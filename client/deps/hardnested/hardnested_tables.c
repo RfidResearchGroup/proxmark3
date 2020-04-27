@@ -20,7 +20,7 @@
 //-----------------------------------------------------------------------------
 
 // To compile it:
-// gcc -std=c99 -I ../../common -o hardnested_tables hardnested_tables.c
+// gcc -I../../../common -I../../../include -o hardnested_tables hardnested_tables.c
 
 #include <inttypes.h>
 #include <stdbool.h>

@@ -49,6 +49,7 @@
 #include "util.h"
 #ifdef _WIN32
 #include "scandir.h"
+#include <direct.h>
 #endif
 
 #define PATH_MAX_LENGTH 200
@@ -130,7 +131,87 @@ static bool is_directory(const char *filename) {
     return S_ISDIR(st.st_mode) != 0;
 }
 
+/**
+ * @brief create a new directory.
+ * @param dirname
+ * @return
+ */
+// Not used...
+/*
+#ifdef _WIN32
+#define make_dir(a) _mkdir(a)
+#else
+#define make_dir(a) mkdir(a,0755) //note 0755 MUST have leading 0 for octal linux file permissions
+#endif
+bool create_path(const char *dirname) {
 
+    if (dirname == NULL) // nothing to do
+        return false;
+
+    if ((strlen(dirname) == 1) && (dirname[0] == '/'))
+        return true;
+
+    if ((strlen(dirname) == 2) && (dirname[1] == ':'))
+        return true;
+
+    if (fileExists(dirname) == 0) {
+
+        char *bs = strrchr(dirname, '\\');
+        char *fs = strrchr(dirname, '/');
+
+        if ((bs == NULL) && (fs != NULL)) {
+            *fs = 0x00;
+            create_path (dirname);
+            *fs = '/';
+        }
+
+        if ((bs != NULL) && (fs == NULL)) {
+            *bs = 0x00;
+            create_path (dirname);
+            *bs = '\\';
+        }
+
+        if ((bs != NULL) && (fs != NULL)) {
+            if (strlen (bs) > strlen (fs)) {
+                *fs = 0x00; // No slash
+                create_path (dirname);
+                *fs = '/';
+            } else {
+                *bs = 0x00;
+                create_path (dirname);
+                *bs = '\\';
+            }
+
+        }
+
+        if (make_dir(dirname) != 0) {
+           PrintAndLogEx(ERR, "could not create directory.... "_RED_("%s"),dirname);
+           return false;
+        }
+    }
+    return true;
+}
+*/
+/*
+bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
+
+    if (pathIndex < spItemCount) {
+        if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
+            free (session.defaultPaths[pathIndex]);
+            session.defaultPaths[pathIndex] = NULL;
+        }
+
+        if (Path != NULL) {
+            session.defaultPaths[pathIndex] = (char *)realloc(session.defaultPaths[pathIndex], strlen(Path) + 1);
+            strcpy(session.defaultPaths[pathIndex], Path);
+        }
+    } else {
+        return false;
+    }
+
+    return true;
+}
+*/
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
@@ -181,7 +262,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -224,7 +305,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     }
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32) "blocks to text file " _YELLOW_("%s"), blocks, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32) " blocks to text file " _YELLOW_("%s"), blocks, fileName);
 
 out:
     free(fileName);
@@ -426,6 +507,44 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
                 }
             }
             break;
+        case jsfMfDesfireKeys:
+            JsonSaveStr(root, "FileType", "mfdes");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[11], 2);
+            uint8_t datslen = data[13];
+            if (datslen > 0)
+                JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], datslen);
+
+            uint8_t dvdata[4][0xE][24 + 1] = {{{0}}};
+            memcpy(dvdata, &data[14 + datslen], 4 * 0xE * (24 + 1));
+
+            for (int i = 0; i < (int)datalen; i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+
+                if (dvdata[0][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.DES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[0][i][1], 8);
+                }
+
+                if (dvdata[1][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.3DES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[1][i][1], 16);
+                }
+                if (dvdata[2][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.AES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[2][i][1], 16);
+                }
+                if (dvdata[3][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.K3KDES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], 24);
+                }
+            }
+            break;
         case jsfSettings:
             preferences_save_callback(root);
             break;
@@ -484,7 +603,7 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
     }
     fclose(wave_file);
 
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
 
 out:
     free(fileName);
@@ -511,7 +630,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
 
 out:
     free(fileName);
@@ -610,7 +729,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     memcpy((data), dump, bytes_read);
     free(dump);
 
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
 
     *datalen = bytes_read;
 
@@ -666,7 +785,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     *datalen = bytes_read;
 
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
     return PM3_SUCCESS;
 }
 
@@ -717,7 +836,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from text file " _YELLOW_("%s"), counter, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, fileName);
 
     if (datalen)
         *datalen = counter;
@@ -867,10 +986,10 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         }
         *datalen = sptr;
     }
+    PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
     if (!strcmp(ctype, "settings")) {
         preferences_load_callback(root);
     }
-    PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);
     free(fileName);
@@ -967,7 +1086,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     }
     fclose(f);
     if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
@@ -1059,7 +1178,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         memset(line, 0, sizeof(line));
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
 
 out:
     free(path);

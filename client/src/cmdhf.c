@@ -16,7 +16,7 @@
 #include <ctype.h>          // tolower
 
 #include "cmdparser.h"      // command_t
-#include "cliparser/cliparser.h"  // parse
+#include "cliparser.h"  // parse
 #include "comms.h"          // clearCommandBuffer
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
@@ -39,7 +39,7 @@
 #include "ui.h"
 #include "cmddata.h"
 #include "graph.h"
-#include "../../common_fpga/fpga.h"
+#include "fpga.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -92,7 +92,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -101,7 +101,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for LTO-CM tag...");
     if (IfPm3Iso14443a()) {
         if (infoLTO(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -110,7 +110,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false, false) > 0) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -119,7 +119,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false)) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -128,7 +128,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -137,7 +137,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -146,7 +146,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
     if (IfPm3Felica()) {
         if (readFelicaUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") "found\n");
+            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -156,7 +156,7 @@ int CmdHFSearch(const char *Cmd) {
         PrintAndLogEx(INPLACE, "Searching for CryptoRF tag...");
         if (IfPm3Iso14443b()) {
             if (readHFCryptoRF(false) == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") "found\n");
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
                 res = PM3_SUCCESS;
             }
         }
@@ -167,7 +167,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
     if (IfPm3Iso14443b()) {
         if (readHF14B(false) == 1) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -176,7 +176,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for iClass / PicoPass tag...");
     if (IfPm3Iclass()) {
         if (readIclass(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -196,7 +196,7 @@ int CmdHFTune(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_tune();
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
-    PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit");
+    PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
     PacketResponseNG resp;
     clearCommandBuffer();
 

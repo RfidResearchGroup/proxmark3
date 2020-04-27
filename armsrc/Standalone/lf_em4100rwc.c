@@ -129,7 +129,7 @@ void RunMod() {
     //      2 - simulate tag from selected slot
     //      3 - write to T5555 tag
     uint8_t state = 0;
-    slots_count = sizeof(low) / sizeof(low[0]);
+    slots_count = ARRAYLEN(low);
     bba = BigBuf_get_addr();
     LED_Slot(selected);
     for (;;) {

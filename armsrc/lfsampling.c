@@ -307,7 +307,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     }
 
     if (verbose) {
-        Dbprintf("Done, saved " _YELLOW_("%d")"out of " _YELLOW_("%d")"seen samples at " _YELLOW_("%d")"bits/sample", samples.total_saved, samples.counter, bits_per_sample);
+        Dbprintf("Done, saved " _YELLOW_("%d")" out of " _YELLOW_("%d")" seen samples at " _YELLOW_("%d")" bits/sample", samples.total_saved, samples.counter, bits_per_sample);
     }
 
     // Ensure that DC offset removal and noise check is performed for any device-side processing

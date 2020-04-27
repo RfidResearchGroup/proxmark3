@@ -4,19 +4,21 @@
 # Add -DPRESETS  to compile with preset models (edit config.h)
 
 MYSRCPATHS =
-MYINCLUDES = -I. -I..
-MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYINCLUDES = -I../cliparser
+MYCFLAGS =
 MYDEFS = -DPRESETS
 MYSRCS = \
 	bmpbit.c \
 	cli.c \
-	getopt.c \
 	model.c \
 	poly.c \
 	preset.c \
 	reveng.c
 
 LIB_A = libreveng.a
+
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../reveng
 
 include ../../../Makefile.host
 

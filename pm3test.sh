@@ -3,7 +3,16 @@
 PM3PATH=$(dirname "$0")
 cd "$PM3PATH" || exit 1
 
+if [ "$1" == "client" ]; then
+    shift
+    TESTDEVICE=false
+    TESTTOOLS=false
+else
+    TESTDEVICE=true
+    TESTTOOLS=true
+fi
 if [ "$1" == "long" ]; then
+    shift
     SLOWTESTS=true
 else
     SLOWTESTS=false
@@ -66,6 +75,7 @@ printf "\n${C_BLUE}RRG/Iceman Proxmark3 test tool ${C_NC}\n\n"
 
 printf "work directory: "
 pwd
+printf "client ${PM3BIN:="./client/proxmark3"}\n"
 
 if [ "$TRAVIS_COMMIT" ]; then
   if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
@@ -83,45 +93,57 @@ echo ""
 
 while true; do
   printf "\n${C_BLUE}Testing files:${C_NC}\n"
-  if ! CheckFileExist "proxmark3 exists" "./client/proxmark3"; then break; fi
-  if ! CheckFileExist "arm image exists" "./armsrc/obj/fullimage.elf"; then break; fi
-  if ! CheckFileExist "bootrom exists" "./bootrom/obj/bootrom.elf"; then break; fi
-  if ! CheckFileExist "hardnested tables exists" "./client/resources/hardnested_tables/*.z"; then break; fi
-
-  printf "\n${C_BLUE}Testing basic help:${C_NC}\n"
-  if ! CheckExecute "proxmark help" "./client/proxmark3 -h" "wait"; then break; fi
-  if ! CheckExecute "proxmark help text ISO7816" "./client/proxmark3 -t 2>&1" "ISO7816"; then break; fi
-  if ! CheckExecute "proxmark help text hardnested" "./client/proxmark3 -t 2>&1" "hardnested"; then break; fi
-
-  printf "\n${C_BLUE}Testing data manipulation:${C_NC}\n"
-  if ! CheckExecute "reveng test" "./client/proxmark3 -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
-  if ! CheckExecute "mfu pwdgen test" "./client/proxmark3 -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
-  
-  printf "\n${C_BLUE}Testing LF:${C_NC}\n"
-  if ! CheckExecute "lf em4x05 test" "./client/proxmark3 -c 'data load traces/em4x05.pm3;lf search'" "FDX-B ID found"; then break; fi
-
-  printf "\n${C_BLUE}Testing HF:${C_NC}\n"
-  if ! CheckExecute "hf mf offline text" "./client/proxmark3 -c 'hf mf'" "at_enc"; then break; fi
-  if $SLOWTESTS; then
-    if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
-    if ! CheckExecute "hf iclass test" "./client/proxmark3 -c 'hf iclass loclass t l'" "verified ok"; then break; fi
-    if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test -l'" "Test(s) \[ OK"; then break; fi
-  else
-    if ! CheckExecute "hf iclass test" "./client/proxmark3 -c 'hf iclass loclass t'" "OK!"; then break; fi
-    if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test(s) \[ OK"; then break; fi
+  if ! CheckFileExist "proxmark3 exists"               "$PM3BIN"; then break; fi
+  if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/*.z"; then break; fi
+  if $TESTDEVICE; then
+    if ! CheckFileExist "arm image exists"             "./armsrc/obj/fullimage.elf"; then break; fi
+    if ! CheckFileExist "bootrom exists"               "./bootrom/obj/bootrom.elf"; then break; fi
   fi
 
-  printf "\n${C_BLUE}Testing tools:${C_NC}\n"
-  # Need a decent example for mfkey32...
-  if ! CheckExecute "mfkey32v2 test" "tools/mfkey/mfkey32v2 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A" "Found Key: \[a0a1a2a3a4a5\]"; then break; fi
-  if ! CheckExecute "mfkey64 test" "tools/mfkey/mfkey64 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439" "Found Key: \[ffffffffffff\]"; then break; fi
-  if ! CheckExecute "mfkey64 long trace test" "tools/mfkey/./mfkey64 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea" "Found Key: \[091e639cb715\]"; then break; fi
-  if ! CheckExecute "nonce2key test" "tools/nonce2key/nonce2key e9cadd9c a8bf4a12 a020a8285858b090 050f010607060e07 5693be6c00000000" "key recovered: fc00018778f7"; then break; fi
-  if ! CheckExecute "xorcheck test" "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
-  if ! CheckExecute "findbits test" "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
-  if ! CheckExecute "findbits_test test" "tools/findbits_test.py 2>&1" "OK"; then break; fi
-  if ! CheckExecute "pm3_eml_mfd test" "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
-  
+  printf "\n${C_BLUE}Testing basic help:${C_NC}\n"
+  if ! CheckExecute "proxmark help"                    "$PM3BIN -h" "wait"; then break; fi
+  if ! CheckExecute "proxmark help text ISO7816"       "$PM3BIN -t 2>&1" "ISO7816"; then break; fi
+  if ! CheckExecute "proxmark help text hardnested"    "$PM3BIN -t 2>&1" "hardnested"; then break; fi
+
+  printf "\n${C_BLUE}Testing data manipulation:${C_NC}\n"
+  if ! CheckExecute "reveng test"                      "$PM3BIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
+  if ! CheckExecute "mfu pwdgen test"                  "$PM3BIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
+
+  printf "\n${C_BLUE}Testing LF:${C_NC}\n"
+  if ! CheckExecute "lf em4x05 test"      "$PM3BIN -c 'data load traces/em4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
+  if ! CheckExecute "lf em410x test"      "$PM3BIN -c 'data load traces/EM4102-1.pm3;lf search 1'" "EM410x ID found"; then break; fi
+  if ! CheckExecute "lf visa2000 test"    "$PM3BIN -c 'data load traces/visa2000.pm3;lf search 1'" "Visa2000 ID found"; then break; fi
+  if ! CheckExecute "lf awid test"        "$PM3BIN -c 'data load traces/AWID-15-259.pm3;lf search 1'" "AWID ID found"; then break; fi
+  if ! CheckExecute "lf securakey test"   "$PM3BIN -c 'data load traces/securakey-64169.pm3;lf search 1 '" "Securakey ID found"; then break; fi
+  if ! CheckExecute "lf keri test"        "$PM3BIN -c 'data load traces/keri.pm3;lf search 1'" "Pyramid ID found"; then break; fi
+  if ! CheckExecute "lf HID Prox test" "$PM3BIN -c 'data load traces/hid-proxCardII-05512-11432784-1.pm3;lf search 1'" "HID Prox ID found"; then break; fi
+  if ! CheckExecute "lf Paradox test"     "$PM3BIN -c 'data load traces/Paradox-96_40426-APJN08.pm3;lf search 1'" "Paradox ID found"; then break; fi
+  if ! CheckExecute "lf IO Prox test"     "$PM3BIN -c 'data load traces/ioprox-XSF-01-3B-44725.pm3;lf search 1'" "IO Prox ID found"; then break; fi
+
+  printf "\n${C_BLUE}Testing HF:${C_NC}\n"
+  if ! CheckExecute "hf mf offline text"               "$PM3BIN -c 'hf mf'" "at_enc"; then break; fi
+  if $SLOWTESTS; then
+    if ! CheckExecute "hf mf hardnested test"          "$PM3BIN -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
+    if ! CheckExecute "hf iclass test"                 "$PM3BIN -c 'hf iclass loclass t l'" "verified ok"; then break; fi
+    if ! CheckExecute "emv test"                       "$PM3BIN -c 'emv test -l'" "Test(s) \[ OK"; then break; fi
+  else
+    if ! CheckExecute "hf iclass test"                 "$PM3BIN -c 'hf iclass loclass t'" "OK!"; then break; fi
+    if ! CheckExecute "emv test"                       "$PM3BIN -c 'emv test'" "Test(s) \[ OK"; then break; fi
+  fi
+
+  if $TESTTOOLS; then
+    printf "\n${C_BLUE}Testing tools:${C_NC}\n"
+    # Need a decent example for mfkey32...
+    if ! CheckExecute "mfkey32v2 test"                   "tools/mfkey/mfkey32v2 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A" "Found Key: \[a0a1a2a3a4a5\]"; then break; fi
+    if ! CheckExecute "mfkey64 test"                     "tools/mfkey/mfkey64 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439" "Found Key: \[ffffffffffff\]"; then break; fi
+    if ! CheckExecute "mfkey64 long trace test"          "tools/mfkey/./mfkey64 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea" "Found Key: \[091e639cb715\]"; then break; fi
+    if ! CheckExecute "nonce2key test"                   "tools/nonce2key/nonce2key e9cadd9c a8bf4a12 a020a8285858b090 050f010607060e07 5693be6c00000000" "key recovered: fc00018778f7"; then break; fi
+    if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
+    if ! CheckExecute "findbits test"                    "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
+    if ! CheckExecute "findbits_test test"               "tools/findbits_test.py 2>&1" "OK"; then break; fi
+    if ! CheckExecute "pm3_eml_mfd test"                 "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
+  fi
+
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
   exit 0
 done

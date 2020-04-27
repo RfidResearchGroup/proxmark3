@@ -1,7 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES =
 # Strange errors on Mingw when compiling with C99
-#MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 MYCFLAGS =
 MYDEFS =
 MYSRCS = \
@@ -15,6 +14,9 @@ MYSRCS = \
     cborvalidation.c \
 
 LIB_A = tinycbor.a
+
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../tinycbor
 
 # Strange errors on Mingw when compiling with -O3
 CFLAGS ?= -Wall -Werror -O2

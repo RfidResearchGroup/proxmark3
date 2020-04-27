@@ -266,7 +266,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
     conn.block_after_ACK = false;
     free(data);
-    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")"bytes to offset "_GREEN_("%u"), datalen, start_index);
+    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")" bytes to offset "_GREEN_("%u"), datalen, start_index);
     return PM3_SUCCESS;
 }
 static int CmdFlashMemDump(const char *Cmd) {
@@ -321,7 +321,7 @@ static int CmdFlashMemDump(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(INFO, "downloading "_YELLOW_("%u")"bytes from flashmem", len);
+    PrintAndLogEx(INFO, "downloading "_YELLOW_("%u")" bytes from flashmem", len);
     if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, 0, NULL, -1, true)) {
         PrintAndLogEx(FAILED, "ERROR; downloading from flashmemory");
         free(dump);

@@ -4,9 +4,6 @@
 #include "common.h"
 #include "mifare.h" // structs
 #include "crc32.h"
-//#include "../../armsrc/printf.h"
-//#include "../../armsrc/desfire.h"
-//#include "../../armsrc/iso14443a.h"
 
 
 #define MAX_CRYPTO_BLOCK_SIZE 16

@@ -19,7 +19,7 @@
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
 #include "emv/emvcore.h"
@@ -466,7 +466,7 @@ int CmdHF14ASim(const char *Cmd) {
                         break;
                 }
                 if (!errors) {
-                    PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")"with " _GREEN_("%d byte UID (%s)"), uidlen, sprint_hex(uid, uidlen));
+                    PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uidlen, sprint_hex(uid, uidlen));
                     useUIDfromEML = false;
                 }
                 cmdp += 2;
@@ -1024,7 +1024,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                     active_select = true;
                     break;
                 case 'b':
-                    sscanf(Cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%u", &temp);
                     numbits = temp & 0xFFFF;
                     i += 3;
                     while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
@@ -1032,7 +1032,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                     break;
                 case 't':
                     bTimeout = true;
-                    sscanf(Cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%u", &temp);
                     timeout = temp;
                     i += 3;
                     while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }

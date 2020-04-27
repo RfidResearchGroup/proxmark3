@@ -55,7 +55,7 @@ static int usage_legic_rdbl(void) {
 }
 static int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("`hf legic eload`") "to upload a dump into emulator memory\n");
+    PrintAndLogEx(NORMAL, "Use " _YELLOW_("`hf legic eload`") " to upload a dump into emulator memory\n");
     PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
@@ -217,7 +217,7 @@ static int CmdLegicInfo(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Reading full tag memory of " _YELLOW_("%d") "bytes...", card.cardsize);
+    PrintAndLogEx(SUCCESS, "Reading full tag memory of " _YELLOW_("%d") " bytes...", card.cardsize);
 
     // allocate receiver buffer
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
@@ -239,7 +239,7 @@ static int CmdLegicInfo(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, " " _CYAN_("CDF: System Area"));
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " ( %s)",
+    PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " (%s)",
                   data[0],
                   sprint_hex(data + 1, 3),
                   data[4],
@@ -394,7 +394,7 @@ static int CmdLegicInfo(const char *Cmd) {
                           (segment_flag & 0x4) >> 2,
                           (segment_flag & 0x8) >> 3
                          );
-            PrintAndLogEx(SUCCESS, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X ( %s)",
+            PrintAndLogEx(SUCCESS, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
                           wrp,
                           wrc,
                           ((data[i + 3] ^ crc) & 0x80) >> 7,

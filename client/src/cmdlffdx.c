@@ -243,7 +243,7 @@ static int CmdFdxDemod(const char *Cmd) {
 
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
-    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  [ %s] ", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("OK") : _RED_("Fail"));
+    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  [%s] ", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("OK") : _RED_("Fail"));
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
@@ -303,7 +303,7 @@ static int CmdFdxClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdx read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdx read`") " to verify");
     return res;
 }
 

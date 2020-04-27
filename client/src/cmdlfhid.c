@@ -86,7 +86,7 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf hid brute [h] [v] w <format> [<field> (decimal)>] [up|down] {...}");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                 :  This help");
-    PrintAndLogEx(NORMAL, "       w <format>        :  see " _YELLOW_("`wiegand list`") "for available formats");
+    PrintAndLogEx(NORMAL, "       w <format>        :  see " _YELLOW_("`wiegand list`") " for available formats");
     PrintAndLogEx(NORMAL, "       f <facility-code> :  facility code");
     PrintAndLogEx(NORMAL, "       c <cardnumber>    :  card number to start with");
     PrintAndLogEx(NORMAL, "       i <issuelevel>    :  issue level");
@@ -241,9 +241,9 @@ static int CmdHIDDemod(const char *Cmd) {
             fc = ((hi & 0xF) << 12) | (lo >> 20);
         }
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
-            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: " _GREEN_("%x%08x (%u)")"- Format Len: 32bit - CC: %u - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: " _GREEN_("%x%08x (%u)")" - Format Len: 32bit - CC: %u - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
-            PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x (%u)")"- Format Len: " _GREEN_("%u bit")"- OEM: %03u - FC: " _GREEN_("%u")"- Card: " _GREEN_("%u"),
+            PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x (%u)")" - Format Len: " _GREEN_("%u bit")" - OEM: %03u - FC: " _GREEN_("%u")" - Card: " _GREEN_("%u"),
                           hi, lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }
@@ -348,7 +348,7 @@ static int CmdHIDClone(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_HID_CLONE, hi2, hi, lo, longid, sizeof(longid));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid read`") " to verify");
     return PM3_SUCCESS;
 }
 
@@ -440,7 +440,7 @@ static int CmdHIDBrute(const char *Cmd) {
     }
 
     if (format_idx == -1) {
-        PrintAndLogEx(ERR, "You must select a wiegand format. See " _YELLOW_("`wiegand list`") "for available formats\n");
+        PrintAndLogEx(ERR, "You must select a wiegand format. See " _YELLOW_("`wiegand list`") " for available formats\n");
         errors = true;
     }
 

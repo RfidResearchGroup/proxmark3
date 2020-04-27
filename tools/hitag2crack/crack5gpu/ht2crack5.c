@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
     for (size_t i0 = 0; i0 < 1 << 20; i0++) {
         uint64_t state0 = expand(0x5806b4a2d16c, i0);
 
-        if (f(state0) == target >> 31) {
+        if (f(state0) == (target >> 31)) {
             // cf kernel, state is now split in 3 shorts >> 2
             candidates[(layer_0_found * 3) + 0] = (uint16_t)((state0 >> (32 + 2)) & 0xffff);
             candidates[(layer_0_found * 3) + 1] = (uint16_t)((state0 >> (16 + 2)) & 0xffff);

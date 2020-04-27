@@ -387,7 +387,7 @@ CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t max
         *datalen = totallen;
 
     return CborNoError;
-};
+}
 
 CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen) {
     if (datalen)
@@ -402,7 +402,7 @@ CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen
         *datalen = slen;
 
     return CborNoError;
-};
+}
 
 CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimiter) {
     CborValue array;
@@ -435,7 +435,7 @@ CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen,
         *datalen = totallen;
 
     return CborNoError;
-};
+}
 
 CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen) {
     if (datalen)
@@ -450,14 +450,14 @@ CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size
         *datalen = slen;
 
     return CborNoError;
-};
+}
 
 CborError CborGetStringValueBuf(CborValue *elm) {
     static char stringBuf[2048];
     memset(stringBuf, 0x00, sizeof(stringBuf));
 
     return CborGetStringValue(elm, stringBuf, sizeof(stringBuf), NULL);
-};
+}
 
 int CBOREncodeElm(json_t *root, const char *rootElmId, CborEncoder *encoder) {
     json_t *elm = NULL;

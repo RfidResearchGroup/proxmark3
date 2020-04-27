@@ -82,7 +82,7 @@ uint32_t getSampleCounter();
 *                  0 or 95 ==> 125 kHz
 *
 **/
-void LFSetupFPGAForADC(int divisor, bool lf_field);
+void LFSetupFPGAForADC(int divisor, bool reader_field);
 
 /**
  * Called from the USB-handler to set the sampling configuration

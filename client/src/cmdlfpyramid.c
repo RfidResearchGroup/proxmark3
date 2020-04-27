@@ -252,7 +252,7 @@ static int CmdPyramidClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pyramid read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pyramid read`") " to verify");
     return res;
 }
 

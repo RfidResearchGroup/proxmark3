@@ -23,7 +23,7 @@
 #include "protocols.h"  // t55xx defines
 #include "cmdlft55xx.h" // clone..
 #include "cmdlf.h"      // cmdlfconfig
-#include "cliparser/cliparser.h" // cli parse input
+#include "cliparser.h" // cli parse input
 
 
 static int CmdHelp(const char *Cmd);
@@ -179,7 +179,7 @@ static int CmdMotorolaClone(const char *Cmd) {
     print_blocks(blocks, ARRAYLEN(blocks));
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf motorola read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf motorola read`") " to verify");
     return res;
 }
 

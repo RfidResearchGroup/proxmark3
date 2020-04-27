@@ -201,7 +201,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
             if (Commands[i].IsAvailable()) {
                 break;
             } else {
-                PrintAndLogEx(WARNING, "This command is " _YELLOW_("not available") "in this mode");
+                PrintAndLogEx(WARNING, "This command is " _YELLOW_("not available") " in this mode");
                 return PM3_ENOTIMPL;
             }
         }

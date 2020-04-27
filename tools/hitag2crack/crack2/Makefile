@@ -1,4 +1,4 @@
-CFLAGS?=-Wall
+CFLAGS?=-Wall -Werror -O3
 # Linux libs
 LIBS=-pthread -D_GNU_SOURCE
 # Mac libs

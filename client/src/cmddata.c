@@ -21,11 +21,11 @@
 #include "graph.h"               // for graph data
 #include "comms.h"
 #include "lfdemod.h"             // for demod code
-#include "../loclass/cipherutils.h" // for decimating samples in getsamples
+#include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem4x.h"           // askem410xdecode
 #include "fileutils.h"           // searchFile
 #include "mifare/ndef.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -101,13 +101,13 @@ static int usage_data_biphaserawdecode(void) {
 static int usage_data_rawdemod(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod [modulation] <help>|<options>");
     PrintAndLogEx(NORMAL, "   [modulation] as 2 char,");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("ab")"- ask/biphase");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("am")"- ask/manchester");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("ar")"- ask/raw");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("fs")"- fsk");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("nr")"- nrz/direct");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("p1")"- psk1");
-    PrintAndLogEx(NORMAL, "       "_YELLOW_("p2")"- psk2");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("ab")" - ask/biphase");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("am")" - ask/manchester");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("ar")" - ask/raw");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("fs")" - fsk");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("nr")" - nrz/direct");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("p1")" - psk1");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("p2")" - psk2");
     PrintAndLogEx(NORMAL, "   <help> as 'h', prints the help for the specific modulation");
     PrintAndLogEx(NORMAL, "   <options> see specific modulation help for optional parameters");
     PrintAndLogEx(NORMAL, "");
@@ -843,7 +843,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     // sanity check
     if (window > len) window = len;
 
-    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") "correlations", GraphTraceLen - window);
+    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") " correlations", GraphTraceLen - window);
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -899,9 +899,9 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 
     if (verbose && foo < bar) {
         distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") "samples", distance);
+        PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") " samples", distance);
     } else if (verbose && (correlation > 1)) {
-        PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") "samples", correlation);
+        PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") " samples", correlation);
     } else {
         PrintAndLogEx(FAILED, "no repeating pattern found, try increasing window size");
     }
@@ -1599,7 +1599,7 @@ int getSamples(uint32_t n, bool verbose) {
     if (n == 0 || n > sizeof(got))
         n = sizeof(got);
 
-    if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") "bytes from device memory", n);
+    if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 
     PacketResponseNG response;
     if (!GetFromDevice(BIG_BUF, got, n, 0, NULL, 0, &response, 10000, true)) {
@@ -1614,7 +1614,7 @@ int getSamples(uint32_t n, bool verbose) {
     //Old devices without this feature would send 0 at arg[0]
     if (response.oldarg[0] > 0) {
         sample_config *sc = (sample_config *) response.data.asBytes;
-        if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") "bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+        if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;
     }
 

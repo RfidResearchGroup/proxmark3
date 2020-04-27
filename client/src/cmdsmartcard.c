@@ -19,7 +19,7 @@
 #include "proxmark3.h"
 #include "comms.h"              // getfromdevice
 #include "emv/emvcore.h"        // decodeTVL
-#include "../crypto/libpcrypto.h"  // sha512hash
+#include "crypto/libpcrypto.h"  // sha512hash
 #include "emv/dump.h"
 #include "ui.h"
 #include "fileutils.h"

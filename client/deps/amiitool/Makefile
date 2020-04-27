@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I. -I.. -I../jansson -I../../../common -I../../../include
-MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYCFLAGS =
 MYDEFS =
 MYSRCS = \
 	amiibo.c \
@@ -8,6 +8,9 @@ MYSRCS = \
 	keygen.c
 
 LIB_A = libamiibo.a
+
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../amiitool
 
 include ../../../Makefile.host
 

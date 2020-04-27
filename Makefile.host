@@ -28,7 +28,7 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 BINDIR := .
 OBJDIR := obj
 
-MYOBJS = $(MYSRCS:%.c=$(OBJDIR)/%.o)
+MYOBJS ?= $(MYSRCS:%.c=$(OBJDIR)/%.o)
 CLEAN = $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
 
 all: $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
@@ -36,6 +36,11 @@ all: $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
 clean:
 	$(Q)$(RM) $(CLEAN)
 	$(Q)$(RMDIR) $(OBJDIR)
+ifneq (,$(MYCLEANOLDPATH))
+	    $(Q)$(RM) $(foreach f,$(CLEAN),$(MYCLEANOLDPATH)/$(f))
+	    $(Q)$(RMDIR) $(MYCLEANOLDPATH)/$(OBJDIR)
+	    $(Q)$(RMDIR_SOFT) $(MYCLEANOLDPATH) 2>/dev/null || true
+endif
 
 install: all
 ifneq (,$(INSTALLTOOLS))

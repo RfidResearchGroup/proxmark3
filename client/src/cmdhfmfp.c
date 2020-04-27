@@ -19,13 +19,13 @@
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "emv/dump.h"
 #include "mifare/mifaredefault.h"
 #include "util_posix.h"
 #include "fileutils.h"
 #include "protocols.h"
-#include "../crypto/libpcrypto.h"
+#include "crypto/libpcrypto.h"
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
@@ -58,9 +58,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+        sprintf(retStr, "0x%02X (" _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+        sprintf(retStr, "0x%02X (" _YELLOW_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -70,14 +70,14 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     char *retStr = buf;
 
     if (id == 0x04) {
-        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+        sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
     } else if (id == 0x05) {
         if (hw)
-            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-2, 14443-3") ")", id);
         else
-            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3, 14443-4") ")", id);
     } else {
-        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+        sprintf(retStr, "0x%02X (" _YELLOW_("Unknown") ")", id);
     }
     return buf;
 }
@@ -88,20 +88,20 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire MF3ICD40") ")", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
 //    else if (major == 0x13 && minor == 0x00)
-//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
+//        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
 
     else if (major == 0x11 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("Plus EV1") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("Plus EV1") ")", major, minor);
     else
-        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
 }
 
@@ -112,16 +112,16 @@ static char *getTypeStr(uint8_t type) {
 
     switch (type) {
         case 1:
-            sprintf(retStr, "0x%02X ( " _YELLOW_("DESFire") ")", type);
+            sprintf(retStr, "0x%02X (" _YELLOW_("DESFire") ")", type);
             break;
         case 2:
-            sprintf(retStr, "0x%02X ( " _YELLOW_("Plus") ")", type);
+            sprintf(retStr, "0x%02X (" _YELLOW_("Plus") ")", type);
             break;
         case 3:
-            sprintf(retStr, "0x%02X ( " _YELLOW_("Ultralight") ")", type);
+            sprintf(retStr, "0x%02X (" _YELLOW_("Ultralight") ")", type);
             break;
         case 4:
-            sprintf(retStr, "0x%02X ( " _YELLOW_("NTAG") ")", type);
+            sprintf(retStr, "0x%02X (" _YELLOW_("NTAG") ")", type);
             break;
         default:
             break;
@@ -227,7 +227,7 @@ static int get_plus_signature(uint8_t *signature, int *signature_len) {
 static int plus_print_version(uint8_t *version) {
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(version + 14, 7));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(version + 21, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
@@ -266,7 +266,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         PrintAndLogEx(WARNING, "command don't have any parameters.\n");
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     bool supportVersion = false;
@@ -328,11 +328,11 @@ static int CmdHFMFPInfo(const char *Cmd) {
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
 
         if (ATQA & 0x0004) {
-            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("2K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("2K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
         if (ATQA & 0x0002) {
-            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("4K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("4K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
 
@@ -357,7 +357,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         }
 
         if (card.sak == 0x20) {
-            PrintAndLogEx(INFO, "           SAK: " _GREEN_("MIFARE Plus SL0/SL3") "or " _GREEN_("MIFARE DESFire"));
+            PrintAndLogEx(INFO, "           SAK: " _GREEN_("MIFARE Plus SL0/SL3") " or " _GREEN_("MIFARE DESFire"));
 
             if (card.ats_len > 0) {
 
@@ -1190,7 +1190,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(ERR, "Key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") "keys", keyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " keys", keyListLen);
     }
 
     if (!verbose)

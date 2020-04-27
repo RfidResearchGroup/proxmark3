@@ -22,6 +22,31 @@
 
 static int CmdHelp(const char *Cmd);
 
+static char *getHitagTypeStr(uint32_t uid) {
+    //uid s/n        ********
+    uint8_t type = (uid >> 4) & 0xF;
+    switch (type) {
+        case 1:
+            return "PCF 7936";
+        case 2:
+            return "PCF 7946";
+        case 3:
+            return "PCF 7947";
+        case 4:
+            return "PCF 7942/44";
+        case 5:
+            return "PCF 7943";
+        case 6:
+            return "PCF 7941";
+        case 7:
+            return "PCF 7952";
+        case 9:
+            return "PCF 7945";
+        default:
+            return "";
+    }
+}
+
 /*
 static size_t nbytes(size_t nbits) {
     return (nbits / 8) + ((nbits % 8) > 0);
@@ -86,9 +111,9 @@ static int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
     PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
-    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: " _YELLOW_("4D494B52") "(\"MIKR\")");
+    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: " _YELLOW_("4D494B52") " (\"MIKR\")");
     PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Read all pages, challenge mode");
-    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: " _YELLOW_("4F4E4D494B52") "(\"ONMIKR\")");
+    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: " _YELLOW_("4F4E4D494B52") " (\"ONMIKR\")");
     PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
     PrintAndLogEx(NORMAL, "      26               Just read UID");
     return PM3_SUCCESS;
@@ -486,7 +511,11 @@ static int CmdLFHitagInfo(const char *Cmd) {
     if (getHitagUid(&uid) == false)
         return PM3_ESOFT;
 
-    PrintAndLogEx(SUCCESS, "UID: " _YELLOW_("%08X"), uid);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(SUCCESS, "     UID: " _GREEN_("%08X"), uid);
+    PrintAndLogEx(SUCCESS, "    TYPE: " _GREEN_("%s"), getHitagTypeStr(uid));
 
     // how to detemine Hitag types?
     // read block3,  get configuration byte.
@@ -497,6 +526,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
     //printHitagConfiguration( 0x02 );
     //printHitagConfiguration( 0x00 );
     //printHitagConfiguration( 0x04 );
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
 }
 

@@ -19,6 +19,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
   * [Usb cable](#usb-cable)
   * [WSL 2  explorer.exe . doesnt work](#WSL-2)
+  * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -173,3 +174,7 @@ Trying to access the dump files created in WSL,  you will need to run ```explore
 
 [<img src="http://www.icedev.se/proxmark3/rdv40/wsl2_p9np.png">](www.icedev.se/proxmark3/rdv40/wsl2_p9np.png)
 
+## Troubles with running the Proxmark3 client
+Some reports has stated that they needed to execute the Proxmark3 as root on their *nix system.  
+Try running it with
+    `sudo ./pm3`  

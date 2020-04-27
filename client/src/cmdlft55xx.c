@@ -482,7 +482,7 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
 
     int res = T55xxReadBlockEx(T55x7_CONFIGURATION_BLOCK, T55x7_PAGE0, usepwd, override, password, downlink_mode, false);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed to read block0, use " _YELLOW_("`p`") "password parameter?");
+        PrintAndLogEx(WARNING, "Failed to read block0, use " _YELLOW_("`p`") " password parameter?");
         return false;
     }
 
@@ -538,7 +538,7 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
         PrintAndLogEx(WARNING, "Failed to validate pwd bit set on configuration block. aborting.");
         return false;
     } else {
-        PrintAndLogEx(SUCCESS, "New configuration block " _YELLOW_("%08X")"password " _YELLOW_("%08X"), block0, new_password);
+        PrintAndLogEx(SUCCESS, "New configuration block " _YELLOW_("%08X")" password " _YELLOW_("%08X"), block0, new_password);
         PrintAndLogEx(SUCCESS, "Success, tag is locked");
         return true;
     }
@@ -2398,7 +2398,7 @@ static int CmdT55xxRestore(const char *Cmd) {
             success = loadFileEML(preferredName, (uint8_t *)data, &datalen);
 
         } else
-            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")"to restore!\n", preferredName);
+            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", preferredName);
     }
 
     if (success == PM3_SUCCESS) { // Got data, so write to cards
@@ -3039,7 +3039,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.oldarg[1], downlink_mode)) {
                 found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) "]", resp.oldarg[1]);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", resp.oldarg[1]);
 
                 } else {
                     PrintAndLogEx(WARNING, "Check pwd failed");
@@ -3089,7 +3089,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
                 found = tryDetectModulation(dl_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) "]", curr_password);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", curr_password);
                     dl_mode = 4; // Exit other downlink mode checks
                     c = keycount; // Exit loop
                 }
@@ -3177,10 +3177,10 @@ static int CmdT55xxBruteForce(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (found) {
-        PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") "]", curr - 1);
+        PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr - 1);
         T55xx_Print_DownlinkMode((found >> 1) & 3);
     } else
-        PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") "]", curr);
+        PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") " ]", curr);
 
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\nTime in bruteforce: %.0f seconds\n", (float)t1 / 1000.0);
@@ -3316,7 +3316,7 @@ out:
     PrintAndLogEx(NORMAL, "");
 
     if (found > 0) {
-        PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") "]", curr_password);
+        PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr_password);
         T55xx_Print_DownlinkMode((found >> 1) & 3);
     } else
         PrintAndLogEx(WARNING, "Recover pwd failed");
@@ -3683,7 +3683,7 @@ static int CmdT55xxProtect(const char *Cmd) {
 
     // lock
     if (t55xxProtect(true, usepwd, override, password, downlink_mode, new_password) == false) {
-        PrintAndLogEx(WARNING, "Command failed. Did you run " _YELLOW_("`lf t55xx detect`") "before?");
+        PrintAndLogEx(WARNING, "Command failed. Did you run " _YELLOW_("`lf t55xx detect`") " before?");
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;

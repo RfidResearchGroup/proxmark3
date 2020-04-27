@@ -19,7 +19,7 @@
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "graph.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "commonutil.h"
 #include "ui.h"         // PrintAndLog
 #include "lfdemod.h"    // parityTest, bitbytes_to_byte
@@ -671,7 +671,7 @@ static int CmdIndalaClone(const char *Cmd) {
     print_blocks(blocks, max);
     int res = clone_t55xx_tag(blocks, max);
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf indala read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf indala read`") " to verify");
     return res;
 }
 

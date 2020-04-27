@@ -47,10 +47,10 @@
 void DownloadLogInstructions() {
     Dbprintf("");
     Dbprintf("[=] List all dumps from flash:");
-    Dbprintf("[=]   " _YELLOW_("-") "mem spiffs tree");
+    Dbprintf("[=]   " _YELLOW_("-") " mem spiffs tree");
     Dbprintf("");
     Dbprintf("[=] To save a dump file from flash to client:");
-    Dbprintf("[=]   " _YELLOW_("-") "mem spiffs dump o hf-legic-UID-dump.bin f hf-legic-UID-dump.bin");
+    Dbprintf("[=]   " _YELLOW_("-") " mem spiffs dump o hf-legic-UID-dump.bin f hf-legic-UID-dump.bin");
 }
 
 void save_dump_to_file(legic_card_select_t *p_card) {

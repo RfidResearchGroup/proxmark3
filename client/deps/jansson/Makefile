@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I.
-MYCFLAGS = -std=c99 -D_ISOC99_SOURCE -Wno-unused-function
+MYCFLAGS = -Wno-unused-function
 MYDEFS = -DHAVE_STDINT_H
 MYSRCS = \
 	dump.c \
@@ -17,5 +17,8 @@ MYSRCS = \
 	value.c
 
 LIB_A = libjansson.a
+
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../jansson
 
 include ../../../Makefile.host

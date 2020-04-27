@@ -138,7 +138,7 @@ static int CmdPrescoClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf presco read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf presco read`") " to verify");
     return res;
 }
 

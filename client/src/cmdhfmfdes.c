@@ -16,21 +16,21 @@
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
-#include "cmdhw.h"
 #include "cmdhf14a.h"
-#include "mbedtls/des.h"
 #include "mbedtls/aes.h"
-#include "../crypto/libpcrypto.h"
+#include "crypto/libpcrypto.h"
 #include "protocols.h"
-#include "mifare.h"         // desfire raw command options
 #include "cmdtrace.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "emv/apduinfo.h"   // APDU manipulation / errorcodes
 #include "emv/emvcore.h"    // APDU logging
 #include "util_posix.h"     // msleep
-#include "mifare/mifare4.h" // MIFARE Authenticate / MAC
 #include "mifare/desfire_crypto.h"
 #include "crapto1/crapto1.h"
+#include "fileutils.h"
+
+#define MAX_KEY_LEN        24
+#define MAX_KEYS_LIST_LEN  1024
 
 struct desfire_key defaultkey = {0};
 static desfirekey_t sessionkey = &defaultkey;
@@ -175,17 +175,11 @@ static char *cluster_to_text(uint8_t cluster) {
         case CL_ADMIN:
             return "card administration";
         case CL_MISC1:
-            return "miscellaneous applications";
         case CL_MISC2:
-            return "miscellaneous applications";
         case CL_MISC3:
-            return "miscellaneous applications";
         case CL_MISC4:
-            return "miscellaneous applications";
         case CL_MISC5:
-            return "miscellaneous applications";
         case CL_MISC6:
-            return "miscellaneous applications";
         case CL_MISC7:
             return "miscellaneous applications";
         case CL_AIRLINES:
@@ -219,7 +213,6 @@ static char *cluster_to_text(uint8_t cluster) {
         case CL_CITYCARD:
             return "city card services";
         case CL_ACCESS_CONTROL_1:
-            return "access control & security";
         case CL_ACCESS_CONTROL_2:
             return "access control & security";
         case CL_VIGIK:
@@ -289,19 +282,12 @@ static char *cluster_to_text(uint8_t cluster) {
         case CL_MAIL:
             return "mail";
         case CL_AMISC:
-            return "miscellaneous applications";
         case CL_AMISC1:
-            return "miscellaneous applications";
         case CL_AMISC2:
-            return "miscellaneous applications";
         case CL_AMISC3:
-            return "miscellaneous applications";
         case CL_AMISC4:
-            return "miscellaneous applications";
         case CL_AMISC5:
-            return "miscellaneous applications";
         case CL_AMISC6:
-            return "miscellaneous applications";
         case CL_AMISC7:
             return "miscellaneous applications";
         default:
@@ -311,7 +297,7 @@ static char *cluster_to_text(uint8_t cluster) {
 }
 
 typedef enum {
-    UNKNOWN = 0,
+    DESFIRE_UNKNOWN = 0,
     DESFIRE_MF3ICD40,
     DESFIRE_EV1,
     DESFIRE_EV2,
@@ -344,9 +330,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+        sprintf(retStr, "0x%02X (" _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+        sprintf(retStr, "0x%02X (" _YELLOW_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -356,14 +342,14 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     char *retStr = buf;
 
     if (id == 0x04) {
-        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+        sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
     } else if (id == 0x05) {
         if (hw)
-            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-2, 14443-3") ")", id);
         else
-            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3, 14443-4") ")", id);
     } else {
-        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+        sprintf(retStr, "0x%02X (" _YELLOW_("Unknown") ")", id);
     }
     return buf;
 }
@@ -374,17 +360,17 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire MF3ICD40") ")", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
 //    else if (major == 0x13 && minor == 0x00)
-//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
+//        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
     else
-        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
 }
 
@@ -653,7 +639,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
 
-    return UNKNOWN;
+    return DESFIRE_UNKNOWN;
 }
 
 int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload, bool defaultkey) {
@@ -736,8 +722,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
         sAPDU apdu = {0x90, subcommand, 0x00, 0x00, 0x01, data};
         int res = send_desfire_cmd(&apdu, false, recv_data, &recv_len, &sw, 0, false);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Sending auth command %02X " _RED_("failed"), subcommand);
-            return PM3_ESOFT;
+            return 1;
         }
     } else if (payload->mode == MFDES_AUTH_PICC) {
         /*cmd[0] = AUTHENTICATE;
@@ -747,13 +732,11 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
     }
 
     if (!recv_len) {
-        PrintAndLogEx(ERR, "Authentication failed. Card timeout.");
-        return PM3_ESOFT;
+        return 2;
     }
 
     if (sw != status(MFDES_ADDITIONAL_FRAME)) {
-        PrintAndLogEx(ERR, "Authentication failed. Invalid key number.");
-        return PM3_ESOFT;
+        return 3;
     }
 
     int expectedlen = 8;
@@ -762,8 +745,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
     }
 
     if (recv_len != expectedlen) {
-        PrintAndLogEx(ERR, "Authentication failed. Length of answer %d doesn't match algo length %d.", recv_len, expectedlen);
-        return PM3_ESOFT;
+        return 4;
     }
     int rndlen = recv_len;
 
@@ -778,8 +760,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
     // Part 3
     if (payload->algo == MFDES_ALGO_AES) {
         if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            PrintAndLogEx(ERR, "mbedtls_aes_setkey_dec failed");
-            return PM3_ESOFT;
+            return 5;
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
     } else if (payload->algo == MFDES_ALGO_DES)
@@ -848,8 +829,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
         }
         if (payload->algo == MFDES_ALGO_AES) {
             if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
-                PrintAndLogEx(ERR, "mbedtls_aes_setkey_enc failed");
-                return PM3_ESOFT;
+                return 6;
             }
             mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
             if (g_debugMode > 1) {
@@ -866,8 +846,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
         sAPDU apdu = {0x90, MFDES_ADDITIONAL_FRAME, 0x00, 0x00, bothlen, both};
         int res = send_desfire_cmd(&apdu, false, recv_data, &recv_len, &sw, 0, false);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Sending auth command %02X " _RED_("failed"), subcommand);
-            return PM3_ESOFT;
+            return 7;
         }
     } else {
         /*cmd[0] = ADDITIONAL_FRAME;
@@ -881,14 +860,12 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
     }
 
     if (!recv_len) {
-        PrintAndLogEx(ERR, "Authentication failed. Card timeout.");
-        return PM3_ESOFT;
+        return 8;
     }
 
     if (payload->mode != MFDES_AUTH_PICC) {
         if (sw != status(MFDES_S_OPERATION_OK)) {
-            PrintAndLogEx(ERR, "Authentication failed.");
-            return PM3_ESOFT;
+            return 9;
         }
     } else {
         /*if (resp[1] != 0x00) {
@@ -915,8 +892,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
             tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
     } else if (payload->mode == MFDES_AUTH_AES) {
         if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-            PrintAndLogEx(ERR, "mbedtls_aes_setkey_dec failed");
-            return PM3_ESOFT;
+            return 10;
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndA, encRndA);
     }
@@ -924,12 +900,11 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
     rol(RndA, rndlen);
     for (int x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
-            PrintAndLogEx(ERR, "Authentication failed. Cannot verify Session Key.");
             if (g_debugMode > 1) {
                 PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
                 PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
             }
-            return PM3_ESOFT;
+            return 11;
         }
     }
 
@@ -938,6 +913,45 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
     return PM3_SUCCESS;
 }
 
+void AuthToError(int error) {
+    switch (error) {
+        case 1:
+            PrintAndLogEx(SUCCESS, "Sending auth command failed");
+            break;
+        case 2:
+            PrintAndLogEx(ERR, "Authentication failed. No data received");
+            break;
+        case 3:
+            PrintAndLogEx(ERR, "Authentication failed. Invalid key number.");
+            break;
+        case 4:
+            PrintAndLogEx(ERR, "Authentication failed. Length of answer %d doesn't match algo length %d.");
+            break;
+        case 5:
+            PrintAndLogEx(ERR, "mbedtls_aes_setkey_dec failed");
+            break;
+        case 6:
+            PrintAndLogEx(ERR, "mbedtls_aes_setkey_enc failed");
+            break;
+        case 7:
+            PrintAndLogEx(SUCCESS, "Sending auth command failed");
+            break;
+        case 8:
+            PrintAndLogEx(ERR, "Authentication failed. Card timeout.");
+            break;
+        case 9:
+            PrintAndLogEx(ERR, "Authentication failed.");
+            break;
+        case 10:
+            PrintAndLogEx(ERR, "mbedtls_aes_setkey_dec failed");
+            break;
+        case 11:
+            PrintAndLogEx(ERR, "Authentication failed. Cannot verify Session Key.");
+            break;
+        default:
+            break;
+    }
+}
 // -- test if card supports 0x0A
 static int test_desfire_authenticate() {
     uint8_t data[] = {0x00};
@@ -1464,7 +1478,7 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type)
     if (data->fileno > 0x1F) return PM3_EINVARG;
     int datatowrite = le24toh(data->length);
     int offset = le24toh(data->offset);
-    int datasize = 0;
+    int datasize;
     int pos = 0;
     int recvlen = 0;
     int res = PM3_SUCCESS;
@@ -1477,8 +1491,10 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type)
     if (type == MFDES_RECORD_FILE) apdu.INS = MFDES_WRITE_RECORD;
 
     while (datatowrite > 0) {
-        if (datatowrite > 52) datasize = 52;
-        else datasize = datatowrite;
+        if (datatowrite > 52)
+            datasize = 52;
+        else
+            datasize = datatowrite;
 
         tmp[1] = offset & 0xFF;
         tmp[2] = (offset >> 8) & 0xFF;
@@ -1676,7 +1692,7 @@ int getKeySettings(uint8_t *aid) {
         }
 
         // Authentication tests
-        int res = test_desfire_authenticate();
+        res = test_desfire_authenticate();
         if (res == PM3_ETIMEOUT) return res;
         PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
 
@@ -1824,29 +1840,29 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     swap16(fid);
 
     if (aidlength != 3) {
-        PrintAndLogEx(ERR, "AID must have 3 bytes length.");
+        PrintAndLogEx(ERR, "AID must have 3 bytes length");
         return PM3_EINVARG;
     }
 
     if (fidlength != 2) {
-        PrintAndLogEx(ERR, "FID must have 2 bytes length.");
-        return PM3_EINVARG;
-    }
-    bool usefid = true;
-    if (fidlength == 0) usefid = false;
-
-    if (keylen1 != 1) {
-        PrintAndLogEx(ERR, "Keysetting1 must have 1 byte length.");
+        PrintAndLogEx(ERR, "FID must have 2 bytes length");
         return PM3_EINVARG;
     }
 
+    bool usefid = (fidlength != 0);
+
     if (keylen1 != 1) {
-        PrintAndLogEx(ERR, "Keysetting2 must have 1 byte length.");
+        PrintAndLogEx(ERR, "Keysetting1 must have 1 byte length");
+        return PM3_EINVARG;
+    }
+
+    if (keylen2 != 1) {
+        PrintAndLogEx(ERR, "Keysetting2 must have 1 byte length");
         return PM3_EINVARG;
     }
 
     if (namelen > 16) {
-        PrintAndLogEx(ERR, "Name has a max. of 16 bytes length.");
+        PrintAndLogEx(ERR, "Name has a max. of 16 bytes length");
         return PM3_EINVARG;
     }
     bool usename = true;
@@ -1860,7 +1876,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     uint8_t keysetting2=0xEE;*/
 
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-        PrintAndLogEx(WARNING, _RED_("   Creating root aid 000000 is forbidden."));
+        PrintAndLogEx(WARNING, _RED_("   Creating root aid 000000 is forbidden"));
         return PM3_ESOFT;
     }
 
@@ -1868,12 +1884,17 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     memcpy(aidhdr.aid, aid, sizeof(aid));
     aidhdr.keysetting1 = keysetting1;
     aidhdr.keysetting2 = keysetting2;
+
     if (usefid) memcpy(aidhdr.fid, fid, sizeof(fid));
+
     if (usename) memcpy(aidhdr.name, name, sizeof(name));
 
     uint8_t rootaid[3] = {0x00, 0x00, 0x00};
     int res = handler_desfire_select_application(rootaid);
-    if (res != PM3_SUCCESS) { DropField(); return res; }
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+     }
 
     res = handler_desfire_createapp(&aidhdr, usename, usefid);
     DropField();
@@ -1931,12 +1952,14 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
@@ -1947,7 +1970,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "Fileno must be lower 0x1F.");
         return PM3_EINVARG;
     }
@@ -1965,10 +1988,12 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         return res;
     }
 
-    res = handler_desfire_clearrecordfile(fileno);
+    res = handler_desfire_clearrecordfile(fileno[0]);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully cleared record file.");
-    } else PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    } else {
+        PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    }
     DropField();
     return res;
 }
@@ -1987,12 +2012,14 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
@@ -2003,7 +2030,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "Fileno must be lower 0x1F.");
         return PM3_EINVARG;
     }
@@ -2021,10 +2048,12 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         return res;
     }
 
-    res = handler_desfire_deletefile(fileno);
+    res = handler_desfire_deletefile(fileno[0]);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully deleted file..");
-    } else PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    } else {
+        PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    }
     DropField();
     return res;
 }
@@ -2048,22 +2077,27 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(5, ar, &arlength);
+
     int fsizelen = 0;
     uint8_t filesize[3] = {0};
     CLIGetHexWithReturn(6, filesize, &fsizelen);
+
     bool isbackup = arg_get_lit(7);
     CLIParserFree();
 
@@ -2076,7 +2110,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
         return PM3_EINVARG;
     }
@@ -2116,7 +2150,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     mfdes_file_t ft;
     memcpy(ft.fid, fid, 2);
     memcpy(ft.filesize, filesize, 3);
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
 
@@ -2146,21 +2180,23 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
+
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
     CLIParserFree();
 
     if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
+        PrintAndLogEx(ERR, "File number is missing");
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno[0] > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         return PM3_EINVARG;
     }
 
@@ -2179,11 +2215,12 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
         return res;
     }
     mfdes_value_t value;
-    value.fileno = fileno;
+    value.fileno = fileno[0];
+
     int len = 0;
     res = handler_desfire_getvalue(&value, &len);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully read value from File %d:", fileno);
+        PrintAndLogEx(SUCCESS, "Successfully read value from File %u:", fileno);
         PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
         PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
         for (int i = 0; i < len; i += 16) {
@@ -2214,38 +2251,42 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int offsetlength = 0;
     uint8_t offset[3] = {0};
     CLIParamHexToBuf(arg_get_str(3), offset, 3, &offsetlength);
+
     int flength = 0;
     uint8_t filesize[3] = {0};
     CLIParamHexToBuf(arg_get_str(4), filesize, 3, &flength);
+
     int type = arg_get_int(5);
     CLIParserFree();
 
     if (type > 1) {
-        PrintAndLogEx(ERR, "Invalid file type (0=Standard/Backup, 1=Record).");
+        PrintAndLogEx(ERR, "Invalid file type (0=Standard/Backup, 1=Record)");
         return PM3_EINVARG;
     }
 
     if (offsetlength != 3 && offsetlength != 0) {
-        PrintAndLogEx(ERR, "Offset needs 3 hex bytes.");
+        PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
         return PM3_EINVARG;
     }
 
     if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
+        PrintAndLogEx(ERR, "File number is missing");
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno[0] > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         return PM3_EINVARG;
     }
 
@@ -2269,15 +2310,18 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     mfdes_data_t ft;
     memcpy(ft.offset, offset, 3);
     memcpy(ft.length, filesize, 3);
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
+
     int bytestoread = le24toh(filesize);
+
     if (bytestoread == 0) bytestoread = 0xFFFFFF;
-    uint8_t *data = (uint8_t *)malloc(bytestoread);
+
+    uint8_t *data = (uint8_t *)calloc(bytestoread, sizeof(uint8_t));
     if (data != NULL) {
         ft.data = data;
         res = handler_desfire_readdata(&ft, type);
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Successfully read data from File %d:", ft.fileno);
+            PrintAndLogEx(SUCCESS, "Successfully read data from file %d:", ft.fileno);
             PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
             PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
             int len = le24toh(ft.length);
@@ -2308,15 +2352,22 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
         arg_int0("mM", "mode", "<mode>", "Mode (0=Credit, 1=LimitedCredit, 2=Debit)"),
         arg_param_end
     };
+
     mfdes_value_t value;
     CLIExecWithReturn(Cmd, argtable, false);
+
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &value.fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+    value.fileno = fileno[0];
+
     int vlength = 0x0;
     CLIParamHexToBuf(arg_get_str(3), value.value, 4, &vlength);
+
     int mode = arg_get_int(4);
     CLIParserFree();
     swap24(aid);
@@ -2378,6 +2429,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
 
 
 static int CmdHF14ADesWriteData(const char *Cmd) {
+
     CLIParserInit("hf mfdes writedata",
                   "Write data to File",
                   "Usage:"
@@ -2389,56 +2441,66 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_strx0("aA",  "aid",   "<aid>", "AID for file (3 hex bytes, big endian)"),
         arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
         arg_strx0("oO", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("dD", "data", "<data>", "Data to write (hex bytes, 0xFFFFFF bytes max.)"),
+        arg_strx0("dD", "data", "<data>", "Data to write (hex bytes, 0xFFFF bytes max.)"),
         arg_int0("type", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
         arg_param_end
     };
+
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
+
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int offsetlength = 0;
     uint8_t offset[3] = {0};
     CLIParamHexToBuf(arg_get_str(3), offset, 3, &offsetlength);
-    int dlength = 0xFFFFFF;
-    uint8_t *data = (uint8_t *)malloc(0xFFFFFF);
-    memset(data, 0x0, 0xFFFFFF);
-    CLIParamHexToBuf(arg_get_str(4), data, 0xFFFFFF, &dlength);
+
+    int dlength = 0xFFFF;
+    uint8_t *data = (uint8_t *)calloc(0xFFFF, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    CLIParamHexToBuf(arg_get_str(4), data, 0xFFFF, &dlength);
+
     int type = arg_get_int(5);
+
     CLIParserFree();
 
     swap24(aid);
     swap24(offset);
 
-    if (type > 1) {
-        PrintAndLogEx(ERR, "Unknown type (0=Standard/Backup, 1=Record).");
+    if (type < 0 || type > 1) {
+        PrintAndLogEx(ERR, "Unknown type (0=Standard/Backup, 1=Record)");
         if (data) free(data);
         return PM3_EINVARG;
     }
 
     if (dlength == 0) {
-        PrintAndLogEx(ERR, "Data needs some hex bytes to write.");
+        PrintAndLogEx(ERR, "Data needs some hex bytes to write");
         if (data) free(data);
         return PM3_EINVARG;
     }
 
     if (offsetlength != 3 && offsetlength != 0) {
-        PrintAndLogEx(ERR, "Offset needs 3 hex bytes.");
+        PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
         if (data) free(data);
         return PM3_EINVARG;
     }
 
     if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
+        PrintAndLogEx(ERR, "File number is missing");
         if (data) free(data);
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno[0] > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         if (data) free(data);
         return PM3_EINVARG;
     }
@@ -2452,21 +2514,23 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     int res = handler_desfire_select_application(aid);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Couldn't select aid.");
+        PrintAndLogEx(ERR, "Couldn't select aid");
         DropField();
         if (data) free(data);
         return res;
     }
 
     mfdes_data_t ft;
+
     memcpy(ft.offset, offset, 3);
     htole24(dlength, ft.length);
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
+
     if (data != NULL) {
         ft.data = data;
         res = handler_desfire_writedata(&ft, type);
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Successfully wrote data.");
+            PrintAndLogEx(SUCCESS, "Successfully wrote data");
         } else {
             PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
         }
@@ -2497,25 +2561,31 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(5, ar, &arlength);
+
     int rsizelen = 0;
     uint8_t recordsize[3] = {0};
     CLIGetHexWithReturn(6, recordsize, &rsizelen);
+
     int msizelen = 0;
     uint8_t maxnumrecords[3] = {0};
     CLIGetHexWithReturn(7, maxnumrecords, &msizelen);
+
     bool cyclic = arg_get_lit(8);
     CLIParserFree();
 
@@ -2539,7 +2609,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
         return PM3_EINVARG;
     }
@@ -2578,7 +2648,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     }
 
     mfdes_linear_t ft;
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
     memcpy(ft.fid, fid, 2);
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
@@ -2616,25 +2686,31 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     uint8_t comset = arg_get_int(3);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(4, ar, &arlength);
+
     int lllen = 0;
     uint8_t lowerlimit[4] = {0};
     CLIGetHexWithReturn(5, lowerlimit, &lllen);
+
     int ullen = 0;
     uint8_t upperlimit[4] = {0};
     CLIGetHexWithReturn(6, upperlimit, &ullen);
+
     int vllen = 0;
     uint8_t value[4] = {0};
     CLIGetHexWithReturn(7, value, &vllen);
+
     int limitedlen = 0;
     uint8_t limited = 0;
     CLIGetHexWithReturn(8, &limited, &limitedlen);
@@ -2647,37 +2723,37 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     swap32(value);
 
     if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
+        PrintAndLogEx(ERR, "File number is missing");
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno[0] > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         return PM3_EINVARG;
     }
 
     if (comset != 0 && comset != 1 && comset != 3) {
-        PrintAndLogEx(ERR, "Communication setting must be either 0=Plain, 1=Plain+MAC or 3=Encrypt.");
+        PrintAndLogEx(ERR, "Communication setting must be either 0=Plain, 1=Plain+MAC or 3=Encrypt");
         return PM3_EINVARG;
     }
 
     if (arlength != 2) {
-        PrintAndLogEx(ERR, "Access rights must have 2 hex bytes length.");
+        PrintAndLogEx(ERR, "Access rights must have 2 hex bytes length");
         return PM3_EINVARG;
     }
 
     if (lllen != 4) {
-        PrintAndLogEx(ERR, "Lower limit must have 4 hex bytes length.");
+        PrintAndLogEx(ERR, "Lower limit must have 4 hex bytes length");
         return PM3_EINVARG;
     }
 
     if (ullen != 4) {
-        PrintAndLogEx(ERR, "Upper limit must have 4 hex bytes length.");
+        PrintAndLogEx(ERR, "Upper limit must have 4 hex bytes length");
         return PM3_EINVARG;
     }
 
     if (vllen != 4) {
-        PrintAndLogEx(ERR, "Value must have 4 hex bytes length.");
+        PrintAndLogEx(ERR, "Value must have 4 hex bytes length");
         return PM3_EINVARG;
     }
 
@@ -2699,7 +2775,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     }
 
     mfdes_value_file_t ft;
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
     memcpy(ft.lowerlimit, lowerlimit, 4);
@@ -2737,7 +2813,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     CLIParserFree();
 
     if ((keylen < 8) || (keylen > 8)) {
-        PrintAndLogEx(ERR, "Specified key must have 8 bytes length.");
+        PrintAndLogEx(ERR, "Specified key must have 8 bytes length");
         return PM3_EINVARG;
     }
 
@@ -2752,6 +2828,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     payload.mode = MFDES_AUTH_PICC;
     payload.algo = MFDES_ALGO_DES;
     payload.keyno = 0;
+
     SendCommandNG(CMD_HF_DESFIRE_AUTH1, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
@@ -2767,11 +2844,14 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
             uint8_t flags;
             uint8_t datalen;
             uint8_t datain[FRAME_PAYLOAD_SIZE];
-        } PACKED payload;
-        payload.datain[0] = 0xFC;
-        payload.flags = NONE;
-        payload.datalen = 1;
-        SendCommandNG(CMD_HF_DESFIRE_COMMAND, (uint8_t *)&payload, sizeof(payload));
+        } PACKED payload_raw;
+
+        payload_raw.datain[0] = 0xFC;
+        payload_raw.flags = NONE;
+        payload_raw.datalen = 1;
+
+        SendCommandNG(CMD_HF_DESFIRE_COMMAND, (uint8_t *)&payload_raw, sizeof(payload_raw));
+
         if (!WaitForResponseTimeout(CMD_HF_DESFIRE_COMMAND, &resp, 3000)) {
             PrintAndLogEx(WARNING, "Client reset command execute timeout");
             DropField();
@@ -2787,7 +2867,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
             return PM3_SUCCESS;
         }
     } else {
-        PrintAndLogEx(WARNING, _RED_("Auth command failed."));
+        PrintAndLogEx(WARNING, _RED_("Auth command failed"));
     }
     DropField();
     return PM3_SUCCESS;
@@ -2839,11 +2919,11 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, sizeof(package->uid)));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), package->details[12], package->details[13]);
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), package->details[12], package->details[13]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionHW[0]));
@@ -3051,6 +3131,151 @@ static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
     return PM3_ESOFT;
 }
 
+static int CmdHF14ADesDump(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    DropField();
+    uint8_t aid[3] = {0};
+    uint8_t app_ids[78] = {0};
+    uint8_t app_ids_len = 0;
+
+    uint8_t file_ids[33] = {0};
+    uint8_t file_ids_len = 0;
+
+    dfname_t dfnames[255];
+    uint8_t dfname_count = 0;
+
+    int res = 0;
+
+    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Can't get list of applications on tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (handler_desfire_dfnames(dfnames, &dfname_count) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("Can't get DF Names"));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-- Mifare DESFire Dump ----------------------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+
+    for (int i = 0; i < app_ids_len; i += 3) {
+
+        aid[0] = app_ids[i];
+        aid[1] = app_ids[i + 1];
+        aid[2] = app_ids[i + 2];
+
+        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
+        PrintAndLogEx(SUCCESS, "  AID Function Cluster 0x%02X: " _YELLOW_("%s"), aid[2], cluster_to_text(aid[2]));
+
+        for (int m = 0; m < dfname_count; m++) {
+            if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
+                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
+            }
+        }
+
+        uint8_t num_keys = 0;
+        uint8_t key_setting = 0;
+        res = handler_desfire_keysettings(&key_setting, &num_keys);
+        if (res != PM3_SUCCESS) return res;
+
+        res = handler_desfire_select_application(aid);
+
+        if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
+            for (int j = file_ids_len - 1; j >= 0; j--) {
+                PrintAndLogEx(SUCCESS, "\n\n   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
+
+                uint8_t filesettings[20] = {0};
+                int fileset_len = 0;
+
+                res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
+                int maclen = 0; // To be implemented
+
+                if (res == PM3_SUCCESS) {
+                    //if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
+                    if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
+                        int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
+                        mfdes_data_t fdata;
+                        fdata.fileno = file_ids[j];
+                        memset(fdata.offset, 0, 3);
+                        //memcpy(fdata.length,&filesettings[4],3);
+                        memset(fdata.length, 0, 3);
+                        uint8_t *data = (uint8_t *)malloc(filesize);
+                        fdata.data = data;
+                        if (data) {
+                            res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE);
+                            if (res == PM3_SUCCESS) {
+                                PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
+                                PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                                int len = le24toh(fdata.length);
+                                for (int n = 0; n < len; n += 16) {
+                                    PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
+                                }
+                                free(data);
+                            } else {
+                                PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
+                                res = handler_desfire_select_application(aid);
+                            }
+                        }
+                    } else if (fileset_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
+                        PrintAndLogEx(NORMAL, "\n\nValue file: 0x%0x", file_ids[j]);
+                        mfdes_value_t value;
+                        value.fileno = file_ids[j];
+                        int len = 0;
+                        res = handler_desfire_getvalue(&value, &len);
+                        if (res == PM3_SUCCESS) {
+                            PrintAndLogEx(NORMAL, "\nOffset  | Value                                            | Ascii");
+                            PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                            for (int n = 0; n < len; n += 16) {
+                                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&value.value[n], len > 16 ? 16 : len), sprint_ascii(&value.value[n], len > 16 ? 16 : len));
+                            }
+                        } else {
+                            PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
+                            res = handler_desfire_select_application(aid);
+                        }
+                    } else if (fileset_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
+                        int maxrecords = (filesettings[9] << 16) + (filesettings[8] << 8) + filesettings[7];
+                        int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
+                        mfdes_data_t fdata;
+                        fdata.fileno = file_ids[j];
+                        memset(fdata.length, 0, 3);
+                        //memcpy(fdata.length,&filesettings[4],3);
+                        uint8_t *data = (uint8_t *)malloc(filesize);
+                        fdata.data = data;
+                        if (data) {
+                            for (int offset = 0; offset < maxrecords; offset++) {
+                                PrintAndLogEx(NORMAL, "\n\nRecord offset: %024x", offset);
+                                memset(data, 0, filesize);
+                                fdata.offset[0] = offset & 0xFF;
+                                fdata.offset[1] = (offset >> 8) & 0xFF;
+                                fdata.offset[2] = (offset >> 16) & 0xFF;
+                                res = handler_desfire_readdata(&fdata, MFDES_RECORD_FILE);
+                                if (res == PM3_SUCCESS) {
+                                    PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
+                                    PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                                    int len = le24toh(fdata.length);
+                                    for (int n = 0; n < len; n += 16) {
+                                        PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
+                                    }
+                                } else {
+                                    res = handler_desfire_select_application(aid);
+                                }
+                            }
+                            free(data);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesEnumApplications(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     DropField();
@@ -3082,7 +3307,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-- Mifare DESFire Enumerate applications --------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
+    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
 
     for (int i = 0; i < app_ids_len; i += 3) {
 
@@ -3116,7 +3341,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
         // Get File IDs
         if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
+            PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
             for (int j = file_ids_len - 1; j >= 0; j--) {
                 PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
 
@@ -3305,14 +3530,520 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
     */
     mfdes_auth_res_t rpayload;
-    if (handler_desfire_auth(&payload, &rpayload, usedefaultkey) == PM3_SUCCESS) {
+    int error = handler_desfire_auth(&payload, &rpayload, usedefaultkey);
+    if (error == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
         PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload.sessionkey, keylength));
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
     } else {
+        AuthToError(error);
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    return PM3_SUCCESS;
+}
+
+void DesFill2bPattern(uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t *deskeyListLen, uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], size_t *aeskeyListLen, uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], size_t *k3kkeyListLen, uint32_t *startPattern) {
+    for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
+        if (*deskeyListLen != MAX_KEYS_LIST_LEN) {
+            deskeyList[*deskeyListLen][0] = (pt >> 8) & 0xff;
+            deskeyList[*deskeyListLen][1] = pt & 0xff;
+            memcpy(&deskeyList[*deskeyListLen][2], &deskeyList[*deskeyListLen][0], 2);
+            memcpy(&deskeyList[*deskeyListLen][4], &deskeyList[*deskeyListLen][0], 4);
+            (*deskeyListLen)++;
+        }
+        if (*aeskeyListLen != MAX_KEYS_LIST_LEN) {
+            aeskeyList[*aeskeyListLen][0] = (pt >> 8) & 0xff;
+            aeskeyList[*aeskeyListLen][1] = pt & 0xff;
+            memcpy(&aeskeyList[*aeskeyListLen][2], &aeskeyList[*aeskeyListLen][0], 2);
+            memcpy(&aeskeyList[*aeskeyListLen][4], &aeskeyList[*aeskeyListLen][0], 4);
+            memcpy(&aeskeyList[*aeskeyListLen][8], &aeskeyList[*aeskeyListLen][0], 8);
+            (*aeskeyListLen)++;
+        }
+        if (*k3kkeyListLen != MAX_KEYS_LIST_LEN) {
+            k3kkeyList[*k3kkeyListLen][0] = (pt >> 8) & 0xff;
+            k3kkeyList[*k3kkeyListLen][1] = pt & 0xff;
+            memcpy(&k3kkeyList[*k3kkeyListLen][2], &k3kkeyList[*k3kkeyListLen][0], 2);
+            memcpy(&k3kkeyList[*k3kkeyListLen][4], &k3kkeyList[*k3kkeyListLen][0], 4);
+            memcpy(&k3kkeyList[*k3kkeyListLen][8], &k3kkeyList[*k3kkeyListLen][0], 8);
+            memcpy(&k3kkeyList[*k3kkeyListLen][16], &k3kkeyList[*k3kkeyListLen][0], 4);
+            (*k3kkeyListLen)++;
+        }
+
+        *startPattern = pt;
+        if ((*deskeyListLen == MAX_KEYS_LIST_LEN) && (*aeskeyListLen == MAX_KEYS_LIST_LEN) && (*k3kkeyListLen == MAX_KEYS_LIST_LEN))
+            break;
+    }
+    (*startPattern)++;
+}
+
+static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t deskeyListLen, uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], size_t aeskeyListLen, uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], size_t k3kkeyListLen, uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
+    int res = handler_desfire_select_application(aid);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "AID %X does not exist.");
+        return res;
+    }
+
+    int usedkeys[0xF] = {0};
+    bool des = false;
+    bool tdes = false;
+    bool aes = false;
+    bool k3kdes = false;
+
+    if (memcmp(aid, "\x00\x00\x00", 3) != 0) {
+        uint8_t file_ids[33] = {0};
+        uint8_t file_ids_len = 0;
+        // Get File IDs
+        if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
+            for (int j = file_ids_len - 1; j >= 0; j--) {
+                uint8_t filesettings[20] = {0};
+                int fileset_len = 0;
+                res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
+                if (res == PM3_SUCCESS) {
+                    uint16_t accrights = (filesettings[3] << 8) + filesettings[2];
+                    int change_access_rights = accrights & 0xF;
+                    int read_write_access = (accrights >> 4) & 0xF;
+                    int write_access = (accrights >> 8) & 0xF;
+                    int read_access = (accrights >> 12) & 0xF;
+                    if (change_access_rights == 0xE) change_access_rights = 0x0;
+                    if (read_write_access == 0xE) read_write_access = 0x0;
+                    if (write_access == 0xE) write_access = 0x0;
+                    if (read_access == 0xE) read_access = 0x0;
+                    usedkeys[change_access_rights] = 1;
+                    usedkeys[read_write_access] = 1;
+                    usedkeys[write_access] = 1;
+                    usedkeys[read_access] = 1;
+                    if (res == PM3_SUCCESS) {
+                        switch (fileset_len >> 6) {
+                            case 0:
+                                des = true;
+                                tdes = true;
+                                break;
+                            case 1:
+                                k3kdes = true;
+                                break;
+                            case 2:
+                                aes = true;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+            if (file_ids_len == 0) {
+                for (int z = 0; z < 0xE; z++) {
+                    usedkeys[z] = 1;
+                    des = true;
+                    tdes = true;
+                    aes = true;
+                    k3kdes = true;
+                }
+            }
+        }
+    } else des = true;
+    int error = PM3_SUCCESS;
+    bool badlen = false;
+    mfdes_authinput_t payload;
+    uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
+    if (des) {
+        for (int keyno = 0; keyno < 0xE; keyno++)
+            if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
+                for (int curkey = 0; curkey < deskeyListLen; curkey++) {
+                    payload.keylen = 8;
+                    memcpy(payload.key, deskeyList[curkey], 8);
+                    payload.mode = MFDES_AUTH_DES;
+                    payload.algo = MFDES_ALGO_DES;
+                    payload.keyno = keyno;
+                    mfdes_auth_res_t rpayload;
+                    error = handler_desfire_auth(&payload, &rpayload, false);
+                    if (error == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
+                        foundKeys[0][keyno][0] = 0x01;
+                        *result = true;
+                        memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
+                        break;
+                    } else if (error < 7) {
+                        badlen = true;
+                        DropField();
+                        res = handler_desfire_select_application(aid);
+                        if (res != PM3_SUCCESS) {
+                            PrintAndLogEx(ERR, "AID %X does not exist.");
+                            return res;
+                        }
+                        break;
+                    }
+                }
+                if (badlen == true) {
+                    badlen = false;
+                    break;
+                }
+            }
+    }
+    if (tdes) {
+        for (int keyno = 0; keyno < 0xE; keyno++)
+            if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
+                for (int curkey = 0; curkey < aeskeyListLen; curkey++) {
+                    payload.keylen = 16;
+                    memcpy(payload.key, aeskeyList[curkey], 16);
+                    payload.mode = MFDES_AUTH_DES;
+                    payload.algo = MFDES_ALGO_3DES;
+                    payload.keyno = keyno;
+                    mfdes_auth_res_t rpayload;
+                    error = handler_desfire_auth(&payload, &rpayload, false);
+                    if (error == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3DES Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                        foundKeys[1][keyno][0] = 0x01;
+                        *result = true;
+                        memcpy(&foundKeys[1][keyno][1], aeskeyList[curkey], 16);
+                        break;
+                    } else if (error < 7) {
+                        badlen = true;
+                        DropField();
+                        res = handler_desfire_select_application(aid);
+                        if (res != PM3_SUCCESS) {
+                            PrintAndLogEx(ERR, "AID %X does not exist.");
+                            return res;
+                        }
+                        break;
+                    }
+                }
+                if (badlen == true) {
+                    badlen = false;
+                    break;
+                }
+            }
+    }
+
+    if (aes) {
+        for (int keyno = 0; keyno < 0xE; keyno++)
+            if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
+                for (int curkey = 0; curkey < aeskeyListLen; curkey++) {
+                    payload.keylen = 16;
+                    memcpy(payload.key, aeskeyList[curkey], 16);
+                    payload.mode = MFDES_AUTH_AES;
+                    payload.algo = MFDES_ALGO_AES;
+                    payload.keyno = keyno;
+                    mfdes_auth_res_t rpayload;
+                    error = handler_desfire_auth(&payload, &rpayload, false);
+                    if (error == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                        foundKeys[2][keyno][0] = 0x01;
+                        *result = true;
+                        memcpy(&foundKeys[2][keyno][1], aeskeyList[curkey], 16);
+                        break;
+                    } else if (error < 7) {
+                        badlen = true;
+                        DropField();
+                        res = handler_desfire_select_application(aid);
+                        if (res != PM3_SUCCESS) {
+                            PrintAndLogEx(ERR, "AID %X does not exist.");
+                            return res;
+                        }
+                        break;
+                    }
+                }
+                if (badlen == true) {
+                    badlen = false;
+                    break;
+                }
+            }
+    }
+
+    if (k3kdes) {
+        for (int keyno = 0; keyno < 0xE; keyno++)
+            if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
+                for (int curkey = 0; curkey < k3kkeyListLen; curkey++) {
+                    payload.keylen = 24;
+                    memcpy(payload.key, k3kkeyList[curkey], 24);
+                    payload.mode = MFDES_AUTH_ISO;
+                    payload.algo = MFDES_ALGO_3K3DES;
+                    payload.keyno = keyno;
+                    mfdes_auth_res_t rpayload;
+                    error = handler_desfire_auth(&payload, &rpayload, false);
+                    if (error == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3K3 Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
+                        foundKeys[3][keyno][0] = 0x01;
+                        *result = true;
+                        memcpy(&foundKeys[3][keyno][1], k3kkeyList[curkey], 16);
+                        break;
+                    } else if (error < 7) {
+                        badlen = true;
+                        DropField();
+                        res = handler_desfire_select_application(aid);
+                        if (res != PM3_SUCCESS) {
+                            PrintAndLogEx(ERR, "AID %X does not exist.");
+                            return res;
+                        }
+                        break;
+                    }
+                }
+                if (badlen == true) {
+                    badlen = false;
+                    break;
+                }
+            }
+    }
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14aDesChk(const char *Cmd) {
+    int res;
+    uint8_t deskeyList[MAX_KEYS_LIST_LEN][8] = {{0}};
+    uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16] = {{0}};
+    uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][MAX_KEY_LEN] = {{0}};
+    size_t deskeyListLen = 0;
+    size_t aeskeyListLen = 0;
+    size_t k3kkeyListLen = 0;
+    uint8_t foundKeys[4][0xE][24 + 1] = {{{0}}};
+
+    CLIParserInit("hf mfdes chk",
+                  "Checks keys with Mifare Desfire card.",
+                  "Usage:\n"
+                  "    hf mfdes chk -a 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456\n"
+                  "    hf mfdes chk -d mfdes_default_keys -> check keys from dictionary against all existing aid on card\n"
+                  "    hf mfdes chk -d mfdes_default_keys -a 123456 -> check keys from dictionary against aid 0x123456\n"
+                  "    hf mfdes chk -a 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json\n"
+                  "    hf mfdes chk -a 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("aA",  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
+        arg_str0("kK",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
+        arg_str0("dD",  "dict",      "<file>", "File with keys dictionary"),
+        arg_lit0(NULL,  "pattern1b", "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
+        arg_lit0(NULL,  "pattern2b", "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
+        arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
+        arg_str0("jJ",  "json",      "<file>",  "Json file to save keys"),
+        arg_lit0("vV",  "verbose",   "Verbose mode."),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, false);
+
+    int aidlength = 0;
+    uint8_t aid[3] = {0};
+    CLIGetHexWithReturn(1, aid, &aidlength);
+    swap24(aid);
+    uint8_t vkey[16] = {0};
+    int vkeylen = 0;
+    CLIGetHexWithReturn(2, vkey, &vkeylen);
+
+    if (vkeylen > 0) {
+        if (vkeylen == 8) {
+            memcpy(&deskeyList[deskeyListLen], vkey, 8);
+            deskeyListLen++;
+        } else if (vkeylen == 16) {
+            memcpy(&aeskeyList[aeskeyListLen], vkey, 16);
+            aeskeyListLen++;
+        } else if (vkeylen == 24) {
+            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 16);
+            k3kkeyListLen++;
+        } else {
+            PrintAndLogEx(ERR, "Specified key must have 8, 16 or 24 bytes length.");
+            CLIParserFree();
+            return PM3_EINVARG;
+        }
+    }
+
+    uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
+    int dict_filenamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(3), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+        PrintAndLogEx(FAILED, "File name too long or invalid.");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+
+    bool pattern1b = arg_get_lit(4);
+    bool pattern2b = arg_get_lit(5);
+
+    if (pattern1b && pattern2b) {
+        PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+
+    if (dict_filenamelen && (pattern1b || pattern2b)) {
+        PrintAndLogEx(ERR, "Pattern search mode and dictionary mode can't be used in one command.");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+
+    uint32_t startPattern = 0x0000;
+    uint8_t vpattern[2];
+    int vpatternlen = 0;
+    CLIGetHexWithReturn(6, vpattern, &vpatternlen);
+    if (vpatternlen > 0) {
+        if (vpatternlen > 0 && vpatternlen <= 2) {
+            startPattern = (vpattern[0] << 8) + vpattern[1];
+        } else {
+            PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
+            CLIParserFree();
+            return PM3_EINVARG;
+        }
+        if (!pattern2b)
+            PrintAndLogEx(WARNING, "Pattern entered, but search mode not is 2-byte search.");
+    }
+
+    uint8_t jsonname[250] = {0};
+    int jsonnamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(7), jsonname, sizeof(jsonname), &jsonnamelen)) {
+        PrintAndLogEx(ERR, "Invalid json name.");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+    jsonname[jsonnamelen] = 0;
+
+    bool verbose = arg_get_lit(8);
+
+    CLIParserFree();
+
+    // 1-byte pattern search mode
+    if (pattern1b) {
+        for (int i = 0; i < 0x100; i++)
+            memset(aeskeyList[i], i, 16);
+        for (int i = 0; i < 0x100; i++)
+            memset(deskeyList[i], i, 8);
+        for (int i = 0; i < 0x100; i++)
+            memset(k3kkeyList[i], i, 24);
+        aeskeyListLen = 0x100;
+        deskeyListLen = 0x100;
+        k3kkeyListLen = 0x100;
+    }
+
+    // 2-byte pattern search mode
+    if (pattern2b) {
+        DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &startPattern);
+    }
+
+    // dictionary mode
+    size_t endFilePosition = 0;
+    if (dict_filenamelen) {
+        uint16_t keycnt = 0;
+        res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &keycnt, 0, &endFilePosition, true);
+        deskeyListLen = keycnt;
+        if (endFilePosition)
+            PrintAndLogEx(SUCCESS, "First part of des dictionary successfully loaded.");
+        endFilePosition = 0;
+        res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
+        aeskeyListLen = keycnt;
+        if (endFilePosition)
+            PrintAndLogEx(SUCCESS, "First part of aes dictionary successfully loaded.");
+        endFilePosition = 0;
+        res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &keycnt, 0, &endFilePosition, true);
+        k3kkeyListLen = keycnt;
+        if (endFilePosition)
+            PrintAndLogEx(SUCCESS, "First part of k3kdes dictionary successfully loaded.");
+        endFilePosition = 0;
+
+        if (endFilePosition)
+            PrintAndLogEx(SUCCESS, "First part of dictionary successfully loaded.");
+    }
+
+    if (aeskeyListLen == 0) {
+        PrintAndLogEx(ERR, "Aes key list is empty. Nothing to check.");
+        return PM3_EINVARG;
+    } else {
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " aes keys", aeskeyListLen);
+    }
+
+    if (deskeyListLen == 0) {
+        PrintAndLogEx(ERR, "Des key list is empty. Nothing to check.");
+        return PM3_EINVARG;
+    } else {
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " des keys", deskeyListLen);
+    }
+
+    if (k3kkeyListLen == 0) {
+        PrintAndLogEx(ERR, "K3k key list is empty. Nothing to check.");
+        return PM3_EINVARG;
+    } else {
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " k3kdes keys", k3kkeyListLen);
+    }
+
+    if (!verbose)
+        printf("Search keys:\n");
+
+    bool result = false;
+    uint8_t app_ids[78] = {0};
+    uint8_t app_ids_len = 0;
+
+    if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Can't get list of applications on tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (aidlength != 0) {
+        memcpy(&app_ids[0], aid, 3);
+        app_ids_len = 1;
+    }
+
+    for (int x = 0; x < app_ids_len / 3; x++) {
+        uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
+        PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
+        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, foundKeys, &result);
+        if (res == PM3_EOPABORTED) {
+            break;
+        }
+
+        if (pattern2b && startPattern < 0x10000) {
+            if (!verbose)
+                printf("p");
+            aeskeyListLen = 0;
+            deskeyListLen = 0;
+            k3kkeyListLen = 0;
+            DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &startPattern);
+            continue;
+        }
+        if (dict_filenamelen && endFilePosition) {
+            if (!verbose)
+                printf("d");
+            uint16_t keycnt = 0;
+            res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
+            deskeyListLen = keycnt;
+            keycnt = 0;
+            res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
+            aeskeyListLen = keycnt;
+            keycnt = 0;
+            res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
+            k3kkeyListLen = keycnt;
+            continue;
+        }
+    }
+    if (!verbose)
+        printf("\n");
+
+    // save keys to json
+    if ((jsonnamelen > 0) && result) {
+        // Mifare Desfire info
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+
+        PacketResponseNG resp;
+        WaitForResponse(CMD_ACK, &resp);
+
+        iso14a_card_select_t card;
+        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+        uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+
+        uint8_t data[10 + 1 + 2 + 1 + 256 + (4 * 0xE * (24 + 1))] = {0};
+        uint8_t atslen = 0;
+        if (select_status == 1 || select_status == 2) {
+            memcpy(data, card.uid, card.uidlen);
+            data[10] = card.sak;
+            data[11] = card.atqa[1];
+            data[12] = card.atqa[0];
+            atslen = card.ats_len;
+            data[13] = atslen;
+            memcpy(&data[14], card.ats, atslen);
+        }
+
+        // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
+        memcpy(&data[14 + atslen], foundKeys, 4 * 0xE * (24 + 1));
+        saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE);
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -3364,6 +4095,8 @@ static command_t CommandTable[] = {
     {"getvalue",    CmdHF14ADesGetValueData,        IfPm3Iso14443a,  "Get value of file"},
     {"changevalue",    CmdHF14ADesChangeValue,        IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
     {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
+    {"dump",    CmdHF14ADesDump,        IfPm3Iso14443a,  "Dump all files"},
+    {"chk",    CmdHF14aDesChk,       IfPm3Iso14443a,  "Check keys"},
     /*
         ToDo:
 

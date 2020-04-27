@@ -616,7 +616,7 @@ static int CmdHfLTRestore(const char *Cmd) {
             is_data_loaded = loadFileEML(filename, (uint8_t *)dump_data, &dump_datalen);
 
         } else
-            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")"to restore!\n", filename);
+            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", filename);
     }
 
     if (is_data_loaded == PM3_SUCCESS) {

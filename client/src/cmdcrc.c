@@ -22,7 +22,7 @@
 #  endif /* STDIN_FILENO */
 #endif /* _WIN32 */
 
-#include "reveng/reveng.h"
+#include "reveng.h"
 #include "ui.h"
 #include "util.h"
 

@@ -31,11 +31,22 @@ version.c
 *.old
 *.swp
 *.json.bak
+*.pyc
 
 # new build file for add-ons.
 Makefile.platform
 # Cache for detecting platform def changes
 .Makefile.options.cache
+
+# cmake
+client/build/
+
+# Coverity
+cov-int/
+.coverity.conf
+
+# profiling
+*.gcno
 
 !client/resources/hardnested/*.bin
 !client/resources/hardnested_tables/*.z

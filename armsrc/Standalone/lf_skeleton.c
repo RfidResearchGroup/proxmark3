@@ -5,7 +5,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// main code for skeleton  aka IceRun by Iceman
+// main code for skeleton  by Iceman
 //-----------------------------------------------------------------------------
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
@@ -15,19 +15,19 @@
 #include "dbprint.h"
 
 void ModInfo(void) {
-    DbpString("  LF skeleton mode -  aka IceRun (iceman)");
+    DbpString("  LF skeleton mode -  aka Skeleton (iceman)");
 }
 
 void RunMod() {
     StandAloneMode();
-    Dbprintf("[=] LF skeleton code a.k.a IceRun started");
+    Dbprintf("[=] LF skeleton code a.k.a Skeleton started");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // the main loop for your standalone mode
     for (;;) {
         WDT_HIT();
 
-        // exit from IceRun,   send a usbcommand.
+        // exit from RunMod,   send a usbcommand.
         if (data_available()) break;
 
         // Was our button held down or pressed?
