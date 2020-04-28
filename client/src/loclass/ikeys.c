@@ -578,8 +578,10 @@ static void print64bits(const char *name, uint64_t val) {
 static uint64_t testCryptedCSN(uint64_t crypted_csn, uint64_t expected) {
     int retval = 0;
     uint8_t result[8] = {0};
-    if (debug_print) PrintAndLogEx(DEBUG, "debug_print %d", debug_print);
-    if (debug_print) print64bits("    {csn}      ", crypted_csn);
+    if (debug_print) {
+        PrintAndLogEx(DEBUG, "debug_print %d", debug_print);
+        print64bits("    {csn}      ", crypted_csn);
+    }
 
     uint64_t crypted_csn_swapped = swapZvalues(crypted_csn);
 
