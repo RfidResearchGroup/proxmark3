@@ -1469,7 +1469,7 @@ static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_c
         if (resp.status != PM3_SUCCESS) {
             if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
             DropField();
-            return PM3_EWRONGANSVER;
+            return PM3_EWRONGANSWER;
         }
 
         if (resp.data.asBytes[0] == 1)
@@ -1811,7 +1811,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
         if (resp.status != PM3_SUCCESS) {
             if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
             DropField();
-            return PM3_EWRONGANSVER;
+            return PM3_EWRONGANSWER;
         }
 
         result = (struct p *)resp.data.asBytes;

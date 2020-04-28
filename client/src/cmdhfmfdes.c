@@ -534,7 +534,7 @@ static char *GetErrorString(int res, uint16_t *sw) {
             return "Generic TTY error";
         case PM3_EINIT:
             return "Initialization error";
-        case PM3_EWRONGANSVER:
+        case PM3_EWRONGANSWER:
             return "Expected a different answer error";
         case PM3_EOUTOFBOUND:
             return "Memory out-of-bounds error";

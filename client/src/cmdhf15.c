@@ -746,14 +746,14 @@ static int NxpSysInfo(uint8_t *uid) {
 
         if (status < 2) {
             PrintAndLogEx(WARNING, "iso15693 card doesn't answer to NXP systeminfo command");
-            return PM3_EWRONGANSVER;
+            return PM3_EWRONGANSWER;
         }
 
         recv = resp.data.asBytes;
 
         if (recv[0] & ISO15_RES_ERROR) {
             PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-            return PM3_EWRONGANSVER;
+            return PM3_EWRONGANSWER;
         }
 
         bool support_signature = (recv[5] & 0x01);
@@ -855,14 +855,14 @@ static int NxpSysInfo(uint8_t *uid) {
 
             if (status < 2) {
                 PrintAndLogEx(WARNING, "iso15693 card doesn't answer to READ SIGNATURE command");
-                return PM3_EWRONGANSVER;
+                return PM3_EWRONGANSWER;
             }
 
             recv = resp.data.asBytes;
 
             if (recv[0] & ISO15_RES_ERROR) {
                 PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-                return PM3_EWRONGANSVER;
+                return PM3_EWRONGANSWER;
             }
 
             uint8_t signature[32] = {0x00};
@@ -916,14 +916,14 @@ static int CmdHF15Info(const char *Cmd) {
 
     if (status < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     memcpy(uid, recv + 2, sizeof(uid));
@@ -1090,7 +1090,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1149,7 +1149,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1430,7 +1430,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     uint32_t status = resp.oldarg[0];
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 card select failed");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
@@ -1442,7 +1442,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(FAILED, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     // skip status byte
@@ -1512,7 +1512,7 @@ static int CmdHF15Read(const char *Cmd) {
     uint32_t status = resp.oldarg[0];
     if (status < 2) {
         PrintAndLogEx(ERR, "iso15693 card select failed");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
@@ -1524,7 +1524,7 @@ static int CmdHF15Read(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     // print response
@@ -1598,7 +1598,7 @@ static int CmdHF15Write(const char *Cmd) {
     uint32_t status = resp.oldarg[0];
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 card select failed");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
@@ -1610,7 +1610,7 @@ static int CmdHF15Write(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     PrintAndLogEx(NORMAL, "OK");
