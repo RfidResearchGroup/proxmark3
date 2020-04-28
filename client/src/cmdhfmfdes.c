@@ -46,12 +46,12 @@ typedef struct {
     uint8_t keyno;
     uint8_t keylen;
     uint8_t key[24];
-} mfdes_authinput_t;
+} PACKED mfdes_authinput_t;
 
 typedef struct mfdes_auth_res {
     uint8_t sessionkeylen;
     uint8_t sessionkey[24];
-} mfdes_auth_res_t;
+} PACKED mfdes_auth_res_t;
 
 typedef struct mfdes_data {
     uint8_t fileno;  //01
