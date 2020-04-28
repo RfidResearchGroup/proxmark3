@@ -2220,7 +2220,7 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
     int len = 0;
     res = handler_desfire_getvalue(&value, &len);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully read value from File %u:", fileno);
+        PrintAndLogEx(SUCCESS, "Successfully read value from File %u:", fileno[0]);
         PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
         PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
         for (int i = 0; i < len; i += 16) {
