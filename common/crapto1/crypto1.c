@@ -18,7 +18,6 @@
     Copyright (C) 2008-2008 bla <blapost@gmail.com>
 */
 #include <stdlib.h>
-
 #include "crapto1.h"
 #include "parity.h"
 
@@ -34,7 +33,6 @@ void crypto1_init(struct Crypto1State *state, uint64_t key) {
         state->odd  = state->odd  << 1 | BIT(key, (i - 1) ^ 7);
         state->even = state->even << 1 | BIT(key, i ^ 7);
     }
-    return;
 }
 
 void crypto1_deinit(struct Crypto1State *state) {
@@ -42,9 +40,9 @@ void crypto1_deinit(struct Crypto1State *state) {
     state->even = 0;
 }
 
-#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks calloc()/free()
 struct Crypto1State *crypto1_create(uint64_t key) {
-    struct Crypto1State *state = malloc(sizeof(*state));
+    struct Crypto1State *state = calloc(sizeof(*state), sizeof(uint8_t));
     if (!state) return NULL;
     crypto1_init(state, key);
     return state;
