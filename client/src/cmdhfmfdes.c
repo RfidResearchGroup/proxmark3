@@ -3584,16 +3584,22 @@ void DesFill2bPattern(uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t *deskeyLi
         }
 
         *startPattern = pt;
-        if ((*deskeyListLen == MAX_KEYS_LIST_LEN) && (*aeskeyListLen == MAX_KEYS_LIST_LEN) && (*k3kkeyListLen == MAX_KEYS_LIST_LEN))
+        if ( (*deskeyListLen == MAX_KEYS_LIST_LEN) &&
+             (*aeskeyListLen == MAX_KEYS_LIST_LEN) &&
+             (*k3kkeyListLen == MAX_KEYS_LIST_LEN)) {
             break;
+        }
     }
     (*startPattern)++;
 }
 
 static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t deskeyListLen, uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], size_t aeskeyListLen, uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], size_t k3kkeyListLen, uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
+
+    uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
+
     int res = handler_desfire_select_application(aid);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "AID %X does not exist.");
+        PrintAndLogEx(ERR, "AID 0x%06X does not exist.", curaid);
         return res;
     }
 
@@ -3608,24 +3614,31 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
         uint8_t file_ids_len = 0;
         // Get File IDs
         if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
+
             for (int j = file_ids_len - 1; j >= 0; j--) {
+
                 uint8_t filesettings[20] = {0};
                 int fileset_len = 0;
+
                 res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
                 if (res == PM3_SUCCESS) {
+
                     uint16_t accrights = (filesettings[3] << 8) + filesettings[2];
                     int change_access_rights = accrights & 0xF;
                     int read_write_access = (accrights >> 4) & 0xF;
                     int write_access = (accrights >> 8) & 0xF;
                     int read_access = (accrights >> 12) & 0xF;
+
                     if (change_access_rights == 0xE) change_access_rights = 0x0;
                     if (read_write_access == 0xE) read_write_access = 0x0;
                     if (write_access == 0xE) write_access = 0x0;
                     if (read_access == 0xE) read_access = 0x0;
+
                     usedkeys[change_access_rights] = 1;
                     usedkeys[read_write_access] = 1;
                     usedkeys[write_access] = 1;
                     usedkeys[read_access] = 1;
+
                     if (res == PM3_SUCCESS) {
                         switch (fileset_len >> 6) {
                             case 0:
@@ -3644,6 +3657,7 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                     }
                 }
             }
+
             if (file_ids_len == 0) {
                 for (int z = 0; z < 0xE; z++) {
                     usedkeys[z] = 1;
@@ -3654,24 +3668,33 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                 }
             }
         }
-    } else des = true;
+    } else {
+        des = true;
+    }
+
     int error = PM3_SUCCESS;
     bool badlen = false;
+
     mfdes_authinput_t payload;
-    uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
+    mfdes_auth_res_t payload_res;
+
     if (des) {
-        for (int keyno = 0; keyno < 0xE; keyno++)
+
+        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
+
             if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
+
                 for (int curkey = 0; curkey < deskeyListLen; curkey++) {
+
                     payload.keylen = 8;
                     memcpy(payload.key, deskeyList[curkey], 8);
                     payload.mode = MFDES_AUTH_DES;
                     payload.algo = MFDES_ALGO_DES;
                     payload.keyno = keyno;
-                    mfdes_auth_res_t rpayload;
-                    error = handler_desfire_auth(&payload, &rpayload, false);
+
+                    error = handler_desfire_auth(&payload, &payload_res, false);
                     if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
                         foundKeys[0][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
@@ -3681,7 +3704,6 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                         DropField();
                         res = handler_desfire_select_application(aid);
                         if (res != PM3_SUCCESS) {
-                            PrintAndLogEx(ERR, "AID 0x%06X does not exist", curaid);
                             return res;
                         }
                         break;
@@ -3692,20 +3714,26 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                     break;
                 }
             }
+        }
     }
+
     if (tdes) {
-        for (int keyno = 0; keyno < 0xE; keyno++)
+
+        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
+
             if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
+
                 for (int curkey = 0; curkey < aeskeyListLen; curkey++) {
+
                     payload.keylen = 16;
                     memcpy(payload.key, aeskeyList[curkey], 16);
                     payload.mode = MFDES_AUTH_DES;
                     payload.algo = MFDES_ALGO_3DES;
                     payload.keyno = keyno;
-                    mfdes_auth_res_t rpayload;
-                    error = handler_desfire_auth(&payload, &rpayload, false);
+
+                    error = handler_desfire_auth(&payload, &payload_res, false);
                     if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3DES Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[1][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[1][keyno][1], aeskeyList[curkey], 16);
@@ -3715,7 +3743,6 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                         DropField();
                         res = handler_desfire_select_application(aid);
                         if (res != PM3_SUCCESS) {
-                            PrintAndLogEx(ERR, "AID %X does not exist.");
                             return res;
                         }
                         break;
@@ -3726,21 +3753,26 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                     break;
                 }
             }
+        }
     }
 
     if (aes) {
-        for (int keyno = 0; keyno < 0xE; keyno++)
+
+        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
+
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
+
                 for (int curkey = 0; curkey < aeskeyListLen; curkey++) {
+
                     payload.keylen = 16;
                     memcpy(payload.key, aeskeyList[curkey], 16);
                     payload.mode = MFDES_AUTH_AES;
                     payload.algo = MFDES_ALGO_AES;
                     payload.keyno = keyno;
-                    mfdes_auth_res_t rpayload;
-                    error = handler_desfire_auth(&payload, &rpayload, false);
+
+                    error = handler_desfire_auth(&payload, &payload_res, false);
                     if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[2][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[2][keyno][1], aeskeyList[curkey], 16);
@@ -3750,7 +3782,6 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                         DropField();
                         res = handler_desfire_select_application(aid);
                         if (res != PM3_SUCCESS) {
-                            PrintAndLogEx(ERR, "AID %X does not exist.");
                             return res;
                         }
                         break;
@@ -3761,21 +3792,25 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                     break;
                 }
             }
+        }
     }
 
     if (k3kdes) {
-        for (int keyno = 0; keyno < 0xE; keyno++)
+
+        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
+
             if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
+
                 for (int curkey = 0; curkey < k3kkeyListLen; curkey++) {
                     payload.keylen = 24;
                     memcpy(payload.key, k3kkeyList[curkey], 24);
                     payload.mode = MFDES_AUTH_ISO;
                     payload.algo = MFDES_ALGO_3K3DES;
                     payload.keyno = keyno;
-                    mfdes_auth_res_t rpayload;
-                    error = handler_desfire_auth(&payload, &rpayload, false);
+
+                    error = handler_desfire_auth(&payload, &payload_res, false);
                     if (error == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3K3 Key %d        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3K3 Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
                         foundKeys[3][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[3][keyno][1], k3kkeyList[curkey], 16);
@@ -3785,17 +3820,17 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                         DropField();
                         res = handler_desfire_select_application(aid);
                         if (res != PM3_SUCCESS) {
-                            PrintAndLogEx(ERR, "AID %X does not exist.");
                             return res;
                         }
                         break;
                     }
                 }
+
                 if (badlen == true) {
-                    badlen = false;
                     break;
                 }
             }
+        }
     }
     DropField();
     return PM3_SUCCESS;
