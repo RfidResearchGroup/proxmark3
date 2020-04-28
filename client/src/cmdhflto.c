@@ -149,14 +149,14 @@ static int lto_select(uint8_t *id_response, uint8_t id_len, uint8_t *type_respon
     resp_len = id_len;
     status = lto_send_cmd_raw(select_sn_cmd, sizeof(select_sn_cmd), id_response, &resp_len, false, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
-        return PM3_EWRONGANSVER; // REQUEST SERIAL NUMBER failed
+        return PM3_EWRONGANSWER; // REQUEST SERIAL NUMBER failed
     }
 
     memcpy(select_cmd + 2, id_response, sizeof(select_cmd) - 2);
     resp_len = 1;
     status = lto_send_cmd_raw(select_cmd, sizeof(select_cmd), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // SELECT failed
+        return PM3_EWRONGANSWER; // SELECT failed
     }
 
     // tag is now INIT and SELECTED.
@@ -222,12 +222,12 @@ static int lto_rdbl(uint8_t blk, uint8_t *block_responce, uint8_t *block_cnt_res
 
     int status = lto_send_cmd_raw(rdbl_cmd, sizeof(rdbl_cmd), block_responce, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
-        return PM3_EWRONGANSVER; // READ BLOCK failed
+        return PM3_EWRONGANSWER; // READ BLOCK failed
     }
 
     status = lto_send_cmd_raw(rdbl_cnt_cmd, sizeof(rdbl_cnt_cmd), block_cnt_responce, &resp_len, false, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
-        return PM3_EWRONGANSVER; // READ BLOCK CONTINUE failed
+        return PM3_EWRONGANSWER; // READ BLOCK CONTINUE failed
     }
 
     return PM3_SUCCESS;
@@ -334,17 +334,17 @@ static int lto_wrbl(uint8_t blk, uint8_t *data, bool verbose) {
 
     int status = lto_send_cmd_raw(wrbl_cmd, sizeof(wrbl_cmd), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+        return PM3_EWRONGANSWER; // WRITE BLOCK failed
     }
 
     status = lto_send_cmd_raw(wrbl_d00_d15, sizeof(wrbl_d00_d15), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+        return PM3_EWRONGANSWER; // WRITE BLOCK failed
     }
 
     status = lto_send_cmd_raw(wrbl_d16_d31, sizeof(wrbl_d16_d31), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+        return PM3_EWRONGANSWER; // WRITE BLOCK failed
     }
 
     return PM3_SUCCESS;

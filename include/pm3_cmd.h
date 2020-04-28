@@ -613,7 +613,7 @@ typedef struct {
 // Initialization error                 pm3:        error related to trying to initalize the pm3 / fpga for different operations
 #define PM3_EINIT             -15
 // Expected a different answer error    client/pm3: error when expecting one answer and got another one
-#define PM3_EWRONGANSVER      -16
+#define PM3_EWRONGANSWER      -16
 // Memory out-of-bounds error           client/pm3: error when a read/write is outside the expected array
 #define PM3_EOUTOFBOUND       -17
 // exchange with card error             client/pm3: error when cant get answer from card or got an incorrect answer

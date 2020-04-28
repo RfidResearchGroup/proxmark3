@@ -611,7 +611,7 @@ bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, 
         if (GetT55xxBlockData(&read_data) == false)
             return false;
 
-    } else if (res == PM3_EWRONGANSVER) {
+    } else if (res == PM3_EWRONGANSWER) {
 
         // could't decode.  Lets see if this was a block 0 write and try read/detect it auto.
         // this messes up with ppls config..
@@ -852,7 +852,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 
             if (tryDetectModulation(downlink_mode, false) == false) {
                 PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
-                return PM3_EWRONGANSVER;
+                return PM3_EWRONGANSWER;
             } else {
                 PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");
                 usepwd = false;
@@ -867,7 +867,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
         return PM3_ERFTRANS;
 
     if (DecodeT55xxBlock() == false)
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
 
     if (verbose)
         printT55xxBlock(block, page1);
