@@ -1824,15 +1824,15 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     uint8_t aid[3] = {0};
     uint8_t fid[2] = {0};
     uint8_t name[16] = {0};
-    uint8_t keysetting1 = 0;
-    uint8_t keysetting2 = 0;
+    uint8_t keysetting1[1] = {0};
+    uint8_t keysetting2[1] = {0};
     int keylen1 = 1;
     int keylen2 = 1;
     int namelen = 16;
     CLIGetHexWithReturn(1, aid, &aidlength);
     CLIGetHexWithReturn(2, fid, &fidlength);
-    CLIGetHexWithReturn(3, &keysetting1, &keylen1);
-    CLIGetHexWithReturn(4, &keysetting2, &keylen2);
+    CLIGetHexWithReturn(3, keysetting1, &keylen1);
+    CLIGetHexWithReturn(4, keysetting2, &keylen2);
     CLIGetStrWithReturn(5, name, &namelen);
     CLIParserFree();
 
@@ -1882,8 +1882,8 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     aidhdr_t aidhdr;
     memcpy(aidhdr.aid, aid, sizeof(aid));
-    aidhdr.keysetting1 = keysetting1;
-    aidhdr.keysetting2 = keysetting2;
+    aidhdr.keysetting1 = keysetting1[0];
+    aidhdr.keysetting2 = keysetting2[0];
 
     if (usefid) memcpy(aidhdr.fid, fid, sizeof(fid));
 
