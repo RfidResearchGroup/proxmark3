@@ -41,7 +41,6 @@ int main(int argc, char *argv[]) {
     int i, j;
     int numtests;
     int urandomfd;
-    FILE *fp;
 
     if (argc < 2) {
         printf("ht2crack2gentest number\n");
@@ -68,7 +67,7 @@ int main(int argc, char *argv[]) {
         makerandom(nR, 4, urandomfd);
         sprintf(filename, "keystream.key-%s.uid-%s.nR-%s", key, uid, nR);
 
-        fp = fopen(filename, "w");
+        FILE *fp = fopen(filename, "w");
         if (!fp) {
             printf("cannot open file '%s' for writing\n", filename);
             exit(1);
@@ -87,9 +86,7 @@ int main(int argc, char *argv[]) {
 
         fclose(fp);
     }
-
     return 0;
-
 }
 
 
