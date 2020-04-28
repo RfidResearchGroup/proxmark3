@@ -2983,13 +2983,11 @@ int readIclass(bool loop, bool verbose) {
 
                 if (isHidRange) {
                     if (legacy)
-                        PrintAndLogEx(SUCCESS, "      : Possible iClass - legacy credential tag");
+                        PrintAndLogEx(SUCCESS, "      : Possible iClass - "_YELLOW_("legacy")" credential tag");
 
                     if (se_enabled)
-                        PrintAndLogEx(SUCCESS, "      : Possible iClass - SE credential tag");
-                }
+                        PrintAndLogEx(SUCCESS, "      : Possible iClass - "_YELLOW_("SE")" credential tag");
 
-                if (isHidRange) {
                     PrintAndLogEx(SUCCESS, "      : Tag is "_YELLOW_("iClass")", CSN is in HID range");
                 } else {
                     PrintAndLogEx(SUCCESS, "      : Tag is "_YELLOW_("PicoPass")", CSN is not in HID range");
