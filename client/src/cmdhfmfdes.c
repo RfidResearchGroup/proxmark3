@@ -3669,7 +3669,7 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
                         DropField();
                         res = handler_desfire_select_application(aid);
                         if (res != PM3_SUCCESS) {
-                            PrintAndLogEx(ERR, "AID %X does not exist.");
+                            PrintAndLogEx(ERR, "AID 0x%06X does not exist", curaid);
                             return res;
                         }
                         break;
