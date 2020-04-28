@@ -3081,13 +3081,25 @@ static void DecodeAccessRights(uint16_t accrights) {
     if (car == NULL) return;
 
     char *rwa = DecodeAccessValue(read_write_access);
-    if (rwa == NULL) return;
+    if (rwa == NULL) {
+        free(car);
+        return;
+    }
 
     char *wa = DecodeAccessValue(write_access);
-    if (wa == NULL) return;
+    if (wa == NULL) {
+        free(car);
+        free(rwa);
+        return;
+    }
 
     char *ra = DecodeAccessValue(read_access);
-    if (ra == NULL) return;
+    if (ra == NULL) {
+        free(car);
+        free(rwa);
+        free(wa);
+        return;
+    }
 
     PrintAndLogEx(INFO, "     Access Rights: 0x%04X - Change %s - RW %s - W %s - R %s", accrights, car, rwa, wa, ra);
     free(car);
