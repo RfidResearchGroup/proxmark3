@@ -281,6 +281,10 @@ void cmac_generate_subkeys(desfirekey_t key) {
 
 void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac) {
     int kbs = key_block_size(key);
+    if (kbs == 0) {
+       return;
+    }
+
     uint8_t *buffer = malloc(padded_data_length(len, kbs));
 
     memcpy(buffer, data, len);
