@@ -1560,7 +1560,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                     } else if (waveHigh) {
                         bits[bitCnt++] = invert;
                         bits[bitCnt++] = invert;
-                    } else if (!waveHigh) {
+                    } else {
                         bits[bitCnt++] = invert ^ 1;
                         bits[bitCnt++] = invert ^ 1;
                     }
