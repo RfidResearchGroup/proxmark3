@@ -1582,9 +1582,10 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
 
                     if (waveHigh) {
                         bits[bitCnt++] = invert;
-                    } else if (!waveHigh) {
+                    } else {
                         bits[bitCnt++] = invert ^ 1;
                     }
+
                     if (*startIdx == 0) {
                         *startIdx = i - cl_2;
                         if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);
