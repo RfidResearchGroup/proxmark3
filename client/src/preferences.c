@@ -138,7 +138,7 @@ int preferences_save(void) {
 
     if (fileExists(fn)) {
         if (rename(fn, backupFilename) != 0) {
-            PrintAndLogEx(FAILED, "Error - could not backup settings file \"%s\" to \"%s\"", prefGetFilename(), backupFilename);
+            PrintAndLogEx(FAILED, "Error - could not backup settings file \"%s\" to \"%s\"", fn, backupFilename);
             free(fn);
             free(backupFilename);
             return PM3_ESOFT;
@@ -927,7 +927,7 @@ static int CmdPrefShow(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), prefGetFilename());
+    // PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), fn);
     showEmojiState(prefShowNone);
     showHintsState(prefShowNone);
     showColorState(prefShowNone);
