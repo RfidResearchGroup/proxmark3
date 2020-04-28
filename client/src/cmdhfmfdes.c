@@ -2712,8 +2712,8 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     CLIGetHexWithReturn(7, value, &vllen);
 
     int limitedlen = 0;
-    uint8_t limited = 0;
-    CLIGetHexWithReturn(8, &limited, &limitedlen);
+    uint8_t limited[1] = {0};
+    CLIGetHexWithReturn(8, limited, &limitedlen);
 
     CLIParserFree();
 
@@ -2781,7 +2781,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     memcpy(ft.lowerlimit, lowerlimit, 4);
     memcpy(ft.upperlimit, upperlimit, 4);
     memcpy(ft.value, value, 4);
-    ft.limitedcreditenabled = limited;
+    ft.limitedcreditenabled = limited[0];
 
     res = handler_desfire_create_value_file(&ft);
     if (res == PM3_SUCCESS) {
