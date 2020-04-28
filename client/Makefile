@@ -90,6 +90,14 @@ else
 endif
 endif
 
+ifneq ($(SKIPBT),1)
+    BTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs bluez 2>/dev/null)
+endif
+
+ifneq ($(BTLDLIBS),)
+    PM3CFLAGS += -DHAVE_BLUEZ
+endif
+
 ifneq ($(SKIPQT),1)
     # Check for correctly configured Qt5
     QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
@@ -131,6 +139,24 @@ else
     QTGUISRCS = guidummy.cpp
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
+
+$(info ===================================================================)
+$(info Client platform:   $(platform))
+ifeq ($(SKIPQT),1)
+$(info GUI support:       skipped)
+else ifneq ($(QTLDLIBS),)
+$(info GUI support:       QT found, enabled)
+else
+$(info GUI support:       QT not found, disabled)
+endif
+ifeq ($(SKIPBT),1)
+$(info native BT support: skipped)
+else ifneq ($(BTLDLIBS),)
+$(info native BT support: Bluez found, enabled)
+else
+$(info native BT support: Bluez not found, disabled)
+endif
+$(info ===================================================================)
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
@@ -286,7 +312,7 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) $(QTLDLIBS)
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) $(BTLDLIBS) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LDLIBS)  -o $@

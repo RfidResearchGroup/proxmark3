@@ -35,6 +35,9 @@ foreach(_qt_package IN LISTS QT_PACKAGELIST)
     endif(NOT ${_qt_package}_FOUND)
 endforeach()
 
+find_package(PkgConfig)
+pkg_search_module(BLUEZ QUIET bluez)
+
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory(deps)
@@ -207,6 +210,12 @@ else (Qt5_FOUND)
             src/guidummy.cpp
             ${TARGET_SOURCES})
 endif (Qt5_FOUND)
+
+if (BLUEZ_FOUND)
+    message("Bluez library found, building native Bluetooth support :)")
+    add_definitions("-DHAVE_BLUEZ")
+    set(ADDITIONAL_LNK bluetooth ${ADDITIONAL_LNK})
+endif (BLUEZ_FOUND)
 
 add_executable(
         proxmark3

@@ -25,8 +25,10 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbluetooth-dev
 ```
+
+If you don't need the native Bluetooth support in the client, you can skip the installation of `libbluetooth-dev`.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qtbase5-dev`.
 
@@ -35,16 +37,20 @@ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to 
 ## On ArchLinux
 
 ```sh
-sudo pacman -Sy git base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib qt5-base --needed
+sudo pacman -Sy git base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez --needed
 ```
+
+If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez`.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-base`.
 
 ## On Fedora
 
 ```sh
-sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel libatomic
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel bluez-libs-devel libatomic
 ```
+
+If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez-libs-devel`.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-qtbase-devel`.
 
@@ -55,6 +61,8 @@ sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel c
 ```
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `libqt5-qtbase-devel`.
+
+Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
 
 # Clone the RRG/Iceman repository
 

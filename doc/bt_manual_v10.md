@@ -102,7 +102,9 @@ http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp
 
 #### Linux
 
-#### (1) Connecting rdv4.0 with Bluetooth on Linux computer
+#### (1) Connecting rdv4.0 with Bluetooth on Linux computer via native Bluetooth support in the client
+
+This requires to have compiled the client with Bluetooth support.
 
 1. Find the MAC address of the Bluetooth add-on, named PM3_RDV4.0.
 
@@ -114,21 +116,9 @@ Scanning ...
 
 Instead of `aa:bb:cc:dd:ee:ff`, you'll see your MAC address.
 
-2. Bind your BT add-on MAC address to a serial port
+2. Use Proxmark client with Bluetooth MAC address as bt:<mac>
 ```sh
-sudo rfcomm bind rfcomm0 aa:bb:cc:dd:ee:ff
-```
-
-Replace `aa:bb:cc:dd:ee:ff` by your MAC address.
-
-3. The blue state LED on the add-on will keep blinking after the
-connection is established. Only when the Proxmark3 client opens the
-`/dev/rfcomm0` port, the blue LED turns on solid, indicating that the
-connection is successful.
-
-4. Use Proxmark client on BT-serial port
-```sh
-./proxmark3 /dev/rfcomm0
+./proxmark3 bt:aa:bb:cc:dd:ee:ff
 ```
 The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
@@ -171,6 +161,39 @@ turn on solid.
 ```sh
 ./proxmark3 /dev/ttyUSB0
 ```
+
+#### (1b, deprecated) Connecting rdv4.0 with Bluetooth on Linux computer via rfcomm
+
+rfcomm is a deprecated tool which might be unavailable in your Linux distribution.
+
+1. Find the MAC address of the Bluetooth add-on, named PM3_RDV4.0.
+
+```sh
+sudo hcitool scan
+Scanning ...
+  aa:bb:cc:dd:ee:ff PM3_RDV4.0
+```
+
+Instead of `aa:bb:cc:dd:ee:ff`, you'll see your MAC address.
+
+2. Bind your BT add-on MAC address to a serial port
+```sh
+sudo rfcomm bind rfcomm0 aa:bb:cc:dd:ee:ff
+```
+
+Replace `aa:bb:cc:dd:ee:ff` by your MAC address.
+
+3. The blue state LED on the add-on will keep blinking after the
+connection is established. Only when the Proxmark3 client opens the
+`/dev/rfcomm0` port, the blue LED turns on solid, indicating that the
+connection is successful.
+
+4. Use Proxmark client on BT-serial port
+```sh
+./proxmark3 /dev/rfcomm0
+```
+
+See instructions above (method 1) for initial pairing.
 
 #### MacOS
 

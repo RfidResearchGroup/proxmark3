@@ -48,10 +48,16 @@
 #include <fcntl.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
-#include "sys/socket.h"
-#include "sys/un.h"
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#ifdef HAVE_BLUEZ
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/rfcomm.h>
+#endif
 
 #include "comms.h"
+#include "ui.h"
 
 // Taken from https://github.com/unbit/uwsgi/commit/b608eb1772641d525bfde268fe9d6d8d0d5efde7
 #ifndef SOL_TCP
@@ -158,6 +164,52 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         return sp;
     }
 
+    if (memcmp(pcPortName, "bt:", 3) == 0) {
+#ifdef HAVE_BLUEZ
+        if (strlen(pcPortName) != 20) {
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        char *addrstr = strndup(pcPortName + 3, 17);
+
+        if (addrstr == NULL) {
+            printf("Error: malloc\n");
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        struct sockaddr_rc addr = { 0 };
+        addr.rc_family = AF_BLUETOOTH;
+        addr.rc_channel = (uint8_t) 1;
+        if (str2ba(addrstr, &addr.rc_bdaddr) != 0) {
+            PrintAndLogEx(ERR, "Invalid Bluetooth MAC address " _RED_("%s"), addrstr);
+            free(addrstr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        int sfd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+        if (sfd == -1) {
+            PrintAndLogEx(ERR, "Error opening Bluetooth socket");
+            free(addrstr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+            PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
+            close(sfd);
+            free(addrstr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        sp->fd = sfd;
+        return sp;
+#else // HAVE_BLUEZ
+        PrintAndLogEx(ERR, "Sorry, this client doesn't support native Bluetooth addresses");
+        free(sp);
+        return INVALID_SERIAL_PORT;
+#endif // HAVE_BLUEZ
+    }
     // The socket for abstract namespace implement.
     // Is local socket buffer, not a TCP or any net connection!
     // so, you can't connect with address like: 127.0.0.1, or any IP

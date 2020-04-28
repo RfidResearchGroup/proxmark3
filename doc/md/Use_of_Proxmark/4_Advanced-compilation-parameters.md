@@ -19,6 +19,14 @@ make clean
 make SKIPQT=1
 ```
 
+On Linux hosts, if the Bluez headers and library are present, the client will be compiled with native Bluetooth support. It's possible to explicitly skip Bluetooth support with:
+
+```
+make clean
+make SKIPBT=1
+```
+
+
 ## Firmware
 
 By default, the firmware is of course tuned for the Proxmark3 Rdv4.0 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.
