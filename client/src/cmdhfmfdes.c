@@ -1268,6 +1268,7 @@ static int handler_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 
 // --- GET DF NAMES
 static int handler_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
+    *dfname_count=0;
     if (g_debugMode > 1) {
         if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
         if (dfname_count == NULL) PrintAndLogEx(ERR, "DFNAME_COUNT=NULL");
@@ -1277,8 +1278,11 @@ static int handler_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t), true);
-    if (res != PM3_SUCCESS)
+    if (res != PM3_SUCCESS){
+        if (sw == status(MFDES_E_ILLEGAL_COMMAND_CODE)) return PM3_SUCCESS;
         return res;
+    }
+
     if (sw != status(MFDES_S_OPERATION_OK))
         return PM3_ESOFT;
     *dfname_count = recv_len;
