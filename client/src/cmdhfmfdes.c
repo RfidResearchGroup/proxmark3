@@ -3347,8 +3347,9 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
                 uint8_t filesettings[20] = {0};
                 int fileset_len = 0;
-                int res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
                 int maclen = 0; // To be implemented
+
+                res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
                 if (res == PM3_SUCCESS) {
                     if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
                         PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
