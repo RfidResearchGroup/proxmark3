@@ -99,7 +99,7 @@ uint64_t candidates[(1 << 20)];
 bitslice_t initial_bitslices[48];
 size_t filter_pos[20] = {4, 7, 9, 13, 16, 18, 22, 24, 27, 30, 32, 35, 45, 47  };
 size_t thread_count = 8;
-size_t layer_0_found;
+uint64_t layer_0_found;
 void *find_state(void *thread_d);
 static void try_state(uint64_t s);
 
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
     for (size_t i0 = 0; i0 < 1 << 20; i0++) {
         uint64_t state0 = expand(0x5806b4a2d16c, i0);
 
-        if (f(state0) == (target >> 31)) {
+        if (f(state0) == target >> 31) {
             candidates[layer_0_found++] = state0;
         }
     }
