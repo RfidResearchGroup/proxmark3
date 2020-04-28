@@ -359,10 +359,11 @@ bool CheckrpIdHash(json_t *json, uint8_t *hash) {
 
 // check ANSI X9.62 format ECDSA signature (on P-256)
 static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, size_t signLen, uint8_t *authData, size_t authDataLen, bool verbose) {
-    int res;
+
     uint8_t rval[300] = {0};
     uint8_t sval[300] = {0};
-    res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
+
+    int res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
     if (!res) {
         if (verbose) {
             PrintAndLogEx(NORMAL, "  r: %s", sprint_hex(rval, 32));
@@ -383,7 +384,7 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
                          authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4]
                          clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
                          NULL, 0);
-        PrintAndLogEx(DEBUG, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+        PrintAndLogEx(DEBUG, "--xbuf(%d)[%zu]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
 
         res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, publickey, xbuf, xbuflen, sign, signLen, true);
         if (res) {
