@@ -934,7 +934,6 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
         };
     */
     uint8_t i;
-    int res;
     bool is_valid = false;
     for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
 
@@ -942,7 +941,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
         uint8_t key[PUBLIC_ECDA_KEYLEN];
         param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
 
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
+        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
 
         is_valid = (res == 0);
         if (is_valid)
