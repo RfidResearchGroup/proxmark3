@@ -35,8 +35,8 @@ class Plot: public QWidget {
     double GraphPixelsPerPoint; // How many visual pixels are between each sample point (x axis)
     uint32_t CursorAPos;
     uint32_t CursorBPos;
-    void PlotGraph(int *buffer, size_t len, QRect r, QRect r2, QPainter *painter, int graphNum);
-    void PlotDemod(uint8_t *buffer, size_t len, QRect r, QRect r2, QPainter *painter, int graphNum, uint32_t plotOffset);
+    void PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum);
+    void PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotationRect, QPainter *painter, int graphNum, uint32_t plotOffset);
     void plotGridLines(QPainter *painter, QRect r);
     int xCoordOf(int i, QRect r);
     int yCoordOf(int v, QRect r, int maxVal);

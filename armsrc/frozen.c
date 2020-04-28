@@ -780,8 +780,7 @@ int json_printf_array(struct json_out *out, va_list *ap) {
 }
 
 #ifdef _WIN32
-int cs_win_vsnprintf(char *str, size_t size, const char *format,
-                     va_list ap) WEAK;
+int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) WEAK;
 int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
     int res = _vsnprintf(str, size, format, ap);
     va_end(ap);
@@ -863,14 +862,21 @@ struct json_scanf_info {
 
 int json_unescape(const char *src, int slen, char *dst, int dlen) WEAK;
 int json_unescape(const char *src, int slen, char *dst, int dlen) {
-    char *send = (char *) src + slen, *dend = dst + dlen, *orig_dst = dst, *p;
+    if (dst == NULL || dlen == 0)
+	    return JSON_STRING_INVALID;
+
+    char *send = (char *) src + slen;
+    char *dend = dst + dlen;
+    char *orig_dst = dst;
+    char *p;
     const char *esc1 = "\"\\/bfnrt", *esc2 = "\"\\/\b\f\n\r\t";
 
     while (src < send) {
         if (*src == '\\') {
-            if (++src >= send) return JSON_STRING_INCOMPLETE;
+            if (++src >= send) { return JSON_STRING_INCOMPLETE; }
+
             if (*src == 'u') {
-                if (send - src < 5) return JSON_STRING_INCOMPLETE;
+                if (send - src < 5) { return JSON_STRING_INCOMPLETE; }
                 /* Here we go: this is a \u.... escape. Process simple one-byte chars */
                 if (src[1] == '0' && src[2] == '0') {
                     /* This is \u00xx character from the ASCII range */
@@ -881,12 +887,16 @@ int json_unescape(const char *src, int slen, char *dst, int dlen) {
                     return JSON_STRING_INVALID;
                 }
             } else if ((p = (char *) strchr(esc1, *src)) != NULL) {
-                if (dst < dend) *dst = esc2[p - esc1];
+                if (dst < dend) {
+                    *dst = esc2[p - esc1];
+                }
             } else {
                 return JSON_STRING_INVALID;
             }
         } else {
-            if (dst < dend) *dst = *src;
+            if (dst < dend) {
+                *dst = *src;
+            }
         }
         dst++;
         src++;

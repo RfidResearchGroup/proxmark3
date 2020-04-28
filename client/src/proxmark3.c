@@ -38,7 +38,7 @@
 #endif
 
 // Used to enable/disable use of preferences json file
-// #define USE_PREFERENCE_FILE
+#define USE_PREFERENCE_FILE
 
 #ifdef _WIN32
 
@@ -412,21 +412,54 @@ static void set_my_executable_path(void) {
 }
 
 static const char *my_user_directory = NULL;
-static char _cwd_Buffer [FILENAME_MAX] = {0};
+// static char _cwd_Buffer [FILENAME_MAX] = {0};
 
 const char *get_my_user_directory(void) {
     return my_user_directory;
 }
+
 static void set_my_user_directory(void) {
+    /*    my_user_directory = getenv("HOME");
+
+        // if not found, default to current directory
+        if (my_user_directory == NULL) {
+            my_user_directory = GetCurrentDir(_cwd_Buffer, sizeof(_cwd_Buffer));
+            // change all slashs to / (windows should not care...
+            for (int i = 0; i < strlen(_cwd_Buffer); i++)
+                if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
+            //      my_user_directory = ".";
+        }
+    */
     my_user_directory = getenv("HOME");
 
     // if not found, default to current directory
     if (my_user_directory == NULL) {
-        my_user_directory = GetCurrentDir(_cwd_Buffer, sizeof(_cwd_Buffer));
-        // change all slashs to / (windows should not care...
-        for (int i = 0; i < strlen(_cwd_Buffer); i++)
-            if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
-        //      my_user_directory = ".";
+
+        char *cwd_Buffer = NULL;
+        uint16_t pathLen = FILENAME_MAX; // should be a good starting point
+        bool error = false;
+
+        cwd_Buffer = (char *)calloc(pathLen, sizeof(uint8_t));
+
+        while (!error && (GetCurrentDir(cwd_Buffer, pathLen) == NULL)) {
+            if (errno == ERANGE) {  // Need bigger buffer
+                pathLen += 10;      // if buffer was too small add 10 characters and try again
+                cwd_Buffer = realloc(cwd_Buffer, pathLen);
+            } else {
+                error = true;
+                free(cwd_Buffer);
+                cwd_Buffer = NULL;
+            }
+            printf("Len... %d\n", pathLen);
+        }
+
+        if (!error) {
+
+            for (int i = 0; i < strlen(cwd_Buffer); i++)
+                if (cwd_Buffer[i] == '\\') cwd_Buffer[i] = '/';
+
+            my_user_directory = cwd_Buffer;
+        }
     }
 }
 
@@ -668,10 +701,6 @@ int main(int argc, char *argv[]) {
     // Load Settings and assign
     // This will allow the command line to override the settings.json values
     preferences_load();
-    // Change height/width (Rows,Cols) - Testing
-    // printf ("\e[8;50;100t");
-    // printf ("\e[3;50;50t"); // x,y
-    //printf ("Path : %s \n",my_user_directory);
     // quick patch for debug level
     g_debugMode = session.client_debug_level;
     // settings_save ();
@@ -877,6 +906,12 @@ int main(int argc, char *argv[]) {
             session.supports_colors = true;
             session.emoji_mode = EMOJI;
         }
+    } else {
+        // even if prefs, we disable colors if stdin or stdout is not a TTY
+        if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
+            session.supports_colors = false;
+            session.emoji_mode = ALTTEXT;
+        }
     }
 #else
     if (session.stdinOnTTY && session.stdoutOnTTY) {
@@ -945,9 +980,22 @@ int main(int argc, char *argv[]) {
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
     if (!session.preferences_loaded) {
+        PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         session.preferences_loaded = true;
+    } /* else {
+        // Set device debug level
+        PrintAndLogEx(INFO,"setting device debug loglevel");
+        if (session.pm3_present) {
+           SendCommandNG(CMD_SET_DBGMODE, &session.device_debug_level, 1);
+           PacketResponseNG resp;
+            if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false)
+                PrintAndLogEx (INFO,"failed to set device debug loglevel");
+        }
+        else
+            PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
+    */
 #endif
 
 #ifdef HAVE_GUI

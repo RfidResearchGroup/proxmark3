@@ -83,7 +83,7 @@ else
     LDLIBS := -L/usr/local/opt/readline/lib $(LDLIBS)
     LIBS := -I/usr/local/opt/readline/include $(LIBS)
     # cf brew info qt: qt not symlinked anymore
-    PKG_CONFIG_PATH := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
+    PKG_CONFIG_ENV := PKG_CONFIG_ENV=/usr/local/opt/qt/lib/pkgconfig
 else
     LUALIB +=  -ldl
     LUAPLATFORM = linux
@@ -92,16 +92,16 @@ endif
 
 ifneq ($(SKIPQT),1)
     # Check for correctly configured Qt5
-    QTINCLUDES = $(shell $(PKG_CONFIG_PATH) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
-    QTLDLIBS = $(shell $(PKG_CONFIG_PATH) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
-    MOC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=host_bins Qt5Core)/moc
-    UIC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=host_bins Qt5Core)/uic
+    QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
+    QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
+    MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/moc
+    UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/uic
     ifeq ($(QTINCLUDES), )
     # if Qt5 not found check for correctly configured Qt4
-        QTINCLUDES = $(shell $(PKG_CONFIG_PATH) pkg-config --cflags QtCore QtGui 2>/dev/null)
-        QTLDLIBS = $(shell $(PKG_CONFIG_PATH) pkg-config --libs QtCore QtGui 2>/dev/null)
-        MOC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=moc_location QtCore)
-        UIC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=uic_location QtCore)
+        QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags QtCore QtGui 2>/dev/null)
+        QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs QtCore QtGui 2>/dev/null)
+        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=moc_location QtCore)
+        UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=uic_location QtCore)
     else
         # On OSX Qt5 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
         PM3CXXFLAGS += -fPIC -std=c++11

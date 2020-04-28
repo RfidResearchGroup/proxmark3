@@ -1,4 +1,4 @@
-CFLAGS?=-Wall
+CFLAGS?=-Wall -Werror -O3
 LIBS=
 VPATH=../common
 INC=-I ../common

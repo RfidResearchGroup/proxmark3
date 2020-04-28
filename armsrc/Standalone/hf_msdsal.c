@@ -371,40 +371,36 @@ void RunMod() {
                     Dbhexdump(len, receivedCmd, false);
 
                     if (receivedCmd[0] == 0x02 || receivedCmd[0] == 0x03) { //Emulate a Visa MSD(Magnetic stripe data) card
-                        uint8_t ppsea[39] = {0x6F, 0x23, 0x84, 0x0E, 0x32, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46, 0x30, 0x31, 0xA5, 0x11, 0xBF, 0x0C, 0x0E, 0x61, 0x0C, 0x4F, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0x87, 0x01, 0x01, 0x90, 0x00};
-                        uint8_t processing[10] = {0x80, 0x06, 0x00, 0x80, 0x08, 0x01, 0x01, 0x00, 0x90, 0x00};
-                        uint8_t visauid[34] = {0x6F, 0x1E, 0x84, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0xA5, 0x13, 0x50, 0x0B, 0x56, 0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44, 0x49, 0x54, 0x9F, 0x38, 0x03, 0x9F, 0x66, 0x02, 0x90, 0x00};
-
-                        uint8_t last[4] =  {0x70, 0x15, 0x57, 0x13};
-                        uint8_t card[25];
-                        uint8_t statusapdu[2] = {0x90, 0x00};
-
-                        uint8_t finished[2] = {0x6f, 0x00};
-
-                        memcpy(&card[0], last, sizeof(last));
-                        memcpy(&card[4], token, sizeof(token));
-                        memcpy(&card[23], statusapdu, sizeof(statusapdu));
-
                         dynamic_response_info.response[0] = receivedCmd[0];
 
                         //Depending on card reader commands, the Proxmark will answer to fool the reader
                         if (receivedCmd[2] == 0xA4 && receivedCmd[6] == 0x32 && prevCmd == 0) {                                 //Respond with PPSE
+                            uint8_t ppsea[39] = {0x6F, 0x23, 0x84, 0x0E, 0x32, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46, 0x30, 0x31, 0xA5, 0x11, 0xBF, 0x0C, 0x0E, 0x61, 0x0C, 0x4F, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0x87, 0x01, 0x01, 0x90, 0x00};
                             memcpy(&dynamic_response_info.response[1], ppsea, sizeof(ppsea));
                             dynamic_response_info.response_n = sizeof(ppsea) + 1;
                             prevCmd++;
                         } else if (receivedCmd[2] == 0xA4 && receivedCmd[10] == 0x03 && receivedCmd[11] == 0x10 && prevCmd == 1) { //Respond Visa AID
-                            memcpy(&dynamic_response_info.response[1], visauid, sizeof(visauid));
-                            dynamic_response_info.response_n = sizeof(visauid) + 1;
+                            uint8_t visauid_long[34] = {0x6F, 0x1E, 0x84, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0xA5, 0x13, 0x50, 0x0B, 0x56, 0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44, 0x49, 0x54, 0x9F, 0x38, 0x03, 0x9F, 0x66, 0x02, 0x90, 0x00};
+                            memcpy(&dynamic_response_info.response[1], visauid_long, sizeof(visauid_long));
+                            dynamic_response_info.response_n = sizeof(visauid_long) + 1;
                             prevCmd++;
                         } else if (receivedCmd[1] == 0x80 && receivedCmd[2] == 0xA8 && receivedCmd[6] == 0x83  && prevCmd == 2) { //GET PROCESSING
-                            memcpy(&dynamic_response_info.response[1], processing, sizeof(processing));
-                            dynamic_response_info.response_n = sizeof(processing) + 1;
+                            uint8_t processing_long[10] = {0x80, 0x06, 0x00, 0x80, 0x08, 0x01, 0x01, 0x00, 0x90, 0x00};
+                            memcpy(&dynamic_response_info.response[1], processing_long, sizeof(processing_long));
+                            dynamic_response_info.response_n = sizeof(processing_long) + 1;
                             prevCmd++;
                         } else if (receivedCmd[1] == 0x00 && receivedCmd[2] == 0xB2  && prevCmd == 3) {                         //SFI
+                            uint8_t last[4] =  {0x70, 0x15, 0x57, 0x13};
+                            uint8_t statusapdu[2] = {0x90, 0x00};
+                            uint8_t card[25];
+                            memcpy(&card[0], last, sizeof(last));
+                            memcpy(&card[4], token, sizeof(token));
+                            memcpy(&card[23], statusapdu, sizeof(statusapdu));
                             memcpy(&dynamic_response_info.response[1], card, sizeof(card));
                             dynamic_response_info.response_n = sizeof(card) + 1;
                             prevCmd++;
                         } else {
+                            uint8_t finished[2] = {0x6f, 0x00};
                             memcpy(&dynamic_response_info.response[1], finished, sizeof(finished));
                             dynamic_response_info.response_n = sizeof(finished) + 1;
                             if (prevCmd == 5) {

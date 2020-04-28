@@ -9,6 +9,7 @@
 #define PREFERENCES_H_
 
 #include "fileutils.h"
+#include <errno.h>
 
 // Current working directory will be prepended.
 #define preferencesFilename "preferences.json"

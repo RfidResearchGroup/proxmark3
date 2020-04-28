@@ -108,9 +108,17 @@ while true; do
   printf "\n${C_BLUE}Testing data manipulation:${C_NC}\n"
   if ! CheckExecute "reveng test"                      "$PM3BIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
   if ! CheckExecute "mfu pwdgen test"                  "$PM3BIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
-  
+
   printf "\n${C_BLUE}Testing LF:${C_NC}\n"
-  if ! CheckExecute "lf em4x05 test"                   "$PM3BIN -c 'data load traces/em4x05.pm3;lf search'" "FDX-B ID found"; then break; fi
+  if ! CheckExecute "lf em4x05 test"      "$PM3BIN -c 'data load traces/em4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
+  if ! CheckExecute "lf em410x test"      "$PM3BIN -c 'data load traces/EM4102-1.pm3;lf search 1'" "EM410x ID found"; then break; fi
+  if ! CheckExecute "lf visa2000 test"    "$PM3BIN -c 'data load traces/visa2000.pm3;lf search 1'" "Visa2000 ID found"; then break; fi
+  if ! CheckExecute "lf awid test"        "$PM3BIN -c 'data load traces/AWID-15-259.pm3;lf search 1'" "AWID ID found"; then break; fi
+  if ! CheckExecute "lf securakey test"   "$PM3BIN -c 'data load traces/securakey-64169.pm3;lf search 1 '" "Securakey ID found"; then break; fi
+  if ! CheckExecute "lf keri test"        "$PM3BIN -c 'data load traces/keri.pm3;lf search 1'" "Pyramid ID found"; then break; fi
+  if ! CheckExecute "lf HID Prox test" "$PM3BIN -c 'data load traces/hid-proxCardII-05512-11432784-1.pm3;lf search 1'" "HID Prox ID found"; then break; fi
+  if ! CheckExecute "lf Paradox test"     "$PM3BIN -c 'data load traces/Paradox-96_40426-APJN08.pm3;lf search 1'" "Paradox ID found"; then break; fi
+  if ! CheckExecute "lf IO Prox test"     "$PM3BIN -c 'data load traces/ioprox-XSF-01-3B-44725.pm3;lf search 1'" "IO Prox ID found"; then break; fi
 
   printf "\n${C_BLUE}Testing HF:${C_NC}\n"
   if ! CheckExecute "hf mf offline text"               "$PM3BIN -c 'hf mf'" "at_enc"; then break; fi

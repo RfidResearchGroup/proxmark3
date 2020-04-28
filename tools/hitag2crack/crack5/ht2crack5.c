@@ -99,21 +99,29 @@ uint64_t candidates[(1 << 20)];
 bitslice_t initial_bitslices[48];
 size_t filter_pos[20] = {4, 7, 9, 13, 16, 18, 22, 24, 27, 30, 32, 35, 45, 47  };
 size_t thread_count = 8;
-size_t layer_0_found;
+uint64_t layer_0_found;
 void *find_state(void *thread_d);
 static void try_state(uint64_t s);
 
 int main(int argc, char *argv[]) {
+
+    if (argc < 6) {
+        printf("%s UID {nR1} {aR1} {nR2} {aR2}\n", argv[0]);
+        exit(1);
+    }
+
     // set constants
     memset(bs_ones.bytes, 0xff, VECTOR_SIZE);
     memset(bs_zeroes.bytes, 0x00, VECTOR_SIZE);
 
     uint32_t target = 0;
 
-    if (argc < 6) {
-        printf("%s UID {nR1} {aR1} {nR2} {aR2}\n", argv[0]);
-        exit(1);
-    }
+#ifndef __WIN32
+	thread_count = sysconf(_SC_NPROCESSORS_CONF);
+	if ( thread_count < 2)
+		thread_count = 2;
+#endif  /* _WIN32 */
+
 
     if (!strncmp(argv[1], "0x", 2) || !strncmp(argv[1], "0X", 2)) {
         uid = rev32(hexreversetoulong(argv[1] + 2));
@@ -181,16 +189,20 @@ int main(int argc, char *argv[]) {
 }
 
 void *find_state(void *thread_d) {
-    size_t thread = (size_t)thread_d;
+    uint64_t thread = (uint64_t)thread_d;
 
-    for (size_t index = thread; index < layer_0_found; index += thread_count) {
+    for (uint64_t index = thread; index < layer_0_found; index += thread_count) {
+
         if (((index / thread_count) & 0xFF) == 0)
-            printf("Thread %lu slice %lu/%lu\n", thread, index / thread_count / 256 + 1, layer_0_found / thread_count / 256);
+            printf("Thread %" PRIu64 " slice %" PRIu64 "/%" PRIu64 "\n", thread, index / thread_count / 256 + 1, layer_0_found / thread_count / 256);
+
         uint64_t state0 = candidates[index];
         bitslice(state0 >> 2, &state[0], 46, false);
+
         for (size_t bit = 0; bit < 8; bit++) {
             state[-2 + filter_pos[bit]] = initial_bitslices[bit];
         }
+
         for (uint16_t i1 = 0; i1 < (1 << (bits[1] + 1) >> 8); i1++) {
             state[-2 + 27].value = ((bool)(i1 & 0x1)) ? bs_ones.value : bs_zeroes.value;
             state[-2 + 30].value = ((bool)(i1 & 0x2)) ? bs_ones.value : bs_zeroes.value;
@@ -208,6 +220,7 @@ void *find_state(void *thread_d) {
             const bitslice_value_t filter1 = f_c_bs(filter1_0, filter1_1, filter1_2, filter1_3, filter1_4);
             bitslice_t results1;
             results1.value = filter1 ^ keystream[1].value;
+
             if (results1.bytes64[0] == 0
                     && results1.bytes64[1] == 0
                     && results1.bytes64[2] == 0
@@ -226,6 +239,7 @@ void *find_state(void *thread_d) {
             const bitslice_value_t filter10_0 = f_a_bs(state[-2 + 12].value, state[-2 + 13].value, state[-2 + 15].value, state[-2 + 16].value);
             const bitslice_value_t filter11_0 = f_a_bs(state[-2 + 13].value, state[-2 + 14].value, state[-2 + 16].value, state[-2 + 17].value);
             const bitslice_value_t filter12_0 = f_a_bs(state[-2 + 14].value, state[-2 + 15].value, state[-2 + 17].value, state[-2 + 18].value);
+
             for (uint16_t i2 = 0; i2 < (1 << (bits[2] + 1)); i2++) {
                 state[-2 + 10].value = ((bool)(i2 & 0x1)) ? bs_ones.value : bs_zeroes.value;
                 state[-2 + 19].value = ((bool)(i2 & 0x2)) ? bs_ones.value : bs_zeroes.value;
@@ -239,6 +253,7 @@ void *find_state(void *thread_d) {
                 const bitslice_value_t filter2 = f_c_bs(filter2_0, filter2_1, filter2_2, filter2_3, filter2_4);
                 bitslice_t results2;
                 results2.value = results1.value & (filter2 ^ keystream[2].value);
+
                 if (results2.bytes64[0] == 0
                         && results2.bytes64[1] == 0
                         && results2.bytes64[2] == 0
@@ -257,6 +272,7 @@ void *find_state(void *thread_d) {
                 const bitslice_value_t filter10_1 = f_b_bs(state[-2 + 18].value, state[-2 + 22].value, state[-2 + 24].value, state[-2 + 25].value);
                 const bitslice_value_t filter10_2 = f_b_bs(state[-2 + 27].value, state[-2 + 31].value, state[-2 + 33].value, state[-2 + 36].value);
                 const bitslice_value_t filter11_1 = f_b_bs(state[-2 + 19].value, state[-2 + 23].value, state[-2 + 25].value, state[-2 + 26].value);
+
                 for (uint8_t i3 = 0; i3 < (1 << bits[3]); i3++) {
                     state[-2 + 11].value = ((bool)(i3 & 0x1)) ? bs_ones.value : bs_zeroes.value;
                     state[-2 + 20].value = ((bool)(i3 & 0x2)) ? bs_ones.value : bs_zeroes.value;
@@ -268,6 +284,7 @@ void *find_state(void *thread_d) {
                     const bitslice_value_t filter3 = f_c_bs(filter3_0, filter3_1, filter3_2, filter3_3, filter3_4);
                     bitslice_t results3;
                     results3.value = results2.value & (filter3 ^ keystream[3].value);
+
                     if (results3.bytes64[0] == 0
                             && results3.bytes64[1] == 0
                             && results3.bytes64[2] == 0
@@ -275,6 +292,7 @@ void *find_state(void *thread_d) {
                        ) {
                         continue;
                     }
+
                     state[-2 + 51].value = lfsr_bs(3);
                     state[-2 + 52].value = lfsr_bs(4);
                     state[-2 + 53].value = lfsr_bs(5);
@@ -291,6 +309,7 @@ void *find_state(void *thread_d) {
                     const bitslice_value_t filter9_4 = f_a_bs(state[-2 + 43].value, state[-2 + 52].value, state[-2 + 53].value, state[-2 + 55].value);
                     const bitslice_value_t filter11_2 = f_b_bs(state[-2 + 28].value, state[-2 + 32].value, state[-2 + 34].value, state[-2 + 37].value);
                     const bitslice_value_t filter12_1 = f_b_bs(state[-2 + 20].value, state[-2 + 24].value, state[-2 + 26].value, state[-2 + 27].value);
+
                     for (uint8_t i4 = 0; i4 < (1 << bits[4]); i4++) {
                         state[-2 + 38].value = ((bool)(i4 & 0x1)) ? bs_ones.value : bs_zeroes.value;
                         // 0xff87ffffffff
@@ -298,6 +317,7 @@ void *find_state(void *thread_d) {
                         const bitslice_value_t filter4 = f_c_bs(filter4_0, filter4_1, filter4_2, filter4_3, filter4_4);
                         bitslice_t results4;
                         results4.value = results3.value & (filter4 ^ keystream[4].value);
+
                         if (results4.bytes64[0] == 0
                                 && results4.bytes64[1] == 0
                                 && results4.bytes64[2] == 0
@@ -305,8 +325,10 @@ void *find_state(void *thread_d) {
                            ) {
                             continue;
                         }
+
                         const bitslice_value_t filter5_3 = f_b_bs(state[-2 + 33].value, state[-2 + 34].value, state[-2 + 36].value, state[-2 + 38].value);
                         const bitslice_value_t filter12_2 = f_b_bs(state[-2 + 29].value, state[-2 + 33].value, state[-2 + 35].value, state[-2 + 38].value);
+
                         for (uint8_t i5 = 0; i5 < (1 << bits[5]); i5++) {
                             state[-2 + 39].value = ((bool)(i5 & 0x1)) ? bs_ones.value : bs_zeroes.value;
                             // 0xffc7ffffffff
@@ -314,6 +336,7 @@ void *find_state(void *thread_d) {
                             const bitslice_value_t filter5 = f_c_bs(filter5_0, filter5_1, filter5_2, filter5_3, filter5_4);
                             bitslice_t results5;
                             results5.value = results4.value & (filter5 ^ keystream[5].value);
+
                             if (results5.bytes64[0] == 0
                                     && results5.bytes64[1] == 0
                                     && results5.bytes64[2] == 0
@@ -321,7 +344,9 @@ void *find_state(void *thread_d) {
                                ) {
                                 continue;
                             }
+
                             const bitslice_value_t filter6_3 = f_b_bs(state[-2 + 34].value, state[-2 + 35].value, state[-2 + 37].value, state[-2 + 39].value);
+
                             for (uint8_t i6 = 0; i6 < (1 << bits[6]); i6++) {
                                 state[-2 + 40].value = ((bool)(i6 & 0x1)) ? bs_ones.value : bs_zeroes.value;
                                 // 0xffe7ffffffff
@@ -329,6 +354,7 @@ void *find_state(void *thread_d) {
                                 const bitslice_value_t filter6 = f_c_bs(filter6_0, filter6_1, filter6_2, filter6_3, filter6_4);
                                 bitslice_t results6;
                                 results6.value = results5.value & (filter6 ^ keystream[6].value);
+
                                 if (results6.bytes64[0] == 0
                                         && results6.bytes64[1] == 0
                                         && results6.bytes64[2] == 0
@@ -336,7 +362,9 @@ void *find_state(void *thread_d) {
                                    ) {
                                     continue;
                                 }
+
                                 const bitslice_value_t filter7_3 = f_b_bs(state[-2 + 35].value, state[-2 + 36].value, state[-2 + 38].value, state[-2 + 40].value);
+
                                 for (uint8_t i7 = 0; i7 < (1 << bits[7]); i7++) {
                                     state[-2 + 41].value = ((bool)(i7 & 0x1)) ? bs_ones.value : bs_zeroes.value;
                                     // 0xfff7ffffffff
@@ -351,9 +379,11 @@ void *find_state(void *thread_d) {
                                        ) {
                                         continue;
                                     }
+
                                     const bitslice_value_t filter8_3 = f_b_bs(state[-2 + 36].value, state[-2 + 37].value, state[-2 + 39].value, state[-2 + 41].value);
                                     const bitslice_value_t filter10_3 = f_b_bs(state[-2 + 38].value, state[-2 + 39].value, state[-2 + 41].value, state[-2 + 43].value);
                                     const bitslice_value_t filter12_3 = f_b_bs(state[-2 + 40].value, state[-2 + 41].value, state[-2 + 43].value, state[-2 + 45].value);
+
                                     for (uint8_t i8 = 0; i8 < (1 << bits[8]); i8++) {
                                         state[-2 + 42].value = ((bool)(i8 & 0x1)) ? bs_ones.value : bs_zeroes.value;
                                         // 0xffffffffffff
@@ -363,6 +393,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter8 = f_c_bs(filter8_0, filter8_1, filter8_2, filter8_3, filter8_4);
                                         bitslice_t results8;
                                         results8.value = results7.value & (filter8 ^ keystream[8].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -370,8 +401,10 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         const bitslice_value_t filter9 = f_c_bs(filter9_0, filter9_1, filter9_2, filter9_3, filter9_4);
                                         results8.value &= (filter9 ^ keystream[9].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -383,6 +416,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter10_4 = f_a_bs(state[-2 + 44].value, state[-2 + 53].value, state[-2 + 54].value, state[-2 + 56].value);
                                         const bitslice_value_t filter10 = f_c_bs(filter10_0, filter10_1, filter10_2, filter10_3, filter10_4);
                                         results8.value &= (filter10 ^ keystream[10].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -390,10 +424,12 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 57].value = lfsr_bs(9);
                                         const bitslice_value_t filter11_4 = f_a_bs(state[-2 + 45].value, state[-2 + 54].value, state[-2 + 55].value, state[-2 + 57].value);
                                         const bitslice_value_t filter11 = f_c_bs(filter11_0, filter11_1, filter11_2, filter11_3, filter11_4);
                                         results8.value &= (filter11 ^ keystream[11].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -401,10 +437,12 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 58].value = lfsr_bs(10);
                                         const bitslice_value_t filter12_4 = f_a_bs(state[-2 + 46].value, state[-2 + 55].value, state[-2 + 56].value, state[-2 + 58].value);
                                         const bitslice_value_t filter12 = f_c_bs(filter12_0, filter12_1, filter12_2, filter12_3, filter12_4);
                                         results8.value &= (filter12 ^ keystream[12].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -412,6 +450,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 59].value = lfsr_bs(11);
                                         const bitslice_value_t filter13_0 = f_a_bs(state[-2 + 15].value, state[-2 + 16].value, state[-2 + 18].value, state[-2 + 19].value);
                                         const bitslice_value_t filter13_1 = f_b_bs(state[-2 + 21].value, state[-2 + 25].value, state[-2 + 27].value, state[-2 + 28].value);
@@ -420,6 +459,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter13_4 = f_a_bs(state[-2 + 47].value, state[-2 + 56].value, state[-2 + 57].value, state[-2 + 59].value);
                                         const bitslice_value_t filter13 = f_c_bs(filter13_0, filter13_1, filter13_2, filter13_3, filter13_4);
                                         results8.value &= (filter13 ^ keystream[13].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -427,6 +467,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 60].value = lfsr_bs(12);
                                         const bitslice_value_t filter14_0 = f_a_bs(state[-2 + 16].value, state[-2 + 17].value, state[-2 + 19].value, state[-2 + 20].value);
                                         const bitslice_value_t filter14_1 = f_b_bs(state[-2 + 22].value, state[-2 + 26].value, state[-2 + 28].value, state[-2 + 29].value);
@@ -435,6 +476,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter14_4 = f_a_bs(state[-2 + 48].value, state[-2 + 57].value, state[-2 + 58].value, state[-2 + 60].value);
                                         const bitslice_value_t filter14 = f_c_bs(filter14_0, filter14_1, filter14_2, filter14_3, filter14_4);
                                         results8.value &= (filter14 ^ keystream[14].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -442,6 +484,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 61].value = lfsr_bs(13);
                                         const bitslice_value_t filter15_0 = f_a_bs(state[-2 + 17].value, state[-2 + 18].value, state[-2 + 20].value, state[-2 + 21].value);
                                         const bitslice_value_t filter15_1 = f_b_bs(state[-2 + 23].value, state[-2 + 27].value, state[-2 + 29].value, state[-2 + 30].value);
@@ -450,6 +493,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter15_4 = f_a_bs(state[-2 + 49].value, state[-2 + 58].value, state[-2 + 59].value, state[-2 + 61].value);
                                         const bitslice_value_t filter15 = f_c_bs(filter15_0, filter15_1, filter15_2, filter15_3, filter15_4);
                                         results8.value &= (filter15 ^ keystream[15].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -457,6 +501,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 62].value = lfsr_bs(14);
                                         const bitslice_value_t filter16_0 = f_a_bs(state[-2 + 18].value, state[-2 + 19].value, state[-2 + 21].value, state[-2 + 22].value);
                                         const bitslice_value_t filter16_1 = f_b_bs(state[-2 + 24].value, state[-2 + 28].value, state[-2 + 30].value, state[-2 + 31].value);
@@ -465,6 +510,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter16_4 = f_a_bs(state[-2 + 50].value, state[-2 + 59].value, state[-2 + 60].value, state[-2 + 62].value);
                                         const bitslice_value_t filter16 = f_c_bs(filter16_0, filter16_1, filter16_2, filter16_3, filter16_4);
                                         results8.value &= (filter16 ^ keystream[16].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -472,6 +518,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 63].value = lfsr_bs(15);
                                         const bitslice_value_t filter17_0 = f_a_bs(state[-2 + 19].value, state[-2 + 20].value, state[-2 + 22].value, state[-2 + 23].value);
                                         const bitslice_value_t filter17_1 = f_b_bs(state[-2 + 25].value, state[-2 + 29].value, state[-2 + 31].value, state[-2 + 32].value);
@@ -480,6 +527,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter17_4 = f_a_bs(state[-2 + 51].value, state[-2 + 60].value, state[-2 + 61].value, state[-2 + 63].value);
                                         const bitslice_value_t filter17 = f_c_bs(filter17_0, filter17_1, filter17_2, filter17_3, filter17_4);
                                         results8.value &= (filter17 ^ keystream[17].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -487,6 +535,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 64].value = lfsr_bs(16);
                                         const bitslice_value_t filter18_0 = f_a_bs(state[-2 + 20].value, state[-2 + 21].value, state[-2 + 23].value, state[-2 + 24].value);
                                         const bitslice_value_t filter18_1 = f_b_bs(state[-2 + 26].value, state[-2 + 30].value, state[-2 + 32].value, state[-2 + 33].value);
@@ -495,6 +544,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter18_4 = f_a_bs(state[-2 + 52].value, state[-2 + 61].value, state[-2 + 62].value, state[-2 + 64].value);
                                         const bitslice_value_t filter18 = f_c_bs(filter18_0, filter18_1, filter18_2, filter18_3, filter18_4);
                                         results8.value &= (filter18 ^ keystream[18].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -502,6 +552,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 65].value = lfsr_bs(17);
                                         const bitslice_value_t filter19_0 = f_a_bs(state[-2 + 21].value, state[-2 + 22].value, state[-2 + 24].value, state[-2 + 25].value);
                                         const bitslice_value_t filter19_1 = f_b_bs(state[-2 + 27].value, state[-2 + 31].value, state[-2 + 33].value, state[-2 + 34].value);
@@ -510,6 +561,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter19_4 = f_a_bs(state[-2 + 53].value, state[-2 + 62].value, state[-2 + 63].value, state[-2 + 65].value);
                                         const bitslice_value_t filter19 = f_c_bs(filter19_0, filter19_1, filter19_2, filter19_3, filter19_4);
                                         results8.value &= (filter19 ^ keystream[19].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -517,6 +569,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 66].value = lfsr_bs(18);
                                         const bitslice_value_t filter20_0 = f_a_bs(state[-2 + 22].value, state[-2 + 23].value, state[-2 + 25].value, state[-2 + 26].value);
                                         const bitslice_value_t filter20_1 = f_b_bs(state[-2 + 28].value, state[-2 + 32].value, state[-2 + 34].value, state[-2 + 35].value);
@@ -525,6 +578,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter20_4 = f_a_bs(state[-2 + 54].value, state[-2 + 63].value, state[-2 + 64].value, state[-2 + 66].value);
                                         const bitslice_value_t filter20 = f_c_bs(filter20_0, filter20_1, filter20_2, filter20_3, filter20_4);
                                         results8.value &= (filter20 ^ keystream[20].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -532,6 +586,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 67].value = lfsr_bs(19);
                                         const bitslice_value_t filter21_0 = f_a_bs(state[-2 + 23].value, state[-2 + 24].value, state[-2 + 26].value, state[-2 + 27].value);
                                         const bitslice_value_t filter21_1 = f_b_bs(state[-2 + 29].value, state[-2 + 33].value, state[-2 + 35].value, state[-2 + 36].value);
@@ -540,6 +595,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter21_4 = f_a_bs(state[-2 + 55].value, state[-2 + 64].value, state[-2 + 65].value, state[-2 + 67].value);
                                         const bitslice_value_t filter21 = f_c_bs(filter21_0, filter21_1, filter21_2, filter21_3, filter21_4);
                                         results8.value &= (filter21 ^ keystream[21].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -547,6 +603,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 68].value = lfsr_bs(20);
                                         const bitslice_value_t filter22_0 = f_a_bs(state[-2 + 24].value, state[-2 + 25].value, state[-2 + 27].value, state[-2 + 28].value);
                                         const bitslice_value_t filter22_1 = f_b_bs(state[-2 + 30].value, state[-2 + 34].value, state[-2 + 36].value, state[-2 + 37].value);
@@ -555,6 +612,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter22_4 = f_a_bs(state[-2 + 56].value, state[-2 + 65].value, state[-2 + 66].value, state[-2 + 68].value);
                                         const bitslice_value_t filter22 = f_c_bs(filter22_0, filter22_1, filter22_2, filter22_3, filter22_4);
                                         results8.value &= (filter22 ^ keystream[22].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -562,6 +620,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 69].value = lfsr_bs(21);
                                         const bitslice_value_t filter23_0 = f_a_bs(state[-2 + 25].value, state[-2 + 26].value, state[-2 + 28].value, state[-2 + 29].value);
                                         const bitslice_value_t filter23_1 = f_b_bs(state[-2 + 31].value, state[-2 + 35].value, state[-2 + 37].value, state[-2 + 38].value);
@@ -600,6 +659,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter25_4 = f_a_bs(state[-2 + 59].value, state[-2 + 68].value, state[-2 + 69].value, state[-2 + 71].value);
                                         const bitslice_value_t filter25 = f_c_bs(filter25_0, filter25_1, filter25_2, filter25_3, filter25_4);
                                         results8.value &= (filter25 ^ keystream[25].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -607,6 +667,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 72].value = lfsr_bs(24);
                                         const bitslice_value_t filter26_0 = f_a_bs(state[-2 + 28].value, state[-2 + 29].value, state[-2 + 31].value, state[-2 + 32].value);
                                         const bitslice_value_t filter26_1 = f_b_bs(state[-2 + 34].value, state[-2 + 38].value, state[-2 + 40].value, state[-2 + 41].value);
@@ -615,6 +676,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter26_4 = f_a_bs(state[-2 + 60].value, state[-2 + 69].value, state[-2 + 70].value, state[-2 + 72].value);
                                         const bitslice_value_t filter26 = f_c_bs(filter26_0, filter26_1, filter26_2, filter26_3, filter26_4);
                                         results8.value &= (filter26 ^ keystream[26].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -622,6 +684,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 73].value = lfsr_bs(25);
                                         const bitslice_value_t filter27_0 = f_a_bs(state[-2 + 29].value, state[-2 + 30].value, state[-2 + 32].value, state[-2 + 33].value);
                                         const bitslice_value_t filter27_1 = f_b_bs(state[-2 + 35].value, state[-2 + 39].value, state[-2 + 41].value, state[-2 + 42].value);
@@ -630,6 +693,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter27_4 = f_a_bs(state[-2 + 61].value, state[-2 + 70].value, state[-2 + 71].value, state[-2 + 73].value);
                                         const bitslice_value_t filter27 = f_c_bs(filter27_0, filter27_1, filter27_2, filter27_3, filter27_4);
                                         results8.value &= (filter27 ^ keystream[27].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -637,6 +701,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 74].value = lfsr_bs(26);
                                         const bitslice_value_t filter28_0 = f_a_bs(state[-2 + 30].value, state[-2 + 31].value, state[-2 + 33].value, state[-2 + 34].value);
                                         const bitslice_value_t filter28_1 = f_b_bs(state[-2 + 36].value, state[-2 + 40].value, state[-2 + 42].value, state[-2 + 43].value);
@@ -645,6 +710,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter28_4 = f_a_bs(state[-2 + 62].value, state[-2 + 71].value, state[-2 + 72].value, state[-2 + 74].value);
                                         const bitslice_value_t filter28 = f_c_bs(filter28_0, filter28_1, filter28_2, filter28_3, filter28_4);
                                         results8.value &= (filter28 ^ keystream[28].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -652,6 +718,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 75].value = lfsr_bs(27);
                                         const bitslice_value_t filter29_0 = f_a_bs(state[-2 + 31].value, state[-2 + 32].value, state[-2 + 34].value, state[-2 + 35].value);
                                         const bitslice_value_t filter29_1 = f_b_bs(state[-2 + 37].value, state[-2 + 41].value, state[-2 + 43].value, state[-2 + 44].value);
@@ -660,6 +727,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter29_4 = f_a_bs(state[-2 + 63].value, state[-2 + 72].value, state[-2 + 73].value, state[-2 + 75].value);
                                         const bitslice_value_t filter29 = f_c_bs(filter29_0, filter29_1, filter29_2, filter29_3, filter29_4);
                                         results8.value &= (filter29 ^ keystream[29].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -667,6 +735,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 76].value = lfsr_bs(28);
                                         const bitslice_value_t filter30_0 = f_a_bs(state[-2 + 32].value, state[-2 + 33].value, state[-2 + 35].value, state[-2 + 36].value);
                                         const bitslice_value_t filter30_1 = f_b_bs(state[-2 + 38].value, state[-2 + 42].value, state[-2 + 44].value, state[-2 + 45].value);
@@ -675,6 +744,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter30_4 = f_a_bs(state[-2 + 64].value, state[-2 + 73].value, state[-2 + 74].value, state[-2 + 76].value);
                                         const bitslice_value_t filter30 = f_c_bs(filter30_0, filter30_1, filter30_2, filter30_3, filter30_4);
                                         results8.value &= (filter30 ^ keystream[30].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0
@@ -682,6 +752,7 @@ void *find_state(void *thread_d) {
                                            ) {
                                             continue;
                                         }
+
                                         state[-2 + 77].value = lfsr_bs(29);
                                         const bitslice_value_t filter31_0 = f_a_bs(state[-2 + 33].value, state[-2 + 34].value, state[-2 + 36].value, state[-2 + 37].value);
                                         const bitslice_value_t filter31_1 = f_b_bs(state[-2 + 39].value, state[-2 + 43].value, state[-2 + 45].value, state[-2 + 46].value);
@@ -690,6 +761,7 @@ void *find_state(void *thread_d) {
                                         const bitslice_value_t filter31_4 = f_a_bs(state[-2 + 65].value, state[-2 + 74].value, state[-2 + 75].value, state[-2 + 77].value);
                                         const bitslice_value_t filter31 = f_c_bs(filter31_0, filter31_1, filter31_2, filter31_3, filter31_4);
                                         results8.value &= (filter31 ^ keystream[31].value);
+
                                         if (results8.bytes64[0] == 0
                                                 && results8.bytes64[1] == 0
                                                 && results8.bytes64[2] == 0

@@ -2705,7 +2705,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 return usage_hf_mfu_otp_tearoff();
             case 'b':
                 blockNoUint = param_get8(Cmd, cmdp + 1);
-                if (blockNoUint < 0) {
+                //iceman,  which blocks can be targeted? UID blocks?
+                if (blockNoUint < 2) {
                     PrintAndLogEx(WARNING, "Wrong block number");
                     errors = true;
                 }
@@ -2713,7 +2714,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 break;
             case 'i':
                 interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
-                if (interval <= 0) {
+                if (interval == 0) {
                     PrintAndLogEx(WARNING, "Wrong interval number");
                     errors = true;
                 }
@@ -2758,13 +2759,14 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
     if (errors) return usage_hf_mfu_otp_tearoff();
 
+    PrintAndLogEx(INFO, "Starting TearOff test - Selected Block no: %u", blockNoUint);
+
+
     uint32_t actualTime = startTime;
-    printf("\nStarting TearOff test - Selected Block no: %d ...\n", blockNoUint);
 
     while (actualTime <= (timeLimit - interval)) {
-        printf("\nTrying attack at: %d us\n", actualTime);
-        printf("\n.....\n");
-        printf("\nReading block before attack: \n");
+        PrintAndLogEx(INFO, "Using tear-off at: %" PRIu32 " us", actualTime);
+        PrintAndLogEx(INFO, "Reading block BEFORE attack");
 
         clearCommandBuffer();
         SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
@@ -2780,7 +2782,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             }
         }
 
-        printf("\n.....\n");
+        PrintAndLogEx(INFO, ".....");
         clearCommandBuffer();
 
         SendCommandOLD(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
@@ -2789,8 +2791,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-
-        printf("\nReading block after attack: \n");
+        PrintAndLogEx(INFO, "Reading block AFTER attack");
 
         clearCommandBuffer();
         SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
