@@ -95,7 +95,7 @@ int preferences_load(void) {
     size_t dummyDL = 0x00;
 
     // to better control json cant find file error msg.
-    char* fn = prefGetFilename();
+    char *fn = prefGetFilename();
     if (fileExists(fn)) {
         PrintAndLogEx(INFO, "Loading Preferences...");
         if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
@@ -115,11 +115,11 @@ int preferences_save(void) {
 
     PrintAndLogEx(INFO, "Saving Preferences...");
 
-    char* fn = prefGetFilename();
+    char *fn = prefGetFilename();
     int fnLen = strlen(fn) + 5; // .bak\0
 
     // [FILENAME_MAX+sizeof(preferencesFilename)+10]
-    char* backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
+    char *backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
     if (backupFilename == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         free(fn);
@@ -916,7 +916,7 @@ int CmdPrefSet(const char *Cmd) {
 
 static int CmdPrefShow(const char *Cmd) {
 
-    char* fn = prefGetFilename();
+    char *fn = prefGetFilename();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, _CYAN_("Preferences loaded from %s"), fn);
 

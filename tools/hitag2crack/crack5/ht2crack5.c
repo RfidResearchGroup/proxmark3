@@ -117,9 +117,9 @@ int main(int argc, char *argv[]) {
     uint32_t target = 0;
 
 #ifndef __WIN32
-	thread_count = sysconf(_SC_NPROCESSORS_CONF);
-	if ( thread_count < 2)
-		thread_count = 2;
+    thread_count = sysconf(_SC_NPROCESSORS_CONF);
+    if (thread_count < 2)
+        thread_count = 2;
 #endif  /* _WIN32 */
 
 

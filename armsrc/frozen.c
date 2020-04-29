@@ -863,7 +863,7 @@ struct json_scanf_info {
 int json_unescape(const char *src, int slen, char *dst, int dlen) WEAK;
 int json_unescape(const char *src, int slen, char *dst, int dlen) {
     if (dst == NULL || dlen == 0)
-	    return JSON_STRING_INVALID;
+        return JSON_STRING_INVALID;
 
     char *send = (char *) src + slen;
     char *dend = dst + dlen;

@@ -1900,7 +1900,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
-     }
+    }
 
     res = handler_desfire_createapp(&aidhdr, usename, usefid);
     DropField();
@@ -3245,7 +3245,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
                     PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
                     int len = le24toh(fdata.length);
                     for (int n = 0; n < len; n += 16) {
-                         PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
+                        PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
                     }
                 } else {
                     PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
@@ -3262,15 +3262,15 @@ static int CmdHF14ADesDump(const char *Cmd) {
                 int len = 0;
                 res = handler_desfire_getvalue(&value, &len);
                 if (res == PM3_SUCCESS) {
-                     PrintAndLogEx(NORMAL, "\nOffset  | Value                                            | Ascii");
-                     PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                     for (int n = 0; n < len; n += 16) {
-                          PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&value.value[n], len > 16 ? 16 : len), sprint_ascii(&value.value[n], len > 16 ? 16 : len));
-                     }
+                    PrintAndLogEx(NORMAL, "\nOffset  | Value                                            | Ascii");
+                    PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                    for (int n = 0; n < len; n += 16) {
+                        PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&value.value[n], len > 16 ? 16 : len), sprint_ascii(&value.value[n], len > 16 ? 16 : len));
+                    }
                 } else {
-                     PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
-                     res = handler_desfire_select_application(aid);
-                     if (res != PM3_SUCCESS) continue;
+                    PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
+                    res = handler_desfire_select_application(aid);
+                    if (res != PM3_SUCCESS) continue;
                 }
 
             } else if (fileset_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
@@ -3294,15 +3294,15 @@ static int CmdHF14ADesDump(const char *Cmd) {
                     fdata.offset[2] = (offset >> 16) & 0xFF;
                     res = handler_desfire_readdata(&fdata, MFDES_RECORD_FILE);
                     if (res == PM3_SUCCESS) {
-                         PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
-                         PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                         int len = le24toh(fdata.length);
-                         for (int n = 0; n < len; n += 16) {
-                             PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
-                         }
+                        PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
+                        PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                        int len = le24toh(fdata.length);
+                        for (int n = 0; n < len; n += 16) {
+                            PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
+                        }
                     } else {
-                         res = handler_desfire_select_application(aid);
-                         if (res != PM3_SUCCESS) continue;
+                        res = handler_desfire_select_application(aid);
+                        if (res != PM3_SUCCESS) continue;
                     }
                 }
                 free(data);
@@ -3586,9 +3586,9 @@ void DesFill2bPattern(uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t *deskeyLi
         }
 
         *startPattern = pt;
-        if ( (*deskeyListLen == MAX_KEYS_LIST_LEN) &&
-             (*aeskeyListLen == MAX_KEYS_LIST_LEN) &&
-             (*k3kkeyListLen == MAX_KEYS_LIST_LEN)) {
+        if ((*deskeyListLen == MAX_KEYS_LIST_LEN) &&
+                (*aeskeyListLen == MAX_KEYS_LIST_LEN) &&
+                (*k3kkeyListLen == MAX_KEYS_LIST_LEN)) {
             break;
         }
     }

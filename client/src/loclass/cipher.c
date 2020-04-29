@@ -68,17 +68,17 @@ typedef struct {
 *  T (x 0 x 1 . . . . . . x 15 ) = x 0 ⊕ x 1 ⊕ x 5 ⊕ x 7 ⊕ x 10 ⊕ x 11 ⊕ x 14 ⊕ x 15 .
 **/
 static bool T(State state) {
-/*
-    bool x0 = state.t & 0x8000;
-    bool x1 = state.t & 0x4000;
-    bool x5 = state.t & 0x0400;
-    bool x7 = state.t & 0x0100;
-    bool x10 = state.t & 0x0020;
-    bool x11 = state.t & 0x0010;
-    bool x14 = state.t & 0x0002;
-    bool x15 = state.t & 0x0001;
-    return x0 ^ x1 ^ x5 ^ x7 ^ x10 ^ x11 ^ x14 ^ x15;
-*/
+    /*
+        bool x0 = state.t & 0x8000;
+        bool x1 = state.t & 0x4000;
+        bool x5 = state.t & 0x0400;
+        bool x7 = state.t & 0x0100;
+        bool x10 = state.t & 0x0020;
+        bool x11 = state.t & 0x0010;
+        bool x14 = state.t & 0x0002;
+        bool x15 = state.t & 0x0001;
+        return x0 ^ x1 ^ x5 ^ x7 ^ x10 ^ x11 ^ x14 ^ x15;
+    */
 #define  _x0  ((state.t & 0x8000) >> 15 )
 #define  _x1  ((state.t & 0x4000) >> 14 )
 #define  _x5  ((state.t & 0x0400) >> 10 )
@@ -86,7 +86,7 @@ static bool T(State state) {
 #define  _x10 ((state.t & 0x0020) >> 5 )
 #define  _x11 ((state.t & 0x0010) >> 4 )
 #define  _x14 ((state.t & 0x0002) >> 1 )
-#define  _x15 (state.t & 0x0001) 
+#define  _x15 (state.t & 0x0001)
     return (_x0) ^ (_x1) ^ (_x5) ^ (_x7) ^ (_x10) ^ (_x11) ^ (_x14) ^ (_x15);
 }
 /**
@@ -114,49 +114,49 @@ static bool T(State state) {
 *  z 2 = (r 3 ∧ r 5 ) ⊕ (r 4 ∧ r 6 ) ⊕ r 7 ⊕ x
 **/
 static uint8_t _select(bool x, bool y, uint8_t r) {
- #define _r0 ((r >> 7) & 0x01)
- #define _r1 ((r >> 6) & 0x01)
- #define _r2 ((r >> 5) & 0x01)
- #define _r3 ((r >> 4) & 0x01)
- #define _r4 ((r >> 3) & 0x01)
- #define _r5 ((r >> 2) & 0x01)
- #define _r6 ((r >> 1) & 0x01)
- #define _r7 (r & 0x01)
+#define _r0 ((r >> 7) & 0x01)
+#define _r1 ((r >> 6) & 0x01)
+#define _r2 ((r >> 5) & 0x01)
+#define _r3 ((r >> 4) & 0x01)
+#define _r4 ((r >> 3) & 0x01)
+#define _r5 ((r >> 2) & 0x01)
+#define _r6 ((r >> 1) & 0x01)
+#define _r7 (r & 0x01)
 
- #define _z0  ( (_r0 & _r2) ^ ( _r1 & (!_r3)) ^ (_r2 | _r4) )
- #define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ x ^ y )
- #define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ x )
+#define _z0  ( (_r0 & _r2) ^ ( _r1 & (!_r3)) ^ (_r2 | _r4) )
+#define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ x ^ y )
+#define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ x )
 
-/*
-    uint8_t r0 = r >> 7 & 0x1;
-    uint8_t r1 = r >> 6 & 0x1;
-    uint8_t r2 = r >> 5 & 0x1;
-    uint8_t r3 = r >> 4 & 0x1;
-    uint8_t r4 = r >> 3 & 0x1;
-    uint8_t r5 = r >> 2 & 0x1;
-    uint8_t r6 = r >> 1 & 0x1;
-    uint8_t r7 = r & 0x1;
+    /*
+        uint8_t r0 = r >> 7 & 0x1;
+        uint8_t r1 = r >> 6 & 0x1;
+        uint8_t r2 = r >> 5 & 0x1;
+        uint8_t r3 = r >> 4 & 0x1;
+        uint8_t r4 = r >> 3 & 0x1;
+        uint8_t r5 = r >> 2 & 0x1;
+        uint8_t r6 = r >> 1 & 0x1;
+        uint8_t r7 = r & 0x1;
 
-    bool z0 = (r0 & r2) ^ (r1 & (!r3)) ^ (r2 | r4);
-    bool z1 = (r0 | r2) ^ (r5 | r7) ^ r1 ^ r6 ^ x ^ y;
-    bool z2 = (r3 & (!r5)) ^ (r4 & r6) ^ r7 ^ x;
+        bool z0 = (r0 & r2) ^ (r1 & (!r3)) ^ (r2 | r4);
+        bool z1 = (r0 | r2) ^ (r5 | r7) ^ r1 ^ r6 ^ x ^ y;
+        bool z2 = (r3 & (!r5)) ^ (r4 & r6) ^ r7 ^ x;
 
-    // The three bitz z0.. z1 are packed into a uint8_t:
-    // 00000ZZZ
-    //Return value is a uint8_t
-    return ((z0 << 2) & 4) | ((z1 << 1) & 2) | (z2 & 1);
-*/
-   return  ((_z0 << 2) & 4) | ((_z1 << 1) & 2) | (_z2 & 1);
+        // The three bitz z0.. z1 are packed into a uint8_t:
+        // 00000ZZZ
+        //Return value is a uint8_t
+        return ((z0 << 2) & 4) | ((z1 << 1) & 2) | (z2 & 1);
+    */
+    return ((_z0 << 2) & 4) | ((_z1 << 1) & 2) | (_z2 & 1);
 
-/*
-    uint8_t retval = 0;
-    retval |= (z0 << 2) & 4;
-    retval |= (z1 << 1) & 2;
-    retval |= (z2) & 1;
+    /*
+        uint8_t retval = 0;
+        retval |= (z0 << 2) & 4;
+        retval |= (z1 << 1) & 2;
+        retval |= (z2) & 1;
 
-    // Return value 0 <= retval <= 7
-    return retval;
-*/
+        // Return value 0 <= retval <= 7
+        return retval;
+    */
 }
 
 /**
