@@ -62,7 +62,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
         }
     }
 
+#ifdef WITH_FPC_USART_HOST
     int resultfpc = PM3_EUNDEF;
+#endif
     int resultusb = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
@@ -79,7 +81,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     }
     // we got two results, let's prioritize the faulty one and USB over FPC.
     if (reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
+#ifdef WITH_FPC_USART_HOST
     if (reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
+#endif
     return PM3_SUCCESS;
 }
 
@@ -117,7 +121,9 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
     }
     txBufferNGLen = sizeof(PacketResponseNGPreamble) + len + sizeof(PacketResponseNGPostamble);
 
+#ifdef WITH_FPC_USART_HOST
     int resultfpc = PM3_EUNDEF;
+#endif
     int resultusb = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
@@ -133,7 +139,9 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
     }
     // we got two results, let's prioritize the faulty one and USB over FPC.
     if (reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
+#ifdef WITH_FPC_USART_HOST
     if (reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
+#endif
     return PM3_SUCCESS;
 }
 
