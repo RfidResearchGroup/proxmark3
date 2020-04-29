@@ -324,7 +324,7 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
         crypto1_bs_f20b_2[0] = f20b(state_p[47 - 25].value, state_p[47 - 27].value, state_p[47 - 29].value, state_p[47 - 31].value);
         crypto1_bs_f20b_3[0] = f20b(state_p[47 - 41].value, state_p[47 - 43].value, state_p[47 - 45].value, state_p[47 - 47].value);
 
-        bitslice_value_t ksb[9];
+        bitslice_value_t ksb[8];
         ksb[0] = f20c(f20a(state_p[47 - 9].value, state_p[47 - 11].value, state_p[47 - 13].value, state_p[47 - 15].value),
                       f20b(state_p[47 - 17].value, state_p[47 - 19].value, state_p[47 - 21].value, state_p[47 - 23].value),
                       crypto1_bs_f20b_2[0],
@@ -347,14 +347,14 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
             }
 
             // pre-compute first feedback bit vector. This is the same for all nonces
-            bitslice_value_t fbb[9];
+            bitslice_value_t fbb[8];
             fbb[0] = odd_feedback ^ bitsliced_even_feedback[block_idx];
 
             // vector to contain test results (1 = passed, 0 = failed)
             bitslice_t results = bs_ones;
 
             // parity_bits
-            bitslice_value_t par[9];
+            bitslice_value_t par[8];
             par[0] = bs_zeroes.value;
             uint32_t next_common_bits = 0;
 
@@ -468,7 +468,7 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
                     }
                     // remember feedback and keystream vectors for later use
                     uint8_t bit = KEYSTREAM_SIZE - ks_idx;
-                    if (bit <= next_common_bits) {  // if needed and not yet stored
+                    if (bit <= MIN(next_common_bits, 7)) {  // if needed and not yet stored
                         fbb[bit] = fb_bits;
                         ksb[bit] = ks_bits;
                         par[bit] = parity_bit_vector;
