@@ -1654,14 +1654,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             // offset should not be over buffer
-            uint16_t offset = MIN(BIGBUF_SIZE - 1, payload->offset);
-
+            if (payload->offset >= BIGBUF_SIZE) {
+                reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_EOVFLOW, NULL, 0);
+                break;
+            }
             // ensure len bytes copied wont go past end of bigbuf
-            uint16_t len = MIN(BIGBUF_SIZE - offset, sizeof(payload->data));
+            uint16_t len = MIN(BIGBUF_SIZE - payload->offset, sizeof(payload->data));
 
             uint8_t *mem = BigBuf_get_addr();
 
-            memcpy(mem + offset, &payload->data, len);
+            memcpy(mem + payload->offset, &payload->data, len);
             reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_SUCCESS, NULL, 0);
             break;
         }
