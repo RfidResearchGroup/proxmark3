@@ -79,18 +79,43 @@ function get_pm3_list_macOS {
 function get_pm3_list_Windows {
     N=$1
     PM3LIST=()
-    for DEV in $(wmic path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null|awk '/^COM/{print $1}'); do
+    # Normal SERIAL PORTS (COM)
+    for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null|awk '/^COM/{print $1}'); do
         DEV=${DEV/ */}
         PM3LIST+=("$DEV")
         if [ ${#PM3LIST[*]} -ge $N ]; then
             return
         fi
     done
+ 
+    #white BT dongle SERIAL PORTS (COM)
+    if $FINDBTDONGLE; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null|awk '/^COM/{print $1}'); do
+            DEV=${DEV/ */}
+            PM3LIST+=("$DEV")
+            if [ ${#PM3LIST[*]} -ge $N ]; then
+                return
+            fi
+        done
+    fi
+
+    #BT direct SERIAL PORTS (COM)    
+    if $FINDBTDIRECT; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk '$0 ~ /COM/{print substr($6,2,4)}'); do
+            DEV=${DEV/ */}
+            PM3LIST+=("$DEV")
+            if [ ${#PM3LIST[*]} -ge $N ]; then
+                return
+            fi
+        done    
+    fi
 }
 
 function get_pm3_list_WSL {
+    N=$1
     PM3LIST=()
-    for DEV in $(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null|awk '/^COM/{print $1}'); do
+    # Normal SERIAL PORTS (COM)
+    for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null|awk '/^COM/{print $1}'); do
         DEV=${DEV/ */}
         DEV="/dev/ttyS${DEV#COM}"
         # ttyS counterpart takes some more time to appear
@@ -105,6 +130,47 @@ function get_pm3_list_WSL {
             fi
         fi
     done
+
+    #white BT dongle SERIAL PORTS (COM)       
+    if $FINDBTDONGLE; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null|awk '/^COM/{print $1}'); do
+            DEV=${DEV/ */}
+            DEV="/dev/ttyS${DEV#COM}"           
+            # ttyS counterpart takes some more time to appear
+            if [ -e "$DEV" ]; then
+                PM3LIST+=("$DEV")
+                if [ ! -w "$DEV" ]; then
+                    echo "[!!] Let's give users read/write access to $DEV"
+                    sudo chmod 666 "$DEV"
+                fi
+                if [ ${#PM3LIST[*]} -ge $N ]; then
+                    return
+                fi
+            fi
+
+        done
+    fi
+
+    #BT direct SERIAL PORTS (COM)    
+    if $FINDBTDIRECT; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk '$0 ~ /COM/{print substr($6,2,4)}'); do
+
+            DEV=${DEV/ */}
+            DEV="/dev/ttyS${DEV#COM}"           
+            # ttyS counterpart takes some more time to appear
+            if [ -e "$DEV" ]; then
+                PM3LIST+=("$DEV")
+                if [ ! -w "$DEV" ]; then
+                    echo "[!!] Let's give users read/write access to $DEV"
+                    sudo chmod 666 "$DEV"
+                fi
+                if [ ${#PM3LIST[*]} -ge $N ]; then
+                    return
+                fi
+            fi
+
+        done
+    fi
 }
 
 SCRIPT=$(basename -- "$0")
