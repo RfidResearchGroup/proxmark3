@@ -925,7 +925,7 @@ void AuthToError(int error) {
             PrintAndLogEx(ERR, "Authentication failed. Invalid key number.");
             break;
         case 4:
-            PrintAndLogEx(ERR, "Authentication failed. Length of answer %d doesn't match algo length %d.");
+            PrintAndLogEx(ERR, "Authentication failed. Length of answer doesn't match algo length");
             break;
         case 5:
             PrintAndLogEx(ERR, "mbedtls_aes_setkey_dec failed");
@@ -3161,6 +3161,7 @@ static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
 static int CmdHF14ADesDump(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     DropField();
+
     uint8_t aid[3] = {0};
     uint8_t app_ids[78] = {0};
     uint8_t app_ids_len = 0;
@@ -3205,106 +3206,120 @@ static int CmdHF14ADesDump(const char *Cmd) {
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
         res = handler_desfire_keysettings(&key_setting, &num_keys);
-        if (res != PM3_SUCCESS) return res;
+        if (res != PM3_SUCCESS) continue;
 
         res = handler_desfire_select_application(aid);
+        if (res != PM3_SUCCESS) continue;
 
-        if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
-            for (int j = file_ids_len - 1; j >= 0; j--) {
-                PrintAndLogEx(SUCCESS, "\n\n   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
+        res = handler_desfire_fileids(file_ids, &file_ids_len);
+        if (res != PM3_SUCCESS) continue;
 
-                uint8_t filesettings[20] = {0};
-                int fileset_len = 0;
+        for (int j = file_ids_len - 1; j >= 0; j--) {
+            PrintAndLogEx(SUCCESS, "\n\n   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
 
-                res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-                int maclen = 0; // To be implemented
+            uint8_t filesettings[20] = {0};
+            int fileset_len = 0;
 
+            res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
+            if (res != PM3_SUCCESS) continue;
+
+            int maclen = 0; // To be implemented
+
+            if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
+                int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
+                mfdes_data_t fdata;
+                fdata.fileno = file_ids[j];
+                memset(fdata.offset, 0, 3);
+                memset(fdata.length, 0, 3);
+
+                uint8_t *data = (uint8_t *)calloc(filesize, sizeof(uint8_t));
+                if (data == NULL) {
+                    DropField();
+                    return PM3_EMALLOC;
+                }
+
+                fdata.data = data;
+                res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE);
                 if (res == PM3_SUCCESS) {
-                    //if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
-                    if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
-                        int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
-                        mfdes_data_t fdata;
-                        fdata.fileno = file_ids[j];
-                        memset(fdata.offset, 0, 3);
-                        //memcpy(fdata.length,&filesettings[4],3);
-                        memset(fdata.length, 0, 3);
-                        uint8_t *data = (uint8_t *)malloc(filesize);
-                        fdata.data = data;
-                        if (data) {
-                            res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE);
-                            if (res == PM3_SUCCESS) {
-                                PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
-                                PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                                int len = le24toh(fdata.length);
-                                for (int n = 0; n < len; n += 16) {
-                                    PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
-                                }
-                                free(data);
-                            } else {
-                                PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
-                                res = handler_desfire_select_application(aid);
-                            }
-                        }
-                    } else if (fileset_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
-                        PrintAndLogEx(NORMAL, "\n\nValue file: 0x%0x", file_ids[j]);
-                        mfdes_value_t value;
-                        value.fileno = file_ids[j];
-                        int len = 0;
-                        res = handler_desfire_getvalue(&value, &len);
-                        if (res == PM3_SUCCESS) {
-                            PrintAndLogEx(NORMAL, "\nOffset  | Value                                            | Ascii");
-                            PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                            for (int n = 0; n < len; n += 16) {
-                                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&value.value[n], len > 16 ? 16 : len), sprint_ascii(&value.value[n], len > 16 ? 16 : len));
-                            }
-                        } else {
-                            PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
-                            res = handler_desfire_select_application(aid);
-                        }
-                    } else if (fileset_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
-                        int maxrecords = (filesettings[9] << 16) + (filesettings[8] << 8) + filesettings[7];
-                        int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
-                        mfdes_data_t fdata;
-                        fdata.fileno = file_ids[j];
-                        memset(fdata.length, 0, 3);
-                        //memcpy(fdata.length,&filesettings[4],3);
-                        uint8_t *data = (uint8_t *)malloc(filesize);
-                        fdata.data = data;
-                        if (data) {
-                            for (int offset = 0; offset < maxrecords; offset++) {
-                                PrintAndLogEx(NORMAL, "\n\nRecord offset: %024x", offset);
-                                memset(data, 0, filesize);
-                                fdata.offset[0] = offset & 0xFF;
-                                fdata.offset[1] = (offset >> 8) & 0xFF;
-                                fdata.offset[2] = (offset >> 16) & 0xFF;
-                                res = handler_desfire_readdata(&fdata, MFDES_RECORD_FILE);
-                                if (res == PM3_SUCCESS) {
-                                    PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
-                                    PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                                    int len = le24toh(fdata.length);
-                                    for (int n = 0; n < len; n += 16) {
-                                        PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
-                                    }
-                                } else {
-                                    res = handler_desfire_select_application(aid);
-                                }
-                            }
-                            free(data);
-                        }
+                    PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
+                    PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                    int len = le24toh(fdata.length);
+                    for (int n = 0; n < len; n += 16) {
+                         PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
+                    }
+                } else {
+                    PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
+                    res = handler_desfire_select_application(aid);
+                    if (res != PM3_SUCCESS) continue;
+                }
+
+                free(data);
+
+            } else if (fileset_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
+                PrintAndLogEx(NORMAL, "\n\nValue file: 0x%0x", file_ids[j]);
+                mfdes_value_t value;
+                value.fileno = file_ids[j];
+                int len = 0;
+                res = handler_desfire_getvalue(&value, &len);
+                if (res == PM3_SUCCESS) {
+                     PrintAndLogEx(NORMAL, "\nOffset  | Value                                            | Ascii");
+                     PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                     for (int n = 0; n < len; n += 16) {
+                          PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&value.value[n], len > 16 ? 16 : len), sprint_ascii(&value.value[n], len > 16 ? 16 : len));
+                     }
+                } else {
+                     PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
+                     res = handler_desfire_select_application(aid);
+                     if (res != PM3_SUCCESS) continue;
+                }
+
+            } else if (fileset_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
+                int maxrecords = (filesettings[9] << 16) + (filesettings[8] << 8) + filesettings[7];
+                int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
+                mfdes_data_t fdata;
+                fdata.fileno = file_ids[j];
+                memset(fdata.length, 0, 3);
+                uint8_t *data = (uint8_t *)calloc(filesize, sizeof(uint8_t));
+                if (data == NULL) {
+                    DropField();
+                    return PM3_EMALLOC;
+                }
+
+                fdata.data = data;
+                for (int offset = 0; offset < maxrecords; offset++) {
+                    PrintAndLogEx(NORMAL, "\n\nRecord offset: %024x", offset);
+                    memset(data, 0, filesize);
+                    fdata.offset[0] = offset & 0xFF;
+                    fdata.offset[1] = (offset >> 8) & 0xFF;
+                    fdata.offset[2] = (offset >> 16) & 0xFF;
+                    res = handler_desfire_readdata(&fdata, MFDES_RECORD_FILE);
+                    if (res == PM3_SUCCESS) {
+                         PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
+                         PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
+                         int len = le24toh(fdata.length);
+                         for (int n = 0; n < len; n += 16) {
+                             PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
+                         }
+                    } else {
+                         res = handler_desfire_select_application(aid);
+                         if (res != PM3_SUCCESS) continue;
                     }
                 }
+                free(data);
             }
         }
     }
+
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     DropField();
     return PM3_SUCCESS;
 }
 
 static int CmdHF14ADesEnumApplications(const char *Cmd) {
+
     (void)Cmd; // Cmd is not used so far
     DropField();
-//    uint8_t isOK = 0x00;
+
     uint8_t aid[3] = {0};
     uint8_t app_ids[78] = {0};
     uint8_t app_ids_len = 0;
@@ -3314,8 +3329,6 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     dfname_t dfnames[255];
     uint8_t dfname_count = 0;
-
-    int res = 0;
 
     if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
@@ -3356,53 +3369,31 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             }
         }
 
-        res = getKeySettings(aid);
-        if (res != PM3_SUCCESS) return res;
+        int res = getKeySettings(aid);
+        if (res != PM3_SUCCESS) continue;
 
         res = handler_desfire_select_application(aid);
+        if (res != PM3_SUCCESS) continue;
 
+        res = handler_desfire_fileids(file_ids, &file_ids_len);
+        if (res != PM3_SUCCESS) continue;
 
-        // Get File IDs
-        if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
-            for (int j = file_ids_len - 1; j >= 0; j--) {
-                PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
+        PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
+        for (int j = file_ids_len - 1; j >= 0; j--) {
+            PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
 
-                uint8_t filesettings[20] = {0};
-                int fileset_len = 0;
-                int maclen = 0; // To be implemented
+            uint8_t filesettings[20] = {0};
+            int fileset_len = 0;
+            int maclen = 0; // To be implemented
 
-                res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
-                if (res == PM3_SUCCESS) {
-                    if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
-                        PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
-                    }
-                }
+            res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
+            if (res != PM3_SUCCESS) continue;
+
+            if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
             }
         }
 
-        /*
-                // Get ISO File IDs
-                {
-                    uint8_t data[] = {GET_ISOFILE_IDS, 0x00, 0x00, 0x00};  // 0x61
-                    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
-                }
-
-                if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
-                    PrintAndLogEx(WARNING, _RED_("   Timed-out"));
-                    continue;
-                } else {
-                    isOK  = respFiles.data.asBytes[2] & 0xff;
-                    if (!isOK) {
-                        PrintAndLogEx(WARNING, _RED_("   Can't get ISO file ids"));
-                    } else {
-                        int respfileLen = resp.oldarg[1] - 3 - 2;
-                        for (int j = 0; j < respfileLen; ++j) {
-                            PrintAndLogEx(SUCCESS, " ISO  Fileid %d :", resp.data.asBytes[j + 3]);
-                        }
-                    }
-                }
-                */
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     DropField();
