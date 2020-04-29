@@ -313,7 +313,7 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) $(BTLDLIBS) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) liblua jansson tinycbor reveng mbedtls zlib amiibo hardnested cliparser lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LDLIBS)  -o $@
 
@@ -373,44 +373,44 @@ tarbin: $(BINS)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
 
 # local libraries:
-$(LUALIB):
-	$(info [*] MAKE liblua for $(LUAPLATFORM))
+liblua:
+	$(info [*] MAKE $@ for $(LUAPLATFORM))
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
 
-$(JANSSONLIB):
-	$(info [*] MAKE jansson)
+jansson:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
 
-$(CBORLIB):
-	$(info [*] MAKE tinycbor)
+tinycbor:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) all
 
-$(REVENGLIB):
-	$(info [*] MAKE reveng)
+reveng:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) all
 
-$(HARDNESTEDLIB):
-	$(info [*] MAKE hardnested)
+hardnested:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) all
 
-$(AMIIBOLIB):
-	$(info [*] MAKE amiibo)
+amiibo:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) all
 
-$(CLIPARSERLIB):
-	$(info [*] MAKE cliparser)
+cliparser:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) all
 
 # common libraries:
-$(MBEDTLSLIB):
-	$(info [*] MAKE mbedtls)
+mbedtls:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
-$(ZLIB):
-	$(info [*] MAKE zlib)
+zlib:
+	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
-.PHONY: all clean install uninstall
+.PHONY: all clean install uninstall tarbin liblua jansson tinycbor reveng hardnested amiibo cliparser mbedtls zlib
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
