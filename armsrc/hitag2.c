@@ -1062,7 +1062,7 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
     lf_init(false, true);
 
     int response = 0;
-    uint8_t rx[HITAG_FRAME_LEN];
+    uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
     size_t txlen = 0;
