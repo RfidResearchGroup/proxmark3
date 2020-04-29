@@ -83,7 +83,7 @@ else
     LDLIBS := -L/usr/local/opt/readline/lib $(LDLIBS)
     LIBS := -I/usr/local/opt/readline/include $(LIBS)
     # cf brew info qt: qt not symlinked anymore
-    PKG_CONFIG_ENV := PKG_CONFIG_ENV=/usr/local/opt/qt/lib/pkgconfig
+    PKG_CONFIG_ENV := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
 else
     LUALIB +=  -ldl
     LUAPLATFORM = linux
