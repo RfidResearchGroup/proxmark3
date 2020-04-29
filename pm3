@@ -2,10 +2,12 @@
 
 # Usage: run option -h to get help
 
-# BT auto detection: only working under Linux at the moment
+# BT auto detection
 #   Shall we look for white HC-06-USB dongle ?
 FINDBTDONGLE=true
 #   Shall we look for rfcomm interface ?
+FINDBTRFCOMM=true
+#   Shall we look for registered BT device ? (Linux only)
 FINDBTDIRECT=true
 
 PM3PATH=$(dirname "$0")
@@ -47,12 +49,13 @@ function get_pm3_list_Linux {
             fi
         done
     fi
-    if $FINDBTDIRECT; then
+    if $FINDBTRFCOMM; then
         # check if the MAC of a Proxmark3 was bound to a local rfcomm interface
+        # (on OSes without deprecated rfcomm and hcitool, the loop will be simply skipped)
         for DEVMAC in $(rfcomm -a 2>/dev/null | grep " 20:19:0[45]" | sed 's/^\(.*\): \([0-9:]*\) .*/\1@\2/'); do
             DEV=${DEVMAC/@*/}
             MAC=${DEVMAC/*@/}
-            # check if Proxmark3 is actually present
+            # check which are Proxmark3 and, side-effect, if they're actually present
             if hcitool name "$MAC" | grep -q "PM3"; then
                 PM3LIST+=("/dev/$DEV")
                 if [ ${#PM3LIST[*]} -ge $N ]; then
@@ -60,6 +63,15 @@ function get_pm3_list_Linux {
                 fi
             fi
         done
+    fi
+    if $FINDBTDIRECT; then
+        # check if the MAC of a Proxmark3 was registered in the known devices
+        MACS=()
+        for MAC in $(dbus-send --system --print-reply --type=method_call --dest='org.bluez' '/' org.freedesktop.DBus.ObjectManager.GetManagedObjects|\
+                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/) print a}'); do
+            PM3LIST+=("bt:$MAC")
+        done
+        # we don't probe the device so there is no guarantee the device is actually present
     fi
 }
 
@@ -81,7 +93,7 @@ function get_pm3_list_Windows {
     PM3LIST=()
     # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
     #BT direct SERIAL PORTS (COM)
-    if $FINDBTDIRECT; then
+    if $FINDBTRFCOMM; then
         for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk '$0 ~ /COM/{print substr($6,2,4)}'); do
             DEV=${DEV/ */}
             PM3LIST+=("$DEV")
@@ -118,7 +130,7 @@ function get_pm3_list_WSL {
 
     # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
     #BT direct SERIAL PORTS (COM)
-    if $FINDBTDIRECT; then
+    if $FINDBTRFCOMM; then
         for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk '$0 ~ /COM/{print substr($6,2,4)}'); do
 
             DEV=${DEV/ */}
@@ -201,6 +213,7 @@ EOF
   }
 elif [ "$SCRIPT" = "pm3-flash" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() {
       ARGS=("--port" "$1" "--flash")
@@ -238,6 +251,7 @@ EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-all" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE"; }
   HELP() {
@@ -257,6 +271,7 @@ EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() { $CLIENT "--port" "$1" "--flash" "--image" "$FULLIMAGE"; }
   HELP() {
@@ -276,6 +291,7 @@ EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE"; }
   HELP() {
