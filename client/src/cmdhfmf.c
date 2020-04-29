@@ -1866,7 +1866,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint64_t foundkey = 0;
     int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
-    DropField();
+    if (tests == 0) DropField();
     if (isOK) {
         switch (isOK) {
             case 1 :
