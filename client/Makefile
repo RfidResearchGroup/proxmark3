@@ -22,13 +22,17 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 LDLIBS ?= -L/usr/local/lib
-LDLIBS += -lreadline -lpthread -lm
+LDLIBS += -lreadline -lm
 
-# RPi Zero gcc requires -latomic
-# but MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
+# MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
 # doesn't recognize option --as-needed
 ifneq ($(platform),Darwin)
+# RPi Zero gcc requires -latomic
     LDLIBS += -Wl,--as-needed -latomic -Wl,--no-as-needed
+# Android Termux doesn't have pthread
+    LDLIBS += -Wl,--as-needed -lpthread -Wl,--no-as-needed
+else
+    LDLIBS += -lpthread
 endif
 
 # local libraries
