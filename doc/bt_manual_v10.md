@@ -116,6 +116,8 @@ Scanning ...
 
 Instead of `aa:bb:cc:dd:ee:ff`, you'll see your MAC address.
 
+If you don't have `hcitool`, you can use `bluetoothctl` and `scan on` as shown in next section.
+
 2. Use Proxmark client with Bluetooth MAC address as bt:<mac>
 ```sh
 ./proxmark3 bt:aa:bb:cc:dd:ee:ff
