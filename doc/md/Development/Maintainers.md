@@ -53,6 +53,18 @@ For verbose usage and see the actual commands being executed, add `V=1`.
 
 Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `make client CC=clang CXX=clang++ LD=clang++`.
 
+If your platform needs specific lib/include paths for the client, you can use `LDLIBS` and `INCLUDES_CLIENT` *as envvars*, e.g. `LDLIBS="-L/some/more/lib" INCLUDES_CLIENT="-I/some/more/include" make client ...`
+
+It's also possible to skip parts even if libraries are present in the compilation environment:
+
+* `make client SKIPQT=1` to skip GUI even if Qt is present
+* `make client SKIPBT=1` to skip native Bluetooth support even if libbluetooth is present
+
+If you're cross-compiling, these ones might be useful:
+
+* `make client SKIPREVENGTEST=1` to skip compilation and execution of a consistency test for reveng, which can be problematic in case of cross-compilation
+* `make client cpu_arch=generic` to skip Intel specialized hardnested components, which is required e.g. if cross-compilation host is Intel but not the target
+
 `make install` is actually triggering the following individual targets which can be accessed individually:
 
 * `make client/install`
