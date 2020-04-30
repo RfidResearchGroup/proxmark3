@@ -22,6 +22,7 @@ MYCLEANOLDPATH = ../../reveng
 
 include ../../../Makefile.host
 
+ifneq ($(SKIPREVENGTEST),1)
 CLEAN += bmptst
 
 $(BINDIR)/$(LIB_A): $(BINDIR)/bmptst
@@ -31,5 +32,6 @@ $(BINDIR)/bmptst: bmpbit.c config.h reveng.h
 	$(Q)$(CC) $(CFLAGS) -DBMPTST -o $@ $<
 	$(info [=] TEST $@)
 	$(Q)( ./$@ && $(TOUCH) $@ ) || ( $(RM) $@ && $(FALSE) )
+endif
 
 .PHONY: all clean
