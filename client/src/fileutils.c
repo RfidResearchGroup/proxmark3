@@ -1151,7 +1151,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
                 fclose(f);
                 goto out;
             } else {
-                memset(*pdata + (mem_size - block_size), 0, block_size);
+                memset((uint8_t *)*pdata + (mem_size - block_size), 0, block_size);
             }
         }
 
@@ -1171,7 +1171,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
         uint64_t key = strtoull(line, NULL, 16);
 
-        num_to_bytes(key, keylen >> 1, *pdata + (*keycnt * (keylen >> 1)));
+        num_to_bytes(key, keylen >> 1, (uint8_t *)*pdata + (*keycnt * (keylen >> 1)));
 
         (*keycnt)++;
 

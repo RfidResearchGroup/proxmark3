@@ -87,7 +87,6 @@ void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
 
 //void xor(unsigned char *dst, unsigned char *src, size_t len);
-int32_t le24toh(uint8_t data[3]);
 
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);

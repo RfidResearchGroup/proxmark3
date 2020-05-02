@@ -34,7 +34,7 @@
 // XYZ 3D printing
 // Vinglock
 //------------------------------------
-void transform_D(uint8_t *ru) {
+static void transform_D(uint8_t *ru) {
 
     const uint32_t c_D[] = {
         0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
@@ -415,7 +415,7 @@ int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
 //------------------------------------
 // Self tests
 //------------------------------------
-int generator_selftest() {
+int generator_selftest(void) {
 
 #define NUM_OF_TEST     5
 

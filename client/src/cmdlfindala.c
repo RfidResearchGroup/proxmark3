@@ -22,6 +22,7 @@
 #include "cliparser.h"
 #include "commonutil.h"
 #include "ui.h"         // PrintAndLog
+#include "proxgui.h"
 #include "lfdemod.h"    // parityTest, bitbytes_to_byte
 #include "cmddata.h"
 #include "cmdlf.h"      // lf_read

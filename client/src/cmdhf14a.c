@@ -1245,7 +1245,7 @@ int CmdHF14A(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-static void printTag(char *tag) {
+static void printTag(const char *tag) {
     PrintAndLogEx(SUCCESS, "POSSIBLE TYPE:" _YELLOW_("    %s"), tag);
 }
 
@@ -1340,7 +1340,7 @@ int detect_nxp_card(uint8_t sak, uint16_t atqa) {
 typedef struct {
     uint8_t uid0;
     uint8_t uid1;
-    char *desc;
+    const char *desc;
 } uidname;
 
 const uidname uidmap[] = {

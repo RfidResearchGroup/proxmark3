@@ -56,6 +56,9 @@ ZLIB = $(OBJDIR)/libz.a
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH)
 INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
 CFLAGS ?= -Wall -Werror -O3
+#CFLAGS ?= -Wall -Werror -O3 -Wchar-subscripts -Wundef -Wshadow -Wcast-align -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Wredundant-decls -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wmissing-prototypes -Wstrict-prototypes -Wnested-externs -Wmissing-declarations
+#  -Wbad-function-cast -Wextra -Wswitch-enum -Wold-style-definition
+
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
 # WIP Testing

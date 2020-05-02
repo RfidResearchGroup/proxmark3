@@ -24,6 +24,7 @@
 #include "util_posix.h"
 #include "protocols.h"
 #include "ui.h"
+#include "proxgui.h"
 #include "graph.h"
 #include "cmddata.h"
 #include "cmdlf.h"

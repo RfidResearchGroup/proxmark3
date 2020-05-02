@@ -37,6 +37,7 @@
 #include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
+#include "proxgui.h"
 #include "cmddata.h"
 #include "graph.h"
 #include "fpga.h"

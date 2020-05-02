@@ -25,6 +25,7 @@
 
 #include "lfdemod.h"        // device/client demods of LF signals
 #include "ui.h"             // for show graph controls
+#include "proxgui.h"
 #include "graph.h"          // for graph data
 #include "cmddata.h"        // for `lf search`
 #include "cmdlfawid.h"      // for awid menu

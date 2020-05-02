@@ -48,21 +48,11 @@ extern session_arg_t session;
 #endif
 #define MAX_PRINT_BUFFER 2048
 
-void ShowGui(void);
-void HideGraphWindow(void);
-void ShowGraphWindow(void);
-void RepaintGraphWindow(void);
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetFlushAfterWrite(bool value);
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter);
 void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode);
-
-extern double CursorScaleFactor;
-extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
-extern uint32_t CursorCPos, CursorDPos;
-extern bool GridLocked;
-extern bool showDemod;
 
 int searchHomeFilePath(char **foundpath, const char *filename, bool create_home);
 
