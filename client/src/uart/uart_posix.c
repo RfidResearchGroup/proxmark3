@@ -88,7 +88,11 @@ int uart_reconfigure_timeouts(uint32_t value) {
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
-    if (sp == 0) return INVALID_SERIAL_PORT;
+
+    if (sp == 0) {
+        PrintAndLogEx(ERR, "UART failed to allocate memory");
+        return INVALID_SERIAL_PORT;
+    }
 
     // init timeouts
     timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
