@@ -82,6 +82,9 @@ local void slide_hash     OF((deflate_state *s));
 local void fill_window    OF((deflate_state *s));
 local block_state deflate_stored OF((deflate_state *s, int flush));
 local block_state deflate_fast   OF((deflate_state *s, int flush));
+#ifdef ZLIB_PM3_TUNED
+local uInt try_harder OF((deflate_state *s, uInt strstart, uInt lookahead, IPos hash_head));
+#endif
 #ifndef FASTEST
 local block_state deflate_slow   OF((deflate_state *s, int flush));
 #endif

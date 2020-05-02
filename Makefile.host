@@ -15,7 +15,8 @@ ifeq ($(DEFSBEENHERE),)
     $(error Can't find Makefile.defs)
 endif
 
-CFLAGS ?= -Wall -Werror -O3
+CFLAGS ?= -Wall -Werror -O3 -Wchar-subscripts -Wundef -Wshadow -Wcast-align -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Wredundant-decls -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wmissing-prototypes -Wstrict-prototypes -Wnested-externs -Wmissing-declarations
+#  -Wbad-function-cast -Wextra -Wswitch-enum -Wold-style-definition
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
 
 vpath %.c $(MYSRCPATHS)
