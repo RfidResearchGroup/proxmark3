@@ -64,7 +64,7 @@ bool set_bit_by_position(wiegand_message_t *data, bool value, uint8_t pos) {
  * If the definition of the wiegand_message struct changes, this function must also
  * be updated to match.
  */
-void message_datacopy(wiegand_message_t *src, wiegand_message_t *dest) {
+static void message_datacopy(wiegand_message_t *src, wiegand_message_t *dest) {
     dest->Bot = src->Bot;
     dest->Mid = src->Mid;
     dest->Top = src->Top;

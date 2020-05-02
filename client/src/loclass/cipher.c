@@ -283,7 +283,7 @@ void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_ke
 }
 
 #ifndef ON_DEVICE
-int testMAC() {
+int testMAC(void) {
     PrintAndLogEx(SUCCESS, "Testing MAC calculation...");
 
     //From the "dismantling.IClass" paper:

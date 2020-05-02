@@ -23,6 +23,6 @@ int PrintAIDDescriptionBuf(json_t *root, uint8_t *aid, size_t aidlen, bool verbo
 json_t *AIDSearchInit(bool verbose);
 json_t *AIDSearchGetElm(json_t *root, int elmindx);
 bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen);
-int AIDSearchFree();
+int AIDSearchFree(json_t *root);
 
 #endif

@@ -318,6 +318,7 @@ static const luaL_Reg binlib[] = {
     {NULL,     NULL}
 };
 
+LUALIB_API int luaopen_binlib(lua_State *L);
 LUALIB_API int luaopen_binlib(lua_State *L) {
     luaL_newlib(L, binlib);
     return 1;

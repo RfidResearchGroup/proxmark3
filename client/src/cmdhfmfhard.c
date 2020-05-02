@@ -1302,7 +1302,7 @@ static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t 
 
 }
 
-static void simulate_acquire_nonces() {
+static void simulate_acquire_nonces(void) {
     time_t time1 = time(NULL);
     last_sample_clock = 0;
     sample_period = 1000; // for simulation
@@ -2108,7 +2108,7 @@ static uint16_t SumProperty(struct Crypto1State *s) {
     return (sum_odd * (16 - sum_even) + (16 - sum_odd) * sum_even);
 }
 
-static void Tests() {
+static void Tests(void) {
 
     if (known_target_key == -1)
         return;

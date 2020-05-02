@@ -1360,7 +1360,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
              (strcmp(FIRMWARES_SUBDIR, pm3dir) == 0) ||
              (strcmp(BOOTROM_SUBDIR, pm3dir) == 0) ||
              (strcmp(FULLIMAGE_SUBDIR, pm3dir) == 0))) {
-        char *above = "../";
+        const char *above = "../";
         char *path = calloc(strlen(exec_path) + strlen(above) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;

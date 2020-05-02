@@ -875,7 +875,7 @@ static int CmdSmartList(const char *Cmd) {
     return 0;
 }
 
-static void smart_brute_prim() {
+static void smart_brute_prim(void) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)

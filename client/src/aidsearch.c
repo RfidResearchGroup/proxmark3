@@ -13,7 +13,7 @@
 #include "fileutils.h"
 #include "pm3_cmd.h"
 
-int openAIDFile(json_t **root, bool verbose) {
+static int openAIDFile(json_t **root, bool verbose) {
     json_error_t error;
 
     char *path;
@@ -42,7 +42,7 @@ out:
     return retval;
 }
 
-int closeAIDFile(json_t *root) {
+static int closeAIDFile(json_t *root) {
 
     json_decref(root);
     return PM3_SUCCESS;
@@ -71,7 +71,7 @@ int AIDSearchFree(json_t *root) {
     return closeAIDFile(root);
 }
 
-const char *jsonStrGet(json_t *data, char *name) {
+static const char *jsonStrGet(json_t *data, const char *name) {
     json_t *jstr;
 
     jstr = json_object_get(data, name);
@@ -88,7 +88,7 @@ const char *jsonStrGet(json_t *data, char *name) {
     return cstr;
 }
 
-bool aidCompare(const char *aidlarge, const char *aidsmall) {
+static bool aidCompare(const char *aidlarge, const char *aidsmall) {
     if (strcmp(aidlarge, aidsmall) == 0)
         return true;
 

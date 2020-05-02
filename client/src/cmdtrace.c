@@ -25,7 +25,7 @@ static int CmdHelp(const char *Cmd);
 static uint8_t *trace;
 long traceLen = 0;
 
-static int usage_trace_list() {
+static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
     PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
     PrintAndLogEx(NORMAL, "    f      - show frame delay times as well");
@@ -56,14 +56,14 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "        trace list iclass");
     return PM3_SUCCESS;
 }
-static int usage_trace_load() {
+static int usage_trace_load(void) {
     PrintAndLogEx(NORMAL, "Load protocol data from file to trace buffer.");
     PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace load mytracefile.bin");
     return PM3_SUCCESS;
 }
-static int usage_trace_save() {
+static int usage_trace_save(void) {
     PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to file.");
     PrintAndLogEx(NORMAL, "Usage:  trace save <filename>");
     PrintAndLogEx(NORMAL, "Examples:");

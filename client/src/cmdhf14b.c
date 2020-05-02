@@ -684,7 +684,7 @@ static bool HF14B_Std_Reader(bool verbose) {
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
-static bool HF14B_Other_Reader() {
+static bool HF14B_Other_Reader(void) {
 
     // uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
     // uint8_t datalen = 4;

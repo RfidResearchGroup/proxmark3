@@ -823,12 +823,6 @@ void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length
     *(target) = GetParity(source + length / 2, EVEN, length / 2);
 }
 
-// xor two arrays together for len items.  The dst array contains the new xored values.
-void xor(unsigned char *dst, unsigned char *src, size_t len) {
-    for (; len > 0; len--, dst++, src++)
-        *dst ^= *src;
-}
-
 // Pack a bitarray into a uint32_t.
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits) {
 

@@ -670,7 +670,7 @@ int CmdLFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void ChkBitstream() {
+static void ChkBitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {

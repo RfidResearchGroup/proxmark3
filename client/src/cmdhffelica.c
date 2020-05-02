@@ -123,7 +123,7 @@ static int usage_hf_felica_request_response(void) {
     return PM3_SUCCESS;
 }
 
-static void print_status_flag1_interpretation() {
+static void print_status_flag1_interpretation(void) {
     PrintAndLogEx(NORMAL, "\nStatus Flag1:");
     PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
     PrintAndLogEx(NORMAL, "  - FFh : If an error occurs during the processing of a command that includes no list in the command packet, or if "
@@ -133,7 +133,7 @@ static void print_status_flag1_interpretation() {
                   "indicating the location of the error.");
 }
 
-static void print_status_flag2_interpration() {
+static void print_status_flag2_interpration(void) {
     PrintAndLogEx(NORMAL, "\nStatus Flag2:");
     PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
     PrintAndLogEx(NORMAL, "  - 01h : The calculated result is either less than zero when the purse data is decremented, or exceeds 4"
@@ -167,7 +167,7 @@ static void print_status_flag2_interpration() {
     PrintAndLogEx(NORMAL, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
 }
 
-static void print_block_list_element_constraints() {
+static void print_block_list_element_constraints(void) {
     PrintAndLogEx(NORMAL, "       - Each Block List Element shall satisfy the following conditions:");
     PrintAndLogEx(NORMAL, "              - The value of Service Code List Order shall not exceed Number of Service.");
     PrintAndLogEx(NORMAL, "              - Access Mode shall be 000b.");
@@ -177,22 +177,22 @@ static void print_block_list_element_constraints() {
     PrintAndLogEx(NORMAL, "              - Block Number shall be in the range of the number of Blocks assigned to the specified Service.");
 }
 
-static void print_number_of_service_constraints() {
+static void print_number_of_service_constraints(void) {
     PrintAndLogEx(NORMAL, "       - Number of Service: shall be a positive integer in the range of 1 to 16, inclusive.");
 }
 
-static void print_number_of_block_constraints() {
+static void print_number_of_block_constraints(void) {
     PrintAndLogEx(NORMAL, "       - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously. "
                   "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used. Use as default 01");
 }
 
-static void print_service_code_list_constraints() {
+static void print_service_code_list_constraints(void) {
     PrintAndLogEx(NORMAL, "       - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
     PrintAndLogEx(NORMAL, "              - Even when Service Code exists in the product, Service Code not referenced from Block List shall not be specified to Service Code List.");
     PrintAndLogEx(NORMAL, "              - For existence or nonexistence of Service in a product, please check using the Request Service (or Request Service v2) command.");
 }
 
-static int usage_hf_felica_read_without_encryption() {
+static int usage_hf_felica_read_without_encryption(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
     print_number_of_service_constraints();
@@ -215,7 +215,7 @@ static int usage_hf_felica_read_without_encryption() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_write_without_encryption() {
+static int usage_hf_felica_write_without_encryption(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to write Block Data to authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
     print_number_of_service_constraints();
@@ -234,7 +234,7 @@ static int usage_hf_felica_write_without_encryption() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_request_system_code() {
+static int usage_hf_felica_request_system_code(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to acquire System Code registered to the card.");
     PrintAndLogEx(NORMAL, "       - If a card is divided into more than one System, this command acquires System Code of each System existing in the card.");
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rqsyscode [-h] [-i]");
@@ -246,7 +246,7 @@ static int usage_hf_felica_request_system_code() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_reset_mode() {
+static int usage_hf_felica_reset_mode(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to reset Mode to Mode 0.");
     print_status_flag1_interpretation();
     print_status_flag2_interpration();
@@ -261,7 +261,7 @@ static int usage_hf_felica_reset_mode() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_request_specification_version() {
+static int usage_hf_felica_request_specification_version(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to acquire the version of card OS.");
     PrintAndLogEx(NORMAL, "  - Response:");
     PrintAndLogEx(NORMAL, "    - Format Version: Fixed value 00h. Provided only if Status Flag1 = 00h.");
@@ -283,7 +283,7 @@ static int usage_hf_felica_request_specification_version() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_authentication1() {
+static int usage_hf_felica_authentication1(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Initiate mutual authentication. This command must always be executed before Authentication2 command"
                   ", and mutual authentication is achieve only after Authentication2 command has succeeded.");
     PrintAndLogEx(NORMAL, "  - Auth1 Parameters:");
@@ -311,7 +311,7 @@ static int usage_hf_felica_authentication1() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_authentication2() {
+static int usage_hf_felica_authentication2(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Complete mutual authentication. This command can only be executed subsquent to Authentication1"
                   " command.");
     PrintAndLogEx(NORMAL, "  - Auth2 Parameters:");
@@ -551,7 +551,7 @@ static bool check_last_idm(uint8_t *data, uint16_t datalen) {
  * @param wr_noCry_resp frame in which the response will be saved.
  * @return success if response was received.
  */
-int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_status_response_t *wr_noCry_resp) {
+static int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_status_response_t *wr_noCry_resp) {
     clear_and_send_command(flags, datalen, data, verbose);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, verbose)) {
@@ -1464,7 +1464,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void printSep() {
+static void printSep(void) {
     PrintAndLogEx(INFO, "------------------------------------------------------------------------------------");
 }
 

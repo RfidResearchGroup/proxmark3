@@ -116,8 +116,8 @@ static void showBanner(void) {
 static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 
-static void prompt_compose(char *buf, size_t buflen, const char *prompt_ctx, const char *prompt_dev) {
-    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
+static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev) {
+    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptctx);
 }
 
 static int check_comm(void) {
@@ -155,11 +155,11 @@ int push_cmdscriptfile(char *path, bool stayafter) {
     return PM3_SUCCESS;
 }
 
-static FILE *current_cmdscriptfile() {
+static FILE *current_cmdscriptfile(void) {
     return cmdscriptfile[cmdscriptfile_idx];
 }
 
-static bool pop_cmdscriptfile() {
+static bool pop_cmdscriptfile(void) {
     fclose(cmdscriptfile[cmdscriptfile_idx]);
     cmdscriptfile[cmdscriptfile_idx--] = NULL;
     if (cmdscriptfile_idx == 0)

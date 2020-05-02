@@ -191,7 +191,7 @@ static int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_readtagfile() {
+static int usage_hf_iclass_readtagfile(void) {
     PrintAndLogEx(NORMAL, "Print a iClass tag-dump file\n");
     PrintAndLogEx(NORMAL, "Usage: hf iClass readtagfile [f <filename>] [s <startblock>] [e <endblock>] [v]\n");
     PrintAndLogEx(NORMAL, "Options:");

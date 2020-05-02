@@ -21,8 +21,8 @@
 # define FILE_PATH_SIZE 1000
 #endif
 
-uint8_t g_debugMode;
-uint8_t g_printAndLog;
+extern uint8_t g_debugMode;
+extern uint8_t g_printAndLog;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2

@@ -1055,7 +1055,7 @@ static int CmdEM4x50Dump(const char *Cmd) {
 
 #define EM_PREAMBLE_LEN 6
 // download samples from device and copy to Graphbuffer
-static bool downloadSamplesEM() {
+static bool downloadSamplesEM(void) {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
     uint8_t got[6000];
@@ -1097,7 +1097,7 @@ static bool doPreambleSearch(size_t *startIdx) {
     return true;
 }
 
-static bool detectFSK() {
+static bool detectFSK(void) {
     // detect fsk clock
     if (GetFskClock("", false) == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK clock failed");
@@ -1112,7 +1112,7 @@ static bool detectFSK() {
     return true;
 }
 // PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
-static bool detectPSK() {
+static bool detectPSK(void) {
     int ans = GetPskClock("", false);
     if (ans <= 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK clock failed");
@@ -1136,7 +1136,7 @@ static bool detectPSK() {
     return true;
 }
 // try manchester - NOTE: ST only applies to T55x7 tags.
-static bool detectASK_MAN() {
+static bool detectASK_MAN(void) {
     bool stcheck = false;
     if (ASKDemod_ext("0 0 0", false, false, 1, &stcheck) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
@@ -1145,7 +1145,7 @@ static bool detectASK_MAN() {
     return true;
 }
 
-static bool detectASK_BI() {
+static bool detectASK_BI(void) {
     int ans = ASKbiphaseDemod("0 0 1", false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase normal demod failed");
@@ -1158,7 +1158,7 @@ static bool detectASK_BI() {
     }
     return true;
 }
-static bool detectNRZ() {
+static bool detectNRZ(void) {
     int ans = NRZrawDemod("0 0 1", false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ normal demod failed");

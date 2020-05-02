@@ -602,7 +602,7 @@ static const cardformat_t FormatTable[] = {
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };
 
-void HIDListFormats() {
+void HIDListFormats(void) {
     if (FormatTable[0].Name == NULL)
         return;
 

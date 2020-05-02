@@ -116,7 +116,7 @@ bool isGraphBitstream(void) {
     return true;
 }
 
-void convertGraphFromBitstream() {
+void convertGraphFromBitstream(void) {
     convertGraphFromBitstreamEx(1, 0);
 }
 
