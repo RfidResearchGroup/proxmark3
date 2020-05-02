@@ -55,7 +55,7 @@ https://github.com/RfidResearchGroup/proxmark3
 To compile the client and firmware with FPC support, the easiest way is to 
 
 1. Copy the sample file:  `Makefile.platform.sample`  ⇒   `Makefile.platform`
-    * `mv Makefile.platform.sample Makefile.platform`
+    * `cp Makefile.platform.sample Makefile.platform`
 2. Edit `Makefile.platform`,  uncomment the line `#PLATFORM_EXTRAS=BTADDON` by removing the `#`
 3. Recompile the project:
    * `make clean; make -j`
@@ -113,10 +113,15 @@ http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp
 
 This requires to have compiled the client with Bluetooth support.
 
+Be sure your user has permissions to use Bluetooth
+
+  * On most distributions, you've to be part of group `bluetooth`: `sudo adduser $USER bluetooth` then log out and log in
+  * else, run the following commands as root : `sudo ...`
+
 1. Find the MAC address of the Bluetooth add-on, named PM3_RDV4.0.
 
 ```sh
-sudo hcitool scan
+hcitool scan
 Scanning ...
   aa:bb:cc:dd:ee:ff PM3_RDV4.0
 ```
@@ -136,7 +141,7 @@ restart it again after pairing.
 If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (again, replace with your addon MAC address):
 
 ```sh
-sudo bluetoothctl
+bluetoothctl
 [bluetooth]# pairable on
 [bluetooth]# scan on
 Discovery started
@@ -178,7 +183,7 @@ rfcomm is a deprecated tool which might be unavailable in your Linux distributio
 1. Find the MAC address of the Bluetooth add-on, named PM3_RDV4.0.
 
 ```sh
-sudo hcitool scan
+hcitool scan
 Scanning ...
   aa:bb:cc:dd:ee:ff PM3_RDV4.0
 ```
