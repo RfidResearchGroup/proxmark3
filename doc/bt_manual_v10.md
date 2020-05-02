@@ -1,6 +1,6 @@
 # MANUAL 
 ### Bluetooth / Battery add-on 'Blue Shark'
-_rev. v1.0 (draft)_
+_rev. v1.0_
 
 ### 1. FEATURES
 
@@ -55,10 +55,12 @@ https://github.com/RfidResearchGroup/proxmark3
 To compile the client and firmware with FPC support, the easiest way is to 
 
 1. Copy the sample file:  `Makefile.platform.sample`  ⇒   `Makefile.platform`
+    * `mv Makefile.platform.sample Makefile.platform`
 2. Edit `Makefile.platform`,  uncomment the line `#PLATFORM_EXTRAS=BTADDON` by removing the `#`
 3. Recompile the project:
-   * `make clean; make -j8`
+   * `make clean; make -j`
 4. Flash the firmware
+   * `./pm3-flash-fullimage`
 
 You are now ready to run the client with the serial port you got from your BT device on your laptop etc.  
 See instructions below.
@@ -86,6 +88,11 @@ You can also switch serial port from inside the proxmark3 client using the new c
 * Open Bluetooth and search for a device named PM3_RDV4.0.
 * Enter the paired password 1234 and establish the connection.
 * The blue state LED on the add-on will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
+
+<enter pictures>
+
+
+* First time you do this you might need to go into Bluetooth more settings and add a outgoing com port. 
 
 #### (2) Fast connection using dedicated USB Bluetooth adapter under Windows
 
@@ -129,7 +136,7 @@ restart it again after pairing.
 If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (again, replace with your addon MAC address):
 
 ```sh
-bluetoothctl
+sudo bluetoothctl
 [bluetooth]# pairable on
 [bluetooth]# scan on
 Discovery started
