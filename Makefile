@@ -186,10 +186,10 @@ udev:
 accessrights:
 ifneq ($(wildcard /etc/arch-release),) #If user is running ArchLinux
 	sudo usermod -aG uucp $(USER) #Use specific command and group
-        sudo usermod -aG bluetooth ${USER}
+	sudo usermod -aG bluetooth $(USER) #Use specific command and group
 else
 	sudo adduser $(USER) dialout
-        sudo adduser ${USER} bluetooth
+	sudo adduser $(USER) bluetooth
 endif
 
 # easy printing of MAKE VARIABLES
