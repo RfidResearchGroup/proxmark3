@@ -30,10 +30,7 @@ int GetNrzClock(const char *str, bool printAns);
 int GetFskClock(const char *str, bool printAns);
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 
-// Max graph trace len: 40000 (bigbuf) * 8 (at 1 bit per sample)
-#ifndef MAX_GRAPH_TRACE_LEN
-#define MAX_GRAPH_TRACE_LEN (40000 * 8 )
-#endif
+#define MAX_GRAPH_TRACE_LEN (40000 * 8)
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0
 

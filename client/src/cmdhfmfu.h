@@ -29,15 +29,6 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 
 int CmdHFMFUltra(const char *Cmd);
 
-uint32_t ul_ev1_pwdgenA(uint8_t *uid);
-uint32_t ul_ev1_pwdgenB(uint8_t *uid);
-uint32_t ul_ev1_pwdgenC(uint8_t *uid);
-uint32_t ul_ev1_pwdgenD(uint8_t *uid);
-
-uint16_t ul_ev1_packgenA(uint8_t *uid);
-uint16_t ul_ev1_packgenB(uint8_t *uid);
-uint16_t ul_ev1_packgenC(uint8_t *uid);
-uint16_t ul_ev1_packgenD(uint8_t *uid);
 uint16_t ul_ev1_packgen_VCNEW(uint8_t *uid, uint32_t pwd);
 
 uint32_t ul_ev1_otpgenA(uint8_t *uid);

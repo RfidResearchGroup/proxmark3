@@ -81,6 +81,5 @@ extern size_t DemodBufferLen;
 
 extern int g_DemodClock;
 extern size_t g_DemodStartIdx;
-extern uint8_t g_debugMode;
 
 #endif

@@ -26,12 +26,14 @@
 #include <string.h>
 #include "proxgui.h"
 #include <QtGui>
-#include "ui.h"
-#include "comms.h"
 
 extern "C" int preferences_save(void);
 
 extern "C" {
+#include "ui.h"
+#include "comms.h"
+#include "graph.h"
+#include "cmddata.h"
 #include "util_darwin.h"
 }
 
