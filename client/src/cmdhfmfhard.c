@@ -793,7 +793,8 @@ static void update_p_K(void) {
         }
         for (uint8_t sum_a8_idx = 0; sum_a8_idx < NUM_SUMS; sum_a8_idx++) {
             uint16_t sum_a8 = sums[sum_a8_idx];
-            my_p_K[sum_a8_idx] = (float)estimated_num_states_coarse(sum_a0, sum_a8) / total_count;
+            float f = estimated_num_states_coarse(sum_a0, sum_a8);
+            my_p_K[sum_a8_idx] = f / total_count;
         }
         // PrintAndLogEx(NORMAL, "my_p_K = [");
         // for (uint8_t sum_a8_idx = 0; sum_a8_idx < NUM_SUMS; sum_a8_idx++) {

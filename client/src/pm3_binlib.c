@@ -203,7 +203,8 @@ static int l_unpack(lua_State *L) {       /** unpack(f,s, [init]) */
 #define PACKNUMBER(OP,T)                        \
     case OP:                                     \
     {                                            \
-        T a=(T)luaL_checknumber(L,i++);             \
+        lua_Number n = luaL_checknumber(L,i++);  \
+        T a=(T)n;                                \
         doswap(swap,&a,sizeof(a));                  \
         luaL_addlstring(&b,(char*)&a,sizeof(a));    \
         break;                                      \
