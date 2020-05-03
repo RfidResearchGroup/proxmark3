@@ -55,15 +55,7 @@ ZLIB = $(OBJDIR)/libz.a
 
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH)
 INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
-#CFLAGS ?= -Wall -Werror -O3
-ifeq ($(platform),Darwin)
-# readline has strict-prototype issues
-CFLAGS ?= -Wall -Werror -O3 -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wundef -Wcast-align -Wno-error=cast-align -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations
-else
-CFLAGS ?= -Wall -Werror -O3 -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wundef -Wcast-align -Wno-error=cast-align -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wstrict-prototypes -Wnested-externs -Wmissing-declarations
-endif
-#  -Wshadow
-#  -Wbad-function-cast -Wextra -Wswitch-enum -Wold-style-definition
+CFLAGS ?= $(DEFCFLAGS)
 
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)

@@ -44,3 +44,18 @@ else
     AR= ar rcs
     RANLIB= ranlib
 endif
+
+DEFCFLAGS = -Wall -Werror -O3
+# Some more warnings we want as errors:
+DEFCFLAGS += -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations
+# Some more warnings we need first to eliminate, so temporarely tolerated:
+DEFCFLAGS += -Wbad-function-cast -Wno-error=bad-function-cast -Wshadow -Wno-error=shadow  -Wcast-align -Wno-error=cast-align
+# TODO?:
+#DEFCFLAGS += -Wextra -Wswitch-enum -Wold-style-definition
+
+ifeq ($(platform),Darwin)
+# their readline has strict-prototype issues
+DEFCFLAGS += -Wstrict-prototypes -Wno-error=strict-prototypes
+else
+DEFCFLAGS += -Wstrict-prototypes
+endif
