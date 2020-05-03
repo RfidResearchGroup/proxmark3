@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I.
-MYCFLAGS = -Wno-unused-function
+MYCFLAGS = -Wno-unused-function -Wno-cast-align
 MYDEFS = -DHAVE_STDINT_H
 MYSRCS = \
 	dump.c \

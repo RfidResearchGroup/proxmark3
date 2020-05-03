@@ -378,7 +378,7 @@ __attribute__((force_align_arg_pointer))
     StateList_t *statelist = arg;
     statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt_enc ^ statelist->uid);
 
-    for (p1 = statelist->head.slhead; * (uint64_t *)p1 != 0; p1++) {};
+    for (p1 = statelist->head.slhead; p1->odd | p1->even; p1++) {};
 
     statelist->len = p1 - statelist->head.slhead;
     statelist->tail.sltail = --p1;
@@ -492,8 +492,10 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
         }
     }
 
-    *(uint64_t *)p3 = -1;
-    *(uint64_t *)p4 = -1;
+    p3->odd = -1;
+    p3->even = -1;
+    p4->odd = -1;
+    p4->even = -1;
     statelists[0].len = p3 - statelists[0].head.slhead;
     statelists[1].len = p4 - statelists[1].head.slhead;
     statelists[0].tail.sltail = --p3;
@@ -637,7 +639,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
     }
 
-    *(uint64_t *)p3 = -1;
+    p3->odd = -1;
+    p3->even = -1;
     statelists[0].len = p3 - statelists[0].head.slhead;
     statelists[0].tail.sltail = --p3;
 
