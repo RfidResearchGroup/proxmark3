@@ -56,7 +56,7 @@ ZLIB = $(OBJDIR)/libz.a
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH)
 INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
 #CFLAGS ?= -Wall -Werror -O3
-ifneq ($(platform),Darwin)
+ifeq ($(platform),Darwin)
 # readline has strict-prototype issues
 CFLAGS ?= -Wall -Werror -O3 -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wundef -Wcast-align -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations
 else
