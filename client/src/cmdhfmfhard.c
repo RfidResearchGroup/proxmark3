@@ -1739,24 +1739,24 @@ static void bitarray_to_list(uint8_t byte, uint32_t *bitarray, uint32_t *state_l
 }
 
 
-static void add_cached_states(statelist_t *candidates, uint16_t part_sum_a0, uint16_t part_sum_a8, odd_even_t odd_even) {
-    candidates->states[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl;
-    candidates->len[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len;
+static void add_cached_states(statelist_t *cands, uint16_t part_sum_a0, uint16_t part_sum_a8, odd_even_t odd_even) {
+    cands->states[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl;
+    cands->len[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len;
     return;
 }
 
 
-static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, uint8_t part_sum_a8, odd_even_t odd_even) {
+static void add_matching_states(statelist_t *cands, uint8_t part_sum_a0, uint8_t part_sum_a8, odd_even_t odd_even) {
     const uint32_t worstcase_size = 1 << 20;
-    candidates->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
-    if (candidates->states[odd_even] == NULL) {
+    cands->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
+    if (cands->states[odd_even] == NULL) {
         PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - statelist.\n");
         exit(4);
     }
-    uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
-    if (candidates_bitarray == NULL) {
+    uint32_t *cands_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
+    if (cands_bitarray == NULL) {
         PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - bitarray.\n");
-        free(candidates->states[odd_even]);
+        free(cands->states[odd_even]);
         exit(4);
     }
 
@@ -1764,21 +1764,21 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
     uint32_t *bitarray_a8 = part_sum_a8_bitarrays[odd_even][part_sum_a8 / 2];
     uint32_t *bitarray_bitflips = nonces[best_first_bytes[0]].states_bitarray[odd_even];
 
-    bitarray_AND4(candidates_bitarray, bitarray_a0, bitarray_a8, bitarray_bitflips);
+    bitarray_AND4(cands_bitarray, bitarray_a0, bitarray_a8, bitarray_bitflips);
 
-    bitarray_to_list(best_first_bytes[0], candidates_bitarray, candidates->states[odd_even], &(candidates->len[odd_even]), odd_even);
+    bitarray_to_list(best_first_bytes[0], cands_bitarray, cands->states[odd_even], &(cands->len[odd_even]), odd_even);
 
-    if (candidates->len[odd_even] == 0) {
-        free(candidates->states[odd_even]);
-        candidates->states[odd_even] = NULL;
-    } else if (candidates->len[odd_even] + 1 < worstcase_size) {
-        candidates->states[odd_even] = realloc(candidates->states[odd_even], sizeof(uint32_t) * (candidates->len[odd_even] + 1));
+    if (cands->len[odd_even] == 0) {
+        free(cands->states[odd_even]);
+        cands->states[odd_even] = NULL;
+    } else if (cands->len[odd_even] + 1 < worstcase_size) {
+        cands->states[odd_even] = realloc(cands->states[odd_even], sizeof(uint32_t) * (cands->len[odd_even] + 1));
     }
-    free_bitarray(candidates_bitarray);
+    free_bitarray(cands_bitarray);
 
     pthread_mutex_lock(&statelist_cache_mutex);
-    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl = candidates->states[odd_even];
-    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len = candidates->len[odd_even];
+    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl = cands->states[odd_even];
+    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len = cands->len[odd_even];
     sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].cache_status = COMPLETED;
     pthread_mutex_unlock(&statelist_cache_mutex);
     return;
