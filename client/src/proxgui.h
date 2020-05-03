@@ -18,7 +18,6 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-//#include "comms.h"
 
 void ShowGraphWindow(void);
 void HideGraphWindow(void);

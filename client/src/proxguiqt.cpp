@@ -24,18 +24,15 @@
 #include <QSlider>
 #include <QHBoxLayout>
 #include <string.h>
-#include "proxgui.h"
 #include <QtGui>
-
-extern "C" int preferences_save(void);
-
-extern "C" {
+#include "proxgui.h"
 #include "ui.h"
 #include "comms.h"
 #include "graph.h"
 #include "cmddata.h"
 #include "util_darwin.h"
-}
+
+extern "C" int preferences_save(void);
 
 bool g_useOverlays = false;
 int g_absVMax = 0;

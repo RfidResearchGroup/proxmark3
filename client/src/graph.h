@@ -13,6 +13,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
 bool HasGraphData(void);
@@ -38,4 +42,7 @@ extern int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 extern size_t GraphTraceLen;
 extern int s_Buff[MAX_GRAPH_TRACE_LEN];
 
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -11,9 +11,13 @@
 #ifndef UI_H__
 #define UI_H__
 
-#include "common.h"
 #include <pthread.h>
+#include "common.h"
 #include "ansi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define _USE_MATH_DEFINES
 
@@ -60,4 +64,7 @@ extern pthread_mutex_t print_lock;
 
 void iceIIR_Butterworth(int *data, const size_t len);
 void iceSimple_Filter(int *data, const size_t len, uint8_t k);
+#ifdef __cplusplus
+}
+#endif
 #endif

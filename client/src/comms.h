@@ -16,6 +16,10 @@
 #include "pm3_cmd.h"    // Packet structs
 #include "util.h"       // FILE_PATH_SIZE
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef DropField
 #define DropField() { \
         clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
@@ -83,6 +87,9 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
 //bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 
