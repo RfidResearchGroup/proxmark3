@@ -90,7 +90,7 @@ static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT;
 
     PrintAndLogEx(NORMAL, "\n");
-#if defined(__linux__) || (__APPLE__) || (_WIN32)
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
@@ -893,7 +893,7 @@ int main(int argc, char *argv[]) {
 
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
-#if defined(__linux__) || (__APPLE__)
+#if defined(__linux__) || defined(__APPLE__)
     // it's okay to use color if:
     // * Linux or OSX
     // * Not redirected to a file but printed to term
