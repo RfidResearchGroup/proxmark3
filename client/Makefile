@@ -58,7 +58,7 @@ INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
 CFLAGS ?= $(DEFCFLAGS)
 
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
+PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT) -DWAI_PM3_TUNED
 # WIP Testing
 #PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
