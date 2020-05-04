@@ -47,7 +47,7 @@ endif
 
 DEFCFLAGS = -Wall -Werror -O3
 # Some more warnings we want as errors:
-DEFCFLAGS += -Wcast-align -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Woverride-init -Wshift-negative-value
+DEFCFLAGS += -Wcast-align -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Woverride-init
 # Some more warnings we need first to eliminate, so temporarely tolerated:
 DEFCFLAGS += -Wno-error=cast-align
 # TODO?:
@@ -55,6 +55,8 @@ DEFCFLAGS += -Wno-error=cast-align
 #DEFCFLAGS += -Wno-error=unused-parameter -Wno-error=old-style-declaration -Wno-error=sign-compare -Wno-error=implicit-fallthrough -Wno-error=type-limits -Wno-error=missing-field-initializers -Wno-error=unused-but-set-parameter -Wno-error=switch-enum -Wno-error=old-style-definition
 # unknown to clang:
 # -Wclobbered -Wmissing-parameter-type -Wcast-function-type
+# requires GCC 6:
+# -Wshift-negative-value
 
 ifeq ($(platform),Darwin)
 # their readline has strict-prototype issues
