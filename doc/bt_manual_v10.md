@@ -1,8 +1,8 @@
 # MANUAL 
-### Bluetooth / Battery add-on 'Blue Shark'
+## Bluetooth / Battery add-on 'Blue Shark'
 _rev. v1.1_
 
-### 1. FEATURES
+## 1. FEATURES
 
 * Built-in Bluetooth 2.0 with EDR Bluetooth module, default baud rate 115200.
 * Built-in 400 mAh polymer lithium-ion battery, typical standby time up to 3.5 hours.
@@ -17,7 +17,7 @@ It can easily connect to Bluetooth mobile phone, portable computer, etc. Without
 Built-in battery can support standalone mode, off-line sniffing, off-line reading & simulation, etc. The temperature of the device is stable.
 
 
-### 2. PARAMETERS
+## 2. PARAMETERS
 
 * Battery capacity:   400 mAh
 * Standby time:       3.5h @ StandBy; 2.9h @ LF-On; 50min @ HF-On;
@@ -29,7 +29,7 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 * Size and weight:    54.4mm * 29.4mm * 13.5mm 24g
 
 
-### 3. ASSEMBLY STEPS
+## 3. ASSEMBLY STEPS
 
 * Unplug your Proxmark3 RDV4.0 device from any usb cable.
 * Remove the plastic upper case of Proxmark3 RDV4.0 with opener.
@@ -45,10 +45,9 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 <img src="http://www.icedev.se/proxmark3/blueshark/addon_open_1.jpg" alt="Image of blue shark add-on open fit" width="300"><img src="http://www.icedev.se/proxmark3/blueshark/addon_fitted_1.jpg" alt="Image of blue shark add-on fitted" width="300">
 </p>
 
-### 4. COMPILATION / FLASHING
+## 4. COMPILATION / FLASHING
 
 #### From Source
-
 Please download the latest source code from Rfid Research Group's Github repo:
 https://github.com/RfidResearchGroup/proxmark3
 
@@ -65,31 +64,14 @@ To compile the client and firmware with FPC support, the easiest way is to
 You are now ready to run the client with the serial port you got from your BT device on your laptop etc.  
 See instructions below.
 
-First open your bluetooth settings,  click on "more options".
-<p align='center'>
-<img src="http://www.icedev.se/proxmark3/blueshark/bt_more_options.png" alt="Image of bluetooth more options popup" width="300">
-</p>
-Go to second tab and view the list of current bluetooth comports. If you don't have an outgoing com port setup, click 'add'
-<p align='center'>
-<img src="http://www.icedev.se/proxmark3/blueshark/bt_com_ports.png" alt="Image of current bluetooth comports" width="300">
-</p>
-Select `outgoing comport` and select the Proxmark3 RDV4.0 device. Click `OK` when done.
-<p align='center'>
-<img src="http://www.icedev.se/proxmark3/blueshark/bt_add_comport.png" alt="Image of adding outgoing comport" width="300">
-</p>
-Verify that you now have a outgoing comport. Remember this com port when you want to use your Proxmark3.
-<p align='center'>
-<img src="http://www.icedev.se/proxmark3/blueshark/bt_done.png" alt="Image of ok bluetooth outgoing comport" width="300">
-</p>
-All done!
-
 #### Homebrew (macOS)
 From the [homebrew-proxmark3 readme](https://github.com/RfidResearchGroup/homebrew-proxmark3)
 
 1. `brew tap rfidresearchgroup/proxmark3`
 2. `brew install --with-blueshark proxmark3`
 
-### 5. CONNECT WITH BLUETOOTH
+
+## 5. CONNECT WITH BLUETOOTH
 
 You can have both USB cable connect and BT active at the same time and connect to either serial port.  
 You can also switch serial port from inside the proxmark3 client using the new command `hw connect`.
@@ -100,19 +82,33 @@ You can also switch serial port from inside the proxmark3 client using the new c
 2. Name:  `PM3_RDV4.0`
 3. Pin: `1234`
 
-#### Windows
-
-#### (1) Connecting your RDV4.0 with Bluetooth on mobile phone or computer
+### Windows
+#### (5.1) (win) Connecting your RDV4.0 with Bluetooth on mobile phone or computer
 * Open Bluetooth and search for a device named PM3_RDV4.0.
 * Enter the paired password 1234 and establish the connection.
 * The blue state LED on the add-on will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
 
-<enter pictures>
-
-
 * First time you do this you might need to go into Bluetooth more settings and add a outgoing com port. 
 
-#### (2) Fast connection using dedicated USB Bluetooth adapter under Windows
+* First open your bluetooth settings,  click on "more options".
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_more_options.png" alt="Image of bluetooth more options popup" width="300">
+</p>
+* Go to second tab and view the list of current bluetooth comports. If you don't have an outgoing com port setup, click 'add'
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_com_ports.png" alt="Image of current bluetooth comports" width="300">
+</p>
+* Select `outgoing comport` and select the Proxmark3 RDV4.0 device. Click `OK` when done.
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_add_comport.png" alt="Image of adding outgoing comport" width="300">
+</p>
+* Verify that you now have a outgoing comport. Remember this com port when you want to use your Proxmark3.
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_done.png" alt="Image of ok bluetooth outgoing comport" width="300">
+</p>
+* done!
+
+#### (5.2) (win) Fast connection using dedicated USB Bluetooth adapter under Windows
 
 <p align='center'>
 <img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
@@ -125,9 +121,8 @@ http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp
 * After the connection is established, the blue state LED on add-on will turn on solid.
 * look for _CP2104 USB tp UART bridge controller_ under devices in order to get the assigned serial port
 
-#### Linux
-
-#### (1) Connecting rdv4.0 with Bluetooth on Linux computer via native Bluetooth support in the client
+### Linux
+#### (5.1) (linux) Connecting rdv4.0 with Bluetooth on Linux computer via native Bluetooth support in the client
 
 This requires to have compiled the client with Bluetooth support.
 
@@ -171,7 +166,7 @@ Discovery started
 [bluetooth]# quit
 ```
 
-#### (2) Fast connection using dedicated USB Bluetooth adapter under Linux
+#### (5.2) (linux) Fast connection using dedicated USB Bluetooth adapter under Linux
 
 <p align='center'>
 <img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
@@ -194,7 +189,7 @@ turn on solid.
 ./proxmark3 /dev/ttyUSB0
 ```
 
-#### (1b, deprecated) Connecting rdv4.0 with Bluetooth on Linux computer via rfcomm
+#### (5.1b) (linux, deprecated) Connecting rdv4.0 with Bluetooth on Linux computer via rfcomm
 
 rfcomm is a deprecated tool which might be unavailable in your Linux distribution.
 
@@ -227,9 +222,9 @@ connection is successful.
 
 See instructions above (method 1) for initial pairing.
 
-#### MacOS
+### MacOS
 
-#### (1) Connecting rdv4.0 with Bluetooth on MacOS
+#### (5.1) (osx) Connecting rdv4.0 with Bluetooth on MacOS
 
 With MacOS Mojave 10.14.5 you could experience some continuosly disconnecting and difficult to recconnect the device at the system wakeup, to avoid this problem do a PRAM reset before to add your Proxmark3 RDV4 Blue Shark:
 
@@ -248,34 +243,34 @@ After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
 ```sh
 ./proxmark3 /dev/tty.PM3_RDV40-DevB
 ```
-#### Android
+### Android
 
-#### (2) Fast connection using dedicated Bluetooth (HC-06 Master + CP2102) adapter under Android with Termux
+#### (5.1) (android) Fast connection using dedicated Bluetooth (HC-06 Master + CP2102) adapter under Android with Termux
  
   1. Make sure you already followed this tutorial https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/termux_notes.md#setup and have Termux with an running Proxmark3 client ready. You need additional the `cp210x` serial usb driver enabled and working, like the `USB_ACM` driver to communicate wireless. 
   2. Insert the Bluetooth adapter with an fitting USB-C/Micro-USB converter into your Android USB port and a serial port `/dev/ttyUSB0` will be created. To see if it's working, run `tsudo ls /dev/ttyU*` and it should list `/dev/ttyUSB0`. 
   3. The adapter will search automatically and establish the connection to BlueShark. The adapter will remember the device that was first connected and after that the same device will be connected. After the connection is established, the blue state LED on add-on will turn on solid.
   4. If you see this, congratulations, you can run your Proxmark3 client in Termux with `tsudo proxmark3/client/proxmark3 /dev/ttyUSB0`
 
-##### Notes
+#### Notes
 If you bought your Bluetooth adapter somewhere else, make sure to set the baud rate to 115200 `AT+BAUD8` and PIN `AT+PIN1234` correctly
 
-### 6. OTHER NOTES
+## 6. OTHER NOTES
 
-#### (1) UART and LED behavior
+### (6.1) UART and LED behavior
 Bluetooth is connected to Proxmark3 RDV4.0 via UART. The USB and UART interfaces of RDV4.0 can coexist without conflict, and no special switching is required. 
 
 The following link has helpful notes on UART usage and baud rates:
 https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/uart_notes.md
 
-#### (2) Disassembly
+### (6.2) Disassembly
 There is a heat conductive double-sided tape inside the add-on, which has strong adhesive force. Therefore, if add-on needs to be removed, it needs to be pulled out from the heat sink end with greater efforts. Each disassembly will reduce the viscidity of double-sided tape. When double-sided tape is well protected, it will not affect the second use. Thermal conductivity will be slightly worse and will therefore have a direct impact on the thermal performance of the heat sink.
 
-#### (3) Battery charging
+### (6.3) Battery charging
 The battery charging circuit is turned on by default. Any time a USB cable is inserted, the battery will be automatically charged. The red LED will remain bright when charging. 
 The red LED will be extinguished when charging is completed.
 
-#### (4) Get better signals
+### (6.4) Get better signals
 For the better heat dissipation, we have used a cast metal enclosure for the add-on. As a result Bluetooth wireless signals are sacrificed. For example, if the back of add-on is facing the Bluetooth host, the signal is very bad and the distance will be reduced. The best signal strength can be obtained when the front glass faces the Bluetooth host.  
 If the Proxmark3 is not responding, it may be due to a poor Bluetooth connection. To improve performance, try repositioning the Proxmark3 so the glass face is directed toward the host.
 
