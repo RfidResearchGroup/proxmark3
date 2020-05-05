@@ -1,6 +1,6 @@
 # MANUAL 
 ### Bluetooth / Battery add-on 'Blue Shark'
-_rev. v1.0_
+_rev. v1.1_
 
 ### 1. FEATURES
 
