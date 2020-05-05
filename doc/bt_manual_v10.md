@@ -65,6 +65,24 @@ To compile the client and firmware with FPC support, the easiest way is to
 You are now ready to run the client with the serial port you got from your BT device on your laptop etc.  
 See instructions below.
 
+First open your bluetooth settings,  click on "more options".
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_more_options.png" alt="Image of bluetooth more options popup" width="300">
+</p>
+Go to second tab and view the list of current bluetooth comports. If you don't have an outgoing com port setup, click 'add'
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_com_ports.png" alt="Image of current bluetooth comports" width="300">
+</p>
+Select `outgoing comport` and select the Proxmark3 RDV4.0 device. Click `OK` when done.
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_add_comport.png" alt="Image of adding outgoing comport" width="300">
+</p>
+Verify that you now have a outgoing comport. Remember this com port when you want to use your Proxmark3.
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/bt_done.png" alt="Image of ok bluetooth outgoing comport" width="300">
+</p>
+All done!
+
 #### Homebrew (macOS)
 From the [homebrew-proxmark3 readme](https://github.com/RfidResearchGroup/homebrew-proxmark3)
 
