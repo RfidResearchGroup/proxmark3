@@ -113,12 +113,9 @@ You can also switch serial port from inside the proxmark3 client using the new c
 * Enter the paired password 1234 and establish the connection.
 * The blue state LED on the add-on will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
 
-* First time you do this you might need to go into Bluetooth more settings and add a outgoing com port. 
+* First time you do this you might need to go into Bluetooth more settings and add a outgoing com port. If so, follow these steps below.
 
 * First open your bluetooth settings,  click on "more options".
-![Image](http://www.icedev.se/proxmark3/blueshark/bt_more_options.png) 
-![Image](http://www.icedev.se/proxmark3/blueshark/bt_com_ports.png)
-
 <p align='center'>
 <img src="http://www.icedev.se/proxmark3/blueshark/bt_more_options.png" alt="Image of bluetooth more options popup" width="300">
 </p>
