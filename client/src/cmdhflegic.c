@@ -880,7 +880,7 @@ int legic_get_type(legic_card_select_t *card) {
     if (!isOK)
         return PM3_ESOFT;
 
-    memcpy(card, (legic_card_select_t *)resp.data.asBytes, sizeof(legic_card_select_t));
+    memcpy(card, resp.data.asBytes, sizeof(legic_card_select_t));
     return PM3_SUCCESS;
 }
 void legic_chk_iv(uint32_t *iv) {
