@@ -110,15 +110,19 @@ while true; do
   if ! CheckExecute "mfu pwdgen test"                  "$PM3BIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
 
   printf "\n${C_BLUE}Testing LF:${C_NC}\n"
-  if ! CheckExecute "lf em4x05 test"      "$PM3BIN -c 'data load traces/em4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
-  if ! CheckExecute "lf em410x test"      "$PM3BIN -c 'data load traces/EM4102-1.pm3;lf search 1'" "EM410x ID found"; then break; fi
-  if ! CheckExecute "lf visa2000 test"    "$PM3BIN -c 'data load traces/visa2000.pm3;lf search 1'" "Visa2000 ID found"; then break; fi
-  if ! CheckExecute "lf awid test"        "$PM3BIN -c 'data load traces/AWID-15-259.pm3;lf search 1'" "AWID ID found"; then break; fi
-  if ! CheckExecute "lf securakey test"   "$PM3BIN -c 'data load traces/securakey-64169.pm3;lf search 1 '" "Securakey ID found"; then break; fi
-  if ! CheckExecute "lf keri test"        "$PM3BIN -c 'data load traces/keri.pm3;lf search 1'" "Pyramid ID found"; then break; fi
+  if ! CheckExecute "lf EM4x05 test"      "$PM3BIN -c 'data load traces/em4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
+  if ! CheckExecute "lf EM410x test"      "$PM3BIN -c 'data load traces/EM4102-1.pm3;lf search 1'" "EM410x ID found"; then break; fi
+  if ! CheckExecute "lf VISA2000 test"    "$PM3BIN -c 'data load traces/visa2000.pm3;lf search 1'" "Visa2000 ID found"; then break; fi
+  if ! CheckExecute "lf AWID test"        "$PM3BIN -c 'data load traces/AWID-15-259.pm3;lf search 1'" "AWID ID found"; then break; fi
+  if ! CheckExecute "lf SECURAKEY test"   "$PM3BIN -c 'data load traces/securakey-64169.pm3;lf search 1 '" "Securakey ID found"; then break; fi
+  if ! CheckExecute "lf NEXWATCH test"    "$PM3BIN -c 'data load traces/quadrakey-521512301.pm3;lf search 1 '" "NexWatch ID found"; then break; fi
+  if ! CheckExecute "lf KERI test"        "$PM3BIN -c 'data load traces/keri.pm3;lf search 1'" "Pyramid ID found"; then break; fi
   if ! CheckExecute "lf HID Prox test" "$PM3BIN -c 'data load traces/hid-proxCardII-05512-11432784-1.pm3;lf search 1'" "HID Prox ID found"; then break; fi
-  if ! CheckExecute "lf Paradox test"     "$PM3BIN -c 'data load traces/Paradox-96_40426-APJN08.pm3;lf search 1'" "Paradox ID found"; then break; fi
-  if ! CheckExecute "lf IO Prox test"     "$PM3BIN -c 'data load traces/ioprox-XSF-01-3B-44725.pm3;lf search 1'" "IO Prox ID found"; then break; fi
+  if ! CheckExecute "lf PARADOX test"     "$PM3BIN -c 'data load traces/Paradox-96_40426-APJN08.pm3;lf search 1'" "Paradox ID found"; then break; fi
+  if ! CheckExecute "lf PAC test"         "$PM3BIN -c 'data load traces/pac-8E4C058E.pm3;lf search 1'" "PAC/Stanley ID found"; then break; fi
+  if ! CheckExecute "lf VIKING test"      "$PM3BIN -c 'data load traces/Transit999-best.pm3;lf search 1'" "Viking ID found"; then break; fi
+  if ! CheckExecute "lf FDX-B test"       "$PM3BIN -c 'data load traces/homeagain1600.pm3;lf search 1'" "FDX-B ID found"; then break; fi
+  if ! CheckExecute "lf INDALA test"      "$PM3BIN -c 'data load traces/indala-504278295.pm3;lf search 1'" "Indala ID found"; then break; fi
 
   printf "\n${C_BLUE}Testing HF:${C_NC}\n"
   if ! CheckExecute "hf mf offline text"               "$PM3BIN -c 'hf mf'" "at_enc"; then break; fi
