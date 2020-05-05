@@ -95,6 +95,8 @@ while true; do
   printf "\n${C_BLUE}Testing files:${C_NC}\n"
   if ! CheckFileExist "proxmark3 exists"               "$PM3BIN"; then break; fi
   if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/*.z"; then break; fi
+  if ! CheckFileExist "simmodule fw file exists"       "./tools/simmodule/sim011.bin"; then break; fi
+
   if $TESTDEVICE; then
     if ! CheckFileExist "arm image exists"             "./armsrc/obj/fullimage.elf"; then break; fi
     if ! CheckFileExist "bootrom exists"               "./bootrom/obj/bootrom.elf"; then break; fi
