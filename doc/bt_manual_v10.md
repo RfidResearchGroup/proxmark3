@@ -2,6 +2,30 @@
 ## Bluetooth / Battery add-on 'Blue Shark'
 _rev. v1.1_
 
+1. FEATURES
+2. PARAMETERS
+3. ASSEMBLY STEPS
+4. COMPILATION / FLASHING
+   * 4.1 From source
+   * 4.2 Homebrew (macOS)
+5. CONNECT WITH BLUETOOTH
+    * 5.1 WINDOWS
+    * 5.1.1 Connecting your RDV4.0 with Bluetooth on mobile phone or computer
+    * 5.1.2 Fast connection using dedicated USB Bluetooth adapter under Windows
+    * 5.2 LINUX
+    * 5.2.1 Connecting rdv4.0 with Bluetooth on Linux computer via native Bluetooth support in the client
+    * 5.2.2 Fast connection using dedicated USB Bluetooth adapter under Linux
+    * 5.2.1b *(deprecated)* Connecting rdv4.0 with Bluetooth on Linux computer via rfcomm
+    * 5.3 OS X
+    * 5.3.1 Connecting rdv4.0 with Bluetooth on MacOS
+    * 5.4 ANDROID
+    * 5.4.1 Fast connection using dedicated Bluetooth (HC-06 Master + CP2102) adapter under Android with Termux
+6. OTHER NOTES
+    * 6.1. UART and LED behavior
+    * 6.2. Disassembly
+    * 6.3. Battery charging
+    * 6.4. Get better signals
+ 
 ## 1. FEATURES
 
 * Built-in Bluetooth 2.0 with EDR Bluetooth module, default baud rate 115200.
@@ -47,7 +71,7 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 ## 4. COMPILATION / FLASHING
 
-#### From Source
+#### (4.1) From Source
 Please download the latest source code from Rfid Research Group's Github repo:
 https://github.com/RfidResearchGroup/proxmark3
 
@@ -64,7 +88,7 @@ To compile the client and firmware with FPC support, the easiest way is to
 You are now ready to run the client with the serial port you got from your BT device on your laptop etc.  
 See instructions below.
 
-#### Homebrew (macOS)
+#### (4.2) Homebrew (macOS)
 From the [homebrew-proxmark3 readme](https://github.com/RfidResearchGroup/homebrew-proxmark3)
 
 1. `brew tap rfidresearchgroup/proxmark3`
@@ -82,8 +106,9 @@ You can also switch serial port from inside the proxmark3 client using the new c
 2. Name:  `PM3_RDV4.0`
 3. Pin: `1234`
 
-### Windows
-#### (5.1) (win) Connecting your RDV4.0 with Bluetooth on mobile phone or computer
+### (5.1) Windows
+
+#### (5.1.1) Connecting your RDV4.0 with Bluetooth on mobile phone or computer
 * Open Bluetooth and search for a device named PM3_RDV4.0.
 * Enter the paired password 1234 and establish the connection.
 * The blue state LED on the add-on will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
@@ -91,6 +116,9 @@ You can also switch serial port from inside the proxmark3 client using the new c
 * First time you do this you might need to go into Bluetooth more settings and add a outgoing com port. 
 
 * First open your bluetooth settings,  click on "more options".
+![Image](http://www.icedev.se/proxmark3/blueshark/bt_more_options.png) 
+![Image](http://www.icedev.se/proxmark3/blueshark/bt_com_ports.png)
+
 <p align='center'>
 <img src="http://www.icedev.se/proxmark3/blueshark/bt_more_options.png" alt="Image of bluetooth more options popup" width="300">
 </p>
@@ -108,7 +136,7 @@ You can also switch serial port from inside the proxmark3 client using the new c
 </p>
 * done!
 
-#### (5.2) (win) Fast connection using dedicated USB Bluetooth adapter under Windows
+#### (5.1.2) Fast connection using dedicated USB Bluetooth adapter under Windows
 
 <p align='center'>
 <img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
@@ -121,8 +149,9 @@ http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp
 * After the connection is established, the blue state LED on add-on will turn on solid.
 * look for _CP2104 USB tp UART bridge controller_ under devices in order to get the assigned serial port
 
-### Linux
-#### (5.1) (linux) Connecting rdv4.0 with Bluetooth on Linux computer via native Bluetooth support in the client
+### (5.2) Linux
+
+#### (5.2.1) Connecting rdv4.0 with Bluetooth on Linux computer via native Bluetooth support in the client
 
 This requires to have compiled the client with Bluetooth support.
 
@@ -166,7 +195,7 @@ Discovery started
 [bluetooth]# quit
 ```
 
-#### (5.2) (linux) Fast connection using dedicated USB Bluetooth adapter under Linux
+#### (5.2.2) Fast connection using dedicated USB Bluetooth adapter under Linux
 
 <p align='center'>
 <img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
@@ -189,7 +218,7 @@ turn on solid.
 ./proxmark3 /dev/ttyUSB0
 ```
 
-#### (5.1b) (linux, deprecated) Connecting rdv4.0 with Bluetooth on Linux computer via rfcomm
+#### (5.2.1b) (deprecated) Connecting rdv4.0 with Bluetooth on Linux computer via rfcomm
 
 rfcomm is a deprecated tool which might be unavailable in your Linux distribution.
 
@@ -222,9 +251,9 @@ connection is successful.
 
 See instructions above (method 1) for initial pairing.
 
-### MacOS
+### (5.3) MacOS
 
-#### (5.1) (osx) Connecting rdv4.0 with Bluetooth on MacOS
+#### (5.3.1) Connecting rdv4.0 with Bluetooth on MacOS
 
 With MacOS Mojave 10.14.5 you could experience some continuosly disconnecting and difficult to recconnect the device at the system wakeup, to avoid this problem do a PRAM reset before to add your Proxmark3 RDV4 Blue Shark:
 
@@ -243,9 +272,9 @@ After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
 ```sh
 ./proxmark3 /dev/tty.PM3_RDV40-DevB
 ```
-### Android
+### (5.4) Android
 
-#### (5.1) (android) Fast connection using dedicated Bluetooth (HC-06 Master + CP2102) adapter under Android with Termux
+#### (5.4.1) Fast connection using dedicated Bluetooth (HC-06 Master + CP2102) adapter under Android with Termux
  
   1. Make sure you already followed this tutorial https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/termux_notes.md#setup and have Termux with an running Proxmark3 client ready. You need additional the `cp210x` serial usb driver enabled and working, like the `USB_ACM` driver to communicate wireless. 
   2. Insert the Bluetooth adapter with an fitting USB-C/Micro-USB converter into your Android USB port and a serial port `/dev/ttyUSB0` will be created. To see if it's working, run `tsudo ls /dev/ttyU*` and it should list `/dev/ttyUSB0`. 
