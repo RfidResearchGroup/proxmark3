@@ -95,7 +95,9 @@ static inline uint32_t bitcount(uint32_t a) {
 }
 
 static uint8_t isEven_64_63(const uint8_t *data) { // 8
-    return (bitcount(*(uint32_t *) data) + (bitcount((*(uint32_t *)(data + 4)) & 0xfeffffff))) & 1;
+    uint32_t tmp[2];
+    memcpy(tmp, data, 8);
+    return (bitcount(tmp[0]) + (bitcount(tmp[1] & 0xfeffffff))) & 1;
 }
 
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
@@ -163,14 +165,14 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
     buffer[6] = (data[3] << 7) | ((data[4] & 0xe0) >> 1) | ((data[4] & 0x01) << 3) | ((data[5] & 0xe0) >> 5);
     buffer[5] = (data[5] << 7) | ((data[6] & 0xe0) >> 1) | ((data[6] & 0x01) << 3) | ((data[7] & 0xe0) >> 5);
-
-    bool isValid = (checksum == *(uint16_t *)(buffer + 5));
+    uint16_t checksum2 = (buffer[6] << 8) + buffer[5];
+    bool isValid = (checksum == checksum2);
 
     subtype = (data[1] & 0x1e) >> 1;
     customerCode = ((data[1] & 0x01) << 11) | (data[2] << 3) | ((data[3] & 0xe0) >> 5);
 
     if (isValid == false) {
-        PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("failed"), checksum, *(uint16_t *)(buffer + 5));
+        PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("failed"), checksum, checksum2);
         ret = PM3_ESOFT;
     }
 

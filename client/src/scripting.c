@@ -33,6 +33,7 @@
 #include "protocols.h"
 #include "fileutils.h"    // searchfile
 #include "cmdlf.h"        // lf_config
+#include "generator.h"
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];

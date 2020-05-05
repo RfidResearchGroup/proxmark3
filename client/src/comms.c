@@ -202,7 +202,7 @@ void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
  *  A better method could have been to have explicit command-ACKS, so we can know which ACK goes to which
  *  operation. Right now we'll just have to live with this.
  */
-void clearCommandBuffer() {
+void clearCommandBuffer(void) {
     //This is a very simple operation
     pthread_mutex_lock(&rxBufferMutex);
     cmd_tail = cmd_head;

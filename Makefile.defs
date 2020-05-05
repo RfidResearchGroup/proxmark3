@@ -44,3 +44,22 @@ else
     AR= ar rcs
     RANLIB= ranlib
 endif
+
+DEFCFLAGS = -Wall -Werror -O3
+# Some more warnings we want as errors:
+DEFCFLAGS += -Wcast-align -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers
+# Some more warnings we need first to eliminate, so temporarely tolerated:
+DEFCFLAGS += -Wno-error=cast-align
+# TODO?:
+#DEFCFLAGS += -Wunused-parameter -Wold-style-declaration -Wsign-compare -Wimplicit-fallthrough=3 -Wtype-limits -Wmissing-field-initializers -Wunused-but-set-parameter -Wswitch-enum -Wold-style-definition
+#DEFCFLAGS += -Wno-error=unused-parameter -Wno-error=old-style-declaration -Wno-error=sign-compare -Wno-error=implicit-fallthrough -Wno-error=type-limits -Wno-error=missing-field-initializers -Wno-error=unused-but-set-parameter -Wno-error=switch-enum -Wno-error=old-style-definition
+# unknown to clang:     -Wclobbered -Wmissing-parameter-type -Wcast-function-type
+# unknown to clang < 8: -Woverride-init
+# unknown to gcc < 6:   -Wshift-negative-value
+
+ifeq ($(platform),Darwin)
+# their readline has strict-prototype issues
+DEFCFLAGS += -Wstrict-prototypes -Wno-error=strict-prototypes
+else
+DEFCFLAGS += -Wstrict-prototypes
+endif

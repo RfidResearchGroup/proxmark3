@@ -22,7 +22,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static char *getHitagTypeStr(uint32_t uid) {
+static const char *getHitagTypeStr(uint32_t uid) {
     //uid s/n        ********
     uint8_t type = (uid >> 4) & 0xF;
     switch (type) {

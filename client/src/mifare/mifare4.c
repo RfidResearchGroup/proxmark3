@@ -90,42 +90,42 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
     return StaticNone;
 }
 /*
-static int CalculateEncIVCommand(mf4Session_t *session, uint8_t *iv, bool verbose) {
-    memcpy(&iv[0], &session->TI, 4);
-    memcpy(&iv[4], &session->R_Ctr, 2);
-    memcpy(&iv[6], &session->W_Ctr, 2);
-    memcpy(&iv[8], &session->R_Ctr, 2);
-    memcpy(&iv[10], &session->W_Ctr, 2);
-    memcpy(&iv[12], &session->R_Ctr, 2);
-    memcpy(&iv[14], &session->W_Ctr, 2);
+static int CalculateEncIVCommand(mf4Session_t *mf4session, uint8_t *iv, bool verbose) {
+    memcpy(&iv[0], &mf4session->TI, 4);
+    memcpy(&iv[4], &mf4session->R_Ctr, 2);
+    memcpy(&iv[6], &mf4session->W_Ctr, 2);
+    memcpy(&iv[8], &mf4session->R_Ctr, 2);
+    memcpy(&iv[10], &mf4session->W_Ctr, 2);
+    memcpy(&iv[12], &mf4session->R_Ctr, 2);
+    memcpy(&iv[14], &mf4session->W_Ctr, 2);
 
     return 0;
 }
 
-static int CalculateEncIVResponse(mf4Session *session, uint8_t *iv, bool verbose) {
-    memcpy(&iv[0], &session->R_Ctr, 2);
-    memcpy(&iv[2], &session->W_Ctr, 2);
-    memcpy(&iv[4], &session->R_Ctr, 2);
-    memcpy(&iv[6], &session->W_Ctr, 2);
-    memcpy(&iv[8], &session->R_Ctr, 2);
-    memcpy(&iv[10], &session->W_Ctr, 2);
-    memcpy(&iv[12], &session->TI, 4);
+static int CalculateEncIVResponse(mf4Session *mf4session, uint8_t *iv, bool verbose) {
+    memcpy(&iv[0], &mf4session->R_Ctr, 2);
+    memcpy(&iv[2], &mf4session->W_Ctr, 2);
+    memcpy(&iv[4], &mf4session->R_Ctr, 2);
+    memcpy(&iv[6], &mf4session->W_Ctr, 2);
+    memcpy(&iv[8], &mf4session->R_Ctr, 2);
+    memcpy(&iv[10], &mf4session->W_Ctr, 2);
+    memcpy(&iv[12], &mf4session->TI, 4);
 
     return 0;
 }
 */
 
-int CalculateMAC(mf4Session_t *session, MACType_t mtype, uint8_t blockNum, uint8_t blockCount, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
-    if (!session || !session->Authenticated || !mac || !data || !datalen)
+int CalculateMAC(mf4Session_t *mf4session, MACType_t mtype, uint8_t blockNum, uint8_t blockCount, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
+    if (!mf4session || !mf4session->Authenticated || !mac || !data || !datalen)
         return 1;
 
     memset(mac, 0x00, 8);
 
-    uint16_t ctr = session->R_Ctr;
+    uint16_t ctr = mf4session->R_Ctr;
     switch (mtype) {
         case mtypWriteCmd:
         case mtypWriteResp:
-            ctr = session->W_Ctr;
+            ctr = mf4session->W_Ctr;
             break;
         case mtypReadCmd:
         case mtypReadResp:
@@ -134,7 +134,7 @@ int CalculateMAC(mf4Session_t *session, MACType_t mtype, uint8_t blockNum, uint8
 
     uint8_t macdata[2049] = {data[0], (ctr & 0xFF), (ctr >> 8), 0};
     int macdatalen = datalen;
-    memcpy(&macdata[3], session->TI, 4);
+    memcpy(&macdata[3], mf4session->TI, 4);
 
     switch (mtype) {
         case mtypReadCmd:
@@ -160,10 +160,10 @@ int CalculateMAC(mf4Session_t *session, MACType_t mtype, uint8_t blockNum, uint8
     if (verbose)
         PrintAndLogEx(NORMAL, "MAC data[%d]: %s", macdatalen, sprint_hex(macdata, macdatalen));
 
-    return aes_cmac8(NULL, session->Kmac, macdata, mac, macdatalen);
+    return aes_cmac8(NULL, mf4session->Kmac, macdata, mac, macdatalen);
 }
 
-int MifareAuth4(mf4Session_t *session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
+int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
     uint8_t data[257] = {0};
     int datalen = 0;
 
@@ -173,8 +173,8 @@ int MifareAuth4(mf4Session_t *session, uint8_t *keyn, uint8_t *key, bool activat
     if (silentMode)
         verbose = false;
 
-    if (session)
-        session->Authenticated = false;
+    if (mf4session)
+        mf4session->Authenticated = false;
 
     uint8_t cmd1[] = {0x70, keyn[1], keyn[0], 0x00};
     int res = ExchangeRAW14a(cmd1, sizeof(cmd1), activateField, true, data, sizeof(data), &datalen, silentMode);
@@ -284,19 +284,19 @@ int MifareAuth4(mf4Session_t *session, uint8_t *keyn, uint8_t *key, bool activat
     if (verbose)
         PrintAndLogEx(NORMAL, "");
 
-    if (session) {
-        session->Authenticated = true;
-        session->R_Ctr = 0;
-        session->W_Ctr = 0;
-        session->KeyNum = keyn[1] + (keyn[0] << 8);
-        memmove(session->RndA, RndA, 16);
-        memmove(session->RndB, RndB, 16);
-        memmove(session->Key, key, 16);
-        memmove(session->TI, raw, 4);
-        memmove(session->PICCap2, &raw[20], 6);
-        memmove(session->PCDCap2, &raw[26], 6);
-        memmove(session->Kenc, kenc, 16);
-        memmove(session->Kmac, kmac, 16);
+    if (mf4session) {
+        mf4session->Authenticated = true;
+        mf4session->R_Ctr = 0;
+        mf4session->W_Ctr = 0;
+        mf4session->KeyNum = keyn[1] + (keyn[0] << 8);
+        memmove(mf4session->RndA, RndA, 16);
+        memmove(mf4session->RndB, RndB, 16);
+        memmove(mf4session->Key, key, 16);
+        memmove(mf4session->TI, raw, 4);
+        memmove(mf4session->PICCap2, &raw[20], 6);
+        memmove(mf4session->PCDCap2, &raw[26], 6);
+        memmove(mf4session->Kenc, kenc, 16);
+        memmove(mf4session->Kmac, kmac, 16);
     }
 
     if (verbose)
@@ -330,39 +330,39 @@ int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int
     return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
-int MFPReadBlock(mf4Session_t *session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+int MFPReadBlock(mf4Session_t *mf4session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     uint8_t rcmd[4 + 8] = {(plain ? (0x37) : (0x33)), blockNum, 0x00, blockCount};
-    if (!plain && session)
-        CalculateMAC(session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], VerboseMode);
+    if (!plain && mf4session)
+        CalculateMAC(mf4session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], VerboseMode);
 
     int res = intExchangeRAW14aPlus(rcmd, plain ? 4 : sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
     if (res)
         return res;
 
-    if (session)
-        session->R_Ctr++;
+    if (mf4session)
+        mf4session->R_Ctr++;
 
-    if (session && mac && *dataoutlen > 11)
-        CalculateMAC(session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, VerboseMode);
+    if (mf4session && mac && *dataoutlen > 11)
+        CalculateMAC(mf4session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, VerboseMode);
 
     return 0;
 }
 
-int MFPWriteBlock(mf4Session_t *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+int MFPWriteBlock(mf4Session_t *mf4session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     uint8_t rcmd[1 + 2 + 16 + 8] = {0xA3, blockNum, 0x00};
     memmove(&rcmd[3], data, 16);
-    if (session)
-        CalculateMAC(session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], VerboseMode);
+    if (mf4session)
+        CalculateMAC(mf4session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], VerboseMode);
 
     int res = intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
     if (res)
         return res;
 
-    if (session)
-        session->W_Ctr++;
+    if (mf4session)
+        mf4session->W_Ctr++;
 
-    if (session && mac && *dataoutlen > 3)
-        CalculateMAC(session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, VerboseMode);
+    if (mf4session && mac && *dataoutlen > 3)
+        CalculateMAC(mf4session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, VerboseMode);
 
     return 0;
 }

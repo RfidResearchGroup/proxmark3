@@ -18,6 +18,7 @@
 #include "commonutil.h"          // ARRAYLEN
 #include "cmdparser.h"           // for command_t
 #include "ui.h"                  // for show graph controls
+#include "proxgui.h"
 #include "graph.h"               // for graph data
 #include "comms.h"
 #include "lfdemod.h"             // for demod code
@@ -287,7 +288,7 @@ static int usage_data_buffclear(void) {
     PrintAndLogEx(NORMAL, "       h              This help");
     return PM3_SUCCESS;
 }
-static int usage_data_fsktonrz() {
+static int usage_data_fsktonrz(void) {
     PrintAndLogEx(NORMAL, "Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");

@@ -90,7 +90,7 @@ static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT;
 
     PrintAndLogEx(NORMAL, "\n");
-#if defined(__linux__) || (__APPLE__) || (_WIN32)
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
@@ -116,8 +116,8 @@ static void showBanner(void) {
 static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 
-static void prompt_compose(char *buf, size_t buflen, const char *prompt_ctx, const char *prompt_dev) {
-    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
+static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev) {
+    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptctx);
 }
 
 static int check_comm(void) {
@@ -155,11 +155,11 @@ int push_cmdscriptfile(char *path, bool stayafter) {
     return PM3_SUCCESS;
 }
 
-static FILE *current_cmdscriptfile() {
+static FILE *current_cmdscriptfile(void) {
     return cmdscriptfile[cmdscriptfile_idx];
 }
 
-static bool pop_cmdscriptfile() {
+static bool pop_cmdscriptfile(void) {
     fclose(cmdscriptfile[cmdscriptfile_idx]);
     cmdscriptfile[cmdscriptfile_idx--] = NULL;
     if (cmdscriptfile_idx == 0)
@@ -893,7 +893,7 @@ int main(int argc, char *argv[]) {
 
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
-#if defined(__linux__) || (__APPLE__)
+#if defined(__linux__) || defined(__APPLE__)
     // it's okay to use color if:
     // * Linux or OSX
     // * Not redirected to a file but printed to term

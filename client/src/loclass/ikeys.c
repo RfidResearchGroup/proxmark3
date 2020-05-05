@@ -219,7 +219,7 @@ static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *o
     }
 }
 
-static void printbegin() {
+static void printbegin(void) {
     if (debug_print < 2)
         return;
 
@@ -369,7 +369,7 @@ void diversifyKey(uint8_t csn[8], uint8_t key[8], uint8_t div_key[8]) {
     hash0(crypt_csn, div_key);
 }
 /*
-static void testPermute() {
+static void testPermute(void) {
     uint64_t x = 0;
     pushbackSixBitByte(&x, 0x00, 0);
     pushbackSixBitByte(&x, 0x01, 1);
@@ -555,7 +555,7 @@ Testcase testcases[] = {
     {{0}, {0}, {0}}
 };
 
-static int testKeyDiversificationWithMasterkeyTestcases() {
+static int testKeyDiversificationWithMasterkeyTestcases(void) {
     int i, error = 0;
     uint8_t empty[8] = {0};
 
@@ -630,7 +630,7 @@ static int testDES2(uint64_t csn, uint64_t expected) {
  * @brief doTestsWithKnownInputs
  * @return
  */
-static int doTestsWithKnownInputs() {
+static int doTestsWithKnownInputs(void) {
     // KSel from http://www.proxmark.org/forum/viewtopic.php?pid=10977#p10977
     int errors = 0;
     PrintAndLogEx(SUCCESS, "Testing DES encryption");

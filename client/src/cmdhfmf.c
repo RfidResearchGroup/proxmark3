@@ -3132,7 +3132,7 @@ out:
 sector_t *k_sector = NULL;
 uint8_t k_sectorsCount = 40;
 
-void showSectorTable() {
+void showSectorTable(void) {
     if (k_sector != NULL) {
         printKeyTable(k_sectorsCount, k_sector);
         free(k_sector);
@@ -4806,7 +4806,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdHFMFPersonalize(const char *cmd) {
+static int CmdHFMFPersonalize(const char *cmd) {
 
     CLIParserInit("hf mf personalize",
                   "Personalize the UID of a Mifare Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",

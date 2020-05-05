@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I. -I..
-MYCFLAGS =
+MYCFLAGS = -Wno-cast-align
 MYDEFS =
 MYSRCS = \
 	aes.c \

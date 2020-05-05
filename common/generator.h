@@ -32,9 +32,6 @@ int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys);
 int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys);
 
-int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
-int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys);
-
 int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys);
 
@@ -44,5 +41,5 @@ int mfc_algo_di_all(uint8_t *uid, uint8_t *keys);
 int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys);
 
-int generator_selftest();
+int generator_selftest(void);
 #endif

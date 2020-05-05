@@ -17,6 +17,7 @@
 #include "comms.h"
 #include "crc16.h"
 #include "ui.h"
+#include "proxgui.h"
 #include "graph.h"
 #include "cmdlfti.h"
 

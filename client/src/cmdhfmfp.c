@@ -949,7 +949,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 #define AES_KEY_LEN        16
 #define MAX_KEYS_LIST_LEN  1024
 
-int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
+static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
                 uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
                 bool verbose) {
     int res;
@@ -1027,7 +1027,7 @@ int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint
     return PM3_SUCCESS;
 }
 
-void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyListLen, uint32_t *startPattern) {
+static void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyListLen, uint32_t *startPattern) {
     for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
         keyList[*keyListLen][0] = (pt >> 8) & 0xff;
         keyList[*keyListLen][1] = pt & 0xff;

@@ -25,6 +25,7 @@
 
 #include "lfdemod.h"        // device/client demods of LF signals
 #include "ui.h"             // for show graph controls
+#include "proxgui.h"
 #include "graph.h"          // for graph data
 #include "cmddata.h"        // for `lf search`
 #include "cmdlfawid.h"      // for awid menu
@@ -669,7 +670,7 @@ int CmdLFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void ChkBitstream() {
+static void ChkBitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {

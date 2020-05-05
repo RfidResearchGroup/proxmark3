@@ -22,10 +22,10 @@
 static int CmdHelp(const char *Cmd);
 
 // trace pointer
-static uint8_t *trace;
-long traceLen = 0;
+static uint8_t *g_trace;
+long g_traceLen = 0;
 
-static int usage_trace_list() {
+static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
     PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
     PrintAndLogEx(NORMAL, "    f      - show frame delay times as well");
@@ -56,14 +56,14 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "        trace list iclass");
     return PM3_SUCCESS;
 }
-static int usage_trace_load() {
+static int usage_trace_load(void) {
     PrintAndLogEx(NORMAL, "Load protocol data from file to trace buffer.");
     PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace load mytracefile.bin");
     return PM3_SUCCESS;
 }
-static int usage_trace_save() {
+static int usage_trace_save(void) {
     PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to file.");
     PrintAndLogEx(NORMAL, "Usage:  trace save <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -491,26 +491,26 @@ static int CmdTraceLoad(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (trace)
-        free(trace);
+    if (g_trace)
+        free(g_trace);
 
-    trace = calloc(fsize, sizeof(uint8_t));
-    if (!trace) {
+    g_trace = calloc(fsize, sizeof(uint8_t));
+    if (!g_trace) {
         PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
         fclose(f);
         return PM3_EMALLOC;
     }
 
-    size_t bytes_read = fread(trace, 1, fsize, f);
-    traceLen = bytes_read;
+    size_t bytes_read = fread(g_trace, 1, fsize, f);
+    g_traceLen = bytes_read;
     fclose(f);
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %lu bytes) loaded from file %s", traceLen, filename);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %lu bytes) loaded from file %s", g_traceLen, filename);
     return PM3_SUCCESS;
 }
 
 static int CmdTraceSave(const char *Cmd) {
 
-    if (traceLen == 0) {
+    if (g_traceLen == 0) {
         PrintAndLogEx(WARNING, "trace is empty, nothing to save");
         return PM3_SUCCESS;
     }
@@ -520,7 +520,7 @@ static int CmdTraceSave(const char *Cmd) {
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_save();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
-    saveFile(filename, ".bin", trace, traceLen);
+    saveFile(filename, ".bin", g_trace, g_traceLen);
     return PM3_SUCCESS;
 }
 
@@ -628,10 +628,10 @@ int CmdTraceList(const char *Cmd) {
 
     uint16_t tracepos = 0;
 
-    // reserv some space.
-    if (!trace) {
-        trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-        if (trace == NULL) {
+    // reserve some space.
+    if (!g_trace) {
+        g_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
+        if (g_trace == NULL) {
             PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
             return PM3_EMALLOC;
         }
@@ -640,38 +640,38 @@ int CmdTraceList(const char *Cmd) {
     if (isOnline) {
         // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
         PacketResponseNG response;
-        if (!GetFromDevice(BIG_BUF, trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
+        if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             return PM3_ETIMEOUT;
         }
 
-        traceLen = response.oldarg[2];
-        if (traceLen > PM3_CMD_DATA_SIZE) {
-            uint8_t *p = realloc(trace, traceLen);
+        g_traceLen = response.oldarg[2];
+        if (g_traceLen > PM3_CMD_DATA_SIZE) {
+            uint8_t *p = realloc(g_trace, g_traceLen);
             if (p == NULL) {
                 PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-                free(trace);
+                free(g_trace);
                 return PM3_EMALLOC;
             }
-            trace = p;
-            if (!GetFromDevice(BIG_BUF, trace, traceLen, 0, NULL, 0, NULL, 2500, false)) {
+            g_trace = p;
+            if (!GetFromDevice(BIG_BUF, g_trace, g_traceLen, 0, NULL, 0, NULL, 2500, false)) {
                 PrintAndLogEx(WARNING, "command execution time out");
-                free(trace);
+                free(g_trace);
                 return PM3_ETIMEOUT;
             }
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", g_traceLen);
 
     /*
     if (protocol == FELICA) {
-        printFelica(traceLen, trace);
+        printFelica(g_traceLen, g_trace);
     } */
 
     if (showHex) {
-        while (tracepos < traceLen) {
-            tracepos = printHexLine(tracepos, traceLen, trace, protocol);
+        while (tracepos < g_traceLen) {
+            tracepos = printHexLine(tracepos, g_traceLen, g_trace, protocol);
         }
     } else {
         PrintAndLogEx(INFO, _YELLOW_("Start") " = Start of Start Bit, " _YELLOW_("End") " = End of last modulation. " _YELLOW_("Src") " = Source of Transfer");
@@ -700,8 +700,8 @@ int CmdTraceList(const char *Cmd) {
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
         ClearAuthData();
-        while (tracepos < traceLen) {
-            tracepos = printTraceLine(tracepos, traceLen, trace, protocol, showWaitCycles, markCRCBytes);
+        while (tracepos < g_traceLen) {
+            tracepos = printTraceLine(tracepos, g_traceLen, g_trace, protocol, showWaitCycles, markCRCBytes);
 
             if (kbd_enter_pressed())
                 break;

@@ -855,7 +855,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     return PM3_SUCCESS;
 }
 
-static int ulev1_print_counters() {
+static int ulev1_print_counters(void) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counters"));
     uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
@@ -1004,7 +1004,7 @@ static int ulc_magic_test(){
     return returnValue;
 }
 */
-static int ul_magic_test() {
+static int ul_magic_test(void) {
     // Magic Ultralight tests
     // 1) take present UID, and try to write it back. OBSOLETE
     // 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:

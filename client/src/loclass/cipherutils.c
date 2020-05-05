@@ -190,7 +190,7 @@ void printarr_human_readable(const char *title, uint8_t *arr, int len) {
 //-----------------------------
 
 #ifndef ON_DEVICE
-static int testBitStream() {
+static int testBitStream(void) {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};
     BitstreamIn in = { input, sizeof(input) * 8, 0};
@@ -215,7 +215,7 @@ static int testBitStream() {
     return PM3_SUCCESS;
 }
 
-static int testReversedBitstream() {
+static int testReversedBitstream(void) {
     uint8_t input [] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t reverse [] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t output [] = {0, 0, 0, 0, 0, 0, 0, 0};

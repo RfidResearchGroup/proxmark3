@@ -274,7 +274,7 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     if (ret != PM3_SUCCESS)
         return ret;
 
-    char *string = "AT+VERSION";
+    const char *string = "AT+VERSION";
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
 
@@ -359,7 +359,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Reconfiguring add-on to default settings.");
-    char *string;
+    const char *string;
     uint8_t data[PM3_CMD_DATA_SIZE];
     size_t len = 0;
     memset(data, 0, sizeof(data));

@@ -37,7 +37,7 @@ enum MifareAuthSeq {
 static enum MifareAuthSeq MifareAuthState;
 static TAuthData AuthData;
 
-void ClearAuthData() {
+void ClearAuthData(void) {
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;

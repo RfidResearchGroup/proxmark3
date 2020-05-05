@@ -143,7 +143,7 @@ int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableL
     return CLIParserParseArg(argc, argv, vargtable, vargtableLen, allowEmptyExec);
 }
 
-void CLIParserFree() {
+void CLIParserFree(void) {
     arg_freetable(argtable, argtableLen);
     argtable = NULL;
 

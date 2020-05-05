@@ -55,9 +55,10 @@ ZLIB = $(OBJDIR)/libz.a
 
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH)
 INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
-CFLAGS ?= -Wall -Werror -O3
+CFLAGS ?= $(DEFCFLAGS)
+
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
+PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT) -DWAI_PM3_TUNED
 # WIP Testing
 #PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local

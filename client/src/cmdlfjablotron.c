@@ -12,7 +12,6 @@
 
 #include <string.h>
 #include <inttypes.h>
-#include <math.h>
 #include <stdlib.h>
 #include <ctype.h>
 
@@ -70,9 +69,9 @@ static uint64_t getJablontronCardId(uint64_t rawcode) {
     uint64_t id = 0;
     uint8_t bytes[] = {0, 0, 0, 0, 0};
     num_to_bytes(rawcode, 5, bytes);
-    for (int i = 4, j = 0; i > -1;  --i, j += 2) {
-        id += NIBBLE_LOW(bytes[i]) * (int)pow(10, j);
-        id += NIBBLE_HIGH(bytes[i]) * (int)pow(10, j + 1);
+    for (int i = 0; i < 5; i++) {
+        id *= 100;
+        id += NIBBLE_HIGH(bytes[i]) * 10 + NIBBLE_LOW(bytes[i]);
     }
     return id;
 }

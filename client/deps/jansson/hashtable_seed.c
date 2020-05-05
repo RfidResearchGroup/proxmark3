@@ -162,7 +162,7 @@ static int seed_from_timestamp_and_pid(uint32_t *seed) {
     return 0;
 }
 
-static uint32_t generate_seed() {
+static uint32_t generate_seed(void) {
     uint32_t seed = 0;
     int done = 0;
 

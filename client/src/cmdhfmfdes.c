@@ -170,7 +170,7 @@ typedef enum {
     CL_AMISC7 = 0xFF,
 } aidcluster_h;
 
-static char *cluster_to_text(uint8_t cluster) {
+static const char *cluster_to_text(uint8_t cluster) {
     switch (cluster) {
         case CL_ADMIN:
             return "card administration";
@@ -375,7 +375,7 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
 }
 
 
-int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
+static int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
 
     *result_len = 0;
     if (sw) *sw = 0;
@@ -433,7 +433,7 @@ int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t
     return PM3_SUCCESS;
 }
 
-static char *getstatus(uint16_t *sw) {
+static const char *getstatus(uint16_t *sw) {
     if (sw == NULL) return "--> sw argument error. This should never happen !";
     if (((*sw >> 8) & 0xFF) == 0x91) {
         switch (*sw & 0xFF) {
@@ -500,7 +500,7 @@ static char *getstatus(uint16_t *sw) {
     return "Unknown error";
 }
 
-static char *GetErrorString(int res, uint16_t *sw) {
+static const char *GetErrorString(int res, uint16_t *sw) {
     switch (res) {
         case PM3_EAPDU_FAIL:
             return getstatus(sw);
@@ -642,7 +642,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     return DESFIRE_UNKNOWN;
 }
 
-int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload, bool defaultkey) {
+static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload, bool def_key) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
     // 3 different communication modes,  PLAIN,MAC,CRYPTO
@@ -679,7 +679,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
 
 
     // Part 1
-    if (defaultkey) {
+    if (def_key) {
         if (payload->algo == MFDES_AUTH_DES)  {
             memcpy(keybytes, PICC_MASTER_KEY8, 8);
         } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES) {
@@ -913,7 +913,7 @@ int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload,
     return PM3_SUCCESS;
 }
 
-void AuthToError(int error) {
+static void AuthToError(int error) {
     switch (error) {
         case 1:
             PrintAndLogEx(SUCCESS, "Sending auth command failed");
@@ -953,7 +953,7 @@ void AuthToError(int error) {
     }
 }
 // -- test if card supports 0x0A
-static int test_desfire_authenticate() {
+static int test_desfire_authenticate(void) {
     uint8_t data[] = {0x00};
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, data}; // 0x0A, KEY 0
     int recv_len = 0;
@@ -968,7 +968,7 @@ static int test_desfire_authenticate() {
 }
 
 // -- test if card supports 0x1A
-static int test_desfire_authenticate_iso() {
+static int test_desfire_authenticate_iso(void) {
     uint8_t data[] = {0x00};
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, data}; // 0x1A, KEY 0
     int recv_len = 0;
@@ -983,7 +983,7 @@ static int test_desfire_authenticate_iso() {
 }
 
 // -- test if card supports 0xAA
-static int test_desfire_authenticate_aes() {
+static int test_desfire_authenticate_aes(void) {
     uint8_t data[] = {0x00};
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, data}; // 0xAA, KEY 0
     int recv_len = 0;
@@ -1210,7 +1210,7 @@ static int handler_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
     return res;
 }
 
-static int handler_desfire_commit_transaction() {
+static int handler_desfire_commit_transaction(void) {
     sAPDU apdu = {0x90, MFDES_COMMIT_TRANSACTION, 0x00, 0x00, 0x00, NULL}; //0xC7
     int recv_len = 0;
     uint16_t sw = 0;
@@ -1225,7 +1225,7 @@ static int handler_desfire_commit_transaction() {
     return res;
 }
 
-/*static int handler_desfire_abort_transaction() {
+/*static int handler_desfire_abort_transaction(void) {
     sAPDU apdu = {0x90, MFDES_ABORT_TRANSACTION, 0x00, 0x00, 0x00, NULL}; //0xA7
     int recv_len = 0;
     uint16_t sw = 0;
@@ -1647,7 +1647,7 @@ static int handler_desfire_create_backup_file(mfdes_file_t *file) {
     return res;
 }
 
-int getKeySettings(uint8_t *aid) {
+static int getKeySettings(uint8_t *aid) {
     if (aid == NULL) return PM3_EINVARG;
 
     int res = 0;
@@ -3558,7 +3558,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-void DesFill2bPattern(uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t *deskeyListLen, uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], size_t *aeskeyListLen, uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], size_t *k3kkeyListLen, uint32_t *startPattern) {
+static void DesFill2bPattern(uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t *deskeyListLen, uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], size_t *aeskeyListLen, uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], size_t *k3kkeyListLen, uint32_t *startPattern) {
     for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
         if (*deskeyListLen != MAX_KEYS_LIST_LEN) {
             deskeyList[*deskeyListLen][0] = (pt >> 8) & 0xff;

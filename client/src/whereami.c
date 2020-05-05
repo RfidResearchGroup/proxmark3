@@ -3,15 +3,26 @@
 //   by Gregory Pakosz (@gpakosz)
 // https://github.com/gpakosz/whereami
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifdef WAI_PM3_TUNED
 
 #include "whereami.h"
 
 #if defined(__linux__)
 // make realpath() available:
 #define _DEFAULT_SOURCE
+#endif
+
+#else  // WAI_PM3_TUNED
+
+// in case you want to #include "whereami.c" in a larger compilation unit
+#if !defined(WHEREAMI_H)
+#include <whereami.h>
+#endif
+
+#endif // WAI_PM3_TUNED
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #if !defined(WAI_MALLOC) || !defined(WAI_FREE) || !defined(WAI_REALLOC)
@@ -50,11 +61,14 @@ extern "C" {
 
 #if defined(_WIN32)
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #if defined(_MSC_VER)
 #pragma warning(push, 3)
 #endif
 #include <windows.h>
+#include <intrin.h>
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
@@ -123,36 +137,36 @@ static int WAI_PREFIX(getModulePath_)(HMODULE module, char *out, int capacity, i
     return length;
 }
 
-WAI_NOINLINE
-WAI_FUNCSPEC
+WAI_NOINLINE WAI_FUNCSPEC
 int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) {
     return WAI_PREFIX(getModulePath_)(NULL, out, capacity, dirname_length);
 }
 
 // GetModuleHandleEx() is not available on old mingw environments. We don't need getModulePath() yet.
 // Sacrifice it for the time being to improve backwards compatibility
-/* WAI_NOINLINE
-WAI_FUNCSPEC
-int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
-{
-  HMODULE module;
-  int length = -1;
+#ifndef WAI_PM3_TUNED
+
+WAI_NOINLINE WAI_FUNCSPEC
+int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
+    HMODULE module;
+    int length = -1;
 
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 4054)
 #endif
-  if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCTSTR)WAI_RETURN_ADDRESS(), &module))
+    if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCTSTR)WAI_RETURN_ADDRESS(), &module))
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
-  {
-    length = WAI_PREFIX(getModulePath_)(module, out, capacity, dirname_length);
-  }
+    {
+        length = WAI_PREFIX(getModulePath_)(module, out, capacity, dirname_length);
+    }
 
-  return length;
+    return length;
 }
-*/
+
+#endif // WAI_PM3_TUNED
 
 #elif defined(__linux__) || defined(__CYGWIN__) || defined(__sun) || defined(WAI_USE_PROC_SELF_EXE)
 
@@ -228,14 +242,14 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
 #include <unistd.h>
 #endif
 
-WAI_NOINLINE
-WAI_FUNCSPEC
+#ifndef WAI_PM3_TUNED
+
+WAI_NOINLINE WAI_FUNCSPEC
 int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
     int length = -1;
     FILE *maps = NULL;
-    int i;
 
-    for (i = 0; i < WAI_PROC_SELF_MAPS_RETRY; ++i) {
+    for (int r = 0; r < WAI_PROC_SELF_MAPS_RETRY; ++r) {
         maps = fopen(WAI_PROC_SELF_MAPS, "r");
         if (!maps)
             break;
@@ -252,8 +266,8 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
             if (!fgets(buffer, sizeof(buffer), maps))
                 break;
 
-            if (sscanf(buffer, "%" SCNx64 "-%" SCNx64 " %s %" SCNx64 " %x:%x %u %s\n", &low, &high, perms, &offset, &major, &minor, &inode, path) == 8) {
-                uint64_t addr = (uint64_t)(uintptr_t)WAI_RETURN_ADDRESS();
+            if (sscanf(buffer, "%" PRIx64 "-%" PRIx64 " %s %" PRIx64 " %x:%x %u %s\n", &low, &high, perms, &offset, &major, &minor, &inode, path) == 8) {
+                uint64_t addr = (uintptr_t)WAI_RETURN_ADDRESS();
                 if (low <= addr && addr <= high) {
                     char *resolved;
 
@@ -299,9 +313,11 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
                         memcpy(out, resolved, length);
 
                         if (dirname_length) {
-                            for (int j = length - 1; j >= 0; --j) {
-                                if (out[j] == '/') {
-                                    *dirname_length = j;
+                            int i;
+
+                            for (i = length - 1; i >= 0; --i) {
+                                if (out[i] == '/') {
+                                    *dirname_length = i;
                                     break;
                                 }
                             }
@@ -325,6 +341,7 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
 
     return length;
 }
+#endif // WAI_PM3_TUNED
 
 #elif defined(__APPLE__)
 
@@ -380,8 +397,9 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
     return length;
 }
 
-WAI_NOINLINE
-WAI_FUNCSPEC
+#ifndef WAI_PM3_TUNED
+
+WAI_NOINLINE WAI_FUNCSPEC
 int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
     char buffer[PATH_MAX];
     char *resolved = NULL;
@@ -417,6 +435,8 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
 
     return length;
 }
+
+#endif // WAI_PM3_TUNED
 
 #elif defined(__QNXNTO__)
 
@@ -474,6 +494,8 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
     return length;
 }
 
+#ifndef WAI_PM3_TUNED
+
 WAI_FUNCSPEC
 int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
     char buffer[PATH_MAX];
@@ -511,11 +533,12 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
     return length;
 }
 
+#endif // WAI_PM3_TUNED
+
 #elif defined(__DragonFly__) || defined(__FreeBSD__) || \
       defined(__FreeBSD_kernel__) || defined(__NetBSD__)
 
 #include <limits.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -531,8 +554,8 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
     int length = -1;
 
     for (;;) {
-#ifdef KERN_PROC_ARGV
-        int mib[4] = { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
+#if defined(__NetBSD__)
+        int mib[4] = { CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME };
 #else
         int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
 #endif
@@ -570,8 +593,9 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
     return length;
 }
 
-WAI_NOINLINE
-WAI_FUNCSPEC
+#ifndef WAI_PM3_TUNED
+
+WAI_NOINLINE WAI_FUNCSPEC
 int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
     char buffer[PATH_MAX];
     char *resolved = NULL;
@@ -607,6 +631,8 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
 
     return length;
 }
+
+#endif // WAI_PM3_TUNED
 
 #else
 

@@ -51,6 +51,7 @@
 
 #ifndef ON_DEVICE
 #include "ui.h"
+#include "util.h"
 # include "cmddata.h"
 # define prnt(args...) PrintAndLogEx(DEBUG, ## args );
 #else

@@ -13,6 +13,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //#include <stdlib.h>  //size_t
 
 int CmdData(const char *Cmd);
@@ -81,6 +85,8 @@ extern size_t DemodBufferLen;
 
 extern int g_DemodClock;
 extern size_t g_DemodStartIdx;
-extern uint8_t g_debugMode;
 
+#ifdef __cplusplus
+}
+#endif
 #endif

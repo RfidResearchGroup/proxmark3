@@ -1245,7 +1245,7 @@ int CmdHF14A(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-static void printTag(char *tag) {
+static void printTag(const char *tag) {
     PrintAndLogEx(SUCCESS, "POSSIBLE TYPE:" _YELLOW_("    %s"), tag);
 }
 
@@ -1261,7 +1261,7 @@ typedef enum {
 } nxp_mifare_type_t;
 
 // According to NXP AN10833 Rev 3.6 MIFARE Type Identification, Table  6
-int detect_nxp_card(uint8_t sak, uint16_t atqa) {
+static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
     int type = MTNONE;
 
     if (sak == 0x00) {
@@ -1340,7 +1340,7 @@ int detect_nxp_card(uint8_t sak, uint16_t atqa) {
 typedef struct {
     uint8_t uid0;
     uint8_t uid1;
-    char *desc;
+    const char *desc;
 } uidname;
 
 const uidname uidmap[] = {
@@ -1355,7 +1355,7 @@ const uidname uidmap[] = {
     {0x00, 0x00, "None"}
 };
 
-void getTagLabel(uint8_t uid0, uint8_t uid1) {
+static void getTagLabel(uint8_t uid0, uint8_t uid1) {
     int i = 0;
     while (uidmap[i].uid0 != 0x00) {
         if ((uidmap[i].uid0 == uid0) && (uidmap[i].uid1 == uid1)) {

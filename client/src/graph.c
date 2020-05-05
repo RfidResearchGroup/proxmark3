@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ui.h"
+#include "proxgui.h"
 #include "util.h"    //param_get32ex
 #include "lfdemod.h"
 #include "cmddata.h" //for g_debugmode
@@ -115,7 +116,7 @@ bool isGraphBitstream(void) {
     return true;
 }
 
-void convertGraphFromBitstream() {
+void convertGraphFromBitstream(void) {
     convertGraphFromBitstreamEx(1, 0);
 }
 

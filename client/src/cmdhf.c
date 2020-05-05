@@ -37,13 +37,14 @@
 #include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
+#include "proxgui.h"
 #include "cmddata.h"
 #include "graph.h"
 #include "fpga.h"
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_search() {
+static int usage_hf_search(void) {
     PrintAndLogEx(NORMAL, "Usage: hf search");
     PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag. Stops when found.");
     PrintAndLogEx(NORMAL, "Options:");
@@ -52,7 +53,7 @@ static int usage_hf_search() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_sniff() {
+static int usage_hf_sniff(void) {
     PrintAndLogEx(NORMAL, "The high frequence sniffer will assign all available memory on device for sniffed data");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
     PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");
@@ -68,7 +69,7 @@ static int usage_hf_sniff() {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_tune() {
+static int usage_hf_tune(void) {
     PrintAndLogEx(NORMAL, "Continuously measure HF antenna tuning.");
     PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
     PrintAndLogEx(NORMAL, "Usage: hf tune [h] [<iter>]");

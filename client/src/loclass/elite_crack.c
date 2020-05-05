@@ -568,7 +568,7 @@ int bruteforceFileNoKeys(const char *filename) {
 // ----------------------------------------------------------------------------
 // TEST CODE BELOW
 // ----------------------------------------------------------------------------
-static int _testBruteforce() {
+static int _testBruteforce(void) {
 
     PrintAndLogEx(INFO, "Testing crack from dumpfile...");
 
@@ -596,7 +596,7 @@ static int _testBruteforce() {
     return errors;
 }
 
-static int _test_iclass_key_permutation() {
+static int _test_iclass_key_permutation(void) {
     uint8_t testcase[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
     uint8_t testcase_output[8] = {0};
     uint8_t testcase_output_correct[8] = {0x8a, 0x0d, 0xb9, 0x88, 0xbb, 0xa7, 0x90, 0xea};
@@ -622,7 +622,7 @@ static int _test_iclass_key_permutation() {
     return 0;
 }
 
-static int _testHash1() {
+static int _testHash1(void) {
     uint8_t expected[8] = {0x7E, 0x72, 0x2F, 0x40, 0x2D, 0x02, 0x51, 0x42};
     uint8_t csn[8] = {0x01, 0x02, 0x03, 0x04, 0xF7, 0xFF, 0x12, 0xE0};
     uint8_t k[8] = {0};
