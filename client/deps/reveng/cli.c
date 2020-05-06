@@ -98,6 +98,7 @@ int reveng_main(int argc, char *argv[]) {
 
 //  pos=0; --- not in this ver of getopt
     optind = 1;
+    optreset = 1;
     do {
         c = getopt(argc, argv, "?A:BDFGLMP:SVXa:bcdefhi:k:lm:p:q:rstuvw:x:yz");
         switch (c) {
