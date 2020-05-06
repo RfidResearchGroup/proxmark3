@@ -11,7 +11,10 @@
 
 #include <stdio.h> // for Mingw readline
 #include <ctype.h> // tolower
+
+#ifndef ANDROID
 #include <readline/readline.h>
+#endif
 
 #include "cmdparser.h"    // command_t
 #include "comms.h"        // clearCommandBuffer
@@ -694,12 +697,19 @@ static int CmdLegicWrbl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "############# DANGER ################");
         PrintAndLogEx(NORMAL, "# changing the DCF is irreversible  #");
         PrintAndLogEx(NORMAL, "#####################################");
+
+#ifndef ANDROID
         char *answer = readline("do you really want to continue? y(es) n(o) : ");
         bool overwrite = (answer[0] == 'y' || answer[0] == 'Y');
         if (!overwrite) {
             PrintAndLogEx(NORMAL, "command cancelled");
             return PM3_EOPABORTED;
         }
+#else
+        PrintAndLogEx(NORMAL, "\n  No interactive support on Android.   ");
+        PrintAndLogEx(NORMAL, "    So no confirmation asked, beware!   ");
+#endif
+
     }
 
     legic_chk_iv(&IV);
