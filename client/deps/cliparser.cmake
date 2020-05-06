@@ -9,3 +9,4 @@ target_include_directories(cliparser PRIVATE
         ../src)
 target_include_directories(cliparser INTERFACE cliparser)
 target_compile_options(cliparser PRIVATE -Wall -Werror -O3)
+set_property(TARGET cliparser PROPERTY POSITION_INDEPENDENT_CODE ON)

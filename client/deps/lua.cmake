@@ -46,3 +46,4 @@ endif (NOT MINGW)
 
 target_include_directories(lua INTERFACE liblua)
 target_compile_options(lua PRIVATE -Wall -Werror -O3)
+set_property(TARGET lua PROPERTY POSITION_INDEPENDENT_CODE ON)

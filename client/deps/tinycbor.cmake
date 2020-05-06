@@ -12,3 +12,4 @@ add_library(tinycbor STATIC
 target_include_directories(tinycbor INTERFACE tinycbor)
 # Strange errors on Mingw when compiling with -O3
 target_compile_options(tinycbor PRIVATE -Wall -Werror -O2)
+set_property(TARGET tinycbor PROPERTY POSITION_INDEPENDENT_CODE ON)

@@ -46,3 +46,4 @@ add_library(mbedtls STATIC
 
 target_include_directories(mbedtls PRIVATE ../../common)
 target_compile_options(mbedtls PRIVATE -Wall -Werror -O3)
+set_property(TARGET mbedtls PROPERTY POSITION_INDEPENDENT_CODE ON)

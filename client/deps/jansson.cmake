@@ -16,3 +16,4 @@ add_library(jansson STATIC
 target_compile_definitions(jansson PRIVATE HAVE_STDINT_H)
 target_include_directories(jansson INTERFACE jansson)
 target_compile_options(jansson PRIVATE -Wall -Werror -Wno-unused-function -O3)
+set_property(TARGET jansson PROPERTY POSITION_INDEPENDENT_CODE ON)

@@ -3,6 +3,7 @@ add_library(hardnested_nosimd OBJECT
         hardnested/hardnested_bitarray_core.c)
 
 target_compile_options(hardnested_nosimd PRIVATE -Wall -Werror -O3)
+set_property(TARGET hardnested_nosimd PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(hardnested_nosimd PRIVATE
         ../../common
@@ -29,6 +30,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_compile_options(hardnested_mmx PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_mmx BEFORE PRIVATE
             -mmmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
+    set_property(TARGET hardnested_mmx PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     target_include_directories(hardnested_mmx PRIVATE
             ../../common
@@ -42,6 +44,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_compile_options(hardnested_sse2 PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_sse2 BEFORE PRIVATE
             -mmmx -msse2 -mno-avx -mno-avx2 -mno-avx512f)
+    set_property(TARGET hardnested_sse2 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     target_include_directories(hardnested_sse2 PRIVATE
             ../../common
@@ -55,6 +58,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_compile_options(hardnested_avx PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_avx BEFORE PRIVATE
             -mmmx -msse2 -mavx -mno-avx2 -mno-avx512f)
+    set_property(TARGET hardnested_avx PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     target_include_directories(hardnested_avx PRIVATE
             ../../common
@@ -68,6 +72,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_compile_options(hardnested_avx2 PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_avx2 BEFORE PRIVATE
             -mmmx -msse2 -mavx -mavx2 -mno-avx512f)
+    set_property(TARGET hardnested_avx2 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     target_include_directories(hardnested_avx2 PRIVATE
             ../../common
@@ -81,6 +86,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_compile_options(hardnested_avx512 PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_avx512 BEFORE PRIVATE
             -mmmx -msse2 -mavx -mavx2 -mavx512f)
+    set_property(TARGET hardnested_avx512 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     target_include_directories(hardnested_avx512 PRIVATE
             ../../common
@@ -101,6 +107,7 @@ add_library(hardnested STATIC
         hardnested/hardnested_bruteforce.c
         $<TARGET_OBJECTS:hardnested_nosimd>
         ${SIMD_TARGETS})
+set_property(TARGET hardnested PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(hardnested PRIVATE
         ../../common
         ../../include

@@ -14,3 +14,4 @@ add_library(amiibo STATIC
 target_include_directories(amiibo PRIVATE ../../include ../../common)
 target_include_directories(amiibo INTERFACE amiitool)
 target_compile_options(amiibo PRIVATE -Wall -Werror -O3)
+set_property(TARGET amiibo PROPERTY POSITION_INDEPENDENT_CODE ON)
