@@ -485,6 +485,7 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
     }
 }
 
+#ifndef ANDROID
 void iceIIR_Butterworth(int *data, const size_t len) {
 
     int *output = (int *) calloc(sizeof(int) * len, sizeof(uint8_t));
@@ -533,6 +534,7 @@ void iceIIR_Butterworth(int *data, const size_t len) {
 
     free(output);
 }
+#endif
 
 void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 // ref: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
