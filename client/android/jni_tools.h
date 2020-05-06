@@ -8,7 +8,6 @@
 #include <jni.h>
 #include <android/log.h>
 #include <string.h>
-#include <getopt.h>
 
 //JNI LOG
 #define TAG "DXL BlUESPP_PN532"
@@ -37,8 +36,5 @@ CMD *parse_command_line(const char *commandStr);
 
 //解析结果释放函数!
 void free_command_line(CMD *);
-
-//重置getopt函数
-void recovery_getopt_opt();
 
 #endif //DXL_TOOLS_H

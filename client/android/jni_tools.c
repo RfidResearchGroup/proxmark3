@@ -95,11 +95,3 @@ void free_command_line(CMD *cmd) {
     LOGD("释放结构体内存");
     free(cmd);
 }
-
-//重置getopt函数的参数
-void recovery_getopt_opt() {
-    optind = 0;
-    opterr = 1;
-    optopt = 0;
-    optarg = NULL;
-}

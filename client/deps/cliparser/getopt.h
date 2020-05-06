@@ -68,7 +68,7 @@ int getopt_long_only(int, char *const *, const char *,
 #define _GETOPT_DECLARED
 int getopt(int, char *const [], const char *);
 
-extern char *optarg; /* getopt(3) external variables */
+extern const char *optarg; /* getopt(3) external variables */
 extern int optind, opterr, optopt;
 #endif
 #ifndef _OPTRESET_DECLARED
