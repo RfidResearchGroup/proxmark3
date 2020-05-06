@@ -10,6 +10,7 @@
 #include "cmdhflegic.h"
 
 #include <stdio.h> // for Mingw readline
+#include <ctype.h> // tolower
 #include <readline/readline.h>
 
 #include "cmdparser.h"    // command_t
