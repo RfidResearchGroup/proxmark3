@@ -1,4 +1,4 @@
-add_library(jansson STATIC
+add_library(pm3rrg_rdv4_jansson STATIC
         jansson/dump.c
         jansson/error.c
         jansson/hashtable.c
@@ -13,7 +13,7 @@ add_library(jansson STATIC
         jansson/value.c
 )
 
-target_compile_definitions(jansson PRIVATE HAVE_STDINT_H)
-target_include_directories(jansson INTERFACE jansson)
-target_compile_options(jansson PRIVATE -Wall -Werror -Wno-unused-function -O3)
-set_property(TARGET jansson PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(pm3rrg_rdv4_jansson PRIVATE HAVE_STDINT_H)
+target_include_directories(pm3rrg_rdv4_jansson INTERFACE jansson)
+target_compile_options(pm3rrg_rdv4_jansson PRIVATE -Wall -Werror -Wno-unused-function -O3)
+set_property(TARGET pm3rrg_rdv4_jansson PROPERTY POSITION_INDEPENDENT_CODE ON)

@@ -1,4 +1,4 @@
-add_library(reveng STATIC
+add_library(pm3rrg_rdv4_reveng STATIC
         reveng/bmpbit.c
         reveng/cli.c
         reveng/model.c
@@ -7,8 +7,8 @@ add_library(reveng STATIC
         reveng/reveng.c
 )
 
-target_compile_definitions(reveng PRIVATE PRESETS)
-target_include_directories(reveng PRIVATE ../cliparser)
-target_include_directories(reveng INTERFACE reveng)
-target_compile_options(reveng PRIVATE -Wall -Werror -O3)
-set_property(TARGET reveng PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(pm3rrg_rdv4_reveng PRIVATE PRESETS)
+target_include_directories(pm3rrg_rdv4_reveng PRIVATE ../cliparser)
+target_include_directories(pm3rrg_rdv4_reveng INTERFACE reveng)
+target_compile_options(pm3rrg_rdv4_reveng PRIVATE -Wall -Werror -O3)
+set_property(TARGET pm3rrg_rdv4_reveng PROPERTY POSITION_INDEPENDENT_CODE ON)
