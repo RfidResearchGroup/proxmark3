@@ -211,7 +211,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     uint16_t data_len, parity_len;
     uint32_t duration, timestamp, first_timestamp, EndOfTransmissionTimestamp;
     uint8_t topaz_reader_command[9];
-    char explanation[30] = {0};
+    char explanation[40] = {0};
     uint8_t mfData[32] = {0};
     size_t mfDataLen = 0;
 
@@ -296,7 +296,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //2 Not crc-command
 
     //--- Draw the data column
-    char line[18][110] = {{0}};
+    char line[18][120] = {{0}};
 
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
 
@@ -315,20 +315,20 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && (isResponse || protocol == ISO_14443A)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
-            snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
+            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
         } else if (protocol == ICLASS  && isResponse == false) {
             uint8_t parity = 0;
             for (int i = 0; i < 6; i++) {
                 parity ^= ((frame[0] >> i) & 1);
             }
             if (parity == ((frame[0] >> 7) & 1)) {
-                snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x  ", frame[j]);
+                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
             } else {
-                snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
+                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
             }
 
         } else {
-            snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x  ", frame[j]);
+            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
         }
 
     }
