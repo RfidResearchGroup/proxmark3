@@ -95,7 +95,7 @@ jint sendCMD(JNIEnv *env, jobject instance, jstring cmd_) {
     }
     //无论如何，新的命令的输入了，就要换个行!
     PrintAndLogEx(NORMAL, "\n");
-    char *cmd = (char *) ((*env)->GetStringUTFChars(env, cmd_, 0));
+    char *cmd = (char *)((*env)->GetStringUTFChars(env, cmd_, 0));
     // Many parts of the PM3 client will assume that they can read any write from pwd. So we set
     // pwd to whatever the PM3 "executable directory" is, to get consistent behaviour.
     /*int ret = chdir(get_my_executable_directory());
@@ -120,7 +120,7 @@ jint sendCMD(JNIEnv *env, jobject instance, jstring cmd_) {
  * 是否在执行命令
  * */
 jboolean isExecuting(JNIEnv *env, jobject instance) {
-    return (jboolean) ((jboolean) conn.run);
+    return (jboolean)((jboolean) conn.run);
 }
 
 /*
@@ -133,7 +133,7 @@ jboolean testPm3(JNIEnv *env, jobject instance) {
         return false;
     }
     bool ret2 = TestProxmark() == PM3_SUCCESS;
-    return (jboolean) (ret1 && ret2);
+    return (jboolean)(ret1 && ret2);
 }
 
 void stopPm3(JNIEnv *env, jobject instance) {
@@ -152,21 +152,21 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     jclass clz_test = (*jniEnv)->FindClass(jniEnv, "cn/rrg/devices/Proxmark3RRGRdv4");
     JNINativeMethod methods[] = {
-            {"startExecute", "(Ljava/lang/String;)I", (void *) sendCMD},
-            {"stopExecute",  "()V",                   (void *) stopPm3},
-            {"isExecuting",  "()Z",                   (void *) isExecuting}
+        {"startExecute", "(Ljava/lang/String;)I", (void *) sendCMD},
+        {"stopExecute",  "()V", (void *) stopPm3},
+        {"isExecuting",  "()Z", (void *) isExecuting}
     };
     JNINativeMethod methods1[] = {
-            {"testPm3",  "()Z", (void *) testPm3},
-            {"closePm3", "()V", stopPm3}
+        {"testPm3",  "()Z", (void *) testPm3},
+        {"closePm3", "()V", stopPm3}
     };
     if ((*jniEnv)->RegisterNatives(jniEnv, clazz, methods, sizeof(methods) / sizeof(methods[0])) !=
-        JNI_OK) {
+            JNI_OK) {
         return -1;
     }
     if ((*jniEnv)->RegisterNatives(jniEnv, clz_test, methods1,
                                    sizeof(methods1) / sizeof(methods1[0])) !=
-        JNI_OK) {
+            JNI_OK) {
         return -1;
     }
     (*jniEnv)->DeleteLocalRef(jniEnv, clazz);

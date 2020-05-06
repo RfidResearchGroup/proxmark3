@@ -950,8 +950,8 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 #define MAX_KEYS_LIST_LEN  1024
 
 static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
-                uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
-                bool verbose) {
+                       uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
+                       bool verbose) {
     int res;
     bool selectCard = true;
     uint8_t keyn[2] = {0};

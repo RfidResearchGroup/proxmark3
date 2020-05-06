@@ -24,7 +24,7 @@ void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc) {
         crc32_byte(&desfire_crc, data[i]);
     }
     uint32_t crctmp = htole32(desfire_crc);
-    for (size_t i=0; i < sizeof(uint32_t); i++) {
+    for (size_t i = 0; i < sizeof(uint32_t); i++) {
         crc[i] = ((uint8_t *) &crctmp)[i];
     }
 }
