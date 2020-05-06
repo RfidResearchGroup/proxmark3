@@ -36,7 +36,7 @@
 #  include <unistd.h>
 #endif
 
-#ifdef __APPLE__ || defined(__ANDROID__) || defined(ANDROID)
+#if defined(__APPLE__) || defined(__ANDROID__) || defined(ANDROID)
 typedef int RetType;
 typedef int LenType;
 #elif __GLIBC__
@@ -102,7 +102,7 @@ FILE *open_memstream(char **bufptr, size_t *lenptr) {
     *bufptr = NULL;
     *lenptr = 0;
 
-#ifdef __APPLE__ || defined(__ANDROID__) || defined(ANDROID)
+#if defined(__APPLE__) || defined(__ANDROID__) || defined(ANDROID)
     return funopen(b, NULL, write_to_buffer, NULL, close_buffer);
 #elif __GLIBC__
     static const cookie_io_functions_t vtable = {
