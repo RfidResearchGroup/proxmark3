@@ -79,7 +79,7 @@ static bool open() {
 }
 
 /*
- * 发送一条命令等待执行!
+ * Transfers to the command buffer and waits for a new command to be executed
  * */
 jint sendCMD(JNIEnv *env, jobject instance, jstring cmd_) {
     //may be pm3 not running.
@@ -93,19 +93,9 @@ jint sendCMD(JNIEnv *env, jobject instance, jstring cmd_) {
             CloseProxmark();
         }
     }
-    //无论如何，新的命令的输入了，就要换个行!
+    // display on new line
     PrintAndLogEx(NORMAL, "\n");
     char *cmd = (char *)((*env)->GetStringUTFChars(env, cmd_, 0));
-    // Many parts of the PM3 client will assume that they can read any write from pwd. So we set
-    // pwd to whatever the PM3 "executable directory" is, to get consistent behaviour.
-    /*int ret = chdir(get_my_executable_directory());
-    if (ret == -1) {
-        LOGW("Couldn't chdir(get_my_executable_directory()), errno=%s", strerror(errno));
-    }
-    char pwd[1024];
-    memset((void *) &pwd, 0, sizeof(pwd));
-    getcwd((char *) &pwd, sizeof(pwd));
-    LOGI("pwd = %s", pwd);*/
     int ret = CommandReceived(cmd);
     if (ret == 99) {
         // exit / quit
@@ -117,14 +107,14 @@ jint sendCMD(JNIEnv *env, jobject instance, jstring cmd_) {
 }
 
 /*
- * 是否在执行命令
+ * Is client running!
  * */
 jboolean isExecuting(JNIEnv *env, jobject instance) {
     return (jboolean)((jboolean) conn.run);
 }
 
 /*
- * 进行设备链接验证!
+ * test hw and hw and client.
  * */
 jboolean testPm3(JNIEnv *env, jobject instance) {
     bool ret1 = open();
@@ -136,10 +126,16 @@ jboolean testPm3(JNIEnv *env, jobject instance) {
     return (jboolean)(ret1 && ret2);
 }
 
+/*
+ * stop pm3 client
+ * */
 void stopPm3(JNIEnv *env, jobject instance) {
     CloseProxmark();
 }
 
+/*
+ * native function map to jvm
+ * */
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *jniEnv = NULL;
     if ((*vm)->GetEnv(vm, (void **) &jniEnv, JNI_VERSION_1_4) != JNI_OK) {
