@@ -18,15 +18,14 @@
 
 #define PROXPROMPT_COMPOSE "[" "%s%s" "] pm3 --> "
 
-#define PROXPROMPT_CTX_SCRIPTFILE  "|" _GREEN_("script")
-#define PROXPROMPT_CTX_SCRIPTCMD   "|" _GREEN_("script")
-#define PROXPROMPT_CTX_STDIN       "|" _GREEN_("script")
+#define PROXPROMPT_CTX_SCRIPTFILE  "|" _RL_GREEN_("script")
+#define PROXPROMPT_CTX_SCRIPTCMD   "|" _RL_GREEN_("script")
+#define PROXPROMPT_CTX_STDIN       "|" _RL_GREEN_("script")
 #define PROXPROMPT_CTX_INTERACTIVE ""
 
-#define PROXPROMPT_DEV_USB     _BOLD_GREEN_("usb")
-#define PROXPROMPT_DEV_FPC     _BOLD_GREEN_("fpc")
-#define PROXPROMPT_DEV_OFFLINE _BOLD_RED_("offline")
-
+#define PROXPROMPT_DEV_USB     _RL_BOLD_GREEN_("usb")
+#define PROXPROMPT_DEV_FPC     _RL_BOLD_GREEN_("fpc")
+#define PROXPROMPT_DEV_OFFLINE _RL_BOLD_RED_("offline")
 
 #define PROXHISTORY "history.txt"
 #define PROXLOG "log_%Y%m%d.txt"
