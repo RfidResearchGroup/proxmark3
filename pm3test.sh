@@ -108,7 +108,8 @@ while true; do
   if ! CheckExecute "proxmark help text hardnested"    "$PM3BIN -t 2>&1" "hardnested"; then break; fi
 
   printf "\n${C_BLUE}Testing data manipulation:${C_NC}\n"
-  if ! CheckExecute "reveng test"                      "$PM3BIN -c 'reveng -h;reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
+  if ! CheckExecute "reveng readline test"             "$PM3BIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
+  if ! CheckExecute "reveng test"                      "$PM3BIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
   if ! CheckExecute "mfu pwdgen test"                  "$PM3BIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
 
   printf "\n${C_BLUE}Testing LF:${C_NC}\n"
