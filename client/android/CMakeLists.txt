@@ -1,17 +1,20 @@
-#需要的最cmake版本
+# version
 cmake_minimum_required(VERSION 3.4.1)
 
-#添加预编译宏定义参数，此次的作用是开启配置文件的引入!
+# We are build on android platform, so we need add def "ANDROID"
+# NDK version for SDK 19 doesn't implement the whole C++11 standard in the STL.
+# see: https://stackoverflow.com/questions/44736135/ndk-clang-error-undefined-reference-to-localeconv
+# so we need add def getlocaledecpoint()='.'
 add_definitions(-DANDROID -D"getlocaledecpoint()='.'" -DZ_SOLO)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -O3 -fvisibility=hidden -w")
 
-#缩短路径定义
+# Root path into client
 set(PM3_ROOT ../../)
 
 add_subdirectory(../deps deps)
 
-#添加动态库定义
+# client resources
 add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/common/util_posix.c
         ${PM3_ROOT}/common/crapto1/crapto1.c
@@ -143,13 +146,12 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlfpcf7931.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdusart.c
-
-        # android source
+        # android resources
         jni_tools.c
         pm3_main.c
         )
 
-#添加头文件配置
+# includes
 target_include_directories(pm3rrg_rdv4 PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${PM3_ROOT}/include/
@@ -167,4 +169,3 @@ find_library(pm3rrg_rdv4_z REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 
 target_link_libraries(pm3rrg_rdv4 pm3rrg_rdv4_hardnested pm3rrg_rdv4_mbedtls pm3rrg_rdv4_cliparser pm3rrg_rdv4_jansson pm3rrg_rdv4_lua pm3rrg_rdv4_tinycbor pm3rrg_rdv4_amiibo pm3rrg_rdv4_reveng pm3rrg_rdv4_z android log)
-#添加动态库链接!
