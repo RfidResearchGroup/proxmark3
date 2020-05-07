@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # NDK version for SDK 19 doesn't implement the whole C++11 standard in the STL.
 # see: https://stackoverflow.com/questions/44736135/ndk-clang-error-undefined-reference-to-localeconv
 # so we need add def getlocaledecpoint()='.'
-add_definitions(-DANDROID -D"getlocaledecpoint()='.'" -DZ_SOLO)
+add_definitions(-DANDROID -D"getlocaledecpoint\(\)='.'" -DZ_SOLO)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -O3 -fvisibility=hidden -w")
 
