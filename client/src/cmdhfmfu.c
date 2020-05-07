@@ -653,66 +653,60 @@ static int ndef_print_CC(uint8_t *data) {
 
 int ul_print_type(uint32_t tagtype, uint8_t spaces) {
 
-    char spc[11] = "          ";
-    spc[10] = 0x00;
-
     if (spaces > 10)
         spaces = 10;
-
-    char *spacer = spc + (10 - spaces);
-
     if (tagtype & UL)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight (MF0ICU1) %s"), spacer, (tagtype & MAGIC) ? "<magic>" : "");
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight (MF0ICU1) %s"), spaces, "", (tagtype & MAGIC) ? "<magic>" : "");
     else if (tagtype & UL_C)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight C (MF0ULC) %s"), spacer, (tagtype & MAGIC) ? "<magic>" : "");
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight C (MF0ULC) %s"), spaces, "", (tagtype & MAGIC) ? "<magic>" : "");
     else if (tagtype & UL_NANO_40)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight Nano 40bytes (MF0UNH00)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight Nano 40bytes (MF0UNH00)"), spaces, "");
     else if (tagtype & UL_EV1_48)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight EV1 48bytes (MF0UL1101)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 48bytes (MF0UL1101)"), spaces, "");
     else if (tagtype & UL_EV1_128)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight EV1 128bytes (MF0UL2101)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 128bytes (MF0UL2101)"), spaces, "");
     else if (tagtype & UL_EV1)
-        PrintAndLogEx(NORMAL, "%sTYPE: " _YELLOW_("MIFARE Ultralight EV1 UNKNOWN"), spacer);
+        PrintAndLogEx(NORMAL, "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 UNKNOWN"), spaces, "");
     else if (tagtype & NTAG)
-        PrintAndLogEx(NORMAL, "%sTYPE: " _YELLOW_("NTAG UNKNOWN"), spacer);
+        PrintAndLogEx(NORMAL, "%*sTYPE: " _YELLOW_("NTAG UNKNOWN"), spaces, "");
     else if (tagtype & NTAG_203)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 203 144bytes (NT2H0301F0DT)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 203 144bytes (NT2H0301F0DT)"), spaces, "");
     else if (tagtype & NTAG_210)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 210 48bytes (NT2L1011G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 210 48bytes (NT2L1011G0DU)"), spaces, "");
     else if (tagtype & NTAG_212)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 212 128bytes (NT2L1211G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 212 128bytes (NT2L1211G0DU)"), spaces, "");
     else if (tagtype & NTAG_213)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 213 144bytes (NT2H1311G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 213 144bytes (NT2H1311G0DU)"), spaces, "");
     else if (tagtype & NTAG_213_F)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 213F 144bytes (NT2H1311F0DTL)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 213F 144bytes (NT2H1311F0DTL)"), spaces, "");
     else if (tagtype & NTAG_215)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 215 504bytes (NT2H1511G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 215 504bytes (NT2H1511G0DU)"), spaces, "");
     else if (tagtype & NTAG_216)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 216 888bytes (NT2H1611G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 216 888bytes (NT2H1611G0DU)"), spaces, "");
     else if (tagtype & NTAG_216_F)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 216F 888bytes (NT2H1611F0DTL)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 216F 888bytes (NT2H1611F0DTL)"), spaces, "");
     else if (tagtype & NTAG_I2C_1K)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C 888bytes (NT3H1101FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C 888bytes (NT3H1101FHK)"), spaces, "");
     else if (tagtype & NTAG_I2C_2K)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C 1904bytes (NT3H1201FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C 1904bytes (NT3H1201FHK)"), spaces, "");
     else if (tagtype & NTAG_I2C_1K_PLUS)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C plus 888bytes (NT3H2111FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C plus 888bytes (NT3H2111FHK)"), spaces, "");
     else if (tagtype & NTAG_I2C_2K_PLUS)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C plus 1912bytes (NT3H2211FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C plus 1912bytes (NT3H2211FHK)"), spaces, "");
     else if (tagtype & MY_D)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 (SLE 66RxxS)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 (SLE 66RxxS)"), spaces, "");
     else if (tagtype & MY_D_NFC)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 NFC (SLE 66RxxP)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 NFC (SLE 66RxxP)"), spaces, "");
     else if (tagtype & MY_D_MOVE)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 move (SLE 66R01P)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move (SLE 66R01P)"), spaces, "");
     else if (tagtype & MY_D_MOVE_NFC)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 move NFC (SLE 66R01P)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move NFC (SLE 66R01P)"), spaces, "");
     else if (tagtype & MY_D_MOVE_LEAN)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 move lean (SLE 66R01L)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move lean (SLE 66R01L)"), spaces, "");
     else if (tagtype & FUDAN_UL)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("FUDAN Ultralight Compatible (or other compatible) %s"), spacer, (tagtype & MAGIC) ? "<magic>" : "");
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("FUDAN Ultralight Compatible (or other compatible) %s"), spaces, "", (tagtype & MAGIC) ? "<magic>" : "");
     else
-        PrintAndLogEx(NORMAL, "%sTYPE: " _YELLOW_("Unknown %06x"), spacer, tagtype);
+        PrintAndLogEx(NORMAL, "%*sTYPE: " _YELLOW_("Unknown %06x"), spaces, "", tagtype);
     return PM3_SUCCESS;
 }
 
