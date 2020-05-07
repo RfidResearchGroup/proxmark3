@@ -314,7 +314,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     if (g_printAndLog & PRINTANDLOG_PRINT) {
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), session.emoji_mode);
         fprintf(stream, "%s", buffer3);
-        fprintf(stream, "          "); // cleaning prompt
+//        fprintf(stream, "          "); // cleaning prompt
         fprintf(stream, "\n");
     }
 
