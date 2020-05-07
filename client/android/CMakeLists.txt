@@ -9,6 +9,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -O3 -fvisibility=hidden -w")
 #缩短路径定义
 set(PM3_ROOT ../../)
 
+add_subdirectory(../deps deps)
+
 #添加动态库定义
 add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/common/util_posix.c
@@ -26,52 +28,6 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/common/iso15693tools.c
         ${PM3_ROOT}/common/bucketsort.c
         ${PM3_ROOT}/common/legic_prng.c
-        ${PM3_ROOT}/common/mbedtls/aes.c
-        ${PM3_ROOT}/common/mbedtls/base64.c
-        ${PM3_ROOT}/common/mbedtls/rsa.c
-        ${PM3_ROOT}/common/mbedtls/rsa_internal.c
-        ${PM3_ROOT}/common/mbedtls/arc4.c
-        ${PM3_ROOT}/common/mbedtls/bignum.c
-        ${PM3_ROOT}/common/mbedtls/asn1parse.c
-        ${PM3_ROOT}/common/mbedtls/asn1write.c
-        ${PM3_ROOT}/common/mbedtls/blowfish.c
-        ${PM3_ROOT}/common/mbedtls/camellia.c
-        ${PM3_ROOT}/common/mbedtls/certs.c
-        ${PM3_ROOT}/common/mbedtls/des.c
-        ${PM3_ROOT}/common/mbedtls/ecdsa.c
-        ${PM3_ROOT}/common/mbedtls/ecp.c
-        ${PM3_ROOT}/common/mbedtls/ecp_curves.c
-        ${PM3_ROOT}/common/mbedtls/entropy.c
-        ${PM3_ROOT}/common/mbedtls/entropy_poll.c
-        ${PM3_ROOT}/common/mbedtls/error.c
-        ${PM3_ROOT}/common/mbedtls/md.c
-        ${PM3_ROOT}/common/mbedtls/md5.c
-        ${PM3_ROOT}/common/mbedtls/md_wrap.c
-        ${PM3_ROOT}/common/mbedtls/sha1.c
-        ${PM3_ROOT}/common/mbedtls/sha256.c
-        ${PM3_ROOT}/common/mbedtls/sha512.c
-        ${PM3_ROOT}/common/mbedtls/timing.c
-        ${PM3_ROOT}/common/mbedtls/cmac.c
-        ${PM3_ROOT}/common/mbedtls/oid.c
-        ${PM3_ROOT}/common/mbedtls/pem.c
-        ${PM3_ROOT}/common/mbedtls/pk.c
-        ${PM3_ROOT}/common/mbedtls/pk_wrap.c
-        ${PM3_ROOT}/common/mbedtls/pkcs5.c
-        ${PM3_ROOT}/common/mbedtls/pkcs12.c
-        ${PM3_ROOT}/common/mbedtls/pkparse.c
-        ${PM3_ROOT}/common/mbedtls/pkwrite.c
-        ${PM3_ROOT}/common/mbedtls/x509.c
-        ${PM3_ROOT}/common/mbedtls/x509_crl.c
-        ${PM3_ROOT}/common/mbedtls/x509_crt.c
-        ${PM3_ROOT}/common/mbedtls/ctr_drbg.c
-        ${PM3_ROOT}/common/mbedtls/cipher_wrap.c
-        ${PM3_ROOT}/common/mbedtls/cipher.c
-        ${PM3_ROOT}/common/mbedtls/platform_util.c
-        ${PM3_ROOT}/common//zlib/inflate.c
-        ${PM3_ROOT}/common/zlib/inffast.c
-        ${PM3_ROOT}/common/zlib/zutil.c
-        ${PM3_ROOT}/common/zlib/inftrees.c
-        ${PM3_ROOT}/common//zlib/adler32.c
         # client inside
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
@@ -187,75 +143,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlfpcf7931.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdusart.c
-        # deps ouside
-        ${PM3_ROOT}/client/deps/jansson/utf.c
-        ${PM3_ROOT}/client/deps/jansson/dump.c
-        ${PM3_ROOT}/client/deps/jansson/path.c
-        ${PM3_ROOT}/client/deps/jansson/load.c
-        ${PM3_ROOT}/client/deps/jansson/error.c
-        ${PM3_ROOT}/client/deps/jansson/value.c
-        ${PM3_ROOT}/client/deps/jansson/memory.c
-        ${PM3_ROOT}/client/deps/jansson/pack_unpack.c
-        ${PM3_ROOT}/client/deps/jansson/hashtable_seed.c
-        ${PM3_ROOT}/client/deps/jansson/strbuffer.c
-        ${PM3_ROOT}/client/deps/jansson/strconv.c
-        ${PM3_ROOT}/client/deps/jansson/hashtable.c
-        ${PM3_ROOT}/client/deps/jansson/hashtable.c
-        # cliparser
-        ${PM3_ROOT}/client/deps/cliparser/cliparser.c
-        ${PM3_ROOT}/client/deps/cliparser/argtable3.c
-        # tinycbor
-        ${PM3_ROOT}/client/deps/tinycbor/cborencoder.c
-        ${PM3_ROOT}/client/deps/tinycbor/cborencoder_close_container_checked.c
-        ${PM3_ROOT}/client/deps/tinycbor/cborerrorstrings.c
-        ${PM3_ROOT}/client/deps/tinycbor/cborparser.c
-        ${PM3_ROOT}/client/deps/tinycbor/cborparser_dup_string.c
-        ${PM3_ROOT}/client/deps/tinycbor/cborpretty.c
-        ${PM3_ROOT}/client/deps/tinycbor/cborpretty_stdio.c
-        ${PM3_ROOT}/client/deps/tinycbor/cbortojson.c
-        ${PM3_ROOT}/client/deps/tinycbor/cborvalidation.c
-        ${PM3_ROOT}/client/deps/tinycbor/open_memstream.c
-        # reveng
-        ${PM3_ROOT}/client/deps/reveng/cli.c
-        ${PM3_ROOT}/client/deps/reveng/bmpbit.c
-        ${PM3_ROOT}/client/deps/reveng/preset.c
-        ${PM3_ROOT}/client/deps/reveng/model.c
-        ${PM3_ROOT}/client/deps/reveng/poly.c
-        ${PM3_ROOT}/client/deps/reveng/reveng.c
-        # liblua
-        ${PM3_ROOT}/client/deps/liblua/lapi.c
-        ${PM3_ROOT}/client/deps/liblua/ldo.c
-        ${PM3_ROOT}/client/deps/liblua/lgc.c
-        ${PM3_ROOT}/client/deps/liblua/ltm.c
-        ${PM3_ROOT}/client/deps/liblua/lvm.c
-        ${PM3_ROOT}/client/deps/liblua/lzio.c
-        ${PM3_ROOT}/client/deps/liblua/lcode.c
-        ${PM3_ROOT}/client/deps/liblua/llex.c
-        ${PM3_ROOT}/client/deps/liblua/liolib.c
-        ${PM3_ROOT}/client/deps/liblua/loslib.c
-        ${PM3_ROOT}/client/deps/liblua/lopcodes.c
-        ${PM3_ROOT}/client/deps/liblua/lmem.c
-        ${PM3_ROOT}/client/deps/liblua/lmathlib.c
-        ${PM3_ROOT}/client/deps/liblua/ldump.c
-        ${PM3_ROOT}/client/deps/liblua/ldblib.c
-        ${PM3_ROOT}/client/deps/liblua/lundump.c
-        ${PM3_ROOT}/client/deps/liblua/lcorolib.c
-        ${PM3_ROOT}/client/deps/liblua/lauxlib.c
-        ${PM3_ROOT}/client/deps/liblua/ltablib.c
-        ${PM3_ROOT}/client/deps/liblua/linit.c
-        ${PM3_ROOT}/client/deps/liblua/lstring.c
-        ${PM3_ROOT}/client/deps/liblua/lctype.c
-        ${PM3_ROOT}/client/deps/liblua/ltable.c
-        ${PM3_ROOT}/client/deps/liblua/ldebug.c
-        ${PM3_ROOT}/client/deps/liblua/lstate.c
-        ${PM3_ROOT}/client/deps/liblua/lstrlib.c
-        ${PM3_ROOT}/client/deps/liblua/lfunc.c
-        ${PM3_ROOT}/client/deps/liblua/lparser.c
-        ${PM3_ROOT}/client/deps/liblua/lobject.c
-        ${PM3_ROOT}/client/deps/liblua/loadlib.c
-        ${PM3_ROOT}/client/deps/liblua/lbaselib.c
-        ${PM3_ROOT}/client/deps/liblua/lbitlib.c
-        ${PM3_ROOT}/client/deps/hardnested/hardnested_bruteforce.c
+
         # android source
         jni_tools.c
         pm3_main.c
@@ -264,140 +152,19 @@ add_library(pm3rrg_rdv4 SHARED
 #添加头文件配置
 target_include_directories(pm3rrg_rdv4 PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${PM3_ROOT}/
         ${PM3_ROOT}/include/
         ${PM3_ROOT}/common
-        ${PM3_ROOT}/common/zlib
         ${PM3_ROOT}/common_fpga
-        ${PM3_ROOT}/common/mbedtls
-        ${PM3_ROOT}/client/src
-        ${PM3_ROOT}/client/src/fido
-        ${PM3_ROOT}/client/src/uart
-        ${PM3_ROOT}/client/deps/liblua
-        ${PM3_ROOT}/client/deps/reveng
-        ${PM3_ROOT}/client/deps/jansson
-        ${PM3_ROOT}/client/deps/tinycbor
-        ${PM3_ROOT}/client/deps/cliparser
-        ${PM3_ROOT}/client/deps/hardnested)
+        ${PM3_ROOT}/client/src)
 
-## CPU-specific code
-## These are mostly for x86-based architectures, which is not useful for many Android devices.
-add_library(pm3rrg_rdv4_hardnested_nosimd OBJECT
-        ${PM3_ROOT}/client/deps/hardnested/hardnested_bf_core.c
-        ${PM3_ROOT}/client/deps/hardnested/hardnested_bitarray_core.c)
+find_library(pm3rrg_rdv4_cliparser REQUIRED)
+find_library(pm3rrg_rdv4_jansson REQUIRED)
+find_library(pm3rrg_rdv4_tinycbor REQUIRED)
+find_library(pm3rrg_rdv4_lua REQUIRED)
+find_library(pm3rrg_rdv4_mbedtls REQUIRED)
+find_library(pm3rrg_rdv4_reveng REQUIRED)
+find_library(pm3rrg_rdv4_z REQUIRED)
+find_library(pm3rrg_rdv4_hardnested REQUIRED)
 
-target_include_directories(pm3rrg_rdv4_hardnested_nosimd PRIVATE
-        ${PM3_ROOT}/common
-        ${PM3_ROOT}/client
-        ${PM3_ROOT}/include/
-        ${PM3_ROOT}/client/deps/hardnested)
-
-set(X86_CPUS x86 x86_64 i686)
-
-message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
-
-if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
-    message(STATUS "Building optimised x86/x86_64 binaries")
-    target_compile_options(pm3rrg_rdv4_hardnested_nosimd BEFORE PRIVATE
-            -mno-mmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
-
-    set_property(TARGET pm3rrg_rdv4_hardnested_nosimd PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-    ## x86 / MMX
-    add_library(pm3rrg_rdv4_hardnested_mmx OBJECT
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bf_core.c
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bitarray_core.c)
-
-    target_compile_options(pm3rrg_rdv4_hardnested_mmx BEFORE PRIVATE
-            -mmmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
-
-    target_include_directories(pm3rrg_rdv4_hardnested_mmx PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
-            ${PM3_ROOT}/include/
-            ${PM3_ROOT}/client/deps/hardnested)
-
-    set_property(TARGET pm3rrg_rdv4_hardnested_mmx PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-    ## x86 / SSE2
-    add_library(pm3rrg_rdv4_hardnested_sse2 OBJECT
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bf_core.c
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bitarray_core.c)
-
-    target_compile_options(pm3rrg_rdv4_hardnested_sse2 BEFORE PRIVATE
-            -mmmx -msse2 -mno-avx -mno-avx2 -mno-avx512f)
-
-    target_include_directories(pm3rrg_rdv4_hardnested_sse2 PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
-            ${PM3_ROOT}/include/
-            ${PM3_ROOT}/client/deps/hardnested)
-
-    set_property(TARGET pm3rrg_rdv4_hardnested_sse2 PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-    ## x86 / AVX
-    add_library(pm3rrg_rdv4_hardnested_avx OBJECT
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bf_core.c
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bitarray_core.c)
-
-    target_compile_options(pm3rrg_rdv4_hardnested_avx BEFORE PRIVATE
-            -mmmx -msse2 -mavx -mno-avx2 -mno-avx512f)
-
-    target_include_directories(pm3rrg_rdv4_hardnested_avx PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
-            ${PM3_ROOT}/include/
-            ${PM3_ROOT}/client/deps/hardnested)
-
-    set_property(TARGET pm3rrg_rdv4_hardnested_avx PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-    ## x86 / AVX2
-    add_library(pm3rrg_rdv4_hardnested_avx2 OBJECT
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bf_core.c
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bitarray_core.c)
-
-    target_compile_options(pm3rrg_rdv4_hardnested_avx2 BEFORE PRIVATE
-            -mmmx -msse2 -mavx -mavx2 -mno-avx512f)
-
-    target_include_directories(pm3rrg_rdv4_hardnested_avx2 PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
-            ${PM3_ROOT}/include/
-            ${PM3_ROOT}/client/deps/hardnested)
-
-    set_property(TARGET pm3rrg_rdv4_hardnested_avx2 PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-    ## x86 / AVX512
-    add_library(pm3rrg_rdv4_hardnested_avx512 OBJECT
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bf_core.c
-            ${PM3_ROOT}/client/deps/hardnested/hardnested_bitarray_core.c)
-
-    target_compile_options(pm3rrg_rdv4_hardnested_avx512 BEFORE PRIVATE
-            -mmmx -msse2 -mavx -mavx2 -mavx512f)
-
-    target_include_directories(pm3rrg_rdv4_hardnested_avx512 PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
-            ${PM3_ROOT}/include/
-            ${PM3_ROOT}/client/deps/hardnested)
-
-    set_property(TARGET pm3rrg_rdv4_hardnested_avx512 PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-    set(SIMD_TARGETS
-            $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_mmx>
-            $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_sse2>
-            $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_avx>
-            $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_avx2>
-            $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_avx512>)
-else ()
-    message(STATUS "Not building optimised targets")
-    set(SIMD_TARGETS)
-endif ()
-
-#定义为静态库，被最终的pm3库依赖!
-add_library(pm3rrg_rdv4_hardnested STATIC
-        $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_nosimd>
-        ${SIMD_TARGETS})
-
+target_link_libraries(pm3rrg_rdv4 pm3rrg_rdv4_hardnested pm3rrg_rdv4_mbedtls pm3rrg_rdv4_cliparser pm3rrg_rdv4_jansson pm3rrg_rdv4_lua pm3rrg_rdv4_tinycbor pm3rrg_rdv4_amiibo pm3rrg_rdv4_reveng pm3rrg_rdv4_z android log)
 #添加动态库链接!
-target_link_libraries(pm3rrg_rdv4 pm3rrg_rdv4_hardnested android log z)

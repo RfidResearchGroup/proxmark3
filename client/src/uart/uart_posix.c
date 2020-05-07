@@ -184,7 +184,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     }
 
     if (memcmp(prefix, "bt:", 3) == 0) {
-         free(prefix);
+        free(prefix);
 
 #ifdef HAVE_BLUEZ
         if (strlen(pcPortName) != 20) {

@@ -1,4 +1,4 @@
-add_library(lua STATIC
+add_library(pm3rrg_rdv4_lua STATIC
         liblua/lapi.c
         liblua/lcode.c
         liblua/lctype.c
@@ -33,16 +33,17 @@ add_library(lua STATIC
         liblua/linit.c
 )
 
-target_compile_definitions(lua PRIVATE LUA_COMPAT_ALL)
+target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_COMPAT_ALL)
 
 if (NOT MINGW)
     if (APPLE)
-        target_compile_definitions(lua PRIVATE LUA_USE_MACOSX)
+        target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_MACOSX)
     else (APPLE)
-        target_compile_definitions(lua PRIVATE LUA_USE_LINUX)
-        target_link_libraries(lua INTERFACE dl)
+        target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_LINUX)
+        target_link_libraries(pm3rrg_rdv4_lua INTERFACE dl)
     endif (APPLE)
 endif (NOT MINGW)
 
-target_include_directories(lua INTERFACE liblua)
-target_compile_options(lua PRIVATE -Wall -Werror -O3)
+target_include_directories(pm3rrg_rdv4_lua INTERFACE liblua)
+target_compile_options(pm3rrg_rdv4_lua PRIVATE -Wall -Werror -O3)
+set_property(TARGET pm3rrg_rdv4_lua PROPERTY POSITION_INDEPENDENT_CODE ON)
