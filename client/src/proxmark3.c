@@ -40,10 +40,11 @@
 // Used to enable/disable use of preferences json file
 #define USE_PREFERENCE_FILE
 
-#ifdef _WIN32
+#define BANNERMSG1 "    :snowflake:  iceman@icesql.net :coffee:"
+#define BANNERMSG2 "   https://github.com/rfidresearchgroup/proxmark3/"
+#define BANNERMSG3 "pre-release v4.0"
 
-static void utf8_showBanner(void) {
-
+static inline void utf8_showBanner(void) {
     char sq[] = { 0xE2, 0x96, 0x88, 0x00 }; // square block
     char tr[] = { 0xE2, 0x95, 0x97, 0x00 }; // top rigth corner
     char tl[] = { 0xE2, 0x95, 0x94, 0x00 }; // top left corner
@@ -51,59 +52,49 @@ static void utf8_showBanner(void) {
     char bl[] = { 0xE2, 0x95, 0x9A, 0x00 }; // bottom left corner
     char hl[] = { 0xE2, 0x95, 0x90, 0x00 }; // horiz line
     char vl[] = { 0xE2, 0x95, 0x91, 0x00 }; // vert line
-    char msg1 [60];
-    char msg2 [60];
-    char msg3 [60];
-
-    strcpy(msg1, "    :snowflake:  iceman@icesql.net :coffee:");
-    strcpy(msg2, "   https://github.com/rfidresearchgroup/proxmark3/");
-    strcpy(msg3, "pre-release v4.0");
-
-    g_printAndLog = PRINTANDLOG_PRINT;
-
-    PrintAndLogEx(NORMAL, "\n");
 
     PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s   %s%s%s%s %s%s%s%s%s "), sq, sq, sq, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, sq, tr);
     PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s   %s%s%s%s"), sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, sq, sq, sq, sq, vl, hl, hl, sq, vl);
     PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s%s"), sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, sq, sq, sq, sq, tl, br);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")" %s", sq, sq, tr, hl, hl, hl, br, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, hl, hl, sq, vl, msg1);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")" %s", sq, sq, vl, sq, sq, vl, bl, hl, br, sq, sq, vl, sq, sq, sq, sq, tl, br, msg2);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")" %s", bl, hl, br, bl, hl, br, bl, hl, br, bl, hl, hl, hl, br, msg3);
-
-    PrintAndLogEx(NORMAL, "");
-    fflush(stdout);
-    g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")" %s", sq, sq, tr, hl, hl, hl, br, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, hl, hl, sq, vl, BANNERMSG1);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")" %s", sq, sq, vl, sq, sq, vl, bl, hl, br, sq, sq, vl, sq, sq, sq, sq, tl, br, BANNERMSG2);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")" %s", bl, hl, br, bl, hl, br, bl, hl, br, bl, hl, hl, hl, br, BANNERMSG3);
 }
 
-#endif
-
-static void showBanner(void) {
-
-#ifdef _WIN32
-    // If on windows and using UTF-8 then we need utf-8 ascii art for banner.
-    if (GetConsoleCP() == 65001) {
-        utf8_showBanner();
-        return;
-    }
-#endif
-
-    g_printAndLog = PRINTANDLOG_PRINT;
-
-    PrintAndLogEx(NORMAL, "\n");
-#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
+static inline void ansi_showBanner(void) {
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "     :snowflake:  iceman@icesql.net :coffee:");
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "    https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") " pre-release v4.0");
-#else
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") " " BANNERMSG1);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") " " BANNERMSG2);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") " " BANNERMSG3);
+}
+
+static inline void ascii_showBanner(void) {
     PrintAndLogEx(NORMAL, "  ======. ===.   ===. ====.");
     PrintAndLogEx(NORMAL, "  ==...==.====. ====.   ..=.");
     PrintAndLogEx(NORMAL, "  ======..==.====.==. ====..");
-    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=.    iceman@icesql.net :coffee:");
-    PrintAndLogEx(NORMAL, "  ==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, "  ...     ...     ... .....  pre-release v4.0");
+    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=." " " BANNERMSG1);
+    PrintAndLogEx(NORMAL, "  ==.     ==. ... ==. ====.." " " BANNERMSG2);
+    PrintAndLogEx(NORMAL, "  ...     ...     ... ..... " " " BANNERMSG3);
+}
+
+static void showBanner(void) {
+
+    g_printAndLog = PRINTANDLOG_PRINT;
+    PrintAndLogEx(NORMAL, "\n");
+
+#if defined(_WIN32)
+    if (GetConsoleCP() == 65001) {
+        // If on Windows and using UTF-8 then we need utf-8 ascii art for banner.
+        utf8_showBanner();
+    } else {
+        ansi_showBanner();
+    }
+#elif defined(__linux__) || defined(__APPLE__)
+    ansi_showBanner();
+#else
+    ascii_showBanner();
 #endif
 //    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
 //    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
