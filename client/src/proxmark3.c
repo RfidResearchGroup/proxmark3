@@ -45,38 +45,45 @@
 #define BANNERMSG3 "pre-release v4.0"
 
 static inline void utf8_showBanner(void) {
-    char sq[] = { 0xE2, 0x96, 0x88, 0x00 }; // square block
-    char tr[] = { 0xE2, 0x95, 0x97, 0x00 }; // top rigth corner
-    char tl[] = { 0xE2, 0x95, 0x94, 0x00 }; // top left corner
-    char br[] = { 0xE2, 0x95, 0x9D, 0x00 }; // bottom right corner
-    char bl[] = { 0xE2, 0x95, 0x9A, 0x00 }; // bottom left corner
-    char hl[] = { 0xE2, 0x95, 0x90, 0x00 }; // horiz line
-    char vl[] = { 0xE2, 0x95, 0x91, 0x00 }; // vert line
+    const char* sq = "\xE2\x96\x88"; // square block
+    const char* tr = "\xE2\x95\x97"; // top right corner
+    const char* tl = "\xE2\x95\x94"; // top left corner
+    const char* br = "\xE2\x95\x9D"; // bottom right corner
+    const char* bl = "\xE2\x95\x9A"; // bottom left corner
+    const char* hl = "\xE2\x95\x90"; // horiz line
+    const char* vl = "\xE2\x95\x91"; // vert line
+    const char* __ = " ";
 
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s   %s%s%s%s %s%s%s%s%s "), sq, sq, sq, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, sq, tr);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s   %s%s%s%s"), sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, sq, sq, sq, sq, vl, hl, hl, sq, vl);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s%s"), sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, sq, sq, sq, sq, tl, br);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")" %s", sq, sq, tr, hl, hl, hl, br, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, hl, hl, sq, vl, BANNERMSG1);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")" %s", sq, sq, vl, sq, sq, vl, bl, hl, br, sq, sq, vl, sq, sq, sq, sq, tl, br, BANNERMSG2);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")" %s", bl, hl, br, bl, hl, br, bl, hl, br, bl, hl, hl, hl, br, BANNERMSG3);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+        sq, sq, sq, sq, sq, sq, tr, __, sq, sq, sq, tr, __, __, __, sq, sq, sq, tr, sq, sq, sq, sq, sq, tr, __);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+        sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, __, sq, sq, sq, sq, vl, bl, hl, hl, hl, sq, sq, tr);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+        sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, __, sq, sq, sq, sq, tl, br);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG1,
+        sq, sq, tl, hl, hl, hl, br, __, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, __, bl, hl, hl, sq, sq, tr);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG2,
+        sq, sq, vl, __, __, __, __, __, sq, sq, vl, __, bl, hl, br, __, sq, sq, vl, sq, sq, sq, sq, sq, tl, br);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG3,
+        bl, hl, br, __, __, __, __, __, bl, hl, br, __, __, __, __, __, bl, hl, br, bl, hl, hl, hl, hl, br, __);
 }
 
 static inline void ansi_showBanner(void) {
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗█████╗ "));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║╚═══██╗"));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") " " BANNERMSG1);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") " " BANNERMSG2);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") " " BANNERMSG3);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║ ╚══██╗") " " BANNERMSG1);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║█████╔╝") " " BANNERMSG2);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝╚════╝ ") " " BANNERMSG3);
 }
 
 static inline void ascii_showBanner(void) {
-    PrintAndLogEx(NORMAL, "  ======. ===.   ===. ====.");
-    PrintAndLogEx(NORMAL, "  ==...==.====. ====.   ..=.");
-    PrintAndLogEx(NORMAL, "  ======..==.====.==. ====..");
-    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=." " " BANNERMSG1);
-    PrintAndLogEx(NORMAL, "  ==.     ==. ... ==. ====.." " " BANNERMSG2);
-    PrintAndLogEx(NORMAL, "  ...     ...     ... ..... " " " BANNERMSG3);
+    PrintAndLogEx(NORMAL, "  ######. ###.   ###.#####. ");
+    PrintAndLogEx(NORMAL, "  ##...##.####. ####. ...##.");
+    PrintAndLogEx(NORMAL, "  ######..##.####.##. ####..");
+    PrintAndLogEx(NORMAL, "  ##..... ##..##..##.  ..##." " " BANNERMSG1);
+    PrintAndLogEx(NORMAL, "  ##.     ##.  .. ##.#####.." " " BANNERMSG2);
+    PrintAndLogEx(NORMAL, "   ..      ..      .. ..... " " " BANNERMSG3);
 }
 
 static void showBanner(void) {
