@@ -830,6 +830,9 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (getReply(response)) {
 
+            if (response->cmd == CMD_ACK)
+                return true;
+
             // sample_buf is a array pointer, located in data.c
             // arg0 = offset in transfer. Startindex of this chunk
             // arg1 = length bytes to transfer
@@ -852,8 +855,6 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
                 memcpy(dest + offset, response->data.asBytes, copy_bytes);
                 bytes_completed += copy_bytes;
-            } else if (response->cmd == CMD_ACK) {
-                return true;
             } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
                 uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
                 PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
@@ -870,8 +871,8 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
-            PrintAndLogEx(NORMAL, "Waiting for a response from the Proxmark3...");
-            PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
+            PrintAndLogEx(INFO, "Waiting for a response from the Proxmark3...");
+            PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
     }
