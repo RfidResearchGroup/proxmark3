@@ -1428,7 +1428,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // upload file from client
             uint8_t *mem = BigBuf_get_addr();
             memcpy(mem + packet->oldarg[0], packet->data.asBytes, PM3_CMD_DATA_SIZE);
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
         case CMD_SMART_UPGRADE: {
@@ -1628,7 +1628,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg1 = RFU
             // arg2 = tracelen?
             // asbytes = samplingconfig array
-            reply_old(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
+            reply_mix(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
             LED_B_OFF();
             break;
         }
@@ -1759,7 +1759,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs((char *)filename);
             if (changed) rdv40_spiffs_lazy_unmount();
-            reply_old(CMD_ACK, size, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, size, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1935,7 +1935,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Flash_UniqueID(info->flashid);
                 FlashStop();
             }
-            reply_old(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
+            reply_mix(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
             BigBuf_free();
 
             LED_B_OFF();
