@@ -494,6 +494,7 @@ static int CmdTraceLoad(const char *Cmd) {
     if (g_trace)
         free(g_trace);
 
+    g_traceLen = 0;
     g_trace = calloc(fsize, sizeof(uint8_t));
     if (!g_trace) {
         PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
@@ -628,16 +629,17 @@ int CmdTraceList(const char *Cmd) {
 
     uint16_t tracepos = 0;
 
-    // reserve some space.
-    if (!g_trace) {
+
+    if (isOnline) {
+        // reserve some space.
+        if (g_trace)
+            free(g_trace);
+        g_traceLen = 0;
         g_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
         if (g_trace == NULL) {
             PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
             return PM3_EMALLOC;
         }
-    }
-
-    if (isOnline) {
         // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
         PacketResponseNG response;
         if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
