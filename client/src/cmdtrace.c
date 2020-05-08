@@ -496,7 +496,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     g_traceLen = 0;
     g_trace = calloc(fsize, sizeof(uint8_t));
-    if (!g_trace) {
+    if (g_trace == NULL) {
         PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
         fclose(f);
         return PM3_EMALLOC;
@@ -505,7 +505,7 @@ static int CmdTraceLoad(const char *Cmd) {
     size_t bytes_read = fread(g_trace, 1, fsize, f);
     g_traceLen = bytes_read;
     fclose(f);
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %lu bytes) loaded from file %s", g_traceLen, filename);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%lu") " bytes) loaded from " _YELLOW_("%s"), g_traceLen, filename);
     return PM3_SUCCESS;
 }
 
@@ -627,10 +627,8 @@ int CmdTraceList(const char *Cmd) {
     //Validations
     if (errors) return usage_trace_list();
 
-    uint16_t tracepos = 0;
-
-
     if (isOnline) {
+
         // reserve some space.
         if (g_trace)
             free(g_trace);
@@ -640,6 +638,9 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
             return PM3_EMALLOC;
         }
+
+        PrintAndLogEx(INFO, "downloading tracelog from device");
+
         // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
         PacketResponseNG response;
         if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
@@ -665,6 +666,11 @@ int CmdTraceList(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", g_traceLen);
+    if (g_traceLen == 0) {
+        return PM3_SUCCESS;
+    }
+
+    uint16_t tracepos = 0;
 
     /*
     if (protocol == FELICA) {
