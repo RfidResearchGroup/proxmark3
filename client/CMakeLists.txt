@@ -174,7 +174,6 @@ set (TARGET_SOURCES
         src/tea.c
         src/ui.c
         src/util.c
-        src/whereami.c
         src/wiegand_formats.c
         src/wiegand_formatutils.c
         )
@@ -260,8 +259,23 @@ find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_z REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
+find_library(pm3rrg_rdv4_whereami REQUIRED)
 
-target_link_libraries(proxmark3 PRIVATE readline pthread m pm3rrg_rdv4_mbedtls pm3rrg_rdv4_cliparser pm3rrg_rdv4_jansson pm3rrg_rdv4_lua pm3rrg_rdv4_tinycbor pm3rrg_rdv4_amiibo pm3rrg_rdv4_reveng pm3rrg_rdv4_z pm3rrg_rdv4_hardnested ${ADDITIONAL_LNK})
+target_link_libraries(proxmark3 PRIVATE
+        readline
+        pthread
+        m
+        pm3rrg_rdv4_mbedtls
+        pm3rrg_rdv4_cliparser
+        pm3rrg_rdv4_jansson
+        pm3rrg_rdv4_lua
+        pm3rrg_rdv4_tinycbor
+        pm3rrg_rdv4_amiibo
+        pm3rrg_rdv4_reveng
+        pm3rrg_rdv4_z
+        pm3rrg_rdv4_hardnested
+        pm3rrg_rdv4_whereami
+        ${ADDITIONAL_LNK})
 
 install(TARGETS proxmark3 DESTINATION "bin")
 install(DIRECTORY cmdscripts lualibs luascripts resources dictionaries DESTINATION "share/proxmark3")

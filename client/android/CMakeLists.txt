@@ -136,7 +136,6 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdscript.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
-        ${PM3_ROOT}/client/src/whereami.c
         ${PM3_ROOT}/client/src/cmdmain.c
         ${PM3_ROOT}/client/src/cmdflashmem.c
         ${PM3_ROOT}/client/src/scripting.c
@@ -167,5 +166,19 @@ find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_z REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
+find_library(pm3rrg_rdv4_whereami REQUIRED)
 
-target_link_libraries(pm3rrg_rdv4 pm3rrg_rdv4_hardnested pm3rrg_rdv4_mbedtls pm3rrg_rdv4_cliparser pm3rrg_rdv4_jansson pm3rrg_rdv4_lua pm3rrg_rdv4_tinycbor pm3rrg_rdv4_amiibo pm3rrg_rdv4_reveng pm3rrg_rdv4_z android log)
+target_link_libraries(
+        pm3rrg_rdv4
+        pm3rrg_rdv4_hardnested
+        pm3rrg_rdv4_mbedtls
+        pm3rrg_rdv4_cliparser
+        pm3rrg_rdv4_jansson
+        pm3rrg_rdv4_lua
+        pm3rrg_rdv4_tinycbor
+        pm3rrg_rdv4_amiibo
+        pm3rrg_rdv4_reveng
+        pm3rrg_rdv4_whereami
+        pm3rrg_rdv4_z
+        android
+        log)

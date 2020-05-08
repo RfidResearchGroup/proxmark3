@@ -46,6 +46,8 @@ HARDNESTEDPATH = ./deps/hardnested
 HARDNESTEDLIB = $(HARDNESTEDPATH)/libhardnested.a
 CLIPARSERPATH = ./deps/cliparser
 CLIPARSERLIB = $(CLIPARSERPATH)/libcliparser.a
+WAILIBPATH = ./deps/whereami
+WAILIB = $(WAILIBPATH)/libwhereami.a
 
 # common libraries
 MBEDTLSLIBPATH = ../common/mbedtls
@@ -53,12 +55,12 @@ MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
-LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH)
+LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH) -I$(WAILIBPATH)
 INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
 CFLAGS ?= $(DEFCFLAGS)
 
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT) -DWAI_PM3_TUNED
+PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
 # WIP Testing
 #PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
@@ -192,7 +194,6 @@ CMDSRCS =   crapto1/crapto1.c \
             loclass/ikeys.c \
             loclass/elite_crack.c \
             fileutils.c \
-            whereami.c \
             mifare/mifarehost.c \
             parity.c \
             crc.c \
@@ -313,8 +314,8 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) $(BTLDLIBS) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) liblua jansson tinycbor reveng mbedtls zlib amiibo hardnested cliparser lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) $(WAILIB) $(BTLDLIBS) $(QTLDLIBS)
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) liblua jansson tinycbor reveng mbedtls zlib amiibo hardnested cliparser whereami lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LDLIBS)  -o $@
 
@@ -346,6 +347,7 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) clean
 
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
@@ -402,6 +404,10 @@ cliparser:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) all
 
+whereami:
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) all
+
 # common libraries:
 mbedtls:
 	$(info [*] MAKE $@)
@@ -411,7 +417,7 @@ zlib:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
-.PHONY: all clean install uninstall tarbin liblua jansson tinycbor reveng hardnested amiibo cliparser mbedtls zlib
+.PHONY: all clean install uninstall tarbin liblua jansson tinycbor reveng hardnested amiibo cliparser whereami mbedtls zlib
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
