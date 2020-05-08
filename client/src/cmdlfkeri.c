@@ -390,7 +390,7 @@ int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
         *invert ^= 1;
     }
 
-    if (*size != 64) return -3; //wrong demoded size
+    if (*size < 64) return -3; //wrong demoded size
 
     return (int)startIdx;
 }
