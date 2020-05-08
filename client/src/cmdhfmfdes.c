@@ -1968,7 +1968,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+    CLIGetHexWithReturn(3, fid, &fidlength);
     CLIParserFree();
 
     if (filenolen != 1) {
@@ -2028,7 +2028,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+    CLIGetHexWithReturn(3, fid, &fidlength);
     CLIParserFree();
 
     if (filenolen != 1) {
@@ -2093,7 +2093,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+    CLIGetHexWithReturn(3, fid, &fidlength);
 
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
@@ -2241,7 +2241,6 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
     return res;
 }
 
-
 static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserInit("hf mfdes readdata",
                   "Read data from File",
@@ -2269,11 +2268,11 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
-    CLIParamHexToBuf(arg_get_str(3), offset, 3, &offsetlength);
+    CLIGetHexWithReturn(3, offset, &offsetlength);
 
     int flength = 0;
     uint8_t filesize[3] = {0};
-    CLIParamHexToBuf(arg_get_str(4), filesize, 3, &flength);
+    CLIGetHexWithReturn(4, filesize, &flength);
 
     int type = arg_get_int(5);
     CLIParserFree();
@@ -2375,7 +2374,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     value.fileno = _fileno[0];
 
     int vlength = 0x0;
-    CLIParamHexToBuf(arg_get_str(3), value.value, 4, &vlength);
+    CLIGetHexWithReturn(3, value.value, &vlength);
 
     int mode = arg_get_int(4);
     CLIParserFree();
@@ -2467,7 +2466,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
-    CLIParamHexToBuf(arg_get_str(3), offset, 3, &offsetlength);
+    CLIGetHexWithReturn(3, offset, &offsetlength);
 
     int dlength = 0xFFFF;
     uint8_t *data = (uint8_t *)calloc(0xFFFF, sizeof(uint8_t));
@@ -2475,7 +2474,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    CLIParamHexToBuf(arg_get_str(4), data, 0xFFFF, &dlength);
+    CLIGetHexWithReturn(4, data, &dlength);
 
     int type = arg_get_int(5);
 
@@ -2580,7 +2579,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+    CLIGetHexWithReturn(3, fid, &fidlength);
 
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
@@ -3445,7 +3444,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     uint8_t key[24] = {0};
     int keylen = 0;
-    CLIParamHexToBuf(arg_get_str(5), key, 24, &keylen);
+    CLIGetHexWithReturn(5, key, &keylen);
     CLIParserFree();
 
     if (keylen == 0) {
