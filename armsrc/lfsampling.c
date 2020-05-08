@@ -110,24 +110,27 @@ void initSampleBuffer(uint32_t *sample_size) {
 }
 
 void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
-
+    if (sample_size == NULL) {
+        Dbprintf("initSampleBufferEx, param NULL");
+        return;
+    }
     BigBuf_free();
+
 
     // We can't erase the buffer now, it would drastically delay the acquisition
 
     if (use_malloc) {
 
-        if (sample_size == NULL || *sample_size == 0) {
+        if (*sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
             data.buffer = BigBuf_get_addr();
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
             data.buffer = BigBuf_malloc(*sample_size);
-
         }
 
     } else {
-        if (sample_size == NULL || *sample_size == 0) {
+        if (*sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
         }
         data.buffer = BigBuf_get_addr();
