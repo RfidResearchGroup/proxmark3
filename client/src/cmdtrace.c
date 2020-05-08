@@ -632,7 +632,9 @@ int CmdTraceList(const char *Cmd) {
         // reserve some space.
         if (g_trace)
             free(g_trace);
+
         g_traceLen = 0;
+
         g_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
         if (g_trace == NULL) {
             PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
@@ -645,18 +647,22 @@ int CmdTraceList(const char *Cmd) {
         PacketResponseNG response;
         if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            free(g_trace);
             return PM3_ETIMEOUT;
         }
 
         g_traceLen = response.oldarg[2];
+
+        // if tracelog buffer was larger and we need to download more.
         if (g_traceLen > PM3_CMD_DATA_SIZE) {
-            uint8_t *p = realloc(g_trace, g_traceLen);
-            if (p == NULL) {
+
+            free(g_trace);
+            g_trace = calloc(g_traceLen, sizeof(uint8_t));
+            if (g_trace == NULL) {
                 PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-                free(g_trace);
                 return PM3_EMALLOC;
             }
-            g_trace = p;
+
             if (!GetFromDevice(BIG_BUF, g_trace, g_traceLen, 0, NULL, 0, NULL, 2500, false)) {
                 PrintAndLogEx(WARNING, "command execution time out");
                 free(g_trace);
