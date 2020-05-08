@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # so we need add def getlocaledecpoint()='.'
 add_definitions(-DANDROID -D"getlocaledecpoint\(\)='.'")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -O3 -fvisibility=hidden -w")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fvisibility=hidden -w")
 
 # Root path into client
 set(PM3_ROOT ../../)
