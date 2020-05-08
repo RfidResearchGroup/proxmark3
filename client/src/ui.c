@@ -351,6 +351,19 @@ void SetFlushAfterWrite(bool value) {
     flushAfterWrite = value;
 }
 
+void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n) {
+    uint8_t *rdest = (uint8_t *)dest;
+    uint8_t *rsrc = (uint8_t *)src;
+    uint16_t si = 0;
+    for (uint16_t i = 0; i < n; i++) {
+        if ((i < n)
+                && ((rsrc[i] == '\001') || (rsrc[i] == '\002')))
+            // skip readline special markers
+            continue;
+        rdest[si++] = rsrc[i];
+    }
+}
+
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter) {
     if (filter) {
         // Filter out ANSI sequences on these OS
@@ -358,10 +371,6 @@ void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter) {
         uint8_t *rsrc = (uint8_t *)src;
         uint16_t si = 0;
         for (uint16_t i = 0; i < n; i++) {
-            if ((i < n)
-                    && ((rsrc[i] == '\001') || (rsrc[i] == '\002')))
-                // skip readline special markers
-                continue;
             if ((i < n - 1)
                     && (rsrc[i] == '\x1b')
                     && (rsrc[i + 1] >= 0x40)

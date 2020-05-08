@@ -331,7 +331,10 @@ check_script:
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
                 prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
-                PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
+                // always filter RL magic separators if not using readline
+                char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
+                memcpy_filter_rlmarkers(prompt_filtered, prompt, sizeof(prompt_filtered));
+                PrintAndLogEx(NORMAL, "%s%s", prompt_filtered, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
                 // add to history if not from a script

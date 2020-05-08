@@ -56,6 +56,7 @@ void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetFlushAfterWrite(bool value);
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter);
+void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n);
 void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode);
 
 int searchHomeFilePath(char **foundpath, const char *filename, bool create_home);
