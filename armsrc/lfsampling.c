@@ -259,7 +259,8 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     while (!BUTTON_PRESS()) {
 
         // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
+        // interruptible only when logging not yet triggered
+        if ((checked == 1000) && (trigger_threshold > 0)) {
             if (data_available()) {
                 checked = -1;
                 break;
