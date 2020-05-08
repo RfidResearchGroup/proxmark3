@@ -38,14 +38,14 @@ JANSSONLIBPATH = ./deps/jansson
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 CBORLIBPATH = ./deps/tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
-REVENGPATH = ./deps/reveng
-REVENGLIB = $(REVENGPATH)/libreveng.a
+REVENGLIBPATH = ./deps/reveng
+REVENGLIB = $(REVENGLIBPATH)/libreveng.a
 AMIIBOLIBPATH = ./deps/amiitool
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
-HARDNESTEDPATH = ./deps/hardnested
-HARDNESTEDLIB = $(HARDNESTEDPATH)/libhardnested.a
-CLIPARSERPATH = ./deps/cliparser
-CLIPARSERLIB = $(CLIPARSERPATH)/libcliparser.a
+HARDNESTEDLIBPATH = ./deps/hardnested
+HARDNESTEDLIB = $(HARDNESTEDLIBPATH)/libhardnested.a
+CLIPARSERLIBPATH = ./deps/cliparser
+CLIPARSERLIB = $(CLIPARSERLIBPATH)/libcliparser.a
 WAILIBPATH = ./deps/whereami
 WAILIB = $(WAILIBPATH)/libwhereami.a
 
@@ -55,7 +55,7 @@ MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
-LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH) -I$(WAILIBPATH)
+LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGLIBPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDLIBPATH) -I$(CLIPARSERLIBPATH) -I$(WAILIBPATH)
 INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
 CFLAGS ?= $(DEFCFLAGS)
 
@@ -343,10 +343,10 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) clean
 	@# Just in case someone compiled within these dirs:
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
@@ -393,11 +393,11 @@ tinycbor:
 
 reveng:
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) all
+	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) all
 
 hardnested:
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) all
+	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) all
 
 amiibo:
 	$(info [*] MAKE $@)
@@ -405,7 +405,7 @@ amiibo:
 
 cliparser:
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) all
+	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) all
 
 whereami:
 	$(info [*] MAKE $@)
