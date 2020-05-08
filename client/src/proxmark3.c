@@ -549,11 +549,11 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
 
     PrintAndLogEx(SUCCESS, "About to use the following file%s:", num_files > 1 ? "s" : "");
     for (int i = 0 ; i < num_files; ++i) {
-        PrintAndLogEx(SUCCESS, "    %s", filepaths[i]);
+        PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), filepaths[i]);
     }
 
     if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
-        PrintAndLogEx(NORMAL, _GREEN_("Found"));
+        PrintAndLogEx(NORMAL, _GREEN_(" found"));
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
         ret = PM3_ETIMEOUT;
@@ -577,7 +577,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         PrintAndLogEx(NORMAL, "");
     }
 
-    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
+    PrintAndLogEx(SUCCESS, _CYAN_("Flashing..."));
 
     for (int i = 0; i < num_files; i++) {
         ret = flash_write(&files[i]);
@@ -585,7 +585,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
             goto finish;
         }
         flash_free(&files[i]);
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
     }
 
 finish:
@@ -597,9 +597,9 @@ finish2:
             free(filepaths[i]);
     }
     if (ret == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+        PrintAndLogEx(SUCCESS, _CYAN_("All done"));
     else
-        PrintAndLogEx(ERR, "Aborted on error.");
+        PrintAndLogEx(ERR, "Aborted on error");
     PrintAndLogEx(NORMAL, "\nHave a nice day!");
     return ret;
 }
