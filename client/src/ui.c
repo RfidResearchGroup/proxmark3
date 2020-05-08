@@ -356,8 +356,7 @@ void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n) {
     uint8_t *rsrc = (uint8_t *)src;
     uint16_t si = 0;
     for (uint16_t i = 0; i < n; i++) {
-        if ((i < n)
-                && ((rsrc[i] == '\001') || (rsrc[i] == '\002')))
+        if ((rsrc[i] == '\001') || (rsrc[i] == '\002'))
             // skip readline special markers
             continue;
         rdest[si++] = rsrc[i];
