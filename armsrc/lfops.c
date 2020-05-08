@@ -261,8 +261,9 @@ void printT55xxConfig(void) {
             else
                 PRN_NA;
 
+        // remove last space
         s[strlen(s)] = 0;
-        DbpString(s);
+        DbpStringEx(FLAG_LOG, s, sizeof(s));
     }
     DbpString("");
 }
