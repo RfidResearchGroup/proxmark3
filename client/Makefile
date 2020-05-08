@@ -348,6 +348,9 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) clean
+	@# Just in case someone compiled within these dirs:
+	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
 
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
