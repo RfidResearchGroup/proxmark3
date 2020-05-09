@@ -45,23 +45,44 @@ else
     RANLIB= ranlib
 endif
 
-DEFCFLAGS = -Wall -Werror -O3
+DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
 # Some more warnings we want as errors:
-DEFCFLAGS += -Wcast-align -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers
+DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits
 # Some more warnings we need first to eliminate, so temporarely tolerated:
-DEFCFLAGS += -Wno-error=cast-align
-# TODO?:
-#DEFCFLAGS += -Wunused-parameter -Wno-error=unused-parameter
-#DEFCFLAGS += -Wold-style-declaration -Wno-error=old-style-declaration
-#DEFCFLAGS += -Wsign-compare -Wno-error=sign-compare
-#DEFCFLAGS += -Wimplicit-fallthrough=3 -Wno-error=implicit-fallthrough
-#DEFCFLAGS += -Wtype-limits -Wno-error=type-limits
-#DEFCFLAGS += -Wunused-but-set-parameter -Wno-error=unused-but-set-parameter
-#DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
-#DEFCFLAGS += -Wold-style-definition -Wno-error=old-style-definition
-# unknown to clang:     -Wclobbered -Wmissing-parameter-type -Wcast-function-type
-# unknown to clang < 8: -Woverride-init
-# unknown to gcc < 6:   -Wshift-negative-value
+DEFCFLAGS += -Wcast-align -Wno-error=cast-align
+
+# Next ones are activated only if GCCEXTRA=1 or CLANGEXTRA=1
+EXTRACFLAGS =
+EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
+EXTRACFLAGS += -Wsign-compare -Wno-error=sign-compare
+EXTRACFLAGS += -Wswitch-enum -Wno-error=switch-enum
+EXTRACFLAGS += -Wold-style-definition -Wno-error=old-style-definition
+
+# unknown to clang or old gcc:
+# First we activate Wextra then we explicitly list those we know about
+GCCEXTRACFLAGS = -Wextra
+GCCEXTRACFLAGS += -Wclobbered -Wno-error=clobbered
+GCCEXTRACFLAGS += -Wcast-function-type -Wno-error=cast-function-type
+GCCEXTRACFLAGS += -Wimplicit-fallthrough=3 -Wno-error=implicit-fallthrough
+GCCEXTRACFLAGS += -Wmissing-parameter-type -Wno-error=missing-parameter-type
+GCCEXTRACFLAGS += -Wold-style-declaration -Wno-error=old-style-declaration
+GCCEXTRACFLAGS += -Woverride-init -Wno-error=override-init
+GCCEXTRACFLAGS += -Wshift-negative-value -Wno-error=shift-negative-value
+GCCEXTRACFLAGS += -Wunused-but-set-parameter -Wno-error=unused-but-set-parameter
+ifeq ($(GCCEXTRA),1)
+  DEFCFLAGS += $(GCCEXTRACFLAGS) $(EXTRACFLAGS)
+endif
+# unknown to gcc or old clang:
+# First we activate Wextra then we explicitly list those we know about
+CLANGEXTRACFLAGS = -Wextra
+CLANGEXTRACFLAGS += -Wtautological-type-limit-compare
+CLANGEXTRACFLAGS += -Wnull-pointer-arithmetic
+CLANGEXTRACFLAGS += -Woverride-init
+CLANGEXTRACFLAGS += -Wshift-negative-value
+CLANGEXTRACFLAGS += -Wimplicit-fallthrough
+ifeq ($(CLANGEXTRA),1)
+  DEFCFLAGS += $(CLANGEXTRACFLAGS) $(EXTRACFLAGS)
+endif
 
 ifeq ($(platform),Darwin)
 # their readline has strict-prototype issues
