@@ -538,10 +538,10 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") " ]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [" _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                          sprint_hex_inrow(resultKey, 6)
+                          sprint_hex(resultKey, 6)
                          );
             return -5;
         }
@@ -714,10 +714,10 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") " ]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [" _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                          sprint_hex_inrow(resultKey, 6)
+                          sprint_hex(resultKey, 6)
                          );
             return PM3_SUCCESS;
         } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
