@@ -1230,7 +1230,8 @@ static void check_for_BitFlipProperties(bool time_budget) {
         args[i][1] = MIN(args[i][0] + bytes_per_thread - 1, 255);
         args[i][2] = time_budget;
     }
-    args[NUM_CHECK_BITFLIPS_THREADS - 1][1] = MAX(args[NUM_CHECK_BITFLIPS_THREADS - 1][1], 255);
+    // args[][] is uint8_t so max 255, no need to check it
+    // args[NUM_CHECK_BITFLIPS_THREADS - 1][1] = MAX(args[NUM_CHECK_BITFLIPS_THREADS - 1][1], 255);
 
     // start threads
     for (uint8_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
