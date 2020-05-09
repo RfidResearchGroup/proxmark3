@@ -54,17 +54,17 @@
 #endif
 
 #define CLOCK 64 //for 125kHz
-#define LF_RWC_T55XX_TYPE 1 //Tag type: 0 - T5555, 1-T55x7
+#define LF_RWSB_T55XX_TYPE 1 //Tag type: 0 - T5555, 1-T55x7
 
-#define LF_RWC_UNKNOWN_RESULT 0
-#define LF_RWC_BRUTE_STOPED 1
-#define LF_RWC_BRUTE_SAVED 2
+#define LF_RWSB_UNKNOWN_RESULT 0
+#define LF_RWSB_BRUTE_STOPED 1
+#define LF_RWSB_BRUTE_SAVED 2
 
 //modes
-#define LF_RWC_MODE_READ 0
-#define LF_RWC_MODE_SIM 1
-#define LF_RWC_MODE_WRITE 2
-#define LF_RWC_MODE_BRUTE 3
+#define LF_RWSB_MODE_READ 0
+#define LF_RWSB_MODE_SIM 1
+#define LF_RWSB_MODE_WRITE 2
+#define LF_RWSB_MODE_BRUTE 3
 
 // Predefined bruteforce speed
 // avg: 1s, 1.2s, 1.5s, 2s
@@ -224,7 +224,7 @@ int ButeEMTag(uint64_t tag, int slot) {
         int button_pressed = BUTTON_CLICKED(1000);
         if (button_pressed == BUTTON_SINGLE_CLICK) {
             Dbprintf("[=] >>  Exit bruteforce mode without saving. <<");
-            return LF_RWC_BRUTE_STOPED;
+            return LF_RWSB_BRUTE_STOPED;
         }
         else if (button_pressed == BUTTON_DOUBLE_CLICK) {
             FlashLEDs(100, 10);
@@ -233,7 +233,7 @@ int ButeEMTag(uint64_t tag, int slot) {
 #ifdef WITH_FLASH
             SaveIDtoFlash(slot, low[slot]);
 #endif
-            return LF_RWC_BRUTE_SAVED;
+            return LF_RWSB_BRUTE_SAVED;
         }
         else if (button_pressed == BUTTON_HOLD) {
             FlashLEDs(100, 1);
@@ -243,7 +243,7 @@ int ButeEMTag(uint64_t tag, int slot) {
             Dbprintf("[=] >>  Setting speed to %d (%d) <<", bruteforceSpeedCurrent, bruteforceSpeed[bruteforceSpeedCurrent]);
         }
     }
-    return LF_RWC_BRUTE_STOPED;
+    return LF_RWSB_BRUTE_STOPED;
 }
 
 int ExecuteMode(int mode, int slot) {
@@ -251,7 +251,7 @@ int ExecuteMode(int mode, int slot) {
 
     switch (mode) {
         //default first mode is simulate
-        case LF_RWC_MODE_READ:
+        case LF_RWSB_MODE_READ:
             Dbprintf("[=] >>  Read mode started  <<");
             CmdEM410xdemod(1, &high[slot], &low[slot], 0);
             LED_Update(mode, slot);
@@ -261,40 +261,40 @@ int ExecuteMode(int mode, int slot) {
 #ifdef WITH_FLASH
             SaveIDtoFlash(slot, low[slot]);
 #endif
-            return LF_RWC_UNKNOWN_RESULT;
-        case LF_RWC_MODE_SIM:
+            return LF_RWSB_UNKNOWN_RESULT;
+        case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
             ConstructEM410xEmulBuf(ReversQuads(low[slot]));
             SimulateTagLowFrequency(buflen, 0, 1);
-            return LF_RWC_UNKNOWN_RESULT;
-        case LF_RWC_MODE_WRITE:
+            return LF_RWSB_UNKNOWN_RESULT;
+        case LF_RWSB_MODE_WRITE:
             Dbprintf("[!!] >>  Write mode started  <<");
-            WriteEM410x(LF_RWC_T55XX_TYPE, (uint32_t)(low[slot] >> 32), (uint32_t)(low[slot] & 0xffffffff));
-            return LF_RWC_UNKNOWN_RESULT;
-        case LF_RWC_MODE_BRUTE:
+            WriteEM410x(LF_RWSB_T55XX_TYPE, (uint32_t)(low[slot] >> 32), (uint32_t)(low[slot] & 0xffffffff));
+            return LF_RWSB_UNKNOWN_RESULT;
+        case LF_RWSB_MODE_BRUTE:
             Dbprintf("[=] >>  Bruteforce mode started  <<");
             return ButeEMTag(low[slot], slot);
     }
-    return LF_RWC_UNKNOWN_RESULT;
+    return LF_RWSB_UNKNOWN_RESULT;
 }
 
 void SwitchMode(int *mode, int slot) {
     int result = ExecuteMode(*mode, slot);
 
-    if (*mode == LF_RWC_MODE_READ) {
+    if (*mode == LF_RWSB_MODE_READ) {
         //After read mode we need to switch to sim mode automatically
         Dbprintf("[=] >>  automatically switch to sim mode after read  <<");
 
-        *mode = LF_RWC_MODE_SIM;
+        *mode = LF_RWSB_MODE_SIM;
         SwitchMode(mode, slot);
     }
-    else if (*mode == LF_RWC_MODE_BRUTE) 
+    else if (*mode == LF_RWSB_MODE_BRUTE) 
     {
         //We have already have a click inside brute mode. Lets switch next mode
         Dbprintf("[=] >>  automatically switch to read mode after brute  <<");
-        *mode = LF_RWC_MODE_READ;
-        if (result == LF_RWC_BRUTE_SAVED) {
-            *mode = LF_RWC_MODE_SIM;
+        *mode = LF_RWSB_MODE_READ;
+        if (result == LF_RWSB_BRUTE_SAVED) {
+            *mode = LF_RWSB_MODE_SIM;
         }
         SwitchMode(mode, slot);
     }
@@ -340,7 +340,7 @@ void RunMod() {
             SpinDelay(300);
             
             //automatically switch to SIM mode on slot selection
-            mode = LF_RWC_MODE_SIM;
+            mode = LF_RWSB_MODE_SIM;
             SwitchMode(&mode, slot);
         } 
     }
