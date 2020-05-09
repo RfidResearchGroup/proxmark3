@@ -8,7 +8,7 @@
 //-----------------------------------------------------------------------------
 // LF rswb   -  This mode can simulate ID from selected slot, read ID to
 //              selected slot, write from selected slot to T5555/T55x7 tag and store
-//              readed ID to flash (only RDV4). 
+//              readed ID to flash (only RDV4).
 //              Predefined its is not recomended because you can incedently rewrite your MANDATORY tag data.
 //
 //              To recall stored ID from flash execute:
@@ -205,11 +205,11 @@ int ButeEMTag(uint64_t tag, int slot) {
 
     uint32_t fc = (tag >> 17) & 0xFF;
     uint32_t cardnum = (tag >> 1) & 0xFFFF;
-    if (cardnum>32767) {
+    if (cardnum > 32767) {
         direction = -1;
     }
 
-    while(cardnum > 1 && cardnum < 65535) {
+    while (cardnum > 1 && cardnum < 65535) {
         WDT_HIT();
         if (data_available()) break;
 
@@ -225,8 +225,7 @@ int ButeEMTag(uint64_t tag, int slot) {
         if (button_pressed == BUTTON_SINGLE_CLICK) {
             Dbprintf("[=] >>  Exit bruteforce mode without saving. <<");
             return LF_RWSB_BRUTE_STOPED;
-        }
-        else if (button_pressed == BUTTON_DOUBLE_CLICK) {
+        } else if (button_pressed == BUTTON_DOUBLE_CLICK) {
             FlashLEDs(100, 10);
             Dbprintf("[=] >>  Saving bruteforced card to current slot  <<");
             low[slot] = tag;
@@ -234,12 +233,11 @@ int ButeEMTag(uint64_t tag, int slot) {
             SaveIDtoFlash(slot, low[slot]);
 #endif
             return LF_RWSB_BRUTE_SAVED;
-        }
-        else if (button_pressed == BUTTON_HOLD) {
+        } else if (button_pressed == BUTTON_HOLD) {
             FlashLEDs(100, 1);
             WAIT_BUTTON_RELEASED();
             bruteforceSpeedCurrent = (bruteforceSpeedCurrent + 1) % speed_count;
-            FlashLEDs(100, bruteforceSpeedCurrent+1);
+            FlashLEDs(100, bruteforceSpeedCurrent + 1);
             Dbprintf("[=] >>  Setting speed to %d (%d) <<", bruteforceSpeedCurrent, bruteforceSpeed[bruteforceSpeedCurrent]);
         }
     }
@@ -287,9 +285,7 @@ void SwitchMode(int *mode, int slot) {
 
         *mode = LF_RWSB_MODE_SIM;
         SwitchMode(mode, slot);
-    }
-    else if (*mode == LF_RWSB_MODE_BRUTE) 
-    {
+    } else if (*mode == LF_RWSB_MODE_BRUTE) {
         //We have already have a click inside brute mode. Lets switch next mode
         Dbprintf("[=] >>  automatically switch to read mode after brute  <<");
         *mode = LF_RWSB_MODE_READ;
@@ -324,24 +320,21 @@ void RunMod() {
 
         //press button - switch mode
         //hold button - switch slot
-        if (button_pressed == BUTTON_SINGLE_CLICK) 
-        {
+        if (button_pressed == BUTTON_SINGLE_CLICK) {
             Dbprintf("[=] >>  Single click  <<");
             mode = (mode + 1) % mode_count;
             SpinDown(100);
 
             SwitchMode(&mode, slot);
-        }
-        else if (button_pressed == BUTTON_HOLD) 
-        {
+        } else if (button_pressed == BUTTON_HOLD) {
             Dbprintf("[=] >>  Button hold  <<");
             slot = (slot + 1) % slots_count;
             SpinUp(100);
             SpinDelay(300);
-            
+
             //automatically switch to SIM mode on slot selection
             mode = LF_RWSB_MODE_SIM;
             SwitchMode(&mode, slot);
-        } 
+        }
     }
 }
