@@ -1,7 +1,7 @@
 MYSRCPATHS =
 MYINCLUDES =
 # Strange errors on Mingw when compiling with C99
-MYCFLAGS =
+MYCFLAGS = -Wno-bad-function-cast -Wno-incompatible-pointer-types-discards-qualifiers
 MYDEFS =
 MYSRCS = \
     cborencoder.c \
