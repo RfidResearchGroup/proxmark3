@@ -20,6 +20,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_EM4100RWC    | Read/simulate em4100 tags & clone it   |
 |                 | to T555x tags                          |
 +----------------------------------------------------------+
+| LF_EM4100RSWB   | Read/simulate/brute em4100 tags &      |
+|                 | clone it to T555x tags                 |
++----------------------------------------------------------+
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce          |
 |                 | - Federico dotta & Maurizio Agazzini   |
 +----------------------------------------------------------+
@@ -55,7 +58,7 @@ define KNOWN_STANDALONE_DEFINITIONS
 +----------------------------------------------------------+
 endef
 
-STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RWC LF_HIDBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN
+STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RWC LF_EM4100RSWB LF_HIDBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN
 STANDALONE_MODES += HF_14ASNIFF HF_BOG HF_COLIN HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_YOUNG
 STANDALONE_MODES_REQ_SMARTCARD :=
 STANDALONE_MODES_REQ_FLASH := LF_ICEHID HF_14ASNIFF HF_BOG HF_COLIN
