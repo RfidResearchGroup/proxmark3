@@ -39,8 +39,68 @@ VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/
 
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 
-CFLAGS ?= -Wall -Werror -pedantic -Wunused -Os -mthumb-interwork
-CFLAGS += -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
+ARMCFLAGS = -mthumb-interwork
+DEFCFLAGS = -Wall -Werror -Os -pedantic -fstrict-aliasing -pipe
+
+# Some more warnings we want as errors:
+DEFCFLAGS += -Wbad-function-cast -Wchar-subscripts -Wundef -Wunused -Wuninitialized -Wpointer-arith -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits
+
+# Some more warnings we need first to eliminate, so temporarely tolerated:
+DEFCFLAGS += -Wshadow -Wno-error=shadow
+DEFCFLAGS += -Winline -Wno-error=inline
+DEFCFLAGS += -Wmissing-prototypes -Wno-error=missing-prototypes
+DEFCFLAGS += -Wmissing-declarations  -Wno-error=missing-declarations
+DEFCFLAGS += -Wstrict-prototypes -Wno-error=strict-prototypes
+# still vsnprintf etc to sort out...
+#DEFCFLAGS += -Wredundant-decls -Wno-error=redundant-decls
+#DEFCFLAGS += -Wcast-align -Wno-error=cast-align
+
+# Next ones are activated only if GCCEXTRA=1 or CLANGEXTRA=1
+EXTRACFLAGS =
+EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
+EXTRACFLAGS += -Wswitch-enum -Wno-error=switch-enum
+EXTRACFLAGS += -Wsign-compare -Wno-error=sign-compare
+EXTRACFLAGS += -Wold-style-definition -Wno-error=old-style-definition
+
+# unknown to clang or old gcc:
+# First we activate Wextra then we explicitly list those we know about
+# Those without -Wno-error are supposed to be completely solved
+GCCEXTRACFLAGS = -Wextra
+# unknown to arm-none-eabi/4.9.3
+GCCEXTRACFLAGS += -Wwrite-strings -Wno-error=discarded-qualifiers
+
+GCCEXTRACFLAGS += -Wold-style-declaration -Wno-error=old-style-declaration
+GCCEXTRACFLAGS += -Wimplicit-fallthrough=3 -Wno-error=implicit-fallthrough
+GCCEXTRACFLAGS += -Wclobbered
+GCCEXTRACFLAGS += -Wcast-function-type
+GCCEXTRACFLAGS += -Wmissing-parameter-type
+GCCEXTRACFLAGS += -Woverride-init
+GCCEXTRACFLAGS += -Wshift-negative-value
+GCCEXTRACFLAGS += -Wunused-but-set-parameter
+# Not yet enabled in DEFCFLAGS:
+GCCEXTRACFLAGS += -Wredundant-decls -Wno-error=redundant-decls
+GCCEXTRACFLAGS += -Wcast-align -Wno-error=cast-align
+
+ifeq ($(GCCEXTRA),1)
+  DEFCFLAGS += $(GCCEXTRACFLAGS) $(EXTRACFLAGS)
+endif
+# unknown to gcc or old clang:
+# First we activate Wextra then we explicitly list those we know about
+# Those without -Wno-error are supposed to be completely solved
+CLANGEXTRACFLAGS = -Wextra 
+CLANGEXTRACFLAGS += -Wtautological-type-limit-compare
+CLANGEXTRACFLAGS += -Wnull-pointer-arithmetic
+CLANGEXTRACFLAGS += -Woverride-init
+CLANGEXTRACFLAGS += -Wshift-negative-value
+CLANGEXTRACFLAGS += -Wimplicit-fallthrough
+# tolerate warnings when using clang
+CLANGEXTRACFLAGS += -Wno-unused-command-line-argument -Wno-error=unknown-attributes -Wno-error=undef -Wno-error=keyword-macro -Wno-error=incompatible-library-redeclaration -Wno-error=macro-redefined -Wno-error=gnu-include-next
+ifeq ($(CLANGEXTRA),1)
+  DEFCFLAGS += $(CLANGEXTRACFLAGS) $(EXTRACFLAGS)
+endif
+
+CFLAGS ?= $(DEFCFLAGS)
+CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
 
 LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -Wl,--build-id=none -n
 LIBS = -lgcc
