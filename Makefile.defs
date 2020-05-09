@@ -60,20 +60,22 @@ EXTRACFLAGS += -Wold-style-definition -Wno-error=old-style-definition
 
 # unknown to clang or old gcc:
 # First we activate Wextra then we explicitly list those we know about
+# Those without -Wno-error are supposed to be completely solved
 GCCEXTRACFLAGS = -Wextra
 GCCEXTRACFLAGS += -Wclobbered -Wno-error=clobbered
-GCCEXTRACFLAGS += -Wcast-function-type -Wno-error=cast-function-type
+GCCEXTRACFLAGS += -Wcast-function-type
 GCCEXTRACFLAGS += -Wimplicit-fallthrough=3 -Wno-error=implicit-fallthrough
-GCCEXTRACFLAGS += -Wmissing-parameter-type -Wno-error=missing-parameter-type
+GCCEXTRACFLAGS += -Wmissing-parameter-type
 GCCEXTRACFLAGS += -Wold-style-declaration -Wno-error=old-style-declaration
-GCCEXTRACFLAGS += -Woverride-init -Wno-error=override-init
-GCCEXTRACFLAGS += -Wshift-negative-value -Wno-error=shift-negative-value
+GCCEXTRACFLAGS += -Woverride-init
+GCCEXTRACFLAGS += -Wshift-negative-value
 GCCEXTRACFLAGS += -Wunused-but-set-parameter -Wno-error=unused-but-set-parameter
 ifeq ($(GCCEXTRA),1)
   DEFCFLAGS += $(GCCEXTRACFLAGS) $(EXTRACFLAGS)
 endif
 # unknown to gcc or old clang:
 # First we activate Wextra then we explicitly list those we know about
+# Those without -Wno-error are supposed to be completely solved
 CLANGEXTRACFLAGS = -Wextra
 CLANGEXTRACFLAGS += -Wtautological-type-limit-compare
 CLANGEXTRACFLAGS += -Wnull-pointer-arithmetic
