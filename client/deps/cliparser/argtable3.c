@@ -4135,7 +4135,8 @@ int arg_parse(int argc, char * *argv, void * *argtable) {
  */
 static void arg_cat(char **pdest, const char *src, size_t *pndest) {
     char *dest = *pdest;
-    char *end  = dest + *pndest;
+    // PM3 fix: leave room for null terminate char
+    char *end  = dest + *pndest - 1;
 
     /*locate null terminator of dest string */
     while (dest < end && *dest != 0)
