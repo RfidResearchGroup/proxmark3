@@ -79,7 +79,7 @@ static void Fatal(void) {
     for (;;) {};
 }
 
-static void UsbPacketReceived(uint8_t *packet, int len) {
+static void UsbPacketReceived(uint8_t *packet) {
     int i, dont_ack = 0;
     PacketCommandOLD *c = (PacketCommandOLD *)packet;
 
@@ -220,7 +220,7 @@ static void flash_mode(void) {
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
             if (usb_read(rx, sizeof(rx))) {
-                UsbPacketReceived(rx, sizeof(rx));
+                UsbPacketReceived(rx);
             }
         }
 
@@ -316,7 +316,7 @@ void BootROM(void) {
 
     if (!common_area_present) {
         /* Common area not ok, initialize it */
-        int i;
+        size_t i;
         /* Makeshift memset, no need to drag util.c into this */
         for (i = 0; i < sizeof(common_area); i++)
             ((char *)&common_area)[i] = 0;
