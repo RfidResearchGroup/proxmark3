@@ -65,7 +65,12 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 //-----------------------------------------------------------------------------
 
 // Returns true if a pulse/pause is received within timeout
+// Note: inlining this function would fail with -Os
+#ifdef __OPTIMIZE_SIZE__
+static bool wait_for(bool value, const uint32_t timeout) {
+#else
 static inline bool wait_for(bool value, const uint32_t timeout) {
+#endif
     while ((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
         if (GetCountSspClk() > timeout) {
             return false;
@@ -126,7 +131,12 @@ static inline int8_t rx_bit() {
 // Note: The Subcarrier is not disabled during bits to prevent glitches. This is
 //       not mandatory but results in a cleaner signal. tx_frame will disable
 //       the subcarrier when the frame is done.
+// Note: inlining this function would fail with -Os
+#ifdef __OPTIMIZE_SIZE__
+static void tx_bit(bool bit) {
+#else
 static inline void tx_bit(bool bit) {
+#endif
     LED_C_ON();
 
     if (bit) {
