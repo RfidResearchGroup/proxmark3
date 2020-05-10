@@ -1535,7 +1535,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         calccrc &= 0xff;
         calccrc = 0xff - calccrc;
 
-        char *crcStr = (crc == calccrc) ? "ok" : "!crc";
+        const char *crcStr = (crc == calccrc) ? "ok" : "!crc";
 
         Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]", version, facilitycode, number, code, code2, crc, crcStr);
         // if we're only looking for one tag

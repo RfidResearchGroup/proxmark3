@@ -42,12 +42,12 @@
         reply_via_usb = tmpusb;}
 
 
-void DbpString(char *str);
-void DbpStringEx(uint32_t flags, char *src, size_t srclen);
+void DbpString(const char *str);
+void DbpStringEx(uint32_t flags, const char *src, size_t srclen);
 void Dbprintf(const char *fmt, ...);
 void DbprintfEx(uint32_t flags, const char *fmt, ...);
 void Dbhexdump(int len, uint8_t *d, bool bAsci);
-void print_result(char *name, uint8_t *buf, size_t len);
+void print_result(const char *name, uint8_t *buf, size_t len);
 //void PrintToSendBuffer(void);
 
 #endif
