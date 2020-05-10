@@ -191,9 +191,9 @@ uint64_t PackEmID(uint64_t original, int newCardNum) {
     buf |= oddparity32((buf >> 1) & 0xFFF) & 1;
     buf |= (evenparity32((buf >> 13) & 0xFFF) & 1) << 25;
 
-    uint32_t cardnum2 = (buf >> 1) & 0xFFFF;
-    uint32_t fc2 = (buf >> 17) & 0xFF;
-    Dbprintf("[=] RECONSTRUCT TAG ID: %"PRIx64" - FC: %u - Card: %u\n", buf, fc2, cardnum2);
+    uint32_t cardnumNew = (buf >> 1) & 0xFFFF;
+    uint32_t fcNew = (buf >> 17) & 0xFF;
+    Dbprintf("[=] RECONSTRUCT TAG ID: %"PRIx64" - FC: %u - Card: %u\n", buf, fcNew, cardnumNew);
     return buf;
 }
 
