@@ -178,20 +178,25 @@ void SaveIDtoFlash(int addr, uint64_t id) {
 }
 #endif
 
-uint64_t PackEmID(int fc, int cardnum) {
-    uint64_t buf = 0;
-    buf |= (cardnum & 0xFFFF) << 1;
-    buf |= (fc & 0xFF) << 17;
+uint64_t PackEmID(uint64_t original, int newCardNum) {
+    uint64_t buf = original;
+    //clear pairity bits
+    buf &= ~(1 << 0);
+    buf &= ~(1 << 25);
+    //clear card number
+    for (int i = 1; i <= 16; i++) {
+        buf &= ~(1 << i);
+    }
+    buf |= (newCardNum & 0xFFFF) << 1;
     buf |= oddparity32((buf >> 1) & 0xFFF) & 1;
     buf |= (evenparity32((buf >> 13) & 0xFFF) & 1) << 25;
-    buf |= 1 << 26;
-    buf += 0x2000000000; //0x20 at start
 
     uint32_t cardnum2 = (buf >> 1) & 0xFFFF;
     uint32_t fc2 = (buf >> 17) & 0xFF;
     Dbprintf("[=] RECONSTRUCT TAG ID: %"PRIx64" - FC: %u - Card: %u\n", buf, fc2, cardnum2);
     return buf;
 }
+
 
 void PrintFcAndCardNum(uint64_t lowData) {
     // Calculate Facility Code and Card Number from high and low
@@ -200,25 +205,25 @@ void PrintFcAndCardNum(uint64_t lowData) {
     Dbprintf("[=] READ TAG ID: %"PRIx64" - FC: %u - Card: %u", lowData, fc, cardnum);
 }
 
-int ButeEMTag(uint64_t tag, int slot) {
+int ButeEMTag(uint64_t originalCard, int slot) {
     int speed_count = 4;
 
     int direction = 1;
 
-    uint32_t fc = (tag >> 17) & 0xFF;
-    uint32_t cardnum = (tag >> 1) & 0xFFFF;
+    uint32_t cardnum = (originalCard >> 1) & 0xFFFF;
     if (cardnum > 32767) {
         direction = -1;
     }
 
+    uint64_t currentCard;
     while (cardnum > 1 && cardnum < 65535) {
         WDT_HIT();
         if (data_available()) break;
 
         cardnum = cardnum + direction;
-        tag = PackEmID(fc, cardnum);
-        Dbprintf("[=] >>  Simulating tag id %"PRIx64" <<", tag);
-        ConstructEM410xEmulBuf(ReversQuads(tag));
+        currentCard = PackEmID(originalCard, cardnum);
+        Dbprintf("[=] >>  Simulating card id %"PRIx64" <<", currentCard);
+        ConstructEM410xEmulBuf(ReversQuads(currentCard));
         SimulateTagLowFrequencyEx(buflen, 0, 1, bruteforceSpeed[bruteforceSpeedCurrent] * 10000);
 
         int button_pressed = BUTTON_CLICKED(1000);
@@ -228,7 +233,7 @@ int ButeEMTag(uint64_t tag, int slot) {
         } else if (button_pressed == BUTTON_DOUBLE_CLICK) {
             FlashLEDs(100, 10);
             Dbprintf("[=] >>  Saving bruteforced card to current slot  <<");
-            low[slot] = tag;
+            low[slot] = currentCard;
 #ifdef WITH_FLASH
             SaveIDtoFlash(slot, low[slot]);
 #endif
