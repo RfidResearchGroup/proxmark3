@@ -10,6 +10,7 @@
 #include "usb_cdc.h"
 
 #include "proxmark3_arm.h"
+#define DEBUG 0
 
 struct common_area common_area __attribute__((section(".commonarea")));
 unsigned int start_addr, end_addr, bootrom_unlocked;
@@ -45,13 +46,15 @@ static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, 
     return result;
 }
 
-void DbpString(char *str) {
+#if DEBUG
+static void DbpString(char *str) {
     uint8_t len = 0;
     while (str[len] != 0x00)
         len++;
 
     reply_old(CMD_DEBUG_PRINT_STRING, len, 0, 0, (uint8_t *)str, len);
 }
+#endif
 
 static void ConfigClocks(void) {
     // we are using a 16 MHz crystal as the basis for everything
@@ -76,7 +79,7 @@ static void Fatal(void) {
     for (;;) {};
 }
 
-void UsbPacketReceived(uint8_t *packet, int len) {
+static void UsbPacketReceived(uint8_t *packet, int len) {
     int i, dont_ack = 0;
     PacketCommandOLD *c = (PacketCommandOLD *)packet;
 
@@ -235,6 +238,7 @@ static void flash_mode(void) {
     }
 }
 
+void BootROM(void);
 void BootROM(void) {
     //------------
     // First set up all the I/O pins; GPIOs configured directly, other ones
