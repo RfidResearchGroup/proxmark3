@@ -53,6 +53,16 @@ static int usage_lf_nexwatch_sim(void) {
     return PM3_SUCCESS;
 }
 
+static inline uint32_t bitcount(uint32_t a) {
+#if defined __GNUC__
+   return __builtin_popcountl(a);
+#else
+   a = a - ((a >> 1) & 0x55555555);
+   a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+   return (((a + (a >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
+#endif
+}
+    
 int demodNexWatch(void) {
     if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
@@ -106,13 +116,14 @@ int demodNexWatch(void) {
     32bit UID:     00100100011001000011111100010010
 
     bits numbered from left (MSB):
-    1234567890 1234567890 1234567890 12
+    1234 5678 9012 34567 8901234567890 12
+    0010 0100 0110 0100 00111111000100 10
 
     descramble:
     b1 b5 b9 b13   b17 b21 b25 b29   b2 b6 b10 b14   b18 b22 b26 b30   b3 b7 b11 b15   b19 b23 b27 b31   b4 b8 b12 b16   b20 b24 b28 b32
 
-    00000100011101001010110100001100    =  74755340
-    
+    gives:
+    0000 0100 0111 0100 1010 1101 0000 1110  =  74755342
     */
 
 // Since the description is not zero indexed we adjust.
@@ -167,18 +178,24 @@ int demodNexWatch(void) {
     d_id |= DemodBuffer[DOFFSET + 24] << 2;
     d_id |= DemodBuffer[DOFFSET + 28] << 1;
     d_id |= DemodBuffer[DOFFSET + 32];
+
+    uint8_t mode = bytebits_to_byte(DemodBuffer + 72, 4);
     
     // parity check 
-    // from 8 preamble, 32 zeros, 32 id, 4 mode,  comes EOEO parity.
-/*
-    uint8_t even;
-    for (uint8_t p=0; p < 76; p++) {
-        even = (DemodBuffer[p] == 1);
+    // from 32 hex id, 4 mode,  descramble par (1234) -> (4231)
+    uint8_t xor_par = 0;
+    for (uint8_t i = 40; i < 76; i +=4) {
+        xor_par ^= bytebits_to_byte(DemodBuffer + i, 4);
     }
-
-    uint8_t calc_parity = (!even << 3 | even << 2 | !even << 1 | even);
+    
+    uint8_t calc_parity ;   
+    calc_parity =  (((xor_par >> 3 ) & 1) );
+    calc_parity |= (((xor_par >> 1 ) & 1) << 1);
+    calc_parity |= (((xor_par >> 2 ) & 1) << 2);
+    calc_parity |=  ((xor_par & 1) << 3);
+    
     uint8_t parity = bytebits_to_byte(DemodBuffer + 76, 4);
-*/
+
     /*
     Checksum:::
         1. Subtract every byte from ID field using an unsigned, one byte register:
@@ -207,9 +224,7 @@ int demodNexWatch(void) {
     
     PrintAndLogEx(NORMAL, "Sum:  0x%02x", calc);
 
-    uint8_t revpar =  (even << 3 | !even << 2 | even << 1 | !even);
-    
-    uint8_t a[] = {0xbe, 0xbc, 0x88, 0x86 };
+     uint8_t a[] = {0xbe, 0xbc, 0x88, 0x86 };
     for (uint8_t c=0; c < ARRAYLEN(a); c++) {
         uint8_t b = calc;
         b -= a[c];
@@ -227,19 +242,18 @@ int demodNexWatch(void) {
     */
         
 //    uint8_t chk = bytebits_to_byte(DemodBuffer + 80, 8);
-    uint8_t mode = bytebits_to_byte(DemodBuffer + 72, 4);
+
 
     // output
     PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32) , rawid);
-    PrintAndLogEx(SUCCESS, "  descrambled id : " _YELLOW_("%"PRIu32) " "  _YELLOW_("0x%"PRIx32), d_id, d_id);
+    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " "  _YELLOW_("0x%"PRIx32), d_id, d_id);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);  
-//    PrintAndLogEx(SUCCESS, "          parity : %s  [%X == %X]", (parity == calc_parity) ? _GREEN_("ok") : _RED_("fail"), parity, calc_parity);
+    PrintAndLogEx(SUCCESS, "          parity : %s  [%X == %X]", (parity == calc_parity) ? _GREEN_("ok") : _RED_("fail"), parity, calc_parity);
 //    PrintAndLogEx(NORMAL,  "        checksum : %02x == %02x", calc, chk);
 
     // bits to hex  (output used for SIM/CLONE cmd)
      CmdPrintDemodBuff("x");
 //    PrintAndLogEx(INFO, "Raw: %s", sprint_hex_inrow(DemodBuffer, size));
-//binarraytohex(char *target, const size_t targetlen, (char *)DemodBuffer, size);
     return PM3_SUCCESS;
 }
 
