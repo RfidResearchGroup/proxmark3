@@ -53,7 +53,7 @@
 #include "flashmem.h"
 #endif
 
-#define CLOCK 64 //for 125kHz
+#define LF_CLOCK 64 //for 125kHz
 #define LF_RWSB_T55XX_TYPE 1 //Tag type: 0 - T5555, 1-T55x7
 
 #define LF_RWSB_UNKNOWN_RESULT 0
@@ -92,13 +92,15 @@ uint64_t ReversQuads(uint64_t bits) {
 }
 
 void FillBuff(uint8_t bit) {
-    memset(bba + buflen, bit, CLOCK / 2);
-    buflen += (CLOCK / 2);
-    memset(bba + buflen, bit ^ 1, CLOCK / 2);
-    buflen += (CLOCK / 2);
+    memset(bba + buflen, bit, LF_CLOCK / 2);
+    buflen += (LF_CLOCK / 2);
+    memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
+    buflen += (LF_CLOCK / 2);
 }
 
 void ConstructEM410xEmulBuf(uint64_t id) {
+    bba = BigBuf_get_addr();
+
     int i, j, binary[4], parity[4];
     buflen = 0;
     for (i = 0; i < 9; i++)
@@ -246,6 +248,7 @@ int ButeEMTag(uint64_t tag, int slot) {
 
 int ExecuteMode(int mode, int slot) {
     LED_Update(mode, slot);
+    WDT_HIT();
 
     switch (mode) {
         //default first mode is simulate
@@ -262,7 +265,8 @@ int ExecuteMode(int mode, int slot) {
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
-            ConstructEM410xEmulBuf(ReversQuads(low[slot]));
+            uint64_t reversed = ReversQuads(low[slot]);
+            ConstructEM410xEmulBuf(reversed);
             SimulateTagLowFrequency(buflen, 0, 1);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
@@ -276,27 +280,22 @@ int ExecuteMode(int mode, int slot) {
     return LF_RWSB_UNKNOWN_RESULT;
 }
 
-void SwitchMode(int *mode, int slot) {
-    int result = ExecuteMode(*mode, slot);
+int SwitchMode(int mode, int slot) {
+    WDT_HIT();
+    ExecuteMode(mode, slot);
 
-    if (*mode == LF_RWSB_MODE_READ) {
+    if (mode == LF_RWSB_MODE_READ) {
         //After read mode we need to switch to sim mode automatically
         Dbprintf("[=] >>  automatically switch to sim mode after read  <<");
 
-        *mode = LF_RWSB_MODE_SIM;
-        SwitchMode(mode, slot);
-    } else if (*mode == LF_RWSB_MODE_BRUTE) {
+        return SwitchMode(LF_RWSB_MODE_SIM, slot);
+    } else if (mode == LF_RWSB_MODE_BRUTE) {
         //We have already have a click inside brute mode. Lets switch next mode
         Dbprintf("[=] >>  automatically switch to read mode after brute  <<");
-        *mode = LF_RWSB_MODE_READ;
-        if (result == LF_RWSB_BRUTE_SAVED) {
-            *mode = LF_RWSB_MODE_SIM;
-        }
-        SwitchMode(mode, slot);
-    }
 
-    //finish led update
-    LED_Update(*mode, slot);
+        return SwitchMode(LF_RWSB_MODE_READ, slot);
+    }
+    return mode;
 }
 
 void RunMod() {
@@ -308,7 +307,7 @@ void RunMod() {
 
     int mode = 0;
     int slot = 0;
-    SwitchMode(&mode, slot);
+    mode = SwitchMode(mode, slot);
 
     bba = BigBuf_get_addr();
     for (;;) {
@@ -325,7 +324,7 @@ void RunMod() {
             mode = (mode + 1) % mode_count;
             SpinDown(100);
 
-            SwitchMode(&mode, slot);
+            mode = SwitchMode(mode, slot);
         } else if (button_pressed == BUTTON_HOLD) {
             Dbprintf("[=] >>  Button hold  <<");
             slot = (slot + 1) % slots_count;
@@ -334,7 +333,7 @@ void RunMod() {
 
             //automatically switch to SIM mode on slot selection
             mode = LF_RWSB_MODE_SIM;
-            SwitchMode(&mode, slot);
+            mode = SwitchMode(mode, slot);
         }
     }
 }
