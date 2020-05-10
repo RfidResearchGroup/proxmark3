@@ -479,7 +479,7 @@ static void SpinDelayUs(int us) {
  * \brief This function deactivates the USB device
  *----------------------------------------------------------------------------
 */
-void usb_disable() {
+void usb_disable(void) {
     // Disconnect the USB device
     AT91C_BASE_PIOA->PIO_ODR = GPIO_USB_PU;
 
@@ -495,7 +495,7 @@ void usb_disable() {
  * \brief This function Activates the USB device
  *----------------------------------------------------------------------------
 */
-void usb_enable() {
+void usb_enable(void) {
     // Set the PLL USB Divider
     AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
 
@@ -548,7 +548,7 @@ int GetUSBconfigured(void) {
     return usb_configured;
 }
 
-bool usb_check() {
+bool usb_check(void) {
 
     /*
     // reconnected ONCE and
@@ -599,7 +599,7 @@ bool usb_check() {
     return (btConfiguration) ? true : false;
 }
 
-bool usb_poll() {
+bool usb_poll(void) {
     if (!usb_check()) return false;
     return (pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank);
 }
@@ -612,7 +612,7 @@ bool usb_poll() {
     that the length available to read is non-zero, thus hopefully fixes the
     bug.
 **/
-bool usb_poll_validate_length() {
+bool usb_poll_validate_length(void) {
     if (!usb_check()) return false;
     if (!(pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank)) return false;
     return ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16) >  0;
@@ -858,7 +858,7 @@ void AT91F_USB_SendStall(AT91PS_UDP pudp) {
 //* 1. this is for USB endpoint0.  the control endpoint.
 //* 2. mixed with CDC ACM endpoint3 , interrupt, control endpoint
 //*----------------------------------------------------------------------------
-void AT91F_CDC_Enumerate() {
+void AT91F_CDC_Enumerate(void) {
     uint8_t bmRequestType, bRequest;
     uint16_t wValue, wIndex, wLength, wStatus;
 
