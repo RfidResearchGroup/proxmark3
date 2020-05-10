@@ -52,7 +52,6 @@ void OnSuccessMagic();
 void OnErrorMagic(uint8_t reason);
 
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
-void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 //void RAMFUNC SniffMifare(uint8_t param);
 
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain);
