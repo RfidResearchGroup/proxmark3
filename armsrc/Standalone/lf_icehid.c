@@ -54,7 +54,7 @@
 #define LF_HIDCOLLECT_LOGFILE "lf_hidcollect.log"
 
 
-void DownloadLogInstructions() {
+void DownloadLogInstructions(void) {
     Dbprintf("");
     Dbprintf("[=] To get the logfile from flash and display it:");
     Dbprintf("[=] " _YELLOW_("1.") " mem spiffs dump o "LF_HIDCOLLECT_LOGFILE" f "LF_HIDCOLLECT_LOGFILE);
@@ -76,7 +76,7 @@ void append(uint8_t *entry, size_t entry_len) {
     LED_B_OFF();
 }
 
-uint32_t IceEM410xdemod() {
+uint32_t IceEM410xdemod(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     size_t idx = 0;
@@ -128,7 +128,7 @@ uint32_t IceEM410xdemod() {
     return PM3_SUCCESS;
 }
 
-uint32_t IceAWIDdemod() {
+uint32_t IceAWIDdemod(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     size_t size = MIN(12800, BigBuf_max_traceLen());
@@ -180,7 +180,7 @@ uint32_t IceAWIDdemod() {
     return PM3_SUCCESS;
 }
 
-uint32_t IceIOdemod() {
+uint32_t IceIOdemod(void) {
 
     int dummyIdx = 0;
     uint8_t version = 0, facilitycode = 0;
@@ -224,7 +224,7 @@ uint32_t IceIOdemod() {
     return PM3_SUCCESS;
 }
 
-uint32_t IceHIDDemod() {
+uint32_t IceHIDDemod(void) {
 
     int dummyIdx = 0;
 
@@ -320,7 +320,7 @@ void ModInfo(void) {
     DbpString(_YELLOW_("  LF HID / IOprox / AWID / EM4100 collector mode") " - a.k.a IceHID (Iceman)");
 }
 
-void RunMod() {
+void RunMod(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     LFSetupFPGAForADC(LF_DIVISOR_125, true);

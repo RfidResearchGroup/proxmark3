@@ -215,22 +215,22 @@ void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
     }
 }
 
-void cjSetCursFRight() {
+void cjSetCursFRight(void) {
     vtsend_cursor_position(NULL, 98, (currfline));
     currfline++;
 }
 
-void cjSetCursRight() {
+void cjSetCursRight(void) {
     vtsend_cursor_position(NULL, 59, (currline));
     currline++;
 }
 
-void cjSetCursLeft() {
+void cjSetCursLeft(void) {
     vtsend_cursor_position(NULL, 0, (curlline));
     curlline++;
 }
 
-void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
+void cjTabulize(void) { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 
 /*
 void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
@@ -275,7 +275,7 @@ void add_schemas_from_json_in_spiffs(char *filename) {
     }
 }
 
-void ReadLastTagFromFlash() {
+void ReadLastTagFromFlash(void) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -332,7 +332,7 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
 
 void ModInfo(void) { DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)"); }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
 
     // add_schema(Schemas, Noralsy, &total_schemas);

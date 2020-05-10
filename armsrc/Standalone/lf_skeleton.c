@@ -18,7 +18,7 @@ void ModInfo(void) {
     DbpString("  LF skeleton mode -  aka Skeleton (iceman)");
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     Dbprintf("[=] LF skeleton code a.k.a Skeleton started");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);

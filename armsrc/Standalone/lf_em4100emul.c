@@ -79,7 +79,7 @@ void LED_Slot(int i) {
     }
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf("[=] >>  LF EM4100 simulator started  <<");

@@ -88,7 +88,7 @@ static inline bool wait_for(bool value, const uint32_t timeout) {
 //  - A bit length >80.2us is a 1
 //  - A bit length <80.2us is a 0
 //  - A bit length >148.6us is a code violation
-static inline int8_t rx_bit() {
+static inline int8_t rx_bit(void) {
     // backup ts for threshold calculation
     uint32_t bit_start = last_frame_end;
 
@@ -187,7 +187,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
     LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
 }
 
-static void tx_ack() {
+static void tx_ack(void) {
     // wait for ack timeslot
     last_frame_end += TAG_ACK_WAIT;
     legic_prng_forward(TAG_ACK_WAIT / TAG_BIT_PERIOD - 1);
@@ -308,7 +308,7 @@ static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
     return 0;
 }
 
-static void init_tag() {
+static void init_tag(void) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR

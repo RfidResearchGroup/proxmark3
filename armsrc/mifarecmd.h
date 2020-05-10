@@ -41,14 +41,14 @@ int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype);
 
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);
-void MifareCIdent();  // is "magic chinese" card?
-void MifareHasStaticNonce();  // Has the tag a static nonce?
+void MifareCIdent(void);  // is "magic chinese" card?
+void MifareHasStaticNonce(void);  // Has the tag a static nonce?
 
 void MifareSetMod(uint8_t *datain);
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);
 
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
-void OnSuccessMagic();
+void OnSuccessMagic(void);
 void OnErrorMagic(uint8_t reason);
 
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);

@@ -44,7 +44,7 @@
  *
 */
 
-void DownloadLogInstructions() {
+void DownloadLogInstructions(void) {
     Dbprintf("");
     Dbprintf("[=] List all dumps from flash:");
     Dbprintf("[=]   " _YELLOW_("-") " mem spiffs tree");
@@ -99,7 +99,7 @@ void ModInfo(void) {
 // A, B, C = Reading
 // A, D = Simulating
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     Dbprintf("[=] >>  HF Legic Prime Read/Simulate Started  <<");

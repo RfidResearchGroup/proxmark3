@@ -110,7 +110,7 @@ bool end = false;
  * Implementation of the crc8 calculation from Hitag S
  * from http://www.proxmark.org/files/Documents/125%20kHz%20-%20Hitag/HitagS.V11.pdf
  */
-void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount) {
+static void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount) {
     *crc ^= data; // crc = crc (exor) data
     do {
         if (*crc & 0x80) { // if (MSB-CRC == 1)
@@ -333,7 +333,7 @@ static int check_select(uint8_t *rx, uint32_t uid) {
     return 0;
 }
 
-void hitagS_set_frame_modulation() {
+static void hitagS_set_frame_modulation(void) {
     switch (tag.mode) {
         case HT_STANDARD:
             sof_bits = 1;
@@ -1075,7 +1075,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     DbpString("Sim Stopped");
 }
 
-void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
+static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
 
     // Reset values for receiving frames
     memset(rx, 0x00, HITAG_FRAME_LEN * sizeof(uint8_t));

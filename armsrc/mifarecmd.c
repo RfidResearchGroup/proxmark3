@@ -44,7 +44,7 @@
 
 // send an incomplete dummy response in order to trigger the card's authentication failure timeout
 #ifndef CHK_TIMEOUT
-# define CHK_TIMEOUT() { \
+# define CHK_TIMEOUT(void) { \
         ReaderTransmit(&dummy_answer, 1, NULL); \
         uint32_t timeout = GetCountSspClk() + HARDNESTED_AUTHENTICATION_TIMEOUT; \
         while (GetCountSspClk() < timeout) {}; \
@@ -627,7 +627,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
 }
 
 // Return 1 if the nonce is invalid else return 0
-int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
+static int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, uint8_t *parity) {
     return ((oddparity8((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity8((NtEnc >> 24) & 0xFF) ^ BIT(Ks1, 16))) & \
             (oddparity8((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity8((NtEnc >> 16) & 0xFF) ^ BIT(Ks1, 8))) & \
             (oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1, 0)))) ? 1 : 0;
@@ -1229,7 +1229,7 @@ typedef struct chk_t {
 //  2 = failed to select.
 //  1 = wrong key
 //  0 = correct key
-uint8_t chkKey(struct chk_t *c) {
+static uint8_t chkKey(struct chk_t *c) {
     uint8_t i = 0, res = 2;
     while (i < 5) {
         // this part is from Piwi's faster nonce collecting part in Hardnested.
@@ -1250,7 +1250,7 @@ uint8_t chkKey(struct chk_t *c) {
     return res;
 }
 
-uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
+static uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
 
     if (!iso14443a_fast_select_card(c->uid, c->cl))
         return 2;
@@ -1275,7 +1275,7 @@ uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
     return res;
 }
 
-void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
+static void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found A keys
@@ -1293,7 +1293,7 @@ void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
     }
 }
 
-void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
+static void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found B keys
@@ -1313,7 +1313,7 @@ void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, ui
 
 // loop all A keys,
 // when A is found but not B,  try to read B.
-void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
+static void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found, uint8_t *sectorcnt, uint8_t *foundkeys) {
 
     // read Block B, if A is found.
     for (uint8_t s = 0; s < *sectorcnt; ++s) {
@@ -2190,7 +2190,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         OnSuccessMagic();
 }
 
-void MifareCIdent() {
+void MifareCIdent(void) {
     // variables
     uint8_t isGen = 0;
     uint8_t rec[1] = {0x00};
@@ -2248,7 +2248,7 @@ OUT:
     BigBuf_free();
 }
 
-void MifareHasStaticNonce() {
+void MifareHasStaticNonce(void) {
 
     // variables
     int retval = PM3_SUCCESS, len;
@@ -2297,7 +2297,7 @@ OUT:
     crypto1_deinit(pcs);
 }
 
-void OnSuccessMagic() {
+void OnSuccessMagic(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);

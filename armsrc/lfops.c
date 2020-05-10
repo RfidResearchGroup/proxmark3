@@ -622,7 +622,7 @@ void ReadTItag(void) {
     StopTicks();
 }
 
-void WriteTIbyte(uint8_t b) {
+static void WriteTIbyte(uint8_t b) {
     int i = 0;
 
     // modulate 8 bits out to the antenna
@@ -1574,7 +1574,7 @@ void TurnReadLFOn(uint32_t delay) {
     //int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
     WaitUS(delay);
 }
-void TurnReadLF_off(uint32_t delay) {
+static void TurnReadLF_off(uint32_t delay) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitUS(delay);
 }
@@ -1586,7 +1586,7 @@ void TurnReadLF_off(uint32_t delay) {
 #define T55_LLR_REF       (136 * 8)
 
 // Write one bit to chip
-void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
+static void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
 
     switch (bit) {
         case 0 :
@@ -1622,7 +1622,7 @@ void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
 // num_bits     - how many bits (low x bits of data)  Max 32 bits at a time
 // max_len      - how many bytes can the bit_array hold (ensure no buffer overflow)
 // returns "Next" bit offset / bits stored (for next store)
-uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t num_bits, uint8_t max_len) {
+static uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t num_bits, uint8_t max_len) {
     int8_t next_offset = start_offset;
 
     // Check if data will fit.
@@ -1646,7 +1646,7 @@ uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t 
 }
 
 // Send one downlink command to the card
-void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
+static void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
 
     /*
     arg bits
@@ -2108,7 +2108,7 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags) {
 
 
 /*-------------- Cloning routines -----------*/
-void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
+static void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
 
     t55xx_write_block_t cmd;
     cmd.pwd     = 0;
@@ -2300,7 +2300,7 @@ uint8_t *fwd_write_ptr;  //forwardlink bit pointer
 //  These timings work for 4469/4269/4305 (with the 55*8 above)
 //  WRITE_0 = 23*8 , 9*8
 
-uint8_t Prepare_Cmd(uint8_t cmd) {
+static uint8_t Prepare_Cmd(uint8_t cmd) {
 
     *forward_ptr++ = 0; //start bit
     *forward_ptr++ = 0; //second pause for 4050 code
@@ -2320,7 +2320,7 @@ uint8_t Prepare_Cmd(uint8_t cmd) {
 // prepares address bits
 // see EM4469 spec
 //====================================================================
-uint8_t Prepare_Addr(uint8_t addr) {
+static uint8_t Prepare_Addr(uint8_t addr) {
 
     register uint8_t line_parity;
 
@@ -2341,7 +2341,7 @@ uint8_t Prepare_Addr(uint8_t addr) {
 // prepares data bits intreleaved with parity bits
 // see EM4469 spec
 //====================================================================
-uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
+static uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
 
     register uint8_t column_parity;
     register uint8_t i, j;
@@ -2377,7 +2377,7 @@ uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
 // Requires: forwarLink_data filled with valid bits (1 bit per byte)
 // fwd_bit_count set with number of bits to be sent
 //====================================================================
-void SendForward(uint8_t fwd_bit_count) {
+static void SendForward(uint8_t fwd_bit_count) {
 
 // iceman,   21.3us increments for the USclock verification.
 // 55FC * 8us == 440us / 21.3 === 20.65 steps.  could be too short. Go for 56FC instead
@@ -2411,7 +2411,7 @@ void SendForward(uint8_t fwd_bit_count) {
     }
 }
 
-void EM4xLogin(uint32_t pwd) {
+static void EM4xLogin(uint32_t pwd) {
     uint8_t len;
     forward_ptr = forwardLink_data;
     len = Prepare_Cmd(FWD_CMD_LOGIN);

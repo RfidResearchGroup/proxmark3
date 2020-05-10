@@ -118,7 +118,7 @@ void SaveIDtoFlash(int addr, uint64_t id) {
 }
 #endif
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf("[=] >>  LF EM4100 read/write/clone started  <<");

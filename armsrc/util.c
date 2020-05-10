@@ -83,7 +83,7 @@ uint8_t hex2int(char hexchar) {
     }
 }
 
-void LEDsoff() {
+void LEDsoff(void) {
     LED_A_OFF();
     LED_B_OFF();
     LED_C_OFF();

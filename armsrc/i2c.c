@@ -39,7 +39,7 @@ volatile unsigned long c;
 // timer.
 // I2CSpinDelayClk(4) = 12.31us
 // I2CSpinDelayClk(1) = 3.07us
-void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
+static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
     for (c = delay * 2; c; c--) {};
 }
 
@@ -146,7 +146,7 @@ void I2C_Reset_EnterBootloader(void) {
 }
 
 // Wait for the clock to go High.
-bool WaitSCL_H_delay(uint32_t delay) {
+static bool WaitSCL_H_delay(uint32_t delay) {
     while (delay--) {
         if (SCL_read) {
             return true;
@@ -158,11 +158,11 @@ bool WaitSCL_H_delay(uint32_t delay) {
 
 // 5000 * 3.07us = 15350us. 15.35ms
 // 15000 * 3.07us = 46050us. 46.05ms
-bool WaitSCL_H(void) {
+static bool WaitSCL_H(void) {
     return WaitSCL_H_delay(15000);
 }
 
-bool WaitSCL_L_delay(uint32_t delay) {
+static bool WaitSCL_L_delay(uint32_t delay) {
     while (delay--) {
         if (!SCL_read) {
             return true;
@@ -172,14 +172,14 @@ bool WaitSCL_L_delay(uint32_t delay) {
     return false;
 }
 // 5000 * 3.07us = 15350us. 15.35ms
-bool WaitSCL_L(void) {
+static bool WaitSCL_L(void) {
     return WaitSCL_L_delay(15000);
 }
 
 // Wait max 1800ms or until SCL goes LOW.
 // It timeout reading response from card
 // Which ever comes first
-bool WaitSCL_L_timeout(void) {
+static bool WaitSCL_L_timeout(void) {
     volatile uint16_t delay = 1800;
     while (delay--) {
         // exit on SCL LOW
@@ -191,7 +191,7 @@ bool WaitSCL_L_timeout(void) {
     return (delay == 0);
 }
 
-bool I2C_Start(void) {
+static bool I2C_Start(void) {
 
     I2C_DELAY_XCLK(4);
     SDA_H;
@@ -209,7 +209,7 @@ bool I2C_Start(void) {
     return true;
 }
 
-bool I2C_WaitForSim() {
+static bool I2C_WaitForSim(void) {
 
     // wait for data from card
     if (!WaitSCL_L_timeout())
@@ -225,7 +225,7 @@ bool I2C_WaitForSim() {
 }
 
 // send i2c STOP
-void I2C_Stop(void) {
+static void I2C_Stop(void) {
     SCL_L;
     I2C_DELAY_2CLK;
     SDA_L;
@@ -238,7 +238,7 @@ void I2C_Stop(void) {
 }
 
 // Send i2c ACK
-void I2C_Ack(void) {
+static void I2C_Ack(void) {
     SCL_L;
     I2C_DELAY_2CLK;
     SDA_L;
@@ -251,7 +251,7 @@ void I2C_Ack(void) {
 }
 
 // Send i2c NACK
-void I2C_NoAck(void) {
+static void I2C_NoAck(void) {
     SCL_L;
     I2C_DELAY_2CLK;
     SDA_H;
@@ -263,7 +263,7 @@ void I2C_NoAck(void) {
     I2C_DELAY_2CLK;
 }
 
-bool I2C_WaitAck(void) {
+static bool I2C_WaitAck(void) {
     SCL_L;
     I2C_DELAY_1CLK;
     SDA_H;
@@ -282,7 +282,7 @@ bool I2C_WaitAck(void) {
     return true;
 }
 
-void I2C_SendByte(uint8_t data) {
+static void I2C_SendByte(uint8_t data) {
     uint8_t bits = 8;
 
     while (bits--) {
@@ -308,7 +308,7 @@ void I2C_SendByte(uint8_t data) {
     SCL_L;
 }
 
-int16_t I2C_ReadByte(void) {
+static int16_t I2C_ReadByte(void) {
     uint8_t bits = 8, b = 0;
 
     SDA_H;
@@ -623,7 +623,7 @@ int I2C_get_version(uint8_t *maj, uint8_t *min) {
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.
-bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
+static bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
 
     uint8_t i = 3;
     int16_t len = 0;
