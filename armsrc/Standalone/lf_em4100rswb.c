@@ -217,10 +217,8 @@ int ButeEMTag(uint64_t tag, int slot) {
 
         cardnum = cardnum + direction;
         tag = PackEmID(fc, cardnum);
-
-        uint64_t reversed = ReversQuads(tag);
         Dbprintf("[=] >>  Simulating tag id %"PRIx64" <<", tag);
-        ConstructEM410xEmulBuf(reversed);
+        ConstructEM410xEmulBuf(ReversQuads(tag));
         SimulateTagLowFrequencyEx(buflen, 0, 1, bruteforceSpeed[bruteforceSpeedCurrent] * 10000);
 
         int button_pressed = BUTTON_CLICKED(1000);
@@ -265,8 +263,7 @@ int ExecuteMode(int mode, int slot) {
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_SIM:
             Dbprintf("[=] >>  Sim mode started  <<");
-            uint64_t reversed = ReversQuads(low[slot]);
-            ConstructEM410xEmulBuf(reversed);
+            ConstructEM410xEmulBuf(ReversQuads(low[slot]));
             SimulateTagLowFrequency(buflen, 0, 1);
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
