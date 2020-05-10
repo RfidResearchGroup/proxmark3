@@ -41,7 +41,7 @@ from the client to view the stored quadlets.
 #define HF_BOG_LOGFILE "hf_bog.log"
 
 // This is actually copied from SniffIso14443a
-void RAMFUNC SniffAndStore(uint8_t param) {
+static void RAMFUNC SniffAndStore(uint8_t param) {
 
     iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 

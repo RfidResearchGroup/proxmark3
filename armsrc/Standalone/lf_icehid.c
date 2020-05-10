@@ -54,7 +54,7 @@
 #define LF_HIDCOLLECT_LOGFILE "lf_hidcollect.log"
 
 
-void DownloadLogInstructions(void) {
+static void DownloadLogInstructions(void) {
     Dbprintf("");
     Dbprintf("[=] To get the logfile from flash and display it:");
     Dbprintf("[=] " _YELLOW_("1.") " mem spiffs dump o "LF_HIDCOLLECT_LOGFILE" f "LF_HIDCOLLECT_LOGFILE);
@@ -64,7 +64,7 @@ void DownloadLogInstructions(void) {
 
 bool log_exists;
 
-void append(uint8_t *entry, size_t entry_len) {
+static void append(uint8_t *entry, size_t entry_len) {
 
     LED_B_ON();
     if (log_exists == false) {
@@ -76,7 +76,7 @@ void append(uint8_t *entry, size_t entry_len) {
     LED_B_OFF();
 }
 
-uint32_t IceEM410xdemod(void) {
+static uint32_t IceEM410xdemod(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     size_t idx = 0;
@@ -128,7 +128,7 @@ uint32_t IceEM410xdemod(void) {
     return PM3_SUCCESS;
 }
 
-uint32_t IceAWIDdemod(void) {
+static uint32_t IceAWIDdemod(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     size_t size = MIN(12800, BigBuf_max_traceLen());
@@ -180,7 +180,7 @@ uint32_t IceAWIDdemod(void) {
     return PM3_SUCCESS;
 }
 
-uint32_t IceIOdemod(void) {
+static uint32_t IceIOdemod(void) {
 
     int dummyIdx = 0;
     uint8_t version = 0, facilitycode = 0;
@@ -224,7 +224,7 @@ uint32_t IceIOdemod(void) {
     return PM3_SUCCESS;
 }
 
-uint32_t IceHIDDemod(void) {
+static uint32_t IceHIDDemod(void) {
 
     int dummyIdx = 0;
 

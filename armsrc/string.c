@@ -247,7 +247,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 
 
 #define isspace(a) __extension__ ({ unsigned char bb__isspace = (a) - 9; bb__isspace == (' ' - 9) || bb__isspace <= (13 - 9); })
-/*
+
 unsigned long strtoul(const char *p, char **out_p, int base) {
     unsigned long v = 0;
 
@@ -319,7 +319,6 @@ long strtol(const char *p, char **out_p, int base) {
     if (out_p) *out_p = (char *)p;
     return v;
 }
-*/
 
 char c_tolower(int c) {
     // (int)a = 97, (int)A = 65

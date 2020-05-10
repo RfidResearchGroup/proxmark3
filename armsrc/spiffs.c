@@ -400,20 +400,20 @@ int rdv40_spiffs_lazy_mount_rollback(int changed) {
 // statement or some function taking function parameters
 // TODO : forbid writing to a filename which already exists as lnk !
 // TODO : forbid writing to a filename.lnk which already exists without lnk !
-int rdv40_spiffs_write(char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+int rdv40_spiffs_write(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         write_to_spiffs(filename, src, size);
     )
 }
 
-int rdv40_spiffs_append(char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+int rdv40_spiffs_append(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         append_to_spiffs(filename, src, size);
     )
 }
 
 // todo integrate reading symlinks transparently
-int rdv40_spiffs_read(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+int rdv40_spiffs_read(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         read_from_spiffs(filename, dst, size);
     )

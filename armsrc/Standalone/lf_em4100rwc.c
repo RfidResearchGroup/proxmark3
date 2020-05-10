@@ -27,6 +27,7 @@
 #include "string.h"
 #include "BigBuf.h"
 #include "spiffs.h"
+#include "commonutil.h"
 
 #ifdef WITH_FLASH
 #include "flashmem.h"
@@ -47,7 +48,7 @@ void ModInfo(void) {
     DbpString("  LF EM4100 read/write/clone mode");
 }
 
-uint64_t ReversQuads(uint64_t bits) {
+static uint64_t ReversQuads(uint64_t bits) {
     uint64_t result = 0;
     for (int i = 0; i < 16; i++) {
         result += ((bits >> (60 - 4 * i)) & 0xf) << (4 * i);
@@ -55,14 +56,14 @@ uint64_t ReversQuads(uint64_t bits) {
     return result >> 24;
 }
 
-void FillBuff(uint8_t bit) {
+static void FillBuff(uint8_t bit) {
     memset(bba + buflen, bit, CLOCK / 2);
     buflen += (CLOCK / 2);
     memset(bba + buflen, bit ^ 1, CLOCK / 2);
     buflen += (CLOCK / 2);
 }
 
-void ConstructEM410xEmulBuf(uint64_t id) {
+static void ConstructEM410xEmulBuf(uint64_t id) {
 
     int i, j, binary[4], parity[4];
     buflen = 0;
@@ -83,7 +84,7 @@ void ConstructEM410xEmulBuf(uint64_t id) {
     FillBuff(0);
 }
 
-void LED_Slot(int i) {
+static void LED_Slot(int i) {
     LEDsoff();
     if (slots_count > 4) {
         LED(i % MAX_IND, 0); //binary indication, usefully for slots_count > 4
@@ -92,7 +93,7 @@ void LED_Slot(int i) {
     }
 }
 
-void FlashLEDs(uint32_t speed, uint8_t times) {
+static void FlashLEDs(uint32_t speed, uint8_t times) {
     for (int i = 0; i < times * 2; i++) {
         LED_A_INV();
         LED_B_INV();
@@ -103,9 +104,9 @@ void FlashLEDs(uint32_t speed, uint8_t times) {
 }
 
 #ifdef WITH_FLASH
-void SaveIDtoFlash(int addr, uint64_t id) {
+static void SaveIDtoFlash(int addr, uint64_t id) {
     uint8_t bt[5];
-    char *filename = "emdump";
+    const char *filename = "emdump";
     rdv40_spiffs_mount();
     for (int i = 0; i < 5; i++) {
         bt[4 - i] = (uint8_t)(id >> 8 * i & 0xff);

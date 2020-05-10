@@ -68,7 +68,7 @@
 
 #define HF_14ASNIFF_LOGFILE "hf_14asniff.trc"
 
-void DownloadTraceInstructions(void) {
+static void DownloadTraceInstructions(void) {
     Dbprintf("");
     Dbprintf("To get the trace from flash and display it:");
     Dbprintf("1. mem spiffs dump o "HF_14ASNIFF_LOGFILE" f trace.trc");
