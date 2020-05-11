@@ -180,7 +180,9 @@ int demodNexWatch(void) {
     d_id |= DemodBuffer[DOFFSET + 32];
 
     uint8_t mode = bytebits_to_byte(DemodBuffer + 72, 4);
-    
+    uint8_t parity = bytebits_to_byte(DemodBuffer + 76, 4);
+    uint8_t chk = bytebits_to_byte(DemodBuffer + 80, 8);
+   
     // parity check 
     // from 32 hex id, 4 mode,  descramble par (1234) -> (4231)
     uint8_t xor_par = 0;
@@ -194,62 +196,48 @@ int demodNexWatch(void) {
     calc_parity |= (((xor_par >> 2 ) & 1) << 2);
     calc_parity |=  ((xor_par & 1) << 3);
     
-    uint8_t parity = bytebits_to_byte(DemodBuffer + 76, 4);
-
-    /*
-    Checksum:::
-        1. Subtract every byte from ID field using an unsigned, one byte register:
-           1F - 15 - A5 - 6D = 0xF6
-
-        2. Subtract BE from the result:
-           0xF6 - 0xBE  = 3A
-
-        3. Reverse the bits of a parity nibble:
-           5(0101) -> (1010) A
-
-        4. Subtract the reversed parity from the result:
-           3A - A = 30 -> 00110000
-
-
-        5. Reverse the bits:
-           00001100 -> 0C
-    */
-    
-    /*
+    // Checksum
     uint8_t calc;
     calc = ((d_id >> 24) & 0xFF);
     calc -= ((d_id >> 16) & 0xFF);
     calc -= ((d_id >> 8) & 0xFF);
     calc -= (d_id & 0xFF);
+       
+    uint8_t revpar = (reflect8(calc_parity) >> 4);
     
-    PrintAndLogEx(NORMAL, "Sum:  0x%02x", calc);
+    typedef struct {
+        uint8_t magic;
+        char desc[10];
+        uint8_t chk;
+    } nexwatch_magic_t;
+    
+    nexwatch_magic_t items[] = { {0xBE, "Quadrakey", 0}, {0x88, "Nexkey", 0} };
 
-     uint8_t a[] = {0xbe, 0xbc, 0x88, 0x86 };
-    for (uint8_t c=0; c < ARRAYLEN(a); c++) {
-        uint8_t b = calc;
-        b -= a[c];
-        PrintAndLogEx(NORMAL, "Subtract [0x%02X] : 0x%02X", a[c], b);
-        b -= revpar;
-        PrintAndLogEx(NORMAL, "Subtract revpar   : 0x%02X", b);
-        PrintAndLogEx(NORMAL, "reversed          : 0x%02X", reflect8(b));
+    uint8_t m_idx; 
+    for ( m_idx = 0; m_idx < ARRAYLEN(items); m_idx++) {
+        uint8_t foo = calc;
+        foo -= items[m_idx].magic;
+        foo -= revpar;
+        foo = reflect8(foo);
+        items[m_idx].chk = foo;
+        if (foo == chk) {
+            break;
+        }
     }
 
-    calc -= 0xBE;
-    PrintAndLogEx(NORMAL, "--after 0xBE:  %02x", calc);
-    calc -= revpar;
-    PrintAndLogEx(NORMAL, "--before reverse:  %02x", calc);
-    calc = reflect8(calc);
-    */
-        
-//    uint8_t chk = bytebits_to_byte(DemodBuffer + 80, 8);
-
+    // detect keytype
 
     // output
     PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32) , rawid);
     PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " "  _YELLOW_("0x%"PRIx32), d_id, d_id);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);  
     PrintAndLogEx(SUCCESS, "          parity : %s  [%X == %X]", (parity == calc_parity) ? _GREEN_("ok") : _RED_("fail"), parity, calc_parity);
-//    PrintAndLogEx(NORMAL,  "        checksum : %02x == %02x", calc, chk);
+    if (m_idx < 3) {
+        PrintAndLogEx(SUCCESS, "        checksum : %s  [%X]",  _GREEN_("ok"), chk);
+        PrintAndLogEx(SUCCESS, "         Keytype : " _GREEN_("%s"),  items[m_idx].desc);
+    } else {
+        PrintAndLogEx(WARNING, "        checksum : %s  [%X == %X]", _RED_("fail"), chk, items[m_idx].chk);
+    }
 
     // bits to hex  (output used for SIM/CLONE cmd)
      CmdPrintDemodBuff("x");
