@@ -84,6 +84,9 @@ GCCEXTRACFLAGS += -Wcast-align -Wno-error=cast-align
 ifeq ($(GCCEXTRA),1)
   DEFCFLAGS += $(GCCEXTRACFLAGS) $(EXTRACFLAGS)
 endif
+ifeq ($(NOERROR),1)
+  DEFCFLAGS += -Wno-error
+endif
 
 CFLAGS ?= $(DEFCFLAGS)
 CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 $(APP_CFLAGS)

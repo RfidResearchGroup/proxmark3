@@ -52,6 +52,13 @@ DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-s
 DEFCFLAGS += -Wcast-align -Wno-error=cast-align
 DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
 
+ifeq ($(platform),Darwin)
+# their readline has strict-prototype issues
+DEFCFLAGS += -Wno-strict-prototypes
+else
+DEFCFLAGS += -Wstrict-prototypes
+endif
+
 # Next ones are activated only if GCCEXTRA=1 or CLANGEXTRA=1
 EXTRACFLAGS =
 EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
@@ -84,10 +91,9 @@ CLANGEXTRACFLAGS += -Wimplicit-fallthrough
 ifeq ($(CLANGEXTRA),1)
   DEFCFLAGS += $(CLANGEXTRACFLAGS) $(EXTRACFLAGS)
 endif
-
-ifeq ($(platform),Darwin)
-# their readline has strict-prototype issues
-DEFCFLAGS += -Wstrict-prototypes -Wno-error=strict-prototypes
-else
-DEFCFLAGS += -Wstrict-prototypes
+ifeq ($(CLANGEVERYTHING),1)
+  DEFCFLAGS += -Weverything -Wno-error
+endif
+ifeq ($(NOERROR),1)
+  DEFCFLAGS += -Wno-error
 endif
