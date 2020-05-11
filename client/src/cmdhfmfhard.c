@@ -90,7 +90,8 @@ static void get_SIMD_instruction_set(char *instruction_set) {
         case SIMD_MMX:
             strcpy(instruction_set, "MMX");
             break;
-        default:
+        case SIMD_AUTO:
+        case SIMD_NONE:
             strcpy(instruction_set, "no");
             break;
     }

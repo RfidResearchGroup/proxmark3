@@ -775,7 +775,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
             res = loadFileJSON(filename, dump, 2048, &bytes_read);
             break;
         }
-        default:
+        case DICTIONARY:
             PrintAndLogEx(ERR, "No dictionary loaded");
             free(dump);
             return PM3_ESOFT;
