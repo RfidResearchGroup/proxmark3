@@ -29,7 +29,6 @@
 #include "fileutils.h"  // loadDictionary
 #include "util_posix.h"
 
-
 // Some defines for readability
 #define T55XX_DLMODE_FIXED         0 // Default Mode
 #define T55XX_DLMODE_LLR           1 // Long Leading Reference
@@ -1312,7 +1311,7 @@ bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wa
         config.Q5 = tests[0].Q5;
         config.ST = tests[0].ST;
         config.downlink_mode = downlink_mode;
-
+                
         if (print_config)
             printConfiguration(config);
 
@@ -1599,17 +1598,18 @@ int special(const char *Cmd) {
 }
 
 int printConfiguration(t55xx_conf_block_t b) {
-    PrintAndLogEx(NORMAL, "    Chip Type      : %s", (b.Q5) ? "T5555 ( Q5 )" : "T55x7");
-    PrintAndLogEx(NORMAL, "    Modulation     : %s", GetSelectedModulationStr(b.modulation));
-    PrintAndLogEx(NORMAL, "    Bit Rate       : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
-    PrintAndLogEx(NORMAL, "    Inverted       : %s", (b.inverted) ? _GREEN_("Yes") : "No");
-    PrintAndLogEx(NORMAL, "    Offset         : %d", b.offset);
-    PrintAndLogEx(NORMAL, "    Seq. Term.     : %s", (b.ST) ? _GREEN_("Yes") : "No");
-    PrintAndLogEx(NORMAL, "    Block0         : 0x%08X", b.block0);
-    PrintAndLogEx(NORMAL, "    Downlink Mode  : %s", GetDownlinkModeStr(b.downlink_mode));
-    PrintAndLogEx(NORMAL, "    Password Set   : %s", (b.usepwd) ? _RED_("Yes") : _GREEN_("No"));
-    if (b.usepwd)
-        PrintAndLogEx(NORMAL, "    Password       : %08X", b.pwd);
+    PrintAndLogEx(INFO, "     Chip Type      : " _GREEN_("%s"), (b.Q5) ? "T5555 ( Q5 )" : "T55x7");
+    PrintAndLogEx(INFO, "     Modulation     : " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
+    PrintAndLogEx(INFO, "     Bit Rate       : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
+    PrintAndLogEx(INFO, "     Inverted       : %s", (b.inverted) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(INFO, "     Offset         : %d", b.offset);
+    PrintAndLogEx(INFO, "     Seq. Term.     : %s", (b.ST) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(INFO, "     Block0         : 0x%08X", b.block0);
+    PrintAndLogEx(INFO, "     Downlink Mode  : %s", GetDownlinkModeStr(b.downlink_mode));
+    PrintAndLogEx(INFO, "     Password Set   : %s", (b.usepwd) ? _RED_("Yes") : _GREEN_("No"));
+    if (b.usepwd) {
+        PrintAndLogEx(INFO, "     Password       : %08X", b.pwd);
+    }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -2181,7 +2181,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         uint32_t datamod  = (block0 >> (32 - 28)) & 0x07;
         uint32_t maxblk   = (block0 >> (32 - 31)) & 0x07;
         uint32_t st       = block0 & 0x01;
-        PrintAndLogEx(NORMAL, "-- Q5 Configuration & Tag Information -----------------------");
+        PrintAndLogEx(NORMAL, "--- " _CYAN_("Q5 Configuration & Information") " ------------");
         PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
         PrintAndLogEx(NORMAL, " Header                    : 0x%03X%s", header, (header != 0x600) ? _RED_(" - Warning") : "");
         PrintAndLogEx(NORMAL, " Page select               : %d", ps);
@@ -2216,7 +2216,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         uint32_t inv      = (block0 >> (32 - 31)) & 0x01;
         uint32_t por      = (block0 >> (32 - 32)) & 0x01;
 
-        PrintAndLogEx(NORMAL, "-- T55x7 Configuration & Tag Information --------------------");
+        PrintAndLogEx(NORMAL, "--- " _CYAN_("T55x7 Configuration & Information") " ---------");
         PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
         PrintAndLogEx(NORMAL, " Safer key                 : %s", GetSaferStr(safer));
         PrintAndLogEx(NORMAL, " reserved                  : %d", resv);
