@@ -157,7 +157,7 @@ int demodNexWatch(void) {
     bool invert = false;
     size_t size = DemodBufferLen;
     int idx = detectNexWatch(DemodBuffer, &size, &invert);
-    if (idx <= 0) {
+    if (idx < 0) {
         if (idx == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch not enough samples");
         // else if (idx == -2)
@@ -470,7 +470,7 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 
     uint8_t preamble[28]   = {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     // sanity check.
-    if (*size < sizeof(preamble) + 100) return -1;
+    if (*size < 96) return -1;
 
     size_t startIdx = 0;
 
