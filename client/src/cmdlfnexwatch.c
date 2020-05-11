@@ -254,7 +254,7 @@ int demodNexWatch(void) {
         PrintAndLogEx(WARNING, "        checksum : %s (0x%02X != 0x%02X)", _RED_("fail"), chk, items[m_idx].chk);
     }
 
-    PrintAndLogEx(INFO, " raw : " _YELLOW_("%"PRIX64"%"PRIX64"%"PRIX64), raw1, raw2, raw3);
+    PrintAndLogEx(INFO, " raw : " _YELLOW_("%"PRIX32"%"PRIX32"%"PRIX32), raw1, raw2, raw3);
     return PM3_SUCCESS;
 }
 
@@ -418,7 +418,7 @@ static int CmdNexWatchSim(const char *Cmd) {
     }
 
     // hex to bits.
-    uint32_t rawblocks[4];
+    uint32_t rawblocks[3];
     for (size_t i = 0; i < ARRAYLEN(rawblocks); i++) {
         rawblocks[i] = bytes_to_num(rawhex + (i * sizeof(uint32_t)), sizeof(uint32_t));
         num_to_bytebits(rawblocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
