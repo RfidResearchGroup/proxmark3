@@ -44,6 +44,7 @@
  *
 */
 
+#ifdef WITH_FLASH
 static void DownloadLogInstructions(void) {
     Dbprintf("");
     Dbprintf("[=] List all dumps from flash:");
@@ -52,6 +53,7 @@ static void DownloadLogInstructions(void) {
     Dbprintf("[=] To save a dump file from flash to client:");
     Dbprintf("[=]   " _YELLOW_("-") " mem spiffs dump o hf-legic-UID-dump.bin f hf-legic-UID-dump.bin");
 }
+#endif
 
 static void save_dump_to_file(legic_card_select_t *p_card) {
 
