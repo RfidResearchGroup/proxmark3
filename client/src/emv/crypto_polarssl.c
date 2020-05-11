@@ -156,7 +156,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl) {
 
 static int myrand(void *rng_state, unsigned char *output, size_t len) {
     size_t i;
-    rng_state = NULL;
+    (void)rng_state;
 
     for (i = 0; i < len; ++i)
         output[i] = rand();
