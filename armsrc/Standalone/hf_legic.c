@@ -44,7 +44,7 @@
  *
 */
 
-void DownloadLogInstructions() {
+static void DownloadLogInstructions(void) {
     Dbprintf("");
     Dbprintf("[=] List all dumps from flash:");
     Dbprintf("[=]   " _YELLOW_("-") " mem spiffs tree");
@@ -53,7 +53,7 @@ void DownloadLogInstructions() {
     Dbprintf("[=]   " _YELLOW_("-") " mem spiffs dump o hf-legic-UID-dump.bin f hf-legic-UID-dump.bin");
 }
 
-void save_dump_to_file(legic_card_select_t *p_card) {
+static void save_dump_to_file(legic_card_select_t *p_card) {
 
 #ifdef WITH_FLASH
 
@@ -99,7 +99,7 @@ void ModInfo(void) {
 // A, B, C = Reading
 // A, D = Simulating
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     Dbprintf("[=] >>  HF Legic Prime Read/Simulate Started  <<");

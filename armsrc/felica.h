@@ -17,6 +17,6 @@
 void felica_sendraw(PacketCommandNG *c);
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
 void felica_sim_lite(uint64_t uid);
-void felica_dump_lite_s();
+void felica_dump_lite_s(void);
 
 #endif

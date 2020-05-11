@@ -54,7 +54,7 @@ void ModInfo(void) {
 
 uint8_t ppdol [255] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00}; // Default GET PROCESSING
 
-uint8_t treatPDOL(uint8_t *apdu) {                  //Generate GET PROCESSING
+static uint8_t treatPDOL(uint8_t *apdu) {                  //Generate GET PROCESSING
     uint8_t plen = 7;
     //PDOL Format: 80 A8 00 00 + (PDOL Length+2) + 83 + PDOL Length + PDOL + 00
     for (uint8_t i = 1; i <= apdu[0]; i++) {          //Magic stuff, the generation order is important
@@ -117,7 +117,7 @@ uint8_t treatPDOL(uint8_t *apdu) {                  //Generate GET PROCESSING
     return plen;
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_(">>")  "Reading Visa cards & Emulating a Visa MSD Transaction a.k.a. MSDSal Started<<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

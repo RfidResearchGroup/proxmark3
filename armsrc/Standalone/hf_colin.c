@@ -104,7 +104,12 @@ static const uint8_t is_hex[] = {
     0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0
 };
 
+// Note: inlining this function would fail with -Os
+#ifdef __OPTIMIZE_SIZE__
+static uint64_t hex2i(const char *s) {
+#else
 static inline uint64_t hex2i(const char *s) {
+#endif
     uint64_t val = 0;
     if (s == NULL || s[0] == 0)
         return 0;
@@ -198,14 +203,14 @@ MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
 
 int total_schemas = 0;
 
-void add_schema(MFC1KSchema *p, MFC1KSchema a, int *schemas_counter) {
+static void add_schema(MFC1KSchema *p, MFC1KSchema a, int *schemas_counter) {
     if (*schemas_counter < MAX_SCHEMAS) {
         p[*schemas_counter] = a;
         *schemas_counter += 1;
     }
 }
-
-void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
+/*
+static void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
     if (*schemas_counter > 0 && index < *schemas_counter && index > -1) {
         int last_index = *schemas_counter - 1;
         for (int i = index; i < last_index; i++) {
@@ -214,23 +219,23 @@ void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
         *schemas_counter -= 1;
     }
 }
-
-void cjSetCursFRight() {
+*/
+static void cjSetCursFRight(void) {
     vtsend_cursor_position(NULL, 98, (currfline));
     currfline++;
 }
 
-void cjSetCursRight() {
+static void cjSetCursRight(void) {
     vtsend_cursor_position(NULL, 59, (currline));
     currline++;
 }
 
-void cjSetCursLeft() {
+static void cjSetCursLeft(void) {
     vtsend_cursor_position(NULL, 0, (curlline));
     curlline++;
 }
 
-void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
+static void cjTabulize(void) { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 
 /*
 void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
@@ -240,7 +245,7 @@ foundKey[5]); cjSetCursRight(); DbprintfEx(FLAG_NEWLINE, "SEC: %02x | KEY : %s |
 }
 */
 
-char *ReadSchemasFromSPIFFS(char *filename) {
+static char *ReadSchemasFromSPIFFS(char *filename) {
     SpinOff(0);
 
     int changed = rdv40_spiffs_lazy_mount();
@@ -255,7 +260,7 @@ char *ReadSchemasFromSPIFFS(char *filename) {
     return (char *)mem;
 }
 
-void add_schemas_from_json_in_spiffs(char *filename) {
+static void add_schemas_from_json_in_spiffs(char *filename) {
 
     char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
 
@@ -275,7 +280,7 @@ void add_schemas_from_json_in_spiffs(char *filename) {
     }
 }
 
-void ReadLastTagFromFlash() {
+static void ReadLastTagFromFlash(void) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -332,7 +337,7 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
 
 void ModInfo(void) { DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)"); }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
 
     // add_schema(Schemas, Noralsy, &total_schemas);

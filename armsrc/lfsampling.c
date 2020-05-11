@@ -29,7 +29,7 @@ Default LF config is set to:
     */
 sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
 
-void printConfig() {
+void printConfig(void) {
     uint32_t d = config.divisor;
     DbpString(_BLUE_("LF Sampling config"));
     Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
@@ -90,7 +90,7 @@ sample_config *getSamplingConfig(void) {
  * @param stream
  * @param bit
  */
-void pushBit(BitstreamOut *stream, uint8_t bit) {
+static void pushBit(BitstreamOut *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
@@ -143,7 +143,7 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
     samples.total_saved = 0;
 }
 
-uint32_t getSampleCounter() {
+uint32_t getSampleCounter(void) {
     return samples.total_saved;
 }
 
@@ -346,7 +346,7 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
     return DoAcquisition(1, 8, 0, trigger_threshold, verbose, sample_size, cancel_after, 0);
 }
 
-uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
+static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
     if (verbose)
         printConfig();
 
@@ -368,7 +368,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size) {
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF() {
+uint32_t SniffLF(void) {
     BigBuf_Clear_ext(false);
     return ReadLF(false, true, 0);
 }
@@ -526,7 +526,7 @@ void doCotagAcquisition(size_t sample_size) {
     computeSignalProperties(dest, bufsize);
 }
 
-uint32_t doCotagAcquisitionManchester() {
+uint32_t doCotagAcquisitionManchester(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();

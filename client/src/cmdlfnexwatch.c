@@ -35,7 +35,7 @@ static int usage_lf_nexwatch_clone(void) {
     PrintAndLogEx(NORMAL, "      r <raw hex>   : raw hex data. 16 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nexwatch clone r 5600000000213C9F8F150C0000000000");
+    PrintAndLogEx(NORMAL, "       lf nexwatch clone r 5600000000213C9F8F150C");
     return PM3_SUCCESS;
 }
 
@@ -49,13 +49,21 @@ static int usage_lf_nexwatch_sim(void) {
     PrintAndLogEx(NORMAL, "      r <raw hex>  : raw hex data. 16 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C0000000000");
+    PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C");
     return PM3_SUCCESS;
 }
-
-static int CmdNexWatchDemod(const char *Cmd) {
-    (void)Cmd;
-
+/*
+static inline uint32_t bitcount(uint32_t a) {
+#if defined __GNUC__
+   return __builtin_popcountl(a);
+#else
+   a = a - ((a >> 1) & 0x55555555);
+   a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+   return (((a + (a >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
+#endif
+}
+*/
+int demodNexWatch(void) {
     if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
         return PM3_ESOFT;
@@ -80,35 +88,178 @@ static int CmdNexWatchDemod(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    setDemodBuff(DemodBuffer, size, idx + 4);
-    setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 4) * g_DemodClock));
-
-//    idx = 8 + 32; // 8 = preamble, 32 = reserved bits (always 0)
-
-    //get ID
-    uint32_t ID = 0;
-    for (uint8_t k = 0; k < 4; k++) {
-        for (uint8_t m = 0; m < 8; m++) {
-            ID = (ID << 1) | DemodBuffer[m + k + (m * 4)];
-        }
-    }
-    //parity check (TBD)
-
-    //checksum check (TBD)
-
-    //output
-    PrintAndLogEx(SUCCESS, "NexWatch ID: " _YELLOW_("%"PRIu32), ID);
+    // skip the 4 first bits from the nexwatch preamble identification (we use 4 extra zeros..)
+    idx += 4;
+    
+    setDemodBuff(DemodBuffer, size, idx);
+    setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
+    
     if (invert) {
         PrintAndLogEx(INFO, "Had to Invert - probably NexKey");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
     }
 
-    // bits to hex
-    CmdPrintDemodBuff("x");
-    //PrintAndLogEx(INFO, "Raw: %s", sprint_hex_inrow(DemodBuffer, DemodBufferLen));
+    // get rawid
+    uint32_t rawid = 0;
+    for (uint8_t k = 0; k < 4; k++) {
+        for (uint8_t m = 0; m < 8; m++) {
+            rawid = (rawid << 1) | DemodBuffer[m + k + (m * 4)];
+        }
+    }
 
+    /*
+    Descrambled id    
+    
+    ref::  http://www.proxmark.org/forum/viewtopic.php?pid=14662#p14662
+    
+    32bit UID:     00100100011001000011111100010010
+
+    bits numbered from left (MSB):
+    1234 5678 9012 34567 8901234567890 12
+    0010 0100 0110 0100 00111111000100 10
+
+    descramble:
+    b1 b5 b9 b13   b17 b21 b25 b29   b2 b6 b10 b14   b18 b22 b26 b30   b3 b7 b11 b15   b19 b23 b27 b31   b4 b8 b12 b16   b20 b24 b28 b32
+
+    gives:
+    0000 0100 0111 0100 1010 1101 0000 1110  =  74755342
+    */
+
+// Since the description is not zero indexed we adjust.
+#define DOFFSET  8 + 32 - 1
+    
+    // descrambled id
+    uint32_t d_id = 0;
+    // b1 b5 b9 b13 
+    d_id |= DemodBuffer[DOFFSET + 1] << 31;
+    d_id |= DemodBuffer[DOFFSET + 5] << 30;
+    d_id |= DemodBuffer[DOFFSET + 9] << 29;
+    d_id |= DemodBuffer[DOFFSET + 13] << 28;
+
+    // b17 b21 b25 b29
+    d_id |= DemodBuffer[DOFFSET + 17] << 27;
+    d_id |= DemodBuffer[DOFFSET + 21] << 26;
+    d_id |= DemodBuffer[DOFFSET + 25] << 25;
+    d_id |= DemodBuffer[DOFFSET + 29] << 24;
+
+    // b2 b6 b10 b14
+    d_id |= DemodBuffer[DOFFSET + 2] << 23;
+    d_id |= DemodBuffer[DOFFSET + 6] << 22;
+    d_id |= DemodBuffer[DOFFSET + 10] << 21;
+    d_id |= DemodBuffer[DOFFSET + 14] << 20;
+
+    // b18 b22 b26 b30 
+    d_id |= DemodBuffer[DOFFSET + 18] << 19;
+    d_id |= DemodBuffer[DOFFSET + 22] << 18;
+    d_id |= DemodBuffer[DOFFSET + 26] << 17;
+    d_id |= DemodBuffer[DOFFSET + 30] << 16;
+
+    // b3 b7 b11 b15  
+    d_id |= DemodBuffer[DOFFSET + 3] << 15;
+    d_id |= DemodBuffer[DOFFSET + 7] << 14;
+    d_id |= DemodBuffer[DOFFSET + 11] << 13;
+    d_id |= DemodBuffer[DOFFSET + 15] << 12;
+
+    // b19 b23 b27 b31
+    d_id |= DemodBuffer[DOFFSET + 19] << 11;
+    d_id |= DemodBuffer[DOFFSET + 23] << 10;
+    d_id |= DemodBuffer[DOFFSET + 27] << 9;
+    d_id |= DemodBuffer[DOFFSET + 31] << 8;
+
+    // b4 b8 b12 b16
+    d_id |= DemodBuffer[DOFFSET + 4] << 7;
+    d_id |= DemodBuffer[DOFFSET + 8] << 6;
+    d_id |= DemodBuffer[DOFFSET + 12] << 5;
+    d_id |= DemodBuffer[DOFFSET + 16] << 4;
+    
+    // b20 b24 b28 b32
+    d_id |= DemodBuffer[DOFFSET + 20] << 3;
+    d_id |= DemodBuffer[DOFFSET + 24] << 2;
+    d_id |= DemodBuffer[DOFFSET + 28] << 1;
+    d_id |= DemodBuffer[DOFFSET + 32];
+
+    uint8_t mode = bytebits_to_byte(DemodBuffer + 72, 4);
+    
+    // parity check 
+    // from 32 hex id, 4 mode,  descramble par (1234) -> (4231)
+    uint8_t xor_par = 0;
+    for (uint8_t i = 40; i < 76; i +=4) {
+        xor_par ^= bytebits_to_byte(DemodBuffer + i, 4);
+    }
+    
+    uint8_t calc_parity ;   
+    calc_parity =  (((xor_par >> 3 ) & 1) );
+    calc_parity |= (((xor_par >> 1 ) & 1) << 1);
+    calc_parity |= (((xor_par >> 2 ) & 1) << 2);
+    calc_parity |=  ((xor_par & 1) << 3);
+    
+    uint8_t parity = bytebits_to_byte(DemodBuffer + 76, 4);
+
+    /*
+    Checksum:::
+        1. Subtract every byte from ID field using an unsigned, one byte register:
+           1F - 15 - A5 - 6D = 0xF6
+
+        2. Subtract BE from the result:
+           0xF6 - 0xBE  = 3A
+
+        3. Reverse the bits of a parity nibble:
+           5(0101) -> (1010) A
+
+        4. Subtract the reversed parity from the result:
+           3A - A = 30 -> 00110000
+
+
+        5. Reverse the bits:
+           00001100 -> 0C
+    */
+    
+    /*
+    uint8_t calc;
+    calc = ((d_id >> 24) & 0xFF);
+    calc -= ((d_id >> 16) & 0xFF);
+    calc -= ((d_id >> 8) & 0xFF);
+    calc -= (d_id & 0xFF);
+    
+    PrintAndLogEx(NORMAL, "Sum:  0x%02x", calc);
+
+     uint8_t a[] = {0xbe, 0xbc, 0x88, 0x86 };
+    for (uint8_t c=0; c < ARRAYLEN(a); c++) {
+        uint8_t b = calc;
+        b -= a[c];
+        PrintAndLogEx(NORMAL, "Subtract [0x%02X] : 0x%02X", a[c], b);
+        b -= revpar;
+        PrintAndLogEx(NORMAL, "Subtract revpar   : 0x%02X", b);
+        PrintAndLogEx(NORMAL, "reversed          : 0x%02X", reflect8(b));
+    }
+
+    calc -= 0xBE;
+    PrintAndLogEx(NORMAL, "--after 0xBE:  %02x", calc);
+    calc -= revpar;
+    PrintAndLogEx(NORMAL, "--before reverse:  %02x", calc);
+    calc = reflect8(calc);
+    */
+        
+//    uint8_t chk = bytebits_to_byte(DemodBuffer + 80, 8);
+
+
+    // output
+    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32) , rawid);
+    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " "  _YELLOW_("0x%"PRIx32), d_id, d_id);
+    PrintAndLogEx(SUCCESS, "            mode : %x", mode);  
+    PrintAndLogEx(SUCCESS, "          parity : %s  [%X == %X]", (parity == calc_parity) ? _GREEN_("ok") : _RED_("fail"), parity, calc_parity);
+//    PrintAndLogEx(NORMAL,  "        checksum : %02x == %02x", calc, chk);
+
+    // bits to hex  (output used for SIM/CLONE cmd)
+     CmdPrintDemodBuff("x");
+//    PrintAndLogEx(INFO, "Raw: %s", sprint_hex_inrow(DemodBuffer, size));
     return PM3_SUCCESS;
+}
+
+static int CmdNexWatchDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodNexWatch();
 }
 
 //by marshmellow
@@ -261,8 +412,3 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
     // size tests?
     return (int) startIdx;
 }
-
-int demodNexWatch(void) {
-    return CmdNexWatchDemod("");
-}
-

@@ -13,7 +13,6 @@
 
 #include "common.h"
 
-extern const uint8_t OddByteParity[256];
 extern int rsamples;   // = 0;
 extern uint8_t trigger;
 extern bool allow_send_wtx;

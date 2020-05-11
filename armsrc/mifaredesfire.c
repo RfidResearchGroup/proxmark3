@@ -36,7 +36,7 @@ static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 struct desfire_key skey = {0};
 static desfirekey_t sessionkey = &skey;
 
-bool InitDesfireCard() {
+bool InitDesfireCard(void) {
 
     pcb_blocknum = 0;
 
@@ -107,7 +107,7 @@ void MifareSendCommand(uint8_t *datain) {
     LED_B_OFF();
 }
 
-void MifareDesfireGetInformation() {
+void MifareDesfireGetInformation(void) {
 
     LEDsoff();
 
@@ -683,7 +683,7 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 // crc_update(&desfire_crc32, byte, 8);
 // uint32_t crc = crc_finish(&desfire_crc32);
 
-void OnSuccess() {
+void OnSuccess(void) {
     pcb_blocknum = 0;
     ReaderTransmit(deselect_cmd, 3, NULL);
     if (mifare_ultra_halt()) {

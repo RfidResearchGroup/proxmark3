@@ -59,7 +59,8 @@ static void uncompress_data_section(void) {
     common_area.arg1 = data_section.total_in;
 }
 
-void __attribute__((section(".startos"))) Vector(void) {
+void __attribute__((section(".startos"))) Vector(void);
+void Vector(void) {
     /* Stack should have been set up by the bootloader */
     // char *src;
     char *dst, *end;

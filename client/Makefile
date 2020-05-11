@@ -159,6 +159,7 @@ $(info native BT support: Bluez found, enabled)
 else
 $(info native BT support: Bluez not found, disabled)
 endif
+$(info compiler version:  $(shell $(CC) --version|head -n 1))
 $(info ===================================================================)
 
 # Flags to generate temporary dependency files

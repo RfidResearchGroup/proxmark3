@@ -2538,7 +2538,7 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
 }
 
 char *GetPskCfStr(uint32_t id, bool q5) {
-    static char buf[25];
+    static char buf[40];
     char *retStr = buf;
     switch (id) {
         case 0:

@@ -191,7 +191,7 @@ const bool Mod_Miller_LUT[] = {
 #define IsMillerModulationNibble1(b) (Mod_Miller_LUT[(b & 0x000000F0) >> 4])
 #define IsMillerModulationNibble2(b) (Mod_Miller_LUT[(b & 0x0000000F)])
 
-tUart14a *GetUart14a() {
+tUart14a *GetUart14a(void) {
     return &Uart;
 }
 
@@ -363,7 +363,7 @@ const bool Mod_Manchester_LUT[] = {
 #define IsManchesterModulationNibble1(b) (Mod_Manchester_LUT[(b & 0x00F0) >> 4])
 #define IsManchesterModulationNibble2(b) (Mod_Manchester_LUT[(b & 0x000F)])
 
-tDemod14a *GetDemod14a() {
+tDemod14a *GetDemod14a(void) {
     return &Demod;
 }
 void Demod14aReset(void) {
@@ -480,7 +480,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 
 // Thinfilm, Kovio mangels ISO14443A in the way that they don't use start bit nor parity bits.
-RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
+static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
     if (Demod.state == DEMOD_14A_UNSYNCD) {
@@ -1613,7 +1613,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 
 // prepare a delayed transfer. This simply shifts ToSend[] by a number
 // of bits specified in the delay parameter.
-void PrepareDelayedTransfer(uint16_t delay) {
+static void PrepareDelayedTransfer(uint16_t delay) {
     delay &= 0x07;
     if (!delay) return;
 
@@ -1683,7 +1683,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 //-----------------------------------------------------------------------------
 // Prepare reader command (in bits, support short frames) to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
+static void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
     int last = 0;
 
     ToSendReset();
@@ -1759,10 +1759,11 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 //-----------------------------------------------------------------------------
 // Prepare reader command to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *par) {
+/*
+static void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *par) {
     CodeIso14443aBitsAsReaderPar(cmd, len * 8, par);
 }
-
+*/
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
 // Stop when button is pressed (return 1) or field was gone (return 2)
@@ -2153,7 +2154,7 @@ void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *tim
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
+static void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
     // Generate parity and redirect
     uint8_t par[MAX_PARITY_SIZE] = {0x00};
     GetParity(frame, len / 8, par);
@@ -2167,7 +2168,7 @@ void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
+static int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
     if (!GetIso14443aAnswerFromTag(receivedAnswer, par, offset))
         return false;
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
@@ -2769,7 +2770,7 @@ OUT:
 // Determine the distance between two nonces.
 // Assume that the difference is small, but we don't know which is first.
 // Therefore try in alternating directions.
-int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
+static int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
     if (nt1 == nt2) return 0;
 

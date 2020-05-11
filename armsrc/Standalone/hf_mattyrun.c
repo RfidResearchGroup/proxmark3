@@ -210,7 +210,7 @@ void ModInfo(void) {
     DbpString("  HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

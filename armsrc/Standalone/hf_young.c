@@ -37,7 +37,7 @@ void ModInfo(void) {
     DbpString("  HF Mifare sniff/simulation - (Craig Young)");
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     Dbprintf(">>  Craig Young Mifare sniff UID/clone uid 2 magic/sim  a.k.a YoungRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
