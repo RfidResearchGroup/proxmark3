@@ -703,7 +703,7 @@ static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid) {
 //  If you do not need the answer use NULL for *recv[]
 //  return: length of received data
 // logging enabled
-int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
+static int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
 
     int t_samples = 0, wait = 0, elapsed = 0, answer_len = 0;
 
@@ -741,7 +741,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outda
 
 // Decodes a message from a tag and displays its metadata and content
 #define DBD15STATLEN 48
-void DbdecodeIso15693Answer(int len, uint8_t *d) {
+static void DbdecodeIso15693Answer(int len, uint8_t *d) {
 
     if (len > 3) {
         char status[DBD15STATLEN + 1] = {0};

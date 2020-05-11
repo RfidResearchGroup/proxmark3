@@ -373,7 +373,7 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
     return wait;
 }
 
-uint8_t hitag_crc(uint8_t *data, size_t length) {
+static uint8_t hitag_crc(uint8_t *data, size_t length) {
     uint8_t crc = 0xff;
     unsigned int byte, bit;
     for (byte = 0; byte < ((length + 7) / 8); byte++) {
@@ -411,7 +411,7 @@ void fix_ac_decoding(uint8_t *input, size_t len) {
 // looks at number of received bits.
 // 0 = collision?
 // 32 =  good response
-bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
+static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
     uint8_t crc;
     *txlen = 0;
     switch (rxlen) {
@@ -480,7 +480,7 @@ bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bo
 }
 
 
-bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
+static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t crc;
     *txlen = 0;
     switch (rxlen) {

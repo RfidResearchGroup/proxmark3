@@ -30,10 +30,10 @@ uint32_t RAMFUNC GetCountUS(void);
 void ResetUSClock(void);
 void SpinDelayCountUs(uint32_t us);
 
-void StartCountSspClk();
+void StartCountSspClk(void);
 void ResetSspClk(void);
-uint32_t RAMFUNC GetCountSspClk();
-uint32_t RAMFUNC GetCountSspClkDelta();
+uint32_t RAMFUNC GetCountSspClk(void);
+uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start);
 
 void StartTicks(void);
 uint32_t GetTicks(void);

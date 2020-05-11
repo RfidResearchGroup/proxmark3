@@ -65,7 +65,7 @@ void lf_sample_mean(void) {
         Dbprintf("LF ADC average %u", adc_avg);
 }
 
-size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
+static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     size_t periods = 0;
     volatile uint8_t adc_val;
     uint8_t avg_peak = adc_avg + 3, avg_through = adc_avg - 3;
@@ -132,7 +132,7 @@ size_t lf_detect_gap(size_t max) {
     return lf_count_edge_periods_ex(max, false, true);
 }
 
-void lf_reset_counter() {
+void lf_reset_counter(void) {
 
     // TODO: find out the correct reset settings for tag and reader mode
 //    if (reader_mode) {
@@ -147,11 +147,11 @@ void lf_reset_counter() {
 //    }
 }
 
-bool lf_get_tag_modulation() {
+bool lf_get_tag_modulation(void) {
     return (rising_edge == false);
 }
 
-bool lf_get_reader_modulation() {
+bool lf_get_reader_modulation(void) {
     return rising_edge;
 }
 
@@ -228,7 +228,7 @@ void lf_init(bool reader, bool simulate) {
     lf_sample_mean();
 }
 
-void lf_finalize() {
+void lf_finalize(void) {
     // Disable timers
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;

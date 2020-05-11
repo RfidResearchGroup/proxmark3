@@ -144,7 +144,7 @@ uint16_t AvgAdc(int ch) {
     return (a + 15) >> 5;
 }
 
-void MeasureAntennaTuning(void) {
+static void MeasureAntennaTuning(void) {
 
     uint32_t peak = 0;
 
@@ -221,7 +221,7 @@ void MeasureAntennaTuning(void) {
 }
 
 // Measure HF in milliVolt
-uint16_t MeasureAntennaTuningHfData(void) {
+static uint16_t MeasureAntennaTuningHfData(void) {
 
 #if defined RDV4
     return (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
@@ -232,7 +232,7 @@ uint16_t MeasureAntennaTuningHfData(void) {
 }
 
 // Measure LF in milliVolt
-uint32_t MeasureAntennaTuningLfData(void) {
+static uint32_t MeasureAntennaTuningLfData(void) {
     return (MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10;
 }
 
@@ -246,7 +246,7 @@ void ReadMem(int addr) {
 extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, __data_src_start__;
-void SendVersion(void) {
+static void SendVersion(void) {
     char temp[PM3_CMD_DATA_SIZE - 12]; /* Limited data payload in USB packets */
     char VersionString[PM3_CMD_DATA_SIZE - 12] = { '\0' };
 
@@ -302,7 +302,7 @@ void SendVersion(void) {
     reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
 }
 
-void TimingIntervalAcquisition(void) {
+static void TimingIntervalAcquisition(void) {
     // trigger new acquisition by turning main oscillator off and on
     mck_from_pll_to_slck();
     mck_from_slck_to_pll();
@@ -312,7 +312,7 @@ void TimingIntervalAcquisition(void) {
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
-void printConnSpeed(void) {
+static void printConnSpeed(void) {
     DbpString(_BLUE_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
@@ -339,7 +339,7 @@ void printConnSpeed(void) {
 /**
   * Prints runtime information about the PM3.
 **/
-void SendStatus(void) {
+static void SendStatus(void) {
     BigBuf_print_status();
     Fpga_print_status();
 #ifdef WITH_FLASH
@@ -382,7 +382,7 @@ void SendStatus(void) {
     reply_ng(CMD_STATUS, PM3_SUCCESS, NULL, 0);
 }
 
-void SendCapabilities(void) {
+static void SendCapabilities(void) {
     capabilities_t capabilities;
     capabilities.version = CAPABILITIES_VERSION;
     capabilities.via_fpc = reply_via_fpc;

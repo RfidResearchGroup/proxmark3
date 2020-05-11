@@ -31,7 +31,7 @@ void ModInfo(void) {
 //  C = playing bank A
 //  D = playing bank B
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");
