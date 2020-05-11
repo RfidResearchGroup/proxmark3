@@ -76,14 +76,14 @@ int bruteforceSpeed[] = {10, 12, 14, 16};
 // In high[] must be nulls
 uint64_t low[] = {0, 0, 0, 0};
 uint32_t high[] = {0, 0, 0, 0};
-uint8_t *bba, slots_count;
+uint8_t *bba;
 int buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 read/sim/write/brute mode");
 }
 
-uint64_t ReversQuads(uint64_t bits) {
+static uint64_t ReversQuads(uint64_t bits) {
     uint64_t result = 0;
     for (int i = 0; i < 16; i++) {
         result += ((bits >> (60 - 4 * i)) & 0xf) << (4 * i);
@@ -91,14 +91,14 @@ uint64_t ReversQuads(uint64_t bits) {
     return result >> 24;
 }
 
-void FillBuff(uint8_t bit) {
+static void FillBuff(uint8_t bit) {
     memset(bba + buflen, bit, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
     memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
     buflen += (LF_CLOCK / 2);
 }
 
-void ConstructEM410xEmulBuf(uint64_t id) {
+static void ConstructEM410xEmulBuf(uint64_t id) {
     bba = BigBuf_get_addr();
 
     int i, j, binary[4], parity[4];
@@ -120,7 +120,7 @@ void ConstructEM410xEmulBuf(uint64_t id) {
     FillBuff(0);
 }
 
-void LED_Update(int mode, int slot) {
+static void LED_Update(int mode, int slot) {
     LEDsoff();
     switch (mode) {
         case 0:
@@ -152,7 +152,7 @@ void LED_Update(int mode, int slot) {
     }
 }
 
-void FlashLEDs(uint32_t speed, uint8_t times) {
+static void FlashLEDs(uint32_t speed, uint8_t times) {
     for (int i = 0; i < times * 2; i++) {
         LED_A_INV();
         LED_B_INV();
@@ -163,7 +163,7 @@ void FlashLEDs(uint32_t speed, uint8_t times) {
 }
 
 #ifdef WITH_FLASH
-void SaveIDtoFlash(int addr, uint64_t id) {
+static void SaveIDtoFlash(int addr, uint64_t id) {
     uint8_t bt[5];
     char *filename = "emdump";
     rdv40_spiffs_mount();
@@ -178,7 +178,7 @@ void SaveIDtoFlash(int addr, uint64_t id) {
 }
 #endif
 
-uint64_t PackEmID(uint64_t original, int newCardNum) {
+static uint64_t PackEmID(uint64_t original, int newCardNum) {
     uint64_t buf = original;
     //clear pairity bits
     buf &= ~(1 << 0);
@@ -198,14 +198,14 @@ uint64_t PackEmID(uint64_t original, int newCardNum) {
 }
 
 
-void PrintFcAndCardNum(uint64_t lowData) {
+static void PrintFcAndCardNum(uint64_t lowData) {
     // Calculate Facility Code and Card Number from high and low
     uint32_t fc = (lowData >> 17) & 0xFF;
     uint32_t cardnum = (lowData >> 1) & 0xFFFF;
     Dbprintf("[=] READ TAG ID: %"PRIx64" - FC: %u - Card: %u", lowData, fc, cardnum);
 }
 
-int ButeEMTag(uint64_t originalCard, int slot) {
+static int ButeEMTag(uint64_t originalCard, int slot) {
     int speed_count = 4;
 
     int direction = 1;
@@ -249,7 +249,7 @@ int ButeEMTag(uint64_t originalCard, int slot) {
     return LF_RWSB_BRUTE_STOPED;
 }
 
-int ExecuteMode(int mode, int slot) {
+static int ExecuteMode(int mode, int slot) {
     LED_Update(mode, slot);
     WDT_HIT();
 
@@ -282,7 +282,7 @@ int ExecuteMode(int mode, int slot) {
     return LF_RWSB_UNKNOWN_RESULT;
 }
 
-int SwitchMode(int mode, int slot) {
+static int SwitchMode(int mode, int slot) {
     WDT_HIT();
     ExecuteMode(mode, slot);
 
