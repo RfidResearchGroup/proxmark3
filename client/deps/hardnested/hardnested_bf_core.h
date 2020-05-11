@@ -52,13 +52,20 @@ THE SOFTWARE.
 
 #include "hardnested_bruteforce.h" // statelist_t
 
+
 typedef enum {
     SIMD_AUTO,
+#if defined (__i386__) || defined (__x86_64__)
+#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
+#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
     SIMD_AVX512,
+#endif
     SIMD_AVX2,
     SIMD_AVX,
     SIMD_SSE2,
     SIMD_MMX,
+#endif
+#endif
     SIMD_NONE,
 } SIMDExecInstr;
 void SetSIMDInstr(SIMDExecInstr instr);
