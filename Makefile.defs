@@ -50,12 +50,12 @@ DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
 DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits -Wold-style-definition
 # Some more warnings we need first to eliminate, so temporarely tolerated:
 DEFCFLAGS += -Wcast-align -Wno-error=cast-align
+DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
 
 # Next ones are activated only if GCCEXTRA=1 or CLANGEXTRA=1
 EXTRACFLAGS =
 EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
 EXTRACFLAGS += -Wsign-compare -Wno-error=sign-compare
-EXTRACFLAGS += -Wswitch-enum -Wno-error=switch-enum
 
 # unknown to clang or old gcc:
 # First we activate Wextra then we explicitly list those we know about
