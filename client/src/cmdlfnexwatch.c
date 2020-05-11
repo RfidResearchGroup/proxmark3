@@ -24,45 +24,131 @@
 #include "protocols.h"      // t55xx defines
 #include "cmdlft55xx.h"     // clone..
 
+typedef enum {
+    SCRAMBLE,
+    DESCRAMBLE
+} NexWatchScramble_t;
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_nexwatch_clone(void) {
     PrintAndLogEx(NORMAL, "clone a Nexwatch tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "You can use raw hex values or create a credential based on id, mode");
+    PrintAndLogEx(NORMAL, "and type of credential (Nexkey/Quadrakey)");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf nexwatch clone [h] [b <raw hex>]");
+    PrintAndLogEx(NORMAL, "Usage: lf nexwatch clone [h] [b <raw hex>] [c <id>] [m <mode>] [n|q]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      r <raw hex>   : raw hex data. 16 bytes max");
+    PrintAndLogEx(NORMAL, "      r <raw hex>   : raw hex data. 12 bytes max");
+    PrintAndLogEx(NORMAL, "      c <id>        : card id (decimal)");
+    PrintAndLogEx(NORMAL, "      m <mode>      : mode (decimal) (0-15, defaults to 1)");
+    PrintAndLogEx(NORMAL, "      n             : Nexkey credential");
+    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");    
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf nexwatch clone r 5600000000213C9F8F150C");
+    PrintAndLogEx(NORMAL, "       lf nexwatch clone c 521512301 m 1 n       -- Nexkey credential");
+    PrintAndLogEx(NORMAL, "       lf nexwatch clone c 521512301 m 1 q       -- Quadrakey credential");
     return PM3_SUCCESS;
 }
 
 static int usage_lf_nexwatch_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Nexwatch card");
+    PrintAndLogEx(NORMAL, "You can use raw hex values or create a credential based on id, mode");
+    PrintAndLogEx(NORMAL, "and type of credential (Nexkey/Quadrakey)");  
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf nexwatch sim [h] <r raw hex>");
+    PrintAndLogEx(NORMAL, "Usage:  lf nexwatch sim [h] <r raw hex> [c <id>] [m <mode>] [n|q]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h            : this help");
     PrintAndLogEx(NORMAL, "      r <raw hex>  : raw hex data. 16 bytes max");
+    PrintAndLogEx(NORMAL, "      c <id>        : card id (decimal)");
+    PrintAndLogEx(NORMAL, "      m <mode>      : mode (decimal) (0-15, defaults to 1)");
+    PrintAndLogEx(NORMAL, "      n             : Nexkey credential");
+    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential"); 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C");
+    PrintAndLogEx(NORMAL, "       lf nexwatch sim c 521512301 m 1 n       -- Nexkey credential");
+    PrintAndLogEx(NORMAL, "       lf nexwatch sim c 521512301 m 1 q       -- Quadrakey credential");
     return PM3_SUCCESS;
 }
-/*
-static inline uint32_t bitcount(uint32_t a) {
-#if defined __GNUC__
-   return __builtin_popcountl(a);
-#else
-   a = a - ((a >> 1) & 0x55555555);
-   a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
-   return (((a + (a >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
-#endif
+
+// scramble parity (1234) -> (4231)
+static uint8_t nexwatch_parity_swap(uint8_t parity) {
+    uint8_t a = (((parity >> 3 ) & 1) );
+    a |= (((parity >> 1 ) & 1) << 1);
+    a |= (((parity >> 2 ) & 1) << 2);
+    a |=  ((parity & 1) << 3);
+    return a;    
 }
-*/
+// parity check 
+// from 32b hex id, 4b mode,
+static uint8_t nexwatch_parity(uint8_t hexid[5]) {
+    uint8_t p = 0;
+    for (uint8_t i = 0; i < 5; i++) {
+        p ^= NIBBLE_HIGH(hexid[i]);
+        p ^= NIBBLE_LOW(hexid[i]);
+    }
+    return nexwatch_parity_swap(p);
+}
+
+/// NETWATCH checksum
+/// @param magic =  0xBE  Quadrakey,  0x88 Nexkey
+/// @param id = descrambled id (printed card number)
+/// @param parity =  the parity based upon the scrambled raw id.
+static uint8_t nexwatch_checksum(uint8_t magic, uint32_t id, uint8_t parity) {
+    uint8_t a = ((id >> 24) & 0xFF);
+    a -= ((id >> 16) & 0xFF);
+    a -= ((id >> 8) & 0xFF);
+    a -= (id & 0xFF);
+    a -= magic;
+    a -= (reflect8(parity) >> 4);
+    return reflect8(a);
+}
+
+// Scrambled id ( 88 bit cardnumber format)
+// ref::  http://www.proxmark.org/forum/viewtopic.php?pid=14662#p14662
+static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *scambled) {
+
+    // 255 = Not used/Unknown other values are the bit offset in the ID/FC values
+    uint8_t hex_2_id [] = { 
+        31, 27, 23, 19, 15, 11, 7, 3,
+        30, 26, 22, 18, 14, 10, 6, 2,
+        29, 25, 21, 17, 13, 9, 5, 1,
+        28, 24, 20, 16, 12, 8, 4, 0
+    };
+
+    switch(action) {
+        case DESCRAMBLE: {
+            *id = 0;
+            for (uint8_t idx = 0; idx < 32; idx++) {
+
+                if (hex_2_id[idx] == 255)
+                    continue;
+
+                bool bit_state = (*scambled >> hex_2_id[idx]) & 1;
+                *id |= (bit_state << (31 - idx));
+            }
+            break;
+        }
+        case SCRAMBLE: {
+            *scambled = 0;
+            for (uint8_t idx = 0; idx < 32; idx++) {
+
+                if (hex_2_id[idx] == 255) 
+                    continue;
+
+                bool bit_state = (*id >> idx) & 1;
+                *scambled |= (bit_state << (31 - hex_2_id[idx]));
+            }
+            break;
+        }
+        default: break;
+    }
+    return PM3_SUCCESS;
+}
+
 int demodNexWatch(void) {
     if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
@@ -95,10 +181,15 @@ int demodNexWatch(void) {
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
     
     if (invert) {
-        PrintAndLogEx(INFO, "Had to Invert - probably NexKey");
+        PrintAndLogEx(INFO, "Inverted the demodulated data");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
     }
+    
+    //got a good demod
+    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t raw3 = bytebits_to_byte(DemodBuffer + 32 + 32, 32);
 
     // get rawid
     uint32_t rawid = 0;
@@ -108,140 +199,62 @@ int demodNexWatch(void) {
         }
     }
 
-    /*
-    Descrambled id    
-    
-    ref::  http://www.proxmark.org/forum/viewtopic.php?pid=14662#p14662
-    
-    32bit UID:     00100100011001000011111100010010
-
-    bits numbered from left (MSB):
-    1234 5678 9012 34567 8901234567890 12
-    0010 0100 0110 0100 00111111000100 10
-
-    descramble:
-    b1 b5 b9 b13   b17 b21 b25 b29   b2 b6 b10 b14   b18 b22 b26 b30   b3 b7 b11 b15   b19 b23 b27 b31   b4 b8 b12 b16   b20 b24 b28 b32
-
-    gives:
-    0000 0100 0111 0100 1010 1101 0000 1110  =  74755342
-    */
-
-// Since the description is not zero indexed we adjust.
-#define DOFFSET  8 + 32 - 1
-    
     // descrambled id
-    uint32_t d_id = 0;
-    // b1 b5 b9 b13 
-    d_id |= DemodBuffer[DOFFSET + 1] << 31;
-    d_id |= DemodBuffer[DOFFSET + 5] << 30;
-    d_id |= DemodBuffer[DOFFSET + 9] << 29;
-    d_id |= DemodBuffer[DOFFSET + 13] << 28;
-
-    // b17 b21 b25 b29
-    d_id |= DemodBuffer[DOFFSET + 17] << 27;
-    d_id |= DemodBuffer[DOFFSET + 21] << 26;
-    d_id |= DemodBuffer[DOFFSET + 25] << 25;
-    d_id |= DemodBuffer[DOFFSET + 29] << 24;
-
-    // b2 b6 b10 b14
-    d_id |= DemodBuffer[DOFFSET + 2] << 23;
-    d_id |= DemodBuffer[DOFFSET + 6] << 22;
-    d_id |= DemodBuffer[DOFFSET + 10] << 21;
-    d_id |= DemodBuffer[DOFFSET + 14] << 20;
-
-    // b18 b22 b26 b30 
-    d_id |= DemodBuffer[DOFFSET + 18] << 19;
-    d_id |= DemodBuffer[DOFFSET + 22] << 18;
-    d_id |= DemodBuffer[DOFFSET + 26] << 17;
-    d_id |= DemodBuffer[DOFFSET + 30] << 16;
-
-    // b3 b7 b11 b15  
-    d_id |= DemodBuffer[DOFFSET + 3] << 15;
-    d_id |= DemodBuffer[DOFFSET + 7] << 14;
-    d_id |= DemodBuffer[DOFFSET + 11] << 13;
-    d_id |= DemodBuffer[DOFFSET + 15] << 12;
-
-    // b19 b23 b27 b31
-    d_id |= DemodBuffer[DOFFSET + 19] << 11;
-    d_id |= DemodBuffer[DOFFSET + 23] << 10;
-    d_id |= DemodBuffer[DOFFSET + 27] << 9;
-    d_id |= DemodBuffer[DOFFSET + 31] << 8;
-
-    // b4 b8 b12 b16
-    d_id |= DemodBuffer[DOFFSET + 4] << 7;
-    d_id |= DemodBuffer[DOFFSET + 8] << 6;
-    d_id |= DemodBuffer[DOFFSET + 12] << 5;
-    d_id |= DemodBuffer[DOFFSET + 16] << 4;
-    
-    // b20 b24 b28 b32
-    d_id |= DemodBuffer[DOFFSET + 20] << 3;
-    d_id |= DemodBuffer[DOFFSET + 24] << 2;
-    d_id |= DemodBuffer[DOFFSET + 28] << 1;
-    d_id |= DemodBuffer[DOFFSET + 32];
-
+    uint32_t cn = 0;
+    uint32_t scambled = bytebits_to_byte(DemodBuffer + 8 + 32, 32);
+    nexwatch_scamble(DESCRAMBLE, &cn, &scambled);
+   
     uint8_t mode = bytebits_to_byte(DemodBuffer + 72, 4);
     uint8_t parity = bytebits_to_byte(DemodBuffer + 76, 4);
     uint8_t chk = bytebits_to_byte(DemodBuffer + 80, 8);
    
     // parity check 
-    // from 32 hex id, 4 mode,  descramble par (1234) -> (4231)
-    uint8_t xor_par = 0;
-    for (uint8_t i = 40; i < 76; i +=4) {
-        xor_par ^= bytebits_to_byte(DemodBuffer + i, 4);
+    // from 32b hex id, 4b mode
+    uint8_t hex[5] = {0};
+    for (uint8_t i = 0; i < 5; i++) {
+        hex[i] = bytebits_to_byte(DemodBuffer + 8 + 32 + (i * 8), 8);
     }
-    
-    uint8_t calc_parity ;   
-    calc_parity =  (((xor_par >> 3 ) & 1) );
-    calc_parity |= (((xor_par >> 1 ) & 1) << 1);
-    calc_parity |= (((xor_par >> 2 ) & 1) << 2);
-    calc_parity |=  ((xor_par & 1) << 3);
-    
-    // Checksum
-    uint8_t calc;
-    calc = ((d_id >> 24) & 0xFF);
-    calc -= ((d_id >> 16) & 0xFF);
-    calc -= ((d_id >> 8) & 0xFF);
-    calc -= (d_id & 0xFF);
-       
-    uint8_t revpar = (reflect8(calc_parity) >> 4);
-    
+    // mode is only 4 bits.
+    hex[4] &= 0xf0;
+    uint8_t calc_parity = nexwatch_parity(hex);
+  
+    // Checksum  
     typedef struct {
         uint8_t magic;
         char desc[10];
         uint8_t chk;
     } nexwatch_magic_t;
-    
     nexwatch_magic_t items[] = { {0xBE, "Quadrakey", 0}, {0x88, "Nexkey", 0} };
 
     uint8_t m_idx; 
     for ( m_idx = 0; m_idx < ARRAYLEN(items); m_idx++) {
-        uint8_t foo = calc;
-        foo -= items[m_idx].magic;
-        foo -= revpar;
-        foo = reflect8(foo);
-        items[m_idx].chk = foo;
-        if (foo == chk) {
+        
+        items[m_idx].chk = nexwatch_checksum(items[m_idx].magic, cn, calc_parity);
+        if (items[m_idx].chk == chk) {
             break;
         }
     }
 
-    // detect keytype
-
     // output
     PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32) , rawid);
-    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " "  _YELLOW_("0x%"PRIx32), d_id, d_id);
-    PrintAndLogEx(SUCCESS, "            mode : %x", mode);  
-    PrintAndLogEx(SUCCESS, "          parity : %s  [%X == %X]", (parity == calc_parity) ? _GREEN_("ok") : _RED_("fail"), parity, calc_parity);
+
     if (m_idx < 3) {
-        PrintAndLogEx(SUCCESS, "        checksum : %s  [%X]",  _GREEN_("ok"), chk);
-        PrintAndLogEx(SUCCESS, "         Keytype : " _GREEN_("%s"),  items[m_idx].desc);
+        PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);        
+    }
+    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%"PRIx32)")", cn, cn);
+    PrintAndLogEx(SUCCESS, "            mode : %x", mode);  
+    if ( parity == calc_parity) {
+        PrintAndLogEx(SUCCESS, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
     } else {
-        PrintAndLogEx(WARNING, "        checksum : %s  [%X == %X]", _RED_("fail"), chk, items[m_idx].chk);
+        PrintAndLogEx(WARNING, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);        
+    }
+    if (m_idx < 3) {
+        PrintAndLogEx(SUCCESS, "        checksum : %s (0x%02X)",  _GREEN_("ok"), chk);
+    } else {
+        PrintAndLogEx(WARNING, "        checksum : %s (0x%02X != 0x%02X)", _RED_("fail"), chk, items[m_idx].chk);
     }
 
-    // bits to hex  (output used for SIM/CLONE cmd)
-     CmdPrintDemodBuff("x");
-//    PrintAndLogEx(INFO, "Raw: %s", sprint_hex_inrow(DemodBuffer, size));
+    PrintAndLogEx(INFO, " raw : " _YELLOW_("%"PRIX64"%"PRIX64"%"PRIX64), raw1, raw2, raw3);
     return PM3_SUCCESS;
 }
 
@@ -259,29 +272,54 @@ static int CmdNexWatchRead(const char *Cmd) {
 
 static int CmdNexWatchClone(const char *Cmd) {
 
-    // 56000000 00213C9F 8F150C00 00000000
-    uint32_t blocks[5];
+    // 56000000 00213C9F 8F150C00
+    uint32_t blocks[4];
+    bool use_raw = false;
     bool errors = false;
     uint8_t cmdp = 0;
     int datalen = 0;
-
+    uint8_t magic = 0xBE;
+    uint32_t cn = 0;
+    uint8_t rawhex[16] = {0x56, 0};
+                
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lf_nexwatch_clone();
             case 'r': {
-                // skip first block,  4*4 = 16 bytes left
-                uint8_t rawhex[16] = {0};
                 int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
                 if (res != 0)
                     errors = true;
 
-                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
-                }
+                use_raw = true;
                 cmdp += 2;
                 break;
             }
+            case 'c': {
+                cn = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                uint32_t scrambled;
+                nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
+                num_to_bytes(scrambled, 4, rawhex + 5);
+                cmdp += 2;
+                break;
+            }
+            case 'm': {
+                uint8_t mode = param_get8ex(Cmd, cmdp + 1, 1, 10);
+                mode &= 0x0F;
+                rawhex[9] |= (mode << 4);
+                cmdp += 2;
+                break;
+            }
+            case 'n': {
+                magic = 0x88;
+                cmdp++;
+                break;
+            }
+            case 'q': {
+                magic = 0xBE;
+                cmdp++;
+                break;
+            }            
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -292,7 +330,17 @@ static int CmdNexWatchClone(const char *Cmd) {
     if (errors || cmdp == 0) return usage_lf_nexwatch_clone();
 
     //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
-    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
+    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
+    
+    if (use_raw == false) {
+        uint8_t parity = nexwatch_parity(rawhex + 5) & 0xF;
+        rawhex[9] |= parity;
+        rawhex[10] |= nexwatch_checksum(magic, cn, parity);
+    }
+    
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
+    }
 
     PrintAndLogEx(INFO, "Preparing to clone NexWatch to T55x7 with raw hex");
     print_blocks(blocks,  ARRAYLEN(blocks));
@@ -307,9 +355,12 @@ static int CmdNexWatchSim(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
-    int rawlen = 0;
-    uint8_t rawhex[16] = {0};
-    uint32_t rawblocks[4];
+    bool use_raw = false;
+    uint8_t rawhex[12] = {0x56, 0};
+    int rawlen = sizeof(rawhex);
+    uint8_t magic = 0xBE;
+    uint32_t cn = 0;
+    
     uint8_t bs[128];
     memset(bs, 0, sizeof(bs));
 
@@ -322,9 +373,35 @@ static int CmdNexWatchSim(const char *Cmd) {
                 if (res != 0)
                     errors = true;
 
+                use_raw = true;
                 cmdp += 2;
                 break;
             }
+            case 'c': {
+                cn = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                uint32_t scrambled;
+                nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
+                num_to_bytes(scrambled, 4, rawhex + 5);
+                cmdp += 2;
+                break;
+            }
+            case 'm': {
+                uint8_t mode = param_get8ex(Cmd, cmdp + 1, 1, 10);
+                mode &= 0x0F;
+                rawhex[9] |= (mode << 4);
+                cmdp += 2;
+                break;
+            }
+            case 'n': {
+                magic = 0x88;
+                cmdp++;
+                break;
+            }
+            case 'q': {
+                magic = 0xBE;
+                cmdp++;
+                break;
+            }  
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -334,7 +411,14 @@ static int CmdNexWatchSim(const char *Cmd) {
 
     if (errors || cmdp == 0) return usage_lf_nexwatch_sim();
 
+    if (use_raw == false) {
+        uint8_t parity = nexwatch_parity(rawhex + 5) & 0xF;
+        rawhex[9] |= parity;
+        rawhex[10] |= nexwatch_checksum(magic, cn, parity);
+    }
+
     // hex to bits.
+    uint32_t rawblocks[4];
     for (size_t i = 0; i < ARRAYLEN(rawblocks); i++) {
         rawblocks[i] = bytes_to_num(rawhex + (i * sizeof(uint32_t)), sizeof(uint32_t));
         num_to_bytebits(rawblocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
