@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `LF_EM4100RSWB` (based on `LF_EM4100RWC`) standalone mode to read/sim/clone/brute EM4100 cards (@Monster1024)
  - Added `HF_MSDSAL` standalone mode which read and emulate Visa EMV cards (@Netxing)
  - Added Mifare Ultralight tear off experiment (@cintainfinita and @fukmar)
  - Added Mifare Desfire Read/Write/Create files/records/values functionality and several fixes to `hf mfdes` (@bkerler)
