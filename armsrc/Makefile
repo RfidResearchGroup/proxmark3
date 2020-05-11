@@ -145,7 +145,10 @@ endif
 OBJS = $(OBJDIR)/fullimage.s19
 FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 
-all: $(OBJS)
+all: showinfo $(OBJS)
+
+showinfo:
+	$(info compiler version:  $(shell $(CC) --version|head -n 1))
 
 .DELETE_ON_ERROR:
 
