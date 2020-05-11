@@ -52,7 +52,7 @@ static int usage_lf_nexwatch_sim(void) {
     PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C");
     return PM3_SUCCESS;
 }
-
+/*
 static inline uint32_t bitcount(uint32_t a) {
 #if defined __GNUC__
    return __builtin_popcountl(a);
@@ -62,7 +62,7 @@ static inline uint32_t bitcount(uint32_t a) {
    return (((a + (a >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
 #endif
 }
-    
+*/
 int demodNexWatch(void) {
     if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
