@@ -269,19 +269,6 @@ static int CmdKeriClone(const char *Cmd) {
         }
     }
 
-    // this is managed in above code
-    // internalid = param_get32ex(Cmd, 0, 0, 10);
-    /*
-        // Q5 is caught in the while loop
-        //Q5
-        if (tolower(param_getchar(Cmd, 1)) == 'q') {
-            blocks[0] =
-                T5555_MODULATION_PSK1 |
-                T5555_SET_BITRATE(128) |
-                T5555_PSK_RF_2 |
-                2 << T5555_MAXBLOCK_SHIFT;
-        }
-    */
     // Setup card data/build internal id
     switch (keritype) {
         case 'i' : // Internal ID
