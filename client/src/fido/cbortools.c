@@ -130,7 +130,7 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
         CborError err;
         CborType type = cbor_value_get_type(it);
 //printf("^%x^", type);
-        bool got_next;
+        bool got_next = false;
 
         switch (type) {
             case CborMapType:
