@@ -75,9 +75,13 @@ static float brute_force_per_second;
 
 static void get_SIMD_instruction_set(char *instruction_set) {
     switch (GetSIMDInstrAuto()) {
+#if defined (__i386__) || defined (__x86_64__)
+#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
+#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
         case SIMD_AVX512:
             strcpy(instruction_set, "AVX512F");
             break;
+#endif
         case SIMD_AVX2:
             strcpy(instruction_set, "AVX2");
             break;
@@ -90,6 +94,8 @@ static void get_SIMD_instruction_set(char *instruction_set) {
         case SIMD_MMX:
             strcpy(instruction_set, "MMX");
             break;
+#endif
+#endif
         case SIMD_AUTO:
         case SIMD_NONE:
             strcpy(instruction_set, "no");

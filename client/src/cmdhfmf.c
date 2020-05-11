@@ -228,10 +228,16 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "        * 2   = 2k");
     PrintAndLogEx(NORMAL, "        * 4   = 4k");
     PrintAndLogEx(NORMAL, "      i <simd type>              set type of SIMD instructions for hardnested. Default: autodetection.");
+#if defined (__i386__) || defined (__x86_64__)
+#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
+#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
     PrintAndLogEx(NORMAL, "        i 5   = AVX512");
+#endif
     PrintAndLogEx(NORMAL, "        i 2   = AVX2");
     PrintAndLogEx(NORMAL, "        i a   = AVX");
     PrintAndLogEx(NORMAL, "        i s   = SSE2");
+#endif
+#endif
     PrintAndLogEx(NORMAL, "        i m   = MMX");
     PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
     PrintAndLogEx(NORMAL, "");
@@ -1998,9 +2004,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 SetSIMDInstr(SIMD_AUTO);
                 ctmp = tolower(param_getchar(Cmd, cmdp + 1));
                 switch (ctmp) {
+#if defined (__i386__) || defined (__x86_64__)
+#if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
+#if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
                     case '5':
                         SetSIMDInstr(SIMD_AVX512);
                         break;
+#endif
                     case '2':
                         SetSIMDInstr(SIMD_AVX2);
                         break;
@@ -2013,6 +2023,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     case 'm':
                         SetSIMDInstr(SIMD_MMX);
                         break;
+#endif
+#endif
                     case 'n':
                         SetSIMDInstr(SIMD_NONE);
                         break;
