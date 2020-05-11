@@ -47,7 +47,7 @@
 #define T55X7_bin 0b0010
 
 #define T5555_DEFAULT_CONFIG_BLOCK      0x6001F004  // data rate 64 , ask, manchester, 2 data blocks?
-enum {
+typedef enum {
     T55x7_RAW = 0x00,
     T55x7_DEFAULT = 0x00,
     T5555_DEFAULT = 0x01,
