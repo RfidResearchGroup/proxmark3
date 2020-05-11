@@ -610,7 +610,8 @@ uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_first_byte
             break;
 #endif
 #endif
-        default:
+        case SIMD_AUTO:
+        case SIMD_NONE:
             crack_states_bitsliced_function_p = &crack_states_bitsliced_NOSIMD;
             break;
     }
@@ -642,7 +643,8 @@ void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, uint32_t *bf_t
             break;
 #endif
 #endif
-        default:
+        case SIMD_AUTO:
+        case SIMD_NONE:
             bitslice_test_nonces_function_p = &bitslice_test_nonces_NOSIMD;
             break;
     }

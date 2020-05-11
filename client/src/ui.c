@@ -424,9 +424,12 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
                     }
                     break;
                 }
-                default: {// ERASE
+                case ERASE: {
                     *emojified_token_length = 0;
                     break;
+                }
+                case ALIAS: { // should never happen
+                    return false;
                 }
             }
             return true;
