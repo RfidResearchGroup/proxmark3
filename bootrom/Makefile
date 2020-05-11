@@ -41,7 +41,10 @@ version.c: default_version.c
 	$(info [=] GEN $@)
 	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
 
-all: $(OBJS)
+all: showinfo $(OBJS)
+
+showinfo:
+	$(info compiler version:  $(shell $(CC) --version|head -n 1))
 
 tarbin: $(OBJS)
 	$(info [=] GEN $@)
@@ -68,7 +71,7 @@ uninstall:
 	$(info [@] Uninstalling bootrom from $(DESTDIR)$(PREFIX)...)
 	$(Q)$(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
 
-.PHONY: all clean help install
+.PHONY: all clean help install showinfo
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:
