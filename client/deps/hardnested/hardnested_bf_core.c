@@ -591,11 +591,11 @@ uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_first_byte
     switch (GetSIMDInstrAuto()) {
 #if defined (__i386__) || defined (__x86_64__)
 #if !defined(__APPLE__) || (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1))
-        case SIMD_AVX512:
 #if (__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2)
+        case SIMD_AVX512:
             crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX512;
-#endif
             break;
+#endif
         case SIMD_AVX2:
             crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX2;
             break;
