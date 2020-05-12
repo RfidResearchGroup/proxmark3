@@ -1840,7 +1840,7 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
         int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, receivedAnswer, receivedAnswerPar, NULL);
         if (len != 1 || receivedAnswer[0] != CARD_ACK) {
             if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-            break;;
+            break;
         }
 
         if (mifare_classic_halt(pcs, cuid)) {

@@ -436,7 +436,7 @@ void LegicRfInfo(void) {
 
     // read MCC and check against UID
     int16_t mcc = read_byte(4, card.cmdsize);
-    int16_t calc_mcc = CRC8Legic(card.uid, 4);;
+    int16_t calc_mcc = CRC8Legic(card.uid, 4);
     if (mcc != calc_mcc) {
         reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;

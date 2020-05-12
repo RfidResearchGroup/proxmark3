@@ -1645,7 +1645,7 @@ void check_challenges(bool file_given, uint8_t *data) {
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
     int t_wait = HITAG_T_WAIT_MAX;
-    int lastbit, STATE = 0;;
+    int lastbit, STATE = 0;
     bool bStop;
     int response_bit[200];
     unsigned char mask = 1;
