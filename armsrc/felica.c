@@ -431,7 +431,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
                 );
                 if (DBGLEVEL >= DBG_DEBUG) Dbprintf("All bytes received! STATE_FULL");
                 return true;
-            } else if (c++ > timeout && FelicaFrame.state == STATE_UNSYNCD) {
+            } else if (c++ > timeout && (FelicaFrame.state == STATE_UNSYNCD || FelicaFrame.state == STATE_TRYING_SYNC)) {
                 if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Error: Timeout! STATE_UNSYNCD");
                 return false;
             }
