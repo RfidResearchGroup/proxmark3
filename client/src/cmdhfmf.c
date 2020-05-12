@@ -2921,7 +2921,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 }
                 keyBlock = p;
             }
-            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));;
+            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
             keycnt++;
         } else if (clen == 1) {
             if (ctmp == 't') { transferToEml = 1; continue; }

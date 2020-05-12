@@ -87,13 +87,13 @@ static int CmdTIDemod(const char *Cmd) {
     int convLen = (highLen > lowLen) ? highLen : lowLen;
     uint16_t crc;
     int i, j, TagType;
-    int lowSum = 0, highSum = 0;;
+    int lowSum = 0, highSum = 0;
     int lowTot = 0, highTot = 0;
     int retval = PM3_ESOFT;
 
     for (i = 0; i < GraphTraceLen - convLen; i++) {
         lowSum = 0;
-        highSum = 0;;
+        highSum = 0;
 
         for (j = 0; j < lowLen; j++) {
             lowSum += LowTone[j] * GraphBuffer[i + j];

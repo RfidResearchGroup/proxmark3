@@ -225,7 +225,7 @@ static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass calcnewkey o 1122334455667788 n 2233445566778899"));
     PrintAndLogEx(NORMAL, "\nNOTE: * = required");
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, "Manage iClass Keys in client memory:\n");
@@ -315,7 +315,7 @@ static int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass chk f dictionaries/iclass_default_keys.dic"));
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass chk f dictionaries/iclass_default_keys.dic e"));
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file\n");

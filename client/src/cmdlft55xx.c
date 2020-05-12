@@ -1619,7 +1619,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     uint32_t password = 0;
     uint8_t cmdp = 0;
     bool errors = false;
-    uint8_t downlink_mode = config.downlink_mode;;
+    uint8_t downlink_mode = config.downlink_mode;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1675,7 +1675,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     bool errors = false;
     bool validate = false;
     uint8_t cmdp = 0;
-    uint32_t downlink_mode = config.downlink_mode;;
+    uint32_t downlink_mode = config.downlink_mode;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1815,7 +1815,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
 static int CmdT55xxReadTrace(const char *Cmd) {
 
     bool frombuff = false;
-    uint8_t downlink_mode = config.downlink_mode;;
+    uint8_t downlink_mode = config.downlink_mode;
     uint8_t cmdp = 0;
     bool errors = false;
 
@@ -2252,7 +2252,7 @@ static int CmdT55xxDump(const char *Cmd) {
 
     uint32_t password = 0;
     uint8_t override = 0;
-    uint8_t downlink_mode = config.downlink_mode;;
+    uint8_t downlink_mode = config.downlink_mode;
     bool usepwd = false;
     bool errors = false;
     uint8_t cmdp = 0;
@@ -2455,7 +2455,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     uint32_t password = 0;
     uint8_t override = 0;
-    uint8_t downlink_mode = config.downlink_mode;;
+    uint8_t downlink_mode = config.downlink_mode;
     bool usepwd = false;
     bool errors = false;
     uint8_t cmdp = 0;
@@ -2809,7 +2809,7 @@ static void t55x7_create_config_block(int tagtype) {
 
 static int CmdResetRead(const char *Cmd) {
 
-    uint8_t downlink_mode = config.downlink_mode;;
+    uint8_t downlink_mode = config.downlink_mode;
     uint8_t flags = 0;
     uint8_t cmdp = 0;
     bool errors = false;
