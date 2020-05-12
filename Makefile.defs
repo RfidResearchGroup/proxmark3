@@ -51,6 +51,8 @@ DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-s
 # Some more warnings we need first to eliminate, so temporarely tolerated:
 DEFCFLAGS += -Wcast-align -Wno-error=cast-align
 DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
+# Termux on-device __BYTE_ORDER and __LITTLE_ENDIAN undef in src/proxendian.h, see #730
+DEFCFLAGS += -Wno-error=undef
 
 ifeq ($(platform),Darwin)
 # their readline has strict-prototype issues
