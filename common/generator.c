@@ -214,6 +214,7 @@ int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    if (keytype > 2) return PM3_EINVARG;
     *key = 0;
     return PM3_SUCCESS;
 }
@@ -233,6 +234,7 @@ int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    if (keytype > 2) return PM3_EINVARG;
     *key = 0;
     return PM3_SUCCESS;
 }
@@ -253,6 +255,7 @@ int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 4) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    if (keytype > 2) return PM3_EINVARG;
 
     if (sector == 0) {
         // A
