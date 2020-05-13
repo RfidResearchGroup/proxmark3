@@ -1387,15 +1387,21 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
         keyCount = size[1] << 8 | size[0];
 
-        if (keyCount == 0 || keyCount == 0xFFFF)
+        if (keyCount == 0)
             goto OUT;
+        
+        // limit size of availlable for keys in bigbuff
+        // a key is 6bytes
+        uint16_t key_mem_available = MIN(BIGBUF_SIZE, keyCount * 6);
+        
+        keyCount = key_mem_available / 6;
 
-        datain = BigBuf_malloc(keyCount * 6);
+        datain = BigBuf_malloc(key_mem_available);
         if (datain == NULL)
             goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET + 2, datain, keyCount * 6);
-        if (isok != keyCount * 6)
+        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET + 2, datain, key_mem_available);
+        if (isok != key_mem_available)
             goto OUT;
 
     }
@@ -1702,14 +1708,16 @@ void MifareChkKeys(uint8_t *datain) {
         bool found;
     } PACKED keyresult;
     keyresult.found = false;
-    uint8_t blockNo, keyType;
-    uint16_t keyCount;
-    bool clearTrace, have_uid = false;
+    bool have_uid = false;
 
-    keyType = datain[0];
-    blockNo = datain[1];
-    clearTrace = datain[2];
-    keyCount = (datain[3] << 8) | datain[4];
+    uint8_t keyType = datain[0];
+    uint8_t blockNo = datain[1];
+    bool clearTrace = datain[2];
+    uint16_t key_count = (datain[3] << 8) | datain[4];
+
+    uint16_t key_mem_available = MIN( (PM3_CMD_DATA_SIZE - 5) , key_count * 6);
+    key_count = key_mem_available / 6;
+    
     datain += 5;
 
     LEDsoff();
@@ -1725,7 +1733,7 @@ void MifareChkKeys(uint8_t *datain) {
 
     set_tracing(false);
 
-    for (i = 0; i < keyCount; i++) {
+    for (i = 0; i < key_count; i++) {
 
         // Iceman: use piwi's faster nonce collecting part in hardnested.
         if (!have_uid) { // need a full select cycle to get the uid first
