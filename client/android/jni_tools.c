@@ -50,7 +50,10 @@ CMD *parse_command_line(const char *commandStr) {
     // new memory size is default 20 for char **
     int size = 20;
     cmd->cmd = (char **) malloc(size * sizeof(char **));
-    if (!cmd->cmd) return NULL;
+    if (!cmd->cmd) {
+        free(cmd);
+        return NULL;
+    }
     // parse
     char *pStr = strtok(pTmp, " ");
     cmd->cmd[0] = pStr;
