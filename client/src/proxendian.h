@@ -17,7 +17,11 @@
 # define HOST_LITTLE_ENDIAN
 #else
 // Only some OSes include endian.h from sys/types.h, not Termux, so let's include endian.h directly
-# include <endian.h>
+# if defined(__APPLE__)
+#  include <machine/endian.h>
+# else
+#  include <endian.h>
+# endif
 # if !defined(BYTE_ORDER)
 #  if !defined(__BYTE_ORDER) || (__BYTE_ORDER != __LITTLE_ENDIAN && __BYTE_ORDER != __BIG_ENDIAN)
 #   error Define BYTE_ORDER to be equal to either LITTLE_ENDIAN or BIG_ENDIAN
