@@ -547,12 +547,12 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), portname);
         fflush(stdout);
         int openCount = 0;
-        PrintAndLogEx(INPLACE, "");
+        PrintAndLogEx(INPLACE, "% 3i", timeout);
         do {
             sp = uart_open(portname, speed);
             msleep(500);
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(INPLACE, "% 3i", timeout - openCount -1);
+
         } while (++openCount < timeout && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
     }
 

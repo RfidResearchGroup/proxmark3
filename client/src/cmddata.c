@@ -1671,19 +1671,21 @@ int CmdTuneSamples(const char *Cmd) {
     RepaintGraphWindow();
 
     int timeout = 0;
+    int timeout_max = 20;
     PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
     PacketResponseNG resp;
-    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 2000)) {
-        timeout++;
-        printf(".");
+    PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
+    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500)) {
         fflush(stdout);
-        if (timeout > 7) {
+        if (timeout >= timeout_max) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return PM3_ETIMEOUT;
         }
+        timeout++;
+        PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
     }
 
     if (resp.status != PM3_SUCCESS) {
@@ -1728,7 +1730,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%sLF antenna is %s \n"
+    PrintAndLogEx(NORMAL, "%s LF antenna is %s \n"
                   , (package->peak_v < LF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
                   , judgement
                  );
@@ -1746,7 +1748,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%sHF antenna is %s"
+    PrintAndLogEx(NORMAL, "%s HF antenna is %s"
                   , (package->v_hf < HF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
                   , judgement
                  );
