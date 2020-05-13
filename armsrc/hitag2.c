@@ -1397,21 +1397,23 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     uint8_t attempt_count = 0;
 
     // Tag specific configuration settings (sof, timings, etc.)
-    if (htf < 10) {
+// TODO HTS
+/*  if (htf <= HTS_LAST_CMD) {
         // hitagS settings
         t_wait_1 = 204;
         t_wait_2 = 128;
         flipped_bit = 0;
         tag_size = 8;
         DBG DbpString("Configured for hitagS reader");
-    } else if (htf < 20) {
+    } else */
+    if (htf <= HT1_LAST_CMD) {
         // hitag1 settings
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
         flipped_bit = 0;
         DBG DbpString("Configured for hitag1 reader");
-    } else if (htf < 30) {
+    } else if (htf <= HT2_LAST_CMD) {
         // hitag2 settings
         t_wait_1 = HITAG_T_WAIT_1_MIN;
         t_wait_2 = HITAG_T_WAIT_2_MIN;
@@ -1721,28 +1723,32 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     lf_init(true, false);
 
     // Tag specific configuration settings (sof, timings, etc.)
-    if (htf < 10) {
+// TODO HTS
+/*    if (htf <= HTS_LAST_CMD) {
         // hitagS settings
         t_wait_1 = 204;
         t_wait_2 = 128;
-        /*tag_size = 256;*/
+        //tag_size = 256;
         flipped_bit = 0;
         tag_size = 8;
         DbpString("Configured for hitagS writer");
-    } else if (htf < 20) {
+    } else */
+// TODO HT1
+/*    if (htf <= HT1_LAST_CMD) {
         // hitag1 settings
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
         flipped_bit = 0;
         DbpString("Configured for hitag1 writer");
-    } else if (htf < 30) {
-        // hitag2 settings
-        t_wait_1 = HITAG_T_WAIT_1_MIN;
-        t_wait_2 = HITAG_T_WAIT_2_MIN;
-        tag_size = 48;
-        DbpString("Configured for hitag2 writer");
-    }
+    } else */
+//    if (htf <= HT2_LAST_CMD) {
+    // hitag2 settings
+    t_wait_1 = HITAG_T_WAIT_1_MIN;
+    t_wait_2 = HITAG_T_WAIT_2_MIN;
+    tag_size = 48;
+    DbpString("Configured for hitag2 writer");
+//    }
 
     uint8_t tag_modulation;
     size_t max_nrzs = (8 * HITAG_FRAME_LEN + 5) * 2; // up to 2 nrzs per bit
