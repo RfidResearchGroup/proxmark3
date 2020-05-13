@@ -43,7 +43,7 @@ static int usage_lf_nexwatch_clone(void) {
     PrintAndLogEx(NORMAL, "      c <id>        : card id (decimal)");
     PrintAndLogEx(NORMAL, "      m <mode>      : mode (decimal) (0-15, defaults to 1)");
     PrintAndLogEx(NORMAL, "      n             : Nexkey credential");
-    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");    
+    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf nexwatch clone r 5600000000213C9F8F150C");
@@ -55,7 +55,7 @@ static int usage_lf_nexwatch_clone(void) {
 static int usage_lf_nexwatch_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Nexwatch card");
     PrintAndLogEx(NORMAL, "You can use raw hex values or create a credential based on id, mode");
-    PrintAndLogEx(NORMAL, "and type of credential (Nexkey/Quadrakey)");  
+    PrintAndLogEx(NORMAL, "and type of credential (Nexkey/Quadrakey)");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf nexwatch sim [h] <r raw hex> [c <id>] [m <mode>] [n|q]");
@@ -65,7 +65,7 @@ static int usage_lf_nexwatch_sim(void) {
     PrintAndLogEx(NORMAL, "      c <id>        : card id (decimal)");
     PrintAndLogEx(NORMAL, "      m <mode>      : mode (decimal) (0-15, defaults to 1)");
     PrintAndLogEx(NORMAL, "      n             : Nexkey credential");
-    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential"); 
+    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C");
@@ -76,10 +76,10 @@ static int usage_lf_nexwatch_sim(void) {
 
 // scramble parity (1234) -> (4231)
 static uint8_t nexwatch_parity_swap(uint8_t parity) {
-    uint8_t a = (((parity >> 3 ) & 1) );
-    a |= (((parity >> 1 ) & 1) << 1);
-    a |= (((parity >> 2 ) & 1) << 2);
-    a |=  ((parity & 1) << 3);
+    uint8_t a = (((parity >> 3) & 1));
+    a |= (((parity >> 1) & 1) << 1);
+    a |= (((parity >> 2) & 1) << 2);
+    a |= ((parity & 1) << 3);
     return a;
 }
 // parity check
@@ -119,7 +119,7 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
         28, 24, 20, 16, 12, 8, 4, 0
     };
 
-    switch(action) {
+    switch (action) {
         case DESCRAMBLE: {
             *id = 0;
             for (uint8_t idx = 0; idx < 32; idx++) {
@@ -144,7 +144,8 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
             }
             break;
         }
-        default: break;
+        default:
+            break;
     }
     return PM3_SUCCESS;
 }
@@ -227,7 +228,7 @@ int demodNexWatch(void) {
     nexwatch_magic_t items[] = { {0xBE, "Quadrakey", 0}, {0x88, "Nexkey", 0} };
 
     uint8_t m_idx;
-    for ( m_idx = 0; m_idx < ARRAYLEN(items); m_idx++) {
+    for (m_idx = 0; m_idx < ARRAYLEN(items); m_idx++) {
 
         items[m_idx].chk = nexwatch_checksum(items[m_idx].magic, cn, calc_parity);
         if (items[m_idx].chk == chk) {
@@ -236,14 +237,14 @@ int demodNexWatch(void) {
     }
 
     // output
-    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32) , rawid);
+    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32), rawid);
 
     if (m_idx < ARRAYLEN(items)) {
         PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);
     }
     PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%"PRIx32)")", cn, cn);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);
-    if ( parity == calc_parity) {
+    if (parity == calc_parity) {
         PrintAndLogEx(SUCCESS, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
     } else {
         PrintAndLogEx(WARNING, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);
@@ -337,7 +338,7 @@ static int CmdNexWatchClone(const char *Cmd) {
         rawhex[9] |= parity;
         rawhex[10] |= nexwatch_checksum(magic, cn, parity);
     }
- 
+
     for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
         blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
     }

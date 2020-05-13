@@ -564,13 +564,13 @@ static SIMDExecInstr GetSIMDInstr(void) {
     else
 #endif
 #if defined(COMPILER_HAS_SIMD)
-    if (__builtin_cpu_supports("avx2")) instr = SIMD_AVX2;
-    else if (__builtin_cpu_supports("avx")) instr = SIMD_AVX;
-    else if (__builtin_cpu_supports("sse2")) instr = SIMD_SSE2;
-    else if (__builtin_cpu_supports("mmx")) instr = SIMD_MMX;
-    else
+        if (__builtin_cpu_supports("avx2")) instr = SIMD_AVX2;
+        else if (__builtin_cpu_supports("avx")) instr = SIMD_AVX;
+        else if (__builtin_cpu_supports("sse2")) instr = SIMD_SSE2;
+        else if (__builtin_cpu_supports("mmx")) instr = SIMD_MMX;
+        else
 #endif
-        instr = SIMD_NONE;
+            instr = SIMD_NONE;
 
     return instr;
 }

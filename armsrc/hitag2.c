@@ -1398,14 +1398,14 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
     // Tag specific configuration settings (sof, timings, etc.)
 // TODO HTS
-/*  if (htf <= HTS_LAST_CMD) {
-        // hitagS settings
-        t_wait_1 = 204;
-        t_wait_2 = 128;
-        flipped_bit = 0;
-        tag_size = 8;
-        DBG DbpString("Configured for hitagS reader");
-    } else */
+    /*  if (htf <= HTS_LAST_CMD) {
+            // hitagS settings
+            t_wait_1 = 204;
+            t_wait_2 = 128;
+            flipped_bit = 0;
+            tag_size = 8;
+            DBG DbpString("Configured for hitagS reader");
+        } else */
     if (htf <= HT1_LAST_CMD) {
         // hitag1 settings
         t_wait_1 = 204;
@@ -1724,24 +1724,24 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     // Tag specific configuration settings (sof, timings, etc.)
 // TODO HTS
-/*    if (htf <= HTS_LAST_CMD) {
-        // hitagS settings
-        t_wait_1 = 204;
-        t_wait_2 = 128;
-        //tag_size = 256;
-        flipped_bit = 0;
-        tag_size = 8;
-        DbpString("Configured for hitagS writer");
-    } else */
+    /*    if (htf <= HTS_LAST_CMD) {
+            // hitagS settings
+            t_wait_1 = 204;
+            t_wait_2 = 128;
+            //tag_size = 256;
+            flipped_bit = 0;
+            tag_size = 8;
+            DbpString("Configured for hitagS writer");
+        } else */
 // TODO HT1
-/*    if (htf <= HT1_LAST_CMD) {
-        // hitag1 settings
-        t_wait_1 = 204;
-        t_wait_2 = 128;
-        tag_size = 256;
-        flipped_bit = 0;
-        DbpString("Configured for hitag1 writer");
-    } else */
+    /*    if (htf <= HT1_LAST_CMD) {
+            // hitag1 settings
+            t_wait_1 = 204;
+            t_wait_2 = 128;
+            tag_size = 256;
+            flipped_bit = 0;
+            DbpString("Configured for hitag1 writer");
+        } else */
 //    if (htf <= HT2_LAST_CMD) {
     // hitag2 settings
     t_wait_1 = HITAG_T_WAIT_1_MIN;

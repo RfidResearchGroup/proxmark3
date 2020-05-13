@@ -1389,11 +1389,11 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
         if (keyCount == 0)
             goto OUT;
-        
+
         // limit size of availlable for keys in bigbuff
         // a key is 6bytes
         uint16_t key_mem_available = MIN(BIGBUF_SIZE, keyCount * 6);
-        
+
         keyCount = key_mem_available / 6;
 
         datain = BigBuf_malloc(key_mem_available);
@@ -1715,9 +1715,9 @@ void MifareChkKeys(uint8_t *datain) {
     bool clearTrace = datain[2];
     uint16_t key_count = (datain[3] << 8) | datain[4];
 
-    uint16_t key_mem_available = MIN( (PM3_CMD_DATA_SIZE - 5) , key_count * 6);
+    uint16_t key_mem_available = MIN((PM3_CMD_DATA_SIZE - 5), key_count * 6);
     key_count = key_mem_available / 6;
-    
+
     datain += 5;
 
     LEDsoff();

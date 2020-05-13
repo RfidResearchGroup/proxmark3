@@ -1301,7 +1301,7 @@ bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wa
         config.Q5 = tests[0].Q5;
         config.ST = tests[0].ST;
         config.downlink_mode = downlink_mode;
-                
+
         if (print_config)
             printConfiguration(config);
 

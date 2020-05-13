@@ -2041,15 +2041,15 @@ void T55xx_ChkPwds(uint8_t flags) {
     if (isok != sizeof(counter))
         goto OUT;
 
-    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);   
+    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
     if (pwd_count == 0)
         goto OUT;
-        
+
     // since flash can report way too many pwds, we need to limit it.
     // bigbuff EM size is determined by CARD_MEMORY_SIZE
     // a password is 4bytes.
     uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
-    
+
     // adjust available pwd_count
     pwd_count = pwd_size_available / 4;
 
