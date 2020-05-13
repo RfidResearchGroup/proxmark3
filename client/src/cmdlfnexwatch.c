@@ -80,9 +80,9 @@ static uint8_t nexwatch_parity_swap(uint8_t parity) {
     a |= (((parity >> 1 ) & 1) << 1);
     a |= (((parity >> 2 ) & 1) << 2);
     a |=  ((parity & 1) << 3);
-    return a;    
+    return a;
 }
-// parity check 
+// parity check
 // from 32b hex id, 4b mode,
 static uint8_t nexwatch_parity(uint8_t hexid[5]) {
     uint8_t p = 0;
@@ -112,7 +112,7 @@ static uint8_t nexwatch_checksum(uint8_t magic, uint32_t id, uint8_t parity) {
 static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *scambled) {
 
     // 255 = Not used/Unknown other values are the bit offset in the ID/FC values
-    uint8_t hex_2_id [] = { 
+    uint8_t hex_2_id [] = {
         31, 27, 23, 19, 15, 11, 7, 3,
         30, 26, 22, 18, 14, 10, 6, 2,
         29, 25, 21, 17, 13, 9, 5, 1,
@@ -136,7 +136,7 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
             *scambled = 0;
             for (uint8_t idx = 0; idx < 32; idx++) {
 
-                if (hex_2_id[idx] == 255) 
+                if (hex_2_id[idx] == 255)
                     continue;
 
                 bool bit_state = (*id >> idx) & 1;
@@ -176,16 +176,16 @@ int demodNexWatch(void) {
 
     // skip the 4 first bits from the nexwatch preamble identification (we use 4 extra zeros..)
     idx += 4;
-    
+
     setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
-    
+
     if (invert) {
         PrintAndLogEx(INFO, "Inverted the demodulated data");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
     }
-    
+
     //got a good demod
     uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
@@ -203,12 +203,12 @@ int demodNexWatch(void) {
     uint32_t cn = 0;
     uint32_t scambled = bytebits_to_byte(DemodBuffer + 8 + 32, 32);
     nexwatch_scamble(DESCRAMBLE, &cn, &scambled);
-   
+
     uint8_t mode = bytebits_to_byte(DemodBuffer + 72, 4);
     uint8_t parity = bytebits_to_byte(DemodBuffer + 76, 4);
     uint8_t chk = bytebits_to_byte(DemodBuffer + 80, 8);
-   
-    // parity check 
+
+    // parity check
     // from 32b hex id, 4b mode
     uint8_t hex[5] = {0};
     for (uint8_t i = 0; i < 5; i++) {
@@ -217,8 +217,8 @@ int demodNexWatch(void) {
     // mode is only 4 bits.
     hex[4] &= 0xf0;
     uint8_t calc_parity = nexwatch_parity(hex);
-  
-    // Checksum  
+
+    // Checksum
     typedef struct {
         uint8_t magic;
         char desc[10];
@@ -226,9 +226,9 @@ int demodNexWatch(void) {
     } nexwatch_magic_t;
     nexwatch_magic_t items[] = { {0xBE, "Quadrakey", 0}, {0x88, "Nexkey", 0} };
 
-    uint8_t m_idx; 
+    uint8_t m_idx;
     for ( m_idx = 0; m_idx < ARRAYLEN(items); m_idx++) {
-        
+
         items[m_idx].chk = nexwatch_checksum(items[m_idx].magic, cn, calc_parity);
         if (items[m_idx].chk == chk) {
             break;
@@ -238,20 +238,20 @@ int demodNexWatch(void) {
     // output
     PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32) , rawid);
 
-    if (m_idx < 3) {
-        PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);        
+    if (m_idx < ARRAYLEN(items)) {
+        PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);
     }
     PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%"PRIx32)")", cn, cn);
-    PrintAndLogEx(SUCCESS, "            mode : %x", mode);  
+    PrintAndLogEx(SUCCESS, "            mode : %x", mode);
     if ( parity == calc_parity) {
         PrintAndLogEx(SUCCESS, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
     } else {
-        PrintAndLogEx(WARNING, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);        
+        PrintAndLogEx(WARNING, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);
     }
-    if (m_idx < 3) {
-        PrintAndLogEx(SUCCESS, "        checksum : %s (0x%02X)",  _GREEN_("ok"), chk);
+    if (m_idx < ARRAYLEN(items)) {
+        PrintAndLogEx(SUCCESS, "        checksum : %s (0x%02X)", _GREEN_("ok"), chk);
     } else {
-        PrintAndLogEx(WARNING, "        checksum : %s (0x%02X != 0x%02X)", _RED_("fail"), chk, items[m_idx].chk);
+        PrintAndLogEx(WARNING, "        checksum : %s (0x%02X)", _RED_("fail"), chk);
     }
 
     PrintAndLogEx(INFO, " raw : " _YELLOW_("%"PRIX32"%"PRIX32"%"PRIX32), raw1, raw2, raw3);
@@ -281,7 +281,7 @@ static int CmdNexWatchClone(const char *Cmd) {
     uint8_t magic = 0xBE;
     uint32_t cn = 0;
     uint8_t rawhex[16] = {0x56, 0};
-                
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -319,7 +319,7 @@ static int CmdNexWatchClone(const char *Cmd) {
                 magic = 0xBE;
                 cmdp++;
                 break;
-            }            
+            }
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -331,13 +331,13 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
-    
+
     if (use_raw == false) {
         uint8_t parity = nexwatch_parity(rawhex + 5) & 0xF;
         rawhex[9] |= parity;
         rawhex[10] |= nexwatch_checksum(magic, cn, parity);
     }
-    
+ 
     for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
         blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
     }
@@ -360,7 +360,6 @@ static int CmdNexWatchSim(const char *Cmd) {
     int rawlen = sizeof(rawhex);
     uint8_t magic = 0xBE;
     uint32_t cn = 0;
-    
     uint8_t bs[128];
     memset(bs, 0, sizeof(bs));
 
@@ -401,7 +400,7 @@ static int CmdNexWatchSim(const char *Cmd) {
                 magic = 0xBE;
                 cmdp++;
                 break;
-            }  
+            }
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
