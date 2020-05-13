@@ -2469,12 +2469,12 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     CLIGetHexWithReturn(3, offset, &offsetlength);
 
     int dlength = 0xFFFF;
-    uint8_t *data = (uint8_t *)calloc(0xFFFF, sizeof(uint8_t));
+    uint8_t *data = (uint8_t *)calloc(dlength, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    if (CLIParamHexToBuf(arg_get_str(4), data, sizeof(data), &dlength)) {
+    if (CLIParamHexToBuf(arg_get_str(4), data, dlength, &dlength)) {
         free(data);
         CLIParserFree();
         return PM3_ESOFT;
