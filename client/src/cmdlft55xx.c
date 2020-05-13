@@ -960,24 +960,14 @@ bool DecodeT55xxBlock(void) {
             ans = ASKDemod_ext(cmdStr, false, false, 1, &ST);
             break;
         case DEMOD_PSK1:
-            // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-            save_restoreGB(GRAPH_SAVE);
-            CmdLtrim("150");
             snprintf(cmdStr, sizeof(buf), "%d %d 6", bitRate[config.bitrate], config.inverted);
             ans = PSKDemod(cmdStr, false);
-            //undo trim samples
-            save_restoreGB(GRAPH_RESTORE);
             break;
         case DEMOD_PSK2: //inverted won't affect this
         case DEMOD_PSK3: //not fully implemented
-            // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-            save_restoreGB(GRAPH_SAVE);
-            CmdLtrim("150");
             snprintf(cmdStr, sizeof(buf), "%d 0 6", bitRate[config.bitrate]);
             ans = PSKDemod(cmdStr, false);
             psk1TOpsk2(DemodBuffer, DemodBufferLen);
-            //undo trim samples
-            save_restoreGB(GRAPH_RESTORE);
             break;
         case DEMOD_NRZ:
             snprintf(cmdStr, sizeof(buf), "%d %d 1", bitRate[config.bitrate], config.inverted);
