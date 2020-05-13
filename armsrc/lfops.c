@@ -2030,7 +2030,7 @@ void T55xx_ChkPwds(uint8_t flags) {
     Dbprintf("[=] Baseline determined [%u]", baseline);
 
     uint8_t *pwds = BigBuf_get_EM_addr();
-    uint16_t pwdCount = 0;
+    uint16_t pwd_count = 0;
     uint32_t candidate = 0;
 #ifdef WITH_FLASH
 
@@ -2041,20 +2041,27 @@ void T55xx_ChkPwds(uint8_t flags) {
     if (isok != sizeof(counter))
         goto OUT;
 
-    pwdCount = (uint16_t)(counter[1] << 8 | counter[0]);
+    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);   
+    if (pwd_count == 0)
+        goto OUT;
+        
+    // since flash can report way too many pwds, we need to limit it.
+    // bigbuff EM size is determined by CARD_MEMORY_SIZE
+    // a password is 4bytes.
+    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
+    
+    // adjust available pwd_count
+    pwd_count = pwd_size_available / 4;
 
-    if (pwdCount == 0 || pwdCount == 0xFFFF)
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwd_size_available);
+    if (isok != pwd_size_available)
         goto OUT;
 
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwdCount * 4);
-    if (isok != pwdCount * 4)
-        goto OUT;
-
-    Dbprintf("[=] Password dictionary count %d ", pwdCount);
+    Dbprintf("[=] Password dictionary count %d ", pwd_count);
 #endif
 
     uint32_t pwd = 0, curr = 0, prev = 0;
-    for (uint16_t i = 0; i < pwdCount; ++i) {
+    for (uint16_t i = 0; i < pwd_count; ++i) {
 
         if (BUTTON_PRESS() && !data_available()) {
             goto OUT;
