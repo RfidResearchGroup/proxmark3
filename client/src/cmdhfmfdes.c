@@ -2474,7 +2474,11 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    CLIGetHexWithReturn(4, data, &dlength);
+    if (CLIParamHexToBuf(arg_get_str(4), data, sizeof(data), &dlength)) {
+        free(data);
+        CLIParserFree();
+        return PM3_ESOFT;
+    }
 
     int type = arg_get_int(5);
 
