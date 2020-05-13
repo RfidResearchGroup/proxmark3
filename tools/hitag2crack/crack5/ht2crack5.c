@@ -93,6 +93,24 @@ const uint64_t unbitslice(const bitslice_t *restrict b, const uint8_t s, const u
     return result;
 }
 
+
+// determine number of logical CPU cores (use for multithreaded functions)
+static int num_CPUs(void) {
+#if defined(_WIN32)
+#include <sysinfoapi.h>
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    return sysinfo.dwNumberOfProcessors;
+#else
+#include <unistd.h>
+    int count = sysconf(_SC_NPROCESSORS_ONLN);
+    if (count < 2)
+        count = 2;
+    return count;
+#endif
+}
+
+
 uint32_t uid, nR1, aR1, nR2, aR2;
 
 uint64_t candidates[(1 << 20)];
@@ -116,12 +134,7 @@ int main(int argc, char *argv[]) {
 
     uint32_t target = 0;
 
-#ifndef __WIN32
-    thread_count = sysconf(_SC_NPROCESSORS_CONF);
-    if (thread_count < 2)
-        thread_count = 2;
-#endif  /* _WIN32 */
-
+    thread_count = num_CPUs();
 
     if (!strncmp(argv[1], "0x", 2) || !strncmp(argv[1], "0X", 2)) {
         uid = rev32(hexreversetoulong(argv[1] + 2));
