@@ -55,15 +55,15 @@
 #endif
 
 #ifndef REV16
-#define REV16(x)        (REV8(x) + (REV8 (x >> 8) << 8))
+#define REV16(x)        (REV8(x) + (REV8 ((x) >> 8) << 8))
 #endif
 
 #ifndef REV32
-#define REV32(x)        (REV16(x) + (REV16(x >> 16) << 16))
+#define REV32(x)        (REV16(x) + (REV16((x) >> 16) << 16))
 #endif
 
 #ifndef REV64
-#define REV64(x)        (REV32(x) + (REV32(x >> 32) << 32))
+#define REV64(x)        (REV32(x) + (REV32((x) >> 32) << 32))
 #endif
 
 #ifndef BIT32

@@ -454,7 +454,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 //add crc8
                 *txlen = 40;
                 crc = CRC_PRESET;
-                calc_crc(&crc, tag.pages[1][2]), 8);
+                calc_crc(&crc, tag.pages[1][2], 8);
                 calc_crc(&crc, tag.pwdh0, 8);
                 calc_crc(&crc, tag.pwdl0, 8);
                 calc_crc(&crc, tag.pwdl1, 8);
