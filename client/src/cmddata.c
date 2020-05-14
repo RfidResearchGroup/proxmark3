@@ -1730,10 +1730,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%s LF antenna is %s \n"
-                  , (package->peak_v < LF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
-                  , judgement
-                 );
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s \n", judgement);
 
     // HF evaluation
     if (package->v_hf > NON_VOLTAGE)
@@ -1748,10 +1745,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%s HF antenna is %s"
-                  , (package->v_hf < HF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
-                  , judgement
-                 );
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s \n", judgement);
 
     // graph LF measurements
     // even here, these values has 3% error.
