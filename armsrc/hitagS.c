@@ -446,7 +446,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 _hitag2_byte(&state);
 
             //send con2, pwdh0, pwdl0, pwdl1 encrypted as a response
-            tx[0] = _hitag2_byte(&state) ^ ((tag.pages[0][1] >> 16) & 0xff);
+            tx[0] = _hitag2_byte(&state) ^ tag.pages[0][1];
             tx[1] = _hitag2_byte(&state) ^ tag.pwdh0;
             tx[2] = _hitag2_byte(&state) ^ tag.pwdl0;
             tx[3] = _hitag2_byte(&state) ^ tag.pwdl1;
@@ -454,7 +454,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 //add crc8
                 *txlen = 40;
                 crc = CRC_PRESET;
-                calc_crc(&crc, ((tag.pages[0][1] >> 16) & 0xff), 8);
+                calc_crc(&crc, tag.pages[0][1], 8);
                 calc_crc(&crc, tag.pwdh0, 8);
                 calc_crc(&crc, tag.pwdl0, 8);
                 calc_crc(&crc, tag.pwdl1, 8);
