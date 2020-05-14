@@ -501,7 +501,7 @@ failtag:
             LED_A_INV();
         }
 
-        if (BUTTON_HELD(10) > 0) {
+        if (BUTTON_HELD(10) == BUTTON_HOLD) {
             WDT_HIT();
             DbprintfEx(FLAG_NEWLINE, "\t\t\t[    READING FLASH   ]");
             ReadLastTagFromFlash();

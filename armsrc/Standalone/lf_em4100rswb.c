@@ -215,13 +215,12 @@ static int ButeEMTag(uint64_t originalCard, int slot) {
         direction = -1;
     }
 
-    uint64_t currentCard;
     while (cardnum > 1 && cardnum < 65535) {
         WDT_HIT();
         if (data_available()) break;
 
         cardnum = cardnum + direction;
-        currentCard = PackEmID(originalCard, cardnum);
+        uint64_t currentCard = PackEmID(originalCard, cardnum);
         Dbprintf("[=] >>  Simulating card id %"PRIx64" <<", currentCard);
         ConstructEM410xEmulBuf(ReversQuads(currentCard));
         SimulateTagLowFrequencyEx(buflen, 0, 1, bruteforceSpeed[bruteforceSpeedCurrent] * 10000);

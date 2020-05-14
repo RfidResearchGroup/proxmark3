@@ -35,7 +35,7 @@ void RunMod(void) {
 
         Dbprintf("button %d", button_pressed);
 
-        if (button_pressed)
+        if (button_pressed != BUTTON_NO_CLICK)
             break;
     }
 

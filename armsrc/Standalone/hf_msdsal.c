@@ -222,9 +222,9 @@ void RunMod(void) {
         // Was our button held down or pressed?
         int button_pressed = BUTTON_HELD(1000);
 
-        if (button_pressed  == 1)        //Holding down the button
+        if (button_pressed  == BUTTON_HOLD)        //Holding down the button
             break;
-        else if (button_pressed == -1) { //Pressing one time change between reading & emulation
+        else if (button_pressed == BUTTON_SINGLE_CLICK) { //Pressing one time change between reading & emulation
             if (state == STATE_READ) {
                 if (chktoken == true && token[0] != 0x00) {  //Only change to emulation if it saved a track 2 in memory
                     state = STATE_EMU;

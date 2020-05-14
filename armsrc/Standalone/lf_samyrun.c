@@ -56,11 +56,6 @@ void RunMod(void) {
         int button_pressed = BUTTON_HELD(280);
         if (button_pressed != BUTTON_HOLD)
             continue;
-        /*
-        #define BUTTON_NO_CLICK 0
-        #define BUTTON_SINGLE_CLICK -1
-        #define BUTTON_DOUBLE_CLICK -2
-        */
 
         if (state == STATE_READ) {
 

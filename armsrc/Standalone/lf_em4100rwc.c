@@ -141,12 +141,12 @@ void RunMod(void) {
         switch (state) {
             case 0:
                 // Select mode
-                if (button_pressed == 1) {
+                if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to simulate mode
                     SpinUp(100);
                     LED_Slot(selected);
                     state = 2;
-                } else if (button_pressed < 0) {
+                } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - switch to next slot
                     selected = (selected + 1) % slots_count;
                     LED_Slot(selected);
@@ -154,12 +154,12 @@ void RunMod(void) {
                 break;
             case 1:
                 // Read mode.
-                if (button_pressed > 0) {
+                if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to read mode
                     SpinUp(100);
                     LED_Slot(selected);
                     state = 3;
-                } else if (button_pressed < 0) {
+                } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - exit to select mode
                     CmdEM410xdemod(1, &high[selected], &low[selected], 0);
                     FlashLEDs(100, 5);
@@ -171,12 +171,12 @@ void RunMod(void) {
                 break;
             case 2:
                 // Simulate mode
-                if (button_pressed > 0) {
+                if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to read mode
                     SpinDown(100);
                     LED_Slot(selected);
                     state = 1;
-                } else if (button_pressed < 0) {
+                } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - start simulating. Click again to exit from simulate mode
                     LED_Slot(selected);
                     ConstructEM410xEmulBuf(ReversQuads(low[selected]));
@@ -188,12 +188,12 @@ void RunMod(void) {
                 break;
             case 3:
                 // Write tag mode
-                if (button_pressed > 0) {
+                if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to select mode
                     SpinDown(100);
                     LED_Slot(selected);
                     state = 0;
-                } else if (button_pressed < 0) {
+                } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - write ID to tag
                     WriteEM410x(0, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff));
                     LED_Slot(selected);
