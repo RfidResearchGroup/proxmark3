@@ -53,6 +53,16 @@ uint8_t uid[10];
 uint32_t cuid;
 iso14a_card_select_t p_card;
 
+/*
+    Pseudo-configuration block.
+*/
+bool printKeys = false;         // Prints keys
+bool transferToEml = true;      // Transfer keys to emulator memory
+bool ecfill = true;             // Fill emulator memory with cards content.
+bool simulation = true;         // Simulates an exact copy of the target tag
+bool fillFromEmulator = false;  // Dump emulator memory.
+uint8_t stKeyBlock = 20;        // Set the quantity of keys in the block.
+
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
@@ -232,24 +242,14 @@ void RunMod(void) {
     // Comment this line below if you want to see debug messages.
     // usb_disable();
 
-    /*
-        Pseudo-configuration block.
-    */
-    bool printKeys = false;         // Prints keys
-    bool transferToEml = true;      // Transfer keys to emulator memory
-    bool ecfill = true;             // Fill emulator memory with cards content.
-    bool simulation = true;         // Simulates an exact copy of the target tag
-    bool fillFromEmulator = false;  // Dump emulator memory.
 
 
     uint16_t mifare_size = 1024;    // Mifare 1k (only 1k supported for now)
     uint8_t sectorSize = 64;        // 1k's sector size is 64 bytes.
     uint8_t blockNo = 3;            // Security block is number 3 for each sector.
     uint8_t sectorsCnt = (mifare_size / sectorSize);
-    uint8_t keyType = 2;            // Keytype buffer
     uint64_t key64;                 // Defines current key
     uint8_t *keyBlock;              // Where the keys will be held in memory.
-    uint8_t stKeyBlock = 20;        // Set the quantity of keys in the block.
     bool keyFound = false;
 
     /*
@@ -317,7 +317,7 @@ void RunMod(void) {
     bool allKeysFound = true;
     uint32_t size = mfKeysCnt;
 
-    for (int type = !keyType; type < 2 && !err; keyType == 2 ? (type++) : (type = 2)) {
+    for (int type = 0; type < 2 && !err; type++) {
         int block = blockNo;
         for (int sec = 0; sec < sectorsCnt && !err; ++sec) {
             Dbprintf("\tCurrent sector:%3d, block:%3d, key type: %c, key count: %i ", sec, block, type ? 'B' : 'A', mfKeysCnt);
