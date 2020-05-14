@@ -358,11 +358,11 @@ typedef struct {
     uint8_t mem_config;     //[13]
     uint8_t eas;            //[14]
     uint8_t fuses;          //[15]
-} picopass_conf_block;
+} picopass_conf_block_t;
 
 typedef struct {
     uint8_t csn[8];
-    picopass_conf_block conf;
+    picopass_conf_block_t conf;
     uint8_t epurse[8];
     uint8_t key_d[8];
     uint8_t key_c[8];
@@ -413,6 +413,10 @@ static void fuse_config(const picopass_hdr *hdr) {
         PrintAndLogEx(SUCCESS, "    RA: Read access enabled");
     else
         PrintAndLogEx(WARNING, "    RA: Read access not enabled");
+
+    PrintAndLogEx(INFO, "    Block write lock: %02x", hdr->conf.block_writelock);
+    PrintAndLogEx(INFO, "    EAS: %02x", hdr->conf.eas);
+
 }
 
 static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
