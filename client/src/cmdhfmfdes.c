@@ -3988,9 +3988,6 @@ static int CmdHF14aDesChk(const char *Cmd) {
         if (endFilePosition)
             PrintAndLogEx(SUCCESS, "First part of k3kdes dictionary successfully loaded.");
         endFilePosition = 0;
-
-        if (endFilePosition)
-            PrintAndLogEx(SUCCESS, "First part of dictionary successfully loaded.");
     }
 
     if (aeskeyListLen == 0) {
