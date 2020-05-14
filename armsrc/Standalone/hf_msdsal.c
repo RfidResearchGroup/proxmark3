@@ -183,8 +183,8 @@ void RunMod(void) {
     uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
 
-    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE];
-    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE];
+    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE] = {0};
+    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE] = {0};
 
     // to know the transaction status
     uint8_t prevCmd = 0;
