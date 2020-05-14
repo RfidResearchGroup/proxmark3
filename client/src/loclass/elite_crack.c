@@ -221,15 +221,16 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
     // Once again, key is on iclass-format
     desencrypt_iclass(key64, key64_negated, z[0]);
 
-//    PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(NORMAL, "High security custom key (Kcus):");
-//    printvar("z0  ",  z[0],8);
+//    PrintAndLogEx(NORMAL, "");
+//    PrintAndLogEx(INFO, "High security custom key (Kcus):");
+//    PrintAndLogEx(INFO, "z0  %s", sprint_hex(z[0],8));
 
     uint8_t y[8][8] = {{0}, {0}};
 
     // y[0]=DES_dec(z[0],~key)
     // Once again, key is on iclass-format
     desdecrypt_iclass(z[0], key64_negated, y[0]);
-//    printvar("y0  ",  y[0],8);
+//    PrintAndLogEx(INFO, "y0  %s",  sprint_hex(y[0],8));
 
     for (i = 1; i < 8; i++) {
         // z [i] = DES dec (rk(K cus , i), z [i−1] )
@@ -272,9 +273,9 @@ static int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
     memcpy(item, dump + i * itemsize, itemsize);
 
     if (true) {
-        printvar("csn", item->csn, sizeof(item->csn));
-        printvar("cc_nr", item->cc_nr, sizeof(item->cc_nr));
-        printvar("mac", item->mac, sizeof(item->mac));
+        PrintAndLogEx(INFO, "csn    %s", sprint_hex(item->csn, sizeof(item->csn)));
+        PrintAndLogEx(INFO, "cc_nr  %s", sprint_hex(item->cc_nr, sizeof(item->cc_nr)));
+        PrintAndLogEx(INFO, "mac    %s", sprint_hex(item->mac, sizeof(item->mac)));
     }
     return 0;
 }
@@ -326,8 +327,8 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 
         if (numbytes_to_recover > 3) {
             PrintAndLogEx(FAILED, "The CSN requires > 3 byte bruteforce, not supported");
-            printvar("[-] CSN", item.csn, 8);
-            printvar("[-] HASH1", key_index, 8);
+            PrintAndLogEx(INFO, "CSN   %s", sprint_hex(item.csn, 8));
+            PrintAndLogEx(INFO, "HASH1 %s", sprint_hex(key_index, 8));
             PrintAndLogEx(NORMAL, "");
             //Before we exit, reset the 'BEING_CRACKED' to zero
             keytable[bytes_to_recover[0]]  &= ~BEING_CRACKED;
@@ -400,9 +401,9 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
     }
 
     if (!found) {
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(WARNING, "Failed to recover %d bytes using the following CSN", numbytes_to_recover);
-        printvar("[!] CSN", item.csn, 8);
+        PrintAndLogEx(INFO, "CSN  %s", sprint_hex(item.csn, 8));
         errors++;
 
         //Before we exit, reset the 'BEING_CRACKED' to zero
@@ -468,8 +469,8 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
     mbedtls_des_crypt_ecb(&ctx_e, key64_negated, result);
     PrintAndLogEx(NORMAL, "\n");
     PrintAndLogEx(SUCCESS, "-- High security custom key (Kcus) --");
-    printvar("[+] Standard format   ", key64_stdformat, 8);
-    printvar("[+] iClass format     ", key64, 8);
+    PrintAndLogEx(SUCCESS, "Standard format  %s", sprint_hex(key64_stdformat, 8));
+    PrintAndLogEx(SUCCESS, "iClass format    %s", sprint_hex(key64, 8));
 
     if (master_key != NULL)
         memcpy(master_key, key64, 8);

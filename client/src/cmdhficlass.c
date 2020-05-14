@@ -1078,7 +1078,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     } else {
         iClassEncryptBlkData(blk_data, key);
     }
-    printvar("encrypted block", blk_data, 8);
+    PrintAndLogEx(SUCCESS, "encrypted block %s", sprint_hex(blk_data, 8));
     return PM3_SUCCESS;
 }
 
