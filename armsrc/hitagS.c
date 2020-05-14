@@ -434,8 +434,8 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             temp2++;
             *txlen = 32;
             state = _hitag2_init(REV64(tag.key),
-                                 REV32(tag.pages[0][0]),
-                                 REV32(((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0]))
+                                 REV32((tag.pages[0][3] << 24) + (tag.pages[0][2] << 16) + (tag.pages[0][1] << 8) + tag.pages[0][0]),
+                                 REV32((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0])
                                 );
             Dbprintf(",{0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X}",
                      rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
@@ -446,7 +446,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 _hitag2_byte(&state);
 
             //send con2, pwdh0, pwdl0, pwdl1 encrypted as a response
-            tx[0] = _hitag2_byte(&state) ^ tag.pages[0][1];
+            tx[0] = _hitag2_byte(&state) ^ tag.pages[1][2];
             tx[1] = _hitag2_byte(&state) ^ tag.pwdh0;
             tx[2] = _hitag2_byte(&state) ^ tag.pwdl0;
             tx[3] = _hitag2_byte(&state) ^ tag.pwdl1;
@@ -454,7 +454,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 //add crc8
                 *txlen = 40;
                 crc = CRC_PRESET;
-                calc_crc(&crc, tag.pages[0][1], 8);
+                calc_crc(&crc, tag.pages[1][2]), 8);
                 calc_crc(&crc, tag.pwdh0, 8);
                 calc_crc(&crc, tag.pwdl0, 8);
                 calc_crc(&crc, tag.pwdl1, 8);
@@ -466,10 +466,16 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
              if (temp2 % 2 == 0) {
              tag.uid = 0x11223344;
-             tag.pages[0][0] = 0x44332211;
+             tag.pages[0][0] = 0x11;
+             tag.pages[0][1] = 0x22;
+             tag.pages[0][2] = 0x33;
+             tag.pages[0][3] = 0x44;
              } else {
              tag.uid = 0x55667788;
-             tag.pages[0][0] = 0x88776655;
+             tag.pages[0][0] = 0x55;
+             tag.pages[0][1] = 0x66;
+             tag.pages[0][2] = 0x77;
+             tag.pages[0][3] = 0x88;
              }
              */
         }
@@ -480,16 +486,20 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             //data received to be written
             if (tag.tstate == HT_WRITING_PAGE_DATA) {
                 tag.tstate = HT_NO_OP;
-                tag.pages[page_to_be_written / 4][page_to_be_written % 4] = (rx[0]
-                                                                            << 0) + (rx[1] << 8) + (rx[2] << 16) + (rx[3] << 24);
+                tag.pages[page_to_be_written][0] = rx[0];
+                tag.pages[page_to_be_written][1] = rx[1];
+                tag.pages[page_to_be_written][2] = rx[2];
+                tag.pages[page_to_be_written][3] = rx[3];
                 //send ack
                 *txlen = 2;
                 tx[0] = 0x40;
                 page_to_be_written = 0;
                 hitagS_set_frame_modulation();
             } else if (tag.tstate == HT_WRITING_BLOCK_DATA) {
-                tag.pages[page_to_be_written / 4][page_to_be_written % 4] = (rx[0]
-                                                                            << 24) + (rx[1] << 16) + (rx[2] << 8) + rx[3];
+                tag.pages[page_to_be_written][0] = rx[0];
+                tag.pages[page_to_be_written][1] = rx[1];
+                tag.pages[page_to_be_written][2] = rx[2];
+                tag.pages[page_to_be_written][3] = rx[3];
                 //send ack
                 *txlen = 2;
                 tx[0] = 0x40;
