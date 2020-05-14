@@ -401,7 +401,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
     for (int i = 0; i < n; i++) {
 
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
             break;
         }
 

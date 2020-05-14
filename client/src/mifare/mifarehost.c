@@ -1240,7 +1240,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
                 traceCrypto1 = lfsr_recovery64(ks2, ks3);
 
             } else {
-                PrintAndLogEx(NORMAL, "[!] nested key recovery not implemented!\n");
+                PrintAndLogEx(WARNING, "nested key recovery not implemented!\n");
                 //at_enc = bytes_to_num(data, 4);
                 crypto1_destroy(traceCrypto1);
                 traceState = TRACE_ERROR;

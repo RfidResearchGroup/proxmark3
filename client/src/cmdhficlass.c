@@ -1324,7 +1324,8 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         printf(".");
         fflush(stdout);
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
             DropField();
             return PM3_EOPABORTED;
         }
@@ -2470,7 +2471,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         uint8_t timeout = 0;
 
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\n[!] Aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "Aborted via keyboard!\n");
             goto out;
         }
 
@@ -2497,10 +2498,12 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             printf(".");
             fflush(stdout);
             if (timeout > 120) {
-                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "No response from Proxmark3. Aborting...");
                 goto out;
             }
         }
+        PrintAndLogEx(NORMAL, "");
 
         found_offset = resp.oldarg[1] & 0xFF;
         uint8_t isOK = resp.oldarg[0] & 0xFF;
@@ -2509,8 +2512,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         switch (isOK) {
             case 1: {
                 found_debit = true;
-
-                PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d]: %.1fs [%s] idx [%u] - found key "_YELLOW_("%s")
+                PrintAndLogEx(INFO, "Chunk [%d/%d]: %.1fs [%s] idx [%u] - found key "_YELLOW_("%s")
                               , key_offset
                               , keycount
                               , (float)(t2 / 1000.0)
@@ -2521,7 +2523,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
                 break;
             }
             case 0: {
-                PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d] : %.1fs [%s]"
+                PrintAndLogEx(INFO, "Chunk [%d/%d] : %.1fs [%s]"
                               , key_offset
                               , keycount
                               , (float)(t2 / 1000.0)
@@ -2546,7 +2548,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 out:
     t1 = msclock() - t1;
 
-    PrintAndLogEx(SUCCESS, "\nTime in iclass checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "Time in iclass checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
     DropField();
 
     // add to managekeys
@@ -2806,7 +2808,7 @@ static void permute(uint8_t *data, uint8_t len, uint8_t *output) {
         return;
     }
     if (len != KEY_SIZE) {
-        PrintAndLogEx(NORMAL, "[!] wrong key size\n");
+        PrintAndLogEx(WARNING, "wrong key size\n");
         return;
     }
     for (uint8_t i = 0; i < KEY_SIZE; ++i) {

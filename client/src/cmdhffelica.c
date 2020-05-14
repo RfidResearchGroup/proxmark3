@@ -1632,7 +1632,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         printf(".");
         fflush(stdout);
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
             DropField();
             return PM3_EOPABORTED;
         }
