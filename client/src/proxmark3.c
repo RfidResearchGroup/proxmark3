@@ -241,8 +241,6 @@ check_script:
 
             // read script file
             if (fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile()) == NULL) {
-                PrintAndLogEx(ERR, "Unexpected end, [%s]", current_cmdscriptfile());
-
                 if (!pop_cmdscriptfile())
                     break;
 
