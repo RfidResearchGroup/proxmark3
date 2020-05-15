@@ -3,7 +3,10 @@ MYSRCS = crypto1.c crapto1.c bucketsort.c iso14443crc.c sleep.c
 MYINCLUDES = -I../../include -I../../common
 MYCFLAGS =
 MYDEFS =
-MYLDLIBS = -lpthread
+MYLDLIBS =
+ifneq ($(SKIPPTHREAD),1)
+MYLDLIBS += -lpthread
+endif
 
 BINS = mf_nonce_brute
 INSTALLTOOLS = $(BINS)
