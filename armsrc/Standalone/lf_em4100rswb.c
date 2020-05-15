@@ -48,13 +48,19 @@
 #include "spiffs.h"
 #include "inttypes.h"
 #include "parity.h"
+//HF
+#include "iso14443a.h"
+#include "commonutil.h" // bytes_to_num etc
 
 #ifdef WITH_FLASH
 #include "flashmem.h"
 #endif
 
+#define TAG_TYPE_LF 0
+#define TAG_TYPE_HF 1
+
 #define LF_CLOCK 64 //for 125kHz
-#define LF_RWSB_T55XX_TYPE 1 //Tag type: 0 - T5555, 1-T55x7
+#define LF_RWSB_T55XX_TYPE 1 //Target card type: 0 - T5555, 1-T55x7
 
 #define LF_RWSB_UNKNOWN_RESULT 0
 #define LF_RWSB_BRUTE_STOPED 1
@@ -66,6 +72,8 @@
 #define LF_RWSB_MODE_WRITE 2
 #define LF_RWSB_MODE_BRUTE 3
 
+#define SLOT_COUNT 4
+
 // Predefined bruteforce speed
 // avg: 1s, 1.2s, 1.5s, 2s
 int bruteforceSpeedCurrent = 1;
@@ -74,8 +82,9 @@ int bruteforceSpeed[] = {10, 12, 14, 16};
 // low & high - array for storage IDs. Its length must be equal.
 // Predefined IDs must be stored in low[].
 // In high[] must be nulls
-uint64_t low[] = {0, 0, 0, 0};
-uint32_t high[] = {0, 0, 0, 0};
+uint64_t low[SLOT_COUNT] = {0, 0, 0, 0};
+uint32_t high[SLOT_COUNT] = {0, 0, 0, 0};
+iso14a_card_select_t hf_card[SLOT_COUNT];
 uint8_t *bba;
 int buflen;
 
@@ -248,7 +257,69 @@ static int ButeEMTag(uint64_t originalCard, int slot) {
     return LF_RWSB_BRUTE_STOPED;
 }
 
-static int ExecuteMode(int mode, int slot) {
+static void HFRead(int slot) {
+    Dbprintf("[=] >>  Searching for HF card  <<");
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
+    iso14a_card_select_t card;
+    for (;;) {
+        WDT_HIT();
+        if (data_available()) break;
+        int button_pressed = BUTTON_CLICKED(100);
+        if (button_pressed != BUTTON_NO_CLICK) {
+            break;
+        }
+
+        if (!iso14443a_select_card(NULL, &card, NULL, true, 0, true)) {
+            continue;
+        } else if (card.uidlen == 4 || card.uidlen == 7) {
+            Dbprintf("Read UID:");
+            Dbhexdump(card.uidlen, card.uid, 0);
+            Dbprintf("SAK: %" PRIx64"", card.sak);
+            Dbprintf("ATQA: %" PRIx64"", card.atqa);
+            hf_card[slot] = card;
+            return;
+        }
+    }
+}
+
+static void HFSim(int slot) {
+    Dbprintf("[=] >>  Starting HF sim  <<");
+    uint8_t flags = FLAG_4B_UID_IN_DATA;
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
+
+    memcpy(data, hf_card[slot].uid, hf_card[slot].uidlen);
+
+    uint64_t tmpuid = bytes_to_num(hf_card[slot].uid, hf_card[slot].uidlen);
+
+    if (hf_card[slot].uidlen == 7) {
+        flags = FLAG_7B_UID_IN_DATA;
+        Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, slot);
+    } else {
+        Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, slot);
+    }
+
+    if (hf_card[slot].sak == 0x08 && hf_card[slot].atqa[0] == 0x04 && hf_card[slot].atqa[1] == 0) {
+        DbpString("Mifare Classic 1k");
+        SimulateIso14443aTag(1, flags, data);
+    } else if (hf_card[slot].sak == 0x18 && hf_card[slot].atqa[0] == 0x02 && hf_card[slot].atqa[1] == 0) {
+        DbpString("Mifare Classic 4k (4b uid)");
+        SimulateIso14443aTag(8, flags, data);
+    } else if (hf_card[slot].sak == 0x08 && hf_card[slot].atqa[0] == 0x44 && hf_card[slot].atqa[1] == 0) {
+        DbpString("Mifare Classic 4k (7b uid)");
+        SimulateIso14443aTag(8, flags, data);
+    } else if (hf_card[slot].sak == 0x00 && hf_card[slot].atqa[0] == 0x44 && hf_card[slot].atqa[1] == 0) {
+        DbpString("Mifare Ultralight");
+        SimulateIso14443aTag(2, flags, data);
+    } else if (hf_card[slot].sak == 0x20 && hf_card[slot].atqa[0] == 0x04 && hf_card[slot].atqa[1] == 0x03) {
+        DbpString("Mifare DESFire");
+        SimulateIso14443aTag(3, flags, data);
+    } else {
+        Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
+        SimulateIso14443aTag(1, flags, data);
+    }
+}
+
+static int ExecuteModeLF(int mode, int slot) {
     LED_Update(mode, slot);
     WDT_HIT();
 
@@ -281,20 +352,41 @@ static int ExecuteMode(int mode, int slot) {
     return LF_RWSB_UNKNOWN_RESULT;
 }
 
-static int SwitchMode(int mode, int slot) {
+static int ExecuteModeHF(int mode, int slot) {
+    LED_Update(mode, slot);
     WDT_HIT();
-    ExecuteMode(mode, slot);
+
+    switch (mode) {
+        //default first mode is simulate
+        case LF_RWSB_MODE_READ:
+            HFRead(slot);
+            break;
+        case LF_RWSB_MODE_SIM:
+            HFSim(slot);
+            break;
+    }
+
+    return LF_RWSB_UNKNOWN_RESULT;
+}
+
+static int SwitchMode(int mode, int slot, int tag_mode) {
+    WDT_HIT();
+    if (tag_mode == TAG_TYPE_LF) {
+        ExecuteModeLF(mode, slot);
+    } else {
+        ExecuteModeHF(mode, slot);
+    }
 
     if (mode == LF_RWSB_MODE_READ) {
         //After read mode we need to switch to sim mode automatically
         Dbprintf("[=] >>  automatically switch to sim mode after read  <<");
 
-        return SwitchMode(LF_RWSB_MODE_SIM, slot);
+        return SwitchMode(LF_RWSB_MODE_SIM, slot, tag_mode);
     } else if (mode == LF_RWSB_MODE_BRUTE) {
         //We have already have a click inside brute mode. Lets switch next mode
         Dbprintf("[=] >>  automatically switch to read mode after brute  <<");
 
-        return SwitchMode(LF_RWSB_MODE_READ, slot);
+        return SwitchMode(LF_RWSB_MODE_READ, slot, tag_mode);
     }
     return mode;
 }
@@ -304,28 +396,42 @@ void RunMod() {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf("[=] >>  LF EM4100 read/write/clone/brute started  <<");
     int slots_count = 4;
-    int mode_count = 4;
+    int mode_count[] = {4, 2}; //LF, HF
 
     int mode = 0;
     int slot = 0;
-    mode = SwitchMode(mode, slot);
+    int tag_mode = TAG_TYPE_LF;
+    mode = SwitchMode(mode, slot, tag_mode);
 
     bba = BigBuf_get_addr();
     for (;;) {
         WDT_HIT();
         if (data_available()) break;
 
-        int button_pressed = BUTTON_CLICKED(1000);
+        int button_pressed = BUTTON_CLICKED(500);
         LED_Update(mode, slot);
 
         //press button - switch mode
         //hold button - switch slot
         if (button_pressed == BUTTON_SINGLE_CLICK) {
             Dbprintf("[=] >>  Single click  <<");
-            mode = (mode + 1) % mode_count;
+            mode = (mode + 1) % mode_count[tag_mode];
             SpinDown(100);
 
-            mode = SwitchMode(mode, slot);
+            mode = SwitchMode(mode, slot, tag_mode);
+        } else if (button_pressed == BUTTON_DOUBLE_CLICK) {
+            Dbprintf("[=] >>  Double click  <<");
+
+            mode = LF_RWSB_MODE_READ;
+            if (tag_mode == TAG_TYPE_LF) {
+                Dbprintf("[=] >>  Switching to HF tag mode <<");
+                tag_mode = TAG_TYPE_HF;
+            } else if (tag_mode == TAG_TYPE_HF) {
+                Dbprintf("[=] >>  Switching to LF tag mode <<");
+                tag_mode = TAG_TYPE_LF;
+            }
+
+            mode = SwitchMode(mode, slot, tag_mode);
         } else if (button_pressed == BUTTON_HOLD) {
             Dbprintf("[=] >>  Button hold  <<");
             slot = (slot + 1) % slots_count;
@@ -334,7 +440,7 @@ void RunMod() {
 
             //automatically switch to SIM mode on slot selection
             mode = LF_RWSB_MODE_SIM;
-            mode = SwitchMode(mode, slot);
+            mode = SwitchMode(mode, slot, tag_mode);
         }
     }
 }
