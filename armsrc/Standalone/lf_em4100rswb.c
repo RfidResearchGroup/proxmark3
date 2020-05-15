@@ -395,7 +395,6 @@ void RunMod() {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf("[=] >>  LF EM4100 read/write/clone/brute started  <<");
-    int slots_count = 4;
     int mode_count[] = {4, 2}; //LF, HF
 
     int mode = 0;
@@ -434,7 +433,7 @@ void RunMod() {
             mode = SwitchMode(mode, slot, tag_mode);
         } else if (button_pressed == BUTTON_HOLD) {
             Dbprintf("[=] >>  Button hold  <<");
-            slot = (slot + 1) % slots_count;
+            slot = (slot + 1) % SLOT_COUNT;
             SpinUp(100);
             SpinDelay(300);
 
