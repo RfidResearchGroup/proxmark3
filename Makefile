@@ -14,7 +14,7 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% fpga_compress/%
+all clean install uninstall: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% mf_nonce_brute/% fpga_compress/%
 
 INSTALLTOOLS=pm3_eml2lower.sh pm3_eml2upper.sh pm3_mfdread.py pm3_mfd2eml.py pm3_eml2mfd.py findbits.py rfidtest.pl xorcheck.py
 INSTALLSIMFW=sim011.bin sim011.sha512.txt
@@ -84,6 +84,9 @@ mfkey/%: FORCE
 nonce2key/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/nonce2key $(patsubst nonce2key/%,%,$@) DESTDIR=$(MYDESTDIR)
+mf_nonce_brute/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/mf_nonce_brute $(patsubst mf_nonce_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
 fpga_compress/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress $(patsubst fpga_compress/%,%,$@) DESTDIR=$(MYDESTDIR)
@@ -103,7 +106,7 @@ recovery/%: FORCE cleanifplatformchanged
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key mf_nonce_brute style checks FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -122,6 +125,7 @@ help:
 	@echo "+ client          - Make only the OS-specific host client"
 	@echo "+ mfkey           - Make tools/mfkey"
 	@echo "+ nonce2key       - Make tools/nonce2key"
+	@echo "+ mf_nonce_brute  - Make tools/mf_nonce_brute"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
 	@echo "+ style           - Apply some automated source code formatting rules"
@@ -151,6 +155,8 @@ recovery: recovery/all
 mfkey: mfkey/all
 
 nonce2key: nonce2key/all
+
+mf_nonce_brute: mf_nonce_brute/all
 
 fpga_compress: fpga_compress/all
 
