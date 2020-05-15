@@ -87,7 +87,7 @@ client/dumps/*
 *.ice
 *.new
 armsrc/TEMP EMV/*
-tools/mf_nonce_brute/*
+tools/mf_nonce_brute/mf_nonce_brute
 tools/andrew/*
 tools/jtag_openocd/openocd_configuration
 ppls patches/*
