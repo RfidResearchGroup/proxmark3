@@ -247,7 +247,6 @@ static void MAC(uint8_t *k, BitstreamIn input, BitstreamOut out) {
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t cc_nr[13] = { 0 };
     uint8_t div_key[8];
-    //cc_nr=(uint8_t*) calloc(length+1, sizeof(uint8_t));
 
     memcpy(cc_nr, cc_nr_p, 12);
     memcpy(div_key, div_key_p, 8);
@@ -260,7 +259,6 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));
     memcpy(mac, dest, 4);
-    //free(cc_nr);
 }
 
 void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]) {
@@ -296,9 +294,9 @@ int testMAC(void) {
     doMAC(cc_nr, div_key, calculated_mac);
 
     if (memcmp(calculated_mac, correct_MAC, 4) == 0) {
-        PrintAndLogEx(SUCCESS, "MAC calculation OK!");
+        PrintAndLogEx(SUCCESS, "    MAC calculation (%s)", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "FAILED: MAC calculation failed:");
+        PrintAndLogEx(FAILED, "    MAC calculation (%s)", _RED_("failed"));
         printarr("    Calculated_MAC", calculated_mac, 4);
         printarr("    Correct_MAC   ", correct_MAC, 4);
         return PM3_ESOFT;
