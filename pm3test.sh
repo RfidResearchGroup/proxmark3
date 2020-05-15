@@ -136,7 +136,7 @@ while true; do
     if ! CheckExecute "hf iclass test"                 "$PM3BIN -c 'hf iclass loclass t l'" "verified ok"; then break; fi
     if ! CheckExecute "emv test"                       "$PM3BIN -c 'emv test -l'" "Test(s) \[ OK"; then break; fi
   else
-    if ! CheckExecute "hf iclass test"                 "$PM3BIN -c 'hf iclass loclass t'" "OK!"; then break; fi
+    if ! CheckExecute "hf iclass test"                 "$PM3BIN -c 'hf iclass loclass t'" "key diversification (ok)"; then break; fi
     if ! CheckExecute "emv test"                       "$PM3BIN -c 'emv test'" "Test(s) \[ OK"; then break; fi
   fi
 
