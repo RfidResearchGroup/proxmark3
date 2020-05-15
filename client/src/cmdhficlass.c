@@ -1938,11 +1938,15 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         }
     } else if (opt == 't') {
         char opt2 = tolower(param_getchar(Cmd, 1));
+
         int errors = testCipherUtils();
         errors += testMAC();
-        errors += doKeyTests(0);
+        errors += doKeyTests();
         errors += testElite(opt2 == 'l');
-        if (errors) PrintAndLogEx(ERR, "There were errors!!!");
+
+        if (errors != PM3_SUCCESS)
+            PrintAndLogEx(ERR, "There were errors!!!");
+
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
@@ -2076,7 +2080,7 @@ void HFiClassCalcDivKey(uint8_t *CSN, uint8_t *KEY, uint8_t *div_key, bool elite
         hash2(KEY, keytable);
         hash1(CSN, key_index);
         for (uint8_t i = 0; i < 8 ; i++)
-            key_sel[i] = keytable[key_index[i]] & 0xFF;
+            key_sel[i] = keytable[key_index[i]];
 
         //Permute from iclass format to standard format
         permutekey_rev(key_sel, key_sel_p);
