@@ -39,7 +39,7 @@ function get_pm3_list_Linux {
                 fi
             fi
         else
-            if grep -q "PRODUCT=9ac4/4b8f" "/sys/class/tty/${DEV#/dev/}/../../uevent" 2>/dev/null; then
+            if grep -q "proxmark.org" "/sys/class/tty/${DEV#/dev/}/../../../manufacturer" 2>/dev/null; then
                 PM3LIST+=("$DEV")
                 if [ ${#PM3LIST[*]} -ge $N ]; then
                     return
