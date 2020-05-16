@@ -65,6 +65,10 @@ If you're cross-compiling, these ones might be useful:
 * `make client SKIPREVENGTEST=1` to skip compilation and execution of a consistency test for reveng, which can be problematic in case of cross-compilation
 * `make client cpu_arch=generic` to skip Intel specialized hardnested components, which is required e.g. if cross-compilation host is Intel but not the target
 
+On some architectures, pthread library is not present:
+
+* `make client SKIPPTHREAD=1` to skip `-lpthread` at linker stage.
+
 `make install` is actually triggering the following individual targets which can be accessed individually:
 
 * `make client/install`
