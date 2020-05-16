@@ -31,10 +31,19 @@ function get_pm3_list_Linux {
     N=$1
     PM3LIST=()
     for DEV in $(find /dev/ttyACM* 2>/dev/null); do
-        if udevadm info -q property -n "$DEV" | grep -q "ID_VENDOR=proxmark.org"; then
-            PM3LIST+=("$DEV")
-            if [ ${#PM3LIST[*]} -ge $N ]; then
-                return
+        if which udevadm >/dev/null; then
+            if udevadm info -q property -n "$DEV" | grep -q "ID_VENDOR=proxmark.org"; then
+                PM3LIST+=("$DEV")
+                if [ ${#PM3LIST[*]} -ge $N ]; then
+                    return
+                fi
+            fi
+        else
+            if grep -q "PRODUCT=9ac4/4b8f" "/sys/class/tty/${DEV#/dev/}/../../uevent" 2>/dev/null; then
+                PM3LIST+=("$DEV")
+                if [ ${#PM3LIST[*]} -ge $N ]; then
+                    return
+                fi
             fi
         fi
     done
