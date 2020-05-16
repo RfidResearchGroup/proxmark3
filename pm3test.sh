@@ -151,6 +151,9 @@ while true; do
     if ! CheckExecute "findbits test"                    "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
     if ! CheckExecute "findbits_test test"               "tools/findbits_test.py 2>&1" "OK"; then break; fi
     if ! CheckExecute "pm3_eml_mfd test"                 "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
+    if $SLOWTESTS; then
+      if ! CheckExecute "mf_nonce_brute test"              "tools/mf_nonce_brute/mf_nonce_brute 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key.*: \[ffffffffffff\]"; then break; fi
+    fi
   fi
 
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
