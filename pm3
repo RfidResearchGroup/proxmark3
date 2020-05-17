@@ -30,6 +30,10 @@ SHOWLIST=false
 function get_pm3_list_Linux {
     N=$1
     PM3LIST=()
+    if [ ! -c "/dev/tty0" ]; then
+        echo >&2 "[!!] Script cannot access /dev/ttyXXX files, insufficient privileges"
+        exit 1
+    fi
     for DEV in $(find /dev/ttyACM* 2>/dev/null); do
         if which udevadm >/dev/null; then
             if udevadm info -q property -n "$DEV" | grep -q "ID_VENDOR=proxmark.org"; then
