@@ -224,6 +224,8 @@ static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *o
 }
 
 static void printState(const char *desc, uint64_t c) {
+    if (g_debugMode == 0)
+        return;
     char s[60] = {0};
     snprintf(s, sizeof(s), "%s : ", desc);
     
