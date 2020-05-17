@@ -34,14 +34,14 @@ function get_pm3_list_Linux {
         if which udevadm >/dev/null; then
             if udevadm info -q property -n "$DEV" | grep -q "ID_VENDOR=proxmark.org"; then
                 PM3LIST+=("$DEV")
-                if [ ${#PM3LIST[*]} -ge $N ]; then
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
         else
             if grep -q "proxmark.org" "/sys/class/tty/${DEV#/dev/}/../../../manufacturer" 2>/dev/null; then
                 PM3LIST+=("$DEV")
-                if [ ${#PM3LIST[*]} -ge $N ]; then
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
@@ -52,7 +52,7 @@ function get_pm3_list_Linux {
         for DEV in $(find /dev/ttyUSB* 2>/dev/null); do
             if udevadm info -q property -n "$DEV" | grep -q "ID_MODEL=CP2104_USB_to_UART_Bridge_Controller"; then
                 PM3LIST+=("$DEV")
-                if [ ${#PM3LIST[*]} -ge $N ]; then
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
@@ -67,7 +67,7 @@ function get_pm3_list_Linux {
             # check which are Proxmark3 and, side-effect, if they're actually present
             if hcitool name "$MAC" | grep -q "PM3"; then
                 PM3LIST+=("/dev/$DEV")
-                if [ ${#PM3LIST[*]} -ge $N ]; then
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
@@ -75,7 +75,6 @@ function get_pm3_list_Linux {
     fi
     if $FINDBTDIRECT; then
         # check if the MAC of a Proxmark3 was registered in the known devices
-        MACS=()
         for MAC in $(dbus-send --system --print-reply --type=method_call --dest='org.bluez' '/' org.freedesktop.DBus.ObjectManager.GetManagedObjects 2>/dev/null|\
                          awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/) print a}'); do
             PM3LIST+=("bt:$MAC")
@@ -91,7 +90,7 @@ function get_pm3_list_macOS {
         $2=="USB Vendor Name"{b=($4=="proxmark.org")}
         b==1 && $2=="IODialinDevice"{print $4}'); do
         PM3LIST+=("$DEV")
-        if [ ${#PM3LIST[*]} -ge $N ]; then
+        if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
         fi
     done
@@ -106,7 +105,7 @@ function get_pm3_list_Windows {
         for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk '$0 ~ /COM/{print substr($6,2,4)}'); do
             DEV=${DEV/ */}
             PM3LIST+=("$DEV")
-            if [ ${#PM3LIST[*]} -ge $N ]; then
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
                 return
             fi
         done
@@ -116,7 +115,7 @@ function get_pm3_list_Windows {
     for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
         DEV=${DEV/ */}
         PM3LIST+=("$DEV")
-        if [ ${#PM3LIST[*]} -ge $N ]; then
+        if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
         fi
     done
@@ -126,7 +125,7 @@ function get_pm3_list_Windows {
         for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
             DEV=${DEV/ */}
             PM3LIST+=("$DEV")
-            if [ ${#PM3LIST[*]} -ge $N ]; then
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
                 return
             fi
         done
@@ -151,7 +150,7 @@ function get_pm3_list_WSL {
                     echo "[!] Let's give users read/write access to $DEV"
                     sudo chmod 666 "$DEV"
                 fi
-                if [ ${#PM3LIST[*]} -ge $N ]; then
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
@@ -170,7 +169,7 @@ function get_pm3_list_WSL {
                 echo "[!] Let's give users read/write access to $DEV"
                 sudo chmod 666 "$DEV"
             fi
-            if [ ${#PM3LIST[*]} -ge $N ]; then
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
                 return
             fi
         fi
@@ -188,7 +187,7 @@ function get_pm3_list_WSL {
                     echo "[!] Let's give users read/write access to $DEV"
                     sudo chmod 666 "$DEV"
                 fi
-                if [ ${#PM3LIST[*]} -ge $N ]; then
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
@@ -235,7 +234,7 @@ elif [ "$SCRIPT" = "pm3-flash" ]; then
           fi
           shift;
       done
-      $CLIENT ${ARGS[@]};
+      $CLIENT "${ARGS[@]}";
   }
   HELP() {
       cat << EOF
@@ -361,8 +360,7 @@ HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
     if uname -a|grep -q Microsoft; then
         # Test presence of wmic
-        wmic.exe computersystem get name >/dev/null 2>&1
-        if [ $? -ne 0 ]; then
+        if ! wmic.exe computersystem get name >/dev/null 2>&1; then
             echo >&2 "[!!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
             exit 1
         fi
@@ -387,7 +385,7 @@ if $SHOWLIST; then
         exit 1
     fi
     n=1
-    for DEV in ${PM3LIST[@]}
+    for DEV in "${PM3LIST[@]}"
         do
             echo "$n: $DEV"
             n=$((n+1))
@@ -396,19 +394,19 @@ if $SHOWLIST; then
 fi
 
 # Wait till we get at least N proxmark3 devices
-$GETPM3LIST $N
-if [ ${#PM3LIST} -lt $N ]; then
+$GETPM3LIST "$N"
+if [ ${#PM3LIST} -lt "$N" ]; then
     echo >&2 "[=] Waiting for Proxmark3 to appear..."
 fi
 while true; do
-    if [ ${#PM3LIST[*]} -ge $N ]; then
+    if [ ${#PM3LIST[*]} -ge "$N" ]; then
         break
     fi
     sleep .1
-    $GETPM3LIST $N
+    $GETPM3LIST "$N"
 done
 
-if [ ${#PM3LIST} -lt $N ]; then
+if [ ${#PM3LIST} -lt "$N" ]; then
     echo >&2 "[!!] No port found, abort"
     exit 1
 fi
