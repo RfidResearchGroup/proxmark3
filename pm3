@@ -54,10 +54,19 @@ function get_pm3_list_Linux {
     if $FINDBTDONGLE; then
         # check if the HC-06-USB white dongle is present (still, that doesn't tell us if it's paired with a Proxmark3...)
         for DEV in $(find /dev/ttyUSB* 2>/dev/null); do
-            if udevadm info -q property -n "$DEV" | grep -q "ID_MODEL=CP2104_USB_to_UART_Bridge_Controller"; then
-                PM3LIST+=("$DEV")
-                if [ ${#PM3LIST[*]} -ge "$N" ]; then
-                    return
+            if which udevadm >/dev/null; then
+                if udevadm info -q property -n "$DEV" | grep -q "ID_MODEL=CP2104_USB_to_UART_Bridge_Controller"; then
+                    PM3LIST+=("$DEV")
+                    if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                        return
+                    fi
+                fi
+            else
+                if grep -q "DRIVER=cp210x" "/sys/class/tty/${DEV#/dev/}/../../uevent" 2>/dev/null; then
+                    PM3LIST+=("$DEV")
+                    if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                        return
+                    fi
                 fi
             fi
         done
