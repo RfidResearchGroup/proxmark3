@@ -32,7 +32,7 @@ function CheckFileExist() {
     return 0
   fi
 
-  if ls $2 1> /dev/null 2>&1; then
+  if ls "$2" 1> /dev/null 2>&1; then
     echo -e "$1 ${C_GREEN}[OK]${C_NC}"
     return 0
   fi
@@ -44,7 +44,7 @@ function CheckFileExist() {
 # title, command line, check result, repeat several times if failed, ignore if fail
 function CheckExecute() {
 
-  if [ $4 ]; then
+  if [ "$4" ]; then
     local RETRY="1 2 3 e"
   else
     local RETRY="e"
@@ -61,7 +61,7 @@ function CheckExecute() {
   done
 
 
-  if [ $5 ]; then
+  if [ "$5" ]; then
     echo -e "$1 ${C_YELLOW}[Ignored]${C_NC}"
     return 0
   fi
@@ -71,11 +71,11 @@ function CheckExecute() {
   return 1
 }
 
-printf "\n${C_BLUE}RRG/Iceman Proxmark3 test tool ${C_NC}\n\n"
+echo -e "\n${C_BLUE}RRG/Iceman Proxmark3 test tool ${C_NC}\n"
 
-printf "work directory: "
+echo -n "work directory: "
 pwd
-printf "client ${PM3BIN:="./client/proxmark3"}\n"
+echo "client ${PM3BIN:="./client/proxmark3"}"
 
 if [ "$TRAVIS_COMMIT" ]; then
   if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
@@ -85,16 +85,16 @@ if [ "$TRAVIS_COMMIT" ]; then
   fi
 fi
 
-printf "git branch: "
+echo -n "git branch: "
 git describe --all
-printf "git sha: "
+echo -n "git sha: "
 git rev-parse HEAD
 echo ""
 
 while true; do
-  printf "\n${C_BLUE}Testing files:${C_NC}\n"
+  echo -e "\n${C_BLUE}Testing files:${C_NC}"
   if ! CheckFileExist "proxmark3 exists"               "$PM3BIN"; then break; fi
-  if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/*.z"; then break; fi
+  if ! CheckFileExist "hardnested tables exists"       "./client/resources/hardnested_tables/bitflip_0_001_states.bin.z"; then break; fi
   if ! CheckFileExist "simmodule fw file exists"       "./tools/simmodule/sim011.bin"; then break; fi
 
   if $TESTDEVICE; then
@@ -102,19 +102,19 @@ while true; do
     if ! CheckFileExist "bootrom exists"               "./bootrom/obj/bootrom.elf"; then break; fi
   fi
 
-  printf "\n${C_BLUE}Testing basic help:${C_NC}\n"
+  echo -e "\n${C_BLUE}Testing basic help:${C_NC}"
   if ! CheckExecute "proxmark help"                    "$PM3BIN -h" "wait"; then break; fi
   if ! CheckExecute "proxmark help text ISO7816"       "$PM3BIN -t 2>&1" "ISO7816"; then break; fi
   if ! CheckExecute "proxmark help text hardnested"    "$PM3BIN -t 2>&1" "hardnested"; then break; fi
 
-  printf "\n${C_BLUE}Testing data manipulation:${C_NC}\n"
+  echo -e "\n${C_BLUE}Testing data manipulation:${C_NC}"
   if ! CheckExecute "reveng readline test"    "$PM3BIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
   if ! CheckExecute "reveng -g test"          "$PM3BIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
   if ! CheckExecute "reveng -w test"          "$PM3BIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
   if ! CheckExecute "mfu pwdgen test"         "$PM3BIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
   if ! CheckExecute "trace load/list test"    "$PM3BIN -c 'trace load traces/hf_mfu.trace; trace list 1;'" "READBLOCK(8)"; then break; fi
 
-  printf "\n${C_BLUE}Testing LF:${C_NC}\n"
+  echo -e "\n${C_BLUE}Testing LF:${C_NC}"
   if ! CheckExecute "lf EM4x05 test"      "$PM3BIN -c 'data load traces/em4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
   if ! CheckExecute "lf EM410x test"      "$PM3BIN -c 'data load traces/EM4102-1.pm3;lf search 1'" "EM410x ID found"; then break; fi
   if ! CheckExecute "lf VISA2000 test"    "$PM3BIN -c 'data load traces/visa2000.pm3;lf search 1'" "Visa2000 ID found"; then break; fi
@@ -129,7 +129,7 @@ while true; do
   if ! CheckExecute "lf FDX-B test"       "$PM3BIN -c 'data load traces/homeagain1600.pm3;lf search 1'" "FDX-B ID found"; then break; fi
   if ! CheckExecute "lf INDALA test"      "$PM3BIN -c 'data load traces/indala-504278295.pm3;lf search 1'" "Indala ID found"; then break; fi
 
-  printf "\n${C_BLUE}Testing HF:${C_NC}\n"
+  echo -e "\n${C_BLUE}Testing HF:${C_NC}"
   if ! CheckExecute "hf mf offline text"               "$PM3BIN -c 'hf mf'" "at_enc"; then break; fi
   if $SLOWTESTS; then
     if ! CheckExecute "hf mf hardnested test"          "$PM3BIN -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
@@ -141,7 +141,7 @@ while true; do
   fi
 
   if $TESTTOOLS; then
-    printf "\n${C_BLUE}Testing tools:${C_NC}\n"
+    echo -e "\n${C_BLUE}Testing tools:${C_NC}"
     # Need a decent example for mfkey32...
     if ! CheckExecute "mfkey32v2 test"                   "tools/mfkey/mfkey32v2 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A" "Found Key: \[a0a1a2a3a4a5\]"; then break; fi
     if ! CheckExecute "mfkey64 test"                     "tools/mfkey/mfkey64 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439" "Found Key: \[ffffffffffff\]"; then break; fi
@@ -156,9 +156,9 @@ while true; do
     fi
   fi
 
-  printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
+  echo -e "\n${C_GREEN}Tests [OK]${C_NC}\n"
   exit 0
 done
 
-printf "\n${C_RED}Tests [FAIL]${C_NC}\n\n"
+echo -e "\n${C_RED}Tests [FAIL]${C_NC}\n"
 exit 1
