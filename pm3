@@ -148,7 +148,7 @@ function get_pm3_list_WSL {
             if [ -e "$DEV" ]; then
                 PM3LIST+=("$DEV")
                 if [ ! -w "$DEV" ]; then
-                    echo "[!!] Let's give users read/write access to $DEV"
+                    echo "[!] Let's give users read/write access to $DEV"
                     sudo chmod 666 "$DEV"
                 fi
                 if [ ${#PM3LIST[*]} -ge $N ]; then
@@ -167,7 +167,7 @@ function get_pm3_list_WSL {
         if [ -e "$DEV" ]; then
             PM3LIST+=("$DEV")
             if [ ! -w "$DEV" ]; then
-                echo "[!!] Let's give users read/write access to $DEV"
+                echo "[!] Let's give users read/write access to $DEV"
                 sudo chmod 666 "$DEV"
             fi
             if [ ${#PM3LIST[*]} -ge $N ]; then
@@ -185,7 +185,7 @@ function get_pm3_list_WSL {
             if [ -e "$DEV" ]; then
                 PM3LIST+=("$DEV")
                 if [ ! -w "$DEV" ]; then
-                    echo "[!!] Let's give users read/write access to $DEV"
+                    echo "[!] Let's give users read/write access to $DEV"
                     sudo chmod 666 "$DEV"
                 fi
                 if [ ${#PM3LIST[*]} -ge $N ]; then
@@ -319,7 +319,7 @@ Usage:
 EOF
   }
 else
-  echo "[!!] Script ran under unknown name, abort: $SCRIPT"
+  echo >&2 "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
 fi
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
@@ -338,7 +338,7 @@ done
 if [ "$1" == "--list" ]; then
     shift
     if [ "$1" != "" ]; then
-        echo "[!!] Option --list must be used alone"
+        echo >&2 "[!!] Option --list must be used alone"
         exit 1
     fi
     SHOWLIST=true
@@ -352,7 +352,7 @@ if [ "$1" == "-n" ]; then
         N=$1
         shift
     else
-        echo "[!!] Option -n requires a number between 1 and 9, got \"$1\""
+        echo >&2 "[!!] Option -n requires a number between 1 and 9, got \"$1\""
         exit 1
     fi
 fi
@@ -363,7 +363,7 @@ if [ "$HOSTOS" = "LINUX" ]; then
         # Test presence of wmic
         wmic.exe computersystem get name >/dev/null 2>&1
         if [ $? -ne 0 ]; then
-            echo "[!!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
+            echo >&2 "[!!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
             exit 1
         fi
         GETPM3LIST=get_pm3_list_WSL
@@ -375,7 +375,7 @@ elif [ "$HOSTOS" = "DARWIN" ]; then
 elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
     GETPM3LIST=get_pm3_list_Windows
 else
-    echo "[!!] Host OS not recognized, abort: $HOSTOS"
+    echo >&2 "[!!] Host OS not recognized, abort: $HOSTOS"
     exit 1
 fi
 
@@ -383,7 +383,7 @@ if $SHOWLIST; then
     # Probe for up to 9 devs
     $GETPM3LIST 9
     if [ ${#PM3LIST} -lt 1 ]; then
-        echo "[!!] No port found"
+        echo >&2 "[!!] No port found"
         exit 1
     fi
     n=1
@@ -409,7 +409,7 @@ while true; do
 done
 
 if [ ${#PM3LIST} -lt $N ]; then
-    echo "[!!] No port found, abort"
+    echo >&2 "[!!] No port found, abort"
     exit 1
 fi
 
