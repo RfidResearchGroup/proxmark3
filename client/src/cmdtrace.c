@@ -30,7 +30,7 @@ typedef struct {
     uint16_t duration;
     uint16_t data_len;
     uint8_t frame[];
-} tracelog_hdr_t;
+} PACKED tracelog_hdr_t;
 
 // 4 + 2 + 2
 #define TRACELOG_HDR_LEN             sizeof(tracelog_hdr_t)
@@ -441,6 +441,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (is_last_record(tracepos, traceLen)) return traceLen;
 
     if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
+        
         uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
         PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
                       (EndOfTransmissionTimestamp - first_timestamp),
