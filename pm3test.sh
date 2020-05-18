@@ -112,7 +112,8 @@ while true; do
   if ! CheckExecute "reveng -g test"          "$PM3BIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
   if ! CheckExecute "reveng -w test"          "$PM3BIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
   if ! CheckExecute "mfu pwdgen test"         "$PM3BIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
-  if ! CheckExecute "trace load/list test"    "$PM3BIN -c 'trace load traces/hf_mfu.trace; trace list 1;'" "READBLOCK(8)"; then break; fi
+  if ! CheckExecute "trace load/list 14a"     "$PM3BIN -c 'trace load traces/hf_mfu.trace; trace list 1;'" "READBLOCK(8)"; then break; fi
+  if ! CheckExecute "trace load/list x"       "$PM3BIN -c 'trace load traces/hf_mfu.trace; trace list x 1;'" "0.0101840425"; then break; fi
 
   echo -e "\n${C_BLUE}Testing LF:${C_NC}"
   if ! CheckExecute "lf EM4x05 test"      "$PM3BIN -c 'data load traces/em4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
