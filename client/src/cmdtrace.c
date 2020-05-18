@@ -297,8 +297,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //1 CRC-command, CRC ok
     //2 Not crc-command
 
-    //--- Draw the data column
+     //--- Draw the data column
     char line[18][120] = {{0}};
+
+   if (data_len == 0) {
+        sprintf(line[0], "<empty trace - possible error>");
+        return tracepos;
+    }
 
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
 
@@ -343,11 +348,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4);
             sprintf(pos2, "%c", ']');
         }
-    }
-
-    if (data_len == 0) {
-        sprintf(line[0], "<empty trace - possible error>");
-        return tracepos;
     }
 
     // Draw the CRC column
@@ -442,7 +442,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
         
-        uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
+        tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
+         
+        uint32_t next_timestamp = next_hdr->timestamp;
         PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
                       (EndOfTransmissionTimestamp - first_timestamp),
                       (next_timestamp - first_timestamp),
