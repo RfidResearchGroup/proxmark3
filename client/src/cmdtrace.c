@@ -76,7 +76,7 @@ static bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen)
 }
 
 static bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
-    uint16_t next_records_datalen = *((uint16_t *)(trace + tracepos + sizeof(uint32_t) + sizeof(uint16_t)));
+    uint16_t next_records_datalen = *((uint16_t *)(void *)(trace + tracepos + sizeof(uint32_t) + sizeof(uint16_t)));
     return ((next_records_datalen & 0x8000) == 0x8000);
 }
 
@@ -92,11 +92,11 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
     memcpy(topaz_reader_command, frame, *data_len);
 
     while (!is_last_record(*tracepos, trace, traceLen) && !next_record_is_response(*tracepos, trace)) {
-        uint32_t next_timestamp = *((uint32_t *)(trace + *tracepos));
+        uint32_t next_timestamp = *((uint32_t *)(void *)(trace + *tracepos));
         *tracepos += sizeof(uint32_t);
-        uint16_t next_duration = *((uint16_t *)(trace + *tracepos));
+        uint16_t next_duration = *((uint16_t *)(void *)(trace + *tracepos));
         *tracepos += sizeof(uint16_t);
-        uint16_t next_data_len = *((uint16_t *)(trace + *tracepos)) & 0x7FFF;
+        uint16_t next_data_len = *((uint16_t *)(void *)(trace + *tracepos)) & 0x7FFF;
         *tracepos += sizeof(uint16_t);
         uint8_t *next_frame = (trace + *tracepos);
         *tracepos += next_data_len;
@@ -126,14 +126,14 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
     uint16_t data_len, parity_len;
     uint32_t timestamp;
 
-    timestamp = *((uint32_t *)(trace + tracepos));
+    timestamp = *((uint32_t *)(void *)(trace + tracepos));
     tracepos += 4;
 
 
     // currently we don't use duration, so we skip it
     tracepos += 2;
 
-    data_len = *((uint16_t *)(trace + tracepos));
+    data_len = *((uint16_t *)(void *)(trace + tracepos));
     tracepos += 2;
 
     if (data_len & 0x8000) {
@@ -216,14 +216,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     size_t mfDataLen = 0;
 
 
-    first_timestamp = *((uint32_t *)(trace));
-    timestamp = *((uint32_t *)(trace + tracepos));
+    first_timestamp = *((uint32_t *)(void *)(trace));
+    timestamp = *((uint32_t *)(void *)(trace + tracepos));
     tracepos += 4;
 
-    duration = *((uint16_t *)(trace + tracepos));
+    duration = *((uint16_t *)(void *)(trace + tracepos));
     tracepos += 2;
 
-    data_len = *((uint16_t *)(trace + tracepos));
+    data_len = *((uint16_t *)(void *)(trace + tracepos));
     tracepos += 2;
 
     if (data_len & 0x8000) {
@@ -439,7 +439,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (is_last_record(tracepos, trace, traceLen)) return traceLen;
 
     if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
-        uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
+        uint32_t next_timestamp = *((uint32_t *)(void *)(trace + tracepos));
         PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
                       (EndOfTransmissionTimestamp - first_timestamp),
                       (next_timestamp - first_timestamp),
