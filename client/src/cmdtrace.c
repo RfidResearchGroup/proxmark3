@@ -149,12 +149,12 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
 
     parity_len = (hdr->data_len - 1) / 8 + 1;
 
-    if (sizeof(tracelog_hdr_t) + hdr->data_len + parity_len > traceLen) {
+    if (TRACELOG_HDR_LEN + hdr->data_len + parity_len > traceLen) {
         return traceLen;
     }
 
     //set trace position
-    tracepos += sizeof(tracelog_hdr_t) + hdr->data_len + parity_len;
+    tracepos += TRACELOG_HDR_LEN + hdr->data_len + parity_len;
 
     if (hdr->data_len == 0) {
         PrintAndLogEx(NORMAL, "<empty trace - possible error>");
@@ -208,7 +208,7 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
 
 static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes) {
     // sanity check
-    if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+    if (is_last_record(tracepos, traceLen)) return traceLen;
 
     bool isResponse;
     uint16_t data_len, parity_len;
@@ -218,16 +218,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     uint8_t mfData[32] = {0};
     size_t mfDataLen = 0;
 
+    tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-    first_timestamp = *((uint32_t *)(trace));
-    timestamp = *((uint32_t *)(trace + tracepos));
-    tracepos += 4;
-
-    duration = *((uint16_t *)(trace + tracepos));
-    tracepos += 2;
-
-    data_len = *((uint16_t *)(trace + tracepos));
-    tracepos += 2;
+    first_timestamp = first_hdr->timestamp;
+    
+    timestamp = hdr->timestamp;
+    duration = hdr->duration;
+    data_len = hdr->data_len;
 
     if (data_len & 0x8000) {
         data_len &= 0x7fff;
@@ -237,13 +235,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
     parity_len = (data_len - 1) / 8 + 1;
 
-    if (tracepos + data_len + parity_len > traceLen) {
+    if (tracepos + TRACELOG_HDR_LEN + data_len + parity_len > traceLen) {
         return traceLen;
     }
-    uint8_t *frame = trace + tracepos;
-    tracepos += data_len;
-    uint8_t *parityBytes = trace + tracepos;
-    tracepos += parity_len;
+
+    uint8_t *frame = hdr->frame;
+    uint8_t *parityBytes = hdr->frame + data_len;
+
+    tracepos += TRACELOG_HDR_LEN + data_len + parity_len;
 
     if (protocol == TOPAZ && !isResponse) {
         // topaz reader commands come in 1 or 9 separate frames with 7 or 8 Bits each.
