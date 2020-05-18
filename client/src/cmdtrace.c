@@ -33,7 +33,8 @@ typedef struct {
 } tracelog_hdr_t;
 
 // 4 + 2 + 2
-#define TRACELOG_HDR_LEN  sizeof(tracelog_hdr_t)
+#define TRACELOG_HDR_LEN             sizeof(tracelog_hdr_t)
+#define TRACELOG_NEXT_PARITY_LEN(x)  (((x)hdr->data_len - 1) / 8 + 1)
 
 static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
@@ -81,13 +82,13 @@ static int usage_trace_save(void) {
     return PM3_SUCCESS;
 }
 
-static bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen) {
-    return (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) >= traceLen);
+static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
+    return ((tracepos + TRACELOG_HDR_LEN) >= traceLen);
 }
 
 static bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
-    uint16_t next_records_datalen = *((uint16_t *)(trace + tracepos + sizeof(uint32_t) + sizeof(uint16_t)));
-    return ((next_records_datalen & 0x8000) == 0x8000);
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
+    return ((hdr->data_len & 0x8000) == 0x8000);
 }
 
 static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t *tracepos, uint16_t traceLen,
@@ -101,22 +102,24 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
     memcpy(topaz_reader_command, frame, *data_len);
 
-    while (!is_last_record(*tracepos, trace, traceLen) && !next_record_is_response(*tracepos, trace)) {
-        uint32_t next_timestamp = *((uint32_t *)(trace + *tracepos));
-        *tracepos += sizeof(uint32_t);
-        uint16_t next_duration = *((uint16_t *)(trace + *tracepos));
-        *tracepos += sizeof(uint16_t);
-        uint16_t next_data_len = *((uint16_t *)(trace + *tracepos)) & 0x7FFF;
-        *tracepos += sizeof(uint16_t);
-        uint8_t *next_frame = (trace + *tracepos);
-        *tracepos += next_data_len;
+    while (!is_last_record(*tracepos, traceLen) && !next_record_is_response(*tracepos, trace)) {
+
+        tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + *tracepos);
+    
+        uint32_t next_timestamp = hdr->timestamp;
+        uint16_t next_duration = hdr->duration;
+        uint16_t next_data_len = hdr->data_len & 0x7FFF;
+        uint8_t *next_frame = hdr->frame;
+        
+        *tracepos += TRACELOG_HDR_LEN + next_data_len;
+
         if ((next_data_len == 1) && (*data_len + next_data_len <= MAX_TOPAZ_READER_CMD_LEN)) {
             memcpy(topaz_reader_command + *data_len, next_frame, next_data_len);
             *data_len += next_data_len;
             last_timestamp = next_timestamp + next_duration;
         } else {
             // rewind and exit
-            *tracepos = *tracepos - next_data_len - sizeof(uint16_t) - sizeof(uint16_t) - sizeof(uint32_t);
+            *tracepos = *tracepos - next_data_len - TRACELOG_HDR_LEN;
             break;
         }
         uint16_t next_parity_len = (next_data_len - 1) / 8 + 1;
@@ -130,19 +133,20 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
 static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol) {
     // sanity check
-    if (tracepos + TRACELOG_HDR_LEN > traceLen) return traceLen;
+    if (is_last_record(tracepos, traceLen)) return traceLen;
 
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
     bool isResponse;
     uint16_t parity_len;
     
-    if (hdr->data_len & 0x8000) {
+    if ((hdr->data_len & 0x8000) == 0x8000) {
         hdr->data_len &= 0x7fff;
         isResponse = true;
     } else {
         isResponse = false;
     }
+
     parity_len = (hdr->data_len - 1) / 8 + 1;
 
     if (sizeof(tracelog_hdr_t) + hdr->data_len + parity_len > traceLen) {
@@ -435,7 +439,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                       explanation);
     }
 
-    if (is_last_record(tracepos, trace, traceLen)) return traceLen;
+    if (is_last_record(tracepos, traceLen)) return traceLen;
 
     if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
         uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
