@@ -25,6 +25,16 @@ static int CmdHelp(const char *Cmd);
 static uint8_t *g_trace;
 long g_traceLen = 0;
 
+typedef struct {
+    uint32_t timestamp;
+    uint16_t duration;
+    uint16_t data_len;
+    uint8_t frame[];
+} tracelog_hdr_t;
+
+// 4 + 2 + 2
+#define TRACELOG_HDR_LEN  sizeof(tracelog_hdr_t)
+
 static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
     PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
@@ -120,39 +130,29 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
 static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol) {
     // sanity check
-    if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+    if (tracepos + TRACELOG_HDR_LEN > traceLen) return traceLen;
+
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
     bool isResponse;
-    uint16_t data_len, parity_len;
-    uint32_t timestamp;
-
-    timestamp = *((uint32_t *)(trace + tracepos));
-    tracepos += 4;
-
-
-    // currently we don't use duration, so we skip it
-    tracepos += 2;
-
-    data_len = *((uint16_t *)(trace + tracepos));
-    tracepos += 2;
-
-    if (data_len & 0x8000) {
-        data_len &= 0x7fff;
+    uint16_t parity_len;
+    
+    if (hdr->data_len & 0x8000) {
+        hdr->data_len &= 0x7fff;
         isResponse = true;
     } else {
         isResponse = false;
     }
-    parity_len = (data_len - 1) / 8 + 1;
+    parity_len = (hdr->data_len - 1) / 8 + 1;
 
-    if (tracepos + data_len + parity_len > traceLen) {
+    if (sizeof(tracelog_hdr_t) + hdr->data_len + parity_len > traceLen) {
         return traceLen;
     }
-    uint8_t *frame = trace + tracepos;
-    tracepos += data_len;
-    //currently we don't use parity bytes, so we skip it
-    tracepos += parity_len;
 
-    if (data_len == 0) {
+    //set trace position
+    tracepos += sizeof(tracelog_hdr_t) + hdr->data_len + parity_len;
+
+    if (hdr->data_len == 0) {
         PrintAndLogEx(NORMAL, "<empty trace - possible error>");
         return tracepos;
     }
@@ -167,25 +167,24 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
              * we use format timestamp, newline, offset (0x000000), pseudo header, data
              * `text2pcap -t "%S." -l 264 -n <input-text-file> <output-pcapng-file>`
              */
-            char line[(data_len * 3) + 1];
+            char line[(hdr->data_len * 3) + 1];
             char *ptr = &line[0];
 
-            for (int j = 0; j < data_len ; j++) {
-                ptr += sprintf(ptr, "%02x", frame[j]);
-                ptr += sprintf(ptr, " ");
+            for (int i = 0; i < hdr->data_len ; i++) {
+                ptr += sprintf(ptr, "%02x ", hdr->frame[i]);
             }
 
             char data_len_str[5];
             char temp_str1[3] = {0};
             char temp_str2[3] = {0};
-
-            sprintf(data_len_str, "%04x", data_len);
+            
+            sprintf(data_len_str, "%04x", hdr->data_len);
             strncat(temp_str1, data_len_str, 2);
             temp_str1[2] = '\0';
             strncat(temp_str2, data_len_str + 2, 2);
             temp_str2[2] = '\0';
 
-            PrintAndLogEx(NORMAL, "0.%010u", timestamp);
+            PrintAndLogEx(NORMAL, "0.%010u", hdr->timestamp);
             PrintAndLogEx(NORMAL, "000000 00 %s %s %s %s",
                           (isResponse ? "ff" : "fe"),
                           temp_str1,
