@@ -21,8 +21,6 @@
 |||[EMV](/doc/emv_notes.md)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
 ||**[JTAG](/doc/jtag_notes.md)**||
-||||
-||||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
 
