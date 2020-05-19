@@ -1150,7 +1150,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len) {
 
     TransmitFor14443b_AsReader();
 
-    if (trigger) LED_A_ON();
+    if (g_trigger) LED_A_ON();
 
     LogTrace(cmd, len, time_start, GetCountSspClk() - time_start, NULL, true);
 }
@@ -1578,7 +1578,7 @@ void RAMFUNC SniffIso14443b(void) {
 }
 
 static void iso14b_set_trigger(bool enable) {
-    trigger = enable;
+    g_trigger = enable;
 }
 
 /*

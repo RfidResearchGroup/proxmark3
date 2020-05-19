@@ -73,7 +73,7 @@ int ToSendMax = -1;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 int button_status = BUTTON_NO_CLICK;
-bool allow_send_wtx = false;
+static bool allow_send_wtx = false;
 
 inline void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
@@ -385,12 +385,12 @@ static void SendStatus(void) {
 static void SendCapabilities(void) {
     capabilities_t capabilities;
     capabilities.version = CAPABILITIES_VERSION;
-    capabilities.via_fpc = reply_via_fpc;
-    capabilities.via_usb = reply_via_usb;
+    capabilities.via_fpc = g_reply_via_fpc;
+    capabilities.via_usb = g_reply_via_usb;
     capabilities.baudrate = 0; // no real baudrate for USB-CDC
 #ifdef WITH_FPC_USART
-    if (reply_via_fpc)
-        capabilities.baudrate = usart_baudrate;
+    if (g_reply_via_fpc)
+        capabilities.baudrate = g_usart_baudrate;
 #endif
 
 #ifdef WITH_FLASH
@@ -701,8 +701,8 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_BREAK_LOOP:
             break;
         case CMD_QUIT_SESSION: {
-            reply_via_fpc = false;
-            reply_via_usb = false;
+            g_reply_via_fpc = false;
+            g_reply_via_usb = false;
             break;
         }
         // emulator

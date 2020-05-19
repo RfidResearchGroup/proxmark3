@@ -48,8 +48,7 @@ static int temp2 = 0;
 static int sof_bits;               // number of start-of-frame bits
 static uint8_t pwdh0, pwdl0, pwdl1; // password bytes
 static uint32_t rnd = 0x74124485;  // randomnumber
-size_t blocknr;
-bool end = false;
+static bool end = false;
 //#define SENDBIT_TEST
 
 /* array index 3 2 1 0 // bytes in sim.bin file are 0 1 2 3

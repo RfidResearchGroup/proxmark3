@@ -48,8 +48,8 @@ static bool bCrypto;
 // Is in auth stage
 static bool bAuthenticating;
 // Successful password auth
-bool bSelecting;
-bool bCollision;
+static bool bSelecting;
+static bool bCollision;
 static bool bPwd;
 static bool bSuccessful;
 
@@ -89,14 +89,14 @@ static uint8_t password[4];
 static uint8_t NrAr[8];
 static uint8_t key[8];
 static uint8_t writedata[4];
-uint8_t logdata_0[4], logdata_1[4];
-uint8_t nonce[4];
-bool key_no;
+static uint8_t logdata_0[4], logdata_1[4];
+static uint8_t nonce[4];
+static bool key_no;
 static uint64_t cipher_state;
 
-int16_t blocknr;
-size_t flipped_bit = 0;
-uint32_t byte_value = 0;
+static int16_t blocknr;
+static size_t flipped_bit = 0;
+static uint32_t byte_value = 0;
 
 static int hitag2_reset(void) {
     tag.state = TAG_STATE_RESET;
@@ -997,7 +997,7 @@ void SniffHitag2(void) {
 
     lf_init(false, false);
 
-    logging = false;
+    g_logging = false;
 
     size_t periods = 0;
     uint8_t periods_bytes[4];
@@ -1031,8 +1031,8 @@ void SniffHitag2(void) {
 
         // Test if we detected the first reader modulation edge
         if (periods != 0) {
-            if (logging == false) {
-                logging = true;
+            if (g_logging == false) {
+                g_logging = true;
                 LED_D_ON();
             }
         }

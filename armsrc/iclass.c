@@ -1802,7 +1802,7 @@ static void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait) {
     TransmitIClassCommand(ToSend, ToSendMax, &wait);
     LED_A_ON();
 
-    LogTrace(frame, len, rsamples, rsamples, NULL, true);
+    LogTrace(frame, len, g_rsamples, g_rsamples, NULL, true);
 }
 static void ReaderTransmitIClass(uint8_t *frame, int len) {
     ReaderTransmitIClass_ext(frame, len, 330);
@@ -1867,7 +1867,7 @@ static int ReaderReceiveIClass(uint8_t *receivedAnswer) {
     if (GetIClassAnswer(receivedAnswer, 0, NULL) == false)
         return 0;
 
-    LogTrace(receivedAnswer, Demod.len, rsamples, rsamples, NULL, false);
+    LogTrace(receivedAnswer, Demod.len, g_rsamples, g_rsamples, NULL, false);
     return Demod.len;
 }
 

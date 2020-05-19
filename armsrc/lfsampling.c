@@ -27,7 +27,7 @@ Default LF config is set to:
     samples_to_skip = 0
     verbose = YES
     */
-sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
+static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
 
 void printConfig(void) {
     uint32_t d = config.divisor;

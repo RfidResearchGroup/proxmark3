@@ -25,7 +25,7 @@
 #define RECEIVE_SIZE 64
 
 // the block number for the ISO14443-4 PCB
-uint8_t pcb_blocknum = 0;
+static uint8_t pcb_blocknum = 0;
 // Deselect card by sending a s-block. the crc is precalced for speed
 static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 

@@ -31,9 +31,9 @@ static uint32_t iso14a_timeout;
 // if iso14443a not active - transmit/receive dont try to execute
 static bool hf_field_active = false;
 
-uint8_t colpos = 0;
-int rsamples = 0;
-uint8_t trigger = 0;
+static uint8_t colpos = 0;
+int g_rsamples = 0;
+uint8_t g_trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
 
@@ -123,7 +123,7 @@ static uint32_t LastProxToAirDuration;
 #define SEC_Z 0xc0
 
 void iso14a_set_trigger(bool enable) {
-    trigger = enable;
+    g_trigger = enable;
 }
 
 void iso14a_set_timeout(uint32_t timeout) {
@@ -2145,7 +2145,7 @@ void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t
     CodeIso14443aBitsAsReaderPar(frame, bits, par);
     // Send command to tag
     TransmitFor14443a(ToSend, ToSendMax, timing);
-    if (trigger) LED_A_ON();
+    if (g_trigger) LED_A_ON();
 
     LogTrace(frame, nbytes(bits), (LastTimeProxToAirStart << 4) + DELAY_ARM2AIR_AS_READER, ((LastTimeProxToAirStart + LastProxToAirDuration) << 4) + DELAY_ARM2AIR_AS_READER, par, true);
 }
