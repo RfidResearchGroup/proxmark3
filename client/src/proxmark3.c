@@ -29,14 +29,6 @@
 #include "flash.h"
 #include "preferences.h"
 
-#ifdef _WIN32
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
-
 // Used to enable/disable use of preferences json file
 #define USE_PREFERENCE_FILE
 

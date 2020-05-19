@@ -12,9 +12,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "lauxlib.h"
 #include "cmdmain.h"
+#include "proxmark3.h"
 #include "comms.h"
 #include "mifare/mifarehost.h"
 #include "crc.h"
@@ -28,7 +30,7 @@
 #include "mifare/ndef.h"  // ndef parsing
 #include "commonutil.h"
 #include "ui.h"
-#include "proxmark3.h"
+
 #include "crc16.h"
 #include "protocols.h"
 #include "fileutils.h"    // searchfile
@@ -912,6 +914,12 @@ static int l_detect_prng(lua_State *L) {
  * @return
  */
 static int l_keygen_algoD(lua_State *L) {
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if (n != 1)  {
+        return returnToLuaWithError(L, "Only UID");
+    }
+
     size_t size;
     uint32_t tmp;
     const char *p_uid = luaL_checklstring(L, 1, &size);
@@ -1129,6 +1137,9 @@ static int l_remark(lua_State *L) {
     return 1;
 }
 
+// 1. filename
+// 2. extension
+// output: full search path to file
 static int l_searchfile(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
@@ -1151,6 +1162,38 @@ static int l_searchfile(lua_State *L) {
 
     lua_pushstring(L, path);
     free(path);
+    return 1;
+}
+
+static int l_ud(lua_State *L) {
+    const char *ud = get_my_user_directory();
+    lua_pushstring(L, ud);
+    return 1;
+}
+static int l_ewd(lua_State *L) {
+    const char *ewd = get_my_executable_directory();
+    lua_pushstring(L, ewd);
+    return 1;
+}
+static int l_cwd(lua_State *L) {
+
+    uint16_t path_len = FILENAME_MAX; // should be a good starting point
+    bool error = false;
+    char *cwd = NULL;
+    cwd = (char *)calloc(path_len, sizeof(uint8_t));
+
+    while (!error && (GetCurrentDir(cwd, path_len) == NULL)) {
+        if (errno == ERANGE) {  // Need bigger buffer
+            path_len += 10;      // if buffer was too small add 10 characters and try again
+            cwd = realloc(cwd, path_len);
+        } else {
+            error = true;
+            free(cwd);
+            return returnToLuaWithError(L, "Failed to get current working directory");
+        }
+    }
+    lua_pushstring(L, cwd);
+    free(cwd);
     return 1;
 }
 
@@ -1215,6 +1258,9 @@ int set_pm3_libraries(lua_State *L) {
         {"ndefparse",                   l_ndefparse},
         {"fast_push_mode",              l_fast_push_mode},
         {"search_file",                 l_searchfile},
+        {"cwd",                         l_cwd},
+        {"ewd",                         l_ewd},
+        {"ud",                          l_ud},
         {"rem",                         l_remark},
         {NULL, NULL}
     };
