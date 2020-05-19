@@ -310,7 +310,7 @@ Settings of the Blue Shark add-on and of the white dongle:
 
 If you bought your Bluetooth adapter dongle somewhere else, make sure to set the baud rate to 115200 `AT+BAUD8`, the name `AT+NAMEPM3_RDV4.0` and PIN `AT+PIN1234` correctly.
 
-### 6.1 UART and LED behavior
+### 6.2 UART and LED behavior
 ^[Top](#top)
 
 Bluetooth is connected to Proxmark3 RDV4.0 via UART. The USB and UART interfaces of RDV4.0 can coexist without conflict, and no special switching is required. 
@@ -318,18 +318,18 @@ Bluetooth is connected to Proxmark3 RDV4.0 via UART. The USB and UART interfaces
 The following link has helpful notes on UART usage and baud rates:
 https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/uart_notes.md
 
-### 6.2 Disassembly
+### 6.3 Disassembly
 ^[Top](#top)
 
 There is a heat conductive double-sided tape inside the add-on, which has strong adhesive force. Therefore, if add-on needs to be removed, it needs to be pulled out from the heat sink end with greater efforts. Each disassembly will reduce the viscidity of double-sided tape. When double-sided tape is well protected, it will not affect the second use. Thermal conductivity will be slightly worse and will therefore have a direct impact on the thermal performance of the heat sink.
 
-### 6.3 Battery charging
+### 6.4 Battery charging
 ^[Top](#top)
 
 The battery charging circuit is turned on by default. Any time a USB cable is inserted, the battery will be automatically charged. The red LED will remain bright when charging. 
 The red LED will be extinguished when charging is completed.
 
-### 6.4 Get better signals
+### 6.5 Get better signals
 ^[Top](#top)
 
 For the better heat dissipation, we have used a cast metal enclosure for the add-on. As a result Bluetooth wireless signals are sacrificed. For example, if the back of add-on is facing the Bluetooth host, the signal is very bad and the distance will be reduced. The best signal strength can be obtained when the front glass faces the Bluetooth host.  
