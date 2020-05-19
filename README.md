@@ -53,9 +53,11 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 This repo compiles nicely on 
    - Proxspace v3.x
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
-   - Ubuntu 1604, 1804, 1904
+   - Ubuntu 1604, 1804, 1904, 2004
+   - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
+   - Rasbian Pi, Jetson Nano, 
+   - Android / Termux
    - Mac OS X / Homebrew
-   - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
