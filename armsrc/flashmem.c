@@ -16,8 +16,8 @@
 /// Calculates the value of the CSR DLYBCT field given the desired delay (in ns)
 #define SPI_DLYBCT(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 32000) << 24)
 
-
-uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
+static uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
+#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;

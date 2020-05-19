@@ -27,8 +27,6 @@
 #define FLASH_FASTBAUD MCK
 #define FLASH_MINBAUD FLASH_FASTBAUD
 
-#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
-
 static int CmdHelp(const char *Cmd);
 
 static int usage_flashmem_spibaud(void) {

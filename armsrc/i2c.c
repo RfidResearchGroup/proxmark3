@@ -32,7 +32,7 @@
 
 #define I2C_ERROR  "I2C_WaitAck Error"
 
-volatile unsigned long c;
+static volatile unsigned long c;
 
 // Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps

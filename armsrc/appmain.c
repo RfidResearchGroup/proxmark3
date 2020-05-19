@@ -278,9 +278,9 @@ static void SendVersion(void) {
 
     strncat(VersionString, "\n [ FPGA ]\n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
-    for (int i = 0; i < fpga_bitstream_num; i++) {
-        strncat(VersionString, fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
-        if (i < fpga_bitstream_num - 1) {
+    for (int i = 0; i < g_fpga_bitstream_num; i++) {
+        strncat(VersionString, g_fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
+        if (i < g_fpga_bitstream_num - 1) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }

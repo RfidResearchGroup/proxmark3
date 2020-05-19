@@ -130,9 +130,9 @@ AT91SAM7S256  USB Device Port
 #define SET_CONTROL_LINE_STATE        0x2221
 
 AT91PS_UDP pUdp = AT91C_BASE_UDP;
-uint8_t btConfiguration = 0;
-uint8_t btConnection    = 0;
-uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
+static uint8_t btConfiguration = 0;
+static uint8_t btConnection    = 0;
+static uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
 static const char devDescriptor[] = {
     /* Device descriptor */
