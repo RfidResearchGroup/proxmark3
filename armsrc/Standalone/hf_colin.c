@@ -104,12 +104,7 @@ static const uint8_t is_hex[] = {
     0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0
 };
 
-// Note: inlining this function would fail with -Os
-#ifdef __OPTIMIZE_SIZE__
 static uint64_t hex2i(const char *s) {
-#else
-static inline uint64_t hex2i(const char *s) {
-#endif
     uint64_t val = 0;
     if (s == NULL || s[0] == 0)
         return 0;
