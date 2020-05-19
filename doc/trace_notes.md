@@ -1,5 +1,5 @@
-# Notes about the tracelog
 <a id="top"></a>
+# Notes about the tracelog
 
 ## Table of Contents
  * [Command](#trace-command)
