@@ -53,9 +53,9 @@ The binary format for the dynamic tracelog is as following.
    32 bits timestamp (little endian)
    16 bits duration (little endian)
    15 bits data length (little endian) (0x7FFF)
-   1 bit isResponse (used as readerToTag flag)
-   y Bytes data
-   x Bytes parity,  where x == ceil(data_len/8)
+   1 bit isResponse (0=reader to tag, 1=tag to reader)
+   data length Bytes data
+   x Bytes parity,  where x == ceil(data length/8)
 */
 
 typedef struct {
