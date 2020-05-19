@@ -46,9 +46,9 @@ static mbedtls_des_context ctx;
 static mbedtls_des3_context ctx3;
 static mbedtls_aes_context actx;
 
-static inline void update_key_schedules(desfirekey_t key);
+static void update_key_schedules(desfirekey_t key);
 
-static inline void update_key_schedules(desfirekey_t key) {
+static void update_key_schedules(desfirekey_t key) {
     // DES_set_key ((DES_cblock *)key->data, &(key->ks1));
     // DES_set_key ((DES_cblock *)(key->data + 8), &(key->ks2));
     // if (T_3K3DES == key->type) {
