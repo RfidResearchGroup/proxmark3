@@ -157,6 +157,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
         return false;
     }
     if (timestamp_end - timestamp_start > 0x7FFF) {
+        Dbprintf("Error in LogTrace: duration too long for UINT16: 0x%08x", timestamp_end - timestamp_start);
         return false; // duration too long, must be max 15 bits
     }
     hdr->timestamp = timestamp_start;
