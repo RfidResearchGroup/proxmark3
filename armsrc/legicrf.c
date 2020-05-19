@@ -113,7 +113,13 @@ static inline int32_t sample_power(void) {
 //
 // Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame
 // has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
+
+// Note: inlining this function would fail with -Os
+#ifdef __OPTIMIZE_SIZE__
+static bool rx_bit(void) {
+#else
 static inline bool rx_bit(void) {
+#endif
     int32_t power;
 
     for (size_t i = 0; i < 5; ++i) {
