@@ -156,12 +156,24 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
         tracing = false; // don't trace any more
         return false;
     }
-    if (timestamp_end - timestamp_start > 0x7FFF) {
-        Dbprintf("Error in LogTrace: duration too long for UINT16: 0x%08x", timestamp_end - timestamp_start);
-        return false; // duration too long, must be max 15 bits
+
+    uint32_t duration;
+    if (timestamp_end > timestamp_start) {
+        duration = timestamp_end - timestamp_start;
+    } else {
+        duration = (UINT32_MAX - timestamp_start) + timestamp_end;
     }
+
+    if (duration > 0x7FFF) {
+        if (DBGLEVEL >= DBG_DEBUG) {
+            Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x start:0x%08x end:0x%08x", duration, timestamp_start, timestamp_end);
+            Dbprintf("Forcing duration = 0");
+        }
+        duration = 0;
+    }
+
     hdr->timestamp = timestamp_start;
-    hdr->duration = timestamp_end - timestamp_start;
+    hdr->duration = duration;
     hdr->data_len = iLen;
     hdr->isResponse = !readerToTag;
     traceLen += TRACELOG_HDR_LEN;

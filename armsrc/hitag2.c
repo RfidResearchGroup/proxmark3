@@ -1238,7 +1238,7 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
         // Check if frame was captured
         if (rxlen > 4) {
 
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, true);
+            LogTrace(rx, nbytes(rxlen), response, response, NULL, true);
 
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hitag2_handle_reader_command(rx, rxlen, tx, &txlen);
