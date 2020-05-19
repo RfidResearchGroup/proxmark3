@@ -1,4 +1,5 @@
 # Notes about the tracelog
+<a id="top"></a>
 
 ## Table of Contents
  * [Command](#trace-command)
@@ -7,12 +8,14 @@
 
 
 ## Trace command
+^[Top](#top)
 
 The `trace` command lists the data exchange by the proxmark3 and a tag or a reader in human readable form.
 
 With `trace list` a table is shown which gives timing information, the src of the data bytes, the transmitted/received bytes itself, a check if the CRC was correct and some decoding of the command.
 
 ### Timing
+^[Top](#top)
 
 The Start and the End coloumn lists timestamps when the transmission of the shown data started (time of first bit) and when it ended (end of last modulation).
 
@@ -29,22 +32,28 @@ The unit for this time information depends on the protocol in use:
 By specifing the option ```f``` (e.g. ```trace list 14a f```) the frame delay times are shown. (So you don't have to do the math by your own).
 
 ### Sources
+^[Top](#top)
 
 If the data is marked as a response the source is shown as Tag. Otherwise it is marked as Reader (Rdr).
 
 ### Data
+^[Top](#top)
 
 This coloumn show the raw bytes trasmitted over the air. With option ```c``` CRC bytes are marked in square brackets.
 
 ### CRC
+^[Top](#top)
 
 Marks if the transmitted CRC matches with the calculated CRC.
 
 ### Annotation
+^[Top](#top)
 
 Annotations provide a rough decoding of the transmitted data. For ISO14443A a more detailed decoding is available with Wireshark (s. next chapter)
 
 ## Tracelog format
+^[Top](#top)
+
 The binary format for the dynamic tracelog is as following.
 
 ```
@@ -73,6 +82,7 @@ typedef struct {
 ```
 
 ## Trace and Wireshark
+^[Top](#top)
 
 To get a more detailed explanation of the transmitted data for ISO14443A traces the output can be converted to a pcapng file to read it with [Wireshark](https://www.wireshark.org/).
 
