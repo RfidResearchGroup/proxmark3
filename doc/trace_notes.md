@@ -1,4 +1,4 @@
-# Notes about the tracelog.
+# Notes about the tracelog
 
 ## Table of Contents
  * [Command](#trace-command)
@@ -44,7 +44,6 @@ Marks if the transmitted CRC matches with the calculated CRC.
 
 Annotations provide a rough decoding of the transmitted data. For ISO14443A a more detailed decoding is available with Wireshark (s. next chapter)
 
---
 ## Tracelog format
 The binary format for the dynamic tracelog is as following.
 
@@ -72,9 +71,6 @@ typedef struct {
 #define TRACELOG_HDR_LEN        sizeof(tracelog_hdr_t)
 #define TRACELOG_PARITY_LEN(x)  (((x)->data_len - 1) / 8 + 1)
 ```
-
-
---
 
 ## Trace and Wireshark
 
