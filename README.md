@@ -18,14 +18,14 @@
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) ||
 ||[Maintainers](/doc/md/Development/Maintainers.md)|[Command Cheat sheet](/doc/cheatsheet.md)|
 ||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
-|||[EMV](/doc/emv_notes.md)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
 ||**[JTAG](/doc/jtag_notes.md)**||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
 
 
-| Notes / helpful documents |||
+## Notes / helpful documents
+| Notes |||
 | ------------------- |:-------------------:| -------------------:|
 |[Notes on UART](/doc/uart_notes.md)|[Notes on Termux / Android](/doc/termux_notes.md)|[Notes on paths](/doc/path_notes.md)|
 |[Notes on frame format](/doc/new_frame_format.md)|[Notes on tracedata / wireshark](/doc/trace_notes.md)|[Notes on EMV](/doc/emv_notes.md)|
