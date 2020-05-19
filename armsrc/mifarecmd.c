@@ -2008,9 +2008,9 @@ out:
 // bit 6 - wipe tag.
 //-----------------------------------------------------------------------------
 // magic uid card generation 1 commands
-uint8_t wupC1[] = { MIFARE_MAGICWUPC1 };
-uint8_t wupC2[] = { MIFARE_MAGICWUPC2 };
-uint8_t wipeC[] = { MIFARE_MAGICWIPEC };
+static uint8_t wupC1[] = { MIFARE_MAGICWUPC1 };
+static uint8_t wupC2[] = { MIFARE_MAGICWUPC2 };
+static uint8_t wipeC[] = { MIFARE_MAGICWIPEC };
 
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 

@@ -70,9 +70,11 @@
 #define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
 uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax = -1;
+
+
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
-int button_status = BUTTON_NO_CLICK;
+static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
 
 inline void send_wtx(uint16_t wtx) {

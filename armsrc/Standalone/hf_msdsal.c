@@ -52,7 +52,7 @@ void ModInfo(void) {
 * technologies. Be brave enough to share your knowledge & inspire others. Salvador Mendoza.
 */
 
-uint8_t ppdol [255] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00}; // Default GET PROCESSING
+static uint8_t ppdol [255] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00}; // Default GET PROCESSING
 
 static uint8_t treatPDOL(uint8_t *apdu) {                  //Generate GET PROCESSING
     uint8_t plen = 7;

@@ -2289,10 +2289,10 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 #define FWD_CMD_READ    0x9
 #define FWD_CMD_DISABLE 0x5
 
-uint8_t forwardLink_data[64]; //array of forwarded bits
-uint8_t *forward_ptr;  //ptr for forward message preparation
-uint8_t fwd_bit_sz; //forwardlink bit counter
-uint8_t *fwd_write_ptr;  //forwardlink bit pointer
+static uint8_t forwardLink_data[64]; //array of forwarded bits
+static uint8_t *forward_ptr;  //ptr for forward message preparation
+static uint8_t fwd_bit_sz; //forwardlink bit counter
+static uint8_t *fwd_write_ptr;  //forwardlink bit pointer
 
 //====================================================================
 // prepares command bits

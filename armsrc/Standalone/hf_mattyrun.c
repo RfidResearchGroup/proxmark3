@@ -49,19 +49,19 @@ on a blank card.
 #include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
 
-uint8_t uid[10];
-uint32_t cuid;
-iso14a_card_select_t p_card;
+static uint8_t uid[10];
+static uint32_t cuid;
+static iso14a_card_select_t p_card;
 
 /*
     Pseudo-configuration block.
 */
-bool printKeys = false;         // Prints keys
-bool transferToEml = true;      // Transfer keys to emulator memory
-bool ecfill = true;             // Fill emulator memory with cards content.
-bool simulation = true;         // Simulates an exact copy of the target tag
-bool fillFromEmulator = false;  // Dump emulator memory.
-uint8_t stKeyBlock = 20;        // Set the quantity of keys in the block.
+static bool printKeys = false;         // Prints keys
+static bool transferToEml = true;      // Transfer keys to emulator memory
+static bool ecfill = true;             // Fill emulator memory with cards content.
+static bool simulation = true;         // Simulates an exact copy of the target tag
+static bool fillFromEmulator = false;  // Dump emulator memory.
+static uint8_t stKeyBlock = 20;        // Set the quantity of keys in the block.
 
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.

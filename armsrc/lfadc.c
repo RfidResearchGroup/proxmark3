@@ -51,8 +51,8 @@ bool lf_test_periods(size_t expected, size_t count) {
 //////////////////////////////////////////////////////////////////////////////
 // Low frequency (LF) adc passthrough functionality
 //////////////////////////////////////////////////////////////////////////////
-uint8_t previous_adc_val = 0;
-uint8_t adc_avg = 0;
+static uint8_t previous_adc_val = 0;
+static uint8_t adc_avg = 0;
 
 void lf_sample_mean(void) {
     uint8_t periods = 0;

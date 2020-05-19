@@ -81,12 +81,12 @@
 
 */
 
-uint8_t cjuid[10];
-uint32_t cjcuid;
-iso14a_card_select_t p_card;
-int currline;
-int currfline;
-int curlline;
+static uint8_t cjuid[10];
+static uint32_t cjcuid;
+static iso14a_card_select_t p_card;
+static int currline;
+static int currfline;
+static int curlline;
 
 // TODO : Implement fast read of KEYS like in RFIdea
 // also http://ext.delaat.net/rp/2015-2016/p04/report.pdf
@@ -162,7 +162,7 @@ static void scan_keys(const char *str, int len, uint64_t *user_data) {
     }
 }
 
-MFC1KSchema Schemas[MAX_SCHEMAS];
+static MFC1KSchema Schemas[MAX_SCHEMAS];
 
 /*MFC1KSchema Noralsy = {
     .name = "Noralsy",
@@ -196,7 +196,7 @@ MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
               0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76}};
 */
 
-int total_schemas = 0;
+static int total_schemas = 0;
 
 static void add_schema(MFC1KSchema *p, MFC1KSchema a, int *schemas_counter) {
     if (*schemas_counter < MAX_SCHEMAS) {

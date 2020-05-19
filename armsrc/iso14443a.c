@@ -67,7 +67,7 @@ static uint8_t iso14_pcb_blocknum = 0;
 #define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1)
 
 // The FPGA will report its internal sending delay in
-uint16_t FpgaSendQueueDelay;
+static uint16_t FpgaSendQueueDelay;
 // the 5 first bits are the number of bits buffered in mod_sig_buf
 // the last three bits are the remaining ticks/2 after the mod_sig_buf shift
 #define DELAY_FPGA_QUEUE (FpgaSendQueueDelay<<1)
