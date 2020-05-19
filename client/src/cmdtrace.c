@@ -18,23 +18,13 @@
 #include "comms.h"              // for sending cmds to device. GetFromBigBuf
 #include "fileutils.h"          // for saveFile
 #include "cmdlfhitag.h"         // annotate hitag
+#include "pm3_cmd.h"            // tracelog_hdr_t
 
 static int CmdHelp(const char *Cmd);
 
 // trace pointer
 static uint8_t *g_trace;
 long g_traceLen = 0;
-
-typedef struct {
-    uint32_t timestamp;
-    uint16_t duration;
-    uint16_t data_len;
-    uint8_t frame[];
-} PACKED tracelog_hdr_t;
-
-// 4 + 2 + 2
-#define TRACELOG_HDR_LEN             sizeof(tracelog_hdr_t)
-#define TRACELOG_NEXT_PARITY_LEN(x)  (((x)hdr->data_len - 1) / 8 + 1)
 
 static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
@@ -88,7 +78,7 @@ static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
 
 static bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
-    return ((hdr->data_len & 0x8000) == 0x8000);
+    return (hdr->isResponse);
 }
 
 static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t *tracepos, uint16_t traceLen,
@@ -106,24 +96,18 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
         tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + *tracepos);
     
-        uint32_t next_timestamp = hdr->timestamp;
-        uint16_t next_duration = hdr->duration;
-        uint16_t next_data_len = hdr->data_len & 0x7FFF;
-        uint8_t *next_frame = hdr->frame;
-        
-        *tracepos += TRACELOG_HDR_LEN + next_data_len;
+        *tracepos += TRACELOG_HDR_LEN + hdr->data_len;
 
-        if ((next_data_len == 1) && (*data_len + next_data_len <= MAX_TOPAZ_READER_CMD_LEN)) {
-            memcpy(topaz_reader_command + *data_len, next_frame, next_data_len);
-            *data_len += next_data_len;
-            last_timestamp = next_timestamp + next_duration;
+        if ((hdr->data_len == 1) && (*data_len + hdr->data_len <= MAX_TOPAZ_READER_CMD_LEN)) {
+            memcpy(topaz_reader_command + *data_len, hdr->frame, hdr->data_len);
+            *data_len += hdr->data_len;
+            last_timestamp = hdr->timestamp + hdr->duration;
         } else {
             // rewind and exit
-            *tracepos = *tracepos - next_data_len - TRACELOG_HDR_LEN;
+            *tracepos = *tracepos - hdr->data_len - TRACELOG_HDR_LEN;
             break;
         }
-        uint16_t next_parity_len = (next_data_len - 1) / 8 + 1;
-        *tracepos += next_parity_len;
+        *tracepos += TRACELOG_PARITY_LEN(hdr);
     }
 
     *duration = last_timestamp - timestamp;
@@ -137,24 +121,12 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
 
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-    bool isResponse;
-    uint16_t parity_len;
-    
-    if ((hdr->data_len & 0x8000) == 0x8000) {
-        hdr->data_len &= 0x7fff;
-        isResponse = true;
-    } else {
-        isResponse = false;
-    }
-
-    parity_len = (hdr->data_len - 1) / 8 + 1;
-
-    if (TRACELOG_HDR_LEN + hdr->data_len + parity_len > traceLen) {
+    if (TRACELOG_HDR_LEN + hdr->data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
         return traceLen;
     }
 
     //set trace position
-    tracepos += TRACELOG_HDR_LEN + hdr->data_len + parity_len;
+    tracepos += TRACELOG_HDR_LEN + hdr->data_len + TRACELOG_PARITY_LEN(hdr);
 
     if (hdr->data_len == 0) {
         PrintAndLogEx(NORMAL, "<empty trace - possible error>");
@@ -190,7 +162,7 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
 
             PrintAndLogEx(NORMAL, "0.%010u", hdr->timestamp);
             PrintAndLogEx(NORMAL, "000000 00 %s %s %s %s",
-                          (isResponse ? "ff" : "fe"),
+                          (hdr->isResponse ? "ff" : "fe"),
                           temp_str1,
                           temp_str2,
                           line);
@@ -210,44 +182,32 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     // sanity check
     if (is_last_record(tracepos, traceLen)) return traceLen;
 
-    bool isResponse;
-    uint16_t data_len, parity_len;
-    uint32_t duration, timestamp, first_timestamp, EndOfTransmissionTimestamp;
+    uint32_t duration;
+    uint16_t data_len;
+    uint32_t EndOfTransmissionTimestamp;
     uint8_t topaz_reader_command[9];
     char explanation[40] = {0};
     uint8_t mfData[32] = {0};
     size_t mfDataLen = 0;
-
     tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-    first_timestamp = first_hdr->timestamp;
-    
-    timestamp = hdr->timestamp;
     duration = hdr->duration;
     data_len = hdr->data_len;
 
-    if (data_len & 0x8000) {
-        data_len &= 0x7fff;
-        isResponse = true;
-    } else {
-        isResponse = false;
-    }
-    parity_len = (data_len - 1) / 8 + 1;
-
-    if (tracepos + TRACELOG_HDR_LEN + data_len + parity_len > traceLen) {
+    if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
         return traceLen;
     }
 
     uint8_t *frame = hdr->frame;
     uint8_t *parityBytes = hdr->frame + data_len;
 
-    tracepos += TRACELOG_HDR_LEN + data_len + parity_len;
+    tracepos += TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr);
 
-    if (protocol == TOPAZ && !isResponse) {
+    if (protocol == TOPAZ && !hdr->isResponse) {
         // topaz reader commands come in 1 or 9 separate frames with 7 or 8 Bits each.
         // merge them:
-        if (merge_topaz_reader_frames(timestamp, &duration, &tracepos, traceLen, trace, frame, topaz_reader_command, &data_len)) {
+        if (merge_topaz_reader_frames(hdr->timestamp, &duration, &tracepos, traceLen, trace, frame, topaz_reader_command, &data_len)) {
             frame = topaz_reader_command;
         }
     }
@@ -258,7 +218,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (data_len > 2) {
         switch (protocol) {
             case ICLASS:
-                crcStatus = iclass_CRC_check(isResponse, frame, data_len);
+                crcStatus = iclass_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_14443B:
             case TOPAZ:
@@ -266,12 +226,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = !felica_CRC_check(frame + 2, data_len - 4);
                 break;
             case PROTO_MIFARE:
-                crcStatus = mifare_CRC_check(isResponse, frame, data_len);
+                crcStatus = mifare_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_14443A:
             case MFDES:
             case LTO:
-                crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
+                crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case THINFILM:
                 frame[data_len - 1] ^= frame[data_len - 2];
@@ -319,11 +279,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != THINFILM
                 && protocol != FELICA
                 && protocol != LTO
-                && (isResponse || protocol == ISO_14443A)
+                && (hdr->isResponse || protocol == ISO_14443A)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
-        } else if (protocol == ICLASS  && isResponse == false) {
+        } else if (protocol == ICLASS  && hdr->isResponse == false) {
             uint8_t parity = 0;
             for (int i = 0; i < 6; i++) {
                 parity ^= ((frame[0] >> i) & 1);
@@ -353,19 +313,19 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     // Draw the CRC column
     const char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
-    EndOfTransmissionTimestamp = timestamp + duration;
+    EndOfTransmissionTimestamp = hdr->timestamp + duration;
 
     // Always annotate LEGIC read/tag
     if (protocol == LEGIC)
         annotateLegic(explanation, sizeof(explanation), frame, data_len);
 
     if (protocol == PROTO_MIFARE)
-        annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, parity_len, isResponse);
+        annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, TRACELOG_PARITY_LEN(hdr), hdr->isResponse);
 
     if (protocol == FELICA)
         annotateFelica(explanation, sizeof(explanation), frame, data_len);
 
-    if (!isResponse) {
+    if (!hdr->isResponse) {
         switch (protocol) {
             case ICLASS:
                 annotateIclass(explanation, sizeof(explanation), frame, data_len);
@@ -412,9 +372,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     for (int j = 0; j < num_lines ; j++) {
         if (j == 0) {
             PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-72s | %s| %s",
-                          (timestamp - first_timestamp),
-                          (EndOfTransmissionTimestamp - first_timestamp),
-                          (isResponse ? "Tag" : "Rdr"),
+                          (hdr->timestamp - first_hdr->timestamp),
+                          (EndOfTransmissionTimestamp - first_hdr->timestamp),
+                          (hdr->isResponse ? "Tag" : "Rdr"),
                           line[j],
                           (j == num_lines - 1) ? crc : "    ",
                           (j == num_lines - 1) ? explanation : "");
@@ -426,12 +386,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
-    if (DecodeMifareData(frame, data_len, parityBytes, isResponse, mfData, &mfDataLen)) {
+    if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen)) {
         memset(explanation, 0x00, sizeof(explanation));
-        if (!isResponse) {
+        if (!hdr->isResponse) {
             annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
         }
-        uint8_t crcc = iso14443A_CRC_check(isResponse, mfData, mfDataLen);
+        uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
         PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
                       sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
                       (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
@@ -440,16 +400,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (is_last_record(tracepos, traceLen)) return traceLen;
 
-    if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
+    if (showWaitCycles && !hdr->isResponse && next_record_is_response(tracepos, trace)) {
         
         tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
          
-        uint32_t next_timestamp = next_hdr->timestamp;
         PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
-                      (EndOfTransmissionTimestamp - first_timestamp),
-                      (next_timestamp - first_timestamp),
+                      (EndOfTransmissionTimestamp - first_hdr->timestamp),
+                      (next_hdr->timestamp - first_hdr->timestamp),
                       "   ",
-                      (next_timestamp - EndOfTransmissionTimestamp));
+                      (next_hdr->timestamp - EndOfTransmissionTimestamp));
     }
 
     return tracepos;
