@@ -210,7 +210,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
  * @param keycnt key count that lays in data. may be NULL
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
+int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint32_t *keycnt);
 
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
@@ -228,7 +228,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
  * @param verbose print messages if true
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint32_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose);
 
 /**
@@ -240,7 +240,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
  * @param keylen  the number of bytes a key per row is
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt);
+int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt);
 
 /**
  * @brief  Utility function to check and convert old mfu dump format to new

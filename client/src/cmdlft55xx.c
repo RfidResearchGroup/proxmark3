@@ -3045,7 +3045,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
 
     if (use_pwd_file) {
-        uint16_t keycount = 0;
+        uint32_t keycount = 0;
 
         int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
         if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
@@ -3056,7 +3056,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        for (uint16_t c = 0; c < keycount; ++c) {
+        for (uint32_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {
                 PrintAndLogEx(WARNING, "Device offline\n");

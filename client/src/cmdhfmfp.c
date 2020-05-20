@@ -1027,7 +1027,7 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
     return PM3_SUCCESS;
 }
 
-static void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyListLen, uint32_t *startPattern) {
+static void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], uint32_t *keyListLen, uint32_t *startPattern) {
     for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
         keyList[*keyListLen][0] = (pt >> 8) & 0xff;
         keyList[*keyListLen][1] = pt & 0xff;
@@ -1045,7 +1045,7 @@ static void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_
 static int CmdHFMFPChk(const char *Cmd) {
     int res;
     uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
-    size_t keyListLen = 0;
+    uint32_t keyListLen = 0;
     uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
 
     CLIParserInit("hf mfp chk",
@@ -1149,6 +1149,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     uint8_t endKeyAB = 1;
     if (keyA && !keyB)
         endKeyAB = 0;
+
     if (!keyA && keyB)
         startKeyAB = 1;
 
@@ -1170,7 +1171,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     // dictionary mode
     size_t endFilePosition = 0;
     if (dict_filenamelen) {
-        uint16_t keycnt = 0;
+        uint32_t keycnt = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
         keyListLen = keycnt;
         if (endFilePosition)
@@ -1210,7 +1211,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         if (dict_filenamelen && endFilePosition) {
             if (!verbose)
                 printf("d");
-            uint16_t keycnt = 0;
+            uint32_t keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
             keyListLen = keycnt;
             continue;

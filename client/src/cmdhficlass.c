@@ -2411,17 +2411,6 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     }
     if (errors) return usage_hf_iclass_chk();
 
-
-    uint8_t *keyBlock = NULL;
-    uint16_t keycount = 0;
-
-    // load keys
-    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
-    if (res != PM3_SUCCESS || keycount == 0) {
-        free(keyBlock);
-        return res;
-    }
-
     // Get CSN / UID and CCNR
     PrintAndLogEx(SUCCESS, "Reading tag CSN");
     for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
@@ -2434,6 +2423,16 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         PrintAndLogEx(WARNING, "Tried 10 times. Can't select card, aborting...");
         DropField();
         return PM3_ESOFT;
+    }
+
+    uint8_t *keyBlock = NULL;
+    uint32_t keycount = 0;
+
+    // load keys
+    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+    if (res != PM3_SUCCESS || keycount == 0) {
+        free(keyBlock);
+        return res;
     }
 
     pre = calloc(keycount, sizeof(iclass_premac_t));
@@ -2678,7 +2677,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "MAC_TAG | %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
 
     uint8_t *keyBlock = NULL;
-    uint16_t keycount = 0;
+    uint32_t keycount = 0;
 
     // load keys
     int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
@@ -2737,11 +2736,12 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 }
 
 // precalc diversified keys and their MAC
-void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, int keycnt, iclass_premac_t *list) {
+void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_premac_t *list) {
     uint8_t key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    for (int i = 0; i < keycnt; i++) {
+//iceman: threading
+    for (uint32_t i = 0; i < keycnt; i++) {
 
         memcpy(key, keys + 8 * i, 8);
 
@@ -2754,11 +2754,12 @@ void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, 
     }
 }
 
-void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, int keycnt, iclass_prekey_t *list) {
+void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_prekey_t *list) {
 
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    for (int i = 0; i < keycnt; i++) {
+//iceman: threading
+    for (uint32_t i = 0; i < keycnt; i++) {
 
         memcpy(list[i].key, keys + 8 * i, 8);
 
@@ -2774,13 +2775,13 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
 }
 
 // print diversified keys
-void PrintPreCalcMac(uint8_t *keys, int keycnt, iclass_premac_t *pre_list) {
+void PrintPreCalcMac(uint8_t *keys, uint32_t keycnt, iclass_premac_t *pre_list) {
 
-    iclass_prekey_t *b =  calloc(keycnt, sizeof(iclass_prekey_t));
+    iclass_prekey_t *b = calloc(keycnt, sizeof(iclass_prekey_t));
     if (!b)
         return;
 
-    for (int i = 0; i < keycnt; i++) {
+    for (uint32_t i = 0; i < keycnt; i++) {
         memcpy(b[i].key, keys + 8 * i, 8);
         memcpy(b[i].mac, pre_list[i].mac, 4);
     }
@@ -2788,7 +2789,7 @@ void PrintPreCalcMac(uint8_t *keys, int keycnt, iclass_premac_t *pre_list) {
     free(b);
 }
 
-void PrintPreCalc(iclass_prekey_t *list, int itemcnt) {
+void PrintPreCalc(iclass_prekey_t *list, uint32_t itemcnt) {
     PrintAndLogEx(NORMAL, "-----+------------------+---------");
     PrintAndLogEx(NORMAL, "#key | key              | mac");
     PrintAndLogEx(NORMAL, "-----+------------------+---------");
