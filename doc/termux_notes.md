@@ -1,10 +1,14 @@
 <a id="top"></a>
 # Proxmark 3 on Android
-
 ## Table of Contents
   * [ Requirements ](#requirements)
   * [ Notes ](#notes)
   * [ Tested setups ](#tested-setups)
+    * OnePlus 5 (arm64, USB-C)
+    * Nexus 5X (arm64, USB-C)
+    * Xiaomi Mi Mix 2S (arm64, USB-C)
+    * OnePlus 5T (arm64, USB-C)
+    * Samsung Galaxy Tab S2 (arm64, MicroUSB)
   * [ Setup ](#setup)
     * [ Setting up Termux ](#setting-up-termux)
     * [ Install Proxmark3 package ](#install-proxmark3-package)
