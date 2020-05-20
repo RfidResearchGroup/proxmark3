@@ -170,7 +170,7 @@ tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
 
 # detect if there were changes in the platform definitions, requiring a clean
 cleanifplatformchanged:
-ifeq ($(PLATFORM_CHANGED), true)
+ifeq ($(PLATFORM_CHANGED),true)
 	$(info [!] Platform definitions changed, cleaning bootrom/armsrc/recovery first...)
 	$(Q)$(MAKE) --no-print-directory -C bootrom clean
 	$(Q)$(MAKE) --no-print-directory -C armsrc clean
@@ -239,17 +239,21 @@ endif
 release: VERSION="v4.$(shell git log --oneline master | wc -l)"
 release:
 	# Preparing a commit for release tagging, to be reverted after tagging.
-	@echo "# - Tag: $(VERSION)"
+	@echo "# - Release Tag:  $(VERSION)"
+ifeq ($(RELEASE_NAME),)
+		$(error "!!! missing RELEASE_NAME")
+endif
+	@echo "# - Release Name: $(RELEASE_NAME)"
 	# - Removing -Werror...
 	@find . \( -path "./Makefile.defs" -or -path "./client/Makefile" -or -path "./common_arm/Makefile.common" -or -path "./tools/hitag2crack/*/Makefile" \) -exec sed -i 's/ -Werror//' {} \;
 	@find . \( -path "./client/deps/*.cmake" -or -path "./client/CMakeLists.txt" \) -exec sed -i 's/ -Werror//' {} \;
 	# - Changing banner...
-	@sed -i "s/^#define BANNERMSG3 .*/#define BANNERMSG3 \"Release $(VERSION)\"/" client/src/proxmark3.c
+	@sed -i "s/^#define BANNERMSG3 .*/#define BANNERMSG3 \"Release $(VERSION) - $(RELEASE_NAME)\"/" client/src/proxmark3.c
 	@echo -n "#   ";grep "^#define BANNERMSG3" client/src/proxmark3.c
 	# - Committing...
-	@git commit -a -m "Release $(VERSION)"
+	@git commit -a -m "Release $(VERSION) - $(RELEASE_NAME)"
 	# - Tagging...
-	@git tag -a -m "Release $(VERSION)" $(VERSION)
+	@git tag -a -m "Release $(VERSION) - $(RELEASE_NAME)" $(VERSION)
 	# - Reverting...
 	@git revert --no-edit HEAD
 
