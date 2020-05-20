@@ -39,7 +39,7 @@ OBJS = $(OBJDIR)/bootrom.s19
 # version.c should be remade on every compilation
 version.c: default_version.c
 	$(info [=] GEN $@)
-	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
+	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $^ $@
 
 all: showinfo $(OBJS)
 
