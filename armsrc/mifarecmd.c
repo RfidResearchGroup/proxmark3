@@ -1940,7 +1940,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     clear_trace();
     set_tracing(true);
 
-    int retval;
+    int retval = PM3_SUCCESS;
 
     if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
         retval = PM3_ESOFT;
@@ -1952,8 +1952,9 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         uint64_t ui64Key = emlGetKey(sectorNo, keytype);
         if (sectorNo == 0) {
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_FIRST)) {
+                retval = PM3_ESOFT;
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth error", sectorNo);
-                break;
+                goto out;
             }
         } else {
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_NESTED)) {
@@ -1979,10 +1980,8 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         }
     }
 
-    if (mifare_classic_halt(pcs, cuid)) {
-        if (DBGLEVEL > DBG_ERROR)
-            Dbprintf("Halt error");
-    }
+    int res = mifare_classic_halt(pcs, cuid);
+    (void)res;
 
     if (DBGLEVEL >= DBG_INFO) DbpString("Emulator fill sectors finished");
 
