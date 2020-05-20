@@ -257,7 +257,7 @@ static void SendVersion(void) {
      */
     char *bootrom_version = *(char **)&_bootphase1_version_pointer;
 
-    strncat(VersionString, " [ ARM ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, " "_YELLOW_("[ ARM ]")"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 
     if (bootrom_version < &_flash_start || bootrom_version >= &_flash_end) {
         strcat(VersionString, "bootrom version information appears invalid\n");
@@ -277,7 +277,7 @@ static void SendVersion(void) {
     strncat(VersionString, "  compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 
-    strncat(VersionString, "\n [ FPGA ]\n ", sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, "\n "_YELLOW_("[ FPGA ]")"\n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < g_fpga_bitstream_num; i++) {
         strncat(VersionString, g_fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
