@@ -17,7 +17,7 @@
 #define FPGA_TRACE_SIZE                     3072
 
 static const uint8_t bitparse_fixed_header[] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x00, 0x00, 0x01};
-extern const int fpga_bitstream_num;
-extern const char *const fpga_version_information[];
+extern const int g_fpga_bitstream_num;
+extern const char *const g_fpga_version_information[];
 
 #endif

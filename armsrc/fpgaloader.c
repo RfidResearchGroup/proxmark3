@@ -203,7 +203,7 @@ static int get_from_fpga_combined_stream(z_streamp compressed_fpga_stream, uint8
 // 288 bytes from FPGA file 1, followed by 288 bytes from FGPA file 2, etc.
 //----------------------------------------------------------------------------
 static int get_from_fpga_stream(int bitstream_version, z_streamp compressed_fpga_stream, uint8_t *output_buffer) {
-    while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % fpga_bitstream_num != (bitstream_version - 1)) {
+    while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % g_fpga_bitstream_num != (bitstream_version - 1)) {
         // skip undesired data belonging to other bitstream_versions
         get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
     }
@@ -509,7 +509,7 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 
 void Fpga_print_status(void) {
     DbpString(_BLUE_("Currently loaded FPGA image"));
-    Dbprintf("  mode....................%s", fpga_version_information[downloaded_bitstream - 1]);
+    Dbprintf("  mode....................%s", g_fpga_version_information[downloaded_bitstream - 1]);
 }
 
 int FpgaGetCurrent(void) {

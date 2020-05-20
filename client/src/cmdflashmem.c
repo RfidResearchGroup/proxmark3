@@ -27,8 +27,6 @@
 #define FLASH_FASTBAUD MCK
 #define FLASH_MINBAUD FLASH_FASTBAUD
 
-#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
-
 static int CmdHelp(const char *Cmd);
 
 static int usage_flashmem_spibaud(void) {
@@ -170,7 +168,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
         return PM3_EINVARG;
     }
     size_t datalen = 0;
-    uint16_t keycount = 0;
+    uint32_t keycount = 0;
     int res = 0;
     uint8_t *data = calloc(FLASH_MEM_MAX_SIZE, sizeof(uint8_t));
 
@@ -182,6 +180,10 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 free(data);
                 return PM3_EFILE;
             }
+            // limited space on flash mem
+            if (keycount > 0xFFFF)
+                keycount &= 0xFFFF;
+
             data[0] = (keycount >> 0) & 0xFF;
             data[1] = (keycount >> 8) & 0xFF;
             datalen += 2;
@@ -193,6 +195,10 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 free(data);
                 return PM3_EFILE;
             }
+            // limited space on flash mem
+            if (keycount > 0xFFFF)
+                keycount &= 0xFFFF;
+
             data[0] = (keycount >> 0) & 0xFF;
             data[1] = (keycount >> 8) & 0xFF;
             datalen += 2;
@@ -204,6 +210,10 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 free(data);
                 return PM3_EFILE;
             }
+            // limited space on flash mem
+            if (keycount > 0xFFFF)
+                keycount &= 0xFFFF;
+
             data[0] = (keycount >> 0) & 0xFF;
             data[1] = (keycount >> 8) & 0xFF;
             datalen += 2;

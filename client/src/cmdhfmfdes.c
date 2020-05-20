@@ -2972,7 +2972,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 1 && minor == 3)
         PrintAndLogEx(INFO, "\t1.3 - DESFire Ev1 MF3ICD21/41/81, Support extended APDU commands, EAL4+");
     if (major == 1 && minor == 4)
-        PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1 MF3ICD21/41/81, EAL4+, N/A (report to iceman!)");
+        PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1 MF3ICD21/41/81, EAL4+");
     if (major == 2 && minor == 0)
         PrintAndLogEx(INFO, "\t2.0 - DESFire Ev2, Originality check, proximity check, EAL5");
 //    if (major == 3 && minor == 0)
@@ -3561,7 +3561,11 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void DesFill2bPattern(uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t *deskeyListLen, uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], size_t *aeskeyListLen, uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], size_t *k3kkeyListLen, uint32_t *startPattern) {
+static void DesFill2bPattern(
+                        uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t *deskeyListLen,
+                        uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t *aeskeyListLen,
+                        uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t *k3kkeyListLen, uint32_t *startPattern) {
+
     for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
         if (*deskeyListLen != MAX_KEYS_LIST_LEN) {
             deskeyList[*deskeyListLen][0] = (pt >> 8) & 0xff;
@@ -3598,7 +3602,11 @@ static void DesFill2bPattern(uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t *d
     (*startPattern)++;
 }
 
-static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], size_t deskeyListLen, uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], size_t aeskeyListLen, uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], size_t k3kkeyListLen, uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
+static int AuthCheckDesfire(uint8_t *aid,
+                      uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
+                      uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
+                      uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
+                      uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
 
@@ -3689,7 +3697,7 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
 
             if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
 
-                for (int curkey = 0; curkey < deskeyListLen; curkey++) {
+                for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
 
                     payload.keylen = 8;
                     memcpy(payload.key, deskeyList[curkey], 8);
@@ -3728,7 +3736,7 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
 
             if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
 
-                for (int curkey = 0; curkey < aeskeyListLen; curkey++) {
+                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
 
                     payload.keylen = 16;
                     memcpy(payload.key, aeskeyList[curkey], 16);
@@ -3767,7 +3775,7 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
 
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
 
-                for (int curkey = 0; curkey < aeskeyListLen; curkey++) {
+                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
 
                     payload.keylen = 16;
                     memcpy(payload.key, aeskeyList[curkey], 16);
@@ -3806,7 +3814,7 @@ static int AuthCheckDesfire(uint8_t *aid, uint8_t deskeyList[MAX_KEYS_LIST_LEN][
 
             if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
 
-                for (int curkey = 0; curkey < k3kkeyListLen; curkey++) {
+                for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
                     payload.keylen = 24;
                     memcpy(payload.key, k3kkeyList[curkey], 24);
                     payload.mode = MFDES_AUTH_ISO;
@@ -3846,9 +3854,9 @@ static int CmdHF14aDesChk(const char *Cmd) {
     uint8_t deskeyList[MAX_KEYS_LIST_LEN][8] = {{0}};
     uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16] = {{0}};
     uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][MAX_KEY_LEN] = {{0}};
-    size_t deskeyListLen = 0;
-    size_t aeskeyListLen = 0;
-    size_t k3kkeyListLen = 0;
+    uint32_t deskeyListLen = 0;
+    uint32_t aeskeyListLen = 0;
+    uint32_t k3kkeyListLen = 0;
     uint8_t foundKeys[4][0xE][24 + 1] = {{{0}}};
 
     CLIParserInit("hf mfdes chk",
@@ -3972,7 +3980,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     // dictionary mode
     size_t endFilePosition = 0;
     if (dict_filenamelen) {
-        uint16_t keycnt = 0;
+        uint32_t keycnt = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &keycnt, 0, &endFilePosition, true);
         deskeyListLen = keycnt;
         if (endFilePosition)
@@ -3994,21 +4002,21 @@ static int CmdHF14aDesChk(const char *Cmd) {
         PrintAndLogEx(ERR, "Aes key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " aes keys", aeskeyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyListLen);
     }
 
     if (deskeyListLen == 0) {
         PrintAndLogEx(ERR, "Des key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " des keys", deskeyListLen);
+        PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyListLen);
     }
 
     if (k3kkeyListLen == 0) {
         PrintAndLogEx(ERR, "K3k key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " k3kdes keys", k3kkeyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
     }
 
     if (!verbose)
@@ -4049,7 +4057,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         if (dict_filenamelen && endFilePosition) {
             if (!verbose)
                 printf("d");
-            uint16_t keycnt = 0;
+            uint32_t keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
             deskeyListLen = keycnt;
             keycnt = 0;

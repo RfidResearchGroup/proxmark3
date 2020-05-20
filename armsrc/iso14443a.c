@@ -67,7 +67,7 @@ static uint8_t iso14_pcb_blocknum = 0;
 #define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1)
 
 // The FPGA will report its internal sending delay in
-uint16_t FpgaSendQueueDelay;
+static uint16_t FpgaSendQueueDelay;
 // the 5 first bits are the number of bits buffered in mod_sig_buf
 // the last three bits are the remaining ticks/2 after the mod_sig_buf shift
 #define DELAY_FPGA_QUEUE (FpgaSendQueueDelay<<1)
@@ -184,7 +184,7 @@ static tUart14a Uart;
 // 0011  -   a 2 tick wide pause, or a three tick wide pause shifted left
 // 0111  -   a 2 tick wide pause shifted left
 // 1001  -   a 2 tick wide pause shifted right
-const bool Mod_Miller_LUT[] = {
+static const bool Mod_Miller_LUT[] = {
     false,  true, false, true,  false, false, false, true,
     false,  true, false, false, false, false, false, false
 };
@@ -351,11 +351,11 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 // 8 ticks modulated:                                     A collision. Save the collision position and treat as Sequence D
 // Note 1: the bitstream may start at any time. We therefore need to sync.
 // Note 2: parameter offset is used to determine the position of the parity bits (required for the anticollision command only)
-tDemod14a Demod;
+static tDemod14a Demod;
 
 // Lookup-Table to decide if 4 raw bits are a modulation.
 // We accept three or four "1" in any position
-const bool Mod_Manchester_LUT[] = {
+static const bool Mod_Manchester_LUT[] = {
     false, false, false, false, false, false, false, true,
     false, false, false, true,  false, true,  true,  true
 };

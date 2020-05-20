@@ -12,7 +12,7 @@
 // b is 8bit lsfr
 // c keeps track on which step the prng is.
 // legic_prng_get_bit() = gets a bit muxed from a and b.
-struct lfsr {
+static struct lfsr {
     uint8_t  a;
     uint8_t  b;
     uint32_t c;

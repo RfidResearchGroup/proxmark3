@@ -431,7 +431,7 @@ static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
             getNext = !getNext;
         }
     }
-    time_stop = GetCountSspClk() - time_0 ;
+    time_stop = GetCountSspClk();
     int len = DemodAnswer(received, buf, counter);
     LogTrace(received, len, time_0 << 4, time_stop << 4, NULL, false);
     BigBuf_free();
@@ -478,7 +478,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
         }
     }
 
-    time_stop = GetCountSspClk() - time_0;
+    time_stop = GetCountSspClk();
     int k = DemodAnswer(received, buf, counter);
     LogTrace(received, k, time_0 << 4, time_stop << 4, NULL, false);
     return k;
@@ -522,7 +522,7 @@ void AcquireRawAdcSamplesIso15693(void) {
     }
 
 
-    LogTrace(cmd, CMD_ID_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
+    LogTrace(cmd, CMD_ID_RESP, time_start << 4, GetCountSspClk() << 4, NULL, true);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
 
@@ -723,7 +723,7 @@ static int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t
     uint32_t time_start = GetCountSspClk();
 
     TransmitTo15693Tag(ToSend, ToSendMax, &t_samples, &wait);
-    LogTrace(send, sendlen, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
+    LogTrace(send, sendlen, time_start << 4, GetCountSspClk() << 4, NULL, true);
 
     // Now wait for a response
     if (outdata != NULL) {
@@ -825,7 +825,7 @@ void ReaderIso15693(uint32_t parameter) {
     uint8_t cmd[CMD_ID_RESP] = {0};
     BuildIdentifyRequest(cmd);
     TransmitTo15693Tag(ToSend, ToSendMax, &tsamples, &wait);
-    LogTrace(cmd, CMD_ID_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
+    LogTrace(cmd, CMD_ID_RESP, time_start << 4, GetCountSspClk() << 4, NULL, true);
 
     // Now wait for a response
     answerLen1 = GetIso15693AnswerFromTag(answer1, &elapsed) ;
@@ -906,7 +906,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
 
             time_start = GetCountSspClk();
             TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
-            LogTrace(cmd, CMD_INV_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
+            LogTrace(cmd, CMD_INV_RESP, time_start << 4, GetCountSspClk() << 4, NULL, true);
 
             if (DBGLEVEL >= DBG_EXTENDED) {
                 Dbprintf("[+] %d octets read from reader command: %x %x %x %x %x %x %x %x", ans,

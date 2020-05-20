@@ -1904,7 +1904,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool calibrate = true;
     // Attack key storage variables
     uint8_t *keyBlock = NULL;
-    uint16_t key_cnt = 0;
+    uint32_t key_cnt = 0;
     sector_t *e_sector;
     uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
     int block_cnt = MIFARE_1K_MAXBLOCK;
@@ -2169,7 +2169,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             for (int j = 0; j < 2; j++) {
                 // Check if the key is known
                 if (e_sector[i].foundKey[j] == 0) {
-                    for (int k = 0; k < key_cnt; k++) {
+                    for (uint32_t k = 0; k < key_cnt; k++) {
                         printf(".");
                         fflush(stdout);
                         if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, (keyBlock + (6 * k)), &key64) == PM3_SUCCESS) {
@@ -2186,13 +2186,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         fflush(stdout);
     } else {
 
-        int chunksize = key_cnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : key_cnt;
+        uint32_t chunksize = key_cnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : key_cnt;
         bool firstChunk = true, lastChunk = false;
 
         for (uint8_t strategy = 1; strategy < 3; strategy++) {
             PrintAndLogEx(INFO, "running strategy %u", strategy);
             // main keychunk loop
-            for (int i = 0; i < key_cnt; i += chunksize) {
+            for (uint32_t i = 0; i < key_cnt; i += chunksize) {
 
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard!\n");

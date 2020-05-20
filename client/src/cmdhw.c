@@ -661,10 +661,10 @@ void pm3_version(bool verbose, bool oneliner) {
 # define PM3HOSTOS " OS:OpenBSD"
 #elif defined(__CYGWIN__)
 # define PM3HOSTOS " OS:Cygwin"
-#elif defined(_WIN64) | defined(__WIN64__)
+#elif defined(_WIN64) || defined(__WIN64__)
 // must be tested before _WIN32
 # define PM3HOSTOS " OS:Windows (64b)"
-#elif defined(_WIN32) | defined(__WIN32__)
+#elif defined(_WIN32) || defined(__WIN32__)
 # define PM3HOSTOS " OS:Windows (32b)"
 #else
 # define PM3HOSTOS " OS:unknown"

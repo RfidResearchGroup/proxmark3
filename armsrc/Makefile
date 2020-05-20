@@ -157,7 +157,7 @@ version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o 
 	$(info [-] GEN $@)
 	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
 
-fpga_version_info.c: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
+fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
 	$(Q)$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
 

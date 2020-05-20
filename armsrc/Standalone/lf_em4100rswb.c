@@ -68,16 +68,16 @@
 
 // Predefined bruteforce speed
 // avg: 1s, 1.2s, 1.5s, 2s
-int bruteforceSpeedCurrent = 1;
-int bruteforceSpeed[] = {10, 12, 14, 16};
+static int bruteforceSpeedCurrent = 1;
+static int bruteforceSpeed[] = {10, 12, 14, 16};
 
 // low & high - array for storage IDs. Its length must be equal.
 // Predefined IDs must be stored in low[].
 // In high[] must be nulls
-uint64_t low[] = {0, 0, 0, 0};
-uint32_t high[] = {0, 0, 0, 0};
-uint8_t *bba;
-int buflen;
+static uint64_t low[] = {0, 0, 0, 0};
+static uint32_t high[] = {0, 0, 0, 0};
+static uint8_t *bba;
+static int buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 read/sim/write/brute mode");

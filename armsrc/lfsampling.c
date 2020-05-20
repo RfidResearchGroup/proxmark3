@@ -100,10 +100,10 @@ static void pushBit(BitstreamOut *stream, uint8_t bit) {
 }
 
 // Holds bit packed struct of samples.
-BitstreamOut data = {0, 0, 0};
+static BitstreamOut data = {0, 0, 0};
 
 // internal struct to keep track of samples gathered
-sampling_t samples = {0, 0, 0, 0};
+static sampling_t samples = {0, 0, 0, 0};
 
 void initSampleBuffer(uint32_t *sample_size) {
     initSampleBufferEx(sample_size, false);

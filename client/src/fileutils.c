@@ -996,7 +996,7 @@ out:
     return retval;
 }
 
-int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
+int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint32_t *keycnt) {
     // t5577 == 4bytes
     // mifare == 6 bytes
     // mf plus == 16 bytes
@@ -1009,7 +1009,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
 }
 
-int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint32_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose) {
 
     if (data == NULL) return PM3_EINVARG;
@@ -1025,7 +1025,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     keylen <<= 1;
 
     char line[255];
-    uint16_t vkeycnt = 0;
+    uint32_t vkeycnt = 0;
     size_t counter = 0;
     int retval = PM3_SUCCESS;
 
@@ -1097,7 +1097,7 @@ out:
     return retval;
 }
 
-int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt) {
+int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt) {
 
     int retval = PM3_SUCCESS;
 
@@ -1141,7 +1141,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     while (fgets(line, sizeof(line), f)) {
 
         // check if we have enough space (if not allocate more)
-        if ((((size_t)(*keycnt)) * (keylen >> 1)) >= mem_size) {
+        if ((*keycnt * (keylen >> 1)) >= mem_size) {
 
             mem_size += block_size;
             *pdata = realloc(*pdata, mem_size);

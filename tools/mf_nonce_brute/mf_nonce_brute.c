@@ -1,5 +1,9 @@
 #define __STDC_FORMAT_MACROS
-#define _USE_32BIT_TIME_T 1
+
+#if defined(_WIN32)
+# define _USE_32BIT_TIME_T 1
+#endif
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>

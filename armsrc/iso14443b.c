@@ -1152,7 +1152,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len) {
 
     if (g_trigger) LED_A_ON();
 
-    LogTrace(cmd, len, time_start, GetCountSspClk() - time_start, NULL, true);
+    LogTrace(cmd, len, time_start, GetCountSspClk(), NULL, true);
 }
 
 /* Sends an APDU to the tag

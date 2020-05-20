@@ -106,8 +106,6 @@
 #define FLASH_FASTBAUD MCK
 #define FLASH_MINBAUD FLASH_FASTBAUD
 
-#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate);
