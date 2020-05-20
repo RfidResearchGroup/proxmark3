@@ -281,7 +281,7 @@ static int CmdNexWatchClone(const char *Cmd) {
     int datalen = 0;
     uint8_t magic = 0xBE;
     uint32_t cn = 0;
-    uint8_t rawhex[16] = {0x56, 0};
+    uint8_t rawhex[12] = {0x56, 0};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
