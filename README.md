@@ -74,6 +74,7 @@ Hardware to run client on
    - Rasbian Pi
    - Jetson Nano
 
+## Roadmap
 The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
 
 > 👉 **Remember!** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
