@@ -4002,21 +4002,21 @@ static int CmdHF14aDesChk(const char *Cmd) {
         PrintAndLogEx(ERR, "Aes key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " aes keys", aeskeyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyListLen);
     }
 
     if (deskeyListLen == 0) {
         PrintAndLogEx(ERR, "Des key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " des keys", deskeyListLen);
+        PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyListLen);
     }
 
     if (k3kkeyListLen == 0) {
         PrintAndLogEx(ERR, "K3k key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " k3kdes keys", k3kkeyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
     }
 
     if (!verbose)

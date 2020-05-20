@@ -1191,7 +1191,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(ERR, "Key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " keys", keyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " keys", keyListLen);
     }
 
     if (!verbose)
