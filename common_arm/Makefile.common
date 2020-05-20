@@ -61,6 +61,7 @@ EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
 EXTRACFLAGS += -Wswitch-enum -Wno-error=switch-enum
 EXTRACFLAGS += -Wsign-compare -Wno-error=sign-compare
 EXTRACFLAGS += -Wold-style-definition -Wno-error=old-style-definition
+EXTRACFLAGS += -Wconversion -Wno-error=conversion -Wno-error=sign-conversion -Wno-error=float-conversion
 
 # unknown to clang or old gcc:
 # First we activate Wextra then we explicitly list those we know about
