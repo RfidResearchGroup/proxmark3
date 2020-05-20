@@ -61,6 +61,7 @@ This repo compiles nicely on
    - Windows/mingw environment with Qt5.6.1 & GCC 4.9
    - Ubuntu 1604 -> 2004
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
+   - Rasbian
    - Android / Termux
    - Mac OS X / Homebrew
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
@@ -70,8 +71,8 @@ This repo compiles nicely on
 
 Hardware to run client on
    - PC
-   - Andriod
-   - Rasbian Pi
+   - Android
+   - Raspberry Pi & Raspberry Pi Zero
    - Jetson Nano
 
 ## Roadmap
