@@ -236,5 +236,22 @@ endif
 #	@find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \
 #	      -exec grep -lP '\\t' {} \;
 
+release: VERSION="v4.$(shell git log --oneline master | wc -l)"
+release:
+	# Preparing a commit for release tagging, to be reverted after tagging.
+	@echo "# - Tag: $(VERSION)"
+	# - Removing -Werror...
+	@find . \( -path "./Makefile.defs" -or -path "./client/Makefile" -or -path "./common_arm/Makefile.common" -or -path "./tools/hitag2crack/*/Makefile" \) -exec sed -i 's/ -Werror//' {} \;
+	@find . \( -path "./client/deps/*.cmake" -or -path "./client/CMakeLists.txt" \) -exec sed -i 's/ -Werror//' {} \;
+	# - Changing banner...
+	@sed -i "s/^#define BANNERMSG3 .*/#define BANNERMSG3 \"Release $(VERSION)\"/" client/src/proxmark3.c
+	@echo -n "#   ";grep "^#define BANNERMSG3" client/src/proxmark3.c
+	# - Committing...
+	@git commit -a -m "Release $(VERSION)"
+	# - Tagging...
+	@git tag -a -m "Release $(VERSION)" $(VERSION)
+	# - Reverting...
+	@git revert --no-edit HEAD
+
 # Dummy target to test for GNU make availability
 _test:
