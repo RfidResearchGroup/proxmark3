@@ -45,23 +45,23 @@ int push_cmdscriptfile(char *path, bool stayafter) {
     return PM3_SUCCESS;
 }
 
-static char *my_executable_path = NULL;
-static char *my_executable_directory = NULL;
+static char *g_android_my_executable_path = NULL;
+static char *g_android_my_executable_directory = NULL;
 
 const char *get_my_executable_path(void) {
-    return my_executable_path;
+    return g_android_my_executable_path;
 }
 
 const char *get_my_executable_directory(void) {
-    if (my_executable_directory != NULL) free(my_executable_directory);
+    if (g_android_my_executable_directory != NULL) free(g_android_my_executable_directory);
     char buf[1024];
     // get current work directory
     getcwd(buf, sizeof(buf));
     // add / to end.
     sprintf(buf, "%s%s", buf, PATHSEP);
     // create on global
-    my_executable_directory = strdup(buf);
-    return my_executable_directory;
+    g_android_my_executable_directory = strdup(buf);
+    return g_android_my_executable_directory;
 }
 
 static void set_my_executable_path(void) {
