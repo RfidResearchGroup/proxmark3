@@ -176,7 +176,14 @@ set (TARGET_SOURCES
         src/util.c
         src/wiegand_formats.c
         src/wiegand_formatutils.c
+        ${CMAKE_BINARY_DIR}/version.c
         )
+
+add_custom_command(
+    OUTPUT  ${CMAKE_BINARY_DIR}/version.c
+    COMMAND sh ${CMAKE_SOURCE_DIR}/../tools/mkversion.sh > ${CMAKE_BINARY_DIR}/version.c || perl ${CMAKE_SOURCE_DIR}/../tools/mkversion.pl > ${CMAKE_BINARY_DIR}/version.c || ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/../common/default_version.c ${CMAKE_BINARY_DIR}/version.c
+    DEPENDS ${CMAKE_SOURCE_DIR}/../common/default_version.c
+)
 
 set(ADDITIONAL_SRC "")
 set(ADDITIONAL_LNK "")
