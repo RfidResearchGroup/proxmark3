@@ -90,7 +90,7 @@ ifeq ($(NOERROR),1)
 endif
 
 CFLAGS ?= $(DEFCFLAGS)
-CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
+CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 -DON_DEVICE $(APP_CFLAGS)
 
 LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -Wl,--build-id=none -n
 LIBS = -lgcc

@@ -66,7 +66,13 @@ $fullgitinfo = substr $fullgitinfo, 0, 49;
 print <<EOF
 #include "common.h"
 /* Generated file, do not edit */
-const struct version_information __attribute__((section(".version_information"))) version_information = {
+#ifndef ON_DEVICE
+#define SECTVERSINFO
+#else
+#define SECTVERSINFO __attribute__((section(".version_information")))
+#endif
+
+const struct version_information SECTVERSINFO version_information = {
     VERSION_INFORMATION_MAGIC,
     1,
     1,
