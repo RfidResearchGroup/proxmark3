@@ -8,6 +8,40 @@
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
 #include "commonutil.h"
+#include <string.h>
+
+/* Similar to FpgaGatherVersion this formats stored version information
+ * into a string representation. It takes a pointer to the struct version_information,
+ * verifies the magic properties, then stores a formatted string, prefixed by
+ * prefix in dst.
+ */
+void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_info) {
+    struct version_information *v = (struct version_information *)version_info;
+    dst[0] = 0;
+    strncat(dst, prefix, len - 1);
+    if (v->magic != VERSION_INFORMATION_MAGIC) {
+        strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
+        return;
+    }
+    if (v->versionversion != 1) {
+        strncat(dst, "Version information not understood", len - strlen(dst) - 1);
+        return;
+    }
+    if (!v->present) {
+        strncat(dst, "Version information not available", len - strlen(dst) - 1);
+        return;
+    }
+
+    strncat(dst, v->gitversion, len - strlen(dst) - 1);
+    if (v->clean == 0) {
+        strncat(dst, "-unclean", len - strlen(dst) - 1);
+    } else if (v->clean == 2) {
+        strncat(dst, "-suspect", len - strlen(dst) - 1);
+    }
+
+    strncat(dst, " ", len - strlen(dst) - 1);
+    strncat(dst, v->buildtime, len - strlen(dst) - 1);
+}
 
 /*
  ref  http://www.csm.ornl.gov/~dunigan/crc.html

@@ -64,7 +64,7 @@ $fullgitinfo =~ s/(\s)//g;
 $fullgitinfo = substr $fullgitinfo, 0, 49;
 
 print <<EOF
-#include "proxmark3_arm.h"
+#include "common.h"
 /* Generated file, do not edit */
 const struct version_information __attribute__((section(".version_information"))) version_information = {
     VERSION_INFORMATION_MAGIC,

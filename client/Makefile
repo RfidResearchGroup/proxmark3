@@ -179,7 +179,8 @@ CORESRCS =  uart/uart_posix.c \
             scandir.c \
             crc16.c \
             crc32.c \
-            comms.c
+            comms.c \
+            version.c
 
 CMDSRCS =   crapto1/crapto1.c \
             crapto1/crypto1.c \
@@ -308,7 +309,7 @@ CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 
 BINS = proxmark3
-CLEAN = $(BINS) src/*.moc.cpp src/ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+CLEAN = $(BINS) src/version.c src/*.moc.cpp src/ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 # transition: cleaning also old path stuff
 CLEAN += flasher *.moc.cpp ui/ui_overlays.h
 
@@ -425,6 +426,11 @@ zlib:
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
 .PHONY: all clean install uninstall tarbin liblua jansson tinycbor reveng hardnested amiibo cliparser whereami mbedtls zlib
+
+# version.c should be remade on every compilation
+src/version.c: default_version.c
+	$(info [=] GEN $@)
+	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)

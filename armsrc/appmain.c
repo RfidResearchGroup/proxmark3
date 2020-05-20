@@ -244,8 +244,7 @@ void ReadMem(int addr) {
     Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 }
 
-/* osimage version information is linked in */
-extern struct version_information version_information;
+/* osimage version information is linked in, cf commonutil.h */
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, __data_src_start__;
 static void SendVersion(void) {
@@ -265,10 +264,12 @@ static void SendVersion(void) {
     } else {
         FormatVersionInformation(temp, sizeof(temp), "  bootrom: ", bootrom_version);
         strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+        strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
     }
 
     FormatVersionInformation(temp, sizeof(temp), "       os: ", &version_information);
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
 
 #if defined(__clang__)
     strncat(VersionString, "  compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);

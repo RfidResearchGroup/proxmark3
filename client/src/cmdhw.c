@@ -20,6 +20,7 @@
 #include "ui.h"
 #include "cmdhw.h"
 #include "cmddata.h"
+#include "commonutil.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -688,7 +689,9 @@ void pm3_version(bool verbose, bool oneliner) {
 
     if (oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
-        printf("Client: RRG/Iceman compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n");
+        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+        FormatVersionInformation(temp, sizeof(temp), "Client: ", &version_information);
+        printf("%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
         return;
     }
 
@@ -701,9 +704,11 @@ void pm3_version(bool verbose, bool oneliner) {
     SendCommandNG(CMD_VERSION, NULL, 0);
 
     if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
         PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Proxmark3 RFID instrument ]"));
         PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ CLIENT ]"));
-        PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
+        FormatVersionInformation(temp, sizeof(temp), "  client: ", &version_information);
+        PrintAndLogEx(NORMAL, "%s", temp);
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
         if (IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
