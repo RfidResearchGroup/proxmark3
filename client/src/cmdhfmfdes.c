@@ -1482,8 +1482,8 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type)
     */
 
     if (data->fileno > 0x1F) return PM3_EINVARG;
-    int datatowrite = le24toh(data->length);
-    int offset = le24toh(data->offset);
+    uint32_t datatowrite = le24toh(data->length);
+    uint32_t offset = le24toh(data->offset);
     int datasize;
     int pos = 0;
     int recvlen = 0;
@@ -1496,7 +1496,8 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type)
     apdu.data = tmp;
     if (type == MFDES_RECORD_FILE) apdu.INS = MFDES_WRITE_RECORD;
 
-    while (datatowrite > 0) {
+    while (datatowrite) {
+
         if (datatowrite > 52)
             datasize = 52;
         else
@@ -2319,7 +2320,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     memcpy(ft.length, filesize, 3);
     ft.fileno = _fileno[0];
 
-    int bytestoread = le24toh(filesize);
+    uint32_t bytestoread = le24toh(filesize);
+    bytestoread &= 0xFFFFFF;
 
     if (bytestoread == 0)
         bytestoread = 0xFFFFFF;
@@ -2332,8 +2334,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Successfully read data from file %d:", ft.fileno);
             PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
             PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-            int len = le24toh(ft.length);
-            for (int i = 0; i < len; i += 16) {
+            uint32_t len = le24toh(ft.length);
+            for (uint32_t i = 0; i < len; i += 16) {
                 PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", i, i, sprint_hex(&ft.data[i], len > 16 ? 16 : len), sprint_ascii(&ft.data[i], len > 16 ? 16 : len));
             }
         } else {
@@ -3246,8 +3248,8 @@ static int CmdHF14ADesDump(const char *Cmd) {
                 if (res == PM3_SUCCESS) {
                     PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
                     PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                    int len = le24toh(fdata.length);
-                    for (int n = 0; n < len; n += 16) {
+                    uint32_t len = le24toh(fdata.length);
+                    for (uint32_t n = 0; n < len; n += 16) {
                         PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
                     }
                 } else {
@@ -3299,8 +3301,8 @@ static int CmdHF14ADesDump(const char *Cmd) {
                     if (res == PM3_SUCCESS) {
                         PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
                         PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
-                        int len = le24toh(fdata.length);
-                        for (int n = 0; n < len; n += 16) {
+                        uint32_t len = le24toh(fdata.length);
+                        for (uint32_t n = 0; n < len; n += 16) {
                             PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s", n, n, sprint_hex(&fdata.data[n], len > 16 ? 16 : len), sprint_ascii(&fdata.data[n], len > 16 ? 16 : len));
                         }
                     } else {

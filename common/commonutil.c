@@ -83,7 +83,7 @@ void lsl(uint8_t *data, size_t len) {
     data[len - 1] <<= 1;
 }
 
-int32_t le24toh(uint8_t data[3]) {
+uint32_t le24toh(uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
