@@ -45,15 +45,23 @@ int push_cmdscriptfile(char *path, bool stayafter) {
     return PM3_SUCCESS;
 }
 
-static char *my_executable_path = NULL;
-static char *my_executable_directory = NULL;
+static char *g_android_my_executable_path = NULL;
+static char *g_android_my_executable_directory = NULL;
 
 const char *get_my_executable_path(void) {
-    return my_executable_path;
+    return g_android_my_executable_path;
 }
 
 const char *get_my_executable_directory(void) {
-    return my_executable_directory;
+    if (g_android_my_executable_directory != NULL) free(g_android_my_executable_directory);
+    char buf[1024];
+    // get current work directory
+    getcwd(buf, sizeof(buf));
+    // add / to end.
+    sprintf(buf, "%s%s", buf, PATHSEP);
+    // create on global
+    g_android_my_executable_directory = strdup(buf);
+    return g_android_my_executable_directory;
 }
 
 static void set_my_executable_path(void) {
@@ -95,7 +103,7 @@ jint sendCMD(JNIEnv *env, jobject instance, jstring cmd_) {
     }
     // display on new line
     PrintAndLogEx(NORMAL, "\n");
-    char *cmd = (char *)((*env)->GetStringUTFChars(env, cmd_, 0));
+    char *cmd = (char *) ((*env)->GetStringUTFChars(env, cmd_, 0));
     int ret = CommandReceived(cmd);
     if (ret == 99) {
         // exit / quit
@@ -110,7 +118,7 @@ jint sendCMD(JNIEnv *env, jobject instance, jstring cmd_) {
  * Is client running!
  * */
 jboolean isExecuting(JNIEnv *env, jobject instance) {
-    return (jboolean)((jboolean) conn.run);
+    return (jboolean) ((jboolean) conn.run);
 }
 
 /*
@@ -123,7 +131,7 @@ jboolean testPm3(JNIEnv *env, jobject instance) {
         return false;
     }
     bool ret2 = TestProxmark() == PM3_SUCCESS;
-    return (jboolean)(ret1 && ret2);
+    return (jboolean) (ret1 && ret2);
 }
 
 /*
@@ -148,21 +156,21 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     jclass clz_test = (*jniEnv)->FindClass(jniEnv, "cn/rrg/devices/Proxmark3RRGRdv4");
     JNINativeMethod methods[] = {
-        {"startExecute", "(Ljava/lang/String;)I", (void *) sendCMD},
-        {"stopExecute",  "()V", (void *) stopPm3},
-        {"isExecuting",  "()Z", (void *) isExecuting}
+            {"startExecute", "(Ljava/lang/String;)I", (void *) sendCMD},
+            {"stopExecute",  "()V",                   (void *) stopPm3},
+            {"isExecuting",  "()Z",                   (void *) isExecuting}
     };
     JNINativeMethod methods1[] = {
-        {"testPm3",  "()Z", (void *) testPm3},
-        {"closePm3", "()V", stopPm3}
+            {"testPm3",  "()Z", (void *) testPm3},
+            {"closePm3", "()V", stopPm3}
     };
     if ((*jniEnv)->RegisterNatives(jniEnv, clazz, methods, sizeof(methods) / sizeof(methods[0])) !=
-            JNI_OK) {
+        JNI_OK) {
         return -1;
     }
     if ((*jniEnv)->RegisterNatives(jniEnv, clz_test, methods1,
                                    sizeof(methods1) / sizeof(methods1[0])) !=
-            JNI_OK) {
+        JNI_OK) {
         return -1;
     }
     (*jniEnv)->DeleteLocalRef(jniEnv, clazz);
