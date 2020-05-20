@@ -32,7 +32,7 @@
 // Used to enable/disable use of preferences json file
 #define USE_PREFERENCE_FILE
 
-#define BANNERMSG1 "    :snowflake:  iceman@icesql.net :coffee:"
+#define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
 #define BANNERMSG2 "   https://github.com/rfidresearchgroup/proxmark3/"
 #define BANNERMSG3 "pre-release v4.0"
 
