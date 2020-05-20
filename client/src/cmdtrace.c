@@ -33,7 +33,7 @@ static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "    c      - mark CRC bytes");
     PrintAndLogEx(NORMAL, "    x      - show hexdump to convert to pcap(ng) or to import into Wireshark using encapsulation type \"ISO 14443\"");
     PrintAndLogEx(NORMAL, "             syntax to use: `text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`");
-    PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try reading data from tag.");
+    PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try to collect a trace from Proxmark3 device.");
     PrintAndLogEx(NORMAL, "Supported <protocol> values:");
     PrintAndLogEx(NORMAL, "    raw      - just show raw data without annotations");
     PrintAndLogEx(NORMAL, "    14a      - interpret data as iso14443a communications");
@@ -593,6 +593,10 @@ int CmdTraceList(const char *Cmd) {
 
     if (isOnline) {
 
+        if (!IfPm3Present()) {
+            PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
+            return PM3_EINVARG;
+        }
         // reserve some space.
         if (g_trace)
             free(g_trace);
