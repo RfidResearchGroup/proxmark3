@@ -1,4 +1,4 @@
-CFLAGS?=-Wall -Werror -O3
+CFLAGS?=-Wall -O3
 LIBS=-lpthread
 VPATH=../common
 INC=-I ../common
