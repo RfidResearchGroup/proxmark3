@@ -61,6 +61,7 @@ It's also possible to skip parts even if libraries are present in the compilatio
 
 * `make client SKIPQT=1` to skip GUI even if Qt is present
 * `make client SKIPBT=1` to skip native Bluetooth support even if libbluetooth is present
+* `make client SKIPLUASYSTEM=1` to skip system Lua lib even if liblua5.2 is present, use embedded Lua lib instead
 
 If you're cross-compiling, these ones might be useful:
 
