@@ -89,10 +89,10 @@ ifeq ($(NOERROR),1)
   DEFCFLAGS += -Wno-error
 endif
 
-CFLAGS ?= $(DEFCFLAGS)
-CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 -DON_DEVICE $(APP_CFLAGS)
+CROSS_CFLAGS ?= $(DEFCFLAGS)
+CROSS_CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 -DON_DEVICE $(APP_CFLAGS)
 
-LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -Wl,--build-id=none -n
+CROSS_LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -Wl,--build-id=none -n
 LIBS = -lgcc
 
 # Flags to generate temporary dependency files
@@ -107,21 +107,21 @@ VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb -o $@ $< 
+	$(Q)$(CC) $(CROSS_CFLAGS) $(DEPFLAGS) -mthumb -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 $(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -o $@ $< 
+	$(Q)$(CC) $(CROSS_CFLAGS) $(DEPFLAGS) -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 $(ASMOBJ): $(OBJDIR)/%.o: %.s
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) -o $@ $<
+	$(Q)$(CC) $(CROSS_CFLAGS) -o $@ $<
 
 $(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) -mthumb -o $@ $< 
+	$(Q)$(CC) $(CROSS_CFLAGS) -mthumb -o $@ $<
 
 # This objcopy call translates physical flash addresses to logical addresses
 # without touching start address or RAM addresses (.bss and .data sections)
@@ -135,7 +135,7 @@ $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	$(Q)$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
 
 # easy printing of MAKE VARIABLES
-print-%: ; @echo $* = $($*) 
+print-%: ; @echo $* = $($*)
 
 # Automatic dependency generation
 DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \

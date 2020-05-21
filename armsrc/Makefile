@@ -132,8 +132,6 @@ VERSIONSRC = version.c \
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common_arm/Makefile.common
 
-COMMON_FLAGS =  -Os
-
 INSTALLFW = $(OBJDIR)/fullimage.elf
 ifneq (,$(FWTAG))
     INSTALLFWTAG = $(notdir $(INSTALLFW:%.elf=%-$(FWTAG).elf))
@@ -178,7 +176,7 @@ $(FPGA_COMPRESSOR):
 
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.nodata.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
@@ -206,7 +204,7 @@ $(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
 
 $(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.nodata.o $(OBJDIR)/fullimage.data.o
 	$(info [=] LD $@)
-	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
+	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
 
 tarbin: $(OBJS)
 	$(info TAR $@)
