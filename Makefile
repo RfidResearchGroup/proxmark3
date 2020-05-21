@@ -238,11 +238,17 @@ endif
 
 release: VERSION="v4.$(shell git log --oneline master | wc -l)"
 release:
+ifneq ($(shell git rev-parse --abbrev-ref HEAD),master)
+	$(error "!!! you are not on master branch, aborting")
+endif
+ifeq ($(shell git describe --dirty --always|grep -o dirty),dirty)
+	$(error "!!! you have pending changes, aborting")
+endif
+ifeq ($(RELEASE_NAME),)
+	$(error "!!! missing RELEASE_NAME, aborting")
+endif
 	# Preparing a commit for release tagging, to be reverted after tagging.
 	@echo "# - Release Tag:  $(VERSION)"
-ifeq ($(RELEASE_NAME),)
-		$(error "!!! missing RELEASE_NAME")
-endif
 	@echo "# - Release Name: $(RELEASE_NAME)"
 	# - Removing -Werror...
 	@find . \( -path "./Makefile.defs" -or -path "./client/Makefile" -or -path "./common_arm/Makefile.common" -or -path "./tools/hitag2crack/*/Makefile" \) -exec sed -i 's/ -Werror//' {} \;
