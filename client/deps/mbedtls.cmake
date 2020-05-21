@@ -45,5 +45,5 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         )
 
 target_include_directories(pm3rrg_rdv4_mbedtls PRIVATE ../../common)
-target_compile_options(pm3rrg_rdv4_mbedtls PRIVATE -Wall -O3)
+target_compile_options(pm3rrg_rdv4_mbedtls PRIVATE -Wall -Werror -O3)
 set_property(TARGET pm3rrg_rdv4_mbedtls PROPERTY POSITION_INDEPENDENT_CODE ON)
