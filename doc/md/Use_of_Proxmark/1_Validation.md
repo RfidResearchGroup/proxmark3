@@ -13,9 +13,9 @@ If all went well you should get some information about the firmware and memory u
 ██████╗ ███╗   ███╗ ████╗  
 ██╔══██╗████╗ ████║   ══█║ 
 ██████╔╝██╔████╔██║ ████╔╝ 
-██╔═══╝ ██║╚██╔╝██║   ══█║    :snowflake: iceman@icesql.net
+██╔═══╝ ██║╚██╔╝██║   ══█║    iceman@icesql.net
 ██║     ██║ ╚═╝ ██║ ████╔╝    https://github.com/rfidresearchgroup/proxmark3/
-╚═╝     ╚═╝     ╚═╝ ╚═══╝  Release v4.9237 - Ice Coffee :coffee:
+╚═╝     ╚═╝     ╚═╝ ╚═══╝  Release v4.9237 - Ice Coffee
 
 
  [ Proxmark3 RFID instrument ] 
@@ -50,10 +50,10 @@ If all went well you should get some information about the firmware and memory u
   --= Nonvolatile Program Memory Type: Embedded Flash Memory
 
 
-pm3 --> 
+[usb] pm3 --> 
 ```
 
-This `pm3 --> ` is the Proxmark3 interactive prompt.
+This `[usb] pm3 --> ` is the Proxmark3 interactive prompt.
 
 
 ### To get interactive help
@@ -64,16 +64,16 @@ For basic help type `help`. Or for help on a set of sub commands type the comman
 
 These commands will return some info about your Proxmark software and hardware status.
 ```
-pm3 --> hw status
-pm3 --> hw version
-pm3 --> hw tune
+[usb] pm3 --> hw status
+[usb] pm3 --> hw version
+[usb] pm3 --> hw tune
 ```
 
 You are now ready to use your newly flashed proxmark3 device.  Many commands uses the `h` parameter to show a help text.
 
 ### To quit the client
 ```
-pm3 --> quit
+[usb] pm3 --> quit
 ```
 or simple press `CTRL-D`.
 
