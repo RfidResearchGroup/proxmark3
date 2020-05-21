@@ -75,7 +75,7 @@ ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -D_ISOC99_SOURCE
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
-CXXFLAGS ?= -Wall -Werror -O3
+CXXFLAGS ?= -Wall -O3
 PM3CXXFLAGS = $(CXXFLAGS) -I../include
 
 LUAPLATFORM = generic
