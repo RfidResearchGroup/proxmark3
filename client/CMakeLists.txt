@@ -229,7 +229,7 @@ add_executable(
         ${ADDITIONAL_SRC}
 )
 
-target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
+target_compile_options(proxmark3 PUBLIC -Wall -O3)
 
 if (MINGW)
     # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
