@@ -271,7 +271,7 @@ endif
 	# - Reverting tagged commit...
 	@git revert --no-edit HEAD
 	@echo "==================================================================="
-	@echo "Done! You can now execute 'git push --follow-tags'"
+	@echo "Done! You can now execute 'git push origin $(VERSION)'"
 
 # Dummy target to test for GNU make availability
 _test:
