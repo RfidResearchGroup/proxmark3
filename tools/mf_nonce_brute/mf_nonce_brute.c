@@ -1,7 +1,9 @@
 #define __STDC_FORMAT_MACROS
 
-#if defined(_WIN32)
-# define _USE_32BIT_TIME_T 1
+#if !defined(_WIN64)
+ #if defined(_WIN32) || defined(__WIN32__)
+ # define _USE_32BIT_TIME_T 1
+  #endif
 #endif
 
 #include <inttypes.h>
@@ -56,7 +58,7 @@ int global_counter = 0;
 int global_fin_flag = 0;
 int global_found = 0;
 int global_found_candidate = 0;
-size_t thread_count = 4;
+size_t thread_count = 2;
 
 static uint16_t parity_from_err(uint32_t data, uint16_t par_err) {
 
@@ -350,7 +352,7 @@ int main(int argc, char *argv[]) {
     //calc (parity XOR corresponding nonce bit encoded with the same keystream bit)
     uint16_t xored = xored_bits(nt_par, nt_enc, ar_par, ar_enc, at_par, at_enc);
 
-#ifndef __WIN32
+#if !defined(_WIN32) || !defined(__WIN32__)
     thread_count = sysconf(_SC_NPROCESSORS_CONF);
     if (thread_count < 2)
         thread_count = 2;
