@@ -47,7 +47,7 @@ else
     RANLIB= ranlib
 endif
 
-DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
+DEFCFLAGS = -Wall -O3 -fstrict-aliasing -pipe
 # Some more warnings we want as errors:
 DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits -Wold-style-definition
 # Some more warnings we need first to eliminate, so temporarely tolerated:
