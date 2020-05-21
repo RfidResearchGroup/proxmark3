@@ -49,7 +49,9 @@ and it will be added along the other firmware as:
 
 For verbose usage and see the actual commands being executed, add `V=1`.
 
-`CFLAGS` and `LDFLAGS` can be overriden by environment variables.
+`CFLAGS` and `LDFLAGS` can be overriden by environment variables for client-side components.
+
+`CROSS_CFLAGS` and `CROSS_LDFLAGS` can be overriden by environment variables for ARM-side components.
 
 Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `make client CC=clang CXX=clang++ LD=clang++`.
 
