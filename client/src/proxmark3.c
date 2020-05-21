@@ -34,7 +34,7 @@
 
 #define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
 #define BANNERMSG2 "   https://github.com/rfidresearchgroup/proxmark3/"
-#define BANNERMSG3 "pre-release v4.0"
+#define BANNERMSG3 " bleeding edge"
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
 
