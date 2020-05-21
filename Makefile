@@ -270,6 +270,8 @@ endif
 	@git tag -a -m "Release $(VERSION) - $(RELEASE_NAME)" $(VERSION)
 	# - Reverting tagged commit...
 	@git revert --no-edit HEAD
+	@echo "==================================================================="
+	@echo "Done! You can now execute 'git push --follow-tags'"
 
 # Dummy target to test for GNU make availability
 _test:
