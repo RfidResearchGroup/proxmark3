@@ -21,10 +21,12 @@ if [ "$commandGIT" != "" ]; then
     # now avoiding the "fatal: No names found, cannot describe anything." error by fallbacking to abbrev hash in such case
     gitversion=$(git describe --dirty --always)
     gitbranch=$(git rev-parse --abbrev-ref HEAD)
-    if [ "$gitversion" != "${gitversion%-dirty}" ]; then
-        clean=0
-    else
-        clean=1
+    if [ "$1" != "--undecided" ]; then
+        if [ "$gitversion" != "${gitversion%-dirty}" ]; then
+            clean=0
+        else
+            clean=1
+        fi
     fi
     if [ "$gitbranch" != "" ] && [ "$gitversion" != "" ]; then
         fullgitinfo="${fullgitinfo}/${gitbranch}/${gitversion}"
