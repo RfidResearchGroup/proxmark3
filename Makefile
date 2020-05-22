@@ -255,7 +255,7 @@ release:
 	# - Tagging temporarily...
 	@git tag -a -m "Release $(VERSION) - $(RELEASE_NAME)" $(VERSION)
 	# - Changing default version information based on new tag
-	@$(SH) tools/mkversion.sh --undecided > common/default_version.c.tmp && $(MV) common/default_version.c.tmp common/default_version.c
+	@$(SH) tools/mkversion.sh > common/default_version.c.tmp && $(MV) common/default_version.c.tmp common/default_version.c
 	# - Removing mkversion calls
 	@sed -i 's#^.*\.\./tools/mkversion.sh.*|| #\t$$(Q)#' client/Makefile bootrom/Makefile armsrc/Makefile
 	@sed -i '/COMMAND/s/sh .*|| //' client/CMakeLists.txt
