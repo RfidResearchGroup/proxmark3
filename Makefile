@@ -238,15 +238,9 @@ endif
 
 release: VERSION="v4.$(shell git log --oneline master | wc -l)"
 release:
-ifneq ($(shell git rev-parse --abbrev-ref HEAD),master)
-	$(error "!!! you are not on master branch, aborting")
-endif
-ifeq ($(shell git describe --dirty --always|grep -o dirty),dirty)
-	$(error "!!! you have pending changes, aborting")
-endif
-ifeq ($(RELEASE_NAME),)
-	$(error "!!! missing RELEASE_NAME, aborting")
-endif
+	$(if $(findstring master,$(shell git rev-parse --abbrev-ref HEAD)),,$(error "!!! you are not on master branch, aborting"))
+	$(if $(findstring dirty,$(shell git describe --dirty --always)),$(error "!!! you have pending changes, aborting"))
+	$(if $(RELEASE_NAME),,$(error "!!! missing RELEASE_NAME, aborting"))
 	# Preparing a commit for release tagging, to be reverted after tagging.
 	@echo "# - Release Tag:  $(VERSION)"
 	@echo "# - Release Name: $(RELEASE_NAME)"
