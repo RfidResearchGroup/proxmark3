@@ -93,7 +93,7 @@ uint64_t uid;
 int maxtablesize = 800000;
 uint64_t supplied_testkey = 0;
 
-void usage() {
+static void usage(void) {
     printf("ht2crack4 - K Sheldrake, based on the work of Garcia et al\n\n");
     printf("Cracks a HiTag2 key using a small number (4 to 16) of encrypted\n");
     printf("nonce and challenge response pairs, using a fast correlation\n");
@@ -147,6 +147,7 @@ double pfnc[][16] = {
 
 
 /* hitag2_crypt works on the post-shifted form of the lfsr; this is the ref in rfidler code */
+/*
 static uint32_t hitag2_crypt(uint64_t s) {
     uint32_t bitindex;
 
@@ -158,9 +159,10 @@ static uint32_t hitag2_crypt(uint64_t s) {
 
     return (ht2_function5c >> bitindex) & 1;
 }
+*/
 
 /* ht2crypt works on the pre-shifted form of the lfsr; this is the ref in the paper */
-uint64_t ht2crypt(uint64_t s) {
+static uint64_t ht2crypt(uint64_t s) {
     uint64_t bitindex;
 
     bitindex = (ht2_function4a >> pickbits2_2(s, 2, 5)) & 1;
@@ -174,12 +176,13 @@ uint64_t ht2crypt(uint64_t s) {
 
 
 /* fnL is the feedback function for the reference code */
-uint64_t fnL(uint64_t x) {
+/*
+static uint64_t fnL(uint64_t x) {
     return (bitn(x, 0) ^ bitn(x, 2) ^ bitn(x, 3) ^ bitn(x, 6) ^ bitn(x, 7) ^ bitn(x, 8) ^
             bitn(x, 16) ^ bitn(x, 22) ^ bitn(x, 23) ^ bitn(x, 26) ^ bitn(x, 30) ^ bitn(x, 41) ^
             bitn(x, 42) ^ bitn(x, 43) ^ bitn(x, 46) ^ bitn(x, 47));
 }
-
+*/
 
 /* packed_size is an array that maps the number of confirmed bits in a state to
  * the number of relevant bits.
@@ -193,7 +196,7 @@ unsigned int packed_size[] = { 0,  0,  0,  1,  2,  2,  3,  4,  4,  5,  5,  5,  5
 
 /* f20 is the same as hitag2_crypt except it works on the packed version
  * of the state where all 20 relevant bits are squashed together */
-uint64_t f20(uint64_t y) {
+static uint64_t f20(uint64_t y) {
     uint64_t bitindex;
 
     bitindex = (ht2_function4a >> (y & 0xf)) & 1;
@@ -207,7 +210,7 @@ uint64_t f20(uint64_t y) {
 
 
 /* packstate packs the relevant bits from LFSR state into 20 bits for pre-shifted lfsr */
-uint64_t packstate(uint64_t s) {
+static uint64_t packstate(uint64_t s) {
     uint64_t packed;
 
     packed =  pickbits2_2(s, 2, 5);
@@ -221,7 +224,7 @@ uint64_t packstate(uint64_t s) {
 
 
 /* create_guess_table mallocs the tables */
-void create_guess_table() {
+static void create_guess_table(void) {
     guesses = (struct guess *)malloc(sizeof(struct guess) * maxtablesize);
     if (!guesses) {
         printf("cannot malloc guess table\n");
@@ -232,7 +235,7 @@ void create_guess_table() {
 
 /* init the guess table by reading in the encrypted nR,aR values and
  * setting the first 2^16 key guesses */
-void init_guess_table(char *filename, char *uidstr) {
+static void init_guess_table(char *filename, char *uidstr) {
     unsigned int i, j;
     FILE *fp;
     char *buf = NULL;
@@ -313,7 +316,7 @@ void init_guess_table(char *filename, char *uidstr) {
 /* bit_score calculates the ratio of partial states that could generate
  * the resulting bit b to all possible states
  * size is the number of confirmed bits in the state */
-double bit_score(uint64_t s, uint64_t size, uint64_t b) {
+static double bit_score(uint64_t s, uint64_t size, uint64_t b) {
     uint64_t packed;
     uint64_t chopped;
     unsigned int n;
@@ -396,7 +399,7 @@ double bit_score(uint64_t s, uint64_t size, uint64_t b) {
  * bit_scores together until no bits remain. bit_scores are
  * multiplied by the number of relevant bits in the scored state
  * to give weight to more complete states. */
-double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kssize) {
+static double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kssize) {
     double sc, sc2;
 
     if ((size == 1) || (kssize == 1)) {
@@ -427,7 +430,7 @@ double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kssize) {
 
 
 /* score_traces runs score for each encrypted nonce */
-void score_traces(struct guess *g, unsigned int size) {
+static void score_traces(struct guess *g, unsigned int size) {
     uint64_t lfsr;
     unsigned int i;
     double sc;
@@ -481,7 +484,7 @@ void score_all_traces(unsigned int size)
 */
 
 /* score_some_traces runs score_traces for every key guess in a section of the table */
-void *score_some_traces(void *data) {
+static void *score_some_traces(void *data) {
     unsigned int i;
     struct thread_data *tdata = (struct thread_data *)data;
 
@@ -494,7 +497,7 @@ void *score_some_traces(void *data) {
 
 
 /* score_all_traces runs score_traces for every key guess in the table */
-void score_all_traces(unsigned int size) {
+static void score_all_traces(unsigned int size) {
     pthread_t threads[NUM_THREADS];
     void *status;
     struct thread_data tdata[NUM_THREADS];
@@ -535,7 +538,7 @@ void score_all_traces(unsigned int size) {
 
 
 /* cmp_guess is the comparison function for qsorting the guess table */
-int cmp_guess(const void *a, const void *b) {
+static int cmp_guess(const void *a, const void *b) {
     struct guess *a1 = (struct guess *)a;
     struct guess *b1 = (struct guess *)b;
 
@@ -552,7 +555,7 @@ int cmp_guess(const void *a, const void *b) {
 /* expand all guesses in first half of (sorted) table by
  * copying them into the second half and extending the copied
  * ones with an extra 1, leaving the first half with an extra 0 */
-void expand_guesses(unsigned int halfsize, unsigned int size) {
+static void expand_guesses(unsigned int halfsize, unsigned int size) {
     unsigned int i, j;
 
     for (i = 0; i < halfsize; i++) {
@@ -567,7 +570,7 @@ void expand_guesses(unsigned int halfsize, unsigned int size) {
 
 /* checks if the supplied test key is still in the table, which
  * is useful when testing different scoring methods */
-void check_supplied_testkey(unsigned int size) {
+static void check_supplied_testkey(unsigned int size) {
     uint64_t partkey;
     unsigned int i;
 
@@ -586,7 +589,7 @@ void check_supplied_testkey(unsigned int size) {
 
 
 /* execute_round scores the guesses, sorts them and expands the good half */
-void execute_round(unsigned int size) {
+static void execute_round(unsigned int size) {
     unsigned int halfsize;
 
     // score all the current guesses
@@ -614,7 +617,7 @@ void execute_round(unsigned int size) {
 
 
 /* crack is the main cracking algo; it executes the rounds */
-void crack() {
+static void crack(void) {
     unsigned int i;
     uint64_t revkey;
     uint64_t foundkey;
@@ -630,9 +633,9 @@ void crack() {
     }
 }
 
-
 /* test function to make sure I know how the LFSR works */
-void testkey(uint64_t key) {
+/*
+static void testkey(uint64_t key) {
     uint64_t i;
     uint64_t b0to31 = 0;
     uint64_t ks = 0;
@@ -689,10 +692,11 @@ void testkey(uint64_t key) {
     printbin2(lfsr, 48);
     printf("\n\n");
 }
-
+*/
 
 /* test function to generate test data */
-void gen_bitstreams_testks(struct guess *g, uint64_t key) {
+/*
+static void gen_bitstreams_testks(struct guess *g, uint64_t key) {
     unsigned int i, j;
     uint64_t nRxorkey, lfsr, ks;
 
@@ -730,10 +734,11 @@ void gen_bitstreams_testks(struct guess *g, uint64_t key) {
         }
     }
 }
-
+*/
 
 /* test function */
-void test() {
+/*
+static void test(void) {
     uint64_t lfsr;
     uint64_t packed;
 
@@ -751,10 +756,10 @@ void test() {
 
     printf("test done\n");
 }
-
+*/
 
 /* check_key tests the potential key against an encrypted nonce, ks pair */
-int check_key(uint64_t key, uint64_t enc_nR, uint64_t ks) {
+static int check_key(uint64_t key, uint64_t enc_nR, uint64_t ks) {
     Hitag_State hstate;
     uint64_t bits;
     int i;

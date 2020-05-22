@@ -4,10 +4,12 @@ PM3PATH="$(dirname "$0")/.."
 cd "$PM3PATH" || exit 1
 
 SLOWTESTS=false
+GPUTESTS=false
 TESTALL=true
 TESTMFKEY=false
 TESTNONCE2KEY=false
 TESTMFNONCEBRUTE=false
+TESTHITAG2CRACK=false
 TESTFPGACOMPRESS=false
 TESTBOOTROM=false
 TESTARMSRC=false
@@ -30,6 +32,10 @@ Usage: $0 [--long] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_br
       ;;
     -l|--long)
       SLOWTESTS=true
+      shift
+      ;;
+    --gpu)
+      GPUTESTS=true
       shift
       ;;
     --clientbin)
@@ -59,6 +65,11 @@ Usage: $0 [--long] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_br
     fpga_compress)
       TESTALL=false
       TESTFPGACOMPRESS=true
+      shift
+      ;;
+    hitag2crack)
+      TESTALL=false
+      TESTHITAG2CRACK=true
       shift
       ;;
     bootrom)
@@ -122,22 +133,43 @@ function CheckFileExist() {
   return 1
 }
 
-# title, command line, check result, repeat several times if failed, ignore if fail
+# [slow] [gpu] [retry] [ignore] <title> <command_line> <check_result_regex>
+# slow:   test takes more than ~5s
+# gpu:    test requires GPU presence
+# retry:  test repeated up to 3 times in case of failure
+# ignore: test failure is not fatal
 function CheckExecute() {
   if [ "$1" == "slow" ]; then
-    SLOWTEST=true
+    local SLOWTEST=true
     shift
   else
-    SLOWTEST=false
+    local SLOWTEST=false
   fi
-  if [ "$4" ]; then
+  if [ "$1" == "gpu" ]; then
+    local GPUTEST=true
+    shift
+  else
+    local GPUTEST=false
+  fi
+  if [ "$1" == "retry" ]; then
     local RETRY="1 2 3 e"
+    shift
   else
     local RETRY="e"
+  fi
+  if [ "$1" == "ignore" ]; then
+    local IGNOREFAILURE=true
+    shift
+  else
+    local IGNOREFAILURE=false
   fi
 
   if $SLOWTEST && ! $SLOWTESTS; then
     echo -e "$1 ${C_YELLOW}[SKIPPED]${C_NC} (slow)\n"
+    return 0
+  fi
+  if $GPUTEST && ! $GPUTESTS; then
+    echo -e "$1 ${C_YELLOW}[SKIPPED]${C_NC} (gpu)\n"
     return 0
   fi
 
@@ -151,7 +183,7 @@ function CheckExecute() {
     if [ ! $I == "e" ]; then echo "retry $I"; fi
   done
 
-  if [ "$5" ]; then
+  if $IGNOREFAILURE; then
     echo -e "$1 ${C_YELLOW}[Ignored]${C_NC}"
     return 0
   fi
@@ -227,6 +259,54 @@ while true; do
       if ! CheckFileExist "mf_nonce_brute exists"          "$MFNONCEBRUTEBIN"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test"         "$MFNONCEBRUTEBIN 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key.*: \[ffffffffffff\]"; then break; fi
     fi
+    # hitag2crack not yet part of "all"
+    # if $TESTALL || $TESTHITAG2CRACK; then
+    if $TESTHITAG2CRACK; then
+      echo -e "\n${C_BLUE}Testing ht2crack2:${C_NC} ${HT2CRACK2PATH:=./tools/hitag2crack/crack2/}"
+      if ! CheckFileExist "ht2crack2buildtable exists"     "$HT2CRACK2PATH/ht2crack2buildtable"; then break; fi
+      if ! CheckFileExist "ht2crack2gentest exists"        "$HT2CRACK2PATH/ht2crack2gentest"; then break; fi
+      if ! CheckFileExist "ht2crack2search exists"         "$HT2CRACK2PATH/ht2crack2search"; then break; fi
+      # 1.5Tb tables are supposed to be absent, so it's just a fast check without real cracking
+      if ! CheckExecute "ht2crack2 quick test"             "cd $HT2CRACK2PATH; ./ht2crack2gentest 1 && ./runalltests.sh; rm keystream*" "searching on bit"; then break; fi
+
+      echo -e "\n${C_BLUE}Testing ht2crack3:${C_NC} ${HT2CRACK3PATH:=./tools/hitag2crack/crack3/}"
+      if ! CheckFileExist "ht2crack3 exists"               "$HT2CRACK3PATH/ht2crack3"; then break; fi
+      if ! CheckFileExist "ht2crack3test exists"           "$HT2CRACK3PATH/ht2crack3test"; then break; fi
+      HT2CRACK3UID=AABBCCDD
+      # Test fast only for HT2CRACK3KEY in begin of keyspace!
+      HT2CRACK3KEY=000102030405
+      HT2CRACK3N=32
+      HT2CRACK3NRAR=hitag2_${HT2CRACK3UID}_nrar_${HT2CRACK3N}emul.txt
+      if ! CheckExecute "ht2crack3 gen testfile"           "cd $HT2CRACK3PATH; python3 ../hitag2_gen_nRaR.py $HT2CRACK3KEY $HT2CRACK3UID $HT2CRACK3N > $HT2CRACK3NRAR && echo SUCCESS" "SUCCESS"; then break; fi
+      if ! CheckExecute "ht2crack3test test"               "cd $HT2CRACK3PATH; ./ht2crack3test $HT2CRACK3NRAR $HT2CRACK3KEY $HT2CRACK3UID|grep -v SUCCESS||echo SUCCESS" "SUCCESS"; then break; fi
+      if ! CheckExecute "ht2crack3 test"                   "cd $HT2CRACK3PATH; ./ht2crack3 $HT2CRACK3UID $HT2CRACK3NRAR |egrep -v '(trying|partial)'" "key = $HT2CRACK3KEY"; then break; fi
+      if ! CheckExecute "ht2crack3 rm testfile"            "cd $HT2CRACK3PATH; rm $HT2CRACK3NRAR && echo SUCCESS" "SUCCESS"; then break; fi
+
+      echo -e "\n${C_BLUE}Testing ht2crack4:${C_NC} ${HT2CRACK4PATH:=./tools/hitag2crack/crack4/}"
+      if ! CheckFileExist "ht2crack4 exists"               "$HT2CRACK4PATH/ht2crack4"; then break; fi
+      HT2CRACK4UID=12345678
+      HT2CRACK4KEY=AABBCCDDEEFF
+      HT2CRACK4N=32
+      HT2CRACK4NRAR=hitag2_${HT2CRACK4UID}_nrar_${HT2CRACK4N}emul.txt
+      # The success is probabilistic: a fresh random nRaR file is required for each run
+      # Order of magnitude to crack it: ~15s -> tagged as "slow"
+      if ! CheckExecute slow retry ignore "ht2crack4 test" "cd $HT2CRACK4PATH; \
+                                                            python3 ../hitag2_gen_nRaR.py $HT2CRACK4KEY $HT2CRACK4UID $HT2CRACK4N > $HT2CRACK4NRAR; \
+                                                            ./ht2crack4 -u $HT2CRACK4UID -n $HT2CRACK4NRAR -N 16 -t 500000 2>&1; \
+                                                            rm $HT2CRACK4NRAR" "key = $HT2CRACK4KEY"; then break; fi
+
+      echo -e "\n${C_BLUE}Testing ht2crack5:${C_NC} ${HT2CRACK5PATH:=./tools/hitag2crack/crack5/}"
+      if ! CheckFileExist "ht2crack5 exists"               "$HT2CRACK5PATH/ht2crack5"; then break; fi
+
+      echo -e "\n${C_BLUE}Testing ht2crack5gpu:${C_NC} ${HT2CRACK5GPUPATH:=./tools/hitag2crack/crack5gpu/}"
+      if ! CheckFileExist "ht2crack5gpu exists"            "$HT2CRACK5GPUPATH/ht2crack5gpu"; then break; fi
+      HT2CRACK5GPUUID=12345678
+      HT2CRACK5GPUKEY=AABBCCDDEEFF
+      # The speed depends on the nRaR so we'll use two pairs known to work fast
+      HT2CRACK5GPUNRAR="B438220C 944FFD74 942C59E3 3D450B34"
+      # Order of magnitude to crack it: ~15s -> tagged as "slow"
+      if ! CheckExecute slow gpu "ht2crack5gpu test"           "cd $HT2CRACK5GPUPATH; ./ht2crack5gpu $HT2CRACK5GPUUID $HT2CRACK5GPUNRAR" "Key: $HT2CRACK5GPUKEY"; then break; fi
+    fi
     if $TESTALL || $TESTCLIENT; then
       echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN:=./client/proxmark3}"
       if ! CheckFileExist "proxmark3 exists"               "$CLIENTBIN"; then break; fi
@@ -261,7 +341,7 @@ while true; do
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
-      if ! CheckExecute slow "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
+      if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested t 1 000000000000'" "found:"; then break; fi
       if ! CheckExecute slow "hf iclass long test"         "$CLIENTBIN -c 'hf iclass loclass t l'" "verified ok"; then break; fi
       if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test(s) \[ OK"; then break; fi
       if ! $SLOWTESTS; then

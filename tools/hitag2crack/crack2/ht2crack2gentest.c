@@ -5,7 +5,7 @@
 
 #include "ht2crackutils.h"
 
-int makerandom(char *hex, unsigned int len, int fd) {
+static int makerandom(char *hex, unsigned int len, int fd) {
     unsigned char raw[32];
     int i;
 
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     int urandomfd;
 
     if (argc < 2) {
-        printf("ht2crack2gentest number\n");
+        printf("%s number\n", argv[0]);
         exit(1);
     }
 

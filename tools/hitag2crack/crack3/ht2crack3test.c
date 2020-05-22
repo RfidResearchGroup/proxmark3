@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     char *uid;
 
     if (argc < 4) {
-        printf("ht2test nRaRfile KEY UID\n");
+        printf("%s nRaRfile KEY UID\n", argv[0]);
         exit(1);
     }
 

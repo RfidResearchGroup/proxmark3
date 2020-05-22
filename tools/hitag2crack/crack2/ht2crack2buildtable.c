@@ -4,7 +4,7 @@
  */
 
 #include "ht2crackutils.h"
-
+#include <stdlib.h>
 
 // DATAMAX is the size of each bucket (bytes).  There are 65536 buckets so choose a value such that
 // DATAMAX * 65536 < RAM available.  For ex, if you want to use 12GB of RAM (for a 16GB machine
@@ -53,63 +53,63 @@ uint64_t d2[48];
 int nsteps2;
 
 // create table entry
-void create_table(struct table *t, int d1, int d2) {
-    if (!t) {
+static void create_table(struct table *tt, int d_1, int d_2) {
+    if (!tt) {
         printf("create_table: t is NULL\n");
         exit(1);
     }
 
     // create some space
-    t->data = (unsigned char *)malloc(DATAMAX);
-    if (!(t->data)) {
+    tt->data = (unsigned char *)malloc(DATAMAX);
+    if (!(tt->data)) {
         printf("create_table: cannot malloc data\n");
         exit(1);
     }
 
     // set data ptr to start of data table
-    t->ptr = t->data;
+    tt->ptr = tt->data;
 
     // init the mutex
-    if (pthread_mutex_init(&(t->mutex), NULL)) {
+    if (pthread_mutex_init(&(tt->mutex), NULL)) {
         printf("create_table: cannot init mutex\n");
         exit(1);
     }
 
     // create the path
-//    sprintf(t->path, "/Volumes/2tb/%02X/%02X.bin", d1 & 0xff, d2 & 0xff);
-    sprintf(t->path, "table/%02x/%02x.bin", d1 & 0xff, d2 & 0xff);
+//    sprintf(tt->path, "/Volumes/2tb/%02X/%02X.bin", d_1 & 0xff, d_2 & 0xff);
+    sprintf(tt->path, "table/%02x/%02x.bin", d_1 & 0xff, d_2 & 0xff);
 }
 
 
 // create all table entries
-void create_tables(struct table *t) {
+static void create_tables(struct table *tt) {
     int i, j;
 
-    if (!t) {
+    if (!tt) {
         printf("create_tables: t is NULL\n");
         exit(1);
     }
 
     for (i = 0; i < 0x100; i++) {
         for (j = 0; j < 0x100; j++) {
-            create_table(t + ((i * 0x100) + j), i, j);
+            create_table(tt + ((i * 0x100) + j), i, j);
         }
     }
 }
 
 
 // free the table memory
-void free_tables(struct table *t) {
+static void free_tables(struct table *tt) {
     int i;
     struct table *ttmp;
 
-    if (!t) {
+    if (!tt) {
         printf("free_tables: t is NULL\n");
         exit(1);
     }
 
     for (i = 0; i < 0x10000; i++) {
-        ttmp = t + i;
+        ttmp = tt + i;
         free(ttmp->data);
     }
 }
@@ -117,7 +117,7 @@ void free_tables(struct table *t) {
 
 
 // write (partial) table to file
-void writetable(struct table *t1) {
+static void writetable(struct table *t1) {
     int fd;
 
     if (debug) printf("writetable %s\n", t1->path);
@@ -142,7 +142,7 @@ void writetable(struct table *t1) {
 
 
 // store value in table
-void store(unsigned char *data) {
+static void store(unsigned char *data) {
     unsigned char d_1, d_2;
     int offset;
     struct table *t1;
@@ -194,7 +194,7 @@ void store(unsigned char *data) {
 }
 
 // writes the ks (keystream) and s (state)
-void write_ks_s(uint32_t ks1, uint32_t ks2, uint64_t shiftreg) {
+static void write_ks_s(uint32_t ks1, uint32_t ks2, uint64_t shiftreg) {
     unsigned char buf[16];
 
     // create buffer
@@ -209,7 +209,7 @@ void write_ks_s(uint32_t ks1, uint32_t ks2, uint64_t shiftreg) {
 
 
 // builds the di table for jumping
-void builddi(int steps, int table) {
+static void builddi(int steps, int table) {
     uint64_t statemask;
     int i;
     Hitag_State mystate;
@@ -241,7 +241,7 @@ void builddi(int steps, int table) {
 }
 
 // jump function - quickly jumps a load of steps
-void jumpnsteps(Hitag_State *hstate, int table) {
+static void jumpnsteps(Hitag_State *hstate, int table) {
     uint64_t output = 0;
     uint64_t bitmask;
     int i;
@@ -277,14 +277,14 @@ void jumpnsteps(Hitag_State *hstate, int table) {
 
 
 // thread to build a part of the table
-void *buildtable(void *d) {
+static void *buildtable(void *dd) {
     Hitag_State hstate;
     Hitag_State hstate2;
     unsigned long i;
     unsigned long maxentries = 1;
     uint32_t ks1;
     uint32_t ks2;
-    int index = (int)(long)d;
+    int index = (int)(long)dd;
     int tnum = NUM_BUILD_THREADS;
 
     /* set random state */
@@ -334,7 +334,7 @@ void *buildtable(void *d) {
 
 
 // make 'table/' (unsorted) and 'sorted/' dir structures
-void makedirs() {
+static void makedirs(void) {
     char path[32];
     int i;
 
@@ -368,7 +368,7 @@ static int datacmp(const void *p1, const void *p2, void *dummy) {
     return memcmp(d_1, d_2, DATASIZE);
 }
 
-void *sorttable(void *d) {
+static void *sorttable(void *dd) {
     int i, j;
     int fdin;
     int fdout;
@@ -378,7 +378,7 @@ void *sorttable(void *d) {
     struct stat filestat;
     unsigned char *table = NULL;
     uint64_t numentries = 0;
-    int index = (int)(long)d;
+    int index = (int)(long)dd;
     int space = 0x100 / NUM_SORT_THREADS;
 
     // create table - 50MB should be enough

@@ -15,6 +15,8 @@ ifneq (,$(DESTDIR))
 endif
 
 all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% mf_nonce_brute/% fpga_compress/%
+# hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
+#all clean install uninstall check: %: hitag2crack/%
 
 INSTALLTOOLS=pm3_eml2lower.sh pm3_eml2upper.sh pm3_mfdread.py pm3_mfd2eml.py pm3_eml2mfd.py findbits.py rfidtest.pl xorcheck.py
 INSTALLSIMFW=sim011.bin sim011.sha512.txt
@@ -103,6 +105,9 @@ client/check: FORCE
 recovery/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
+hitag2crack/check: FORCE
+	$(info [*] CHECK $(patsubst %/check,%,$@))
+	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
 common/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
@@ -135,9 +140,12 @@ recovery/install: bootrom/all armsrc/all
 recovery/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@) DESTDIR=$(MYDESTDIR)
+hitag2crack/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/hitag2crack $(patsubst hitag2crack/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key mf_nonce_brute style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key mf_nonce_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -157,6 +165,7 @@ help:
 	@echo "+ mfkey           - Make tools/mfkey"
 	@echo "+ nonce2key       - Make tools/nonce2key"
 	@echo "+ mf_nonce_brute  - Make tools/mf_nonce_brute"
+	@echo "+ hitag2crack     - Make tools/hitag2crack"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
 	@echo "+ style           - Apply some automated source code formatting rules"
@@ -192,6 +201,8 @@ nonce2key: nonce2key/all
 mf_nonce_brute: mf_nonce_brute/all
 
 fpga_compress: fpga_compress/all
+
+hitag2crack: hitag2crack/all
 
 newtarbin:
 	$(RM) proxmark3-$(platform)-bin.tar proxmark3-$(platform)-bin.tar.gz

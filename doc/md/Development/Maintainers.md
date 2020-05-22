@@ -72,6 +72,10 @@ On some architectures, pthread library is not present:
 
 * `make client SKIPPTHREAD=1` to skip `-lpthread` at linker stage.
 
+One tool requires a CUDA compilation environment, it can be skipped as well:
+
+* `make hitag2crack SKIPGPU=1` to skip ht2crack5gpu tool when compiling the hitag2crack toolsuite.
+
 Some unittests are available via `make check`, which is actually triggering individual targets as for `make install`.
 
 `make install` is actually triggering the following individual targets which can be accessed individually:

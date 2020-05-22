@@ -65,7 +65,7 @@ bitslice_t bs_zeroes, bs_ones;
                     state[-2+i+42].value ^ state[-2+i+43].value ^ state[-2+i+46].value ^ state[-2+i+47].value);
 #define get_bit(n, word) ((word >> (n)) & 1)
 
-const uint64_t expand(uint64_t mask, uint64_t value) {
+static uint64_t expand(uint64_t mask, uint64_t value) {
     uint64_t fill = 0;
     for (uint64_t bit_index = 0; bit_index < 48; bit_index++) {
         if (mask & 1) {
@@ -77,7 +77,7 @@ const uint64_t expand(uint64_t mask, uint64_t value) {
     return fill;
 }
 
-void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value, const size_t bit_len, bool reverse) {
+static void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value, const size_t bit_len, bool reverse) {
     size_t bit_idx;
     for (bit_idx = 0; bit_idx < bit_len; bit_idx++) {
         bool bit;
@@ -123,7 +123,7 @@ struct context {
 };
 
 
-void runKernel(struct context *ctx, uint32_t cand_base, uint64_t *matches, uint32_t *matches_found) {
+static void runKernel(struct context *ctx, uint32_t cand_base, uint64_t *matches, uint32_t *matches_found) {
     int err;
     size_t global[2];
 
