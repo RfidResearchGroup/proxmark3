@@ -691,22 +691,13 @@ int main(int argc, char *argv[]) {
 
     bool flash_mode = false;
     bool flash_can_write_bl = false;
+    bool debug_mode_forced = false;
     int flash_num_files = 0;
     char *flash_filenames[FLASH_MAX_FILES];
 
     // set global variables soon enough to get the log path
     set_my_executable_path();
     set_my_user_directory();
-
-#ifdef USE_PREFERENCE_FILE
-    // Load Settings and assign
-    // This will allow the command line to override the settings.json values
-    preferences_load();
-    // quick patch for debug level
-    g_debugMode = session.client_debug_level;
-    // settings_save ();
-    // End Settings
-#endif
 
     for (int i = 1; i < argc; i++) {
 
@@ -779,6 +770,7 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             g_debugMode = demod;
+            debug_mode_forced = true;
             i++;
             continue;
         }
@@ -885,6 +877,17 @@ int main(int argc, char *argv[]) {
         show_help(false, exec_name);
         return 1;
     }
+
+#ifdef USE_PREFERENCE_FILE
+    // Load Settings and assign
+    // This will allow the command line to override the settings.json values
+    preferences_load();
+    // quick patch for debug level
+    if (! debug_mode_forced)
+        g_debugMode = session.client_debug_level;
+    // settings_save ();
+    // End Settings
+#endif
 
 #ifndef USE_PREFERENCE_FILE
     // comment next 2 lines to use session values set from settings_load
