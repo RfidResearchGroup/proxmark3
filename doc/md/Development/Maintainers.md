@@ -72,6 +72,8 @@ On some architectures, pthread library is not present:
 
 * `make client SKIPPTHREAD=1` to skip `-lpthread` at linker stage.
 
+Some unittests are available via `make check`, which is actually triggering individual targets as for `make install`.
+
 `make install` is actually triggering the following individual targets which can be accessed individually:
 
 * `make client/install`
@@ -89,4 +91,4 @@ On some architectures, pthread library is not present:
   * SIM firmware
   * udev rule on Linux
 
-Same logic for `make all`, `make clean`, `make uninstall`
+Same logic for `make all`, `make clean`, `make uninstall` and `make check`.
