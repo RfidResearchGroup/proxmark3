@@ -23,8 +23,9 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--gpu] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
     --long:          Enable slow tests
+    --gpu:           Enable tests requiring GPU
     --clientbin ...: Specify path to proxmark3 binary to test
     If no target given, all targets will be tested
 """
@@ -119,17 +120,19 @@ C_NC='\033[0m' # No Color
 # title, file name or file wildcard to check
 function CheckFileExist() {
 
+  printf "%-40s" "$1 "
+
   if [ -f "$2" ]; then
-    echo -e "$1 ${C_GREEN}[OK]${C_NC}"
+    echo -e "${C_GREEN}[OK]${C_NC}"
     return 0
   fi
 
   if ls "$2" 1> /dev/null 2>&1; then
-    echo -e "$1 ${C_GREEN}[OK]${C_NC}"
+    echo -e "${C_GREEN}[OK]${C_NC}"
     return 0
   fi
 
-  echo -e "$1 ${C_RED}[Fail]${C_NC}"
+  echo -e "${C_RED}[FAIL]${C_NC}"
   return 1
 }
 
@@ -164,12 +167,14 @@ function CheckExecute() {
     local IGNOREFAILURE=false
   fi
 
+  printf "%-40s" "$1 "
+
   if $SLOWTEST && ! $SLOWTESTS; then
-    echo -e "$1 ${C_YELLOW}[SKIPPED]${C_NC} (slow)\n"
+    echo -e "${C_YELLOW}[SKIPPED]${C_NC} (slow)\n"
     return 0
   fi
   if $GPUTEST && ! $GPUTESTS; then
-    echo -e "$1 ${C_YELLOW}[SKIPPED]${C_NC} (gpu)\n"
+    echo -e "${C_YELLOW}[SKIPPED]${C_NC} (gpu)\n"
     return 0
   fi
 
@@ -177,18 +182,18 @@ function CheckExecute() {
   do
     RES=$(eval "$2")
     if echo "$RES" | grep -q "$3"; then
-      echo -e "$1 ${C_GREEN}[OK]${C_NC}"
+      echo -e "${C_GREEN}[OK]${C_NC}"
       return 0
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
   done
 
   if $IGNOREFAILURE; then
-    echo -e "$1 ${C_YELLOW}[Ignored]${C_NC}"
+    echo -e "${C_YELLOW}[IGNORED]${C_NC}"
     return 0
   fi
 
-  echo -e "$1 ${C_RED}[Fail]${C_NC}"
+  echo -e "${C_RED}[FAIL]${C_NC}"
   echo -e "Execution trace:\n$RES"
   return 1
 }
