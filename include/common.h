@@ -31,8 +31,8 @@
 #define RESOURCES_SUBDIR     "resources" PATHSEP
 #define TRACES_SUBDIR        "traces" PATHSEP
 #define FIRMWARES_SUBDIR     "firmware" PATHSEP
-#define BOOTROM_SUBDIR       "bootrom/obj" PATHSEP
-#define FULLIMAGE_SUBDIR     "armsrc/obj" PATHSEP
+#define BOOTROM_SUBDIR       "bootrom" PATHSEP "obj" PATHSEP
+#define FULLIMAGE_SUBDIR     "armsrc" PATHSEP "obj" PATHSEP
 
 #define PACKED __attribute__((packed))
 
