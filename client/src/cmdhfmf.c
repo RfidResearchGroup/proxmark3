@@ -48,8 +48,8 @@ static int usage_hf14_ice(void) {
     PrintAndLogEx(NORMAL, "  f <name>     save nonces to <name> instead of hf-mf-<UID>-nonces.bin");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mf ice");
-    PrintAndLogEx(NORMAL, "         hf mf ice f nonces.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf ice"));
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf ice f nonces.bin"));
     return PM3_SUCCESS;
 }
 
@@ -60,8 +60,8 @@ static int usage_hf14_dump(void) {
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mf dump");
-    PrintAndLogEx(NORMAL, "         hf mf dump 4");
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf dump"));
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf dump 4"));
     return PM3_SUCCESS;
 }
 
@@ -72,9 +72,9 @@ static int usage_hf14_mifare(void) {
     PrintAndLogEx(NORMAL, "      <block number>  (Optional) target other block");
     PrintAndLogEx(NORMAL, "      <A|B>           (optional) target key type");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf mf darkside");
-    PrintAndLogEx(NORMAL, "           hf mf darkside 16");
-    PrintAndLogEx(NORMAL, "           hf mf darkside 16 B");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf darkside"));
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf darkside 16"));
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf darkside 16 B"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_mfsim(void) {
@@ -95,10 +95,10 @@ static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "      e    (Optional) Fill simulator keys from found keys");
     PrintAndLogEx(NORMAL, "      v    (Optional) Verbose");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf mf sim u 0a0a0a0a");
-    PrintAndLogEx(NORMAL, "           hf mf sim u 11223344556677");
-    PrintAndLogEx(NORMAL, "           hf mf sim u 112233445566778899AA");
-    PrintAndLogEx(NORMAL, "           hf mf sim u 11223344 i x");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 0a0a0a0a"));
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 11223344556677"));
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 112233445566778899AA"));
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sim u 11223344 i x"));
     return PM3_SUCCESS;
 }
 /*
@@ -112,7 +112,7 @@ static int usage_hf14_mfsim(void) {
 //  PrintAndLogEx(NORMAL, " n/a  e     decrypt sequence, collect read and write commands and save the result of the sequence to emulator memory");
     PrintAndLogEx(NORMAL, "      f    decrypt sequence, collect read and write commands and save the result of the sequence to emulator dump file `uid.eml`");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "           hf mf sniff l d f");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf sniff l d f"));
     return PM3_SUCCESS;
 }
 */
@@ -127,10 +127,10 @@ static int usage_hf14_nested(void) {
     PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
-    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF t      -- and transfer keys into emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF d      -- or write keys to binary file ");
-    PrintAndLogEx(NORMAL, "      hf mf nested o 0 A FFFFFFFFFFFF 4 A    -- one sector key recovery. Use block 0 Key A to find block 4 Key A");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested 1 0 A FFFFFFFFFFFF")"        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested 1 0 A FFFFFFFFFFFF t")"      -- and transfer keys into emulator memory");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested 1 0 A FFFFFFFFFFFF d")"      -- or write keys to binary file ");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf nested o 0 A FFFFFFFFFFFF 4 A")"    -- one sector key recovery. Use block 0 Key A to find block 4 Key A");
     return PM3_SUCCESS;
 }
 static int usage_hf14_staticnested(void) {
@@ -143,9 +143,9 @@ static int usage_hf14_staticnested(void) {
     PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf staticnested 1 0 A FFFFFFFFFFFF        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
-    PrintAndLogEx(NORMAL, "      hf mf staticnested 1 0 A FFFFFFFFFFFF t      -- and transfer keys into emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf staticnested 1 0 A FFFFFFFFFFFF d      -- or write keys to binary file ");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf staticnested 1 0 A FFFFFFFFFFFF")"        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf staticnested 1 0 A FFFFFFFFFFFF t")"      -- and transfer keys into emulator memory");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf staticnested 1 0 A FFFFFFFFFFFF d")"      -- or write keys to binary file ");
     return PM3_SUCCESS;
 }
 static int usage_hf14_hardnested(void) {
@@ -175,35 +175,17 @@ static int usage_hf14_hardnested(void) {
     PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A FFFFFFFFFFFF 4 A");
-    PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w");
-    PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A FFFFFFFFFFFF 4 A f nonces.bin w s");
-    PrintAndLogEx(NORMAL, "      hf mf hardnested r");
-    PrintAndLogEx(NORMAL, "      hf mf hardnested r a0a1a2a3a4a5");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A w"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A FFFFFFFFFFFF 4 A f nonces.bin w s"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested r"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested r a0a1a2a3a4a5"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Add the known target key to check if it is present in the remaining key space:");
-    PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF"));
     return PM3_SUCCESS;
 }
-/*
-static int usage_hf14_fixednested(void) {
-    PrintAndLogEx(NORMAL, "Usage:");
-    PrintAndLogEx(NORMAL, " all sectors:  hf mf fixed  <card memory> <block> <key A/B> <key (12 hex symbols)> [t,d]");
-    PrintAndLogEx(NORMAL, " one sector:   hf mf fixed  o <block> <key A/B> <key (12 hex symbols)> <target block> <target key A/B> [t]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h    this help");
-    PrintAndLogEx(NORMAL, "      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
-    PrintAndLogEx(NORMAL, "      t    transfer keys into emulator memory");
-    PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf fixed 1 0 A FFFFFFFFFFFF        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
-    PrintAndLogEx(NORMAL, "      hf mf fixed 1 0 A FFFFFFFFFFFF t      -- and transfer keys into emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf fixed 1 0 A FFFFFFFFFFFF d      -- or write keys to binary file ");
-    PrintAndLogEx(NORMAL, "      hf mf fixed o 0 A FFFFFFFFFFFF 4 A    -- one sector key recovery. Use block 0 Key A to find block 4 Key A");
-    return PM3_SUCCESS;
-}
-*/
+
 static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
@@ -238,10 +220,10 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn                                             -- target Mifare classic card with default keys");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn * 1 f mfc_default_keys                      -- target Mifare classic card (size 1k) with default dictionary");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF                          -- target Mifare classic card with Sector0 typeA with known key 'FFFFFFFFFFFF'");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys   -- this command combines the two above (reduce the need for nested / hardnested attacks, by using a dictionary)");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn")"                                             -- target Mifare classic card with default keys");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn * 1 f mfc_default_keys")"                      -- target Mifare classic card (size 1k) with default dictionary");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn k 0 A FFFFFFFFFFFF")"                          -- target Mifare classic card with Sector0 typeA with known key 'FFFFFFFFFFFF'");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys")"   -- this command combines the two above (reduce the need for nested / hardnested attacks, by using a dictionary)");
     return PM3_SUCCESS;
 }
 static int usage_hf14_chk(void) {
@@ -301,7 +283,7 @@ static int usage_hf14_keybrute(void) {
     PrintAndLogEx(NORMAL, "      <A|B>           target key type");
     PrintAndLogEx(NORMAL, "      <key>           candidate key from mf_nonce_brute tool");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf mf keybrute 1 A 000011223344");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf mf keybrute 1 A 000011223344"));
     return 0;
 }
 */
@@ -314,10 +296,10 @@ static int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, specific the full filename of data file");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-dump.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-dump.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf restore") "                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf restore 1 u 12345678") "               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-dump.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf restore 1 u 12345678 k dumpkey.bin") " -- restore from dumpkey.bin and hf-mf-12345678-dump.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf restore 4") "                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
     return PM3_SUCCESS;
 }
 static int usage_hf14_decryptbytes(void) {
@@ -330,26 +312,28 @@ static int usage_hf14_decryptbytes(void) {
     PrintAndLogEx(NORMAL, "      <at_enc>     encrypted tag response");
     PrintAndLogEx(NORMAL, "      <data>       encrypted data, taken directly after at_enc and forward");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mf decrypt b830049b 9248314a 9280e203 41e586f9\n");
-    PrintAndLogEx(NORMAL, "  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  auth block 3 [crc]");
+    PrintAndLogEx(NORMAL, _YELLOW_("         hf mf decrypt b830049b 9248314a 9280e203 41e586f9"));
+    PrintAndLogEx(NORMAL, "\n  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  auth block 3 [crc]");
     return PM3_SUCCESS;
 }
 
 static int usage_hf14_eget(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf eget <block number>");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mf eget 0 ");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eget 0"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_eclr(void) {
     PrintAndLogEx(NORMAL, "It set card emulator memory to empty data blocks and key A/B FFFFFFFFFFFF \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eclr");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eclr"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_eset(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf eset <block number> <block data (32 hex symbols)>");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mf eset 1 000102030405060708090a0b0c0d0e0f ");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eset 1 000102030405060708090a0b0c0d0e0f"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_eload(void) {
@@ -358,8 +342,8 @@ static int usage_hf14_eload(void) {
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mf eload filename");
-    PrintAndLogEx(NORMAL, "        hf mf eload 4 filename");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eload filename"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eload 4 filename"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_esave(void) {
@@ -368,9 +352,9 @@ static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mf esave ");
-    PrintAndLogEx(NORMAL, "        hf mf esave 4");
-    PrintAndLogEx(NORMAL, "        hf mf esave 4 filename");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4 filename"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_ecfill(void) {
@@ -380,8 +364,8 @@ static int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mf ecfill A");
-    PrintAndLogEx(NORMAL, "        hf mf ecfill A 4");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf ecfill A"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf ecfill A 4"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_ekeyprn(void) {
@@ -393,8 +377,8 @@ static int usage_hf14_ekeyprn(void) {
     PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf ekeyprn 1");
-    PrintAndLogEx(NORMAL, "      hf mf ekeyprn d");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf ekeyprn 1"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf ekeyprn d"));
     return PM3_SUCCESS;
 }
 
@@ -409,8 +393,8 @@ static int usage_hf14_csetuid(void) {
     PrintAndLogEx(NORMAL, "       <atqa>   ATQA 4 hex symbols");
     PrintAndLogEx(NORMAL, "       <sak>    SAK 2 hex symbols");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf csetuid 01020304");
-    PrintAndLogEx(NORMAL, "      hf mf csetuid 01020304 0004 08 w");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf csetuid 01020304"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf csetuid 01020304 0004 08 w"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_csetblk(void) {
@@ -423,8 +407,8 @@ static int usage_hf14_csetblk(void) {
     PrintAndLogEx(NORMAL, "       <block>   block number");
     PrintAndLogEx(NORMAL, "       <data>    block data to write (32 hex symbols)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mf csetblk 1 01020304050607080910111213141516");
-    PrintAndLogEx(NORMAL, "       hf mf csetblk 1 01020304050607080910111213141516 w");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csetblk 1 01020304050607080910111213141516"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csetblk 1 01020304050607080910111213141516 w"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_cload(void) {
@@ -439,8 +423,8 @@ static int usage_hf14_cload(void) {
     PrintAndLogEx(NORMAL, "       b <filename> load card with data from binary file");
     PrintAndLogEx(NORMAL, "       <filename>   load card with data from eml file");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mf cload mydump");
-    PrintAndLogEx(NORMAL, "       hf mf cload e");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cload mydump"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cload e"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_cgetblk(void) {
@@ -451,7 +435,7 @@ static int usage_hf14_cgetblk(void) {
     PrintAndLogEx(NORMAL, "      h         this help");
     PrintAndLogEx(NORMAL, "      <block>   block number");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf cgetblk 1");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf cgetblk 1"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_cgetsc(void) {
@@ -462,7 +446,7 @@ static int usage_hf14_cgetsc(void) {
     PrintAndLogEx(NORMAL, "      h          this help");
     PrintAndLogEx(NORMAL, "      <sector>   sector number");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf cgetsc 0");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf cgetsc 0"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_csave(void) {
@@ -478,9 +462,9 @@ static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "       o <filename>  save data to file");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mf csave u 1");
-    PrintAndLogEx(NORMAL, "       hf mf csave e 1");
-    PrintAndLogEx(NORMAL, "       hf mf csave 4 o filename");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave u 1"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave e 1"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave 4 o filename"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_nack(void) {
@@ -491,7 +475,7 @@ static int usage_hf14_nack(void) {
     PrintAndLogEx(NORMAL, "       h             this help");
     PrintAndLogEx(NORMAL, "       v             verbose");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf mf nack");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf nack"));
     return PM3_SUCCESS;
 }
 
@@ -3727,6 +3711,11 @@ int CmdHF14AMfELoad(const char *Cmd) {
             free(data);
             return res;
         }
+        
+        // update expected blocks to match converted data.
+        if (numBlocks != datalen / 4) {
+            numBlocks = datalen / 4;
+        }
     }
 
     PrintAndLogEx(INFO, "Uploading to emulator memory");
@@ -3752,24 +3741,27 @@ int CmdHF14AMfELoad(const char *Cmd) {
         counter += blockWidth;
         datalen -= blockWidth;
     }
+    free(data);
     PrintAndLogEx(NORMAL, "\n");
 
-    // Ultralight /Ntag
     if (blockWidth == 4) {
+        PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim h`"));
+        // MFU / NTAG
         if ((blockNum != numBlocks)) {
-            PrintAndLogEx(FAILED, "Warning, Ultralight/Ntag file content, Loaded %d blocks into emulator memory", blockNum);
-            free(data);
+            PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", blockNum, numBlocks);
             return PM3_SUCCESS;
         }
     } else {
+        PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mf sim h`"));
+        // MFC
         if ((blockNum != numBlocks)) {
-            PrintAndLogEx(FAILED, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
-            free(data);
+            PrintAndLogEx(WARNING, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
+
             return PM3_SUCCESS;
         }
+
     }
     PrintAndLogEx(SUCCESS, "Done");
-    free(data);
     return PM3_SUCCESS;
 }
 
