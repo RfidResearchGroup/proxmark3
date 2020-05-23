@@ -54,7 +54,7 @@ pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 
 // needed by flasher, so let's put it here instead of fileutils.c
-int searchHomeFilePath(char **foundpath, const char *filename, bool create_home) {
+int searchHomeFilePath(char **foundpath, const char *subdir, const char *filename, bool create_home) {
     if (foundpath == NULL)
         return PM3_EINVARG;
     const char *user_path = get_my_user_directory();
@@ -62,7 +62,8 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
         fprintf(stderr, "Could not retrieve $HOME from the environment\n");
         return PM3_EFILE;
     }
-    char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1, sizeof(char));
+    size_t pathlen = strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1;
+    char *path = calloc(pathlen, sizeof(char));
     if (path == NULL)
         return PM3_EMALLOC;
     strcpy(path, user_path);
@@ -96,11 +97,48 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
             return PM3_EFILE;
         }
     }
+    if (subdir != NULL) {
+        pathlen += strlen(subdir);
+        path = realloc(path, pathlen * sizeof(char));
+        if (path == NULL)
+            return PM3_EMALLOC;
+        strcat(path, subdir);
+
+#ifdef _WIN32
+        // Mingw _stat fails if path ends with /, so let's use a stripped path
+        if (path[strlen(path) - 1] == '/') {
+            path[strlen(path) - 1] = '\0';
+            result = _stat(path, &st);
+            path[strlen(path)] = '/';
+        } else {
+            result = _stat(path, &st);
+        }
+#else
+        result = stat(path, &st);
+#endif
+        if ((result != 0) && create_home) {
+
+#ifdef _WIN32
+            if (_mkdir(path))
+#else
+            if (mkdir(path, 0700))
+#endif
+            {
+                fprintf(stderr, "Could not create user directory %s\n", path);
+                free(path);
+                return PM3_EFILE;
+            }
+        }
+    }
+
     if (filename == NULL) {
         *foundpath = path;
         return PM3_SUCCESS;
     }
-    path = realloc(path, (strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(filename) + 1) * sizeof(char));
+    pathlen += strlen(filename);
+    path = realloc(path, pathlen * sizeof(char));
+    if (path == NULL)
+        return PM3_EMALLOC;
     strcat(path, filename);
     *foundpath = path;
     return PM3_SUCCESS;
@@ -266,7 +304,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         time_t now = time(NULL);
         timenow = gmtime(&now);
         strftime(filename, sizeof(filename), PROXLOG, timenow);
-        if (searchHomeFilePath(&my_logfile_path, filename, true) != PM3_SUCCESS) {
+        if (searchHomeFilePath(&my_logfile_path, LOGS_SUBDIR, filename, true) != PM3_SUCCESS) {
             fprintf(stderr, "[-] Logging disabled!\n\n");
             my_logfile_path = NULL;
             logging = 0;

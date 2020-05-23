@@ -32,7 +32,7 @@ static int setCmdHelp(const char *Cmd);
 static char *prefGetFilename(void) {
     char *path;
 
-    if (searchHomeFilePath(&path, preferencesFilename, false) == PM3_SUCCESS)
+    if (searchHomeFilePath(&path, NULL, preferencesFilename, false) == PM3_SUCCESS)
         return path;
     else
         return strdup(preferencesFilename);
