@@ -36,21 +36,41 @@ endif
 
 # local libraries
 LUALIBPATH = ./deps/liblua
+LUALIBINC = -I$(LUALIBPATH)
 LUALIB = $(LUALIBPATH)/liblua.a
 JANSSONLIBPATH = ./deps/jansson
+JANSSONLIBINC = -I$(JANSSONLIBPATH)
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 CBORLIBPATH = ./deps/tinycbor
+CBORLIBINC = -I$(CBORLIBPATH)
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
 REVENGLIBPATH = ./deps/reveng
+REVENGLIBINC = -I$(REVENGLIBPATH)
 REVENGLIB = $(REVENGLIBPATH)/libreveng.a
 AMIIBOLIBPATH = ./deps/amiitool
+AMIIBOLIBINC = -I$(AMIIBOLIBPATH)
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
 HARDNESTEDLIBPATH = ./deps/hardnested
+HARDNESTEDLIBINC = -I$(HARDNESTEDLIBPATH)
 HARDNESTEDLIB = $(HARDNESTEDLIBPATH)/libhardnested.a
 CLIPARSERLIBPATH = ./deps/cliparser
+CLIPARSERLIBINC = -I$(CLIPARSERLIBPATH)
 CLIPARSERLIB = $(CLIPARSERLIBPATH)/libcliparser.a
 WAILIBPATH = ./deps/whereami
+WAILIBINC = -I$(WAILIBPATH)
 WAILIB = $(WAILIBPATH)/libwhereami.a
+
+LUAPLATFORM = generic
+ifneq (,$(findstring MINGW,$(platform)))
+    LUAPLATFORM = mingw
+else
+    ifeq ($(platform),Darwin)
+        LUAPLATFORM = macosx
+    else
+        LUALIB +=  -ldl
+        LUAPLATFORM = linux
+    endif
+endif
 
 # common libraries
 MBEDTLSLIBPATH = ../common/mbedtls
@@ -58,50 +78,19 @@ MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
-LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGLIBPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDLIBPATH) -I$(CLIPARSERLIBPATH) -I$(WAILIBPATH)
-INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
-CFLAGS ?= $(DEFCFLAGS)
-
-# We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
-# WIP Testing
-#PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
-PREFIX ?= /usr/local
-ifneq (,$(findstring MINGW,$(platform)))
-    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
-    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
-    # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
-    # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
-    PM3CFLAGS += -D_ISOC99_SOURCE
-    PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
-endif
-CXXFLAGS ?= -Wall -Werror -O3
-PM3CXXFLAGS = $(CXXFLAGS) -I../include
-
-LUAPLATFORM = generic
-ifneq (,$(findstring MINGW,$(platform)))
-    LUAPLATFORM = mingw
-else
-    ifeq ($(platform),Darwin)
-    LUAPLATFORM = macosx
-    OBJCSRCS = util_darwin.m
-    LDFLAGS += -framework Foundation -framework AppKit
-    LDLIBS := -L/usr/local/opt/readline/lib $(LDLIBS)
-    LIBS := -I/usr/local/opt/readline/include $(LIBS)
-    # cf brew info qt: qt not symlinked anymore
-    PKG_CONFIG_ENV := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
-else
-    LUALIB +=  -ldl
-    LUAPLATFORM = linux
-endif
+# system libraries
+ifneq ($(SKIPLUASYSTEM),1)
+    LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
+    LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua5.2 2>/dev/null)
+    ifneq ($(LUAINCLUDES),)
+        LUALIB = $(LUALDLIBS)
+        LUALIBINC = $(LUAINCLUDES)
+        LUASYSTEM = 1
+    endif
 endif
 
 ifneq ($(SKIPBT),1)
     BTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs bluez 2>/dev/null)
-endif
-
-ifneq ($(BTLDLIBS),)
-    PM3CFLAGS += -DHAVE_BLUEZ
 endif
 
 ifneq ($(SKIPQT),1)
@@ -118,7 +107,7 @@ ifneq ($(SKIPQT),1)
         UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=uic_location QtCore)
     else
         # On OSX Qt5 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
-        PM3CXXFLAGS += -fPIC -std=c++11
+        QT5FOUND = 1
     endif
     ifeq ($(QTINCLUDES), )
     # if both pkg-config commands failed, search in common places
@@ -128,7 +117,7 @@ ifneq ($(SKIPQT),1)
             ifneq ($(wildcard $(QTDIR)/include/QtWidgets),)
                 QTINCLUDES += -I$(QTDIR)/include/QtWidgets
                 QTLDLIBS = -L$(QTDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core
-                PM3CXXFLAGS += -fPIC -std=c++11
+                QT5FOUND = 1
             endif
             MOC = $(QTDIR)/bin/moc
             UIC = $(QTDIR)/bin/uic
@@ -136,11 +125,47 @@ ifneq ($(SKIPQT),1)
     endif
 endif
 
+LIBS = $(LUALIBINC) $(MBEDTLSLIBINC) $(JANSSONLIBINC) $(CBORLIBINC) $(ZLIBINC) $(REVENGLIBINC) $(AMIIBOLIBINC) $(HARDNESTEDLIBINC) $(CLIPARSERLIBINC) $(WAILIBINC)
+INCLUDES_CLIENT += -I./src -I../include -I../common -I../common_fpga $(LIBS)
+CFLAGS ?= $(DEFCFLAGS)
+
+# We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
+PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
+# WIP Testing
+#PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
+PREFIX ?= /usr/local
+ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
+    # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
+    PM3CFLAGS += -D_ISOC99_SOURCE
+    PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
+endif
+ifeq ($(platform),Darwin)
+    OBJCSRCS = util_darwin.m
+    LDFLAGS += -framework Foundation -framework AppKit
+    LDLIBS := -L/usr/local/opt/readline/lib $(LDLIBS)
+    LIBS := -I/usr/local/opt/readline/include $(LIBS)
+    # cf brew info qt: qt not symlinked anymore
+    PKG_CONFIG_ENV := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
+endif
+
+CXXFLAGS ?= -Wall -Werror -O3
+PM3CXXFLAGS = $(CXXFLAGS) -I../include
+
+ifneq ($(BTLDLIBS),)
+    PM3CFLAGS += -DHAVE_BLUEZ
+endif
+
 ifneq ($(QTLDLIBS),)
     QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
     QTGUIOBJS = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
     PM3CFLAGS += -DHAVE_GUI
     PM3CXXFLAGS += -DQT_NO_DEBUG
+    ifeq ($(QT5FOUND),1)
+        PM3CXXFLAGS += -fPIC -std=c++11
+    endif
 else
     QTGUISRCS = guidummy.cpp
     QTGUIOBJS = $(OBJDIR)/guidummy.o
@@ -161,6 +186,9 @@ else ifneq ($(BTLDLIBS),)
 $(info native BT support: Bluez found, enabled)
 else
 $(info native BT support: Bluez not found, disabled)
+endif
+ifeq ($(LUASYSTEM),1)
+$(info system LUA:        Lua5.2 found)
 endif
 $(info compiler version:  $(shell $(CC) --version|head -n 1))
 $(info ===================================================================)
@@ -385,8 +413,10 @@ tarbin: $(BINS)
 
 # local libraries:
 liblua:
+ifneq ($(LUASYSTEM),1)
 	$(info [*] MAKE $@ for $(LUAPLATFORM))
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
+endif
 
 jansson:
 	$(info [*] MAKE $@)

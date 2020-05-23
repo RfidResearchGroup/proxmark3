@@ -25,6 +25,7 @@ CC = gcc
 CXX = g++
 LD = g++
 SH = sh
+BASH = bash
 PERL = perl
 
 PATHSEP=/
