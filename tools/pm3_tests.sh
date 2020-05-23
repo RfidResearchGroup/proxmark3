@@ -297,6 +297,12 @@ while true; do
 
       echo -e "\n${C_BLUE}Testing ht2crack5:${C_NC} ${HT2CRACK5PATH:=./tools/hitag2crack/crack5/}"
       if ! CheckFileExist "ht2crack5 exists"               "$HT2CRACK5PATH/ht2crack5"; then break; fi
+      HT2CRACK5UID=12345678
+      HT2CRACK5KEY=AABBCCDDEEFF
+      # The speed depends on the nRaR so we'll use two pairs known to work fast
+      HT2CRACK5NRAR="6F901EE0 3AC77442 E5F99B3C 055B29BE"
+      # Order of magnitude to crack it: ~45s -> tagged as "slow"
+      if ! CheckExecute slow "ht2crack5 test"              "cd $HT2CRACK5PATH; ./ht2crack5 $HT2CRACK5UID $HT2CRACK5NRAR" "Key: $HT2CRACK5KEY"; then break; fi
 
       echo -e "\n${C_BLUE}Testing ht2crack5gpu:${C_NC} ${HT2CRACK5GPUPATH:=./tools/hitag2crack/crack5gpu/}"
       if ! CheckFileExist "ht2crack5gpu exists"            "$HT2CRACK5GPUPATH/ht2crack5gpu"; then break; fi
@@ -305,7 +311,7 @@ while true; do
       # The speed depends on the nRaR so we'll use two pairs known to work fast
       HT2CRACK5GPUNRAR="B438220C 944FFD74 942C59E3 3D450B34"
       # Order of magnitude to crack it: ~15s -> tagged as "slow"
-      if ! CheckExecute slow gpu "ht2crack5gpu test"           "cd $HT2CRACK5GPUPATH; ./ht2crack5gpu $HT2CRACK5GPUUID $HT2CRACK5GPUNRAR" "Key: $HT2CRACK5GPUKEY"; then break; fi
+      if ! CheckExecute slow gpu "ht2crack5gpu test"        "cd $HT2CRACK5GPUPATH; ./ht2crack5gpu $HT2CRACK5GPUUID $HT2CRACK5GPUNRAR" "Key: $HT2CRACK5GPUKEY"; then break; fi
     fi
     if $TESTALL || $TESTCLIENT; then
       echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN:=./client/proxmark3}"
