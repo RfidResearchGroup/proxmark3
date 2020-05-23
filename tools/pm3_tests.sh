@@ -300,8 +300,8 @@ while true; do
       HT2CRACK5UID=12345678
       HT2CRACK5KEY=AABBCCDDEEFF
       # The speed depends on the nRaR so we'll use two pairs known to work fast
-      HT2CRACK5NRAR="6F901EE0 3AC77442 E5F99B3C 055B29BE"
-      # Order of magnitude to crack it: ~45s -> tagged as "slow"
+      HT2CRACK5NRAR="71DA20AA 7EFDF3FA 2A4265F9 59653B07"
+      # Order of magnitude to crack it: ~12s on 1 core, ~3s on 4 cores -> tagged as "slow"
       if ! CheckExecute slow "ht2crack5 test"              "cd $HT2CRACK5PATH; ./ht2crack5 $HT2CRACK5UID $HT2CRACK5NRAR" "Key: $HT2CRACK5KEY"; then break; fi
 
       echo -e "\n${C_BLUE}Testing ht2crack5gpu:${C_NC} ${HT2CRACK5GPUPATH:=./tools/hitag2crack/crack5gpu/}"
