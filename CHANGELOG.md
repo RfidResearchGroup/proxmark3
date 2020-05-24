@@ -5,6 +5,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 
 ## [ice coffee.4.][2020-05-21]
+ - Add doc/mfu_binary_format_notes.md (@iceman1001)
+ - Fix `hf mfu dump` - now reads Ulev1 3counter vs NTAG 1 counters (@iceman1001)
+ - Fix `hf mfu info` - now print correct cfg1 - nfc protection (@iceman1001)
  - Fix `hf mfu eload` - now detects and converts between plain/old/new mfu binary format (@iceman1001)
  - Change log files moved to subfolders (@doegex)
  - Change lib lua unbundled. (@doegex)
