@@ -89,6 +89,14 @@ ifneq ($(SKIPLUASYSTEM),1)
     endif
 endif
 
+ifneq ($(SKIPWHEREAMISYSTEM),1)
+    ifneq (,$(wildcard /usr/include/whereami.h))
+        WAILIBINC =
+        WAILIB = -lwhereami
+        WAISYSTEM = 1
+    endif
+endif
+
 ifneq ($(SKIPBT),1)
     BTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs bluez 2>/dev/null)
 endif
@@ -188,7 +196,10 @@ else
 $(info native BT support: Bluez not found, disabled)
 endif
 ifeq ($(LUASYSTEM),1)
-$(info system LUA:        Lua5.2 found)
+$(info Lua library:       system library found)
+endif
+ifeq ($(WAISYSTEM),1)
+$(info Whereami library:  system library found)
 endif
 $(info compiler version:  $(shell $(CC) --version|head -n 1))
 $(info ===================================================================)
@@ -443,8 +454,10 @@ cliparser:
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) all
 
 whereami:
+ifneq ($(WAISYSTEM),1)
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) all
+endif
 
 # common libraries:
 mbedtls:
