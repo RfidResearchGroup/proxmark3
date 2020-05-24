@@ -3,14 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-
-## [ice coffee.4.][2020-05-21]
  - Add doc/mfu_binary_format_notes.md (@iceman1001)
  - Fix `hf mfu dump` - now reads Ulev1 3counter vs NTAG 1 counters (@iceman1001)
  - Fix `hf mfu info` - now print correct cfg1 - nfc protection (@iceman1001)
  - Fix `hf mfu eload` - now detects and converts between plain/old/new mfu binary format (@iceman1001)
- - Change log files moved to subfolders (@doegex)
- - Change lib lua unbundled. (@doegex)
+ - Change, hitag2crack now integrated into main Makefile, tests added (@doegox)
+ - Add `make check` mechanics (@doegox)
+ - Change, log files moved to subfolders (@doegox)
+ - Change, use system Lua library if available (@doegox)
+ - Fix release version information (@doegox)
+
+## [ice coffee.4.9237][2020-05-21]
  - Updated documentation (@doegox, @iceman1001)
  - Change `pm3test.sh` - more regression tests to  (@doegox, @iceman1001)
  - Change `hf 15 dump` - now supports basic json format (@iceman1001)
