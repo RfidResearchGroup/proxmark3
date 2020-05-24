@@ -17,7 +17,7 @@
 #include "comms.h"
 #include "ui.h"
 #include "cmdhf14a.h"
-#include "mbedtls/aes.h"
+#include "aes.h"
 #include "crypto/libpcrypto.h"
 #include "protocols.h"
 #include "cmdtrace.h"

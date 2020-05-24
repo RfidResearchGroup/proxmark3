@@ -35,7 +35,7 @@
 #include "hardnested_bruteforce.h"
 #include "hardnested_bf_core.h"
 #include "hardnested_bitarray_core.h"
-#include "zlib/zlib.h"
+#include "zlib.h"
 #include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
@@ -220,7 +220,7 @@ static void inflate_free(voidpf opaque, voidpf address) {
 #define INPUT_BUFFER_LEN 80
 
 //----------------------------------------------------------------------------
-// Initialize decompression of the respective (HF or LF) FPGA stream
+// Initialize decompression of the respective bitflip_bitarray stream
 //----------------------------------------------------------------------------
 static void init_inflate(z_streamp compressed_stream, uint8_t *input_buffer, uint32_t insize, uint8_t *output_buffer, uint32_t outsize) {
 

@@ -18,8 +18,8 @@
 #include "comms.h"              //getfromdevice
 #include "cmdflashmemspiffs.h" // spiffs commands
 
-#include "mbedtls/rsa.h"
-#include "mbedtls/sha1.h"
+#include "rsa.h"
+#include "sha1.h"
 
 #define MCK 48000000
 #define FLASH_MINFAST 24000000 //33000000

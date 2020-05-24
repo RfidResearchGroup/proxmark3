@@ -18,7 +18,7 @@
 #include "cmdtrace.h"
 #include "util_posix.h"
 #include "comms.h"
-#include "mbedtls/des.h"
+#include "des.h"
 #include "loclass/cipherutils.h"
 #include "loclass/cipher.h"
 #include "loclass/ikeys.h"

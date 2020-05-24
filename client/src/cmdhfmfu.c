@@ -12,7 +12,7 @@
 #include "cmdparser.h"
 #include "commonutil.h"
 #include "crypto/libpcrypto.h"
-#include "mbedtls/des.h"
+#include "des.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
 #include "comms.h"

@@ -22,7 +22,7 @@
 #include "util.h"
 #include "ui.h"
 #include "mifare.h"     // felica_card_select_t struct
-#include "mbedtls/des.h"
+#include "des.h"
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static int CmdHelp(const char *Cmd);

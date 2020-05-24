@@ -14,8 +14,8 @@
 
 #include "cmdhfmf.h"
 #include "util.h"
-#include "mbedtls/des.h"
-#include "mbedtls/aes.h"
+#include "des.h"
+#include "aes.h"
 
 static int CmdHelp(const char *Cmd);
 

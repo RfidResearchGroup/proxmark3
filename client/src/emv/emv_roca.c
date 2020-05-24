@@ -24,7 +24,7 @@
 #include "emv_roca.h"
 
 #include "ui.h"  // Print...
-#include "mbedtls/bignum.h"
+#include "bignum.h"
 
 static uint8_t g_primes[ROCA_PRINTS_LENGTH] = {
     11, 13, 17, 19, 37, 53, 61, 71, 73, 79, 97, 103, 107, 109, 127, 151, 157

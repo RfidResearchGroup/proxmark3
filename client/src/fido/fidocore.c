@@ -17,7 +17,7 @@
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
 #include "cbortools.h"
-#include "mbedtls/x509_crt.h"
+#include "x509_crt.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
 #include "additional_ca.h"

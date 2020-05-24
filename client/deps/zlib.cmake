@@ -9,5 +9,6 @@ add_library(pm3rrg_rdv4_z STATIC
 )
 
 target_compile_definitions(pm3rrg_rdv4_z PRIVATE Z_SOLO NO_GZIP ZLIB_PM3_TUNED)
+target_include_directories(pm3rrg_rdv4_z INTERFACE ../../common/zlib)
 target_compile_options(pm3rrg_rdv4_z PRIVATE -Wall -Werror -O3)
 set_property(TARGET pm3rrg_rdv4_z PROPERTY POSITION_INDEPENDENT_CODE ON)

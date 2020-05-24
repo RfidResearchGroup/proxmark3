@@ -29,8 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "commonutil.h"
-#include "mbedtls/aes.h"
-#include "mbedtls/des.h"
+#include "aes.h"
+#include "des.h"
 #include "ui.h"
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt

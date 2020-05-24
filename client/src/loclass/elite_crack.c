@@ -45,7 +45,7 @@
 #include "ikeys.h"
 #include "elite_crack.h"
 #include "fileutils.h"
-#include "mbedtls/des.h"
+#include "des.h"
 #include "util_posix.h"
 
 /**

@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mbedtls/rsa.h"
-#include "mbedtls/sha1.h"
+#include "rsa.h"
+#include "sha1.h"
 
 struct crypto_hash_polarssl {
     struct crypto_hash ch;
