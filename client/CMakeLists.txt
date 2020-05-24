@@ -165,6 +165,7 @@ set (TARGET_SOURCES
         src/fileutils.c
         src/flash.c
         src/graph.c
+        src/jansson_path.c
         src/preferences.c
         src/pm3_binlib.c
         src/pm3_bitlib.c

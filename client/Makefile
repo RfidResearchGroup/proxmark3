@@ -82,17 +82,27 @@ ZLIB = $(OBJDIR)/libz.a
 ifneq ($(SKIPLUASYSTEM),1)
     LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
     LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua5.2 2>/dev/null)
-    ifneq ($(LUAINCLUDES),)
+    ifneq ($(LUALDLIBS),)
         LUALIB = $(LUALDLIBS)
         LUALIBINC = $(LUAINCLUDES)
         LUASYSTEM = 1
     endif
 endif
 
+ifneq ($(SKIPJANSSONSYSTEM),1)
+    JANSSONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags jansson 2>/dev/null)
+    JANSSONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs jansson 2>/dev/null)
+    ifneq ($(JANSSONLDLIBS),)
+        JANSSONLIB = $(JANSSONLDLIBS)
+        JANSSONLIBINC = $(JANSSONINCLUDES)
+        JANSSONSYSTEM = 1
+    endif
+endif
+
 ifneq ($(SKIPWHEREAMISYSTEM),1)
     ifneq (,$(wildcard /usr/include/whereami.h))
-        WAILIBINC =
         WAILIB = -lwhereami
+        WAILIBINC =
         WAISYSTEM = 1
     endif
 endif
@@ -194,6 +204,9 @@ else ifneq ($(BTLDLIBS),)
 $(info native BT support: Bluez found, enabled)
 else
 $(info native BT support: Bluez not found, disabled)
+endif
+ifeq ($(JANSSONSYSTEM),1)
+$(info Jansson library:   system library found)
 endif
 ifeq ($(LUASYSTEM),1)
 $(info Lua library:       system library found)
@@ -339,9 +352,8 @@ CMDSRCS =   crapto1/crapto1.c \
             wiegand_formats.c \
             wiegand_formatutils.c \
             cardhelper.c \
-            preferences.c
-
-
+            preferences.c \
+            jansson_path.c
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
@@ -430,8 +442,10 @@ ifneq ($(LUASYSTEM),1)
 endif
 
 jansson:
+ifneq ($(JANSSONSYSTEM),1)
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
+endif
 
 tinycbor:
 	$(info [*] MAKE $@)

@@ -145,6 +145,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlfpcf7931.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdusart.c
+        ${PM3_ROOT}/client/src/jansson_path.c
         # android resources
         jni_tools.c
         pm3_main.c

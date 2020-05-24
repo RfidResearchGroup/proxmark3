@@ -11,7 +11,110 @@
 #include <assert.h>
 
 #include "jansson.h"
-#include "jansson_private.h"
+#include "jansson_path.h"
+
+////// memory.c private functions
+
+/* C89 allows these to be macros */
+#undef malloc
+#undef free
+
+/* memory function pointers */
+static json_malloc_t do_malloc = malloc;
+static json_free_t do_free = free;
+
+static void *jsonp_malloc(size_t size) {
+    if (!size)
+        return NULL;
+
+    return (*do_malloc)(size);
+}
+
+static void jsonp_free(void *ptr) {
+    if (!ptr)
+        return;
+
+    (*do_free)(ptr);
+}
+
+static char *jsonp_strndup(const char *str, size_t len) {
+    char *new_str;
+
+    new_str = jsonp_malloc(len + 1);
+    if (!new_str)
+        return NULL;
+
+    memcpy(new_str, str, len);
+    new_str[len] = '\0';
+    return new_str;
+}
+
+static char *jsonp_strdup(const char *str) {
+    return jsonp_strndup(str, strlen(str));
+}
+
+////// error.c private functions
+
+static void jsonp_error_set_source(json_error_t *error, const char *source) {
+    size_t length;
+
+    if (!error || !source)
+        return;
+
+    length = strlen(source);
+    if (length < JSON_ERROR_SOURCE_LENGTH) {
+        strncpy(error->source, source, JSON_ERROR_SOURCE_LENGTH - 1);
+    } else {
+        size_t extra = length - JSON_ERROR_SOURCE_LENGTH + 4;
+        memcpy(error->source, "...", 3);
+        strncpy(error->source + 3, source + extra, length - extra + 1);
+    }
+}
+
+static void jsonp_error_init(json_error_t *error, const char *source) {
+    if (error) {
+        error->text[0] = '\0';
+        error->line = -1;
+        error->column = -1;
+        error->position = 0;
+        if (source)
+            jsonp_error_set_source(error, source);
+        else
+            error->source[0] = '\0';
+    }
+}
+
+static void jsonp_error_vset(json_error_t *error, int line, int column,
+                      size_t position, enum json_error_code code,
+                      const char *msg, va_list ap) {
+    if (!error)
+        return;
+
+    if (error->text[0] != '\0') {
+        /* error already set */
+        return;
+    }
+
+    error->line = line;
+    error->column = column;
+    error->position = (int)position;
+
+    vsnprintf(error->text, JSON_ERROR_TEXT_LENGTH - 1, msg, ap);
+    error->text[JSON_ERROR_TEXT_LENGTH - 2] = '\0';
+    error->text[JSON_ERROR_TEXT_LENGTH - 1] = code;
+}
+
+static void jsonp_error_set(json_error_t *error, int line, int column,
+                     size_t position, enum json_error_code code,
+                     const char *msg, ...) {
+    va_list ap;
+    va_start(ap, msg);
+    jsonp_error_vset(error, line, column, position, code, msg, ap);
+    va_end(ap);
+}
+
+
+// original path.c from jansson fork
 
 json_t *json_path_get(const json_t *json, const char *path) {
     static const char root_chr = '$', array_open = '[';
