@@ -313,6 +313,9 @@ out:
 }
 
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen) {
+    return saveFileJSONex(preferredName, ftype, data, datalen, true);
+}
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose) {
 
     if (data == NULL) return PM3_EINVARG;
 
@@ -559,7 +562,9 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
         retval = 200;
         goto out;
     }
-    PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
+
     json_decref(root);
 
 out:
@@ -677,7 +682,6 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
     free(fileName);
     return PM3_SUCCESS;
 }
-
 
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
@@ -820,6 +824,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         if (fgets(line, sizeof(line), f) == NULL) {
             if (feof(f))
                 break;
+
             fclose(f);
             PrintAndLogEx(FAILED, "File reading error.");
             retval = PM3_EFILE;
@@ -829,10 +834,14 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         if (line[0] == '#')
             continue;
 
+        strcleanrn(line, sizeof(line));
+        
         int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
-        if (res == 0 || res == 1) {
+        if (res == 0) {
             memcpy(udata + counter, buf, hexlen);
             counter += hexlen;
+        } else {
+            retval = PM3_ESOFT;
         }
     }
     fclose(f);
@@ -847,6 +856,9 @@ out:
 }
 
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen) {
+    return loadFileJSONex(preferredName, data, maxdatalen, datalen, true);
+}
+int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose) {
 
     if (data == NULL) return PM3_EINVARG;
     char *fileName = filenamemcopy(preferredName, ".json");
@@ -986,7 +998,9 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         }
         *datalen = sptr;
     }
-    PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
+
     if (!strcmp(ctype, "settings")) {
         preferences_load_callback(root);
     }
@@ -1185,36 +1199,135 @@ out:
     return retval;
 }
 
-int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
-    if (!dump || !dumplen || *dumplen < OLD_MFU_DUMP_PREFIX_LENGTH)
-        return 1;
-    // try to check new file format
-    mfu_dump_t *mfu_dump = (mfu_dump_t *) *dump;
-    if ((*dumplen - MFU_DUMP_PREFIX_LENGTH) / 4 - 1 == mfu_dump->pages)
-        return 0;
+mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
+
+    mfu_df_e retval = MFU_DF_UNKNOWN;
+    uint8_t bcc0, bcc1;
+    uint8_t ct = 0x88;
+ 
+    // detect new
+    mfu_dump_t *new = (mfu_dump_t *)*dump;
+    bcc0 = ct ^ new->data[0] ^ new->data[1] ^ new->data[2];
+    bcc1 = new->data[4] ^ new->data[5] ^ new->data[6] ^ new->data[7];   
+    if (bcc0 == new->data[3] && bcc1 == new->data[8]) {
+        retval = MFU_DF_NEWBIN;
+    }
+
+    // detect old
+    if (retval == MFU_DF_UNKNOWN) {
+        old_mfu_dump_t *old = (old_mfu_dump_t *)*dump;
+        bcc0 = ct ^ old->data[0] ^ old->data[1] ^ old->data[2];
+        bcc1 = old->data[4] ^ old->data[5] ^ old->data[6] ^ old->data[7];
+        if (bcc0 == old->data[3] && bcc1 == old->data[8]) {
+            retval = MFU_DF_OLDBIN;
+        }
+    }
+
+    // detect plain
+    if (retval == MFU_DF_UNKNOWN) {
+        uint8_t *plain = *dump;
+        bcc0 = ct ^ plain[0] ^ plain[1] ^ plain[2];
+        bcc1 = plain[4] ^ plain[5] ^ plain[6] ^ plain[7];
+        if ((bcc0 == plain[3]) && (bcc1 == plain[8])) {
+            retval = MFU_DF_PLAINBIN;
+        }
+    }
+
+    if (verbose) {
+        switch(retval) {
+            case MFU_DF_NEWBIN: 
+                PrintAndLogEx(INFO, "detected " _GREEN_("new") " mfu dump format");
+                break;
+            case MFU_DF_OLDBIN:
+                PrintAndLogEx(INFO, "detected " _GREEN_("old") " mfu dump format");
+                break;
+            case MFU_DF_PLAINBIN:
+                PrintAndLogEx(INFO, "detected " _GREEN_("plain") " mfu dump format");
+                break;
+            case MFU_DF_UNKNOWN:
+                PrintAndLogEx(WARNING, "failed to detected mfu dump format");
+                break;
+        }
+    }
+    return retval;
+}
+
+static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
+    
+    mfu_dump_t *mfu = (mfu_dump_t *) calloc( sizeof(mfu_dump_t), sizeof(uint8_t));
+    if (mfu == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    memcpy(mfu->data, *dump, *dumplen);
+
+    mfu->pages = *dumplen / 4 - 1;
+    
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "plain mfu dump format was converted to " _GREEN_("%d") " blocks", mfu->pages + 1);
+    }
+    
+    *dump = (uint8_t *)mfu;
+    *dumplen += MFU_DUMP_PREFIX_LENGTH ;
+    return PM3_SUCCESS;
+}
+
+static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
+
     // convert old format
-    old_mfu_dump_t *old_mfu_dump = (old_mfu_dump_t *) *dump;
+    old_mfu_dump_t *old_mfu_dump = (old_mfu_dump_t *)*dump;
 
     size_t old_data_len = *dumplen - OLD_MFU_DUMP_PREFIX_LENGTH;
     size_t new_dump_len = old_data_len + MFU_DUMP_PREFIX_LENGTH;
+  
+    mfu_dump_t *mfu_dump = (mfu_dump_t *) calloc( sizeof(mfu_dump_t), sizeof(uint8_t));
+    if (mfu_dump == NULL) {
+        return PM3_EMALLOC;
+    }
 
-    mfu_dump = (mfu_dump_t *) calloc(new_dump_len, sizeof(uint8_t));
-
-    memcpy(mfu_dump->version, old_mfu_dump->version, 8);
-    memcpy(mfu_dump->tbo, old_mfu_dump->tbo, 2);
+    memcpy(mfu_dump->version, old_mfu_dump->version, sizeof(mfu_dump->version));
+    memcpy(mfu_dump->tbo, old_mfu_dump->tbo, sizeof(mfu_dump->tbo));
+    memcpy(mfu_dump->signature, old_mfu_dump->signature, sizeof(mfu_dump->signature));
+    
     mfu_dump->tbo1[0] = old_mfu_dump->tbo1[0];
-    memcpy(mfu_dump->signature, old_mfu_dump->signature, 32);
-    for (int i = 0; i < 3; i++)
-        mfu_dump->counter_tearing[i][3] = old_mfu_dump->tearing[i];
 
-    memcpy(mfu_dump->data, old_mfu_dump->data, old_data_len);
+    for (int i = 0; i < 3; i++) {
+        mfu_dump->counter_tearing[i][3] = old_mfu_dump->tearing[i];
+    }
+
+    memcpy(mfu_dump->data, old_mfu_dump->data, sizeof(mfu_dump->data));
+
     mfu_dump->pages = old_data_len / 4 - 1;
-    // free old buffer, return new buffer
-    *dumplen = new_dump_len;
+
+    if (verbose) {  
+        PrintAndLogEx(SUCCESS, "old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);
+    }
+
     free(*dump);
-    *dump = (uint8_t *) mfu_dump;
-    PrintAndLogEx(SUCCESS, "old mfu dump format, was converted on load to " _GREEN_("%d") " pages", mfu_dump->pages + 1);
+    *dump = (uint8_t *)mfu_dump;
+    *dumplen = new_dump_len;
     return PM3_SUCCESS;
+}
+
+int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
+
+    if (!dump || !dumplen || *dumplen < OLD_MFU_DUMP_PREFIX_LENGTH) {
+        return PM3_EINVARG;
+    }
+    
+    mfu_df_e res = detect_mfu_dump_format(dump, dumplen, verbose);
+
+    switch(res) {
+        case MFU_DF_NEWBIN: 
+            return PM3_SUCCESS;
+        case MFU_DF_OLDBIN:
+            return convert_old_mfu_dump(dump, dumplen, verbose);
+        case MFU_DF_PLAINBIN:
+            return convert_plain_mfu_dump(dump, dumplen, verbose);
+        case MFU_DF_UNKNOWN:
+        default:
+            return PM3_ESOFT;
+    }
 }
 
 static int filelist(const char *path, const char *ext, bool last, bool tentative) {

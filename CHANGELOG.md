@@ -5,6 +5,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 
 ## [ice coffee.4.][2020-05-21]
+ - Fix `hf mfu eload` - now detects and converts between plain/old/new mfu binary format (@iceman1001)
+ - Change log files moved to subfolders (@doegex)
+ - Change lib lua unbundled. (@doegex)
  - Updated documentation (@doegox, @iceman1001)
  - Change `pm3test.sh` - more regression tests to  (@doegox, @iceman1001)
  - Change `hf 15 dump` - now supports basic json format (@iceman1001)

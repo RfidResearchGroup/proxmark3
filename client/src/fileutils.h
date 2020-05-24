@@ -116,6 +116,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  * @return 0 for ok, 1 for failz
  */
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose);
 
 /** STUB
  * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
@@ -198,6 +199,8 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen);
  * @return 0 for ok, 1 for failz
 */
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen);
+int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose);
+
 
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
@@ -242,14 +245,23 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 */
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt);
 
+
+typedef enum {
+    MFU_DF_UNKNOWN,
+    MFU_DF_PLAINBIN,
+    MFU_DF_OLDBIN,
+    MFU_DF_NEWBIN
+} mfu_df_e;
 /**
- * @brief  Utility function to check and convert old mfu dump format to new
- *
+ * @brief  Utility function to check and convert plain mfu dump format to new mfu binary format.
+ * plain dumps doesn't have any extra data, like version, signature etc.
  * @param dump pointer to loaded dump to check and convert format
  * @param dumplen the number of bytes loaded dump and converted
- * @return 0 for ok, 1 for fails
+ * @param verbose - extra debug output
+ * @return PM3_SUCCESS for ok, PM3_ESOFT for fails
 */
-int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
+int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose); 
 
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);

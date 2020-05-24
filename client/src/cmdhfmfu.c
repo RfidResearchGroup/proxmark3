@@ -2039,6 +2039,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool write_special = false;
     bool write_extra = false;
     bool read_key = false;
+    bool verbose = false;
     size_t filelen = 0;
     FILE *f;
 
@@ -2087,6 +2088,9 @@ static int CmdHF14AMfURestore(const char *Cmd) {
                 cmdp++;
                 read_key = true;
                 break;
+            case 'v':
+                cmdp++;
+                verbose = true;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
                 errors = true;
@@ -2128,10 +2132,9 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         return 1;
     }
 
-    // convert old format to new format, if need
-    int res = convertOldMfuDump(&dump, &bytes_read);
+    int res = convert_mfu_dump_format(&dump, &bytes_read, verbose);    
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed convert on load to new Ultralight/NTAG format");
+        PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
         free(dump);
         return res;
     }
