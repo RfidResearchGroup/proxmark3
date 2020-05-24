@@ -541,7 +541,7 @@ static int ul_print_default(uint8_t *data) {
                   sprint_bin(data + 10, 2)
                  );
 
-    PrintAndLogEx(SUCCESS, "OneTimePad: %s - %s\n",
+    PrintAndLogEx(SUCCESS, "OneTimePad: %s - %s",
                   sprint_hex(data + 12, 4),
                   sprint_bin(data + 12, 4)
                  );
@@ -748,11 +748,13 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Configuration"));
 
     bool strg_mod_en = (data[0] & 2);
+
     uint8_t authlim = (data[4] & 0x07);
-    bool nfc_cnf_en = (data[4] & 0x08);
-    bool nfc_cnf_prot_pwd = (data[4] & 0x10);
-    bool cfglck = (data[4] & 0x40);
-    bool prot = (data[4] & 0x80);
+    bool nfc_cnf_prot_pwd = ((data[4] & 0x08) == 0x08);
+    bool nfc_cnf_en  = ((data[4] & 0x10) == 0x10);
+    bool cfglck = ((data[4] & 0x40) == 0x40);
+    bool prot = ((data[4] & 0x80) == 0x80);
+
     uint8_t vctid = data[5];
 
     PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", startPage, startPage, sprint_hex(data, 4));
@@ -838,7 +840,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
         PrintAndLogEx(INFO, "                    - Max number of password attempts is " _YELLOW_("%d"), authlim);
 
     PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_en) ? "enabled" : "disabled");
-    PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "not protected" : "password protection enabled");
+    PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "password protection enabled" : "not protected");
 
     PrintAndLogEx(INFO, "                    - user configuration %s", cfglck ? "permanently locked" : "writeable");
     PrintAndLogEx(INFO, "                    - %s access is protected with password", prot ? "read and write" : "write");
@@ -850,6 +852,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 }
 
 static int ulev1_print_counters(void) {
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counters"));
     uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
@@ -859,7 +862,7 @@ static int ulev1_print_counters(void) {
         len = ulev1_readCounter(i, counter, sizeof(counter));
         if (len == 3) {
             PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
-            PrintAndLogEx(SUCCESS, "            - %02X tearing %s", tear[0], (tear[0] == 0xBD) ? "Ok" : "failure");
+            PrintAndLogEx(SUCCESS, "            - %02X tearing (" _GREEN_("%s") ")", tear[0], (tear[0] == 0xBD) ? "ok" : "failure");
         }
     }
     return len;
@@ -969,6 +972,20 @@ static int ulev1_print_version(uint8_t *data) {
     PrintAndLogEx(INFO, "            Size: %s", getUlev1CardSizeStr(data[6]));
     PrintAndLogEx(INFO, "   Protocol type: %02X%s", data[7], (data[7] == 0x3) ? ", ISO14443-3 Compliant" : "");
     return PM3_SUCCESS;
+}
+
+static int ntag_print_counter(void) {
+    // NTAG has one counter/tearing.  At address 0x02.
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counter"));
+    uint8_t tear[1] = {0};
+    uint8_t counter[3] = {0, 0, 0};
+    uint16_t len;
+    len = ulev1_readTearing(0x02, tear, sizeof(tear));
+    len = ulev1_readCounter(0x02, counter, sizeof(counter));
+    PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
+    PrintAndLogEx(SUCCESS, "            - %02X tearing (" _GREEN_("%s")")", tear[0], (tear[0] == 0xBD) ? "ok" : "failure");
+    return len;
 }
 
 /*
@@ -1271,6 +1288,12 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     // NTAG counters?
+    if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216))) {
+        if (ntag_print_counter()) {
+            // failed - re-select
+            if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
+        }
+    }
 
     // Read signature
     if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
@@ -1942,16 +1965,42 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         if (hasAuthKey) {
             uint8_t dummy_pack[] = {0, 0};
             ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
-        } else
+        } else {
             ul_select(&card);
+        }
 
         ulev1_getVersion(get_version, sizeof(get_version));
-        for (uint8_t n = 0; n < 3; ++n) {
-            ulev1_readTearing(n, &get_counter_tearing[n][3], 1);
+
+        // ULEV-1 has 3 counters
+        uint8_t n = 0;
+
+        // NTAG has 1 counter, at 0x02
+        if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216))) {
+            n = 2;
+        }
+
+        // NTAG can have nfc counter pwd protection enabled
+        for (; n < 3; n++) {
+
+            if (hasAuthKey) {
+                uint8_t dummy_pack[] = {0, 0};
+                ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            } else {
+                ul_select(&card);
+            }
             ulev1_readCounter(n, &get_counter_tearing[n][0], 3);
+
+            if (hasAuthKey) {
+                uint8_t dummy_pack[] = {0, 0};
+                ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            } else {
+                ul_select(&card);
+            }
+            ulev1_readTearing(n, &get_counter_tearing[n][3], 1);
         }
 
         DropField();
+
         if (hasAuthKey) {
             uint8_t dummy_pack[] = {0, 0};
             ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
