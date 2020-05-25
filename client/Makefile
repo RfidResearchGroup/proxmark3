@@ -32,11 +32,6 @@ AMIIBOLIBPATH = ./deps/amiitool
 AMIIBOLIBINC = -I$(AMIIBOLIBPATH)
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
 
-## Tinycbor
-CBORLIBPATH = ./deps/tinycbor
-CBORLIBINC = -I$(CBORLIBPATH)
-CBORLIB = $(CBORLIBPATH)/tinycbor.a
-
 ## Cliparser / Argtable3
 CLIPARSERLIBPATH = ./deps/cliparser
 CLIPARSERLIBINC = -I$(CLIPARSERLIBPATH)
@@ -73,6 +68,11 @@ REVENGLIBPATH = ./deps/reveng
 REVENGLIBINC = -I$(REVENGLIBPATH)
 REVENGLIB = $(REVENGLIBPATH)/libreveng.a
 
+## Tinycbor
+TINYCBORLIBPATH = ./deps/tinycbor
+TINYCBORLIBINC = -I$(TINYCBORLIBPATH)
+TINYCBORLIB = $(TINYCBORLIBPATH)/tinycbor.a
+
 ## Whereami
 WAILIBPATH = ./deps/whereami
 WAILIBINC = -I$(WAILIBPATH)
@@ -100,11 +100,6 @@ ZLIB = $(OBJDIR)/libz.a
 # not distributed as system library
 LDLIBS += $(AMIIBOLIB)
 INCLUDES += $(AMIIBOLIBINC)
-
-## Tinycbor
-# not distributed as system library
-LDLIBS += $(CBORLIB)
-INCLUDES += $(CBORLIBINC)
 
 ## Cliparser / Argtable3
 # not distributed as system library
@@ -151,6 +146,11 @@ INCLUDES += $(MBEDTLSLIBINC)
 # not distributed as system library
 LDLIBS += $(REVENGLIB)
 INCLUDES += $(REVENGLIBINC)
+
+## Tinycbor
+# not distributed as system library
+LDLIBS += $(TINYCBORLIB)
+INCLUDES += $(TINYCBORLIBINC)
 
 ## Whereami
 ifneq ($(SKIPWHEREAMISYSTEM),1)
@@ -524,7 +524,7 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: $(OBJS) liblua jansson tinycbor reveng mbedtls zlib amiibo hardnested cliparser whereami lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: $(OBJS) amiibo cliparser jansson hardnested lua mbedtls reveng tinycbor whereami zlib lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
@@ -549,17 +549,17 @@ lualibs/mfc_default_keys.lua : mfc_default_keys.dic
 clean:
 	$(Q)$(RM) $(CLEAN)
 	$(Q)$(RMDIR) $(OBJDIR)
-	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) clean
 	@# Just in case someone compiled within these dirs:
-	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
 
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
@@ -591,30 +591,6 @@ tarbin: $(BINS)
 # local libraries targets #
 ###########################
 
-liblua:
-ifneq ($(LUA_FOUND),1)
-	$(info [*] MAKE $@ for $(LUAPLATFORM))
-	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
-endif
-
-jansson:
-ifneq ($(JANSSON_FOUND),1)
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
-endif
-
-tinycbor:
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) all
-
-reveng:
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) all
-
-hardnested:
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) all
-
 amiibo:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) all
@@ -623,16 +599,39 @@ cliparser:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) all
 
+hardnested:
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) all
+
+jansson:
+ifneq ($(JANSSON_FOUND),1)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
+endif
+
+lua:
+ifneq ($(LUA_FOUND),1)
+	$(info [*] MAKE $@ for $(LUAPLATFORM))
+	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
+endif
+
+mbedtls:
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
+
+reveng:
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) all
+
+tinycbor:
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) all
+
 whereami:
 ifneq ($(WAI_FOUND),1)
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) all
 endif
-
-# common libraries:
-mbedtls:
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
 zlib:
 ifneq ($(ZLIB_FOUND),1)
@@ -644,7 +643,7 @@ endif
 # misc #
 ########
 
-.PHONY: all clean install uninstall tarbin liblua jansson tinycbor reveng hardnested amiibo cliparser whereami mbedtls zlib
+.PHONY: all clean install uninstall tarbin amiibo cliparser hardnested jansson lua mbedtls reveng tinycbor whereami zlib
 
 # version.c should be remade on every compilation
 src/version.c: default_version.c
