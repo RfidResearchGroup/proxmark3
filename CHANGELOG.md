@@ -13,6 +13,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change, use system Lua library if available (@doegox)
  - Change, use system Jansson library if available (@doegox)
  - Change, use system Whereami library if available (@doegox)
+ - Change, use system Zlib library if available (@doegox)
  - Fix release version information (@doegox)
 
 ## [ice coffee.4.9237][2020-05-21]

@@ -165,6 +165,15 @@ INCLUDES += $(WAILIBINC)
 
 ## Zlib
 # system library useable? Need to recompress hardnested tables?
+ifneq ($(SKIPZLIBSYSTEM),1)
+    ZLIBINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags zlib 2>/dev/null)
+    ZLIBLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs zlib 2>/dev/null)
+    ifneq ($(ZLIBLDLIBS),)
+        ZLIB = $(ZLIBLDLIBS)
+        ZLIBINC = $(ZLIBINCLUDES)
+        ZLIB_FOUND = 1
+    endif
+endif
 LDLIBS +=$(ZLIB)
 INCLUDES += $(ZLIBINC)
 
@@ -326,6 +335,10 @@ endif
 
 ifeq ($(WAI_FOUND),1)
     $(info Whereami library:  system library found)
+endif
+
+ifeq ($(ZLIB_FOUND),1)
+    $(info Zlib library:      system library found)
 endif
 
 $(info compiler version:  $(shell $(CC) --version|head -n 1))
@@ -622,8 +635,10 @@ mbedtls:
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
 zlib:
+ifneq ($(ZLIB_FOUND),1)
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
+endif
 
 ########
 # misc #
