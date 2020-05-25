@@ -72,9 +72,9 @@ TINYCBORLIBINC = -I$(TINYCBORLIBPATH)
 TINYCBORLIB = $(TINYCBORLIBPATH)/tinycbor.a
 
 ## Whereami
-WAILIBPATH = ./deps/whereami
-WAILIBINC = -I$(WAILIBPATH)
-WAILIB = $(WAILIBPATH)/libwhereami.a
+WHEREAMILIBPATH = ./deps/whereami
+WHEREAMILIBINC = -I$(WHEREAMILIBPATH)
+WHEREAMILIB = $(WHEREAMILIBPATH)/libwhereami.a
 
 ##########################
 # common local libraries #
@@ -153,13 +153,13 @@ INCLUDES += $(TINYCBORLIBINC)
 ## Whereami
 ifneq ($(SKIPWHEREAMISYSTEM),1)
     ifneq (,$(wildcard /usr/include/whereami.h))
-        WAILIB = -lwhereami
-        WAILIBINC =
-        WAI_FOUND = 1
+        WHEREAMILIB = -lwhereami
+        WHEREAMILIBINC =
+        WHEREAMI_FOUND = 1
     endif
 endif
-LDLIBS += $(WAILIB)
-INCLUDES += $(WAILIBINC)
+LDLIBS += $(WHEREAMILIB)
+INCLUDES += $(WHEREAMILIBINC)
 
 ## Zlib
 # system library useable? Need to recompress hardnested tables?
@@ -305,38 +305,64 @@ $(info Client platform:   $(platform))
 
 ifeq ($(SKIPQT),1)
     $(info GUI support:       skipped)
-else ifeq ($(QT_FOUND),1)
-    ifeq ($(QT5_FOUND),1)
-        $(info GUI support:       QT5 found, enabled)
-    else
-        $(info GUI support:       QT4 found, enabled)
-    endif
 else
-    $(info GUI support:       QT not found, disabled)
+    ifeq ($(QT_FOUND),1)
+        ifeq ($(QT5_FOUND),1)
+            $(info GUI support:       QT5 found, enabled)
+        else
+            $(info GUI support:       QT4 found, enabled)
+        endif
+    else
+        $(info GUI support:       QT not found, disabled)
+    endif
 endif
 
 ifeq ($(SKIPBT),1)
     $(info native BT support: skipped)
-else ifneq ($(BTLDLIBS),)
-    $(info native BT support: Bluez found, enabled)
 else
-    $(info native BT support: Bluez not found, disabled)
+    ifeq ($(BT_FOUND),1)
+        $(info native BT support: Bluez found, enabled)
+    else
+        $(info native BT support: Bluez not found, disabled)
+    endif
 endif
 
-ifeq ($(JANSSON_FOUND),1)
+ifeq ($(SKIPJANSSONSYSTEM),1)
+    $(info Jansson library:   local library forced)
+else ifeq ($(JANSSON_FOUND),1)
     $(info Jansson library:   system library found)
+else
+    $(info Jansson library:   system library not found, using local library)
 endif
 
-ifeq ($(LUA_FOUND),1)
-    $(info Lua library:       system library found)
+ifeq ($(SKIPLUASYSTEM),1)
+    $(info Lua library:       local library forced)
+else
+    ifeq ($(LUA_FOUND),1)
+        $(info Lua library:       system library found)
+    else
+        $(info Lua library:       system library not found, using local library)
+    endif
 endif
 
-ifeq ($(WAI_FOUND),1)
-    $(info Whereami library:  system library found)
+ifeq ($(SKIPWHEREAMISYSTEM),1)
+    $(info Whereami library:  local library forced)
+else
+    ifeq ($(WHEREAMI_FOUND),1)
+        $(info Whereami library:  system library found)
+    else
+        $(info Whereami library:  system library not found, using local library)
+    endif
 endif
 
-ifeq ($(ZLIB_FOUND),1)
-    $(info Zlib library:      system library found)
+ifeq ($(SKIPZLIBSYSTEM),1)
+    $(info Zlib library:      local library forced)
+else
+    ifeq ($(ZLIB_FOUND),1)
+        $(info Zlib library:      system library found)
+    else
+        $(info Zlib library:      system library not found, using local library)
+    endif
 endif
 
 $(info compiler version:  $(shell $(CC) --version|head -n 1))
@@ -554,7 +580,7 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) clean
 	@# Just in case someone compiled within these dirs:
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
@@ -626,9 +652,9 @@ tinycbor:
 	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) all
 
 whereami:
-ifneq ($(WAI_FOUND),1)
+ifneq ($(WHEREAMI_FOUND),1)
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(WAILIBPATH) all
+	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) all
 endif
 
 zlib:
