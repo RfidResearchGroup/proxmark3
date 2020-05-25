@@ -16,8 +16,6 @@ VPATH =  ../common src
 vpath %.dic dictionaries
 OBJDIR = obj
 
-LDLIBS ?= -L/usr/local/lib
-
 ifeq ($(platform),Darwin)
     # cf brew info qt: qt not symlinked anymore
     PKG_CONFIG_ENV := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
