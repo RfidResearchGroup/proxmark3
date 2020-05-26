@@ -24,6 +24,7 @@
 #define PM3_USER_DIRECTORY   PATHSEP ".proxmark3" PATHSEP
 
 // PM3 subdirectories:
+#define PYTHON_SCRIPTS_SUBDIR "pyscripts" PATHSEP
 #define CMD_SCRIPTS_SUBDIR   "cmdscripts" PATHSEP
 #define DICTIONARIES_SUBDIR  "dictionaries" PATHSEP
 #define LUA_LIBRARIES_SUBDIR "lualibs" PATHSEP
