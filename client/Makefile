@@ -373,9 +373,9 @@ else
 endif
 
 ifeq ($(PYTHON_FOUND),1)
-    $(info Python library:    system library found)
+    $(info Python3 version:   Python3 v${shell pkg-config --modversion python3} found, enabled)
 else
-    $(info Python library:    system library not found, disabled)
+    $(info Python library:    Python3 not found, disabled)
 endif
 
 ifeq ($(SKIPWHEREAMISYSTEM),1)
