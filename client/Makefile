@@ -135,25 +135,6 @@ endif
 LDLIBS += $(LUALIB)
 INCLUDES += $(LUALIBINC)
 
-## Python3
-PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
-PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
-ifneq ($(PYTHONLDLIBS),)
-    PYTHONLIB = $(PYTHONLDLIBS)
-    PYTHONLIBINC = $(PYTHONINCLUDES)
-    PYTHON_FOUND = 1
-else
-    PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3-embed 2>/dev/null)
-    PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
-    ifneq ($(PYTHONLDLIBS),)
-        PYTHONLIB = $(PYTHONLDLIBS)
-        PYTHONLIBINC = $(PYTHONINCLUDES)
-        PYTHON_FOUND = 1
-    endif
-endif
-LDLIBS += $(PYTHONLIB)
-INCLUDES += $(PYTHONLIBINC)
-
 ## mbed TLS
 # system library cannot be used because it is compiled by default without CMAC support
 LDLIBS +=$(MBEDTLSLIB)
@@ -219,13 +200,6 @@ endif
 LDLIBS += $(BTLIB)
 INCLUDES += $(BTLIBINC)
 
-## Readline
-ifeq ($(platform),Darwin)
-    LDLIBS += -L/usr/local/opt/readline/lib
-    INCLUDES += -I/usr/local/opt/readline/include
-endif
-LDLIBS += -lreadline
-
 ## Math
 LDLIBS += -lm
 
@@ -234,6 +208,28 @@ LDLIBS += -lm
 ifneq ($(SKIPPTHREAD),1)
     LDLIBS += -lpthread
 endif
+
+## Python3 (optional)
+ifneq ($(SKIPPYTHON),1)
+    PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
+    PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
+    ifneq ($(PYTHONLDLIBS),)
+        PYTHONLIB = $(PYTHONLDLIBS)
+        PYTHONLIBINC = $(PYTHONINCLUDES)
+        PYTHON_FOUND = 1
+    else
+        # since python3.8, applications willing to embed python must use -embed:
+        PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3-embed 2>/dev/null)
+        PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
+        ifneq ($(PYTHONLDLIBS),)
+            PYTHONLIB = $(PYTHONLDLIBS)
+            PYTHONLIBINC = $(PYTHONINCLUDES)
+            PYTHON_FOUND = 1
+        endif
+    endif
+endif
+LDLIBS += $(PYTHONLIB)
+INCLUDES += $(PYTHONLIBINC)
 
 ## QT5 (or QT4 fallback) (optional)
 ifneq ($(SKIPQT),1)
@@ -275,8 +271,12 @@ endif
 LDLIBS += $(QTLDLIBS)
 CXXINCLUDES += $(QTINCLUDES)
 
-## Python
-
+## Readline
+ifeq ($(platform),Darwin)
+    LDLIBS += -L/usr/local/opt/readline/lib
+    INCLUDES += -I/usr/local/opt/readline/include
+endif
+LDLIBS += -lreadline
 
 #######################################################################################################
 CFLAGS ?= $(DEFCFLAGS)
@@ -373,9 +373,9 @@ else
 endif
 
 ifeq ($(PYTHON_FOUND),1)
-    $(info Python3 version:   Python3 v${shell pkg-config --modversion python3} found, enabled)
+    $(info Python3 library:   Python3 v$(shell pkg-config --modversion python3) found, enabled)
 else
-    $(info Python library:    Python3 not found, disabled)
+    $(info Python3 library:   Python3 not found, disabled)
 endif
 
 ifeq ($(SKIPWHEREAMISYSTEM),1)
