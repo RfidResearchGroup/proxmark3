@@ -136,13 +136,20 @@ LDLIBS += $(LUALIB)
 INCLUDES += $(LUALIBINC)
 
 ## Python3
-#PYTHON_CONFIG := python3-config
 PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
 PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
 ifneq ($(PYTHONLDLIBS),)
     PYTHONLIB = $(PYTHONLDLIBS)
     PYTHONLIBINC = $(PYTHONINCLUDES)
     PYTHON_FOUND = 1
+else
+    PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3-embed 2>/dev/null)
+    PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
+    ifneq ($(PYTHONLDLIBS),)
+        PYTHONLIB = $(PYTHONLDLIBS)
+        PYTHONLIBINC = $(PYTHONINCLUDES)
+        PYTHON_FOUND = 1
+    endif
 endif
 LDLIBS += $(PYTHONLIB)
 INCLUDES += $(PYTHONLIBINC)
