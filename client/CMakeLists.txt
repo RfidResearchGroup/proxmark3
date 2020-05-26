@@ -231,11 +231,13 @@ if (PYTHON3EMBED_FOUND)
     add_definitions("-DHAVE_PYTHON")
     set(ADDITIONAL_DIRS ${PYTHON3EMBED_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${PYTHON3EMBED_LIBRARIES} ${ADDITIONAL_LNK})
+    set(ADDITIONAL_LNKDIRS ${PYTHON3EMBED_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
 elseif (PYTHON3_FOUND)
     message("Python3 library found, building with python3 support :)")
     add_definitions("-DHAVE_PYTHON")
     set(ADDITIONAL_DIRS ${PYTHON3_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${PYTHON3_LIBRARIES} ${ADDITIONAL_LNK})
+    set(ADDITIONAL_LNKDIRS ${PYTHON3_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
 endif (PYTHON3EMBED_FOUND)
 
 add_executable(
@@ -299,6 +301,8 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})
+
+target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
 
 install(TARGETS proxmark3 DESTINATION "bin")
 install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
