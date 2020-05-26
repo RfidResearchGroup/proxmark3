@@ -372,10 +372,14 @@ else
     endif
 endif
 
-ifeq ($(PYTHON_FOUND),1)
-    $(info Python3 library:   Python3 v$(shell pkg-config --modversion python3) found, enabled)
+ifeq ($(SKIPPYTHON),1)
+        $(info Python3 library:   skipped)
 else
-    $(info Python3 library:   Python3 not found, disabled)
+    ifeq ($(PYTHON_FOUND),1)
+        $(info Python3 library:   Python3 v$(shell pkg-config --modversion python3) found, enabled)
+    else
+        $(info Python3 library:   Python3 not found, disabled)
+    endif
 endif
 
 ifeq ($(SKIPWHEREAMISYSTEM),1)

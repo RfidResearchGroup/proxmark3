@@ -139,8 +139,11 @@ static int CmdScriptList(const char *Cmd) {
     ret = searchAndList(CMD_SCRIPTS_SUBDIR, ".cmd");
     if (ret != PM3_SUCCESS)
         return ret;
-   
+#ifdef HAVE_PYTHON
     return searchAndList(PYTHON_SCRIPTS_SUBDIR, ".py");
+#else
+    return ret;
+#endif
 }
 
 /**
@@ -158,7 +161,10 @@ static int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     static uint8_t luascriptfile_idx = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
-
+    if (strlen(preferredName) == 0) {
+        PrintAndLogEx(FAILED, "no script name provided");
+        return PM3_EINVARG;
+    }
     char *extension_chk;
     extension_chk = str_dup(preferredName);
     str_lower(extension_chk);
@@ -329,15 +335,18 @@ static int CmdScriptRun(const char *Cmd) {
 #ifdef HAVE_PYTHON
     else if (ext == PM3_PY)
         ret = searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", false);
-#endif
     else if (ext == PM3_UNSPECIFIED)
         PrintAndLogEx(FAILED, "Error - can't find %s.[lua|cmd|py]", preferredName);
+#else
+    else if (ext == PM3_UNSPECIFIED)
+        PrintAndLogEx(FAILED, "Error - can't find %s.[lua|cmd]", preferredName);
+#endif
     free(script_path);
     return ret;
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
+    {"help",  CmdHelp,          AlwaysAvailable, "Usage info"},
     {"list",  CmdScriptList,    AlwaysAvailable, "List available scripts"},
     {"run",   CmdScriptRun,     AlwaysAvailable, "<name> -- execute a script"},
     {NULL, NULL, NULL, NULL}
@@ -351,7 +360,11 @@ static command_t CommandTable[] = {
  */
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place Lua-scripts within the luascripts/-folder. ");
+#ifdef HAVE_PYTHON
+    PrintAndLogEx(NORMAL, "This is a feature to run Lua/Cmd/Python scripts. You can place scripts within the luascripts/cmdscripts/pyscripts folders. ");
+#else
+    PrintAndLogEx(NORMAL, "This is a feature to run Lua/Cmd scripts. You can place scripts within the luascripts/cmdscripts folders. ");
+#endif
     return PM3_SUCCESS;
 }
 
