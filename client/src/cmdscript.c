@@ -316,10 +316,7 @@ static int CmdScriptRun(const char *Cmd) {
         //PyImport_ImportModule("requests");
         PyRun_SimpleFileExFlags(f, preferredName, 1, NULL);
 
-        if (Py_FinalizeEx() < 0) {
-            free(script_path);
-            return PM3_ESOFT;
-        }
+        Py_Finalize();
         
         PyMem_RawFree(program);
         free(script_path);
