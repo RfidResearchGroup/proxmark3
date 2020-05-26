@@ -36,10 +36,38 @@
 typedef enum {
     PM3_LUA,
     PM3_CMD,
+#ifdef HAVE_PYTHON    
     PM3_PY
+#endif    
 } pm3_scriptfile_t;
 
 static int CmdHelp(const char *Cmd);
+
+#ifdef HAVE_PYTHON
+static int split(char *str, char **arr) {
+    int begin_index = 0;
+    int word_cnt = 0;
+
+    while (1) {
+        while (isspace(str[begin_index])) {
+            ++begin_index;
+        }
+        if (str[begin_index] == '\0') {
+            break;
+        }
+        int end_index = begin_index;
+        while (str[end_index] && !isspace(str[end_index])) {
+            ++end_index;
+        }
+        int len = end_index - begin_index;
+        char *tmp = calloc(len + 1, sizeof(char));
+        memcpy(tmp, &str[begin_index], len);
+        arr[word_cnt++] = tmp;
+        begin_index = end_index;
+    }
+    return word_cnt;
+}
+#endif
 
 /**
 * Generate a sorted list of available commands, what it does is
@@ -188,7 +216,7 @@ static int CmdScriptRun(const char *Cmd) {
     
     if ((ext == PM3_PY) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
         
-        PrintAndLogEx(SUCCESS, "executing python s " _YELLOW_("%s"), script_path);
+        PrintAndLogEx(SUCCESS, "executing python " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
         wchar_t *program = Py_DecodeLocale(preferredName, NULL);
@@ -202,19 +230,22 @@ static int CmdScriptRun(const char *Cmd) {
         Py_SetProgramName(program);
         Py_Initialize();
 
+        //int argc, char ** argv
+        char *argv[128];
+        int argc = split(arguments, argv);
+    
+        wchar_t *py_args[argc];
+        py_args[0] = Py_DecodeLocale(preferredName, NULL);
+        for (int i = 0; i < argc; i++) {
+            py_args[i+1] = Py_DecodeLocale(argv[i], NULL);
+        }
 
-        int argc = 6;
-        wchar_t *args[argc];
-        args[0] = Py_DecodeLocale(preferredName, NULL);
-        args[1] = Py_DecodeLocale("04", NULL);
-        args[2] = Py_DecodeLocale("00", NULL);
-        args[3] = Py_DecodeLocale("80", NULL);
-        args[4] = Py_DecodeLocale("64", NULL);
-        args[5] = Py_DecodeLocale("ba", NULL);
-
-        PySys_SetArgv(argc, args);
+        PySys_SetArgv(argc, py_args);
         
-        //PySys_SetArgv(arguments, script_path);
+        // clean up
+        for (int i = 0; i < argc; ++i) {
+            free(argv[i]);
+        }
         
         FILE *f = fopen(script_path, "r");
         if (f == NULL) {
@@ -223,9 +254,9 @@ static int CmdScriptRun(const char *Cmd) {
             return PM3_ESOFT;            
         }
 
-        PyRun_SimpleFile(f, preferredName);
-
-        fclose(f);
+        // to we need to manually call all importmodules?
+        //PyImport_ImportModule("requests");
+        PyRun_SimpleFileExFlags(f, preferredName, 1, NULL);
 
         if (Py_FinalizeEx() < 0) {
             free(script_path);
