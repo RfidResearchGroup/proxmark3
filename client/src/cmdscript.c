@@ -191,9 +191,9 @@ static int CmdScriptRun(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "executing python s " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
-        wchar_t *program = Py_DecodeLocale(script_path, NULL);
+        wchar_t *program = Py_DecodeLocale(preferredName, NULL);
         if (program == NULL) {
-            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), script_path);
+            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), preferredName);
             free(script_path);
             return PM3_ESOFT;
         }
@@ -201,7 +201,20 @@ static int CmdScriptRun(const char *Cmd) {
         // optional but recommended
         Py_SetProgramName(program);
         Py_Initialize();
-//        PySys_SetArgv(arguments, script_path);  // we dont have  argc , argv here
+
+
+        int argc = 6;
+        wchar_t *args[argc];
+        args[0] = Py_DecodeLocale(preferredName, NULL);
+        args[1] = Py_DecodeLocale("04", NULL);
+        args[2] = Py_DecodeLocale("00", NULL);
+        args[3] = Py_DecodeLocale("80", NULL);
+        args[4] = Py_DecodeLocale("64", NULL);
+        args[5] = Py_DecodeLocale("ba", NULL);
+
+        PySys_SetArgv(argc, args);
+        
+        //PySys_SetArgv(arguments, script_path);
         
         FILE *f = fopen(script_path, "r");
         if (f == NULL) {
@@ -210,7 +223,7 @@ static int CmdScriptRun(const char *Cmd) {
             return PM3_ESOFT;            
         }
 
-        PyRun_SimpleFile(f, script_path);
+        PyRun_SimpleFile(f, preferredName);
 
         fclose(f);
 
