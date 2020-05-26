@@ -38,6 +38,8 @@ endforeach()
 find_package(PkgConfig)
 pkg_search_module(BLUEZ QUIET bluez)
 
+pkg_search_module(PYTHON3 QUIET python3)
+
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory(deps)
@@ -224,6 +226,14 @@ if (BLUEZ_FOUND)
     set(ADDITIONAL_LNK bluetooth ${ADDITIONAL_LNK})
 endif (BLUEZ_FOUND)
 
+if (PYTHON3_FOUND)
+    message("Python3 library found, building with python3 support :)")
+    add_definitions("-DHAVE_PYTHON")
+#    include_directories ( ${PYTHON_INCLUDE_DIRS} )
+    set(ADDITIONAL_LNK python3 ${PYTHON_LIBRARIES})
+endif (PYTHON3_FOUND)
+
+
 add_executable(
         proxmark3
         ${TARGET_SOURCES}
@@ -286,7 +296,7 @@ target_link_libraries(proxmark3 PRIVATE
         ${ADDITIONAL_LNK})
 
 install(TARGETS proxmark3 DESTINATION "bin")
-install(DIRECTORY cmdscripts lualibs luascripts resources dictionaries DESTINATION "share/proxmark3")
+install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
 
 add_custom_command(OUTPUT lualibs/pm3_cmd.lua
         COMMAND "awk -f pm3_cmd_h2lua.awk ../include/pm3_cmd.h >  lualibs/pm3_cmd.lua"
