@@ -304,7 +304,7 @@ target_link_libraries(proxmark3 PRIVATE
         ${ADDITIONAL_LNK})
 
 # OSX have a hard time compiling python3 dependency with older cmake.
-if (PYTHON3EMBED_FOUND AND PYTHON3_FOUND)
+if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
     if (NOT CMAKE_VERSION VERSION_LESS 3.13)
            target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
     elseif (APPLE)
