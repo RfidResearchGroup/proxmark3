@@ -37,7 +37,6 @@ endforeach()
 
 find_package(PkgConfig)
 pkg_search_module(BLUEZ QUIET bluez)
-
 pkg_search_module(PYTHON3 QUIET python3)
 
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -190,7 +189,6 @@ add_custom_command(
 
 set(ADDITIONAL_SRC "")
 set(ADDITIONAL_LNK "")
-
 set(X86_CPUS x86 x86_64 i686)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
@@ -229,10 +227,19 @@ endif (BLUEZ_FOUND)
 if (PYTHON3_FOUND)
     message("Python3 library found, building with python3 support :)")
     add_definitions("-DHAVE_PYTHON")
-#    include_directories ( ${PYTHON_INCLUDE_DIRS} )
-    set(ADDITIONAL_LNK python3 ${PYTHON_LIBRARIES})
-endif (PYTHON3_FOUND)
 
+    #PYTHON3_LIBRARIES      ... only the libraries (w/o the '-l')
+    #PYTHON3_LIBRARY_DIRS   ... the paths of the libraries (w/o the '-L')
+    #PYTHON3_INCLUDE_DIRS   ... the '-I' preprocessor flags (w/o the '-I')
+
+    message(STATUS "PYTHON3 LIBS := ${PYTHON3_LIBRARIES}")    
+    message(STATUS "PYTHON3 INC DIRS := ${PYTHON3_INCLUDE_DIRS}")
+    
+    set(ADDITIONAL_LNK ${ADDITIONAL_LNK} ${PYTHON3_LIBRARIES})
+    
+#PYTHONINCLUDES = pkg-config --cflags python3    == -I/usr/include/python3.6m -I/usr/include/x86_64-linux-gnu/python3.6m
+#PYTHONLDLIBS = pkg-config --libs python3        == -lpython3.6m
+endif (PYTHON3_FOUND)
 
 add_executable(
         proxmark3
