@@ -44,6 +44,9 @@ typedef enum {
 static int CmdHelp(const char *Cmd);
 
 #ifdef HAVE_PYTHON
+
+#define PYTHON_LIBRARIES_WILDCARD  "?.py"
+
 static int split(char *str, char **arr) {
     int begin_index = 0;
     int word_cnt = 0;
@@ -66,6 +69,58 @@ static int split(char *str, char **arr) {
         begin_index = end_index;
     }
     return word_cnt;
+}
+
+static void set_python_path(char *path) {
+    PyObject *syspath = PySys_GetObject("path");
+    if (syspath == 0) {
+        PrintAndLogEx(WARNING, "Python failed to getobject");
+    }
+    
+    PyObject *pName = PyUnicode_FromString(path);
+    if (PyList_Insert(syspath, 0, pName)) {
+        PrintAndLogEx(WARNING, "Error inserting extra path into sys.path list");
+    }
+    
+    if (PySys_SetObject("path", syspath)) {
+        PrintAndLogEx(WARNING,"Error setting sys.path object");
+    }
+}
+
+static void set_python_paths(void) {
+    //--add to the LUA_PATH (package.path in lua)
+    // so we can load scripts from various places:
+    const char *exec_path = get_my_executable_directory();
+    if (exec_path != NULL) {
+        // from the ./luascripts/ directory
+        char scripts_path[strlen(exec_path) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
+        strcpy(scripts_path, exec_path);
+        strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
+//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        set_python_path(scripts_path);
+    }
+
+    const char *user_path = get_my_user_directory();
+    if (user_path != NULL) {
+        // from the $HOME/.proxmark3/luascripts/ directory
+        char scripts_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
+        strcpy(scripts_path, user_path);
+        strcat(scripts_path, PM3_USER_DIRECTORY);
+        strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
+//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        set_python_path(scripts_path);
+
+    }
+
+    if (exec_path != NULL) {
+        // from the $PREFIX/share/proxmark3/luascripts/ directory
+        char scripts_path[strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
+        strcpy(scripts_path, exec_path);
+        strcat(scripts_path, PM3_SHARE_RELPATH);
+        strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
+//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        set_python_path(scripts_path);
+    }
 }
 #endif
 
@@ -246,6 +301,9 @@ static int CmdScriptRun(const char *Cmd) {
         for (int i = 0; i < argc; ++i) {
             free(argv[i]);
         }
+        
+        // setup search paths.
+        set_python_paths();
         
         FILE *f = fopen(script_path, "r");
         if (f == NULL) {
