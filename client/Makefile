@@ -10,7 +10,7 @@ ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 include ../Makefile.defs
 
 INSTALLBIN = proxmark3
-INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
+INSTALLSHARE = cmdscripts lualibs luascripts pyscripts resources dictionaries
 
 VPATH =  ../common src
 vpath %.dic dictionaries
@@ -135,6 +135,18 @@ endif
 LDLIBS += $(LUALIB)
 INCLUDES += $(LUALIBINC)
 
+## Python3
+#PYTHON_CONFIG := python3-config
+PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
+PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
+ifneq ($(PYTHONLDLIBS),)
+    PYTHONLIB = $(PYTHONLDLIBS)
+    PYTHONLIBINC = $(PYTHONINCLUDES)
+    PYTHON_FOUND = 1
+endif
+LDLIBS += $(PYTHONLIB)
+INCLUDES += $(PYTHONLIBINC)
+
 ## mbed TLS
 # system library cannot be used because it is compiled by default without CMAC support
 LDLIBS +=$(MBEDTLSLIB)
@@ -256,6 +268,9 @@ endif
 LDLIBS += $(QTLDLIBS)
 CXXINCLUDES += $(QTINCLUDES)
 
+## Python
+
+
 #######################################################################################################
 CFLAGS ?= $(DEFCFLAGS)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
@@ -343,6 +358,12 @@ else
     else
         $(info Lua library:       system library not found, using local library)
     endif
+endif
+
+ifeq ($(PYTHON_FOUND),1)
+    $(info Python library:    system library found)
+else
+    $(info Python library:    system library not found, disabled)
 endif
 
 ifeq ($(SKIPWHEREAMISYSTEM),1)
