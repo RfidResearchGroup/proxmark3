@@ -1624,7 +1624,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
-        int j = 0;
+        uint32_t j = 0;
         for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             GraphBuffer[j] = ((int) sample) - 127;
@@ -1634,7 +1634,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
 
     } else {
-        for (int j = 0; j < n; j++) {
+        for (uint32_t j = 0; j < n; j++) {
             GraphBuffer[j] = ((int)got[j]) - 127;
         }
         GraphTraceLen = n;
