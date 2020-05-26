@@ -189,6 +189,7 @@ add_custom_command(
 
 set(ADDITIONAL_SRC "")
 set(ADDITIONAL_LNK "")
+set(ADDITIONAL_DIRS "")
 set(X86_CPUS x86 x86_64 i686)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
@@ -227,18 +228,8 @@ endif (BLUEZ_FOUND)
 if (PYTHON3_FOUND)
     message("Python3 library found, building with python3 support :)")
     add_definitions("-DHAVE_PYTHON")
-
-    #PYTHON3_LIBRARIES      ... only the libraries (w/o the '-l')
-    #PYTHON3_LIBRARY_DIRS   ... the paths of the libraries (w/o the '-L')
-    #PYTHON3_INCLUDE_DIRS   ... the '-I' preprocessor flags (w/o the '-I')
-
-    message(STATUS "PYTHON3 LIBS := ${PYTHON3_LIBRARIES}")    
-    message(STATUS "PYTHON3 INC DIRS := ${PYTHON3_INCLUDE_DIRS}")
-    
+    set(ADDITIONAL_DIRS ${ADDITIONAL_DIRS} ${PYTHON3_INCLUDE_DIRS})
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} ${PYTHON3_LIBRARIES})
-    
-#PYTHONINCLUDES = pkg-config --cflags python3    == -I/usr/include/python3.6m -I/usr/include/x86_64-linux-gnu/python3.6m
-#PYTHONLDLIBS = pkg-config --libs python3        == -lpython3.6m
 endif (PYTHON3_FOUND)
 
 add_executable(
@@ -265,6 +256,7 @@ target_include_directories(proxmark3 PRIVATE
         ../common_fpga
         ../include
         src
+        ${ADDITIONAL_DIRS}
 )
 
 if (APPLE)
