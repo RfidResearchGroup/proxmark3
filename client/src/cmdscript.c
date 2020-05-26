@@ -34,11 +34,12 @@
 #include "fileutils.h"
 
 typedef enum {
+    PM3_UNSPECIFIED,
     PM3_LUA,
     PM3_CMD,
 #ifdef HAVE_PYTHON    
     PM3_PY
-#endif    
+#endif
 } pm3_scriptfile_t;
 
 static int CmdHelp(const char *Cmd);
@@ -161,20 +162,20 @@ static int CmdScriptRun(const char *Cmd) {
     char *extension_chk;
     extension_chk = str_dup(preferredName);
     str_lower(extension_chk);
-    pm3_scriptfile_t ext = PM3_LUA;
-
-    if (str_endswith(extension_chk, ".cmd"))  {
+    pm3_scriptfile_t ext = PM3_UNSPECIFIED;
+    if (str_endswith(extension_chk, ".lua"))  {
+        ext = PM3_LUA;
+    } else if (str_endswith(extension_chk, ".cmd"))  {
         ext = PM3_CMD;
     }
-
 #ifdef HAVE_PYTHON
-    if (str_endswith(extension_chk, ".py")) {
+    else if (str_endswith(extension_chk, ".py")) {
         ext = PM3_PY;
     }
 #endif
 
     char *script_path = NULL;
-    if ((ext == PM3_LUA) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
+    if (((ext == PM3_LUA) || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
         int error;
         if (luascriptfile_idx == MAX_NESTED_LUASCRIPT) {
             PrintAndLogEx(ERR, "too many nested scripts, skipping %s\n", script_path);
@@ -230,7 +231,7 @@ static int CmdScriptRun(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if ((ext == PM3_CMD) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
+    if (((ext == PM3_CMD) || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
 
         PrintAndLogEx(SUCCESS, "executing Cmd " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
@@ -268,7 +269,7 @@ static int CmdScriptRun(const char *Cmd) {
 
 #ifdef HAVE_PYTHON
 
-    if ((ext == PM3_PY) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
+    if (((ext == PM3_PY)  || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
 
         PrintAndLogEx(SUCCESS, "executing python " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
@@ -323,13 +324,14 @@ static int CmdScriptRun(const char *Cmd) {
     int ret = PM3_EUNDEF;
     if (ext == PM3_LUA)
         ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
-
-    if (ext == PM3_CMD)
+    else if (ext == PM3_CMD)
         ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
 #ifdef HAVE_PYTHON
-    if (ext == PM3_PY)
+    else if (ext == PM3_PY)
         ret = searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", false);
 #endif
+    else if (ext == PM3_UNSPECIFIED)
+        PrintAndLogEx(FAILED, "Error - can't find %s.[lua|cmd|py]", preferredName);
     free(script_path);
     return ret;
 }
