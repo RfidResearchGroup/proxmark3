@@ -13,9 +13,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PY_SSIZE_T_CLEAN
+#ifdef DHAVE_PYTHON
+//#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <wchar.h>
+#endif
 
 
 #include "cmdparser.h"    // command_t
@@ -79,8 +81,10 @@ static int CmdScriptRun(const char *Cmd) {
     pm3_scriptfile_t ext = PM3_LUA;
     if (str_endswith(preferredName, ".cmd"))
         ext = PM3_CMD;
+#ifdef DHAVE_PYTHON
     if (str_endswith(preferredName, ".py"))
         ext = PM3_PY;
+#endif
         
     char *script_path = NULL;
     if ((ext == PM3_LUA) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
@@ -151,8 +155,7 @@ static int CmdScriptRun(const char *Cmd) {
         return ret;
     }
     
-    /*
-    
+    /*    
     For apt (Ubuntu, Debian...):
         sudo apt-get install python3-dev  # for python3.x installs
 
@@ -177,6 +180,7 @@ static int CmdScriptRun(const char *Cmd) {
         
     */
 
+#ifdef DHAVE_PYTHON
     if ((ext == PM3_PY) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
 
         PrintAndLogEx(SUCCESS, "executing python s " _YELLOW_("%s"), script_path);
@@ -215,6 +219,7 @@ static int CmdScriptRun(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
         return PM3_SUCCESS;
     }
+#endif
 
     // file not found, let's search again to display the error messages
     int ret = PM3_EUNDEF;
@@ -223,10 +228,10 @@ static int CmdScriptRun(const char *Cmd) {
 
     if (ext == PM3_CMD)
         ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
-
+#ifdef DHAVE_PYTHON
     if (ext == PM3_PY)
         ret = searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", false);
-
+#endif
     free(script_path);
     return ret;
 }
