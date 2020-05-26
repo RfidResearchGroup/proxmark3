@@ -191,6 +191,7 @@ add_custom_command(
 set(ADDITIONAL_SRC "")
 set(ADDITIONAL_LNK "")
 set(ADDITIONAL_DIRS "")
+set(ADDITIONAL_LNKDIRS "")
 set(X86_CPUS x86 x86_64 i686)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
@@ -227,7 +228,7 @@ if (BLUEZ_FOUND)
 endif (BLUEZ_FOUND)
 
 if (PYTHON3EMBED_FOUND)
-    message("Python3 library found, building with python3 support :)")
+    message("Python3-embed library found, building with python3 support :)")
     add_definitions("-DHAVE_PYTHON")
     set(ADDITIONAL_DIRS ${PYTHON3EMBED_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${PYTHON3EMBED_LIBRARIES} ${ADDITIONAL_LNK})
@@ -237,7 +238,7 @@ elseif (PYTHON3_FOUND)
     add_definitions("-DHAVE_PYTHON")
     set(ADDITIONAL_DIRS ${PYTHON3_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${PYTHON3_LIBRARIES} ${ADDITIONAL_LNK})
-    set(ADDITIONAL_LNKDIRS ${PYTHON3_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
+    set(ADDITIONAL_LNKDIRS ${PYTHON3_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})   
 endif (PYTHON3EMBED_FOUND)
 
 add_executable(
@@ -302,8 +303,15 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})
 
-target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
-
+# OSX have a hard time compiling python3 dependency with older cmake.
+if (PYTHON3EMBED_FOUND AND PYTHON3_FOUND)
+    if (NOT CMAKE_VERSION VERSION_LESS 3.13)
+           target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
+    elseif (APPLE)
+           message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
+    endif()
+endif()
+    
 install(TARGETS proxmark3 DESTINATION "bin")
 install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
 
