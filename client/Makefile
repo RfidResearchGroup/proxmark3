@@ -293,6 +293,11 @@ ifeq ($(BT_FOUND),1)
     PM3CFLAGS += -DHAVE_BLUEZ
 endif
 
+ifeq ($(PYTHON_FOUND),1)
+    PM3CFLAGS += -DHAVE_PYTHON
+endif
+
+
 CXXFLAGS ?= -Wall -Werror -O3
 PM3CXXFLAGS = $(CXXFLAGS)
 PM3CXXFLAGS += -I../include
