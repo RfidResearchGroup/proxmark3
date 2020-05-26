@@ -233,14 +233,14 @@ static int CmdScriptRun(const char *Cmd) {
         //int argc, char ** argv
         char *argv[128];
         int argc = split(arguments, argv);
-    
+   
         wchar_t *py_args[argc];
         py_args[0] = Py_DecodeLocale(preferredName, NULL);
         for (int i = 0; i < argc; i++) {
             py_args[i+1] = Py_DecodeLocale(argv[i], NULL);
         }
 
-        PySys_SetArgv(argc, py_args);
+        PySys_SetArgv(argc+1, py_args);
         
         // clean up
         for (int i = 0; i < argc; ++i) {
