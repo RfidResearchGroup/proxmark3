@@ -185,13 +185,8 @@ static int CmdScriptRun(const char *Cmd) {
     */
 
 #ifdef HAVE_PYTHON
-
-    PrintAndLogEx(SUCCESS, "script engine detected: %s", ( ext == PM3_PY) ? "PYTHON" : ( ext == PM3_CMD) ? "CMD" : "LUA");
-    PrintAndLogEx(SUCCESS, "script engine,  folder %s", PYTHON_SCRIPTS_SUBDIR);
     
     if ((ext == PM3_PY) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
-
-        PrintAndLogEx(SUCCESS, "ICE");
         
         PrintAndLogEx(SUCCESS, "executing python s " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
