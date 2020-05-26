@@ -157,22 +157,22 @@ static int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     static uint8_t luascriptfile_idx = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
-    
+
     char *extension_chk;
     extension_chk = str_dup(preferredName);
     str_lower(extension_chk);
     pm3_scriptfile_t ext = PM3_LUA;
-    
+
     if (str_endswith(extension_chk, ".cmd"))  {
         ext = PM3_CMD;
     }
-    
+
 #ifdef HAVE_PYTHON
     if (str_endswith(extension_chk, ".py")) {
         ext = PM3_PY;
     }
 #endif
-        
+
     char *script_path = NULL;
     if ((ext == PM3_LUA) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
         int error;
@@ -241,8 +241,8 @@ static int CmdScriptRun(const char *Cmd) {
         free(script_path);
         return ret;
     }
-    
-    /*    
+
+    /*
     For apt (Ubuntu, Debian...):
         sudo apt-get install python3-dev  # for python3.x installs
 
@@ -264,13 +264,12 @@ static int CmdScriptRun(const char *Cmd) {
 
     For apt-cyg (Cygwin...):
         apt-cyg install python3-devel  # for python3.x installs
-        
     */
 
 #ifdef HAVE_PYTHON
-    
+
     if ((ext == PM3_PY) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
-        
+
         PrintAndLogEx(SUCCESS, "executing python " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
@@ -288,7 +287,6 @@ static int CmdScriptRun(const char *Cmd) {
         //int argc, char ** argv
         char *argv[128];
         int argc = split(arguments, argv);
-   
         wchar_t *py_args[argc];
         py_args[0] = Py_DecodeLocale(preferredName, NULL);
         for (int i = 0; i < argc; i++) {
@@ -296,28 +294,24 @@ static int CmdScriptRun(const char *Cmd) {
         }
 
         PySys_SetArgv(argc+1, py_args);
-        
+
         // clean up
         for (int i = 0; i < argc; ++i) {
             free(argv[i]);
         }
-        
+
         // setup search paths.
         set_python_paths();
-        
+
         FILE *f = fopen(script_path, "r");
         if (f == NULL) {
             PrintAndLogEx(ERR, "Could open file " _YELLOW_("%s"), script_path);
             free(script_path);
-            return PM3_ESOFT;            
+            return PM3_ESOFT;
         }
 
-        // to we need to manually call all importmodules?
-        //PyImport_ImportModule("requests");
         PyRun_SimpleFileExFlags(f, preferredName, 1, NULL);
-
         Py_Finalize();
-        
         PyMem_RawFree(program);
         free(script_path);
         PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
