@@ -38,6 +38,7 @@ endforeach()
 find_package(PkgConfig)
 pkg_search_module(BLUEZ QUIET bluez)
 pkg_search_module(PYTHON3 QUIET python3)
+pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -225,12 +226,17 @@ if (BLUEZ_FOUND)
     set(ADDITIONAL_LNK bluetooth ${ADDITIONAL_LNK})
 endif (BLUEZ_FOUND)
 
-if (PYTHON3_FOUND)
+if (PYTHON3EMBED_FOUND)
     message("Python3 library found, building with python3 support :)")
     add_definitions("-DHAVE_PYTHON")
-    set(ADDITIONAL_DIRS ${ADDITIONAL_DIRS} ${PYTHON3_INCLUDE_DIRS})
-    set(ADDITIONAL_LNK ${ADDITIONAL_LNK} ${PYTHON3_LIBRARIES})
-endif (PYTHON3_FOUND)
+    set(ADDITIONAL_DIRS ${PYTHON3EMBED_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${PYTHON3EMBED_LIBRARIES} ${ADDITIONAL_LNK})
+elseif (PYTHON3_FOUND)
+    message("Python3 library found, building with python3 support :)")
+    add_definitions("-DHAVE_PYTHON")
+    set(ADDITIONAL_DIRS ${PYTHON3_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${PYTHON3_LIBRARIES} ${ADDITIONAL_LNK})
+endif (PYTHON3EMBED_FOUND)
 
 add_executable(
         proxmark3
