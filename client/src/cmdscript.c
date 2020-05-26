@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef DHAVE_PYTHON
+#ifdef HAVE_PYTHON
 //#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <wchar.h>
@@ -79,11 +79,15 @@ static int CmdScriptRun(const char *Cmd) {
     extension_chk = str_dup(preferredName);
     str_lower(extension_chk);
     pm3_scriptfile_t ext = PM3_LUA;
-    if (str_endswith(preferredName, ".cmd"))
+    
+    if (str_endswith(extension_chk, ".cmd"))  {
         ext = PM3_CMD;
-#ifdef DHAVE_PYTHON
-    if (str_endswith(preferredName, ".py"))
+    }
+    
+#ifdef HAVE_PYTHON
+    if (str_endswith(extension_chk, ".py")) {
         ext = PM3_PY;
+    }
 #endif
         
     char *script_path = NULL;
@@ -180,9 +184,15 @@ static int CmdScriptRun(const char *Cmd) {
         
     */
 
-#ifdef DHAVE_PYTHON
+#ifdef HAVE_PYTHON
+
+    PrintAndLogEx(SUCCESS, "script engine detected: %s", ( ext == PM3_PY) ? "PYTHON" : ( ext == PM3_CMD) ? "CMD" : "LUA");
+    PrintAndLogEx(SUCCESS, "script engine,  folder %s", PYTHON_SCRIPTS_SUBDIR);
+    
     if ((ext == PM3_PY) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
 
+        PrintAndLogEx(SUCCESS, "ICE");
+        
         PrintAndLogEx(SUCCESS, "executing python s " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
@@ -200,7 +210,7 @@ static int CmdScriptRun(const char *Cmd) {
         
         FILE *f = fopen(script_path, "r");
         if (f == NULL) {
-            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), script_path);
+            PrintAndLogEx(ERR, "Could open file " _YELLOW_("%s"), script_path);
             free(script_path);
             return PM3_ESOFT;            
         }
@@ -228,7 +238,7 @@ static int CmdScriptRun(const char *Cmd) {
 
     if (ext == PM3_CMD)
         ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
-#ifdef DHAVE_PYTHON
+#ifdef HAVE_PYTHON
     if (ext == PM3_PY)
         ret = searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", false);
 #endif
