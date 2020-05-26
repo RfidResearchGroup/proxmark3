@@ -7,9 +7,16 @@
 //-----------------------------------------------------------------------------
 // Some lua scripting glue to proxmark core.
 //-----------------------------------------------------------------------------
+// 2020, added Python support (@iceman100)
+
 
 #include <stdlib.h>
 #include <string.h>
+
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+#include <wchar.h>
+
 
 #include "cmdparser.h"    // command_t
 #include "scripting.h"
@@ -24,6 +31,12 @@
 #include "ui.h"
 #include "fileutils.h"
 
+typedef enum {
+    PM3_LUA,
+    PM3_CMD,
+    PM3_PY
+} pm3_scriptfile_t;
+
 static int CmdHelp(const char *Cmd);
 
 /**
@@ -36,7 +49,12 @@ static int CmdScriptList(const char *Cmd) {
     int ret = searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
     if (ret != PM3_SUCCESS)
         return ret;
-    return searchAndList(CMD_SCRIPTS_SUBDIR, ".cmd");
+    
+    ret = searchAndList(CMD_SCRIPTS_SUBDIR, ".cmd");
+    if (ret != PM3_SUCCESS)
+        return ret;
+   
+    return searchAndList(PYTHON_SCRIPTS_SUBDIR, ".py");
 }
 
 /**
@@ -54,9 +72,18 @@ static int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     static uint8_t luascriptfile_idx = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
-
+    
+    char *extension_chk;
+    extension_chk = str_dup(preferredName);
+    str_lower(extension_chk);
+    pm3_scriptfile_t ext = PM3_LUA;
+    if (str_endswith(preferredName, ".cmd"))
+        ext = PM3_CMD;
+    if (str_endswith(preferredName, ".py"))
+        ext = PM3_PY;
+        
     char *script_path = NULL;
-    if ((!str_endswith(preferredName, ".cmd")) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
+    if ((ext == PM3_LUA) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
         int error;
         if (luascriptfile_idx == MAX_NESTED_LUASCRIPT) {
             PrintAndLogEx(ERR, "too many nested scripts, skipping %s\n", script_path);
@@ -112,7 +139,7 @@ static int CmdScriptRun(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if ((!str_endswith(preferredName, ".lua")) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
+    if ((ext == PM3_CMD) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
 
         PrintAndLogEx(SUCCESS, "executing Cmd " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
@@ -123,11 +150,83 @@ static int CmdScriptRun(const char *Cmd) {
         free(script_path);
         return ret;
     }
+    
+    /*
+    
+    For apt (Ubuntu, Debian...):
+        sudo apt-get install python3-dev  # for python3.x installs
+
+    For yum (CentOS, RHEL...):
+        sudo yum install python3-devel   # for python3.x installs
+
+    For dnf (Fedora...):
+        sudo dnf install python3-devel  # for python3.x installs
+
+    For zypper (openSUSE...):
+        sudo zypper in python3-devel  # for python3.x installs
+
+    For apk (Alpine...):
+
+        # This is a departure from the normal Alpine naming
+        # scheme, which uses py2- and py3- prefixes
+
+        sudo apk add python3-dev  # for python3.x installs
+
+    For apt-cyg (Cygwin...):
+        apt-cyg install python3-devel  # for python3.x installs
+        
+    */
+
+    if ((ext == PM3_PY) && (searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", true) == PM3_SUCCESS)) {
+
+        PrintAndLogEx(SUCCESS, "executing python s " _YELLOW_("%s"), script_path);
+        PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
+
+        wchar_t *program = Py_DecodeLocale(script_path, NULL);
+        if (program == NULL) {
+            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), script_path);
+            free(script_path);
+            return PM3_ESOFT;
+        }
+
+        // optional but recommended
+        Py_SetProgramName(program);
+        Py_Initialize();
+//        PySys_SetArgv(arguments, script_path);  // we dont have  argc , argv here
+        
+        FILE *f = fopen(script_path, "r");
+        if (f == NULL) {
+            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), script_path);
+            free(script_path);
+            return PM3_ESOFT;            
+        }
+
+        PyRun_SimpleFile(f, script_path);
+
+        fclose(f);
+
+        if (Py_FinalizeEx() < 0) {
+            free(script_path);
+            return PM3_ESOFT;
+        }
+        
+        PyMem_RawFree(program);
+        free(script_path);
+        PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
+        return PM3_SUCCESS;
+    }
 
     // file not found, let's search again to display the error messages
     int ret = PM3_EUNDEF;
-    if (!str_endswith(preferredName, ".cmd")) ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
-    if (!str_endswith(preferredName, ".lua")) ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
+    if (ext == PM3_LUA)
+        ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
+
+    if (ext == PM3_CMD)
+        ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
+
+    if (ext == PM3_PY)
+        ret = searchFile(&script_path, PYTHON_SCRIPTS_SUBDIR, preferredName, ".py", false);
+
     free(script_path);
     return ret;
 }
@@ -135,7 +234,7 @@ static int CmdScriptRun(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",  CmdHelp,          AlwaysAvailable, "This help"},
     {"list",  CmdScriptList,    AlwaysAvailable, "List available scripts"},
-    {"run",   CmdScriptRun,     AlwaysAvailable, "<name> -- Execute a script"},
+    {"run",   CmdScriptRun,     AlwaysAvailable, "<name> -- execute a script"},
     {NULL, NULL, NULL, NULL}
 };
 
