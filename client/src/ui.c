@@ -100,8 +100,10 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     if (subdir != NULL) {
         pathlen += strlen(subdir);
         path = realloc(path, pathlen * sizeof(char));
-        if (path == NULL)
+        if (path == NULL) {
+            free(path);
             return PM3_EMALLOC;
+        }
         strcat(path, subdir);
 
 #ifdef _WIN32
@@ -536,7 +538,6 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
             }
         }
         memcpy(rdest + si, current_token, current_token_length);
-        si += current_token_length;
     }
 }
 
