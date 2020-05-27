@@ -605,24 +605,25 @@ int TestProxmark(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_PING, data, len);
 
-    uint32_t timeout = 1000;
+    uint32_t timeout;
 
 #ifdef USART_SLOW_LINK
     // 10s timeout for slow FPC, e.g. over BT
     // as this is the very first command sent to the pm3
     // that initiates the BT connection
     timeout = 10000;
+#else
+    timeout = 1000;
 #endif
 
     if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == 0) {
         return PM3_ETIMEOUT;
     }
 
-    bool error = false;
-    error = memcmp(data, resp.data.asBytes, len) != 0;
-
-    if (error)
+    bool error = memcmp(data, resp.data.asBytes, len) != 0;
+    if (error) {
         return PM3_EIO;
+    }
 
     SendCommandNG(CMD_CAPABILITIES, NULL, 0);
     if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == 0) {
