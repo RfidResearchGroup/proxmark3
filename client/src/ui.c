@@ -57,15 +57,18 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 int searchHomeFilePath(char **foundpath, const char *subdir, const char *filename, bool create_home) {
     if (foundpath == NULL)
         return PM3_EINVARG;
+
     const char *user_path = get_my_user_directory();
     if (user_path == NULL) {
         fprintf(stderr, "Could not retrieve $HOME from the environment\n");
         return PM3_EFILE;
     }
+
     size_t pathlen = strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1;
     char *path = calloc(pathlen, sizeof(char));
     if (path == NULL)
         return PM3_EMALLOC;
+
     strcpy(path, user_path);
     strcat(path, PM3_USER_DIRECTORY);
 
@@ -139,9 +142,12 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         return PM3_SUCCESS;
     }
     pathlen += strlen(filename);
-    path = realloc(path, pathlen * sizeof(char));
-    if (path == NULL)
+    char *tmp = realloc(path, pathlen * sizeof(char));
+    if (tmp == NULL) {
+        free(path);
         return PM3_EMALLOC;
+    }
+    path = tmp;
     strcat(path, filename);
     *foundpath = path;
     return PM3_SUCCESS;
