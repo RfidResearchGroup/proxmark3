@@ -486,7 +486,7 @@ static int ul_fudan_check(void) {
 
     uint8_t cmd[4] = {0x30, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return UL_ERROR;
     if (resp.oldarg[0] != 1) return UL_ERROR;
@@ -1052,6 +1052,42 @@ uint32_t GetHF14AMfU_Type(void) {
 
         switch (len) {
             case 0x0A: {
+                /*
+                MF0UL1001DUx 0004030100000B03
+MF0UL1101DUx 0004030101000B03
+MF0ULH1101DUx 0004030201000B03
+MF0UL1141DUF 0004030301000B03
+MF0UL2101Dxy 0004030101000E03
+MF0UL2101DUx 0004030201000E03
+MF0UL3101DUx 0004030101001103
+MF0ULH3101DUx 0004030201001103
+MF0UL5101DUx 0004030101001303
+NT2L1011F0DUx 0004040101000B03
+NT2H1011G0DUD 0004040201000B03
+NT2L1211F0DUx 0004040101000E03
+NT2H1311G0DUx 0004040201000F03
+NT2H1311F0Dxy 0004040401000F03
+NT2H1411G0DUx 0004040201011103
+NT2H1511G0DUx 0004040201001103
+NT2H1511F0Dxy 0004040401001103
+NT2H1611G0DUx 0004040201001303
+NT2H1611F0Dxy 0004040401001303
+NT2H1311C1DTL 0004040201010F03
+NT2H1311TTDUx 0004040203000F03
+NT3H1101W0FHK 0004040502001303
+NT3H1201W0FHK 0004040502001503
+NT3H1101W0FHK_Variant 0004040502011303
+NT3H1201 0004040502011503
+NT3H2111 0004040502021303
+NT3H2211 0004040502021503
+nhs 0004040600001303
+MF0UN0001DUx 0004030102000B03
+MF0UNH0001DUx 0004030202000B03
+MF0UN1001DUx 0004030103000B03
+MF0UNH1001DUx 0004030203000B03
+NT2L1001G0DUx 0004040102000B03
+NT2H1001G0DUx 0004040202000B03
+                */
 
                 if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0B", 7) == 0)      { tagtype = UL_EV1_48; break; }
                 else if (memcmp(version, "\x00\x04\x03\x01\x02\x00\x0B", 7) == 0) { tagtype = UL_NANO_40; break; }
@@ -1534,7 +1570,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
+    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -1639,7 +1675,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
+    SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK = resp.oldarg[0] & 0xff;
@@ -1907,7 +1943,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
@@ -2812,7 +2848,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "Reading block BEFORE attack");
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -2828,7 +2864,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, ".....");
         clearCommandBuffer();
 
-        SendCommandOLD(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
+        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
         if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
             PrintAndLogEx(WARNING, "Failed");
             return PM3_ESOFT;
@@ -2837,7 +2873,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "Reading block AFTER attack");
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             uint8_t isOK = resp.oldarg[0] & 0xff;
             if (isOK) {
