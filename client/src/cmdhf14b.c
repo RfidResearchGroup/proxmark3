@@ -693,7 +693,7 @@ static bool HF14B_Other_Reader(void) {
     // uint32_t flags = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC;
 
     // clearCommandBuffer();
-    // SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
+    // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
     // PacketResponseNG resp;
     // WaitForResponse(CMD_ACK,&resp);
 
@@ -707,7 +707,7 @@ static bool HF14B_Other_Reader(void) {
 
     // data[0] = ISO14443B_AUTHENTICATE;
     // clearCommandBuffer();
-    // SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
+    // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     // PacketResponseNG resp;
     // WaitForResponse(CMD_ACK, &resp);
 
@@ -721,7 +721,7 @@ static bool HF14B_Other_Reader(void) {
 
     // data[0] = ISO14443B_RESET;
     // clearCommandBuffer();
-    // SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
+    // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     // PacketResponseNG resp;
     // WaitForResponse(CMD_ACK, &resp);
 
@@ -913,7 +913,7 @@ static int CmdHF14BDump(const char *Cmd) {
         req[1] = blocknum;
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ISO14443B_COMMAND,  ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND,  ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
