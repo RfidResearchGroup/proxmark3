@@ -37,7 +37,7 @@ typedef enum {
     PM3_UNSPECIFIED,
     PM3_LUA,
     PM3_CMD,
-#ifdef HAVE_PYTHON    
+#ifdef HAVE_PYTHON
     PM3_PY
 #endif
 } pm3_scriptfile_t;
@@ -77,12 +77,12 @@ static void set_python_path(char *path) {
     if (syspath == 0) {
         PrintAndLogEx(WARNING, "Python failed to getobject");
     }
-    
+
     PyObject *pName = PyUnicode_FromString(path);
     if (PyList_Insert(syspath, 0, pName)) {
         PrintAndLogEx(WARNING, "Error inserting extra path into sys.path list");
     }
-    
+
     if (PySys_SetObject("path", syspath)) {
         PrintAndLogEx(WARNING,"Error setting sys.path object");
     }
@@ -135,7 +135,7 @@ static int CmdScriptList(const char *Cmd) {
     int ret = searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
     if (ret != PM3_SUCCESS)
         return ret;
-    
+
     ret = searchAndList(CMD_SCRIPTS_SUBDIR, ".cmd");
     if (ret != PM3_SUCCESS)
         return ret;
@@ -163,6 +163,7 @@ static int CmdScriptRun(const char *Cmd) {
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
     if (strlen(preferredName) == 0) {
         PrintAndLogEx(FAILED, "no script name provided");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`script list`") " to see available scripts");
         return PM3_EINVARG;
     }
     char *extension_chk;
