@@ -612,7 +612,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     memcpy(data, key, 6);
     memcpy(data + 10, bldata, 16);
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_WRITEBL, blockNo, keyType, 0, data, sizeof(data));
+    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockNo, keyType, 0, data, sizeof(data));
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -725,7 +725,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     PrintAndLogEx(NORMAL, "--sector no:%d key type:%c key:%s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
+    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
     PrintAndLogEx(NORMAL, "");
 
     PacketResponseNG resp;
@@ -1198,7 +1198,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
             memcpy(data + 10, bldata, 16);
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, keyType, 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, keyType, 0, data, sizeof(data));
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
