@@ -99,11 +99,12 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     }
     if (subdir != NULL) {
         pathlen += strlen(subdir);
-        path = realloc(path, pathlen * sizeof(char));
-        if (path == NULL) {
+        char *tmp = realloc(path, pathlen * sizeof(char));
+        if (tmp == NULL) {
             free(path);
             return PM3_EMALLOC;
         }
+        path = tmp;
         strcat(path, subdir);
 
 #ifdef _WIN32
