@@ -955,7 +955,7 @@ static int l_T55xx_readblock(lua_State *L) {
     if (n != 4)
         return returnToLuaWithError(L, "Wrong number of arguments, got %d bytes, expected 4", n);
 
-    uint32_t block, usepage1, override, password;
+    uint32_t block, usepage1, override, password = 0;
     bool usepwd;
     size_t size;
 
@@ -1179,15 +1179,17 @@ static int l_cwd(lua_State *L) {
 
     uint16_t path_len = FILENAME_MAX; // should be a good starting point
     bool error = false;
-    char *cwd = NULL;
-    cwd = (char *)calloc(path_len, sizeof(uint8_t));
+    char *cwd = (char *)calloc(path_len, sizeof(uint8_t));
 
     while (!error && (GetCurrentDir(cwd, path_len) == NULL)) {
         if (errno == ERANGE) {  // Need bigger buffer
             path_len += 10;      // if buffer was too small add 10 characters and try again
             cwd = realloc(cwd, path_len);
+            if (cwd == NULL) {
+                free(cwd);
+                return returnToLuaWithError(L, "Failed to allocate memory");
+            }
         } else {
-            error = true;
             free(cwd);
             return returnToLuaWithError(L, "Failed to get current working directory");
         }
