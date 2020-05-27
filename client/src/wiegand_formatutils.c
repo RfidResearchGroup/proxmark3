@@ -80,7 +80,7 @@ static void message_datacopy(wiegand_message_t *src, wiegand_message_t *dest) {
 uint64_t get_linear_field(wiegand_message_t *data, uint8_t firstBit, uint8_t length) {
     uint64_t result = 0;
     for (uint8_t i = 0; i < length; i++) {
-        result = (result << 1) | get_bit_by_position(data, firstBit + i);
+        result = (result << 1) | (get_bit_by_position(data, firstBit + i));
     }
     return result;
 }
