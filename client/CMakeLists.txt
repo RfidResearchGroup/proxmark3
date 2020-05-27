@@ -30,6 +30,7 @@ set(QT_PACKAGELIST
 set(Qt5_FOUND ON)
 foreach(_qt_package IN LISTS QT_PACKAGELIST)
     find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
+    set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
     if(NOT ${_qt_package}_FOUND)
         set(Qt5_FOUND OFF)
     endif(NOT ${_qt_package}_FOUND)
@@ -37,6 +38,8 @@ endforeach()
 
 find_package(PkgConfig)
 pkg_search_module(BLUEZ QUIET bluez)
+pkg_search_module(PYTHON3 QUIET python3)
+pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -188,7 +191,8 @@ add_custom_command(
 
 set(ADDITIONAL_SRC "")
 set(ADDITIONAL_LNK "")
-
+set(ADDITIONAL_DIRS "")
+set(ADDITIONAL_LNKDIRS "")
 set(X86_CPUS x86 x86_64 i686)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
@@ -210,7 +214,7 @@ if (Qt5_FOUND)
             ${TARGET_SOURCES})
 
     add_definitions("-DHAVE_GUI")
-    set(ADDITIONAL_LNK Qt5::Core Qt5::Widgets Qt5::Gui ${ADDITIONAL_LNK})
+    set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
 else (Qt5_FOUND)
     message("Qt5 library not found, not building gui")
     set(TARGET_SOURCES
@@ -221,8 +225,22 @@ endif (Qt5_FOUND)
 if (BLUEZ_FOUND)
     message("Bluez library found, building native Bluetooth support :)")
     add_definitions("-DHAVE_BLUEZ")
-    set(ADDITIONAL_LNK bluetooth ${ADDITIONAL_LNK})
+    set(ADDITIONAL_LNK ${BLUEZ_LIBRARIES} ${ADDITIONAL_LNK})
 endif (BLUEZ_FOUND)
+
+if (PYTHON3EMBED_FOUND)
+    message("Python3-embed library found, building with python3 support :)")
+    add_definitions("-DHAVE_PYTHON")
+    set(ADDITIONAL_DIRS ${PYTHON3EMBED_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${PYTHON3EMBED_LIBRARIES} ${ADDITIONAL_LNK})
+    set(ADDITIONAL_LNKDIRS ${PYTHON3EMBED_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
+elseif (PYTHON3_FOUND)
+    message("Python3 library found, building with python3 support :)")
+    add_definitions("-DHAVE_PYTHON")
+    set(ADDITIONAL_DIRS ${PYTHON3_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${PYTHON3_LIBRARIES} ${ADDITIONAL_LNK})
+    set(ADDITIONAL_LNKDIRS ${PYTHON3_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})   
+endif (PYTHON3EMBED_FOUND)
 
 add_executable(
         proxmark3
@@ -248,6 +266,7 @@ target_include_directories(proxmark3 PRIVATE
         ../common_fpga
         ../include
         src
+        ${ADDITIONAL_DIRS}
 )
 
 if (APPLE)
@@ -285,8 +304,17 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})
 
+# OSX have a hard time compiling python3 dependency with older cmake.
+if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+    if (NOT CMAKE_VERSION VERSION_LESS 3.13)
+           target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
+    elseif (APPLE)
+           message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
+    endif()
+endif()
+    
 install(TARGETS proxmark3 DESTINATION "bin")
-install(DIRECTORY cmdscripts lualibs luascripts resources dictionaries DESTINATION "share/proxmark3")
+install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
 
 add_custom_command(OUTPUT lualibs/pm3_cmd.lua
         COMMAND "awk -f pm3_cmd_h2lua.awk ../include/pm3_cmd.h >  lualibs/pm3_cmd.lua"

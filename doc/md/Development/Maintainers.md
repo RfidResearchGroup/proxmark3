@@ -61,6 +61,7 @@ It's also possible to skip parts even if libraries are present in the compilatio
 
 * `make client SKIPQT=1` to skip GUI even if Qt is present
 * `make client SKIPBT=1` to skip native Bluetooth support even if libbluetooth is present
+* `make client SKIPPYTHON=1` to skip embedded Python 3 interpreter even if libpython3 is present
 * `make client SKIPLUASYSTEM=1` to skip system Lua lib even if liblua5.2 is present, use embedded Lua lib instead
 * `make client SKIPJANSSONSYSTEM=1` to skip system Jansson lib even if libjansson is present, use embedded Jansson lib instead
 * `make client SKIPWHEREAMISYSTEM=1` to skip system Whereami lib even if libwhereami is present, use embedded whereami lib instead

@@ -10,7 +10,7 @@ ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 include ../Makefile.defs
 
 INSTALLBIN = proxmark3
-INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
+INSTALLSHARE = cmdscripts lualibs luascripts pyscripts resources dictionaries
 
 VPATH =  ../common src
 vpath %.dic dictionaries
@@ -200,13 +200,6 @@ endif
 LDLIBS += $(BTLIB)
 INCLUDES += $(BTLIBINC)
 
-## Readline
-ifeq ($(platform),Darwin)
-    LDLIBS += -L/usr/local/opt/readline/lib
-    INCLUDES += -I/usr/local/opt/readline/include
-endif
-LDLIBS += -lreadline
-
 ## Math
 LDLIBS += -lm
 
@@ -215,6 +208,28 @@ LDLIBS += -lm
 ifneq ($(SKIPPTHREAD),1)
     LDLIBS += -lpthread
 endif
+
+## Python3 (optional)
+ifneq ($(SKIPPYTHON),1)
+    PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
+    PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
+    ifneq ($(PYTHONLDLIBS),)
+        PYTHONLIB = $(PYTHONLDLIBS)
+        PYTHONLIBINC = $(PYTHONINCLUDES)
+        PYTHON_FOUND = 1
+    else
+        # since python3.8, applications willing to embed python must use -embed:
+        PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3-embed 2>/dev/null)
+        PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
+        ifneq ($(PYTHONLDLIBS),)
+            PYTHONLIB = $(PYTHONLDLIBS)
+            PYTHONLIBINC = $(PYTHONINCLUDES)
+            PYTHON_FOUND = 1
+        endif
+    endif
+endif
+LDLIBS += $(PYTHONLIB)
+INCLUDES += $(PYTHONLIBINC)
 
 ## QT5 (or QT4 fallback) (optional)
 ifneq ($(SKIPQT),1)
@@ -256,6 +271,13 @@ endif
 LDLIBS += $(QTLDLIBS)
 CXXINCLUDES += $(QTINCLUDES)
 
+## Readline
+ifeq ($(platform),Darwin)
+    LDLIBS += -L/usr/local/opt/readline/lib
+    INCLUDES += -I/usr/local/opt/readline/include
+endif
+LDLIBS += -lreadline
+
 #######################################################################################################
 CFLAGS ?= $(DEFCFLAGS)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
@@ -277,6 +299,11 @@ endif
 ifeq ($(BT_FOUND),1)
     PM3CFLAGS += -DHAVE_BLUEZ
 endif
+
+ifeq ($(PYTHON_FOUND),1)
+    PM3CFLAGS += -DHAVE_PYTHON
+endif
+
 
 CXXFLAGS ?= -Wall -Werror -O3
 PM3CXXFLAGS = $(CXXFLAGS)
@@ -342,6 +369,16 @@ else
         $(info Lua library:       system library found)
     else
         $(info Lua library:       system library not found, using local library)
+    endif
+endif
+
+ifeq ($(SKIPPYTHON),1)
+        $(info Python3 library:   skipped)
+else
+    ifeq ($(PYTHON_FOUND),1)
+        $(info Python3 library:   Python3 v$(shell pkg-config --modversion python3) found, enabled)
+    else
+        $(info Python3 library:   Python3 not found, disabled)
     endif
 endif
 

@@ -28,6 +28,7 @@ addons:
       - gcc-arm-none-eabi
       - libnewlib-dev
       - libbluetooth-dev
+      - python3-dev
   homebrew:
     packages:
       - readline
