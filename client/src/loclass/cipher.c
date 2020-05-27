@@ -124,8 +124,8 @@ static uint8_t _select(bool x, bool y, uint8_t r) {
 #define _r7 (r & 0x01)
 
 #define _z0  ( (_r0 & _r2) ^ ( _r1 & (!_r3)) ^ (_r2 | _r4) )
-#define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ x ^ y )
-#define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ x )
+#define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ (x) ^ (y) )
+#define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ (x) )
 
     /*
         uint8_t r0 = r >> 7 & 0x1;
@@ -177,10 +177,10 @@ static State successor(uint8_t *k, State s, bool y) {
     State successor = {0, 0, 0, 0};
 
     successor.t = s.t >> 1;
-    successor.t |= (T(s) ^ r0 ^ r4) << 15;
+    successor.t |= ((T(s)) ^ r0 ^ r4) << 15;
 
     successor.b = s.b >> 1;
-    successor.b |= (B(s) ^ r7) << 7;
+    successor.b |= ((B(s)) ^ r7) << 7;
 
     bool Tt = T(s);
 
