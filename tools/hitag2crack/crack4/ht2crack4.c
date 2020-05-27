@@ -295,8 +295,6 @@ static void init_guess_table(char *filename, char *uidstr) {
     }
 
     fclose(fp);
-    fp = NULL;
-
     fprintf(stderr, "Loaded %u nRaR pairs\n", num_nRaR);
 
     // set key and copy in enc_nR and ks values
@@ -400,7 +398,7 @@ static double bit_score(uint64_t s, uint64_t size, uint64_t b) {
  * multiplied by the number of relevant bits in the scored state
  * to give weight to more complete states. */
 static double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kssize) {
-    double sc, sc2;
+    double sc;
 
     if ((size == 1) || (kssize == 1)) {
         sc = bit_score(s, size, ks & 0x1);
@@ -416,7 +414,7 @@ static double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kss
             return 0.0;
         } else {
 
-            sc2 = score(s >> 1, size - 1, ks >> 1, kssize - 1);
+            double sc2 = score(s >> 1, size - 1, ks >> 1, kssize - 1);
 
             // if score returns a probability of 0 then this can't be a winner
             if (sc2 == 0.0) {
