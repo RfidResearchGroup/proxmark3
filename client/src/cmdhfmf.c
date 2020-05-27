@@ -4366,6 +4366,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
+        free(dump);
         return select_status;
     }
 
