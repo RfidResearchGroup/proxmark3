@@ -204,7 +204,6 @@ static void write_ks_s(uint32_t ks1, uint32_t ks2, uint64_t shiftreg) {
 
     // store buffer
     store(buf);
-
 }
 
 
@@ -438,7 +437,10 @@ static void *sorttable(void *dd) {
                 printf("cannot create outfile %s\n", outfile);
                 exit(1);
             }
-            write(fdout, table, numentries * DATASIZE);
+            if (write(fdout, table, numentries * DATASIZE)) {
+                printf("writetable cannot write all of the data\n");
+                exit(1);
+            }
             close(fdout);
 
             // remove input file
