@@ -748,7 +748,7 @@ out:
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
+    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -910,7 +910,7 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, 16);
+    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, 16);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
