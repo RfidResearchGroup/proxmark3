@@ -436,30 +436,36 @@ static void set_my_user_directory(void) {
     // if not found, default to current directory
     if (my_user_directory == NULL) {
 
-        char *cwd_Buffer = NULL;
         uint16_t pathLen = FILENAME_MAX; // should be a good starting point
         bool error = false;
+        char *cwd_buffer = (char *)calloc(pathLen, sizeof(uint8_t));
 
-        cwd_Buffer = (char *)calloc(pathLen, sizeof(uint8_t));
-
-        while (!error && (GetCurrentDir(cwd_Buffer, pathLen) == NULL)) {
+        while (!error && (GetCurrentDir(cwd_buffer, pathLen) == NULL)) {
             if (errno == ERANGE) {  // Need bigger buffer
                 pathLen += 10;      // if buffer was too small add 10 characters and try again
-                cwd_Buffer = realloc(cwd_Buffer, pathLen);
+                char *tmp = realloc(cwd_buffer, pathLen);
+                if (tmp == NULL) {
+                    PrintAndLogEx(WARNING, "failed to allocate memory");
+                    free(cwd_buffer);
+                    return;
+                }
+                cwd_buffer = tmp;
             } else {
-                error = true;
-                free(cwd_Buffer);
-                cwd_Buffer = NULL;
+                free(cwd_buffer);
+                return;
             }
-            printf("Len... %d\n", pathLen);
+            PrintAndLogEx(NORMAL, "Len... %d", pathLen);
         }
 
         if (!error) {
 
-            for (int i = 0; i < strlen(cwd_Buffer); i++)
-                if (cwd_Buffer[i] == '\\') cwd_Buffer[i] = '/';
+            for (int i = 0; i < strlen(cwd_buffer); i++) {
+                if (cwd_buffer[i] == '\\') {
+                    cwd_buffer[i] = '/';
+                }
+            }
 
-            my_user_directory = cwd_Buffer;
+            my_user_directory = cwd_buffer;
         }
     }
 }
