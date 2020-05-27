@@ -681,7 +681,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         default: {
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, numberOfCSNs, 0, CSN, 8);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, numberOfCSNs, 0, CSN, 8);
             break;
         }
     }
