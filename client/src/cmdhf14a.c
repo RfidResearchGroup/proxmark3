@@ -1524,7 +1524,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (select_status == 2) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
         WaitForResponse(CMD_ACK, &resp);
 
         memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
