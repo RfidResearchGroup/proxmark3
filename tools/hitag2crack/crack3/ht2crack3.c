@@ -147,12 +147,6 @@ static int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint
     return 0;
 }
 
-
-
-
-
-
-
 // some notes on how I think this attack should work.
 // due to the way fc works, in a number of cases, it doesn't matter what
 // the most significant bits are doing for it to produce the same result.
@@ -177,7 +171,6 @@ static int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint
 // limit our guesses to a smaller set than a full brute force and
 // effectively work out candidates for the lower 34 bits of the key.
 
-
 static void *crack(void *d) {
     struct threaddata *data = (struct threaddata *)d;
     uint64_t uid;
@@ -187,21 +180,14 @@ static void *crack(void *d) {
     Hitag_State hstate;
     int i, j;
 
-    uint64_t klower;
-    uint64_t kmiddle;
-    uint64_t y;
+    uint64_t klower, kmiddle, klowery;
+    uint64_t y, b, z, bit;
     uint64_t ytmp;
-    uint64_t klowery;
     unsigned int count;
-    uint64_t bit;
-    uint64_t b;
-    uint64_t z;
-    uint64_t foundkey;
-    uint64_t revkey;
+    uint64_t foundkey, revkey;
     int ret;
     unsigned int found;
     unsigned int badguess;
-
     struct Tklower *Tk = NULL;
 
     if (!data) {
@@ -216,7 +202,7 @@ static void *crack(void *d) {
     // create space for tables
     Tk = (struct Tklower *)malloc(sizeof(struct Tklower) * 0x40000);
     if (!Tk) {
-        printf("cannot malloc Tk\n");
+        printf("Failed to allocate memory (Tk)\n");
         exit(1);
     }
 
@@ -301,6 +287,7 @@ static void *crack(void *d) {
         }
     }
 
+    free(Tk);
     return NULL;
 }
 int main(int argc, char *argv[]) {
@@ -383,7 +370,6 @@ int main(int argc, char *argv[]) {
 
     // close file
     fclose(fp);
-    fp = NULL;
 
     printf("Loaded %u NrAr pairs\n", numnrar);
 
