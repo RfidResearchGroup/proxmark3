@@ -177,10 +177,10 @@ static State successor(uint8_t *k, State s, bool y) {
     State successor = {0, 0, 0, 0};
 
     successor.t = s.t >> 1;
-    successor.t |= ((T(s)) ^ r0 ^ r4) << 15;
+    successor.t |= ((T(s)) ^ (r0) ^ (r4)) << 15;
 
     successor.b = s.b >> 1;
-    successor.b |= ((B(s)) ^ r7) << 7;
+    successor.b |= ((B(s)) ^ (r7)) << 7;
 
     bool Tt = T(s);
 
