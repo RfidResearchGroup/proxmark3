@@ -366,7 +366,7 @@ static int smart_responseEx(uint8_t *data, bool silent) {
 
         uint8_t getstatus[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
         clearCommandBuffer();
-        SendCommandOLD(CMD_SMART_RAW, SC_RAW, sizeof(getstatus), 0, getstatus, sizeof(getstatus));
+        SendCommandMIX(CMD_SMART_RAW, SC_RAW, sizeof(getstatus), 0, getstatus, sizeof(getstatus));
 
         datalen = smart_wait(data, silent);
 
@@ -893,7 +893,7 @@ static void smart_brute_prim(void) {
     for (int i = 0; i < ARRAYLEN(get_card_data); i += 5) {
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, 5, 0, get_card_data + i, 5);
+        SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, 5, 0, get_card_data + i, 5);
 
         int len = smart_responseEx(buf, true);
 
@@ -936,7 +936,7 @@ static int smart_brute_sfi(bool decodeTLV) {
             READ_RECORD[3] = (sfi << 3) | 4;
 
             clearCommandBuffer();
-            SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, sizeof(READ_RECORD), 0, READ_RECORD, sizeof(READ_RECORD));
+            SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, sizeof(READ_RECORD), 0, READ_RECORD, sizeof(READ_RECORD));
 
             len = smart_responseEx(buf, true);
 
@@ -944,7 +944,7 @@ static int smart_brute_sfi(bool decodeTLV) {
                 READ_RECORD[4] = buf[1];
 
                 clearCommandBuffer();
-                SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, sizeof(READ_RECORD), 0, READ_RECORD, sizeof(READ_RECORD));
+                SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, sizeof(READ_RECORD), 0, READ_RECORD, sizeof(READ_RECORD));
                 len = smart_responseEx(buf, true);
 
                 READ_RECORD[4] = 0;
@@ -979,7 +979,7 @@ static void smart_brute_options(bool decodeTLV) {
 
     // Get processing options command
     clearCommandBuffer();
-    SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS));
+    SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, sizeof(GET_PROCESSING_OPTIONS), 0, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS));
 
     int len = smart_responseEx(buf, true);
     if (len > 4) {
@@ -1190,7 +1190,7 @@ int ExchangeAPDUSC(bool silent, uint8_t *datain, int datainlen, bool activateCar
 
         clearCommandBuffer();
         // something fishy: we have only 5 bytes but we put datainlen in arg1?
-        SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, datainlen, 0, data, sizeof(data));
+        SendCommandMIX(CMD_SMART_RAW, SC_RAW_T0, datainlen, 0, data, sizeof(data));
 
         len = smart_responseEx(dataout, silent);
     }
