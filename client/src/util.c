@@ -111,7 +111,6 @@ void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const s
 
 void AddLogUint64(const char *fn, const char *data, const uint64_t value) {
     char buf[20] = {0};
-    memset(buf, 0x00, sizeof(buf));
     sprintf(buf, "%016" PRIx64 "", value);
     AddLogLine(fn, data, buf);
 }
