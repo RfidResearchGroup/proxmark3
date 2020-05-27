@@ -347,8 +347,7 @@ static int ul_select(iso14a_card_select_t *card) {
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    bool ans = false;
-    ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+    bool ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
 
     if (!ans || resp.oldarg[0] < 1) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
@@ -946,7 +945,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     }
 
     PrintAndLogEx(NORMAL, "");
-    if (is_valid == false) {
+    if (is_valid == false || i == ARRAYLEN(nxp_mfu_public_keys)) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
     }
@@ -982,7 +981,9 @@ static int ntag_print_counter(void) {
     uint8_t counter[3] = {0, 0, 0};
     uint16_t len;
     len = ulev1_readTearing(0x02, tear, sizeof(tear));
+    (void)len;
     len = ulev1_readCounter(0x02, counter, sizeof(counter));
+    (void)len;
     PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
     PrintAndLogEx(SUCCESS, "            - %02X tearing (" _GREEN_("%s")")", tear[0], (tear[0] == 0xBD) ? "ok" : "failure");
     return len;

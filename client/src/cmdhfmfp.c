@@ -168,7 +168,6 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
     };
 
     uint8_t i;
-    int res;
     bool is_valid = false;
 
     for (i = 0; i < ARRAYLEN(nxp_plus_public_keys); i++) {
@@ -177,7 +176,7 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
         uint8_t key[PUBLIC_PLUS_ECDA_KEYLEN];
         param_gethex_to_eol(nxp_plus_public_keys[i].value, 0, key, PUBLIC_PLUS_ECDA_KEYLEN, &dl);
 
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
+        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
         is_valid = (res == 0);
         if (is_valid)
             break;
@@ -186,7 +185,7 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
 
-    if (is_valid == false) {
+    if (is_valid == false || i == ARRAYLEN(nxp_plus_public_keys)) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
     }
