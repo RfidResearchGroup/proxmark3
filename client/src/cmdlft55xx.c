@@ -3618,7 +3618,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
+    SendCommandMIX(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
     return PM3_SUCCESS;
 }
 
