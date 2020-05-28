@@ -536,7 +536,7 @@ bool IsCommunicationThreadDead(void) {
     return ret;
 }
 
-bool OpenProxmark(char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
+bool OpenProxmark(pm3_device *current_device, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
     if (!wait_for_port) {
         PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);

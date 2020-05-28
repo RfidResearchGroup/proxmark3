@@ -66,7 +66,7 @@ static bool OpenPm3(void) {
         return true;
     }
     // Open with LocalSocket. Not a tcp connection!
-    bool ret = OpenProxmark("socket:"PM3_LOCAL_SOCKET_SERVER, false, 1000, false, 115200);
+    bool ret = OpenProxmark(session.current_device, "socket:"PM3_LOCAL_SOCKET_SERVER, false, 1000, false, 115200);
     return ret;
 }
 

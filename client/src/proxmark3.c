@@ -32,6 +32,7 @@
 #include "flash.h"
 #include "preferences.h"
 
+#ifndef LIBPM3
 #define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
 #define BANNERMSG2 "   https://github.com/rfidresearchgroup/proxmark3/"
 #define BANNERMSG3 " bleeding edge :coffee:"
@@ -109,6 +110,7 @@ static void showBanner(void) {
     fflush(stdout);
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 }
+#endif //LIBPM3
 
 static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
@@ -398,6 +400,7 @@ check_script:
     }
 }
 
+#ifndef LIBPM3
 static void dumpAllHelp(int markdown) {
     session.help_dump_mode = true;
     PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
@@ -408,6 +411,7 @@ static void dumpAllHelp(int markdown) {
     dumpCommandsRecursive(cmds, markdown);
     session.help_dump_mode = false;
 }
+#endif
 
 static char *my_executable_path = NULL;
 static char *my_executable_directory = NULL;
@@ -493,6 +497,7 @@ static void set_my_user_directory(void) {
     }
 }
 
+#ifndef LIBPM3
 static void show_help(bool showFullHelp, char *exec_name) {
 
     PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m]", exec_name);
@@ -577,7 +582,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), filepaths[i]);
     }
 
-    if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+    if (OpenProxmark(session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_(" found"));
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
@@ -628,6 +633,7 @@ finish2:
     PrintAndLogEx(NORMAL, "\nHave a nice day!");
     return ret;
 }
+#endif
 
 // Check if windows AnsiColor Support is enabled in the registery
 // [HKEY_CURRENT_USER\Console]
@@ -684,11 +690,69 @@ static bool DetectWindowsAnsiSupport(void) {
 }
 #endif
 
-int main(int argc, char *argv[]) {
+static void init(void) {
     srand(time(0));
 
     session.pm3_present = false;
     session.help_dump_mode = false;
+    session.supports_colors = false;
+    session.emoji_mode = ALTTEXT;
+    session.stdinOnTTY = false;
+    session.stdoutOnTTY = false;
+
+    // set global variables soon enough to get the log path
+    set_my_executable_path();
+    set_my_user_directory();
+
+}
+
+
+/* ======================================================= */
+/* user API */
+
+pm3_device* pm3_open(char *port) {
+    init();
+    OpenProxmark(session.current_device, port, false, 20, false, USART_BAUD_RATE);
+    if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
+        CloseProxmark();
+    }
+
+    if ((port != NULL) && (!session.pm3_present))
+        exit(EXIT_FAILURE);
+
+    if (!session.pm3_present)
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode");
+    // For now, there is no real device context:
+    return session.current_device;
+}
+
+void pm3_close(pm3_device* dev) {
+    // For now, there is no real device context:
+    (void) dev;
+    // Clean up the port
+    if (session.pm3_present) {
+        clearCommandBuffer();
+        SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
+        msleep(100); // Make sure command is sent before killing client
+        CloseProxmark();
+    }
+}
+
+int pm3_console(pm3_device* dev, char *Cmd) {
+    // For now, there is no real device context:
+    (void) dev;
+    return CommandReceived(Cmd);
+}
+
+pm3_device* pm3_get_current_dev(void) {
+    return session.current_device;
+}
+/* ======================================================= */
+
+#ifndef LIBPM3
+int main(int argc, char *argv[]) {
+    init();
     bool waitCOMPort = false;
     bool addLuaExec = false;
     bool stayInCommandLoop = false;
@@ -721,10 +785,6 @@ int main(int argc, char *argv[]) {
     bool debug_mode_forced = false;
     int flash_num_files = 0;
     char *flash_filenames[FLASH_MAX_FILES];
-
-    // set global variables soon enough to get the log path
-    set_my_executable_path();
-    set_my_user_directory();
 
     // color management:
     // 1. default = no color
@@ -978,7 +1038,7 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
-        OpenProxmark(port, waitCOMPort, 20, false, speed);
+        OpenProxmark(session.current_device, port, waitCOMPort, 20, false, speed);
     }
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
@@ -1046,3 +1106,4 @@ int main(int argc, char *argv[]) {
         preferences_save();
     exit(EXIT_SUCCESS);
 }
+#endif

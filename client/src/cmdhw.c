@@ -591,7 +591,7 @@ static int CmdConnect(const char *Cmd) {
     }
 
     // 10 second timeout
-    OpenProxmark(port, false, 10, false, baudrate);
+    OpenProxmark(session.current_device, port, false, 10, false, baudrate);
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");

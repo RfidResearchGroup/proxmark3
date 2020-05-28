@@ -74,7 +74,8 @@ void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
 bool IsCommunicationThreadDead(void);
-bool OpenProxmark(char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
+typedef struct pm3_device pm3_device;
+bool OpenProxmark(pm3_device *current_device, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
 int TestProxmark(void);
 void CloseProxmark(void);
 

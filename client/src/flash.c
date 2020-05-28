@@ -374,7 +374,7 @@ static int enter_bootloader(char *serial_port_name) {
         // Let time to OS to make the port disappear
         msleep(1000);
 
-        if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+        if (OpenProxmark(session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
             PrintAndLogEx(NORMAL, _GREEN_(" found"));
             return PM3_SUCCESS;
         } else {

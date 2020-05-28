@@ -14,7 +14,7 @@
 
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
-SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
+SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -380,18 +380,41 @@ else (SKIPREADLINE EQUAL 1)
 endif(SKIPREADLINE EQUAL 1)
 message("===================================================================")
 
-add_executable(proxmark3
+# Lua SWIG
+if (EXISTS ${PM3_ROOT}/client/src/pm3_luawrap.c)
+    set (TARGET_SOURCES
+            ${PM3_ROOT}/client/src/pm3_luawrap.c
+            ${TARGET_SOURCES})
+    add_definitions(-DHAVE_LUA_SWIG)
+    message("Lua SWIG wrapper found")
+endif (EXISTS ${PM3_ROOT}/client/src/pm3_luawrap.c)
+
+# Python SWIG
+if (NOT SKIPPYTHON EQUAL 1)
+    if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+        if (EXISTS ${PM3_ROOT}/client/src/pm3_pywrap.c)
+            set (TARGET_SOURCES
+                    ${PM3_ROOT}/client/src/pm3_pywrap.c
+                    ${TARGET_SOURCES})
+            add_definitions(-DHAVE_PYTHON_SWIG)
+            message("Python SWIG wrapper found")
+        endif (EXISTS ${PM3_ROOT}/client/src/pm3_pywrap.c)
+    endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+endif (NOT SKIPPYTHON EQUAL 1)
+
+add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/proxmark3.c
         ${TARGET_SOURCES}
         ${ADDITIONAL_SRC}
 )
+target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
 
-target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
+target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
 if (ANDROID)
     if (NOT SKIPREADLINE EQUAL 1)
-        add_dependencies(proxmark3 ncurses readline)
+        add_dependencies(pm3rrg_rdv4 ncurses readline)
     endif (NOT SKIPREADLINE EQUAL 1)
-    add_dependencies(proxmark3 bzip2)
+    add_dependencies(pm3rrg_rdv4 bzip2)
 endif (ANDROID)
 
 if (MINGW)
@@ -399,13 +422,13 @@ if (MINGW)
     # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
     # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
     # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
-    target_compile_definitions(proxmark3 PRIVATE _ISOC99_SOURCE)
+    target_compile_definitions(pm3rrg_rdv4 PRIVATE _ISOC99_SOURCE)
 
     set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
 endif (MINGW)
 
-target_include_directories(proxmark3 PRIVATE
+target_include_directories(pm3rrg_rdv4 PRIVATE
         ${PM3_ROOT}/common
         ${PM3_ROOT}/common_fpga
         ${PM3_ROOT}/include
@@ -429,7 +452,7 @@ find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 find_library(pm3rrg_rdv4_whereami REQUIRED)
 
-target_link_libraries(proxmark3 PRIVATE
+target_link_libraries(pm3rrg_rdv4 PRIVATE
         m
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
@@ -443,34 +466,16 @@ target_link_libraries(proxmark3 PRIVATE
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)
-    target_link_libraries(proxmark3 PRIVATE pthread)
+    target_link_libraries(pm3rrg_rdv4 PRIVATE pthread)
 endif (NOT SKIPPTHREAD EQUAL 1)
 
 if (NOT SKIPPYTHON EQUAL 1)
     # OSX have a hard time compiling python3 dependency with older cmake.
     if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
         if (NOT CMAKE_VERSION VERSION_LESS 3.13)
-               target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
+               target_link_directories(pm3rrg_rdv4 PRIVATE ${ADDITIONAL_LNKDIRS})
         elseif (APPLE)
                message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
         endif (NOT CMAKE_VERSION VERSION_LESS 3.13)
     endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
-
-install(TARGETS proxmark3 DESTINATION "bin")
-install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
-
-add_custom_command(OUTPUT lualibs/pm3_cmd.lua
-        COMMAND "awk -f pm3_cmd_h2lua.awk ../include/pm3_cmd.h >  lualibs/pm3_cmd.lua"
-        COMMENT "Creating lualibs/pm3_cmd.lua"
-        )
-
-add_custom_command(OUTPUT lualibs/mfc_default_keys.lua
-        COMMAND "awk -f default_keys_dic2lua.awk mfc_default_keys.dic >  lualibs/mfc_default_keys.lua"
-        COMMENT "Creating lualibs/mfc_default_keys.lua"
-        )
-
-#"make package" will trigger this
-SET(CPACK_GENERATOR "DEB")
-SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Iceman")
-INCLUDE(CPack)
