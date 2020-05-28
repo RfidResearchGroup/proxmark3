@@ -13,6 +13,7 @@
 
 #include <pthread.h>
 #include "common.h"
+#include "comms.h"
 #include "ansi.h"
 
 #ifdef __cplusplus
@@ -46,6 +47,7 @@ typedef struct {
     clientdebugLevel_t client_debug_level;
 //    uint8_t device_debug_level;
     char *history_path;
+    pm3_device *current_device;
 } session_arg_t;
 
 extern session_arg_t session;

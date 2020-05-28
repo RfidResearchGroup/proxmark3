@@ -21,7 +21,7 @@
 message(STATUS "CMake ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
-SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
+SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -457,6 +457,28 @@ else (SKIPWHEREAMISYSTEM EQUAL 1)
     endif (WHEREAMI_FOUND)
 endif (SKIPWHEREAMISYSTEM EQUAL 1)
 message(STATUS "===================================================================")
+
+# Lua SWIG
+if (EXISTS ${PM3_ROOT}/client/src/pm3_luawrap.c)
+    set (TARGET_SOURCES
+            ${PM3_ROOT}/client/src/pm3_luawrap.c
+            ${TARGET_SOURCES})
+    add_definitions(-DHAVE_LUA_SWIG)
+    message("Lua SWIG wrapper found")
+endif (EXISTS ${PM3_ROOT}/client/src/pm3_luawrap.c)
+
+# Python SWIG
+if (NOT SKIPPYTHON EQUAL 1)
+    if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+        if (EXISTS ${PM3_ROOT}/client/src/pm3_pywrap.c)
+            set (TARGET_SOURCES
+                    ${PM3_ROOT}/client/src/pm3_pywrap.c
+                    ${TARGET_SOURCES})
+            add_definitions(-DHAVE_PYTHON_SWIG)
+            message("Python SWIG wrapper found")
+        endif (EXISTS ${PM3_ROOT}/client/src/pm3_pywrap.c)
+    endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+endif (NOT SKIPPYTHON EQUAL 1)
 
 add_executable(proxmark3
         ${PM3_ROOT}/client/src/proxmark3.c
