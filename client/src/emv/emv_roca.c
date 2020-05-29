@@ -143,8 +143,6 @@ cleanup:
 }
 
 int roca_self_test(void) {
-    int ret = 0;
-
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "ROCA check vulnerability tests");
 
@@ -154,12 +152,12 @@ int roca_self_test(void) {
                      "\x27\x83\x30\xd3\xf4\x71\xa2\x53\x8f\xa6\x67\x80\x2e\xd2\xa3\xc4"\
                      "\x4a\x8b\x7d\xea\x82\x6e\x88\x8d\x0a\xa3\x41\xfd\x66\x4f\x7f\xa7";
 
-
+    int ret = 0;
     if (emv_rocacheck(keyp, 64, false)) {
-        PrintAndLogEx(SUCCESS, "Weak modulus   [ %s]", _GREEN_("PASS"));
+        PrintAndLogEx(SUCCESS, "Weak modulus   [ %s ]", _GREEN_("PASS"));
     } else {
         ret++;
-        PrintAndLogEx(FAILED, "Weak modulus   [ %s]", _RED_("Fail"));
+        PrintAndLogEx(FAILED, "Weak modulus   [ %s ]", _RED_("Fail"));
     }
 
     // negative
@@ -170,10 +168,9 @@ int roca_self_test(void) {
 
     if (emv_rocacheck(keyn, 64, false)) {
         ret++;
-        PrintAndLogEx(FAILED, "Strong modulus [ %s]", _RED_("Fail"));
+        PrintAndLogEx(FAILED, "Strong modulus [ %s ]", _RED_("Fail"));
     } else {
-        PrintAndLogEx(SUCCESS, "Strong modulus [ %s]", _GREEN_("PASS"));
+        PrintAndLogEx(SUCCESS, "Strong modulus [ %s ]", _GREEN_("PASS"));
     }
-
     return ret;
 }
