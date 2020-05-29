@@ -1368,6 +1368,8 @@ static int CmdEMVScan(const char *Cmd) {
     size_t AIDlen = 0;
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
+    uint8_t ODAI_list[4096];
+	size_t ODAI_listlen = 0;
     uint16_t sw = 0;
     int res;
     json_t *root;
@@ -1425,7 +1427,7 @@ static int CmdEMVScan(const char *Cmd) {
 
     if (!IfPm3Smartcard()) {
         if (channel == ECC_CONTACT) {
-            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support. Exiting.");
+            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support, exiting");
             return PM3_EDEVNOTSUPP;
         }
     }
@@ -1435,6 +1437,7 @@ static int CmdEMVScan(const char *Cmd) {
     // current path + file name
     if (!strstr(crelfname, ".json"))
         strcat(crelfname, ".json");
+
     char fname[strlen(get_my_executable_directory()) + strlen(crelfname) + 1];
     strcpy(fname, get_my_executable_directory());
     strcat(fname, crelfname);
@@ -1447,7 +1450,7 @@ static int CmdEMVScan(const char *Cmd) {
         }
 
         if (!json_is_object(root)) {
-            PrintAndLogEx(ERR, "Invalid json format. root must be an object.");
+            PrintAndLogEx(ERR, "Invalid json format. root must be an object");
             return PM3_EFILE;
         }
     } else {
@@ -1461,7 +1464,7 @@ static int CmdEMVScan(const char *Cmd) {
 
     if (channel == ECC_CONTACTLESS) {
         // iso 14443 select
-        PrintAndLogEx(NORMAL, "--> GET UID, ATS.");
+        PrintAndLogEx(INFO, "GET UID, ATS");
 
         iso14a_card_select_t card;
         if (Hf14443_4aGetCardData(&card)) {
@@ -1474,7 +1477,7 @@ static int CmdEMVScan(const char *Cmd) {
         JsonSaveHex(root, "$.Card.Contactless.SAK", card.sak, 0);
         JsonSaveBufAsHex(root, "$.Card.Contactless.ATS", (uint8_t *)card.ats, card.ats_len);
     } else {
-        PrintAndLogEx(NORMAL, "--> GET ATR.");
+        PrintAndLogEx(INFO, "GET ATR");
 
         smart_card_atr_t card;
         smart_select(true, &card);
@@ -1492,7 +1495,7 @@ static int CmdEMVScan(const char *Cmd) {
     struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
     // EMV PPSE
-    PrintAndLogEx(NORMAL, "--> PPSE.");
+    PrintAndLogEx(INFO, "PPSE");
     res = EMVSelectPSE(channel, true, true, 2, buf, sizeof(buf), &len, &sw);
 
     if (!res && sw == 0x9000) {
@@ -1518,9 +1521,9 @@ static int CmdEMVScan(const char *Cmd) {
     } else {
         // EMV SEARCH with AID list
         SetAPDULogging(false);
-        PrintAndLogEx(NORMAL, "--> AID search.");
+        PrintAndLogEx(INFO, "AID search.");
         if (EMVSearch(channel, false, true, decodeTLV, tlvSelect)) {
-            PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
+            PrintAndLogEx(ERR, "Can't found any of EMV AID, exiting...");
             tlvdb_free(tlvSelect);
             DropFieldEx(channel);
             return PM3_ERFTRANS;
@@ -1537,7 +1540,7 @@ static int CmdEMVScan(const char *Cmd) {
     tlvdb_free(tlvSelect);
 
     if (!AIDlen) {
-        PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
+        PrintAndLogEx(INFO, "Can't select AID. EMV AID not found, exiting...");
         DropFieldEx(channel);
         return PM3_ERFTRANS;
     }
@@ -1550,12 +1553,12 @@ static int CmdEMVScan(const char *Cmd) {
 
     // EMV SELECT applet
 
-    PrintAndLogEx(NORMAL, "\n-->Selecting AID:%s.", sprint_hex_inrow(AID, AIDlen));
+    PrintAndLogEx(INFO, "Selecting AID: " _GREEN_("%s"), sprint_hex_inrow(AID, AIDlen));
     SetAPDULogging(showAPDU);
     res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
 
     if (res) {
-        PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
+        PrintAndLogEx(ERR, "Can't select AID (%d), exiting...", res);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         return PM3_ERFTRANS;
@@ -1577,13 +1580,13 @@ static int CmdEMVScan(const char *Cmd) {
     tlvdb_free(fci);
 
     // create transaction parameters
-    PrintAndLogEx(NORMAL, "-->Init transaction parameters.");
+    PrintAndLogEx(INFO, "Init transaction parameters");
     InitTransactionParameters(tlvRoot, paramLoadJSON, TrType, GenACGPO);
 
-    PrintAndLogEx(NORMAL, "-->Calc PDOL.");
+    PrintAndLogEx(INFO, "Calc PDOL");
     struct tlv *pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
     if (!pdol_data_tlv) {
-        PrintAndLogEx(ERR, "Can't create PDOL TLV.");
+        PrintAndLogEx(ERR, "Can't create PDOL TLV");
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         return PM3_ESOFT;
@@ -1592,7 +1595,7 @@ static int CmdEMVScan(const char *Cmd) {
     size_t pdol_data_tlv_data_len;
     unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
     if (!pdol_data_tlv_data) {
-        PrintAndLogEx(ERR, "Can't create PDOL data.");
+        PrintAndLogEx(ERR, "Can't create PDOL data");
         tlvdb_free(tlvRoot);
         free(pdol_data_tlv);
         DropFieldEx(channel);
@@ -1600,14 +1603,14 @@ static int CmdEMVScan(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
-    PrintAndLogEx(INFO, "-->GPO.");
+    PrintAndLogEx(INFO, "GPO");
     res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 
     free(pdol_data_tlv_data);
     free(pdol_data_tlv);
 
     if (res) {
-        PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
+        PrintAndLogEx(ERR, "GPO error(%d): %4x, exiting...", res, sw);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         return PM3_ERFTRANS;
@@ -1625,7 +1628,7 @@ static int CmdEMVScan(const char *Cmd) {
 
     tlvdb_free(gpofci);
 
-    PrintAndLogEx(INFO, "-->Read records from AFL.");
+    PrintAndLogEx(INFO, "Read records from AFL");
     const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
 
     while (AFL && AFL->len) {
@@ -1650,21 +1653,42 @@ static int CmdEMVScan(const char *Cmd) {
             uint8_t SFIstart = AFL->value[i * 4 + 1];
             uint8_t SFIend = AFL->value[i * 4 + 2];
             uint8_t SFIoffline = AFL->value[i * 4 + 3];
+            bool first_time = SFIoffline;
 
-            PrintAndLogEx(INFO, "--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+            PrintAndLogEx(INFO, "   SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
             if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
                 PrintAndLogEx(ERR, "SFI ERROR! Skipped...");
                 continue;
             }
 
             for (int n = SFIstart; n <= SFIend; n++) {
-                PrintAndLogEx(INFO, "---->SFI[%02x] %d", SFI, n);
+                PrintAndLogEx(INFO, "     SFI[%02x] %d", SFI, n);
 
                 res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
                 if (res) {
                     PrintAndLogEx(ERR, "SFI[%02x]. APDU error %4x", SFI, sw);
                     continue;
                 }
+
+                // Build Input list for Offline Data Authentication
+				// EMV 4.3 book3 10.3, page 96
+				if (first_time && SFIoffline) {  
+					if (SFI < 11) {
+						const unsigned char *abuf = buf;
+						size_t elmlen = len;
+						struct tlv e;
+						if (tlv_parse_tl(&abuf, &elmlen, &e)) {
+							memcpy(ODAI_list + ODAI_listlen, &buf[len - elmlen], elmlen);
+							ODAI_listlen += elmlen;
+						} else {
+							PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error", SFI);
+						}
+					} else {
+						memcpy(ODAI_list + ODAI_listlen, buf, len);
+						ODAI_listlen += len;
+					}
+					first_time = false;
+				}
 
                 if (decodeTLV) {
                     TLVPrintFromBuffer(buf, len);
@@ -1683,16 +1707,23 @@ static int CmdEMVScan(const char *Cmd) {
                     JsonSaveTLVTree(root, jsonelm, "$.Data", rsfi);
                 else
                     JsonSaveTLVTreeElm(jsonelm, "$.Data", rsfi, true, true, false);
-                tlvdb_free(rsfi);
+
+                tlvdb_free(rsfi);                               
             }
         }
-
         break;
     }
 
+    // copy Input list for Offline Data Authentication
+	if (ODAI_listlen) {
+		struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
+		tlvdb_add(tlvRoot, oda);
+		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%d bytes]", ODAI_listlen);
+	}
+
     // getting certificates
     if (tlvdb_get(tlvRoot, 0x90, NULL)) {
-        PrintAndLogEx(INFO, "-->Recovering certificates.");
+        PrintAndLogEx(INFO, "Recovering certificates");
         PKISetStrictExecution(false);
         RecoveryCertificates(tlvRoot, root);
         PKISetStrictExecution(true);
@@ -1712,7 +1743,6 @@ static int CmdEMVScan(const char *Cmd) {
 
     // free json object
     json_decref(root);
-
     return PM3_SUCCESS;
 }
 
@@ -1921,13 +1951,13 @@ static int CmdEMVRoca(const char *Cmd) {
 						size_t elmlen = len;
 						struct tlv e;
 						if (tlv_parse_tl(&abuf, &elmlen, &e)) {
-							memcpy(&ODAI_list[ODAI_listlen], &buf[len - elmlen], elmlen);
+							memcpy(ODAI_list + ODAI_listlen, &buf[len - elmlen], elmlen);
 							ODAI_listlen += elmlen;
 						} else {
 							PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error", SFI);
 						}
 					} else {
-						memcpy(&ODAI_list[ODAI_listlen], buf, len);
+						memcpy(ODAI_list + ODAI_listlen, buf, len);
 						ODAI_listlen += len;
 					}
 					SFIoffline--;
