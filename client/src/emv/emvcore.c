@@ -675,34 +675,28 @@ int trSDA(struct tlvdb *tlv) {
 
     struct emv_pk *pk = get_ca_pk(tlv);
     if (!pk) {
-        PrintAndLogEx(ERR, "Error: Key not found. Exit.");
+        PrintAndLogEx(ERR, "Error: Key not found, exiting");
         return 2;
     }
 
     struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
     if (!issuer_pk) {
         emv_pk_free(pk);
-        PrintAndLogEx(ERR, "Error: Issuer certificate not found. Exit.");
+        PrintAndLogEx(ERR, "Error: Issuer certificate not found, exiting");
         return 2;
     }
-
-    PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx",
-                  issuer_pk->rid[0],
-                  issuer_pk->rid[1],
-                  issuer_pk->rid[2],
-                  issuer_pk->rid[3],
-                  issuer_pk->rid[4],
-                  issuer_pk->index,
-                  issuer_pk->serial[0],
-                  issuer_pk->serial[1],
-                  issuer_pk->serial[2]
-                 );
+            
+    PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
+      sprint_hex(issuer_pk->rid, 5),
+      issuer_pk->index,
+      sprint_hex(issuer_pk->serial, 3)
+     );
 
     const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
     if (!sda_tlv || sda_tlv->len < 1) {
         emv_pk_free(issuer_pk);
         emv_pk_free(pk);
-        PrintAndLogEx(WARNING, "Can't find input list for Offline Data Authentication. Exit.");
+        PrintAndLogEx(WARNING, "Can't find input list for Offline Data Authentication, exiting");
         return 3;
     }
 
@@ -733,52 +727,42 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
 
     struct emv_pk *pk = get_ca_pk(tlv);
     if (!pk) {
-        PrintAndLogEx(ERR, "Error: Key not found. Exit.");
+        PrintAndLogEx(ERR, "Error: Key not found, exiting");
         return 2;
     }
 
     const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
     /* if (!sda_tlv || sda_tlv->len < 1) { it may be 0!!!!
             emv_pk_free(pk);
-            PrintAndLogEx(ERR, "Error: Can't find input list for Offline Data Authentication. Exit.");
+            PrintAndLogEx(ERR, "Error: Can't find input list for Offline Data Authentication, exiting");
             return 3;
         }
     */
     struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
     if (!issuer_pk) {
         emv_pk_free(pk);
-        PrintAndLogEx(ERR, "Error: Issuer certificate not found. Exit.");
+        PrintAndLogEx(ERR, "Error: Issuer certificate not found, exiting");
         return 2;
     }
-    PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
-                  issuer_pk->rid[0],
-                  issuer_pk->rid[1],
-                  issuer_pk->rid[2],
-                  issuer_pk->rid[3],
-                  issuer_pk->rid[4],
-                  issuer_pk->index,
-                  issuer_pk->serial[0],
-                  issuer_pk->serial[1],
-                  issuer_pk->serial[2]
-                 );
+            
+    PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
+      sprint_hex(issuer_pk->rid, 5),
+      issuer_pk->index,
+      sprint_hex(issuer_pk->serial, 3)
+     );
 
     struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
     if (!icc_pk) {
         emv_pk_free(pk);
         emv_pk_free(issuer_pk);
-        PrintAndLogEx(ERR, "Error: ICC certificate not found. Exit.");
+        PrintAndLogEx(ERR, "Error: ICC certificate not found, exiting");
         return 2;
     }
-    PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
-                  icc_pk->rid[0],
-                  icc_pk->rid[1],
-                  icc_pk->rid[2],
-                  icc_pk->rid[3],
-                  icc_pk->rid[4],
+
+    PrintAndLogEx(SUCCESS, "ICC Public key recovered. RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
+                  sprint_hex(icc_pk->rid, 5),
                   icc_pk->index,
-                  icc_pk->serial[0],
-                  icc_pk->serial[1],
-                  icc_pk->serial[2]
+                  sprint_hex(icc_pk->serial, 3)
                  );
 
     if (tlvdb_get(tlv, 0x9f2d, NULL)) {
@@ -786,20 +770,14 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         if (!icc_pe_pk) {
             PrintAndLogEx(WARNING, "WARNING: ICC PE PK recover error. ");
         } else {
-            PrintAndLogEx(SUCCESS, "ICC PE PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
-                          icc_pe_pk->rid[0],
-                          icc_pe_pk->rid[1],
-                          icc_pe_pk->rid[2],
-                          icc_pe_pk->rid[3],
-                          icc_pe_pk->rid[4],
+            PrintAndLogEx(SUCCESS, "ICC PE Public key recovered. RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
+                          sprint_hex(icc_pe_pk->rid, 5),
                           icc_pe_pk->index,
-                          icc_pe_pk->serial[0],
-                          icc_pe_pk->serial[1],
-                          icc_pe_pk->serial[2]
+                          sprint_hex(icc_pe_pk->serial,3)
                          );
         }
     } else {
-        PrintAndLogEx(INFO, "ICC PE PK (PIN Encipherment Public Key Certificate) not found.\n");
+        PrintAndLogEx(INFO, "ICC PE Public Key (PIN Encipherment Public Key Certificate) not found.\n");
     }
 
     // 9F4B: Signed Dynamic Application Data
@@ -807,7 +785,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
     // DDA with internal authenticate OR fDDA with filled 0x9F4B tag (GPO result)
     // EMV kernel3 v2.4, contactless book C-3, C.1., page 147
     if (sdad_tlv) {
-        PrintAndLogEx(NORMAL, "\n* * Got Signed Dynamic Application Data (9F4B) form GPO. Maybe fDDA...");
+        PrintAndLogEx(NORMAL, "* * Got Signed Dynamic Application Data (9F4B) form GPO. Maybe fDDA...");
 
         const struct tlvdb *atc_db = emv_pki_recover_atc_ex(icc_pk, tlv, true);
         if (!atc_db) {
@@ -831,7 +809,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
                 PrintAndLogEx(WARNING, "Error: fDDA verified, but ATC in the certificate and ATC in the record not the same.");
             }
         } else {
-            PrintAndLogEx(NORMAL, "\nERROR: fDDA (fast DDA) verify error");
+            PrintAndLogEx(WARNING, "ERROR: fDDA (fast DDA) verify error");
             emv_pk_free(pk);
             emv_pk_free(issuer_pk);
             emv_pk_free(icc_pk);
@@ -872,7 +850,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         PrintAndLogEx(NORMAL, "\n* Internal Authenticate");
         int res = EMVInternalAuthenticate(channel, true, (uint8_t *)ddol_data_tlv->value, ddol_data_tlv->len, buf, sizeof(buf), &len, &sw, NULL);
         if (res) {
-            PrintAndLogEx(ERR, "Internal Authenticate error(%d): %4x. Exit...", res, sw);
+            PrintAndLogEx(ERR, "Internal Authenticate error(%d): %4x, exiting..", res, sw);
             free(ddol_data_tlv);
             emv_pk_free(pk);
             emv_pk_free(issuer_pk);
@@ -956,58 +934,48 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
 
     struct emv_pk *pk = get_ca_pk(tlv);
     if (!pk) {
-        PrintAndLogEx(ERR, "Error: Key not found. Exit.");
+        PrintAndLogEx(ERR, "Error: Key not found, exiting");
         return 2;
     }
 
     const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
     if (!sda_tlv || sda_tlv->len < 1) {
-        PrintAndLogEx(ERR, "Error: Can't find input list for Offline Data Authentication. Exit.");
+        PrintAndLogEx(ERR, "Error: Can't find input list for Offline Data Authentication, exiting");
         emv_pk_free(pk);
         return 3;
     }
 
     struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlv);
     if (!issuer_pk) {
-        PrintAndLogEx(ERR, "Error: Issuer certificate not found. Exit.");
+        PrintAndLogEx(ERR, "Error: Issuer certificate not found, exiting");
         emv_pk_free(pk);
         return 2;
     }
-    PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
-                  issuer_pk->rid[0],
-                  issuer_pk->rid[1],
-                  issuer_pk->rid[2],
-                  issuer_pk->rid[3],
-                  issuer_pk->rid[4],
-                  issuer_pk->index,
-                  issuer_pk->serial[0],
-                  issuer_pk->serial[1],
-                  issuer_pk->serial[2]
-                 );
+                
+    PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
+      sprint_hex(issuer_pk->rid, 5),
+      issuer_pk->index,
+      sprint_hex(issuer_pk->serial, 3)
+     );
 
     struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
     if (!icc_pk) {
-        PrintAndLogEx(ERR, "Error: ICC certificate not found. Exit.");
+        PrintAndLogEx(ERR, "Error: ICC certificate not found, exiting");
         emv_pk_free(pk);
         emv_pk_free(issuer_pk);
         return 2;
     }
-    PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
-                  icc_pk->rid[0],
-                  icc_pk->rid[1],
-                  icc_pk->rid[2],
-                  icc_pk->rid[3],
-                  icc_pk->rid[4],
+
+    PrintAndLogEx(SUCCESS, "ICC Public key recovered. RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
+                  sprint_hex(icc_pk->rid, 5),
                   icc_pk->index,
-                  icc_pk->serial[0],
-                  icc_pk->serial[1],
-                  icc_pk->serial[2]
+                  sprint_hex(icc_pk->serial,3)
                  );
 
     struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
     if (dac_db) {
         const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-        PrintAndLogEx(NORMAL, "SSAD verified OK. (%02hhx:%02hhx)", dac_tlv->value[0], dac_tlv->value[1]);
+        PrintAndLogEx(SUCCESS, "SSAD verified (%s) (%02hhx:%02hhx)", _GREEN_("ok"), dac_tlv->value[0], dac_tlv->value[1]);
         tlvdb_add(tlv, dac_db);
     } else {
         PrintAndLogEx(ERR, "Error: SSAD verify error");
@@ -1017,7 +985,7 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
         return 4;
     }
 
-    PrintAndLogEx(NORMAL, "\n* * Check Signed Dynamic Application Data (SDAD)");
+    PrintAndLogEx(INFO, "* * Check Signed Dynamic Application Data (SDAD)");
     struct tlvdb *idn_db = emv_pki_perform_cda_ex(icc_pk, tlv, ac_tlv,
                                                   pdol_data_tlv, // pdol
                                                   ac_data_tlv,   // cdol1
@@ -1025,11 +993,11 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
                                                   true);
     if (idn_db) {
         const struct tlv *idn_tlv = tlvdb_get(idn_db, 0x9f4c, NULL);
-        PrintAndLogEx(NORMAL, "\nIDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
-        PrintAndLogEx(NORMAL, "CDA verified OK.");
+        PrintAndLogEx(INFO, "IDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
+        PrintAndLogEx(SUCCESS, "CDA verified (%s)", _GREEN_("ok"));
         tlvdb_add(tlv, idn_db);
     } else {
-        PrintAndLogEx(ERR, "\nERROR: CDA verify error");
+        PrintAndLogEx(ERR, "ERROR: CDA verify error");
     }
 
     emv_pk_free(pk);
@@ -1039,30 +1007,24 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
 }
 
 int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
-
     struct emv_pk *pk = get_ca_pk(tlvRoot);
     if (!pk) {
-        PrintAndLogEx(ERR, "ERROR: Key not found. Exit.");
+        PrintAndLogEx(ERR, "ERROR: Key not found, exiting");
         return 1;
     }
 
     struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlvRoot);
     if (!issuer_pk) {
         emv_pk_free(pk);
-        PrintAndLogEx(WARNING, "WARNING: Issuer certificate not found. Exit.");
+        PrintAndLogEx(WARNING, "WARNING: Issuer certificate not found, exiting");
         return 2;
     }
-    PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx",
-                  issuer_pk->rid[0],
-                  issuer_pk->rid[1],
-                  issuer_pk->rid[2],
-                  issuer_pk->rid[3],
-                  issuer_pk->rid[4],
-                  issuer_pk->index,
-                  issuer_pk->serial[0],
-                  issuer_pk->serial[1],
-                  issuer_pk->serial[2]
-                 );
+
+    PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
+      sprint_hex(issuer_pk->rid, 5),
+      issuer_pk->index,
+      sprint_hex(issuer_pk->serial, 3)
+     );
 
     JsonSaveBufAsHex(root, "$.ApplicationData.RID", issuer_pk->rid, 5);
 
@@ -1075,7 +1037,7 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
     if (!icc_pk) {
         emv_pk_free(pk);
         emv_pk_free(issuer_pk);
-        PrintAndLogEx(WARNING, "WARNING: ICC certificate not found. Exit.");
+        PrintAndLogEx(WARNING, "WARNING: ICC certificate not found, exiting");
         return 2;
     }
     PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
@@ -1094,6 +1056,5 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
     JsonSaveStr(root, "$.ApplicationData.ICCPublicKeyDec", icc_pk_c);
     JsonSaveBufAsHex(root, "$.ApplicationData.ICCPublicKeyModulus", icc_pk->modulus, icc_pk->mlen);
     free(icc_pk_c);
-
     return 0;
 }
