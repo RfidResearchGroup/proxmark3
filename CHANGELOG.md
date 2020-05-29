@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
  - Fix `emv scan -w` - hash mismatch, solution similar to below (@iceman1001)
  - Fix 'emv roca' - hash mismatch, merged from offical repo (@pwpiwi)
+ - Fix 'lf ti demod' - now calculates correct crc (@iceman1001)
  - Add Python3 as possible script engine (@iceman1001, @doegox)
  - Add doc/mfu_binary_format_notes.md (@iceman1001)
  - Fix `hf mfu dump` - now reads Ulev1 3counter vs NTAG 1 counters (@iceman1001)
