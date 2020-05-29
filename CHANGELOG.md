@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix `emv scan -w` - hash mismatch, solution similar to below (@iceman1001)
+ - Fix 'emv roca' - hash mismatch, merged from offical repo (@pwpiwi)
  - Add Python3 as possible script engine (@iceman1001, @doegox)
  - Add doc/mfu_binary_format_notes.md (@iceman1001)
  - Fix `hf mfu dump` - now reads Ulev1 3counter vs NTAG 1 counters (@iceman1001)
