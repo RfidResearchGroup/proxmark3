@@ -56,10 +56,10 @@ static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
 static void PrintChannel(EMVCommandChannel channel) {
     switch (channel) {
         case ECC_CONTACTLESS:
-            PrintAndLogEx(INFO, "Channel: CONTACTLESS (T=CL)");
+            PrintAndLogEx(INFO, "Selected channel : " _GREEN_("CONTACTLESS (T=CL)"));
             break;
         case ECC_CONTACT:
-            PrintAndLogEx(INFO, "Channel: CONTACT");
+            PrintAndLogEx(INFO, "Selected channel : " _GREEN_("CONTACT"));
             break;
     }
 }
@@ -1747,6 +1747,8 @@ static int CmdEMVRoca(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
+    uint8_t ODAI_list[4096];
+	size_t ODAI_listlen = 0;
     int res;
 
     CLIParserInit("emv roca",
@@ -1759,23 +1761,30 @@ static int CmdEMVRoca(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("tT",  "selftest",   "self test"),
-        arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
+        arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
+        arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default"),
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, true);
 
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(1))
+    if (arg_get_lit(1)) {
+        CLIParserFree();
         return roca_self_test();
+    }
 
-    if (arg_get_lit(2))
+    bool show_apdu = arg_get_lit(2);
+
+    if (arg_get_lit(3))
         channel = ECC_CONTACT;
-    PrintChannel(channel);
+    
     CLIParserFree();
+    
+    PrintChannel(channel);
 
     if (!IfPm3Smartcard()) {
         if (channel == ECC_CONTACT) {
-            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support. Exiting.");
+            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support, exiting");
             return PM3_EDEVNOTSUPP;
         }
     }
@@ -1783,14 +1792,14 @@ static int CmdEMVRoca(const char *Cmd) {
     // select card
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 
-    SetAPDULogging(false);
+    SetAPDULogging(show_apdu);
 
     // init applets list tree
     const char *al = "Applets list";
     struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
     // EMV PPSE
-    PrintAndLogEx(NORMAL, "--> PPSE.");
+    PrintAndLogEx(INFO, "PPSE");
     res = EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
 
     // check PPSE and select application id
@@ -1798,9 +1807,9 @@ static int CmdEMVRoca(const char *Cmd) {
         TLVPrintAIDlistFromSelectTLV(tlvSelect);
     } else {
         // EMV SEARCH with AID list
-        PrintAndLogEx(NORMAL, "--> AID search.");
+        PrintAndLogEx(INFO, "starting AID search");
         if (EMVSearch(channel, false, true, false, tlvSelect)) {
-            PrintAndLogEx(ERR, "Can't found any of EMV AID. Exit...");
+            PrintAndLogEx(ERR, "Can't found any of EMV AID, exiting");
             tlvdb_free(tlvSelect);
             DropFieldEx(channel);
             return PM3_ERFTRANS;
@@ -1817,7 +1826,7 @@ static int CmdEMVRoca(const char *Cmd) {
     tlvdb_free(tlvSelect);
 
     if (!AIDlen) {
-        PrintAndLogEx(INFO, "Can't select AID. EMV AID not found. Exit...");
+        PrintAndLogEx(INFO, "Can't select AID or EMV AID not found, exiting");
         DropFieldEx(channel);
         return PM3_ERFTRANS;
     }
@@ -1827,23 +1836,23 @@ static int CmdEMVRoca(const char *Cmd) {
     struct tlvdb *tlvRoot = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
 
     // EMV SELECT applet
-    PrintAndLogEx(NORMAL, "\n-->Selecting AID:%s.", sprint_hex_inrow(AID, AIDlen));
+    PrintAndLogEx(INFO, "Selecting AID: " _YELLOW_("%s"), sprint_hex_inrow(AID, AIDlen));
     res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
 
     if (res) {
-        PrintAndLogEx(ERR, "Can't select AID (%d). Exit...", res);
+        PrintAndLogEx(ERR, "Can't select AID (%d), exiting", res);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         return PM3_ERFTRANS;
     }
 
-    PrintAndLogEx(NORMAL, "\n* Init transaction parameters.");
+    PrintAndLogEx(INFO, "Init transaction parameters");
     InitTransactionParameters(tlvRoot, true, TT_QVSDCMCHIP, false);
 
-    PrintAndLogEx(NORMAL, "-->Calc PDOL.");
+    PrintAndLogEx(INFO, "Calc PDOL");
     struct tlv *pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
     if (!pdol_data_tlv) {
-        PrintAndLogEx(ERR, "Can't create PDOL TLV.");
+        PrintAndLogEx(ERR, "Can't create PDOL TLV");
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         return PM3_ESOFT;
@@ -1852,7 +1861,7 @@ static int CmdEMVRoca(const char *Cmd) {
     size_t pdol_data_tlv_data_len;
     unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
     if (!pdol_data_tlv_data) {
-        PrintAndLogEx(ERR, "Can't create PDOL data.");
+        PrintAndLogEx(ERR, "Can't create PDOL data, exiting");
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         free(pdol_data_tlv);
@@ -1860,21 +1869,21 @@ static int CmdEMVRoca(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
-    PrintAndLogEx(INFO, "-->GPO.");
+    PrintAndLogEx(INFO, "GPO");
     res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 
     free(pdol_data_tlv_data);
     free(pdol_data_tlv);
 
     if (res) {
-        PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
+        PrintAndLogEx(ERR, "GPO error(%d): %4x, exiting", res, sw);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
         return PM3_ERFTRANS;
     }
     ProcessGPOResponseFormat1(tlvRoot, buf, len, false);
 
-    PrintAndLogEx(INFO, "-->Read records from AFL.");
+    PrintAndLogEx(INFO, "Read records from AFL");
     const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
 
     while (AFL && AFL->len) {
@@ -1889,35 +1898,62 @@ static int CmdEMVRoca(const char *Cmd) {
             uint8_t SFIend = AFL->value[i * 4 + 2];
             uint8_t SFIoffline = AFL->value[i * 4 + 3];
 
-            PrintAndLogEx(INFO, "--->SFI[%02x] start:%02x end:%02x offline:%02x", SFI, SFIstart, SFIend, SFIoffline);
+            PrintAndLogEx(INFO, "   SFI[%02x] start :%02x end :%02x  offline :%02x", SFI, SFIstart, SFIend, SFIoffline);
             if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
-                PrintAndLogEx(ERR, "SFI ERROR! Skipped...");
+                PrintAndLogEx(ERR, "SFI ERROR, skipping");
                 continue;
             }
 
             for (int n = SFIstart; n <= SFIend; n++) {
-                PrintAndLogEx(INFO, "---->SFI[%02x] %d", SFI, n);
+                PrintAndLogEx(INFO, "      SFI[%02x] %d", SFI, n);
 
                 res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
                 if (res) {
                     PrintAndLogEx(ERR, "SFI[%02x]. APDU error %4x", SFI, sw);
                     continue;
                 }
+                
+				// Build Input list for Offline Data Authentication
+				// EMV 4.3 book3 10.3, page 96
+				if (SFIoffline > 0) {
+					if (SFI < 11) {
+						const unsigned char *abuf = buf;
+						size_t elmlen = len;
+						struct tlv e;
+						if (tlv_parse_tl(&abuf, &elmlen, &e)) {
+							memcpy(&ODAI_list[ODAI_listlen], &buf[len - elmlen], elmlen);
+							ODAI_listlen += elmlen;
+						} else {
+							PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error", SFI);
+						}
+					} else {
+						memcpy(&ODAI_list[ODAI_listlen], buf, len);
+						ODAI_listlen += len;
+					}
+					SFIoffline--;
+				}
             }
         }
-
         break;
     }
 
     // getting certificates
     int ret = PM3_SUCCESS;
+    
+    // copy Input list for Offline Data Authentication
+	if (ODAI_listlen) {
+		struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
+		tlvdb_add(tlvRoot, oda);
+		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%d bytes]", ODAI_listlen);
+	}
+    
     if (tlvdb_get(tlvRoot, 0x90, NULL)) {
-        PrintAndLogEx(INFO, "-->Recovering certificates.");
+        PrintAndLogEx(INFO, "Recovering certificates");
         PKISetStrictExecution(false);
 
         struct emv_pk *pk = get_ca_pk(tlvRoot);
         if (!pk) {
-            PrintAndLogEx(ERR, "ERROR: Key not found. Exit.");
+            PrintAndLogEx(ERR, "ERROR: Key not found, exiting");
             ret = PM3_ESOFT;
             goto out;
         }
@@ -1925,41 +1961,45 @@ static int CmdEMVRoca(const char *Cmd) {
         struct emv_pk *issuer_pk = emv_pki_recover_issuer_cert(pk, tlvRoot);
         if (!issuer_pk) {
             emv_pk_free(pk);
-            PrintAndLogEx(WARNING, "WARNING: Issuer certificate not found. Exit.");
+            PrintAndLogEx(WARNING, "WARNING: Issuer certificate not found, exiting");
             ret = PM3_ESOFT;
             goto out;
         }
 
-        PrintAndLogEx(SUCCESS, "Issuer PK recovered. RID %s IDX %02hhx CSN %s",
+        PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
                       sprint_hex(issuer_pk->rid, 5),
                       issuer_pk->index,
                       sprint_hex(issuer_pk->serial, 3)
                      );
 
 
-        struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlvRoot, NULL);
+        const struct tlv *sda_tlv = tlvdb_get(tlvRoot, 0x21, NULL);
+        struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlvRoot, sda_tlv);
         if (!icc_pk) {
             emv_pk_free(pk);
             emv_pk_free(issuer_pk);
-            PrintAndLogEx(WARNING, "WARNING: ICC certificate not found. Exit.");
+            PrintAndLogEx(WARNING, "WARNING: ICC certificate not found, exiting");
             ret = PM3_ESOFT;
             goto out;
         }
-        PrintAndLogEx(SUCCESS, "ICC PK recovered. RID %s IDX %02hhx CSN %s\n",
+        
+        PrintAndLogEx(SUCCESS, "ICC Public key recovered     RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
                       sprint_hex(icc_pk->rid, 5),
                       icc_pk->index,
                       sprint_hex(icc_pk->serial, 3)
                      );
 
-        PrintAndLogEx(INFO, "ICC pk modulus: %s", sprint_hex_inrow(icc_pk->modulus, icc_pk->mlen));
+        PrintAndLogEx(INFO, "ICC Public key modulus:");
+        print_hex_break(icc_pk->modulus, icc_pk->mlen, 16);
 
         // icc_pk->exp, icc_pk->elen
         // icc_pk->modulus, icc_pk->mlen
         if (icc_pk->elen > 0 && icc_pk->mlen > 0) {
-            if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen, true)) {
-                PrintAndLogEx(INFO, "ICC pk is a subject to ROCA vulnerability, insecure..");
+            PrintAndLogEx(NORMAL, "");
+            if (emv_rocacheck(icc_pk->modulus, icc_pk->mlen, false)) {
+                PrintAndLogEx(SUCCESS, "ICC Public key is " _RED_("subject") " to ROCA vulnerability, it is considered insecure");
             } else {
-                PrintAndLogEx(INFO, "ICC pk is OK(");
+                PrintAndLogEx(INFO, "ICC Public key is " _GREEN_("not subject") " to ROCA vulnerability, it is secure");
             }
         }
 
@@ -1967,10 +2007,7 @@ static int CmdEMVRoca(const char *Cmd) {
     }
 
 out:
-
-    // free tlv object
     tlvdb_free(tlvRoot);
-
     DropFieldEx(channel);
     return ret;
 }
