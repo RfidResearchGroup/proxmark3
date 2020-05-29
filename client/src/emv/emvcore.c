@@ -24,7 +24,7 @@
 #include "emvjson.h"
 #include "util_posix.h"
 
-// Got from here. Thanks)
+// Got from here. Thanks!
 // https://eftlab.co.uk/index.php/site-map/knowledge-base/211-emv-aid-rid-pix
 static const char *PSElist [] = {
     "325041592E5359532E4444463031", // 2PAY.SYS.DDF01 - Visa Proximity Payment System Environment - PPSE
@@ -131,6 +131,7 @@ static const TAIDList AIDlist [] = {
     { CV_OTHER, "F0000000030001" },              // BRADESCO - Brazilian Bank Banco Bradesco
 };
 
+//iceman:  this logging setting, should be unified with client debug etc.
 static bool APDULogging = false;
 void SetAPDULogging(bool logging) {
     APDULogging = logging;
@@ -156,20 +157,18 @@ enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
     return CV_NA;
 }
 
-static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
+static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     emv_tag_dump(tlv, stdout, level);
     if (is_leaf) {
         dump_buffer(tlv->value, tlv->len, stdout, level);
     }
-
-    return true;
 }
 
 bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
     struct tlvdb *t = NULL;
     t = tlvdb_parse_multi(data, datalen);
     if (t) {
-        PrintAndLogEx(NORMAL, "-------------------- TLV decoded --------------------");
+        PrintAndLogEx(INFO, "-------------------- " _CYAN_("TLV decoded") " --------------------");
 
         tlvdb_visit(t, print_cb, NULL, 0);
         tlvdb_free(t);
@@ -192,13 +191,13 @@ void TLVPrintFromTLV(struct tlvdb *tlv) {
 }
 
 void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
-    PrintAndLogEx(NORMAL, "|------------------|--------|-------------------------|");
-    PrintAndLogEx(NORMAL, "|    AID           |Priority| Name                    |");
-    PrintAndLogEx(NORMAL, "|------------------|--------|-------------------------|");
+    PrintAndLogEx(INFO, "|------------------+--------+-------------------------|");
+    PrintAndLogEx(INFO, "|    AID           |Priority| Name                    |");
+    PrintAndLogEx(INFO, "|------------------+--------+-------------------------|");
 
     struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f);
     if (!ttmp)
-        PrintAndLogEx(NORMAL, "|                         none                        |");
+        PrintAndLogEx(INFO, "|                         none                        |");
 
     while (ttmp) {
         const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
@@ -206,7 +205,7 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
         const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
         if (!tgAID)
             break;
-        PrintAndLogEx(NORMAL, "|%s|   %s  |%s|",
+        PrintAndLogEx(INFO, "|%s|   %s  |%s|",
                       sprint_hex_inrow_ex(tgAID->value, tgAID->len, 18),
                       (tgPrio) ? sprint_hex(tgPrio->value, 1) : "   ",
                       (tgName) ? sprint_ascii_ex(tgName->value, tgName->len, 25) : "                         ");
@@ -214,7 +213,7 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
         ttmp = tlvdb_find_next(ttmp, 0x6f);
     }
 
-    PrintAndLogEx(NORMAL, "|------------------|--------|-------------------------|");
+    PrintAndLogEx(INFO, "|------------------+--------+-------------------------|");
 }
 
 struct tlvdb *GetPANFromTrack2(const struct tlv *track2) {
@@ -362,7 +361,6 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
     uint8_t buf[APDU_AID_LEN] = {0};
     *ResultLen = 0;
     int len = 0;
-    int res = 0;
     switch (PSENum) {
         case 1:
             param_gethex_to_eol(PSElist[1], 0, buf, sizeof(buf), &len);
@@ -373,11 +371,7 @@ int EMVSelectPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
         default:
             return -1;
     }
-
-    // select
-    res = EMVSelect(channel, ActivateField, LeaveFieldON, buf, len, Result, MaxResultLen, ResultLen, sw, NULL);
-
-    return res;
+    return EMVSelect(channel, ActivateField, LeaveFieldON, buf, len, Result, MaxResultLen, ResultLen, sw, NULL);
 }
 
 static int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -398,7 +392,7 @@ static int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, boo
                 }
 
                 retrycnt = 0;
-                PrintAndLogEx(NORMAL, "Retry failed [%s]. Skipped...", sprint_hex_inrow(AID, AIDLen));
+                PrintAndLogEx(FAILED, "Retry failed [%s]. Skipped...", sprint_hex_inrow(AID, AIDLen));
                 return res;
             }
         }
@@ -430,7 +424,7 @@ static int EMVCheckAID(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *
 
             // all is ok
             if (decodeTLV) {
-                PrintAndLogEx(NORMAL, "%s:", sprint_hex_inrow(tgAID->value, tgAID->len));
+                PrintAndLogEx(SUCCESS, "%s:", sprint_hex_inrow(tgAID->value, tgAID->len));
                 TLVPrintFromBuffer(data, datalen);
             }
         }
@@ -667,7 +661,7 @@ struct emv_pk *get_ca_pk(struct tlvdb *db) {
     if (!df_tlv || !caidx_tlv || df_tlv->len < 6 || caidx_tlv->len != 1)
         return NULL;
 
-    PrintAndLogEx(NORMAL, "CA public key index 0x%0x", caidx_tlv->value[0]);
+    PrintAndLogEx(INFO, "CA public key index 0x%0x", caidx_tlv->value[0]);
     return emv_pk_get_ca_pk(df_tlv->value, caidx_tlv->value[0]);
 }
 
@@ -703,7 +697,7 @@ int trSDA(struct tlvdb *tlv) {
     struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
     if (dac_db) {
         const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-        PrintAndLogEx(NORMAL, "SDA verified OK. (Data Authentication Code: %02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
+        PrintAndLogEx(INFO, "SDA verified (%s) (Data Authentication Code: %02hhx:%02hhx)", _GREEN_("ok"), dac_tlv->value[0], dac_tlv->value[1]);
         tlvdb_add(tlv, dac_db);
     } else {
         emv_pk_free(issuer_pk);
@@ -785,7 +779,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
     // DDA with internal authenticate OR fDDA with filled 0x9F4B tag (GPO result)
     // EMV kernel3 v2.4, contactless book C-3, C.1., page 147
     if (sdad_tlv) {
-        PrintAndLogEx(NORMAL, "* * Got Signed Dynamic Application Data (9F4B) form GPO. Maybe fDDA...");
+        PrintAndLogEx(INFO, "* * Got Signed Dynamic Application Data (9F4B) form GPO. Maybe fDDA...");
 
         const struct tlvdb *atc_db = emv_pki_recover_atc_ex(icc_pk, tlv, true);
         if (!atc_db) {
@@ -799,7 +793,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         // 9f36 Application Transaction Counter (ATC)
         const struct tlv *atc_tlv = tlvdb_get(atc_db, 0x9f36, NULL);
         if (atc_tlv) {
-            PrintAndLogEx(NORMAL, "\nATC (Application Transaction Counter) [%zu] %s", atc_tlv->len, sprint_hex_inrow(atc_tlv->value, atc_tlv->len));
+            PrintAndLogEx(INFO, "ATC (Application Transaction Counter) [%zu] %s", atc_tlv->len, sprint_hex_inrow(atc_tlv->value, atc_tlv->len));
 
             const struct tlv *core_atc_tlv = tlvdb_get(tlv, 0x9f36, NULL);
             if (tlv_equal(core_atc_tlv, atc_tlv)) {
@@ -819,7 +813,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
         if (dac_db) {
             const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);
-            PrintAndLogEx(NORMAL, "SDAD verified OK. (Data Authentication Code: %02hhx:%02hhx)\n", dac_tlv->value[0], dac_tlv->value[1]);
+            PrintAndLogEx(INFO, "SDAD verified (%s) (Data Authentication Code: %02hhx:%02hhx)\n", _GREEN_("ok"), dac_tlv->value[0], dac_tlv->value[1]);
             tlvdb_add(tlv, dac_db);
         } else {
             PrintAndLogEx(ERR, "Error: SSAD verify error");
@@ -829,11 +823,11 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             return 4;
         }
 
-        PrintAndLogEx(NORMAL, "\n* Calc DDOL");
+        PrintAndLogEx(INFO, "* Calc DDOL");
         const struct tlv *ddol_tlv = tlvdb_get(tlv, 0x9f49, NULL);
         if (!ddol_tlv) {
             ddol_tlv = &default_ddol_tlv;
-            PrintAndLogEx(NORMAL, "DDOL [9f49] not found. Using default DDOL");
+            PrintAndLogEx(INFO, "DDOL [9f49] not found. Using default DDOL");
         }
 
         struct tlv *ddol_data_tlv = dol_process(ddol_tlv, tlv, 0);
@@ -845,9 +839,9 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             return 5;
         }
 
-        PrintAndLogEx(NORMAL, "DDOL data[%zu]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
+        PrintAndLogEx(INFO, "DDOL data[%zu]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
 
-        PrintAndLogEx(NORMAL, "\n* Internal Authenticate");
+        PrintAndLogEx(INFO, "* Internal Authenticate");
         int res = EMVInternalAuthenticate(channel, true, (uint8_t *)ddol_data_tlv->value, ddol_data_tlv->len, buf, sizeof(buf), &len, &sw, NULL);
         if (res) {
             PrintAndLogEx(ERR, "Internal Authenticate error(%d): %4x, exiting..", res, sw);
@@ -874,7 +868,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
                 tlvdb_free(t80);
 
                 if (decodeTLV) {
-                    PrintAndLogEx(NORMAL, "* * Decode response format 1:");
+                    PrintAndLogEx(INFO, "* * Decode response format 1:");
                     TLVPrintFromTLV(dda_db);
                 }
             }
@@ -909,12 +903,12 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         // 9f4c ICC Dynamic Number
         const struct tlv *idn_tlv = tlvdb_get(idn_db, 0x9f4c, NULL);
         if (idn_tlv) {
-            PrintAndLogEx(INFO, "\nIDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
+            PrintAndLogEx(INFO, "IDN (ICC Dynamic Number) [%zu] %s", idn_tlv->len, sprint_hex_inrow(idn_tlv->value, idn_tlv->len));
             PrintAndLogEx(INFO, "DDA verified OK.");
             tlvdb_add(tlv, idn_db);
             tlvdb_free(idn_db);
         } else {
-            PrintAndLogEx(ERR, "\nDDA verify error");
+            PrintAndLogEx(ERR, "DDA verify error");
             tlvdb_free(idn_db);
 
             emv_pk_free(pk);

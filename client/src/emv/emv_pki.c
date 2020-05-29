@@ -462,22 +462,20 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
     return atc_db;
 }
 
-static bool tlv_hash(void *data, const struct tlv *tlv, int level, bool is_leaf) {
+static void tlv_hash(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     struct crypto_hash *ch = data;
     size_t tag_len;
     unsigned char *tag;
 
     if (tlv_is_constructed(tlv))
-        return true;
+        return;
 
     if (tlv->tag == 0x9f4b)
-        return true;
+        return;
 
     tag = tlv_encode(tlv, &tag_len);
     crypto_hash_write(ch, tag, tag_len);
     free(tag);
-
-    return true;
 }
 
 struct tlvdb *emv_pki_perform_cda(const struct emv_pk *enc_pk, const struct tlvdb *db,
