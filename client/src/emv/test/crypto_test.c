@@ -304,31 +304,27 @@ close_pub:
 int exec_crypto_test(bool verbose, bool include_slow_tests) {
     unsigned int keylengths[] = {1024, 2048};
     unsigned int extra_keylengths[] = {1152, 1408, 1984, 3072, 4096};
-    int i;
-    int ret;
-    fprintf(stdout, "\n");
-
-    ret = test_pk(verbose);
+    int ret = test_pk(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "Crypto raw test: failed");
+        PrintAndLogEx(WARNING, "Crypto raw test: (%s)", _RED_("failed"));
         return ret;
     }
     PrintAndLogEx(SUCCESS, "Crypto raw test (%s)", _GREEN_("passed"));
 
-    for (i = 0; i < ARRAYLEN(keylengths); i++) {
+    for (int i = 0; i < ARRAYLEN(keylengths); i++) {
         unsigned int kl = keylengths[i];
         ret = test_genkey(kl, message, kl / 8, verbose);
         if (ret) {
-            PrintAndLogEx(WARNING, "Crypto generate key[%u] test: failed", kl);
+            PrintAndLogEx(WARNING, "Crypto generate key[%u] test: (%s)", kl, _RED_("failed"));
             return ret;
         }
     }
     if (include_slow_tests) {
-        for (i = 0; i < ARRAYLEN(extra_keylengths); i++) {
+        for (int i = 0; i < ARRAYLEN(extra_keylengths); i++) {
             unsigned int kl = extra_keylengths[i];
             ret = test_genkey(kl, message, kl / 8, verbose);
             if (ret) {
-                PrintAndLogEx(WARNING, "Crypto generate key[%u] test: failed", kl);
+                PrintAndLogEx(WARNING, "Crypto generate key[%u] test: (%s)", kl, _RED_("failed"));
                 return ret;
             }
         }

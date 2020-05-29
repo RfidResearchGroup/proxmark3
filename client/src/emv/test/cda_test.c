@@ -123,6 +123,7 @@ const unsigned char c_ssd1[] = {
     0x03, 0x8d, 0x0c, 0x91, 0x0a, 0x8a, 0x02, 0x95, 0x05, 0x9f, 0x37, 0x04, 0x9f, 0x4c, 0x08,
     0x39, 0x00,
 };
+
 static const struct tlv ssd1_tlv = {
     .len = sizeof(c_ssd1),
     .value = c_ssd1,
@@ -146,6 +147,7 @@ const unsigned char c_crm1[] = {
     0x00, 0x00, 0x00, 0x06, 0x43, 0x14, 0x09, 0x25, 0x50, 0x12, 0x34, 0x57, 0x79, 0x23, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x03, 0x00,
 };
+
 static const struct tlv crm1_tlv = {
     .len = sizeof(c_crm1),
     .value = c_crm1,
@@ -420,16 +422,16 @@ static int cda_test_pk(bool verbose) {
 int exec_cda_test(bool verbose) {
     int ret = cda_test_raw(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "CDA raw test: failed");
+        PrintAndLogEx(WARNING, "CDA raw test: (%s)", _RED_("failed"));
         return ret;
     }
-    PrintAndLogEx(INFO, "CDA raw test: passed");
+    PrintAndLogEx(INFO, "CDA raw test: (%s)", _GREEN_("passed"));
 
     ret = cda_test_pk(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "CDA test pk: failed");
+        PrintAndLogEx(WARNING, "CDA test pk: (%s)", _RED_("failed"));
         return ret;
     }
-    PrintAndLogEx(INFO, "CDA test pk: passed");
+    PrintAndLogEx(INFO, "CDA test pk: (%s)", _GREEN_("passed"));
     return 0;
 }
