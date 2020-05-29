@@ -194,9 +194,9 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
     size_t i;
     memset(tmp, 0x00, hex_max_len);
 
-    size_t maxLen = (hex_len > hex_max_len) ? hex_max_len : hex_len;
+    size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
 
-    for (i = 0; i < maxLen; ++i, tmp += 2 + spaces_between) {
+    for (i = 0; i < max_len; ++i, tmp += 2 + spaces_between) {
         sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
 
         for (size_t j = 0; j < spaces_between; j++)
@@ -204,10 +204,12 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
     }
 
     i *= (2 + spaces_between);
-    size_t minStrLen = min_str_len > i ? min_str_len : 0;
-    if (minStrLen > hex_max_len)
-        minStrLen = hex_max_len;
-    for (; i < minStrLen; i++, tmp += 1)
+
+    size_t mlen = min_str_len > i ? min_str_len : 0;
+    if (mlen > hex_max_len)
+        mlen = hex_max_len;
+
+    for (; i < mlen; i++, tmp += 1)
         sprintf(tmp, " ");
 
     // remove last space
