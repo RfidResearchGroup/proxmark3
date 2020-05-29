@@ -10,8 +10,7 @@
 
 #include "cryptotest.h"
 #include "util.h"
-#include "ui.h"
-
+#include "ui.h"              // printandlog
 #include "bignum.h"
 #include "aes.h"
 #include "cmac.h"
@@ -25,7 +24,6 @@
 #include "ctr_drbg.h"
 #include "entropy.h"
 #include "timing.h"
-
 #include "crypto_test.h"
 #include "sda_test.h"
 #include "dda_test.h"
@@ -63,7 +61,7 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
         res = mbedtls_timing_self_test(verbose);
         if (!res)
             break;
-        PrintAndLogEx(WARNING, "Repeat timing test %d", i + 1);
+        PrintAndLogEx(WARNING, "Repeat timing test " _RED_("%d"), i + 1);
     }
     if (res && !ignore_time) TestFail = true;
 
@@ -100,12 +98,12 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
     res = roca_self_test();
     if (res) TestFail = true;
 
-    PrintAndLogEx(NORMAL, "\n--------------------------");
+    PrintAndLogEx(INFO, "--------------------------");
 
     if (TestFail)
-        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_("Fail"));
+        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_("fail"));
     else
-        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_("OK"));
+        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_("ok"));
 
     return TestFail;
 }

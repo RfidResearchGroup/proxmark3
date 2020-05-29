@@ -17,16 +17,16 @@
 #include <config.h>
 #endif
 
-#include "commonutil.h"  // ARRAYLEN
+#include <string.h>     // memcpy
+#include <stdlib.h>     // malloc
+#include <inttypes.h>
+#include "crypto_test.h"
 
+#include "commonutil.h"     // ARRAYLEN
 #include "../crypto.h"
 #include "../dump.h"
 #include "util_posix.h"
-
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
-#include "crypto_test.h"
+#include "ui.h"             // printandlog
 
 static int test_genkey(unsigned int keylength, unsigned char *msg, size_t msg_len, bool verbose) {
     int ret = 1;
@@ -34,46 +34,46 @@ static int test_genkey(unsigned int keylength, unsigned char *msg, size_t msg_le
     unsigned char *tmp, *tmp2;
     struct crypto_pk *pk;
 
-    printf("Testing key length %u ", keylength);
+    PrintAndLogEx(INFO, "Testing key length " _GREEN_("%u"), keylength);
     uint64_t ms = msclock();
 
     pk = crypto_pk_genkey(PK_RSA, 1, keylength, 3);
     if (!pk) {
-        fprintf(stderr, "ERROR: key generation error.\n");
+        PrintAndLogEx(WARNING, "ERROR: key generation error");
         goto out;
     }
 
     tmp_len = crypto_pk_get_nbits(pk);
     if (tmp_len != keylength) {
-        fprintf(stderr, "ERROR: crypto_pk_get_nbits.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_get_nbits");
         goto close;
     }
 
     tmp = crypto_pk_decrypt(pk, msg, msg_len, &tmp_len);
     if (!tmp) {
-        fprintf(stderr, "ERROR: crypto_pk_decrypt.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_decrypt");
         goto close;
     }
 
     tmp2 = crypto_pk_encrypt(pk, tmp, tmp_len, &tmp2_len);
     if (!tmp2) {
-        fprintf(stderr, "ERROR: crypto_pk_encrypt.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_encrypt");
         goto free_tmp;
     }
 
     if (tmp2_len == msg_len && !memcmp(tmp2, msg, tmp2_len)) {
         ret = 0;
     } else {
-        fprintf(stderr, "ERROR: encrypt-decrypt sequence length or data error.\n");
+        PrintAndLogEx(WARNING, "ERROR: encrypt-decrypt sequence length or data error");
     }
 
     free(tmp2);
-    printf("passed. (%"PRIu64" ms) \n", msclock() - ms);
+    PrintAndLogEx(SUCCESS, "passed (" _GREEN_("%" PRIu64) " ms)", msclock() - ms);
+
 free_tmp:
     free(tmp);
 close:
     crypto_pk_close(pk);
-
 out:
     return ret;
 }
@@ -202,25 +202,25 @@ static int test_pk(bool verbose) {
     unsigned char *msg = message;
     size_t msg_len = sizeof(pk_N);
 
-    printf("Testing public keys interfaces\n");
+    PrintAndLogEx(INFO, "Testing public keys interfaces");
 
     pubk = crypto_pk_open(PK_RSA,
                           pk_N, sizeof(pk_N),
                           pk_E, sizeof(pk_E));
     if (!pubk) {
-        fprintf(stderr, "ERROR: open public key.\n");
+        PrintAndLogEx(WARNING, "ERROR: open public key");
         return 1;
     }
 
     tmp_len = crypto_pk_get_nbits(pubk);
     if (tmp_len != sizeof(pk_N) * 8) {
-        fprintf(stderr, "ERROR: crypto_pk_get_nbits mismatch.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_get_nbits mismatch");
         goto close_pub;
     }
 
     tmp = crypto_pk_get_parameter(pubk, 0, &tmp_len);
     if (tmp_len != sizeof(pk_N) || memcmp(tmp, pk_N, tmp_len)) {
-        fprintf(stderr, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %zu len %zu\n", tmp_len, sizeof(pk_N));
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %zu len %zu", tmp_len, sizeof(pk_N));
         free(tmp);
         goto close_pub;
     }
@@ -228,7 +228,7 @@ static int test_pk(bool verbose) {
 
     tmp = crypto_pk_get_parameter(pubk, 1, &tmp_len);
     if (tmp_len != sizeof(pk_E) || memcmp(tmp, pk_E, tmp_len)) {
-        fprintf(stderr, "ERROR: crypto_pk_get_parameter(1) Exponent.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_get_parameter(1) Exponent");
         free(tmp);
         goto close_pub;
     }
@@ -244,20 +244,20 @@ static int test_pk(bool verbose) {
                                 pk_dQ, sizeof(pk_dQ),
                                 pk_I, sizeof(pk_I));
     if (!privk) {
-        fprintf(stderr, "ERROR: open private key.\n");
+        PrintAndLogEx(WARNING, "ERROR: open private key");
         goto close_pub;
     }
 
 
     tmp_len = crypto_pk_get_nbits(privk);
     if (tmp_len != sizeof(pk_N) * 8) {
-        fprintf(stderr, "ERROR: crypto_pk_get_nbits mismatch.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_get_nbits mismatch");
         goto close_pub;
     }
 
     tmp = crypto_pk_get_parameter(privk, 0, &tmp_len);
     if (tmp_len != sizeof(pk_N) || memcmp(tmp, pk_N, tmp_len)) {
-        fprintf(stderr, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %zu len %zu\n", tmp_len, sizeof(pk_N));
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_get_parameter(0) Modulus. param len %zu len %zu", tmp_len, sizeof(pk_N));
         free(tmp);
         goto close;
     }
@@ -265,7 +265,7 @@ static int test_pk(bool verbose) {
 
     tmp = crypto_pk_get_parameter(privk, 1, &tmp_len);
     if (tmp_len != sizeof(pk_E) || memcmp(tmp, pk_E, tmp_len)) {
-        fprintf(stderr, "ERROR: crypto_pk_get_parameter(1) Exponent.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_get_parameter(1) Exponent");
         free(tmp);
         goto close;
     }
@@ -273,20 +273,20 @@ static int test_pk(bool verbose) {
 
     tmp = crypto_pk_decrypt(privk, msg, msg_len, &tmp_len);
     if (!tmp) {
-        fprintf(stderr, "ERROR: crypto_pk_decrypt.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_decrypt");
         goto close;
     }
 
     tmp2 = crypto_pk_encrypt(pubk, tmp, tmp_len, &tmp2_len);
     if (!tmp2) {
-        fprintf(stderr, "ERROR: crypto_pk_encrypt.\n");
+        PrintAndLogEx(WARNING, "ERROR: crypto_pk_encrypt");
         goto free_tmp;
     }
 
     if (tmp2_len == msg_len && !memcmp(tmp2, msg, tmp2_len)) {
         ret = 0;
     } else {
-        fprintf(stderr, "ERROR: encrypt-decrypt sequence length or data error.\n");
+        PrintAndLogEx(WARNING, "ERROR: encrypt-decrypt sequence length or data error");
     }
 
     free(tmp2);
@@ -310,16 +310,16 @@ int exec_crypto_test(bool verbose, bool include_slow_tests) {
 
     ret = test_pk(verbose);
     if (ret) {
-        fprintf(stderr, "Crypto raw test: failed\n");
+        PrintAndLogEx(WARNING, "Crypto raw test: failed");
         return ret;
     }
-    fprintf(stdout, "Crypto raw test: passed\n\n");
+    PrintAndLogEx(SUCCESS, "Crypto raw test (%s)", _GREEN_("passed"));
 
     for (i = 0; i < ARRAYLEN(keylengths); i++) {
         unsigned int kl = keylengths[i];
         ret = test_genkey(kl, message, kl / 8, verbose);
         if (ret) {
-            fprintf(stderr, "Crypto generate key[%u] test: failed\n", kl);
+            PrintAndLogEx(WARNING, "Crypto generate key[%u] test: failed", kl);
             return ret;
         }
     }
@@ -328,7 +328,7 @@ int exec_crypto_test(bool verbose, bool include_slow_tests) {
             unsigned int kl = extra_keylengths[i];
             ret = test_genkey(kl, message, kl / 8, verbose);
             if (ret) {
-                fprintf(stderr, "Crypto generate key[%u] test: failed\n", kl);
+                PrintAndLogEx(WARNING, "Crypto generate key[%u] test: failed", kl);
                 return ret;
             }
         }

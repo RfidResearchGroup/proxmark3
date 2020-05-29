@@ -17,16 +17,16 @@
 #include <config.h>
 #endif
 
+#include <string.h>     // memcpy
+#include <stdlib.h>     // malloc
+#include "cda_test.h"
+
 #include "../emv_pk.h"
 #include "../crypto.h"
 #include "../dump.h"
 #include "../tlv.h"
 #include "../emv_pki.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "cda_test.h"
+#include "ui.h"             // printandlog
 
 struct emv_pk c_mchip_05 = {
     .rid = { 0xa0, 0x00, 0x00, 0x00, 0x04, },
@@ -169,7 +169,7 @@ static int cda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("issuer cert:\n");
+        PrintAndLogEx(INFO, "issuer cert:");
         dump_buffer(ipk_data, ipk_data_len, stdout, 0);
     }
 
@@ -199,7 +199,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash:\n");
+        PrintAndLogEx(INFO, "crypto hash:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -228,7 +228,7 @@ static int cda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("icc cert:\n");
+        PrintAndLogEx(INFO, "icc cert:");
         dump_buffer(iccpk_data, iccpk_data_len, stdout, 0);
     }
 
@@ -257,7 +257,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash1.1:\n");
+        PrintAndLogEx(INFO, "crypto hash1.1:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -284,7 +284,7 @@ static int cda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("SDAD:\n");
+        PrintAndLogEx(INFO, "SDAD:");
         dump_buffer(sdad, sdad_len, stdout, 0);
     }
 
@@ -305,7 +305,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash2:\n");
+        PrintAndLogEx(INFO, "crypto hash2:");
         dump_buffer(h2, 20, stdout, 0);
     }
 
@@ -328,7 +328,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash2.1:\n");
+        PrintAndLogEx(INFO, "crypto hash2.1:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -339,9 +339,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     crypto_hash_close(ch);
-
     free(sdad);
-
     return 0;
 }
 
@@ -356,7 +354,7 @@ static int cda_test_pk(bool verbose) {
 
     struct emv_pk *ipk = emv_pki_recover_issuer_cert(pk, db);
     if (!ipk) {
-        fprintf(stderr, "Could not recover Issuer certificate!\n");
+        PrintAndLogEx(WARNING, "Could not recover Issuer certificate!");
         tlvdb_free(db);
         return 2;
     }
@@ -367,7 +365,7 @@ static int cda_test_pk(bool verbose) {
 
     struct emv_pk *iccpk = emv_pki_recover_icc_cert(ipk, db, &ssd1_tlv);
     if (!iccpk) {
-        fprintf(stderr, "Could not recover ICC certificate!\n");
+        PrintAndLogEx(WARNING, "Could not recover ICC certificate!");
         emv_pk_free(ipk);
         tlvdb_free(db);
         return 2;
@@ -387,7 +385,7 @@ static int cda_test_pk(bool verbose) {
                                               &crm1_tlv,
                                               NULL);
     if (!idndb) {
-        fprintf(stderr, "Could not recover IDN!\n");
+        PrintAndLogEx(WARNING, "Could not recover IDN!");
         tlvdb_free(cda_db);
         emv_pk_free(iccpk);
         emv_pk_free(ipk);
@@ -397,7 +395,7 @@ static int cda_test_pk(bool verbose) {
 
     const struct tlv *idn = tlvdb_get(idndb, 0x9f4c, NULL);
     if (!idn) {
-        fprintf(stderr, "IDN not found!\n");
+        PrintAndLogEx(WARNING, "IDN not found!");
         tlvdb_free(idndb);
         tlvdb_free(cda_db);
         emv_pk_free(iccpk);
@@ -407,7 +405,7 @@ static int cda_test_pk(bool verbose) {
     }
 
     if (verbose) {
-        printf("IDN:\n");
+        PrintAndLogEx(INFO, "IDN:");
         dump_buffer(idn->value, idn->len, stdout, 0);
     }
 
@@ -416,27 +414,22 @@ static int cda_test_pk(bool verbose) {
     emv_pk_free(iccpk);
     emv_pk_free(ipk);
     tlvdb_free(db);
-
     return 0;
 }
 
 int exec_cda_test(bool verbose) {
-    int ret;
-    fprintf(stdout, "\n");
-
-    ret = cda_test_raw(verbose);
+    int ret = cda_test_raw(verbose);
     if (ret) {
-        fprintf(stderr, "CDA raw test: failed\n");
+        PrintAndLogEx(WARNING, "CDA raw test: failed");
         return ret;
     }
-    fprintf(stdout, "CDA raw test: passed\n");
+    PrintAndLogEx(INFO, "CDA raw test: passed");
 
     ret = cda_test_pk(verbose);
     if (ret) {
-        fprintf(stderr, "CDA test pk: failed\n");
+        PrintAndLogEx(WARNING, "CDA test pk: failed");
         return ret;
     }
-    fprintf(stdout, "CDA test pk: passed\n");
-
+    PrintAndLogEx(INFO, "CDA test pk: passed");
     return 0;
 }
