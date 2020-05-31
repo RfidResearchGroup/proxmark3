@@ -1420,7 +1420,7 @@ static int CmdEMVScan(const char *Cmd) {
     PrintChannel(channel);
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
     uint8_t relfname[250] = {0};
-    char *crelfname = (char *)relfname;
+    char *fname = (char *)relfname;
     int relfnamelen = 0;
     CLIGetStrWithReturn(12, relfname, &relfnamelen);
     CLIParserFree();
@@ -1435,12 +1435,8 @@ static int CmdEMVScan(const char *Cmd) {
     SetAPDULogging(showAPDU);
 
     // current path + file name
-    if (!strstr(crelfname, ".json"))
-        strcat(crelfname, ".json");
-
-    char fname[strlen(get_my_executable_directory()) + strlen(crelfname) + 1];
-    strcpy(fname, get_my_executable_directory());
-    strcat(fname, crelfname);
+    if (!strstr(fname, ".json"))
+        strcat(fname, ".json");
 
     if (MergeJSON) {
         root = json_load_file(fname, 0, &error);
