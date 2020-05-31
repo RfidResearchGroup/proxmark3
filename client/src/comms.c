@@ -24,8 +24,6 @@
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
 
-uint8_t gui_serial_port_name[FILE_PATH_SIZE];
-
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 
@@ -537,19 +535,18 @@ bool IsCommunicationThreadDead(void) {
     return ret;
 }
 
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
+bool OpenProxmark(char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
-    char *portname = (char *)port;
     if (!wait_for_port) {
-        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), portname);
-        sp = uart_open(portname, speed);
+        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);
+        sp = uart_open(port, speed);
     } else {
-        PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), portname);
+        PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), port);
         fflush(stdout);
         int openCount = 0;
         PrintAndLogEx(INPLACE, "% 3i", timeout);
         do {
-            sp = uart_open(portname, speed);
+            sp = uart_open(port, speed);
             msleep(500);
             PrintAndLogEx(INPLACE, "% 3i", timeout - openCount - 1);
 
@@ -558,22 +555,19 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), port);
         sp = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", port);
         sp = NULL;
         return false;
     } else {
         // start the communication thread
-        if (portname != (char *)conn.serial_port_name) {
-            uint16_t len = MIN(strlen(portname), FILE_PATH_SIZE - 1);
+        if (port != conn.serial_port_name) {
+            uint16_t len = MIN(strlen(port), FILE_PATH_SIZE - 1);
             memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
-            memcpy(conn.serial_port_name, portname, len);
-
-            memset(gui_serial_port_name, 0, FILE_PATH_SIZE);
-            memcpy(gui_serial_port_name, portname, len);
+            memcpy(conn.serial_port_name, port, len);
         }
         conn.run = true;
         conn.block_after_ACK = flash_mode;

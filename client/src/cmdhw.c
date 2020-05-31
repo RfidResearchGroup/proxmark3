@@ -580,7 +580,7 @@ static int CmdConnect(const char *Cmd) {
 
     // default back to previous used serial port
     if (strlen(port) == 0) {
-        if (strlen((char *)conn.serial_port_name) == 0) {
+        if (strlen(conn.serial_port_name) == 0) {
             return usage_hw_connect();
         }
         memcpy(port, conn.serial_port_name, sizeof(port));

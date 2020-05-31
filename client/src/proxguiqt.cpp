@@ -233,7 +233,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     setLayout(layout);
 
     // plot window title
-    QString pt = QString("[*]Plot [ %1 ]").arg((char *)gui_serial_port_name);
+    QString pt = QString("[*]Plot [ %1 ]").arg(conn.serial_port_name);
     setWindowTitle(pt);
 
     // shows plot window on the screen.
@@ -247,7 +247,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     }
 
     // Olverlays / slider window title
-    QString ct = QString("[*]Slider [ %1 ]").arg((char *)gui_serial_port_name);
+    QString ct = QString("[*]Slider [ %1 ]").arg(conn.serial_port_name);
     controlWidget->setWindowTitle(ct);
 
     controlWidget->show();
