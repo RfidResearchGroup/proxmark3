@@ -3394,6 +3394,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     SendCommandNG(CMD_HF_MIFARE_SNIFF, NULL, 0);
 
     PacketResponseNG resp;
+    struct Crypto1State *traceCrypto1 = NULL;
 
     // wait cycle
     while (true) {
@@ -3490,13 +3491,13 @@ static int CmdHF14AMfSniff(const char *Cmd) {
                         PrintAndLogEx(SUCCESS, "Trace saved to %s", logHexFileName);
                     }
                     if (wantDecrypt)
-                        mfTraceInit(uid, uid_len, atqa, sak, wantSaveToEmlFile);
+                        mfTraceInit(&traceCrypto1, uid, uid_len, atqa, sak, wantSaveToEmlFile);
                 } else {
                     PrintAndLogEx(NORMAL, "%03d| %s |%s", num, isTag ? "TAG" : "RDR", sprint_hex(bufPtr, len));
                     if (wantLogToFile)
                         AddLogHex(logHexFileName, isTag ? "TAG| " : "RDR| ", bufPtr, len);
                     if (wantDecrypt)
-                        mfTraceDecode(bufPtr, len, wantSaveToEmlFile);
+                        mfTraceDecode(traceCrypto1, bufPtr, len, wantSaveToEmlFile);
                     num++;
                 }
                 bufPtr += len;

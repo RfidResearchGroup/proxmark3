@@ -36,7 +36,7 @@ static bool comm_thread_dead = false;
 // Transmit buffer.
 static PacketCommandOLD txBuffer;
 static PacketCommandNGRaw txBufferNG;
-size_t txBufferNGLen;
+static size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t txBufferSig = PTHREAD_COND_INITIALIZER;

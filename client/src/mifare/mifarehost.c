@@ -955,9 +955,6 @@ static int traceState = TRACE_IDLE;
 static uint8_t traceCurBlock = 0;
 static uint8_t traceCurKey = 0;
 
-struct Crypto1State *traceCrypto1 = NULL;
-struct Crypto1State *revstate = NULL;
-
 uint32_t cuid = 0;    // uid part used for crypto1.
 
 int isTraceCardEmpty(void) {
@@ -1046,12 +1043,12 @@ int saveTraceCard(void) {
     return PM3_SUCCESS;
 }
 //
-int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
+int mfTraceInit(struct Crypto1State **traceCrypto1, uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile) {
 
-    if (traceCrypto1)
-        crypto1_destroy(traceCrypto1);
+    if (*traceCrypto1)
+        crypto1_destroy(*traceCrypto1);
 
-    traceCrypto1 = NULL;
+    *traceCrypto1 = NULL;
 
     if (wantSaveToEmlFile)
         loadTraceCard(tuid, uidlen);
@@ -1079,7 +1076,7 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
     }
 }
 
-int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
+int mfTraceDecode(struct Crypto1State *traceCrypto1, uint8_t *data_src, int len, bool wantSaveToEmlFile) {
     if (traceState == TRACE_ERROR)
         return PM3_ESOFT;
 
@@ -1209,7 +1206,7 @@ int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile) {
                 uint64_t key = 0;
                 uint32_t ks2 = ar_enc ^ prng_successor(nt, 64);
                 uint32_t ks3 = at_enc ^ prng_successor(nt, 96);
-                revstate = lfsr_recovery64(ks2, ks3);
+                struct Crypto1State *revstate = lfsr_recovery64(ks2, ks3);
                 lfsr_rollback_word(revstate, 0, 0);
                 lfsr_rollback_word(revstate, 0, 0);
                 lfsr_rollback_word(revstate, nr_enc, 1);

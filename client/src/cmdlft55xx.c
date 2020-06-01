@@ -54,7 +54,7 @@ t55xx_conf_block_t config = {
     .downlink_mode = refFixedBit
 };
 
-t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
+static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
 
 t55xx_conf_block_t Get_t55xx_Config(void) {
     return config;

@@ -81,8 +81,8 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak);
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params);
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
 
-int mfTraceInit(uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile);
-int mfTraceDecode(uint8_t *data_src, int len, bool wantSaveToEmlFile);
+int mfTraceInit(struct Crypto1State **traceCrypto1, uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile);
+int mfTraceDecode(struct Crypto1State *traceCrypto1, uint8_t *data_src, int len, bool wantSaveToEmlFile);
 
 int isTraceCardEmpty(void);
 int isBlockEmpty(int blockN);
