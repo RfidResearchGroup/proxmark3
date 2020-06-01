@@ -364,7 +364,8 @@ static int CmdHF14AInfo(const char *Cmd) {
     bool do_nack_test = false;
     bool do_aid_search = false;
 
-    CLIParserInit("hf 14a info",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a info",
                   "This command makes more extensive tests against a ISO14443a tag in order to collect information",
                   "Sample:\n\thf 14a info -nsv - shows full information about the card\n");
 
@@ -375,13 +376,13 @@ static int CmdHF14AInfo(const char *Cmd) {
         arg_lit0("sS",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     verbose = arg_get_lit(1);
     do_nack_test = arg_get_lit(2);
     do_aid_search = arg_get_lit(3);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     infoHF14A(verbose, do_nack_test, do_aid_search);
     return 0;
@@ -878,7 +879,8 @@ static int CmdHF14AAPDU(const char *Cmd) {
     bool extendedAPDU = false;
     int le = 0;
 
-    CLIParserInit("hf 14a apdu",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a apdu",
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
                   "Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
                   "\thf 14a apdu -sd 00A404000E325041592E5359532E444446303100 - decode apdu\n"
@@ -897,14 +899,14 @@ static int CmdHF14AAPDU(const char *Cmd) {
         arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     activateField = arg_get_lit(1);
     leaveSignalON = arg_get_lit(2);
     decodeTLV = arg_get_lit(3);
     decodeAPDU = arg_get_lit(4);
 
-    CLIGetHexWithReturn(5, header, &headerlen);
+    CLIGetHexWithReturn(ctx, 5, header, &headerlen);
     makeAPDU = headerlen > 0;
     if (makeAPDU && headerlen != 4) {
         PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
@@ -917,7 +919,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
         uint8_t apdudata[PM3_CMD_DATA_SIZE] = {0};
         int apdudatalen = 0;
 
-        CLIGetHexBLessWithReturn(8, apdudata, &apdudatalen, 1 + 2);
+        CLIGetHexBLessWithReturn(ctx, 8, apdudata, &apdudatalen, 1 + 2);
 
         APDUStruct apdu;
         apdu.cla = header[0];
@@ -947,10 +949,10 @@ static int CmdHF14AAPDU(const char *Cmd) {
         }
 
         // len = data + PCB(1b) + CRC(2b)
-        CLIGetHexBLessWithReturn(8, data, &datalen, 1 + 2);
+        CLIGetHexBLessWithReturn(ctx, 8, data, &datalen, 1 + 2);
     }
 
-    CLIParserFree();
+    CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel " : "", leaveSignalON ? "keep " : "", decodeTLV ? "TLV" : "", sprint_hex(data, datalen));
 
     if (decodeAPDU) {
@@ -1162,7 +1164,8 @@ static int waitCmd(uint8_t iSelect) {
 
 static int CmdHF14AAntiFuzz(const char *Cmd) {
 
-    CLIParserInit("hf 14a antifuzz",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a antifuzz",
                   "Tries to fuzz the ISO14443a anticollision phase",
                   "Usage:\n"
                   "\thf 14a antifuzz -4\n");
@@ -1174,7 +1177,7 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
         arg_lit0(NULL,  "10",  "10 byte uid"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t arg0 = FLAG_4B_UID_IN_DATA;
     if (arg_get_lit(2))
@@ -1182,7 +1185,7 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     if (arg_get_lit(3))
         arg0 = FLAG_10B_UID_IN_DATA;
 
-    CLIParserFree();
+    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_ANTIFUZZ, arg0, 0, 0, NULL, 0);
     return 0;
@@ -1190,7 +1193,8 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
 
 static int CmdHF14AChaining(const char *Cmd) {
 
-    CLIParserInit("hf 14a chaining",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
                   "Usage:\n"
                   "\thf 14a chaining disable -> disable chaining\n"
@@ -1201,7 +1205,7 @@ static int CmdHF14AChaining(const char *Cmd) {
         arg_str0(NULL, NULL,      "<enable/disable or 0/1>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     struct arg_str *str = arg_get_str(1);
     int len = arg_get_str_len(1);
@@ -1212,7 +1216,7 @@ static int CmdHF14AChaining(const char *Cmd) {
     if (len && (!strcmp(str->sval[0], "disable") || !strcmp(str->sval[0], "0")))
         APDUInFramingEnable = false;
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
 

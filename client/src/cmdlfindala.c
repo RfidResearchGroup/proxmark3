@@ -560,7 +560,8 @@ static int CmdIndalaClone(const char *Cmd) {
     uint8_t fc = 0;
     uint16_t cn = 0;
 
-    CLIParserInit("lf indala clone",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf indala clone",
                   "clone INDALA tag to T55x7 (or to q5/T5555)",
                   "Examples:\n"
                   "\tlf indala clone --heden 888\n"
@@ -578,12 +579,12 @@ static int CmdIndalaClone(const char *Cmd) {
         arg_int0("", "cn",      "<decimal>", "Cardnumber (26 bit format)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     is_long_uid = arg_get_lit(1);
 
     // raw param
-    CLIGetHexWithReturn(3, data, &datalen);
+    CLIGetHexWithReturn(ctx, 3, data, &datalen);
 
     is_t5555 = arg_get_lit(4);
 
@@ -599,7 +600,7 @@ static int CmdIndalaClone(const char *Cmd) {
         got_26 = (fc != 0 && cn != 0);
     }
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     if (is_long_uid) {
         // 224 BIT UID

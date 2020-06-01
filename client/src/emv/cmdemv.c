@@ -68,7 +68,8 @@ static int CmdEMVSelect(const char *Cmd) {
     uint8_t data[APDU_AID_LEN] = {0};
     int datalen = 0;
 
-    CLIParserInit("emv select",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv select",
                   "Executes select applet command",
                   "Usage:\n\temv select -s a00000000101 -> select card, select applet\n\temv select -st a00000000101 -> select card, select applet, show result in TLV\n");
 
@@ -82,7 +83,7 @@ static int CmdEMVSelect(const char *Cmd) {
         arg_strx0(NULL,  NULL,     "<HEX applet AID>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool leaveSignalON = arg_get_lit(2);
@@ -92,8 +93,8 @@ static int CmdEMVSelect(const char *Cmd) {
     if (arg_get_lit(5))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIGetHexWithReturn(6, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 6, data, &datalen);
+    CLIParserFree(ctx);
 
     SetAPDULogging(APDULogging);
 
@@ -117,7 +118,8 @@ static int CmdEMVSelect(const char *Cmd) {
 
 static int CmdEMVSearch(const char *Cmd) {
 
-    CLIParserInit("emv search",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv search",
                   "Tries to select all applets from applet list:\n",
                   "Usage:\n\temv search -s -> select card and search\n\temv search -st -> select card, search and show result in TLV\n");
 
@@ -130,7 +132,7 @@ static int CmdEMVSearch(const char *Cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool leaveSignalON = arg_get_lit(2);
@@ -140,7 +142,7 @@ static int CmdEMVSearch(const char *Cmd) {
     if (arg_get_lit(5))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     SetAPDULogging(APDULogging);
 
@@ -167,7 +169,8 @@ static int CmdEMVSearch(const char *Cmd) {
 
 static int CmdEMVPPSE(const char *Cmd) {
 
-    CLIParserInit("emv pse",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv pse",
                   "Executes PSE/PPSE select command. It returns list of applet on the card:\n",
                   "Usage:\n\temv pse -s1 -> select, get pse\n\temv pse -st2 -> select, get ppse, show result in TLV\n");
 
@@ -182,7 +185,7 @@ static int CmdEMVPPSE(const char *Cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool leaveSignalON = arg_get_lit(2);
@@ -197,7 +200,7 @@ static int CmdEMVPPSE(const char *Cmd) {
     if (arg_get_lit(7))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     SetAPDULogging(APDULogging);
 
@@ -223,7 +226,8 @@ static int CmdEMVGPO(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
-    CLIParserInit("emv gpo",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv gpo",
                   "Executes Get Processing Options command. It returns data in TLV format (0x77 - format2) or plain format (0x80 - format1).\nNeeds a EMV applet to be selected.",
                   "Usage:\n\temv gpo -k -> execute GPO\n"
                   "\temv gpo -t 01020304 -> execute GPO with 4-byte PDOL data, show result in TLV\n"
@@ -240,7 +244,7 @@ static int CmdEMVGPO(const char *Cmd) {
         arg_strx0(NULL,  NULL,     "<HEX PDOLdata/PDOL>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool leaveSignalON = arg_get_lit(1);
     bool paramsLoadFromFile = arg_get_lit(2);
@@ -251,8 +255,8 @@ static int CmdEMVGPO(const char *Cmd) {
     if (arg_get_lit(6))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIGetHexWithReturn(7, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 7, data, &datalen);
+    CLIParserFree(ctx);
 
     SetAPDULogging(APDULogging);
 
@@ -331,7 +335,8 @@ static int CmdEMVReadRecord(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
-    CLIParserInit("emv readrec",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv readrec",
                   "Executes Read Record command. It returns data in TLV format.\nNeeds a bank applet to be selected and sometimes needs GPO to be executed.",
                   "Usage:\n\temv readrec -k 0101 -> read file SFI=01, SFIrec=01\n\temv readrec -kt 0201-> read file 0201 and show result in TLV\n");
 
@@ -344,7 +349,7 @@ static int CmdEMVReadRecord(const char *Cmd) {
         arg_strx1(NULL,  NULL,     "<SFI 1byte HEX><SFIrecord 1byte HEX>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool leaveSignalON = arg_get_lit(1);
     bool APDULogging = arg_get_lit(2);
@@ -353,8 +358,8 @@ static int CmdEMVReadRecord(const char *Cmd) {
     if (arg_get_lit(4))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIGetHexWithReturn(5, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 5, data, &datalen);
+    CLIParserFree(ctx);
 
     if (datalen != 2) {
         PrintAndLogEx(ERR, "Command needs to have 2 bytes of data");
@@ -386,7 +391,8 @@ static int CmdEMVAC(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
-    CLIParserInit("emv genac",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv genac",
                   "Generate Application Cryptogram command. It returns data in TLV format .\nNeeds a EMV applet to be selected and GPO to be executed.",
                   "Usage:\n\temv genac -k 0102 -> generate AC with 2-byte CDOLdata and keep field ON after command\n"
                   "\temv genac -t 01020304 -> generate AC with 4-byte CDOL data, show result in TLV\n"
@@ -406,7 +412,7 @@ static int CmdEMVAC(const char *Cmd) {
         arg_strx1(NULL,  NULL,      "<HEX CDOLdata/CDOL>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool leaveSignalON = arg_get_lit(1);
     bool trTypeCDA = arg_get_lit(2);
@@ -436,8 +442,8 @@ static int CmdEMVAC(const char *Cmd) {
     if (arg_get_lit(8))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIGetHexWithReturn(9, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 9, data, &datalen);
+    CLIParserFree(ctx);
 
     SetAPDULogging(APDULogging);
 
@@ -505,7 +511,8 @@ static int CmdEMVAC(const char *Cmd) {
 
 static int CmdEMVGenerateChallenge(const char *Cmd) {
 
-    CLIParserInit("emv challenge",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv challenge",
                   "Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\nNeeds a EMV applet to be selected and GPO to be executed.",
                   "Usage:\n\temv challenge -> get challenge\n\temv challenge -k -> get challenge, keep fileld ON\n");
 
@@ -516,7 +523,7 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool leaveSignalON = arg_get_lit(1);
     bool APDULogging = arg_get_lit(2);
@@ -524,7 +531,7 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
     if (arg_get_lit(3))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     SetAPDULogging(APDULogging);
 
@@ -552,7 +559,8 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     uint8_t data[APDU_RES_LEN] = {0};
     int datalen = 0;
 
-    CLIParserInit("emv intauth",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv intauth",
                   "Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\n"
                   "Needs a EMV applet to be selected and GPO to be executed.",
 
@@ -572,7 +580,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
         arg_strx1(NULL,  NULL,     "<HEX DDOLdata/DDOL>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool leaveSignalON = arg_get_lit(1);
     bool paramsLoadFromFile = arg_get_lit(2);
@@ -583,8 +591,8 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     if (arg_get_lit(6))
         channel = ECC_CONTACT;
     PrintChannel(channel);
-    CLIGetHexWithReturn(7, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 7, data, &datalen);
+    CLIParserFree(ctx);
 
     SetAPDULogging(APDULogging);
 
@@ -782,7 +790,8 @@ static int CmdEMVExec(const char *Cmd) {
     struct tlvdb *tlvRoot = NULL;
     struct tlv *pdol_data_tlv = NULL;
 
-    CLIParserInit("emv exec",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv exec",
                   "Executes EMV contactless transaction",
                   "Usage:\n"
                   "\temv exec -sat -> select card, execute MSD transaction, show APDU and TLV\n"
@@ -803,7 +812,7 @@ static int CmdEMVExec(const char *Cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool activateField = arg_get_lit(1);
     bool showAPDU = arg_get_lit(2);
@@ -825,7 +834,7 @@ static int CmdEMVExec(const char *Cmd) {
         channel = ECC_CONTACT;
     PrintChannel(channel);
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     if (!IfPm3Smartcard()) {
         if (channel == ECC_CONTACT) {
@@ -1375,7 +1384,8 @@ static int CmdEMVScan(const char *Cmd) {
     json_t *root;
     json_error_t error;
 
-    CLIParserInit("emv scan",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv scan",
                   "Scan EMV card and save it contents to a file.",
                   "It executes EMV contactless transaction and saves result to a file which can be used for emulation\n"
                   "Usage:\n\temv scan -at -> scan MSD transaction mode and show APDU and TLV\n"
@@ -1397,7 +1407,7 @@ static int CmdEMVScan(const char *Cmd) {
         arg_str1(NULL,  NULL,       "output.json", "JSON output file name"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool showAPDU = arg_get_lit(1);
     bool decodeTLV = arg_get_lit(2);
@@ -1422,8 +1432,8 @@ static int CmdEMVScan(const char *Cmd) {
     uint8_t relfname[250] = {0};
     char *crelfname = (char *)relfname;
     int relfnamelen = 0;
-    CLIGetStrWithReturn(12, relfname, &relfnamelen);
-    CLIParserFree();
+    CLIGetStrWithReturn(ctx, 12, relfname, &relfnamelen);
+    CLIParserFree(ctx);
 
     if (!IfPm3Smartcard()) {
         if (channel == ECC_CONTACT) {
@@ -1752,7 +1762,8 @@ static int CmdEMVList(const char *Cmd) {
 }
 
 static int CmdEMVTest(const char *Cmd) {
-    CLIParserInit("emv test",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv test",
                   "Executes tests\n",
                   "Usage:\n\temv test [l]\n");
 
@@ -1762,11 +1773,11 @@ static int CmdEMVTest(const char *Cmd) {
         arg_lit0("lL",  "long",  "run long tests too"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool ignoreTimeTest = arg_get_lit(1);
     bool runSlowTests = arg_get_lit(2);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     return ExecuteCryptoTests(true, ignoreTimeTest, runSlowTests);
 }
@@ -1781,7 +1792,8 @@ static int CmdEMVRoca(const char *Cmd) {
 	size_t ODAI_listlen = 0;
     int res;
 
-    CLIParserInit("emv roca",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv roca",
                   "Tries to extract public keys and run the ROCA test against them.\n",
                   "Usage:\n"
                   "\temv roca -w -> select --CONTACT-- card and run test\n"
@@ -1795,11 +1807,11 @@ static int CmdEMVRoca(const char *Cmd) {
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     EMVCommandChannel channel = ECC_CONTACTLESS;
     if (arg_get_lit(1)) {
-        CLIParserFree();
+        CLIParserFree(ctx);
         return roca_self_test();
     }
 
@@ -1807,9 +1819,8 @@ static int CmdEMVRoca(const char *Cmd) {
 
     if (arg_get_lit(3))
         channel = ECC_CONTACT;
-    
-    CLIParserFree();
-    
+
+    CLIParserFree(ctx);
     PrintChannel(channel);
 
     if (!IfPm3Smartcard()) {

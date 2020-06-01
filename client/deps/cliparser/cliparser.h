@@ -27,16 +27,24 @@
 #define arg_strx1(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 1, 250, (glossary)))
 #define arg_strx0(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 0, 250, (glossary)))
 
-#define CLIExecWithReturn(cmd, atbl, ifempty) if (CLIParserParseString(cmd, atbl, arg_getsize(atbl), ifempty)){CLIParserFree();return PM3_ESOFT;}
-#define CLIGetHexBLessWithReturn(paramnum, data, datalen, delta) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data) - (delta), datalen)) {CLIParserFree();return PM3_ESOFT;}
-#define CLIGetHexWithReturn(paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree();return PM3_ESOFT;}
-#define CLIGetStrWithReturn(paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree();return PM3_ESOFT;}
+#define CLIExecWithReturn(ctx, cmd, atbl, ifempty) if (CLIParserParseString(ctx, cmd, atbl, arg_getsize(atbl), ifempty)){CLIParserFree(ctx);return PM3_ESOFT;}
+#define CLIGetHexBLessWithReturn(ctx, paramnum, data, datalen, delta) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data) - (delta), datalen)) {CLIParserFree(ctx);return PM3_ESOFT;}
+#define CLIGetHexWithReturn(ctx, paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree(ctx);return PM3_ESOFT;}
+#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree(ctx);return PM3_ESOFT;}
 
-int CLIParserInit(const char *vprogramName, const char *vprogramHint, const char *vprogramHelp);
-int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
-int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
-int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
-void CLIParserFree(void);
+typedef struct {
+    void **argtable;
+    size_t argtableLen;
+    const char *programName;
+    const char *programHint;
+    const char *programHelp;
+    char buf[500];
+} CLIParserContext;
+int CLIParserInit(CLIParserContext **context, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp);
+int CLIParserParseString(CLIParserContext *context, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
+int CLIParserParseStringEx(CLIParserContext *context, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
+int CLIParserParseArg(CLIParserContext *context, int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
+void CLIParserFree(CLIParserContext *context);
 
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);

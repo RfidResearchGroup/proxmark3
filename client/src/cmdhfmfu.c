@@ -2915,7 +2915,8 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     uint8_t *p_key = key;
     uint8_t pack[4] = {0, 0, 0, 0};
 
-    CLIParserInit("hf mfu ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\thf mfu ndef -> shows NDEF data\n"
                   "\thf mfu ndef -k ffffffff -> shows NDEF data with key\n");
@@ -2926,10 +2927,10 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         arg_lit0("lL", "key", "(optional) swap entered key's endianness"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
-    CLIGetHexWithReturn(1, key, &keylen);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
     swapEndian = arg_get_lit(2);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     switch (keylen) {
         case 0:

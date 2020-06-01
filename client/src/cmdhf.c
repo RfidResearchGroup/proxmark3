@@ -254,7 +254,8 @@ int CmdHFSniff(const char *Cmd) {
 }
 
 int CmdHFPlot(const char *Cmd) {
-    CLIParserInit("hf plot",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf plot",
                   "Plots HF signal after RF signal path and A/D conversion.",
                   "This can be used after any hf command and will show the last few milliseconds of the HF signal.\n"
                   "Note: If the last hf command terminated because of a timeout you will most probably see nothing.\n");
@@ -262,7 +263,8 @@ int CmdHFPlot(const char *Cmd) {
         arg_param_begin,
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     uint8_t buf[FPGA_TRACE_SIZE];
 

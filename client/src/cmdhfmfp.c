@@ -424,7 +424,8 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
     uint8_t key[64] = {0};
     int keyLen = 0;
 
-    CLIParserInit("hf mfp wrp",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp wrp",
                   "Executes Write Perso command. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp wrp 4000 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000 \n"
                   "\thf mfp wrp 4000 -> write default key(0xff..0xff) to key number 4000");
@@ -436,12 +437,12 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
         arg_strx0(NULL,  NULL,     "<HEX key (16b)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
-    CLIGetHexWithReturn(2, keyNum, &keyNumLen);
-    CLIGetHexWithReturn(3, key, &keyLen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 2, keyNum, &keyNumLen);
+    CLIGetHexWithReturn(ctx, 3, key, &keyLen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -490,7 +491,8 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
     uint8_t data[250] = {0};
     int datalen = 0;
 
-    CLIParserInit("hf mfp initp",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp initp",
                   "Executes Write Perso command for all card's keys. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp initp 000102030405060708090a0b0c0d0e0f -> fill all the keys with key (00..0f)\n"
                   "\thf mfp initp -vv -> fill all the keys with default key(0xff..0xff) and show all the data exchange");
@@ -501,12 +503,12 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
         arg_strx0(NULL,  NULL,      "<HEX key (16b)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     bool verbose2 = arg_get_lit(1) > 1;
-    CLIGetHexWithReturn(2, key, &keyLen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 2, key, &keyLen);
+    CLIParserFree(ctx);
 
     if (keyLen && keyLen != 16) {
         PrintAndLogEx(ERR, "Key length must be 16 bytes instead of: %d", keyLen);
@@ -557,7 +559,8 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
 }
 
 static int CmdHFMFPCommitPerso(const char *Cmd) {
-    CLIParserInit("hf mfp commitp",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp commitp",
                   "Executes Commit Perso command. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp commitp ->  \n");
 
@@ -567,10 +570,10 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
         arg_int0(NULL,  NULL,      "SL mode", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -603,7 +606,8 @@ static int CmdHFMFPAuth(const char *Cmd) {
     uint8_t key[250] = {0};
     int keylen = 0;
 
-    CLIParserInit("hf mfp auth",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp auth",
                   "Executes AES authentication command for Mifare Plus card",
                   "Usage:\n\thf mfp auth 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
                   "\thf mfp auth 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data\n");
@@ -615,12 +619,12 @@ static int CmdHFMFPAuth(const char *Cmd) {
         arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
-    CLIGetHexWithReturn(2, keyn, &keynlen);
-    CLIGetHexWithReturn(3, key, &keylen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 2, keyn, &keynlen);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    CLIParserFree(ctx);
 
     if (keynlen != 2) {
         PrintAndLogEx(ERR, "ERROR: <Key Num> must be 2 bytes long instead of: %d", keynlen);
@@ -640,7 +644,8 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     uint8_t key[250] = {0};
     int keylen = 0;
 
-    CLIParserInit("hf mfp rdbl",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp rdbl",
                   "Reads several blocks from Mifare Plus card.",
                   "Usage:\n\thf mfp rdbl 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data\n"
                   "\thf mfp rdbl 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
@@ -655,15 +660,15 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool verbose = arg_get_lit(1);
     int blocksCount = arg_get_int_def(2, 1);
     bool keyB = arg_get_lit(3);
     int plain = arg_get_lit(4);
     uint32_t blockn = arg_get_int(5);
-    CLIGetHexWithReturn(6, key, &keylen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 6, key, &keylen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -752,7 +757,8 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     uint8_t key[250] = {0};
     int keylen = 0;
 
-    CLIParserInit("hf mfp rdsc",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp rdsc",
                   "Reads one sector from Mifare Plus card.",
                   "Usage:\n\thf mfp rdsc 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data\n"
                   "\thf mfp rdsc 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
@@ -766,14 +772,14 @@ static int CmdHFMFPRdsc(const char *Cmd) {
         arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool verbose = arg_get_lit(1);
     bool keyB = arg_get_lit(2);
     bool plain = arg_get_lit(3);
     uint32_t sectorNum = arg_get_int(4);
-    CLIGetHexWithReturn(5, key, &keylen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -850,7 +856,8 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     uint8_t datain[250] = {0};
     int datainlen = 0;
 
-    CLIParserInit("hf mfp wrbl",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp wrbl",
                   "Writes one block to Mifare Plus card.",
                   "Usage:\n\thf mfp wrbl 1 ff0000000000000000000000000000ff 000102030405060708090a0b0c0d0e0f -> writes block 1 data\n"
                   "\thf mfp wrbl 2 ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xFF..0xFF and some additional data\n");
@@ -864,14 +871,14 @@ static int CmdHFMFPWrbl(const char *Cmd) {
         arg_str0(NULL,  NULL,      "<Key (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool verbose = arg_get_lit(1);
     bool keyB = arg_get_lit(2);
     uint32_t blockNum = arg_get_int(3);
-    CLIGetHexWithReturn(4, datain, &datainlen);
-    CLIGetHexWithReturn(5, key, &keylen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 4, datain, &datainlen);
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -1047,7 +1054,8 @@ static int CmdHFMFPChk(const char *Cmd) {
     uint32_t keyListLen = 0;
     uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
 
-    CLIParserInit("hf mfp chk",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp chk",
                   "Checks keys with Mifare Plus card.",
                   "Usage:\n"
                   "    hf mfp chk -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B\n"
@@ -1071,7 +1079,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         arg_lit0("vV",  "verbose",   "verbose mode."),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool keyA = arg_get_lit(1);
     bool keyB = arg_get_lit(2);
@@ -1080,14 +1088,14 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     uint8_t vkey[16] = {0};
     int vkeylen = 0;
-    CLIGetHexWithReturn(5, vkey, &vkeylen);
+    CLIGetHexWithReturn(ctx, 5, vkey, &vkeylen);
     if (vkeylen > 0) {
         if (vkeylen == 16) {
             memcpy(&keyList[keyListLen], vkey, 16);
             keyListLen++;
         } else {
             PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
-            CLIParserFree();
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -1096,7 +1104,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     int dict_filenamelen = 0;
     if (CLIParamStrToBuf(arg_get_str(6), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
         PrintAndLogEx(FAILED, "File name too long or invalid.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -1105,26 +1113,26 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     if (dict_filenamelen && (pattern1b || pattern2b)) {
         PrintAndLogEx(ERR, "Pattern search mode and dictionary mode can't be used in one command.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t startPattern = 0x0000;
     uint8_t vpattern[2];
     int vpatternlen = 0;
-    CLIGetHexWithReturn(9, vpattern, &vpatternlen);
+    CLIGetHexWithReturn(ctx, 9, vpattern, &vpatternlen);
     if (vpatternlen > 0) {
         if (vpatternlen > 0 && vpatternlen <= 2) {
             startPattern = (vpattern[0] << 8) + vpattern[1];
         } else {
             PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
-            CLIParserFree();
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
         if (!pattern2b)
@@ -1135,14 +1143,14 @@ static int CmdHFMFPChk(const char *Cmd) {
     int jsonnamelen = 0;
     if (CLIParamStrToBuf(arg_get_str(10), jsonname, sizeof(jsonname), &jsonnamelen)) {
         PrintAndLogEx(ERR, "Invalid json name.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     jsonname[jsonnamelen] = 0;
 
     bool verbose = arg_get_lit(11);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     uint8_t startKeyAB = 0;
     uint8_t endKeyAB = 1;
@@ -1277,7 +1285,8 @@ static int CmdHFMFPChk(const char *Cmd) {
 
 static int CmdHFMFPMAD(const char *Cmd) {
 
-    CLIParserInit("hf mfp mad",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp mad",
                   "Checks and prints Mifare Application Directory (MAD)",
                   "Usage:\n\thf mfp mad -> shows MAD if exists\n"
                   "\thf mfp mad -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
@@ -1290,18 +1299,18 @@ static int CmdHFMFPMAD(const char *Cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     uint8_t aid[2] = {0};
     int aidlen;
-    CLIGetHexWithReturn(2, aid, &aidlen);
+    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[16] = {0};
     int keylen;
-    CLIGetHexWithReturn(3, key, &keylen);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(4);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     if (aidlen != 2 && keylen > 0) {
         PrintAndLogEx(WARNING, "do not need a key without aid.");
@@ -1371,7 +1380,8 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
 static int CmdHFMFPNDEF(const char *Cmd) {
 
-    CLIParserInit("hf mfp ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\thf mfp ndef -> shows NDEF data\n"
                   "\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
@@ -1384,19 +1394,19 @@ static int CmdHFMFPNDEF(const char *Cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     bool verbose2 = arg_get_lit(1) > 1;
     uint8_t aid[2] = {0};
     int aidlen;
-    CLIGetHexWithReturn(2, aid, &aidlen);
+    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[16] = {0};
     int keylen;
-    CLIGetHexWithReturn(3, key, &keylen);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(4);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     uint16_t ndefAID = 0x03e1;
     if (aidlen == 2)

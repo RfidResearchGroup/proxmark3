@@ -1782,7 +1782,8 @@ static void swap16(uint8_t *data) {
 
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
-    CLIParserInit("hf mfdes createaid",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createaid",
                   "Create Application ID",
                   "Usage:\n\thf mfdes createaid -a 123456 -f 1111 -k 0E -l 2E -n Test\n"
                  );
@@ -1796,7 +1797,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_str0("nN",  "name",    "<name>", "App ISO-4 Name (optional)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     /* KeySetting 1 (AMK Setting):
        0:   Allow change master key
        1:   Free Directory list access without master key
@@ -1835,12 +1836,12 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     int keylen1 = 1;
     int keylen2 = 1;
     int namelen = 16;
-    CLIGetHexWithReturn(1, aid, &aidlength);
-    CLIGetHexWithReturn(2, fid, &fidlength);
-    CLIGetHexWithReturn(3, keysetting1, &keylen1);
-    CLIGetHexWithReturn(4, keysetting2, &keylen2);
-    CLIGetStrWithReturn(5, name, &namelen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 2, fid, &fidlength);
+    CLIGetHexWithReturn(ctx, 3, keysetting1, &keylen1);
+    CLIGetHexWithReturn(ctx, 4, keysetting2, &keylen2);
+    CLIGetStrWithReturn(ctx, 5, name, &namelen);
+    CLIParserFree(ctx);
 
     swap24(aid);
     swap16(fid);
@@ -1908,7 +1909,8 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 }
 
 static int CmdHF14ADesDeleteApp(const char *Cmd) {
-    CLIParserInit("hf mfdes deleteaid",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes deleteaid",
                   "Delete Application ID",
                   "Usage:\n\t-a aid (3 hex bytes, big endian)\n\n"
                   "Example:\n\thf mfdes deleteaid -a 123456\n"
@@ -1919,11 +1921,11 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_strx0("aA",  "aid",    "<aid>", "App ID to delete"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int aidlength = 3;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
+    CLIParserFree(ctx);
     swap24(aid);
     if (aidlength != 3) {
         PrintAndLogEx(ERR, "AID must have 3 bytes length.");
@@ -1945,7 +1947,8 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
 
 static int CmdHF14ADesClearRecordFile(const char *Cmd) {
-    CLIParserInit("hf mfdes clearrecord",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes clearrecord",
                   "Clear record file",
                   "Usage:\n\t"
                   "hf mfdes clearrecord -a 123456 -n 01\n"
@@ -1957,19 +1960,19 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIGetHexWithReturn(3, fid, &fidlength);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 3, fid, &fidlength);
+    CLIParserFree(ctx);
 
     if (filenolen != 1) {
         PrintAndLogEx(ERR, "Fileno must have 1 bytes length.");
@@ -2005,7 +2008,8 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
 }
 
 static int CmdHF14ADesDeleteFile(const char *Cmd) {
-    CLIParserInit("hf mfdes deletefile",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes deletefile",
                   "Delete File",
                   "Usage:\n\t"
                   "hf mfdes deletefile -a 123456 -n 01\n"
@@ -2017,19 +2021,19 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIGetHexWithReturn(3, fid, &fidlength);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 3, fid, &fidlength);
+    CLIParserFree(ctx);
 
     if (filenolen != 1) {
         PrintAndLogEx(ERR, "Fileno must have 1 bytes length.");
@@ -2065,7 +2069,8 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
 }
 
 static int CmdHF14ADesCreateFile(const char *Cmd) {
-    CLIParserInit("hf mfdes createfile",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createfile",
                   "Create Standard/Backup File",
                   "Usage:"
                   "\n\thf mfdes createfile -a 123456 -f 1111 -n 01 -c 0 -r EEEE -s 000100\n"
@@ -2082,30 +2087,30 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_lit0("bB", "backup", "Create backupfile instead of standard file"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIGetHexWithReturn(3, fid, &fidlength);
+    CLIGetHexWithReturn(ctx, 3, fid, &fidlength);
 
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
     uint8_t ar[2] = {0};
-    CLIGetHexWithReturn(5, ar, &arlength);
+    CLIGetHexWithReturn(ctx, 5, ar, &arlength);
 
     int fsizelen = 0;
     uint8_t filesize[3] = {0};
-    CLIGetHexWithReturn(6, filesize, &fsizelen);
+    CLIGetHexWithReturn(ctx, 6, filesize, &fsizelen);
 
     bool isbackup = arg_get_lit(7);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     swap24(aid);
     swap16(fid);
@@ -2175,7 +2180,8 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 }
 
 static int CmdHF14ADesGetValueData(const char *Cmd) {
-    CLIParserInit("hf mfdes getvalue",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getvalue",
                   "Get value from value file",
                   "Usage:"
                   "\n\thf mfdes getvalue -a 123456 -n 03\n"
@@ -2187,16 +2193,16 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
         arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
+    CLIParserFree(ctx);
 
     if (filenolen != 1) {
         PrintAndLogEx(ERR, "File number is missing");
@@ -2242,7 +2248,8 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
 }
 
 static int CmdHF14ADesReadData(const char *Cmd) {
-    CLIParserInit("hf mfdes readdata",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes readdata",
                   "Read data from File",
                   "Usage:"
                   "\n\thf mfdes readdata -a 123456 -n 01 -t 0 -o 000000 -l 000000\n"
@@ -2257,25 +2264,25 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_int0("type", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
-    CLIGetHexWithReturn(3, offset, &offsetlength);
+    CLIGetHexWithReturn(ctx, 3, offset, &offsetlength);
 
     int flength = 0;
     uint8_t filesize[3] = {0};
-    CLIGetHexWithReturn(4, filesize, &flength);
+    CLIGetHexWithReturn(ctx, 4, filesize, &flength);
 
     int type = arg_get_int(5);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     if (type > 1) {
         PrintAndLogEx(ERR, "Invalid file type (0=Standard/Backup, 1=Record)");
@@ -2347,7 +2354,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 }
 
 static int CmdHF14ADesChangeValue(const char *Cmd) {
-    CLIParserInit("hf mfdes changevalue",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes changevalue",
                   "Change value (credit/limitedcredit/debit)",
                   "Usage:"
                   "\n\thf mfdes changevalue -a 123456 -n 03 -m 0 -d 00000001\n"
@@ -2363,22 +2371,22 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     };
 
     mfdes_value_t value;
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
     value.fileno = _fileno[0];
 
     int vlength = 0x0;
-    CLIGetHexWithReturn(3, value.value, &vlength);
+    CLIGetHexWithReturn(ctx, 3, value.value, &vlength);
 
     int mode = arg_get_int(4);
-    CLIParserFree();
+    CLIParserFree(ctx);
     swap24(aid);
 
     if (mode > 2) {
@@ -2439,7 +2447,8 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
 
 static int CmdHF14ADesWriteData(const char *Cmd) {
 
-    CLIParserInit("hf mfdes writedata",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes writedata",
                   "Write data to File",
                   "Usage:"
                   "\n\thf mfdes writedata -a 123456 -n 01 -t 0 -o 000000 -d 3132333435363738\n"
@@ -2455,19 +2464,19 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_param_end
     };
 
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
-    CLIGetHexWithReturn(3, offset, &offsetlength);
+    CLIGetHexWithReturn(ctx, 3, offset, &offsetlength);
 
     int dlength = 0xFFFF;
     uint8_t *data = (uint8_t *)calloc(dlength, sizeof(uint8_t));
@@ -2477,13 +2486,13 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     }
     if (CLIParamHexToBuf(arg_get_str(4), data, dlength, &dlength)) {
         free(data);
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
     int type = arg_get_int(5);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     swap24(aid);
     swap24(offset);
@@ -2555,7 +2564,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
 
 static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
-    CLIParserInit("hf mfdes createrecordfile",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createrecordfile",
                   "Create Linear/Cyclic Record File",
                   "Usage:"
                   "\n\thf mfdes createrecordfile -a 123456 -f 1122 -n 02 -c 0 -r EEEE -s 000010 -m 000005\n"
@@ -2573,34 +2583,34 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         arg_lit0("bB", "cyclic", "Create cyclic record file instead of linear record file"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIGetHexWithReturn(3, fid, &fidlength);
+    CLIGetHexWithReturn(ctx, 3, fid, &fidlength);
 
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
     uint8_t ar[2] = {0};
-    CLIGetHexWithReturn(5, ar, &arlength);
+    CLIGetHexWithReturn(ctx, 5, ar, &arlength);
 
     int rsizelen = 0;
     uint8_t recordsize[3] = {0};
-    CLIGetHexWithReturn(6, recordsize, &rsizelen);
+    CLIGetHexWithReturn(ctx, 6, recordsize, &rsizelen);
 
     int msizelen = 0;
     uint8_t maxnumrecords[3] = {0};
-    CLIGetHexWithReturn(7, maxnumrecords, &msizelen);
+    CLIGetHexWithReturn(ctx, 7, maxnumrecords, &msizelen);
 
     bool cyclic = arg_get_lit(8);
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     swap24(aid);
     swap16(fid);
@@ -2685,7 +2695,8 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
 }
 
 static int CmdHF14ADesCreateValueFile(const char *Cmd) {
-    CLIParserInit("hf mfdes createvaluefile",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createvaluefile",
                   "Create Value File",
                   "Usage:"
                   "\n\thf mfdes createvaluefile -a 123456 -n 03 -c 0 -r EEEE -l 00000000 -u 00002000 -v 00000001 -m 02\n"
@@ -2703,37 +2714,37 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_strx0("mM", "limitcredit", "<limitcredit>", "Limited Credit enabled (1 hex byte [Bit 0=LimitedCredit, 1=FreeValue])"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
 
     int filenolen = 0;
     uint8_t _fileno[1] = {0};
-    CLIGetHexWithReturn(2, _fileno, &filenolen);
+    CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
     uint8_t comset = arg_get_int(3);
     int arlength = 0;
     uint8_t ar[2] = {0};
-    CLIGetHexWithReturn(4, ar, &arlength);
+    CLIGetHexWithReturn(ctx, 4, ar, &arlength);
 
     int lllen = 0;
     uint8_t lowerlimit[4] = {0};
-    CLIGetHexWithReturn(5, lowerlimit, &lllen);
+    CLIGetHexWithReturn(ctx, 5, lowerlimit, &lllen);
 
     int ullen = 0;
     uint8_t upperlimit[4] = {0};
-    CLIGetHexWithReturn(6, upperlimit, &ullen);
+    CLIGetHexWithReturn(ctx, 6, upperlimit, &ullen);
 
     int vllen = 0;
     uint8_t value[4] = {0};
-    CLIGetHexWithReturn(7, value, &vllen);
+    CLIGetHexWithReturn(ctx, 7, value, &vllen);
 
     int limitedlen = 0;
     uint8_t limited[1] = {0};
-    CLIGetHexWithReturn(8, limited, &limitedlen);
+    CLIGetHexWithReturn(ctx, 8, limited, &limitedlen);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     swap24(aid);
     swap32(lowerlimit);
@@ -2813,7 +2824,8 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
 }
 
 static int CmdHF14ADesFormatPICC(const char *Cmd) {
-    CLIParserInit("hf mfdes formatpicc",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes formatpicc",
                   "Formats MIFARE DESFire PICC to factory state",
                   "Usage:\n\t-k PICC key (8 bytes)\n\n"
                   "Example:\n\thf mfdes formatpicc -k 0000000000000000\n"
@@ -2824,12 +2836,12 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t key[8] = {0};
     int keylen = 8;
-    CLIGetHexWithReturn(1, key, &keylen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
+    CLIParserFree(ctx);
 
     if ((keylen < 8) || (keylen > 8)) {
         PrintAndLogEx(ERR, "Specified key must have 8 bytes length");
@@ -3419,7 +3431,8 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     uint8_t keylength = 8;
     bool usedefaultkey = false;
 
-    CLIParserInit("hf mfdes auth",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes auth",
                   "Authenticates Mifare DESFire using Key",
                   "Usage:"
                   "\n\thf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 (AES)"
@@ -3436,21 +3449,21 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t cmdAuthMode = arg_get_int_def(1, 0);
     uint8_t cmdAuthAlgo = arg_get_int_def(2, 0);
 
     int aidlength = 3;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(3, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 3, aid, &aidlength);
     swap24(aid);
     uint8_t cmdKeyNo  = arg_get_int_def(4, 0);
 
     uint8_t key[24] = {0};
     int keylen = 0;
-    CLIGetHexWithReturn(5, key, &keylen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIParserFree(ctx);
 
     if (keylen == 0) {
         usedefaultkey = true;
@@ -3860,7 +3873,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
     uint32_t k3kkeyListLen = 0;
     uint8_t foundKeys[4][0xE][24 + 1] = {{{0}}};
 
-    CLIParserInit("hf mfdes chk",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with Mifare Desfire card.",
                   "Usage:\n"
                   "    hf mfdes chk -a 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456\n"
@@ -3881,15 +3895,15 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0("vV",  "verbose",   "Verbose mode."),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
-    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
     swap24(aid);
     uint8_t vkey[16] = {0};
     int vkeylen = 0;
-    CLIGetHexWithReturn(2, vkey, &vkeylen);
+    CLIGetHexWithReturn(ctx, 2, vkey, &vkeylen);
 
     if (vkeylen > 0) {
         if (vkeylen == 8) {
@@ -3903,7 +3917,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
             k3kkeyListLen++;
         } else {
             PrintAndLogEx(ERR, "Specified key must have 8, 16 or 24 bytes length.");
-            CLIParserFree();
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -3912,7 +3926,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     int dict_filenamelen = 0;
     if (CLIParamStrToBuf(arg_get_str(3), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
         PrintAndLogEx(FAILED, "File name too long or invalid.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -3921,26 +3935,26 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     if (dict_filenamelen && (pattern1b || pattern2b)) {
         PrintAndLogEx(ERR, "Pattern search mode and dictionary mode can't be used in one command.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t startPattern = 0x0000;
     uint8_t vpattern[2];
     int vpatternlen = 0;
-    CLIGetHexWithReturn(6, vpattern, &vpatternlen);
+    CLIGetHexWithReturn(ctx, 6, vpattern, &vpatternlen);
     if (vpatternlen > 0) {
         if (vpatternlen > 0 && vpatternlen <= 2) {
             startPattern = (vpattern[0] << 8) + vpattern[1];
         } else {
             PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
-            CLIParserFree();
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
         if (!pattern2b)
@@ -3951,14 +3965,14 @@ static int CmdHF14aDesChk(const char *Cmd) {
     int jsonnamelen = 0;
     if (CLIParamStrToBuf(arg_get_str(7), jsonname, sizeof(jsonname), &jsonnamelen)) {
         PrintAndLogEx(ERR, "Invalid json name.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     jsonname[jsonnamelen] = 0;
 
     bool verbose = arg_get_lit(8);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     // 1-byte pattern search mode
     if (pattern1b) {

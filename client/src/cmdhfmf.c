@@ -4025,7 +4025,8 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     uint8_t sak[1] = {0x00};
     int sakLen = 0;
 
-    CLIParserInit("hf mf cwipe",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf cwipe",
                   "Wipe gen1 magic chinese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
                   "Usage:\n\thf mf cwipe -> wipe card.\n"
                   "\thf mf cwipe  -u 09080706 -a 0004 -s 18      -- set UID, ATQA and SAK and wipe card.");
@@ -4037,12 +4038,12 @@ static int CmdHF14AMfCWipe(const char *cmd) {
         arg_str0("sS",  "sak",     "<SAK (hex 1b)>",  "SAK for card"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(ctx, cmd, argtable, true);
 
-    CLIGetHexWithReturn(1, uid, &uidLen);
-    CLIGetHexWithReturn(2, atqa, &atqaLen);
-    CLIGetHexWithReturn(3, sak, &sakLen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, uid, &uidLen);
+    CLIGetHexWithReturn(ctx, 2, atqa, &atqaLen);
+    CLIGetHexWithReturn(ctx, 3, sak, &sakLen);
+    CLIParserFree(ctx);
 
     if (uidLen && uidLen != 4) {
         PrintAndLogEx(ERR, "UID length must be 4 bytes instead of: %d", uidLen);
@@ -4611,7 +4612,8 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
     uint8_t key[16] = {0};
     int keylen = 0;
 
-    CLIParserInit("hf mf auth4",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf auth4",
                   "Executes AES authentication command in ISO14443-4",
                   "Usage:\n\thf mf auth4 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
                   "\thf mf auth4 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication\n");
@@ -4622,11 +4624,11 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
         arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    CLIGetHexWithReturn(1, keyn, &keynlen);
-    CLIGetHexWithReturn(2, key, &keylen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, keyn, &keynlen);
+    CLIGetHexWithReturn(ctx, 2, key, &keylen);
+    CLIParserFree(ctx);
 
     if (keynlen != 2) {
         PrintAndLogEx(ERR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
@@ -4644,7 +4646,8 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static int CmdHF14AMfMAD(const char *Cmd) {
 
-    CLIParserInit("hf mf mad",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf mad",
                   "Checks and prints Mifare Application Directory (MAD)",
                   "Usage:\n\thf mf mad -> shows MAD if exists\n"
                   "\thf mf mad -a 03e1 -k ffffffffffff -b -> shows NDEF data if exists. read card with custom key and key B\n");
@@ -4657,17 +4660,17 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = arg_get_lit(1);
     uint8_t aid[2] = {0};
     int aidlen;
-    CLIGetHexWithReturn(2, aid, &aidlen);
+    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[6] = {0};
     int keylen;
-    CLIGetHexWithReturn(3, key, &keylen);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(4);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     if (aidlen != 2 && keylen > 0) {
         PrintAndLogEx(WARNING, "do not need a key without aid.");
@@ -4734,7 +4737,8 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
 static int CmdHFMFNDEF(const char *Cmd) {
 
-    CLIParserInit("hf mf ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\thf mf ndef -> shows NDEF data\n"
                   "\thf mf ndef -a 03e1 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B\n");
@@ -4747,19 +4751,19 @@ static int CmdHFMFNDEF(const char *Cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     bool verbose2 = arg_get_lit(1) > 1;
     uint8_t aid[2] = {0};
     int aidlen;
-    CLIGetHexWithReturn(2, aid, &aidlen);
+    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[6] = {0};
     int keylen;
-    CLIGetHexWithReturn(3, key, &keylen);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(4);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     uint16_t ndefAID = 0x03e1;
     if (aidlen == 2)
@@ -4838,7 +4842,8 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
 static int CmdHFMFPersonalize(const char *cmd) {
 
-    CLIParserInit("hf mf personalize",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf personalize",
                   "Personalize the UID of a Mifare Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",
                   "Usage:\n\thf mf personalize UIDF0                        -> double size UID according to ISO/IEC14443-3\n"
                   "\thf mf personalize UIDF1                        -> double size UID according to ISO/IEC14443-3, optional usage of selection process shortcut\n"
@@ -4853,7 +4858,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
         arg_str1(NULL,  NULL,      "<UIDF0|UIDF1|UIDF2|UIDF3>", "Personalization Option"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(ctx, cmd, argtable, true);
 
     char keytypestr[2] = "a";
     uint8_t keytype = 0x00;
@@ -4863,7 +4868,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
 
     if (res || (keytypestr[0] != 'a' && keytypestr[0] != 'b')) {
         PrintAndLogEx(ERR, "ERROR: not a valid key type. Key type must be A or B");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     if (keytypestr[0] == 'b') {
@@ -4875,7 +4880,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
     res = CLIParamHexToBuf(arg_get_str(2), key, 6, &key_len);
     if (res || (!res && key_len > 0 && key_len != 6)) {
         PrintAndLogEx(ERR, "ERROR: not a valid key. Key must be 12 hex digits");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -4888,7 +4893,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
     if (res || (!res && opt_len > 0 && opt_len != 5)
             || (strncmp(pers_optionstr, "uidf0", 5) && strncmp(pers_optionstr, "uidf1", 5) && strncmp(pers_optionstr, "uidf2", 5) && strncmp(pers_optionstr, "uidf3", 5))) {
         PrintAndLogEx(ERR, "ERROR: invalid personalization option. Must be one of UIDF0, UIDF1, UIDF2, or UIDF3");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     if (!strncmp(pers_optionstr, "uidf0", 5)) {
@@ -4901,7 +4906,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
         pers_option = MIFARE_EV1_UIDF3;
     }
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
 

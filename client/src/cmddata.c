@@ -2292,7 +2292,8 @@ static int CmdDataNDEF(const char *Cmd) {
 #define MAX_NDEF_LEN  2048
 #endif
 
-    CLIParserInit("data ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
 
@@ -2301,12 +2302,12 @@ static int CmdDataNDEF(const char *Cmd) {
         arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
-    CLIGetHexWithReturn(1, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    CLIParserFree(ctx);
     if (datalen == 0)
         return PM3_EINVARG;
 
