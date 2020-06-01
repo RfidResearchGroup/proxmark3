@@ -30,7 +30,7 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 
-uint64_t g_em410xid = 0;
+static uint64_t g_em410xid = 0;
 
 static int CmdHelp(const char *Cmd);
 

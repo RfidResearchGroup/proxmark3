@@ -499,7 +499,7 @@ static void free_sum_bitarrays(void) {
 
 
 #ifdef DEBUG_KEY_ELIMINATION
-char failstr[250] = "";
+static char failstr[250] = "";
 #endif
 
 static const float p_K0[NUM_SUMS] = { // the probability that a random nonce has a Sum Property K

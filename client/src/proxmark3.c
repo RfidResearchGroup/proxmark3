@@ -134,9 +134,9 @@ static int check_comm(void) {
 }
 
 // first slot is always NULL, indicating absence of script when idx=0
-FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
-uint8_t cmdscriptfile_idx = 0;
-bool cmdscriptfile_stayafter = false;
+static FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
+static uint8_t cmdscriptfile_idx = 0;
+static bool cmdscriptfile_stayafter = false;
 
 int push_cmdscriptfile(char *path, bool stayafter) {
     if (cmdscriptfile_idx == MAX_NESTED_CMDSCRIPT) {

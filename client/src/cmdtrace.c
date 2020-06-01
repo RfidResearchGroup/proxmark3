@@ -24,7 +24,7 @@ static int CmdHelp(const char *Cmd);
 
 // trace pointer
 static uint8_t *g_trace;
-long g_traceLen = 0;
+static long g_traceLen = 0;
 
 static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");

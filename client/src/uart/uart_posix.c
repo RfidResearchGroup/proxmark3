@@ -77,8 +77,8 @@ struct timeval timeout = {
     .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000
 };
 
-uint32_t newtimeout_value = 0;
-bool newtimeout_pending = false;
+static uint32_t newtimeout_value = 0;
+static bool newtimeout_pending = false;
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;

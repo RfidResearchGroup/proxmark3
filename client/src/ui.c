@@ -44,7 +44,7 @@ session_arg_t session;
 double CursorScaleFactor = 1;
 int PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
 uint32_t CursorCPos = 0, CursorDPos = 0;
-bool flushAfterWrite = 0;
+static bool flushAfterWrite = 0;
 int GridOffset = 0;
 bool GridLocked = false;
 bool showDemod = true;
@@ -176,7 +176,7 @@ void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     PrintAndLogEx(NORMAL, "%s", buff);
 }
 
-uint8_t PrintAndLogEx_spinidx = 0;
+static uint8_t PrintAndLogEx_spinidx = 0;
 
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 

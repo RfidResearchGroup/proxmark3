@@ -34,11 +34,12 @@
 
 extern "C" int preferences_save(void);
 
-bool g_useOverlays = false;
-int g_absVMax = 0;
-uint32_t startMax; // Maximum offset in the graph (right side of graph)
-uint32_t PageWidth; // How many samples are currently visible on this 'page' / graph
-int unlockStart = 0;
+static int s_Buff[MAX_GRAPH_TRACE_LEN];
+static bool g_useOverlays = false;
+static int g_absVMax = 0;
+static uint32_t startMax; // Maximum offset in the graph (right side of graph)
+static uint32_t PageWidth; // How many samples are currently visible on this 'page' / graph
+static int unlockStart = 0;
 
 void ProxGuiQT::ShowGraphWindow(void) {
     emit ShowGraphWindowSignal();

@@ -19,7 +19,6 @@
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 size_t GraphTraceLen;
-int s_Buff[MAX_GRAPH_TRACE_LEN];
 
 /* write a manchester bit to the graph
 TODO,  verfy that this doesn't overflow buffer  (iceman)

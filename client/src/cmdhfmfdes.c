@@ -32,7 +32,7 @@
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
 
-struct desfire_key defaultkey = {0};
+static struct desfire_key defaultkey = {0};
 static desfirekey_t sessionkey = &defaultkey;
 
 //uint8_t key_zero_data[16] = { 0x00 };

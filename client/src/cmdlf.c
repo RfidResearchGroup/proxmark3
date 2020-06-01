@@ -55,7 +55,7 @@
 #include "cmdlfmotorola.h"  // for Motorola menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 
-bool g_lf_threshold_set = false;
+static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
