@@ -312,10 +312,10 @@ out:
     return retval;
 }
 
-int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen) {
-    return saveFileJSONex(preferredName, ftype, data, datalen, true);
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
+    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback);
 }
-int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose) {
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
 
     if (data == NULL) return PM3_EINVARG;
 
@@ -548,8 +548,8 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
                 }
             }
             break;
-        case jsfSettings:
-            preferences_save_callback(root);
+        case jsfCustom:
+            (*callback)(root);
             break;
         default:
             break;
@@ -855,10 +855,10 @@ out:
     return retval;
 }
 
-int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen) {
-    return loadFileJSONex(preferredName, data, maxdatalen, datalen, true);
+int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, void (*callback)(json_t *)) {
+    return loadFileJSONex(preferredName, data, maxdatalen, datalen, true, callback);
 }
-int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose) {
+int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *)) {
 
     if (data == NULL) return PM3_EINVARG;
     char *fileName = filenamemcopy(preferredName, ".json");
@@ -1001,8 +1001,8 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     if (verbose)
         PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 
-    if (!strcmp(ctype, "settings")) {
-        preferences_load_callback(root);
+    if (callback != NULL) {
+        (*callback)(root);
     }
 out:
     json_decref(root);

@@ -89,7 +89,7 @@ int preferences_load(void) {
     char *fn = prefGetFilename();
     if (fileExists(fn)) {
         PrintAndLogEx(INFO, "Loading Preferences...");
-        if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
+        if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL, &preferences_load_callback) == PM3_SUCCESS) {
             session.preferences_loaded = true;
         }
     }
@@ -139,7 +139,7 @@ int preferences_save(void) {
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
 
-    if (saveFileJSON(fn, jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
+    if (saveFileJSON(fn, jsfCustom, &dummyData, dummyDL, &preferences_save_callback) != PM3_SUCCESS)
         PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", fn);
 
     free(fn);

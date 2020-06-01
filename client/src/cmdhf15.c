@@ -1272,7 +1272,7 @@ static int CmdHF15Dump(const char *Cmd) {
     size_t datalen = blocknum * 4;
     saveFile(filename, ".bin", data, datalen);
     saveFileEML(filename, data, datalen, 4);
-    saveFileJSON(filename, jsf15, data, datalen);
+    saveFileJSON(filename, jsf15, data, datalen, NULL);
     return PM3_SUCCESS;
 }
 

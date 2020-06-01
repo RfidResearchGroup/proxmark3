@@ -776,7 +776,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
             break;
         }
         case JSON: {
-            res = loadFileJSON(filename, dump, 2048, &bytes_read);
+            res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
             break;
         }
         case DICTIONARY:
@@ -966,7 +966,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         saveFile(fptr, ".bin", decrypted, decryptedlen);
         saveFileEML(fptr, decrypted, decryptedlen, 8);
-        saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
+        saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen, NULL);
 
         PrintAndLogEx(INFO, "Following output skips CSN / block0");
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
@@ -1433,7 +1433,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "saving dump file - %zu blocks read", gotBytes / 8);
     saveFile(filename, ".bin", tag_data, gotBytes);
     saveFileEML(filename, tag_data, gotBytes, 8);
-    saveFileJSON(filename, jsfIclass, tag_data, gotBytes);
+    saveFileJSON(filename, jsfIclass, tag_data, gotBytes, NULL);
     return PM3_SUCCESS;
 }
 

@@ -62,7 +62,7 @@ typedef enum {
     jsfT55x7,
     jsfT5555,
     jsfMfPlusKeys,
-    jsfSettings,
+    jsfCustom,
     jsfMfDesfireKeys,
 } JSONFileType;
 
@@ -115,8 +115,8 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
-int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose);
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *));
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *));
 
 /** STUB
  * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
@@ -198,8 +198,8 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen);
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen);
-int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose);
+int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, void (*callback)(json_t *));
+int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *));
 
 
 /**

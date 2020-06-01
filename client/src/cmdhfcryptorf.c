@@ -495,7 +495,7 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
     //needs to change
     saveFileEML(filename, data, numofbytes, 8);
     //needs to change
-    saveFileJSON(filename, jsfRaw, data, numofbytes);
+    saveFileJSON(filename, jsfRaw, data, numofbytes, NULL);
     return PM3_SUCCESS;
 }
 

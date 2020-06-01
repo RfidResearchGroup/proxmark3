@@ -2090,7 +2090,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
     uint16_t datalen = pages * 4 + MFU_DUMP_PREFIX_LENGTH;
     saveFile(filename, ".bin", (uint8_t *)&dump_file_data, datalen);
-    saveFileJSON(filename, jsfMfuMemory, (uint8_t *)&dump_file_data, datalen);
+    saveFileJSON(filename, jsfMfuMemory, (uint8_t *)&dump_file_data, datalen, NULL);
 
     if (is_partial)
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);

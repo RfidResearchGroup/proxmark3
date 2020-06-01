@@ -1068,7 +1068,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     saveFile(dataFilename, ".bin", (uint8_t *)carddata, bytes);
     saveFileEML(dataFilename, (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
-    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)carddata, bytes);
+    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)carddata, bytes, NULL);
     return PM3_SUCCESS;
 }
 
@@ -2518,7 +2518,7 @@ all_found:
 
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, jsfCardMemory, dump, bytes);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes, NULL);
 
     // Generate and show statistics
     t1 = msclock() - t1;
@@ -3832,7 +3832,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
 
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, jsfCardMemory, dump, bytes);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes, NULL);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4150,7 +4150,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         res = loadFile(fileName, ".bin", data, maxdatalen, &datalen);
     } else {
         if (fillFromJson) {
-            res = loadFileJSON(fileName, data, maxdatalen, &datalen);
+            res = loadFileJSON(fileName, data, maxdatalen, &datalen, NULL);
         } else {
             res = loadFileEML(Cmd, data, &datalen);
         }
@@ -4412,7 +4412,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, jsfCardMemory, dump, bytes);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes, NULL);
     free(dump);
     return PM3_SUCCESS;
 }

@@ -4114,7 +4114,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
         // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
         memcpy(&data[14 + atslen], foundKeys, 4 * 0xE * (24 + 1));
-        saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE);
+        saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE, NULL);
     }
 
     return PM3_SUCCESS;

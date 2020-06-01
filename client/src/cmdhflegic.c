@@ -1026,7 +1026,7 @@ static int CmdLegicDump(const char *Cmd) {
 
     saveFile(filename, ".bin", data, readlen);
     saveFileEML(filename, data, readlen, 8);
-    saveFileJSON(filename, jsfLegic, data, readlen);
+    saveFileJSON(filename, jsfLegic, data, readlen, NULL);
     free(data);
     return PM3_SUCCESS;
 }
@@ -1299,7 +1299,7 @@ static int CmdLegicESave(const char *Cmd) {
 
     saveFile(filename, ".bin", data, numofbytes);
     saveFileEML(filename, data, numofbytes, 8);
-    saveFileJSON(filename, jsfLegic, data, numofbytes);
+    saveFileJSON(filename, jsfLegic, data, numofbytes, NULL);
     return PM3_SUCCESS;
 }
 
