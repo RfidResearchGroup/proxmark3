@@ -7,6 +7,7 @@
 
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
+SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -41,152 +42,149 @@ pkg_search_module(BLUEZ QUIET bluez)
 pkg_search_module(PYTHON3 QUIET python3)
 pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 
-SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
-add_subdirectory(deps)
+add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
-        src/proxmark3.c
-        ../common/commonutil.c
-        ../common/util_posix.c
-        ../common/parity.c
-        ../common/bucketsort.c
-        ../common/crapto1/crapto1.c
-        ../common/crapto1/crypto1.c
-        ../common/crc.c
-        ../common/crc16.c
-        ../common/crc32.c
-        ../common/crc64.c
-        ../common/lfdemod.c
-        ../common/legic_prng.c
-        ../common/iso15693tools.c
-        ../common/cardhelper.c
-        ../common/generator.c
-        src/crypto/asn1dump.c
-        src/crypto/asn1utils.c
-        src/crypto/libpcrypto.c
-        src/emv/test/cda_test.c
-        src/emv/test/crypto_test.c
-        src/emv/test/cryptotest.c
-        src/emv/test/dda_test.c
-        src/emv/test/sda_test.c
-        src/emv/apduinfo.c
-        src/emv/cmdemv.c
-        src/emv/crypto.c
-        src/emv/crypto_polarssl.c
-        src/emv/dol.c
-        src/emv/dump.c
-        src/emv/emv_pk.c
-        src/emv/emv_pki.c
-        src/emv/emv_pki_priv.c
-        src/emv/emv_roca.c
-        src/emv/emv_tags.c
-        src/emv/emvcore.c
-        src/emv/emvjson.c
-        src/emv/tlv.c
-        src/fido/additional_ca.c
-        src/fido/cbortools.c
-        src/fido/cose.c
-        src/fido/fidocore.c
-        src/loclass/cipher.c
-        src/loclass/cipherutils.c
-        src/loclass/elite_crack.c
-        src/loclass/hash1_brute.c
-        src/loclass/ikeys.c
-        src/mifare/mad.c
-        src/mifare/mfkey.c
-        src/mifare/mifare4.c
-        src/mifare/mifaredefault.c
-        src/mifare/mifarehost.c
-        src/mifare/ndef.c
-        src/mifare/desfire_crypto.c
-        src/uart/uart_posix.c
-        src/uart/uart_win32.c
-        src/ui/overlays.ui
-        src/aidsearch.c
-        src/cmdanalyse.c
-        src/cmdcrc.c
-        src/cmddata.c
-        src/cmdflashmem.c
-        src/cmdflashmemspiffs.c
-        src/cmdhf.c
-        src/cmdhf14a.c
-        src/cmdhf14b.c
-        src/cmdhf15.c
-        src/cmdhfcryptorf.c
-        src/cmdhfepa.c
-        src/cmdhffelica.c
-        src/cmdhffido.c
-        src/cmdhficlass.c
-        src/cmdhflegic.c
-        src/cmdhflist.c
-        src/cmdhflto.c
-        src/cmdhfmf.c
-        src/cmdhfmfdes.c
-        src/cmdhfmfhard.c
-        src/cmdhfmfp.c
-        src/cmdhfmfu.c
-        src/cmdhfthinfilm.c
-        src/cmdhftopaz.c
-        src/cmdhw.c
-        src/cmdlf.c
-        src/cmdlfawid.c
-        src/cmdlfcotag.c
-        src/cmdlfem4x.c
-        src/cmdlffdx.c
-        src/cmdlfgallagher.c
-        src/cmdlfguard.c
-        src/cmdlfhid.c
-        src/cmdlfhitag.c
-        src/cmdlfindala.c
-        src/cmdlfio.c
-        src/cmdlfjablotron.c
-        src/cmdlfkeri.c
-        src/cmdlfmotorola.c
-        src/cmdlfnedap.c
-        src/cmdlfnexwatch.c
-        src/cmdlfnoralsy.c
-        src/cmdlfpac.c
-        src/cmdlfparadox.c
-        src/cmdlfpcf7931.c
-        src/cmdlfpresco.c
-        src/cmdlfpyramid.c
-        src/cmdlfsecurakey.c
-        src/cmdlft55xx.c
-        src/cmdlfti.c
-        src/cmdlfverichip.c
-        src/cmdlfviking.c
-        src/cmdlfvisa2000.c
-        src/cmdmain.c
-        src/cmdparser.c
-        src/cmdscript.c
-        src/cmdsmartcard.c
-        src/cmdtrace.c
-        src/cmdusart.c
-        src/cmdwiegand.c
-        src/comms.c
-        src/fileutils.c
-        src/flash.c
-        src/graph.c
-        src/jansson_path.c
-        src/preferences.c
-        src/pm3_binlib.c
-        src/pm3_bitlib.c
-        src/prng.c
-        src/scandir.c
-        src/scripting.c
-        src/tea.c
-        src/ui.c
-        src/util.c
-        src/wiegand_formats.c
-        src/wiegand_formatutils.c
+        ${PM3_ROOT}/common/commonutil.c
+        ${PM3_ROOT}/common/util_posix.c
+        ${PM3_ROOT}/common/parity.c
+        ${PM3_ROOT}/common/bucketsort.c
+        ${PM3_ROOT}/common/crapto1/crapto1.c
+        ${PM3_ROOT}/common/crapto1/crypto1.c
+        ${PM3_ROOT}/common/crc.c
+        ${PM3_ROOT}/common/crc16.c
+        ${PM3_ROOT}/common/crc32.c
+        ${PM3_ROOT}/common/crc64.c
+        ${PM3_ROOT}/common/lfdemod.c
+        ${PM3_ROOT}/common/legic_prng.c
+        ${PM3_ROOT}/common/iso15693tools.c
+        ${PM3_ROOT}/common/cardhelper.c
+        ${PM3_ROOT}/common/generator.c
+        ${PM3_ROOT}/client/src/crypto/asn1dump.c
+        ${PM3_ROOT}/client/src/crypto/asn1utils.c
+        ${PM3_ROOT}/client/src/crypto/libpcrypto.c
+        ${PM3_ROOT}/client/src/emv/test/cda_test.c
+        ${PM3_ROOT}/client/src/emv/test/crypto_test.c
+        ${PM3_ROOT}/client/src/emv/test/cryptotest.c
+        ${PM3_ROOT}/client/src/emv/test/dda_test.c
+        ${PM3_ROOT}/client/src/emv/test/sda_test.c
+        ${PM3_ROOT}/client/src/emv/apduinfo.c
+        ${PM3_ROOT}/client/src/emv/cmdemv.c
+        ${PM3_ROOT}/client/src/emv/crypto.c
+        ${PM3_ROOT}/client/src/emv/crypto_polarssl.c
+        ${PM3_ROOT}/client/src/emv/dol.c
+        ${PM3_ROOT}/client/src/emv/dump.c
+        ${PM3_ROOT}/client/src/emv/emv_pk.c
+        ${PM3_ROOT}/client/src/emv/emv_pki.c
+        ${PM3_ROOT}/client/src/emv/emv_pki_priv.c
+        ${PM3_ROOT}/client/src/emv/emv_roca.c
+        ${PM3_ROOT}/client/src/emv/emv_tags.c
+        ${PM3_ROOT}/client/src/emv/emvcore.c
+        ${PM3_ROOT}/client/src/emv/emvjson.c
+        ${PM3_ROOT}/client/src/emv/tlv.c
+        ${PM3_ROOT}/client/src/fido/additional_ca.c
+        ${PM3_ROOT}/client/src/fido/cbortools.c
+        ${PM3_ROOT}/client/src/fido/cose.c
+        ${PM3_ROOT}/client/src/fido/fidocore.c
+        ${PM3_ROOT}/client/src/loclass/cipher.c
+        ${PM3_ROOT}/client/src/loclass/cipherutils.c
+        ${PM3_ROOT}/client/src/loclass/elite_crack.c
+        ${PM3_ROOT}/client/src/loclass/hash1_brute.c
+        ${PM3_ROOT}/client/src/loclass/ikeys.c
+        ${PM3_ROOT}/client/src/mifare/mad.c
+        ${PM3_ROOT}/client/src/mifare/mfkey.c
+        ${PM3_ROOT}/client/src/mifare/mifare4.c
+        ${PM3_ROOT}/client/src/mifare/mifaredefault.c
+        ${PM3_ROOT}/client/src/mifare/mifarehost.c
+        ${PM3_ROOT}/client/src/mifare/ndef.c
+        ${PM3_ROOT}/client/src/mifare/desfire_crypto.c
+        ${PM3_ROOT}/client/src/uart/uart_posix.c
+        ${PM3_ROOT}/client/src/uart/uart_win32.c
+        ${PM3_ROOT}/client/src/ui/overlays.ui
+        ${PM3_ROOT}/client/src/aidsearch.c
+        ${PM3_ROOT}/client/src/cmdanalyse.c
+        ${PM3_ROOT}/client/src/cmdcrc.c
+        ${PM3_ROOT}/client/src/cmddata.c
+        ${PM3_ROOT}/client/src/cmdflashmem.c
+        ${PM3_ROOT}/client/src/cmdflashmemspiffs.c
+        ${PM3_ROOT}/client/src/cmdhf.c
+        ${PM3_ROOT}/client/src/cmdhf14a.c
+        ${PM3_ROOT}/client/src/cmdhf14b.c
+        ${PM3_ROOT}/client/src/cmdhf15.c
+        ${PM3_ROOT}/client/src/cmdhfcryptorf.c
+        ${PM3_ROOT}/client/src/cmdhfepa.c
+        ${PM3_ROOT}/client/src/cmdhffelica.c
+        ${PM3_ROOT}/client/src/cmdhffido.c
+        ${PM3_ROOT}/client/src/cmdhficlass.c
+        ${PM3_ROOT}/client/src/cmdhflegic.c
+        ${PM3_ROOT}/client/src/cmdhflist.c
+        ${PM3_ROOT}/client/src/cmdhflto.c
+        ${PM3_ROOT}/client/src/cmdhfmf.c
+        ${PM3_ROOT}/client/src/cmdhfmfdes.c
+        ${PM3_ROOT}/client/src/cmdhfmfhard.c
+        ${PM3_ROOT}/client/src/cmdhfmfp.c
+        ${PM3_ROOT}/client/src/cmdhfmfu.c
+        ${PM3_ROOT}/client/src/cmdhfthinfilm.c
+        ${PM3_ROOT}/client/src/cmdhftopaz.c
+        ${PM3_ROOT}/client/src/cmdhw.c
+        ${PM3_ROOT}/client/src/cmdlf.c
+        ${PM3_ROOT}/client/src/cmdlfawid.c
+        ${PM3_ROOT}/client/src/cmdlfcotag.c
+        ${PM3_ROOT}/client/src/cmdlfem4x.c
+        ${PM3_ROOT}/client/src/cmdlffdx.c
+        ${PM3_ROOT}/client/src/cmdlfgallagher.c
+        ${PM3_ROOT}/client/src/cmdlfguard.c
+        ${PM3_ROOT}/client/src/cmdlfhid.c
+        ${PM3_ROOT}/client/src/cmdlfhitag.c
+        ${PM3_ROOT}/client/src/cmdlfindala.c
+        ${PM3_ROOT}/client/src/cmdlfio.c
+        ${PM3_ROOT}/client/src/cmdlfjablotron.c
+        ${PM3_ROOT}/client/src/cmdlfkeri.c
+        ${PM3_ROOT}/client/src/cmdlfmotorola.c
+        ${PM3_ROOT}/client/src/cmdlfnedap.c
+        ${PM3_ROOT}/client/src/cmdlfnexwatch.c
+        ${PM3_ROOT}/client/src/cmdlfnoralsy.c
+        ${PM3_ROOT}/client/src/cmdlfpac.c
+        ${PM3_ROOT}/client/src/cmdlfparadox.c
+        ${PM3_ROOT}/client/src/cmdlfpcf7931.c
+        ${PM3_ROOT}/client/src/cmdlfpresco.c
+        ${PM3_ROOT}/client/src/cmdlfpyramid.c
+        ${PM3_ROOT}/client/src/cmdlfsecurakey.c
+        ${PM3_ROOT}/client/src/cmdlft55xx.c
+        ${PM3_ROOT}/client/src/cmdlfti.c
+        ${PM3_ROOT}/client/src/cmdlfverichip.c
+        ${PM3_ROOT}/client/src/cmdlfviking.c
+        ${PM3_ROOT}/client/src/cmdlfvisa2000.c
+        ${PM3_ROOT}/client/src/cmdmain.c
+        ${PM3_ROOT}/client/src/cmdparser.c
+        ${PM3_ROOT}/client/src/cmdscript.c
+        ${PM3_ROOT}/client/src/cmdsmartcard.c
+        ${PM3_ROOT}/client/src/cmdtrace.c
+        ${PM3_ROOT}/client/src/cmdusart.c
+        ${PM3_ROOT}/client/src/cmdwiegand.c
+        ${PM3_ROOT}/client/src/comms.c
+        ${PM3_ROOT}/client/src/fileutils.c
+        ${PM3_ROOT}/client/src/flash.c
+        ${PM3_ROOT}/client/src/graph.c
+        ${PM3_ROOT}/client/src/jansson_path.c
+        ${PM3_ROOT}/client/src/preferences.c
+        ${PM3_ROOT}/client/src/pm3_binlib.c
+        ${PM3_ROOT}/client/src/pm3_bitlib.c
+        ${PM3_ROOT}/client/src/prng.c
+        ${PM3_ROOT}/client/src/scandir.c
+        ${PM3_ROOT}/client/src/scripting.c
+        ${PM3_ROOT}/client/src/tea.c
+        ${PM3_ROOT}/client/src/ui.c
+        ${PM3_ROOT}/client/src/util.c
+        ${PM3_ROOT}/client/src/wiegand_formats.c
+        ${PM3_ROOT}/client/src/wiegand_formatutils.c
         ${CMAKE_BINARY_DIR}/version.c
         )
 
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version.c
-    COMMAND sh ${CMAKE_SOURCE_DIR}/../tools/mkversion.sh > ${CMAKE_BINARY_DIR}/version.c || perl ${CMAKE_SOURCE_DIR}/../tools/mkversion.pl > ${CMAKE_BINARY_DIR}/version.c || ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/../common/default_version.c ${CMAKE_BINARY_DIR}/version.c
-    DEPENDS ${CMAKE_SOURCE_DIR}/../common/default_version.c
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh > ${CMAKE_BINARY_DIR}/version.c || perl ${PM3_ROOT}/tools/mkversion.pl > ${CMAKE_BINARY_DIR}/version.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version.c ${CMAKE_BINARY_DIR}/version.c
+    DEPENDS ${PM3_ROOT}/common/default_version.c
 )
 
 set(ADDITIONAL_SRC "")
@@ -199,7 +197,7 @@ message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
 
 if (APPLE)
     message("Apple device detected.")
-    set(ADDITIONAL_SRC src/util_darwin.h  src/util_darwin.m ${ADDITIONAL_SRC})
+    set(ADDITIONAL_SRC ${PM3_ROOT}/client/src/util_darwin.h  ${PM3_ROOT}/client/src/util_darwin.m ${ADDITIONAL_SRC})
     set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
 endif (APPLE)
 
@@ -209,8 +207,8 @@ if (Qt5_FOUND)
     set(CMAKE_AUTORCC ON)
     set(CMAKE_AUTOUIC ON)
     set (TARGET_SOURCES
-            src/proxgui.cpp
-            src/proxguiqt.cpp
+            ${PM3_ROOT}/client/src/proxgui.cpp
+            ${PM3_ROOT}/client/src/proxguiqt.cpp
             ${TARGET_SOURCES})
 
     add_definitions("-DHAVE_GUI")
@@ -218,7 +216,7 @@ if (Qt5_FOUND)
 else (Qt5_FOUND)
     message("Qt5 library not found, not building gui")
     set(TARGET_SOURCES
-            src/guidummy.cpp
+            ${PM3_ROOT}/client/src/guidummy.cpp
             ${TARGET_SOURCES})
 endif (Qt5_FOUND)
 
@@ -230,20 +228,20 @@ endif (BLUEZ_FOUND)
 
 if (PYTHON3EMBED_FOUND)
     message("Python3-embed library found, building with python3 support :)")
-    add_definitions("-DHAVE_PYTHON")
+    add_definitions(-DHAVE_PYTHON)
     set(ADDITIONAL_DIRS ${PYTHON3EMBED_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${PYTHON3EMBED_LIBRARIES} ${ADDITIONAL_LNK})
     set(ADDITIONAL_LNKDIRS ${PYTHON3EMBED_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
 elseif (PYTHON3_FOUND)
     message("Python3 library found, building with python3 support :)")
-    add_definitions("-DHAVE_PYTHON")
+    add_definitions(-DHAVE_PYTHON)
     set(ADDITIONAL_DIRS ${PYTHON3_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${PYTHON3_LIBRARIES} ${ADDITIONAL_LNK})
     set(ADDITIONAL_LNKDIRS ${PYTHON3_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})   
 endif (PYTHON3EMBED_FOUND)
 
-add_executable(
-        proxmark3
+add_executable(proxmark3
+        ${PM3_ROOT}/client/src/proxmark3.c
         ${TARGET_SOURCES}
         ${ADDITIONAL_SRC}
 )
@@ -262,10 +260,11 @@ if (MINGW)
 endif (MINGW)
 
 target_include_directories(proxmark3 PRIVATE
-        ../common
-        ../common_fpga
-        ../include
-        src
+        ${PM3_ROOT}/common
+        ${PM3_ROOT}/common_fpga
+        ${PM3_ROOT}/include
+        ${PM3_ROOT}/client/src
+        ${PM3_ROOT}/client/include
         ${ADDITIONAL_DIRS}
 )
 
@@ -310,9 +309,9 @@ if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
            target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
     elseif (APPLE)
            message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
-    endif()
-endif()
-    
+    endif (NOT CMAKE_VERSION VERSION_LESS 3.13)
+endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+
 install(TARGETS proxmark3 DESTINATION "bin")
 install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
 
