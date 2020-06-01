@@ -36,10 +36,6 @@
 #include "crc16.h"        // crc16 ccitt
 #include "crc32.h"
 
-mbedtls_des_context ctx;
-mbedtls_des3_context ctx3;
-mbedtls_aes_context actx;
-
 #ifndef AddCrc14A
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
@@ -57,17 +53,20 @@ static inline void update_key_schedules(desfirekey_t key) {
 /******************************************************************************/
 
 void des_encrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_context ctx;
     mbedtls_des_setkey_enc(&ctx, key);
     mbedtls_des_crypt_ecb(&ctx, in, out);
 }
 
 void des_decrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_context ctx;
     mbedtls_des_setkey_dec(&ctx, key);
     mbedtls_des_crypt_ecb(&ctx, in, out);
 }
 
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
     if (length % 8) return;
+    mbedtls_des3_context ctx3;
     if (keymode == 2) mbedtls_des3_set2key_dec(&ctx3, key);
     else mbedtls_des3_set3key_dec(&ctx3, key);
 
@@ -94,6 +93,7 @@ void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key,
 
 void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
     if (length % 8) return;
+    mbedtls_des3_context ctx3;
     if (keymode == 2) mbedtls_des3_set2key_enc(&ctx3, key);
     else mbedtls_des3_set3key_enc(&ctx3, key);
 
@@ -754,43 +754,52 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
             break;
         case T_3DES:
             switch (operation) {
-                case MCO_ENCYPHER:
+                case MCO_ENCYPHER: {
+                    mbedtls_des3_context ctx3;
                     mbedtls_des3_set2key_enc(&ctx3, key->data);
                     mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     break;
-                case MCO_DECYPHER:
+                }
+                case MCO_DECYPHER: {
+                    mbedtls_des3_context ctx3;
                     mbedtls_des3_set2key_dec(&ctx3, key->data);
                     mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
                     break;
+                }
             }
             break;
         case T_3K3DES:
             switch (operation) {
-                case MCO_ENCYPHER:
+                case MCO_ENCYPHER: {
+                    mbedtls_des3_context ctx3;
                     mbedtls_des3_set3key_enc(&ctx3, key->data);
                     mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_ENCRYPT);
                     break;
-                case MCO_DECYPHER:
+                }
+                case MCO_DECYPHER: {
+                    mbedtls_des3_context ctx3;
                     mbedtls_des3_set3key_dec(&ctx3, key->data);
                     mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
                     break;
+                }
             }
             break;
         case T_AES:
             switch (operation) {
                 case MCO_ENCYPHER: {
+                    mbedtls_aes_context actx;
                     mbedtls_aes_init(&actx);
                     mbedtls_aes_setkey_enc(&actx, key->data, 128);
                     mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, sizeof(edata), ivect, data, edata);
@@ -798,6 +807,7 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
                     break;
                 }
                 case MCO_DECYPHER: {
+                    mbedtls_aes_context actx;
                     mbedtls_aes_init(&actx);
                     mbedtls_aes_setkey_dec(&actx, key->data, 128);
                     mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(edata), ivect, edata, data);
