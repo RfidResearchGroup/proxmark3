@@ -234,8 +234,8 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-char pparent[512] = {0};
-char *parent = pparent;
+static char pparent[512] = {0};
+static char *parent = pparent;
 
 void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     if (cmds[0].Name == NULL) return;

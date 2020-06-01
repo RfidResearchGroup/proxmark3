@@ -438,6 +438,8 @@ int CmdHF14ASim(const char *Cmd) {
     bool setEmulatorMem = false;
     bool verbose = false;
     bool errors = false;
+    sector_t *k_sector = NULL;
+    uint8_t k_sectorsCount = 40;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -521,7 +523,7 @@ int CmdHF14ASim(const char *Cmd) {
         if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) break;
 
         nonces_t *data = (nonces_t *)resp.data.asBytes;
-        readerAttack(data[0], setEmulatorMem, verbose);
+        readerAttack(k_sector, k_sectorsCount, data[0], setEmulatorMem, verbose);
 
         keypress = kbd_enter_pressed();
     }
@@ -532,7 +534,7 @@ int CmdHF14ASim(const char *Cmd) {
     }
 
     if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK))
-        showSectorTable();
+        showSectorTable(k_sector, k_sectorsCount);
 
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;

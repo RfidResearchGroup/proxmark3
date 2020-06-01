@@ -3129,10 +3129,7 @@ out:
     return PM3_SUCCESS;
 }
 
-sector_t *k_sector = NULL;
-uint8_t k_sectorsCount = 40;
-
-void showSectorTable(void) {
+void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount) {
     if (k_sector != NULL) {
         printKeyTable(k_sectorsCount, k_sector);
         free(k_sector);
@@ -3140,7 +3137,7 @@ void showSectorTable(void) {
     }
 }
 
-void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
+void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose) {
 
     uint64_t key = 0;
     bool success = false;
@@ -3196,6 +3193,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
     nonces_t data[1];
     char csize[13] = { 0 };
     char uidsize[8] = { 0 };
+    sector_t *k_sector = NULL;
+    uint8_t k_sectorsCount = 40;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -3343,9 +3342,9 @@ static int CmdHF14AMfSim(const char *Cmd) {
             if ((resp.oldarg[0] & 0xffff) != CMD_HF_MIFARE_SIMULATE) break;
 
             memcpy(data, resp.data.asBytes, sizeof(data));
-            readerAttack(data[0], setEmulatorMem, verbose);
+            readerAttack(k_sector, k_sectorsCount, data[0], setEmulatorMem, verbose);
         }
-        showSectorTable();
+        showSectorTable(k_sector, k_sectorsCount);
     }
 
     k_sectorsCount = MIFARE_4K_MAXSECTOR;
