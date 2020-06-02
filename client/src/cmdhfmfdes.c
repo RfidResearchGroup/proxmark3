@@ -2482,6 +2482,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     uint8_t *data = (uint8_t *)calloc(dlength, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
+        CLIParserFree(ctx);
         return PM3_EMALLOC;
     }
     if (CLIParamHexToBuf(arg_get_str(4), data, dlength, &dlength)) {
