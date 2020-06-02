@@ -439,8 +439,6 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
     size_t sfidatalen[0x11] = {0};
     uint16_t sw = 0;
     int res;
-    bool fileFound = false;
-
     const char *PSE_or_PPSE = PSENum == 1 ? "PSE" : "PPSE";
 
     // select PPSE
@@ -452,8 +450,9 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
             return 1;
         }
 
-        struct tlvdb *t = NULL;
-        t = tlvdb_parse_multi(data, datalen);
+        bool fileFound = false;
+
+        struct tlvdb *t = tlvdb_parse_multi(data, datalen);
         if (t) {
             // PSE/PPSE with SFI
             struct tlvdb *tsfi = tlvdb_find_path(t, (tlv_tag_t[]) {0x6f, 0xa5, 0x88, 0x00});
