@@ -912,6 +912,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
     makeAPDU = headerlen > 0;
     if (makeAPDU && headerlen != 4) {
         PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
+        CLIParserFree(ctx);
         return 1;
     }
     extendedAPDU = arg_get_lit(6);
@@ -937,24 +938,27 @@ static int CmdHF14AAPDU(const char *Cmd) {
 
         if (APDUEncode(&apdu, data, &datalen)) {
             PrintAndLogEx(ERR, "can't make apdu with provided parameters.");
+            CLIParserFree(ctx);
             return 2;
         }
 
     } else {
         if (extendedAPDU) {
             PrintAndLogEx(ERR, "make mode not set but here `e` option.");
+            CLIParserFree(ctx);
             return 3;
         }
         if (le > 0) {
             PrintAndLogEx(ERR, "make mode not set but here `l` option.");
+            CLIParserFree(ctx);
             return 3;
         }
 
         // len = data + PCB(1b) + CRC(2b)
         CLIGetHexBLessWithReturn(ctx, 8, data, &datalen, 1 + 2);
     }
-
     CLIParserFree(ctx);
+
     PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel " : "", leaveSignalON ? "keep " : "", decodeTLV ? "TLV" : "", sprint_hex(data, datalen));
 
     if (decodeAPDU) {
