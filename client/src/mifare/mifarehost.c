@@ -1212,6 +1212,7 @@ int mfTraceDecode(struct Crypto1State *traceCrypto1, uint8_t *data_src, int len,
                 lfsr_rollback_word(revstate, nr_enc, 1);
                 lfsr_rollback_word(revstate, cuid ^ nt, 0);
                 crypto1_get_lfsr(revstate, &key);
+                free(revstate);
                 PrintAndLogEx(SUCCESS, "found Key: [%012" PRIx64 "]", key);
 
                 //if ( tryMfk64(cuid, nt, nr_enc, ar_enc, at_enc, &key) )
