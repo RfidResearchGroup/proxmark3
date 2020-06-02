@@ -54,7 +54,6 @@ typedef struct {
     //uint8_t foundKey[2];
 } icesector_t;
 
-extern char logHexFileName[FILE_PATH_SIZE];
 #define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 4) / 6)
 #define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * 6)
 #define CANDIDATE_SIZE  (0xFFFF * 6)
@@ -81,14 +80,6 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak);
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params);
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
 
-int mfTraceInit(struct Crypto1State **traceCrypto1, uint8_t *tuid, uint8_t uidlen, uint8_t *atqa, uint8_t sak, bool wantSaveToEmlFile);
-int mfTraceDecode(struct Crypto1State *traceCrypto1, uint8_t *data_src, int len, bool wantSaveToEmlFile);
-
-int isTraceCardEmpty(void);
-int isBlockEmpty(int blockN);
-int isBlockTrailer(int blockN);
-int loadTraceCard(uint8_t *tuid, uint8_t uidlen);
-int saveTraceCard(void);
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 
 int detect_classic_prng(void);
