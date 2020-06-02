@@ -269,6 +269,7 @@ static void *brute_thread(void *arguments) {
                 uint8_t isOK = 0;
                 // check if cmd exists
                 isOK = checkValidCmd(decrypted);
+                (void)isOK;
 
                 // Add a crc-check.
                 isOK = checkCRC(decrypted);
