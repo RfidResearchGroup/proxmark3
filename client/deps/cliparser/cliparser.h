@@ -40,11 +40,11 @@ typedef struct {
     const char *programHelp;
     char buf[500];
 } CLIParserContext;
-int CLIParserInit(CLIParserContext **context, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp);
-int CLIParserParseString(CLIParserContext *context, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
-int CLIParserParseStringEx(CLIParserContext *context, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
-int CLIParserParseArg(CLIParserContext *context, int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
-void CLIParserFree(CLIParserContext *context);
+int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp);
+int CLIParserParseString(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
+int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
+int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
+void CLIParserFree(CLIParserContext *ctx);
 
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
