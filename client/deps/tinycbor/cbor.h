@@ -556,8 +556,10 @@ enum CborPrettyFlags {
 };
 
 typedef CborError(*CborStreamFunction)(void *token, const char *fmt, ...)
-#ifdef __GNUC__
-__attribute__((__format__(printf, 2, 3)))
+#if defined(__MINGW32__) || defined(__MINGW64__)
+    __attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)));
+#elif defined(__GNUC__)
+    __attribute__((__format__(printf, 2, 3)))
 #endif
 ;
 
