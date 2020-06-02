@@ -2177,6 +2177,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             case 'v':
                 cmdp++;
                 verbose = true;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
                 errors = true;
