@@ -88,7 +88,7 @@ int preferences_load(void) {
     // to better control json cant find file error msg.
     char *fn = prefGetFilename();
     if (fileExists(fn)) {
-        PrintAndLogEx(INFO, "Loading Preferences...");
+        PrintAndLogEx(INFO, "Loading preferences...");
         if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL, &preferences_load_callback) == PM3_SUCCESS) {
             session.preferences_loaded = true;
         }
@@ -104,7 +104,7 @@ int preferences_load(void) {
 int preferences_save(void) {
     // Note sure if backup has value ?
 
-    PrintAndLogEx(INFO, "Saving Preferences...");
+    PrintAndLogEx(INFO, "Saving preferences...");
 
     char *fn = prefGetFilename();
     int fnLen = strlen(fn) + 5; // .bak\0
@@ -908,18 +908,16 @@ static int CmdPrefSet(const char *Cmd) {
 
 static int CmdPrefShow(const char *Cmd) {
 
-    char *fn = prefGetFilename();
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, _CYAN_("Preferences loaded from %s"), fn);
-
-    free(fn);
-
-    if (!session.preferences_loaded) {
+    if (session.preferences_loaded) {
+        char *fn = prefGetFilename();
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, _CYAN_("Preferences loaded from " _YELLOW_("%s")), fn);
+        free(fn);        
+    } else {
         PrintAndLogEx(ERR, "Preferences not loaded");
         return PM3_ESOFT;
     }
 
-    // PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), fn);
     showEmojiState(prefShowNone);
     showHintsState(prefShowNone);
     showColorState(prefShowNone);
@@ -931,7 +929,6 @@ static int CmdPrefShow(const char *Cmd) {
 
     showClientDebugState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 /*
