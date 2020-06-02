@@ -3133,7 +3133,6 @@ void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount) {
     if (k_sector != NULL) {
         printKeyTable(k_sectorsCount, k_sector);
         free(k_sector);
-        k_sector = NULL;
     }
 }
 
