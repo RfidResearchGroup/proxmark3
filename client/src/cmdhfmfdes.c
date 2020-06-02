@@ -4007,7 +4007,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
         endFilePosition = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &k3kkeyListLen, 0, &endFilePosition, true);
-        if (PM3_SUCCESS && endFilePosition)
+        if (res == PM3_SUCCESS && endFilePosition)
             PrintAndLogEx(SUCCESS, "First part of k3kdes dictionary successfully loaded.");
 
         endFilePosition = 0;
