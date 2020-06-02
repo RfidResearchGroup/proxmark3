@@ -515,7 +515,6 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
 
 static int32_t initSectorTable(sector_t **src, int32_t items) {
 
-    // initialize storage
     (*src) = calloc(items, sizeof(sector_t));
 
     if (*src == NULL)
@@ -3144,6 +3143,7 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
     if (k_sector == NULL) {
         int32_t res = initSectorTable(&k_sector, k_sectorsCount);
         if (res != k_sectorsCount) {
+            free(k_sector);
             return;
         }
     }
@@ -3175,6 +3175,8 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
             mfEmlSetMem(memBlock, (sector * 4) + 3, 1);
         }
     }
+
+    free(k_sector);
 }
 
 static int CmdHF14AMfSim(const char *Cmd) {
