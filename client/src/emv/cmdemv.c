@@ -146,9 +146,8 @@ static int CmdEMVSearch(const char *Cmd) {
 
     SetAPDULogging(APDULogging);
 
-    struct tlvdb *t = NULL;
     const char *al = "Applets list";
-    t = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
+    struct tlvdb *t = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
     if (EMVSearch(channel, activateField, leaveSignalON, decodeTLV, t)) {
         tlvdb_free(t);
