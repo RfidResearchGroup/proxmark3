@@ -165,8 +165,7 @@ static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
 }
 
 bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
-    struct tlvdb *t = NULL;
-    t = tlvdb_parse_multi(data, datalen);
+    struct tlvdb *t = tlvdb_parse_multi(data, datalen);
     if (t) {
         PrintAndLogEx(INFO, "-------------------- " _CYAN_("TLV decoded") " --------------------");
 
