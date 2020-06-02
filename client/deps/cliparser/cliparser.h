@@ -27,10 +27,11 @@
 #define arg_strx1(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 1, 250, (glossary)))
 #define arg_strx0(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 0, 250, (glossary)))
 
-#define CLIExecWithReturn(ctx, cmd, atbl, ifempty) if (CLIParserParseString(ctx, cmd, atbl, arg_getsize(atbl), ifempty)){CLIParserFree(ctx);return PM3_ESOFT;}
-#define CLIGetHexBLessWithReturn(ctx, paramnum, data, datalen, delta) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data) - (delta), datalen)) {CLIParserFree(ctx);return PM3_ESOFT;}
-#define CLIGetHexWithReturn(ctx, paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree(ctx);return PM3_ESOFT;}
-#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree(ctx);return PM3_ESOFT;}
+#define CLIFree(ctx)        if ((ctx)) {CLIParserFree((ctx)); (ctx)=NULL;}
+#define CLIExecWithReturn(ctx, cmd, atbl, ifempty)    if (CLIParserParseString(ctx, cmd, atbl, arg_getsize(atbl), ifempty)){if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
+#define CLIGetHexBLessWithReturn(ctx, paramnum, data, datalen, delta) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data) - (delta), datalen)) {if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
+#define CLIGetHexWithReturn(ctx, paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
+#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
 
 typedef struct {
     void **argtable;
