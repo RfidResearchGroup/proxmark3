@@ -145,11 +145,6 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
     return CLIParserParseArg(ctx, argc, argv, vargtable, vargtableLen, allowEmptyExec);
 }
 
-void CLIParserFree(CLIParserContext *ctx) {
-    arg_freetable(ctx->argtable, ctx->argtableLen);
-    free(ctx);
-}
-
 // convertors
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
     *datalen = 0;

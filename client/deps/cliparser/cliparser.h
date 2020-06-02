@@ -11,6 +11,7 @@
 #ifndef __CLIPARSER_H
 #define __CLIPARSER_H
 #include "argtable3.h"
+#include <stdlib.h>
 #include "util.h"
 
 #define arg_param_begin arg_lit0("hH",  "help",    "This help")
@@ -27,11 +28,11 @@
 #define arg_strx1(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 1, 250, (glossary)))
 #define arg_strx0(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 0, 250, (glossary)))
 
-#define CLIFree(ctx)        if ((ctx)) {CLIParserFree((ctx)); (ctx)=NULL;}
-#define CLIExecWithReturn(ctx, cmd, atbl, ifempty)    if (CLIParserParseString(ctx, cmd, atbl, arg_getsize(atbl), ifempty)){if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
-#define CLIGetHexBLessWithReturn(ctx, paramnum, data, datalen, delta) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data) - (delta), datalen)) {if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
-#define CLIGetHexWithReturn(ctx, paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
-#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {if ((ctx)) CLIParserFree((ctx)); (ctx)=NULL;return PM3_ESOFT;}
+#define CLIParserFree(ctx)        if ((ctx)) {arg_freetable(ctx->argtable, ctx->argtableLen); free((ctx)); (ctx)=NULL;}
+#define CLIExecWithReturn(ctx, cmd, atbl, ifempty)    if (CLIParserParseString(ctx, cmd, atbl, arg_getsize(atbl), ifempty)) {CLIParserFree((ctx)); return PM3_ESOFT;}
+#define CLIGetHexBLessWithReturn(ctx, paramnum, data, datalen, delta) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data) - (delta), datalen)) {CLIParserFree((ctx)); return PM3_ESOFT;}
+#define CLIGetHexWithReturn(ctx, paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree((ctx)); return PM3_ESOFT;}
+#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str(paramnum), data, sizeof(data), datalen)) {CLIParserFree((ctx)); return PM3_ESOFT;}
 
 typedef struct {
     void **argtable;
@@ -45,7 +46,6 @@ int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *
 int CLIParserParseString(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
 int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData);
 int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec);
-void CLIParserFree(CLIParserContext *ctx);
 
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen);
