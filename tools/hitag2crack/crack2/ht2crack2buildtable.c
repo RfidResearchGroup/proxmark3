@@ -375,13 +375,12 @@ static void *sorttable(void *dd) {
     char outfile[64];
     unsigned char *data = NULL;
     struct stat filestat;
-    unsigned char *table = NULL;
     uint64_t numentries = 0;
     int index = (int)(long)dd;
     int space = 0x100 / NUM_SORT_THREADS;
 
     // create table - 50MB should be enough
-    table = (unsigned char *)malloc(50UL * 1024UL * 1024UL);
+    unsigned char *table = (unsigned char *)malloc(50UL * 1024UL * 1024UL);
     if (!table) {
         printf("sorttable: cannot malloc table\n");
         exit(1);
