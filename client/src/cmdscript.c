@@ -169,6 +169,7 @@ static int CmdScriptRun(const char *Cmd) {
     char *extension_chk;
     extension_chk = str_dup(preferredName);
     str_lower(extension_chk);
+
     pm3_scriptfile_t ext = PM3_UNSPECIFIED;
     if (str_endswith(extension_chk, ".lua"))  {
         ext = PM3_LUA;
@@ -180,6 +181,7 @@ static int CmdScriptRun(const char *Cmd) {
         ext = PM3_PY;
     }
 #endif
+    free(extension_chk);
 
     char *script_path = NULL;
     if (((ext == PM3_LUA) || (ext == PM3_UNSPECIFIED)) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
