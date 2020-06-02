@@ -1731,7 +1731,7 @@ static int CmdEMVScan(const char *Cmd) {
 	if (ODAI_listlen) {
 		struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
 		tlvdb_add(tlvRoot, oda);
-		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%d bytes]", ODAI_listlen);
+		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%zu bytes]", ODAI_listlen);
 	}
 
     // getting certificates
@@ -1988,7 +1988,7 @@ static int CmdEMVRoca(const char *Cmd) {
 	if (ODAI_listlen) {
 		struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
 		tlvdb_add(tlvRoot, oda);
-		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%d bytes]", ODAI_listlen);
+		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%zu bytes]", ODAI_listlen);
 	}
     
     if (tlvdb_get(tlvRoot, 0x90, NULL)) {
