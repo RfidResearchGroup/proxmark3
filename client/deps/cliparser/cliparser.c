@@ -146,9 +146,10 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
 }
 
 void CLIParserFree(CLIParserContext *ctx) {
-    if (ctx) {
+    if (ctx != NULL) {
         arg_freetable(ctx->argtable, ctx->argtableLen);
         free(ctx);
+        ctx = NULL;
     }
 }
 
