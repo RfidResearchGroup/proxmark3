@@ -1809,7 +1809,6 @@ static int CmdEMVRoca(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    EMVCommandChannel channel = ECC_CONTACTLESS;
     if (arg_get_lit(1)) {
         CLIParserFree(ctx);
         return roca_self_test();
@@ -1817,6 +1816,7 @@ static int CmdEMVRoca(const char *Cmd) {
 
     bool show_apdu = arg_get_lit(2);
 
+    EMVCommandChannel channel = ECC_CONTACTLESS;
     if (arg_get_lit(3))
         channel = ECC_CONTACT;
 
