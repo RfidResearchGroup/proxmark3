@@ -23,7 +23,7 @@ VERSIONSRC = version.c
 # THUMBSRC :=
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS = -I. -fno-strict-aliasing -ffunction-sections -fdata-sections
+APP_CFLAGS = -I. -ffunction-sections -fdata-sections
 
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
 APP_CFLAGS += -fno-stack-protector -fno-pie
