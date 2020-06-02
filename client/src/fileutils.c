@@ -346,37 +346,30 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
                 }
 
                 if (mfIsSectorTrailer(i)) {
-                    memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
+
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyA", mfSectorNum(i));
                     JsonSaveBufAsHexCompact(root, path, &data[i * 16], 6);
 
-                    memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.KeyB", mfSectorNum(i));
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyB", mfSectorNum(i));
                     JsonSaveBufAsHexCompact(root, path, &data[i * 16 + 10], 6);
 
-                    memset(path, 0x00, sizeof(path));
                     uint8_t *adata = &data[i * 16 + 6];
-                    sprintf(path, "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
                     JsonSaveBufAsHexCompact(root, path, &data[i * 16 + 6], 4);
 
-                    memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 3);
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 3);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(0, adata));
 
-                    memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 2);
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 2);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(1, adata));
 
-                    memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 1);
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 1);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(2, adata));
 
-                    memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i);
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(3, adata));
 
-                    memset(path, 0x00, sizeof(path));
-                    sprintf(path, "$.SectorKeys.%d.AccessConditionsText.UserData", mfSectorNum(i));
+                    snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.UserData", mfSectorNum(i));
                     JsonSaveBufAsHexCompact(root, path, &adata[3], 1);
                 }
             }
