@@ -4073,15 +4073,22 @@ static int CmdHF14aDesChk(const char *Cmd) {
         if (dict_filenamelen && endFilePosition) {
             if (!verbose)
                 printf("d");
+
             uint32_t keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            deskeyListLen = keycnt;
+            if (res == PM3_SUCCESS && endFilePosition)
+                deskeyListLen = keycnt;
+            
             keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            aeskeyListLen = keycnt;
+            if (res == PM3_SUCCESS && endFilePosition)
+                aeskeyListLen = keycnt;
+            
             keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            k3kkeyListLen = keycnt;
+            if (res == PM3_SUCCESS && endFilePosition)
+                k3kkeyListLen = keycnt;
+            
             continue;
         }
     }
