@@ -427,6 +427,7 @@ static int CmdEMVAC(const char *Cmd) {
 
         if (termDecision == 0xff) {
             PrintAndLogEx(ERR, "ERROR: can't find terminal decision '%s'", arg_get_str(3)->sval[0]);
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     } else {
@@ -438,9 +439,11 @@ static int CmdEMVAC(const char *Cmd) {
     bool dataMakeFromCDOL = arg_get_lit(5);
     bool APDULogging = arg_get_lit(6);
     bool decodeTLV = arg_get_lit(7);
+
     EMVCommandChannel channel = ECC_CONTACTLESS;
     if (arg_get_lit(8))
         channel = ECC_CONTACT;
+
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 9, data, &datalen);
     CLIParserFree(ctx);
