@@ -177,6 +177,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
  * @return PM3_SUCCESS for ok, PM3_E* for failz
 */
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
+int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
  * E.g. dumpdata-15.txt
@@ -187,6 +188,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
  * @return 0 for ok, 1 for failz
 */
 int loadFileEML(const char *preferredName, void *data, size_t *datalen);
+int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.

@@ -737,6 +737,9 @@ out:
 }
 
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen) {
+    return loadFile_safeEx(preferredName, suffix, pdata, datalen, true);
+}
+int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose) {
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
@@ -782,7 +785,8 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     *datalen = bytes_read;
 
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
     return PM3_SUCCESS;
 }
 
@@ -845,6 +849,92 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
 out:
     free(fileName);
+    return retval;
+}
+
+int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    *pdata = calloc(fsize, sizeof(uint8_t));
+    if (!*pdata) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+    
+    // 128 + 2 newline chars + 1 null terminator
+    char line[131];
+    memset(line, 0, sizeof(line));
+    uint8_t buf[64] = {0x00};
+    size_t counter = 0;
+    int retval = PM3_SUCCESS, hexlen = 0;
+
+    uint8_t *tmp = (uint8_t *)*pdata;
+
+    while (!feof(f)) {
+
+        memset(line, 0, sizeof(line));
+
+        if (fgets(line, sizeof(line), f) == NULL) {
+            if (feof(f))
+                break;
+
+            fclose(f);
+            PrintAndLogEx(FAILED, "File reading error.");
+            return PM3_EFILE;
+        }
+
+        if (line[0] == '#')
+            continue;
+
+        strcleanrn(line, sizeof(line));
+       
+        res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
+        if (res == 0) {
+            memcpy( tmp + counter, buf, hexlen);
+            counter += hexlen;
+        } else {
+            retval = PM3_ESOFT;
+        }
+    }
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, preferredName);
+
+
+    uint8_t *newdump = realloc(*pdata, counter);
+    if (newdump == NULL) {
+        free(*pdata);
+        return PM3_EMALLOC;
+    } else {
+        *pdata = newdump;
+    }
+
+    if (datalen)
+        *datalen = counter;
+
     return retval;
 }
 
