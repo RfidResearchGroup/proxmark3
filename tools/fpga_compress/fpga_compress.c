@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 // Compression tool for FPGA config files. Compress several *.bit files at
 // compile time. Decompression is done at run time (see fpgaloader.c).
-// This uses the zlib library tuned to this specific case. The small file sizes
+// This uses the lz4 library tuned to this specific case. The small file sizes
 // allow to use "insane" parameters for optimum compression ratio.
 //-----------------------------------------------------------------------------
 
@@ -15,28 +15,11 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <inttypes.h>
 #include "fpga.h"
-#include "zlib.h"
-
-// zlib configuration
-#define COMPRESS_LEVEL          9  // use best possible compression
-#define COMPRESS_WINDOW_BITS    15 // default = max = 15 for a window of 2^15 = 32KBytes
-#define COMPRESS_MEM_LEVEL      9  // determines the amount of memory allocated during compression. Default = 8.
-
-/* COMPRESS_STRATEGY can be
-    Z_DEFAULT_STRATEGY (the default),
-    Z_FILTERED (more huffmann, less string matching),
-    Z_HUFFMAN_ONLY (huffman only, no string matching)
-    Z_RLE (distances limited to one)
-    Z_FIXED (prevents the use of dynamic Huffman codes)
-*/
-
-#define COMPRESS_STRATEGY         Z_DEFAULT_STRATEGY
-// zlib tuning parameters:
-#define COMPRESS_GOOD_LENGTH      258
-#define COMPRESS_MAX_LAZY         258
-#define COMPRESS_MAX_NICE_LENGTH  258
-#define COMPRESS_MAX_CHAIN        8192
+#include "lz4hc.h"
 
 #define HARDNESTED_TABLE_SIZE (uint32_t)(sizeof(uint32_t) * ((1L<<19)+1))
 
@@ -52,18 +35,6 @@ static void usage(void) {
 }
 
 
-static voidpf fpga_deflate_malloc(voidpf opaque, uInt items, uInt size) {
-    (void) opaque;
-    return calloc(items * size, sizeof(uint8_t));
-}
-
-
-static void fpga_deflate_free(voidpf opaque, voidpf address) {
-    (void) opaque;
-    free(address);
-}
-
-
 static bool all_feof(FILE *infile[], uint8_t num_infiles) {
     for (uint16_t i = 0; i < num_infiles; i++) {
         if (!feof(infile[i])) {
@@ -76,10 +47,8 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles) {
 
 static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardnested_mode) {
     uint8_t *fpga_config;
-    uint32_t i;
-    int32_t ret;
+    //int32_t ret;
     uint8_t c;
-    z_stream compressed_fpga_stream;
 
     if (hardnested_mode) {
         fpga_config = calloc(num_infiles * HARDNESTED_TABLE_SIZE, sizeof(uint8_t));
@@ -87,10 +56,10 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
         fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
     }
     // read the input files. Interleave them into fpga_config[]
-    i = 0;
+    uint32_t total_size = 0;
     do {
 
-        if (i >= num_infiles * (hardnested_mode ? HARDNESTED_TABLE_SIZE : FPGA_CONFIG_SIZE)) {
+        if (total_size >= num_infiles * (hardnested_mode ? HARDNESTED_TABLE_SIZE : FPGA_CONFIG_SIZE)) {
             if (hardnested_mode) {
                 fprintf(stderr,
                         "Input file too big (> %" PRIu32 " bytes). This is probably not a hardnested bitflip state table.\n"
@@ -112,53 +81,47 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
             for (uint16_t k = 0; k < FPGA_INTERLEAVE_SIZE; k++) {
                 c = (uint8_t)fgetc(infile[j]);
                 if (!feof(infile[j])) {
-                    fpga_config[i++] = c;
+                    fpga_config[total_size++] = c;
                 } else if (num_infiles > 1) {
-                    fpga_config[i++] = '\0';
+                    fpga_config[total_size++] = '\0';
                 }
             }
         }
 
     } while (!all_feof(infile, num_infiles));
 
-    // initialize zlib structures
-    compressed_fpga_stream.next_in = fpga_config;
-    compressed_fpga_stream.avail_in = i;
-    compressed_fpga_stream.zalloc = fpga_deflate_malloc;
-    compressed_fpga_stream.zfree = fpga_deflate_free;
-    compressed_fpga_stream.opaque = Z_NULL;
+    uint32_t buffer_size = FPGA_RING_BUFFER_BYTES;
+    if (num_infiles == 1)
+        buffer_size = 1024*1024; //1M for now
+    uint32_t outsize_max = LZ4_compressBound(buffer_size);
 
-    ret = deflateInit2(&compressed_fpga_stream,
-                       COMPRESS_LEVEL,
-                       Z_DEFLATED,
-                       COMPRESS_WINDOW_BITS,
-                       COMPRESS_MEM_LEVEL,
-                       COMPRESS_STRATEGY);
+    char *outbuf = calloc(outsize_max, sizeof(char));
 
-    // estimate the size of the compressed output
-    uint32_t outsize_max = deflateBound(&compressed_fpga_stream, compressed_fpga_stream.avail_in);
-    uint8_t *outbuf = calloc(outsize_max, sizeof(uint8_t));
-    compressed_fpga_stream.next_out = outbuf;
-    compressed_fpga_stream.avail_out = outsize_max;
+    LZ4_streamHC_t* lz4_streamhc = LZ4_createStreamHC();
+    LZ4_resetStreamHC_fast(lz4_streamhc, LZ4HC_CLEVEL_MAX);
 
-    if (ret == Z_OK) {
-        ret = deflateTune(&compressed_fpga_stream,
-                          COMPRESS_GOOD_LENGTH,
-                          COMPRESS_MAX_LAZY,
-                          COMPRESS_MAX_NICE_LENGTH,
-                          COMPRESS_MAX_CHAIN);
+    int current_in = 0;
+    int current_out = 0;
+    char * ring_buffer = calloc(buffer_size, sizeof(char));
+    while (current_in < total_size) {
+        int bytes_to_copy = FPGA_RING_BUFFER_BYTES;
+        if (total_size - current_in < FPGA_RING_BUFFER_BYTES)
+            bytes_to_copy = total_size - current_in;
+        memcpy(ring_buffer, fpga_config + current_in, bytes_to_copy);
+        int cmp_bytes = LZ4_compress_HC_continue(lz4_streamhc, ring_buffer, outbuf, bytes_to_copy, outsize_max);
+        fwrite(&cmp_bytes, sizeof(int), 1, outfile);
+        fwrite(outbuf, sizeof(char), cmp_bytes, outfile);
+        current_in += bytes_to_copy;
+        current_out += cmp_bytes;
     }
 
-    if (ret == Z_OK) {
-        ret = deflate(&compressed_fpga_stream, Z_FINISH);
-    }
+    free(ring_buffer);
 
-    fprintf(stdout, "compressed %u input bytes to %lu output bytes\n", i, compressed_fpga_stream.total_out);
+    fprintf(stdout, "compressed %u input bytes to %u output bytes\n", total_size, current_out);
 
-    if (ret != Z_STREAM_END) {
-        fprintf(stderr, "Error in deflate(): %d %s\n", ret, compressed_fpga_stream.msg);
+    if (current_out == 0) {
+        fprintf(stderr, "Error in lz4");
         free(outbuf);
-        deflateEnd(&compressed_fpga_stream);
         for (uint16_t j = 0; j < num_infiles; j++) {
             fclose(infile[j]);
         }
@@ -167,90 +130,64 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
         return (EXIT_FAILURE);
     }
 
-    for (i = 0; i < compressed_fpga_stream.total_out; i++) {
-        fputc(outbuf[i], outfile);
-    }
-
     free(outbuf);
-    deflateEnd(&compressed_fpga_stream);
+
     for (uint16_t j = 0; j < num_infiles; j++) {
         fclose(infile[j]);
     }
     fclose(outfile);
+    LZ4_freeStreamHC(lz4_streamhc);
     free(fpga_config);
 
     return (EXIT_SUCCESS);
 
 }
 
+typedef struct lz4_stream_s {
+    LZ4_streamDecode_t* lz4StreamDecode;
+    char * next_in;
+    int avail_in;
+} lz4_stream;
 
 static int zlib_decompress(FILE *infile, FILE *outfile) {
-#define DECOMPRESS_BUF_SIZE 1024
-    uint8_t outbuf[DECOMPRESS_BUF_SIZE];
-    uint8_t inbuf[DECOMPRESS_BUF_SIZE];
-    int32_t ret;
 
-    z_stream compressed_fpga_stream;
+    LZ4_streamDecode_t lz4StreamDecode_body = { 0 };
+    char outbuf[FPGA_RING_BUFFER_BYTES];
 
-    // initialize zlib structures
-    compressed_fpga_stream.next_in = inbuf;
-    compressed_fpga_stream.avail_in = 0;
-    compressed_fpga_stream.next_out = outbuf;
-    compressed_fpga_stream.avail_out = DECOMPRESS_BUF_SIZE;
-    compressed_fpga_stream.zalloc = fpga_deflate_malloc;
-    compressed_fpga_stream.zfree = fpga_deflate_free;
-    compressed_fpga_stream.opaque = Z_NULL;
+    fseek(infile, 0L, SEEK_END);
+    long infile_size = ftell(infile);
+    fseek(infile, 0L, SEEK_SET);
 
-    ret = inflateInit2(&compressed_fpga_stream, 0);
-    if (ret < 0)
-        return (EXIT_FAILURE);
+    char * inbuf = calloc(infile_size, sizeof(char));
+    size_t num_read = fread(inbuf, sizeof(char), infile_size, infile);
 
-    do {
-        if (compressed_fpga_stream.avail_in == 0) {
-            compressed_fpga_stream.next_in = inbuf;
-            uint16_t i = 0;
-            do {
-                int32_t c = fgetc(infile);
-                if (!feof(infile)) {
-                    inbuf[i++] = c & 0xFF;
-                    compressed_fpga_stream.avail_in++;
-                } else {
-                    break;
-                }
-            } while (i < DECOMPRESS_BUF_SIZE);
-        }
-
-        ret = inflate(&compressed_fpga_stream, Z_SYNC_FLUSH);
-
-        if (ret != Z_OK && ret != Z_STREAM_END) {
-            break;
-        }
-
-        if (compressed_fpga_stream.avail_out == 0) {
-            for (uint16_t i = 0; i < DECOMPRESS_BUF_SIZE; i++) {
-                fputc(outbuf[i], outfile);
-            }
-            compressed_fpga_stream.avail_out = DECOMPRESS_BUF_SIZE;
-            compressed_fpga_stream.next_out = outbuf;
-        }
-    } while (ret == Z_OK);
-
-    if (ret == Z_STREAM_END) {  // reached end of input
-        uint16_t i = 0;
-        while (compressed_fpga_stream.avail_out < DECOMPRESS_BUF_SIZE) {
-            fputc(outbuf[i++], outfile);
-            compressed_fpga_stream.avail_out++;
-        }
-        fclose(outfile);
-        fclose(infile);
-        return (EXIT_SUCCESS);
-    } else {
-        fprintf(stderr, "Error. Inflate() returned error %d, %s", ret, compressed_fpga_stream.msg);
-        fclose(outfile);
-        fclose(infile);
+    if (num_read != infile_size) {
         return (EXIT_FAILURE);
     }
 
+    lz4_stream compressed_fpga_stream;
+    // initialize lz4 structures
+    compressed_fpga_stream.lz4StreamDecode = &lz4StreamDecode_body;
+    compressed_fpga_stream.next_in = inbuf;
+    compressed_fpga_stream.avail_in = infile_size;
+
+    int total_size = 0;
+    while (compressed_fpga_stream.avail_in > 0) {
+        const int cmp_bytes = *(int*)(compressed_fpga_stream.next_in);
+        compressed_fpga_stream.next_in += 4;
+        compressed_fpga_stream.avail_in -= cmp_bytes + 4;
+        const int decBytes = LZ4_decompress_safe_continue(compressed_fpga_stream.lz4StreamDecode, compressed_fpga_stream.next_in, outbuf, cmp_bytes, FPGA_RING_BUFFER_BYTES);
+        if (decBytes <= 0) {
+            break;
+        }
+        fwrite(outbuf, decBytes, sizeof(char), outfile);
+        total_size += decBytes;
+        compressed_fpga_stream.next_in += cmp_bytes;
+    }
+    printf("uncompressed %li input bytes to %i output bytes\n", infile_size, total_size);
+    fclose(outfile);
+    fclose(infile);
+    return (EXIT_SUCCESS);
 }
 
 
@@ -342,7 +279,7 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
         strncat(dst, " on ", len - strlen(dst) - 1);
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
-            if (i < sizeof(tempstr)) {
+            if (i < sizeof(tempstr)) {                
                 if (c == '/') c = '-';
                 if (c == ' ') c = '0';
                 tempstr[i] = c;
