@@ -143,12 +143,15 @@ int push_cmdscriptfile(char *path, bool stayafter) {
         PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", path);
         return PM3_EMALLOC;
     }
-    FILE *tmp = fopen(path, "r");
-    if (tmp == NULL)
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL)
         return PM3_EFILE;
+
     if (cmdscriptfile_idx == 0)
         cmdscriptfile_stayafter = stayafter;
-    cmdscriptfile[++cmdscriptfile_idx] = tmp;
+
+    cmdscriptfile[++cmdscriptfile_idx] = f;
     return PM3_SUCCESS;
 }
 
