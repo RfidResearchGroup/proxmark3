@@ -18,14 +18,12 @@
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html
 //-----------------------------------------------------------------------------
 
-
 #include "cmdhffido.h"
 
 #include <unistd.h>
 
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"
-
 #include "comms.h"
 #include "proxmark3.h"
 #include "emv/emvcore.h"
@@ -50,7 +48,7 @@ static int CmdHFFidoInfo(const char *cmd) {
     infoHF14A(false, false, false);
 
     // FIDO info
-    PrintAndLogEx(NORMAL, "--------------------------------------------");
+    PrintAndLogEx(INFO, "-----------" _CYAN_("FIDO Info") "---------------------------------");
     SetAPDULogging(false);
 
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -70,7 +68,7 @@ static int CmdHFFidoInfo(const char *cmd) {
             PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000.");
 
         DropField();
-        return 0;
+        return PM3_SUCCESS;
     }
 
     if (!strncmp((char *)buf, "U2F_V2", 7)) {
@@ -92,13 +90,12 @@ static int CmdHFFidoInfo(const char *cmd) {
     }
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "FIDO2 version doesn't exist (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-
-        return 0;
+        return PM3_SUCCESS;
     }
 
     if (buf[0]) {
         PrintAndLogEx(ERR, "FIDO2 get version error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0]));
-        return 0;
+        return PM3_SUCCESS;
     }
 
     if (len > 1) {
@@ -107,7 +104,7 @@ static int CmdHFFidoInfo(const char *cmd) {
     } else {
         PrintAndLogEx(ERR, "FIDO2 version length error");
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static json_t *OpenJson(CLIParserContext *ctx, int paramnum, char *fname, void *argtable[], bool *err) {
@@ -115,7 +112,7 @@ static json_t *OpenJson(CLIParserContext *ctx, int paramnum, char *fname, void *
     json_error_t error;
     *err = false;
 
-    uint8_t jsonname[250] = {0};
+    uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
 
@@ -159,7 +156,6 @@ static int CmdHFFidoRegister(const char *cmd) {
     uint8_t cdata[250] = {0};
     int applen = 0;
     uint8_t adata[250] = {0};
-    json_t *root = NULL;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido reg",
@@ -187,12 +183,12 @@ static int CmdHFFidoRegister(const char *cmd) {
     bool paramsPlain = arg_get_lit(3);
     bool showDERTLV = arg_get_lit(4);
 
-    char fname[250] = {0};
+    char fname[FILE_PATH_SIZE] = {0};
     bool err;
-    root = OpenJson(ctx, 5, fname, argtable, &err);
+    json_t *root = OpenJson(ctx, 5, fname, argtable, &err);
     if (err) {
         CLIParserFree(ctx);
-        return 1;
+        return PM3_EINVARG;
     }
     if (root) {
         size_t jlen;
@@ -205,13 +201,13 @@ static int CmdHFFidoRegister(const char *cmd) {
         CLIGetStrWithReturn(ctx, 6, cdata, &chlen);
         if (chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
-            return 1;
+            return PM3_EINVARG;
         }
     } else {
         CLIGetHexWithReturn(ctx, 6, cdata, &chlen);
         if (chlen && chlen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
-            return 1;
+            return PM3_EINVARG;
         }
     }
     if (chlen)
@@ -223,13 +219,13 @@ static int CmdHFFidoRegister(const char *cmd) {
         CLIGetStrWithReturn(ctx, 7, adata, &applen);
         if (applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
-            return 1;
+            return PM3_EINVARG;
         }
     } else {
         CLIGetHexWithReturn(ctx, 7, adata, &applen);
         if (applen && applen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
-            return 1;
+            return PM3_EINVARG;
         }
     }
     if (applen)
@@ -258,7 +254,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
-        return 2;
+        return PM3_ESOFT;
     }
 
     res = FIDORegister(data, buf,  sizeof(buf), &len, &sw);
@@ -270,22 +266,24 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "ERROR execute register command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return 3;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "");
     if (APDULogging)
-        PrintAndLogEx(NORMAL, "---------------------------------------------------------------");
+        PrintAndLogEx(INFO, "---------------------------------------------------------------");
+
     PrintAndLogEx(NORMAL, "data len: %zu", len);
+
     if (verbose2) {
-        PrintAndLogEx(NORMAL, "--------------data----------------------");
+        PrintAndLogEx(INFO, "------------ " _CYAN_("data") " ----------------------");
         dump_buffer((const unsigned char *)buf, len, NULL, 0);
-        PrintAndLogEx(NORMAL, "--------------data----------------------");
+        PrintAndLogEx(INFO, "-------------" _CYAN_("data") " ----------------------");
     }
 
     if (buf[0] != 0x05) {
         PrintAndLogEx(ERR, "ERROR: First byte must be 0x05, but it %2x", buf[0]);
-        return 5;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, "User public key: %s", sprint_hex(&buf[1], 65));
 
@@ -357,12 +355,11 @@ static int CmdHFFidoRegister(const char *cmd) {
     }
 
     PrintAndLogEx(INFO, "\nauth command: ");
-    printf("hf fido auth %s%s", paramsPlain ? "-p " : "", sprint_hex_inrow(&buf[67], keyHandleLen));
+    PrintAndLogEx(INFO, "hf fido auth %s%s", paramsPlain ? "-p " : "", sprint_hex_inrow(&buf[67], keyHandleLen));
     if (chlen || applen)
-        printf(" %s", paramsPlain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
+        PrintAndLogEx(INFO, " %s", paramsPlain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
     if (applen)
-        printf(" %s", paramsPlain ? (char *)adata : sprint_hex_inrow(adata, 32));
-    printf("\n");
+        PrintAndLogEx(INFO, " %s", paramsPlain ? (char *)adata : sprint_hex_inrow(adata, 32));
 
     if (root) {
         JsonSaveBufAsHex(root, "ChallengeParam", data, 32);
@@ -375,16 +372,15 @@ static int CmdHFFidoRegister(const char *cmd) {
         res = json_dump_file(root, fname, JSON_INDENT(2));
         if (res) {
             PrintAndLogEx(ERR, "ERROR: can't save the file: %s", fname);
-            return 200;
+            return PM3_EFILE;
         }
         PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
 
         // free json object
         json_decref(root);
     }
-
-    return 0;
-};
+    return PM3_SUCCESS;
+}
 
 static int CmdHFFidoAuthenticate(const char *cmd) {
     uint8_t data[512] = {0};
@@ -393,7 +389,6 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     uint8_t public_key[65] = {0};
     int hdatalen = 0;
     uint8_t keyHandleLen = 0;
-    json_t *root = NULL;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido auth",
@@ -430,11 +425,12 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     char fname[250] = {0};
     bool err;
-    root = OpenJson(ctx, 7, fname, argtable, &err);
+    json_t *root = OpenJson(ctx, 7, fname, argtable, &err);
     if (err) {
         CLIParserFree(ctx);
-        return 1;
+        return PM3_EINVARG;
     }
+
     if (root) {
         size_t jlen;
         JsonLoadBufAsHex(root, "$.ChallengeParam", data, 32, &jlen);
@@ -450,7 +446,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     CLIGetHexWithReturn(ctx, 8, hdata, &hdatalen);
     if (hdatalen && hdatalen != 65) {
         PrintAndLogEx(ERR, "ERROR: public key length must be 65 bytes only.");
-        return 1;
+        return PM3_EINVARG;
     }
     if (hdatalen) {
         memmove(public_key, hdata, hdatalen);
@@ -460,7 +456,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     CLIGetHexWithReturn(ctx, 9, hdata, &hdatalen);
     if (hdatalen > 255) {
         PrintAndLogEx(ERR, "ERROR: application parameter length must be less than 255.");
-        return 1;
+        return PM3_EINVARG;
     }
     if (hdatalen) {
         keyHandleLen = hdatalen;
@@ -473,13 +469,13 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
-            return 1;
+            return PM3_EINVARG;
         }
     } else {
         CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
-            return 1;
+            return PM3_EINVARG;
         }
     }
     if (hdatalen)
@@ -490,13 +486,15 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         CLIGetStrWithReturn(ctx, 11, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
-            return 1;
+            CLIParserFree(ctx);            
+            return PM3_EINVARG;
         }
     } else {
         CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
-            return 1;
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
     }
     if (hdatalen)
@@ -530,7 +528,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
-        return 2;
+        return PM3_ESOFT;
     }
 
     res = FIDOAuthentication(data, datalen, controlByte,  buf,  sizeof(buf), &len, &sw);
@@ -542,7 +540,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "ERROR execute authentication command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return 3;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "---------------------------------------------------------------");
@@ -598,15 +596,15 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         res = json_dump_file(root, fname, JSON_INDENT(2));
         if (res) {
             PrintAndLogEx(ERR, "ERROR: can't save the file: %s", fname);
-            return 200;
+            return PM3_EFILE;
         }
         PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
 
         // free json object
         json_decref(root);
     }
-    return 0;
-};
+    return PM3_ESOFT;
+}
 
 static void CheckSlash(char *fileName) {
     if ((fileName[strlen(fileName) - 1] != '/') &&
@@ -614,6 +612,7 @@ static void CheckSlash(char *fileName) {
         strcat(fileName, "/");
 }
 
+//iceman, todo:  use searchfile..
 static int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFileName, char *fileName) {
     fileName[0] = 0x00;
     strcpy(fileName, get_my_executable_directory());
@@ -635,16 +634,15 @@ static int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFile
             strcat(fileName, ".json");
 
         if (access(fileName, F_OK) < 0) {
-            return 1; // file not found
+            return PM3_EFILE; // file not found
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFFido2MakeCredential(const char *cmd) {
     json_error_t error;
-    json_t *root = NULL;
-    char fname[300] = {0};
+    char fname[FILE_PATH_SIZE] = {0};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido make",
@@ -669,7 +667,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     bool showDERTLV = arg_get_lit(3);
     bool showCBOR = arg_get_lit(4);
 
-    uint8_t jsonname[250] = {0};
+    uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
     CLIGetStrWithReturn(ctx, 5, jsonname, &jsonnamelen);
@@ -684,15 +682,15 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     SetAPDULogging(APDULogging);
 
     int res = GetExistsFileNameJson("fido", cjsonname, fname);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "ERROR: Can't found the json file.");
         return res;
     }
     PrintAndLogEx(NORMAL, "fname: %s\n", fname);
-    root = json_load_file(fname, 0, &error);
+    json_t *root = json_load_file(fname, 0, &error);
     if (!root) {
         PrintAndLogEx(ERR, "ERROR: json error on line %d: %s", error.line, error.text);
-        return 1;
+        return PM3_EFILE;
     }
 
     uint8_t data[2048] = {0};
@@ -703,7 +701,6 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
 
     DropField();
     res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
-
     if (res) {
         PrintAndLogEx(ERR, "Can't select authenticator. res=%x. Exit...", res);
         DropField();
@@ -713,7 +710,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
-        return 2;
+        return PM3_ESOFT;
     }
 
     res = FIDO2CreateMakeCredentionalReq(root, data, sizeof(data), &datalen);
@@ -722,9 +719,9 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
 
     if (showCBOR) {
         PrintAndLogEx(INFO, "CBOR make credential request:");
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
         TinyCborPrintFIDOPackage(fido2CmdMakeCredential, false, data, datalen);
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
     }
 
     res = FIDO2MakeCredential(data, datalen, buf,  sizeof(buf), &len, &sw);
@@ -736,20 +733,20 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
 
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "ERROR execute make credential command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return 3;
+        return PM3_EFILE;
     }
 
     if (buf[0]) {
         PrintAndLogEx(ERR, "FIDO2 make credential error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0]));
-        return 0;
+        return PM3_SUCCESS;
     }
 
     PrintAndLogEx(SUCCESS, "MakeCredential result (%zu b) OK.", len);
     if (showCBOR) {
         PrintAndLogEx(SUCCESS, "CBOR make credential response:");
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
         TinyCborPrintFIDOPackage(fido2CmdMakeCredential, true, &buf[1], len - 1);
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
     }
 
     // parse returned cbor
@@ -759,19 +756,18 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
         res = json_dump_file(root, fname, JSON_INDENT(2));
         if (res) {
             PrintAndLogEx(ERR, "ERROR: can't save the file: %s", fname);
-            return 200;
+            return PM3_EFILE;
         }
         PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
     }
 
     json_decref(root);
-    return 0;
-};
+    return PM3_SUCCESS;
+}
 
 static int CmdHFFido2GetAssertion(const char *cmd) {
     json_error_t error;
-    json_t *root = NULL;
-    char fname[300] = {0};
+    char fname[FILE_PATH_SIZE] = {0};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fido assert",
@@ -796,7 +792,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     bool showCBOR = arg_get_lit(3);
     bool createAllowList = arg_get_lit(4);
 
-    uint8_t jsonname[250] = {0};
+    uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
     CLIGetStrWithReturn(ctx, 5, jsonname, &jsonnamelen);
@@ -811,15 +807,15 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     SetAPDULogging(APDULogging);
 
     int res = GetExistsFileNameJson("fido", cjsonname, fname);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "ERROR: Can't found the json file.");
         return res;
     }
     PrintAndLogEx(NORMAL, "fname: %s\n", fname);
-    root = json_load_file(fname, 0, &error);
+    json_t *root = json_load_file(fname, 0, &error);
     if (!root) {
         PrintAndLogEx(ERR, "ERROR: json error on line %d: %s", error.line, error.text);
-        return 1;
+        return PM3_EFILE;
     }
 
     uint8_t data[2048] = {0};
@@ -830,9 +826,8 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 
     DropField();
     res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
-
     if (res) {
-        PrintAndLogEx(ERR, "Can't select authenticator. res=%x. Exit...", res);
+        PrintAndLogEx(ERR, "Can't select authenticator. res=%x. exiting...", res);
         DropField();
         return res;
     }
@@ -840,7 +835,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Can't select FIDO application. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
-        return 2;
+        return PM3_ESOFT;
     }
 
     res = FIDO2CreateGetAssertionReq(root, data, sizeof(data), &datalen, createAllowList);
@@ -849,9 +844,9 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 
     if (showCBOR) {
         PrintAndLogEx(SUCCESS, "CBOR get assertion request:");
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
         TinyCborPrintFIDOPackage(fido2CmdGetAssertion, false, data, datalen);
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
     }
 
     res = FIDO2GetAssertion(data, datalen, buf,  sizeof(buf), &len, &sw);
@@ -863,20 +858,20 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "ERROR execute get assertion command. APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return 3;
+        return PM3_ESOFT;
     }
 
     if (buf[0]) {
         PrintAndLogEx(ERR, "FIDO2 get assertion error: %d - %s", buf[0], fido2GetCmdErrorDescription(buf[0]));
-        return 0;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "GetAssertion result (%zu b) OK.", len);
     if (showCBOR) {
         PrintAndLogEx(SUCCESS, "CBOR get assertion response:");
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
         TinyCborPrintFIDOPackage(fido2CmdGetAssertion, true, &buf[1], len - 1);
-        PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
+        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
     }
 
     // parse returned cbor
@@ -886,32 +881,32 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
         res = json_dump_file(root, fname, JSON_INDENT(2));
         if (res) {
             PrintAndLogEx(ERR, "ERROR: can't save the file: %s", fname);
-            return 200;
+            return PM3_EFILE;
         }
         PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
     }
 
     json_decref(root);
-    return 0;
-};
+    return PM3_SUCCESS;
+}
 
 static command_t CommandTable[] = {
-    {"help",             CmdHelp,                    AlwaysAvailable, "This help."},
-    {"info",             CmdHFFidoInfo,              IfPm3Iso14443a,  "Info about FIDO tag."},
-    {"reg",              CmdHFFidoRegister,          IfPm3Iso14443a,  "FIDO U2F Registration Message."},
-    {"auth",             CmdHFFidoAuthenticate,      IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
-    {"make",             CmdHFFido2MakeCredential,   IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
-    {"assert",           CmdHFFido2GetAssertion,     IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
-    {NULL,               NULL,                       0, NULL}
+    {"help",      CmdHelp,                    AlwaysAvailable, "This help."},
+    {"info",      CmdHFFidoInfo,              IfPm3Iso14443a,  "Info about FIDO tag."},
+    {"reg",       CmdHFFidoRegister,          IfPm3Iso14443a,  "FIDO U2F Registration Message."},
+    {"auth",      CmdHFFidoAuthenticate,      IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
+    {"make",      CmdHFFido2MakeCredential,   IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
+    {"assert",    CmdHFFido2GetAssertion,     IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
+    {NULL,        NULL,                       0, NULL}
 };
 
 int CmdHFFido(const char *Cmd) {
-    (void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
+    clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
 
 int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
