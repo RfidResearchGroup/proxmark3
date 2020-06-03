@@ -20,6 +20,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [Usb cable](#usb-cable)
   * [WSL 2  explorer.exe . doesnt work](#WSL-2)
   * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
+  * [libQt5Core.so.5 not found]()
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -178,3 +179,11 @@ Trying to access the dump files created in WSL,  you will need to run ```explore
 Some reports has stated that they needed to execute the Proxmark3 as root on their *nix system.  
 Try running it with
     `sudo ./pm3`  
+
+## libQt5Core.so.5 not found
+On WSL1 / updated to Ubuntu 20.04,  there is a slight chance you experience problems when compiling the repo with QT5.
+The following steps is needed to make the development environment happy again.   
+```
+sudo apt reinstall qtbase5-dev
+sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
+```
