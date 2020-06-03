@@ -20,7 +20,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [Usb cable](#usb-cable)
   * [WSL 2  explorer.exe . doesnt work](#WSL-2)
   * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
-  * [libQt5Core.so.5 not found](#libQt5Core.so.5-not-found)
+  * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
