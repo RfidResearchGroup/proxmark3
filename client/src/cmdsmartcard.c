@@ -522,7 +522,6 @@ static int CmdSmartUpgrade(const char *Cmd) {
     PrintAndLogEx(WARNING, "A dangerous command, do wrong and you could brick the sim module");
     PrintAndLogEx(NORMAL, "");
 
-    FILE *f;
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t cmdp = 0;
     bool errors = false;
@@ -530,7 +529,6 @@ static int CmdSmartUpgrade(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'f':
-                //File handling and reading
                 if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
                     PrintAndLogEx(FAILED, "Filename too long");
                     errors = true;
@@ -550,105 +548,70 @@ static int CmdSmartUpgrade(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_upgrade();
 
-    char sha512filename[FILE_PATH_SIZE] = {'\0'};
+
     char *bin_extension = filename;
     char *dot_position = NULL;
     while ((dot_position = strchr(bin_extension, '.')) != NULL) {
         bin_extension = dot_position + 1;
     }
 
+    // generate filename for the related SHA512 hash file
+    char sha512filename[FILE_PATH_SIZE] = {'\0'};
     if (!strcmp(bin_extension, "BIN") || !strcmp(bin_extension, "bin")) {
         memcpy(sha512filename, filename, strlen(filename) - strlen("bin"));
         strcat(sha512filename, "sha512.txt");
     } else {
         PrintAndLogEx(FAILED, "Filename extension of firmware upgrade file must be .BIN");
-        return 1;
+        return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "firmware file      : " _YELLOW_("%s"), filename);
-    PrintAndLogEx(INFO, "Checking integrity : " _YELLOW_("%s"), sha512filename);
+    PrintAndLogEx(INFO, "firmware file       " _YELLOW_("%s"), filename);
+    PrintAndLogEx(INFO, "Checking integrity  " _YELLOW_("%s"), sha512filename);
 
     // load firmware file
-    f = fopen(filename, "rb");
-    if (!f) {
+    size_t firmware_size = 0;
+    uint8_t *firmware = NULL;
+    if (loadFile_safe(filename, "", (void**)&firmware, &firmware_size) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Firmware file " _YELLOW_("%s") " not found or locked.", filename);
         return PM3_EFILE;
     }
 
-    // get filesize in order to malloc memory
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "error, when getting filesize");
-        fclose(f);
-        return 1;
-    }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        fclose(f);
-        return 1;
-    }
-
-    size_t firmware_size = fread(dump, 1, fsize, f);
-    fclose(f);
-
     // load sha512 file
-    f = fopen(sha512filename, "rb");
-    if (!f) {
+    size_t sha512_size = 0;
+    char *hashstring = NULL;
+    if (loadFile_safe(sha512filename, "", (void**)&hashstring, &sha512_size) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "SHA-512 file not found or locked.");
-        free(dump);
+        free(firmware);
         return PM3_EFILE;
     }
 
-    // get filesize in order to malloc memory
-    fseek(f, 0, SEEK_END);
-    fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize < 0) {
-        PrintAndLogEx(FAILED, "Could not determine size of SHA-512 file");
-        fclose(f);
-        free(dump);
-        return 1;
+    if (sha512_size < 128) {
+        PrintAndLogEx(FAILED, "SHA-512 file wrong size");
+        free(firmware);
+        return PM3_ESOFT;
     }
-
-    if (fsize < 128) {
-        PrintAndLogEx(FAILED, "SHA-512 file too short");
-        fclose(f);
-        free(dump);
-        return 1;
-    }
-
-    char hashstring[129];
-    size_t bytes_read = fread(hashstring, 1, 128, f);
     hashstring[128] = '\0';
 
-    fclose(f);
-
     uint8_t hash_1[64];
-    if (bytes_read != 128 || param_gethex(hashstring, 0, hash_1, 128)) {
+    if (param_gethex(hashstring, 0, hash_1, 128)) {
         PrintAndLogEx(FAILED, "Couldn't read SHA-512 file");
-        free(dump);
-        return 1;
+        free(firmware);
+        return PM3_ESOFT;
     }
 
     uint8_t hash_2[64];
-    if (sha512hash(dump, firmware_size, hash_2)) {
+    if (sha512hash(firmware, firmware_size, hash_2)) {
         PrintAndLogEx(FAILED, "Couldn't calculate SHA-512 of firmware");
-        free(dump);
-        return 1;
+        free(firmware);
+        return PM3_ESOFT;
     }
 
     if (memcmp(hash_1, hash_2, 64)) {
         PrintAndLogEx(FAILED, "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)"));
-        free(dump);
-        return 1;
+        free(firmware);
+        return PM3_ESOFT;
     }
-
+    
     PrintAndLogEx(SUCCESS, "Sim module firmware uploading to PM3");
 
     //Send to device
@@ -666,20 +629,19 @@ static int CmdSmartUpgrade(const char *Cmd) {
             conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_SMART_UPLOAD, index + bytes_sent, bytes_in_packet, 0, dump + bytes_sent, bytes_in_packet);
+        SendCommandOLD(CMD_SMART_UPLOAD, index + bytes_sent, bytes_in_packet, 0, firmware + bytes_sent, bytes_in_packet);
         if (!WaitForResponseTimeout(CMD_ACK, NULL, 2000)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            free(dump);
-            return 1;
+            free(firmware);
+            return PM3_ETIMEOUT;
         }
 
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(INPLACE, "%d bytes sent", bytes_sent);
     }
-    free(dump);
-    printf("\n");
+    free(firmware);
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Sim module firmware updating,  don\'t turn off your PM3!");
 
     // trigger the firmware upgrade
@@ -688,11 +650,11 @@ static int CmdSmartUpgrade(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return 1;
+        return PM3_ETIMEOUT;
     }
     if ((resp.oldarg[0] & 0xFF)) {
         PrintAndLogEx(SUCCESS, "Sim module firmware upgrade " _GREEN_("successful"));
-        PrintAndLogEx(SUCCESS, "\n run " _YELLOW_("`hw status`") " to validate the fw version ");
+        PrintAndLogEx(HINT, "run " _YELLOW_("`hw status`") " to validate the fw version ");
     } else {
         PrintAndLogEx(FAILED, "Sim module firmware upgrade " _RED_("failed"));
     }
