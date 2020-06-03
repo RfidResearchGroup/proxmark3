@@ -1686,6 +1686,7 @@ static int CmdHF15Restore(const char *Cmd) {
     
     if ((datalen % blocksize) != 0) {
         PrintAndLogEx(WARNING, "Datalen %zu isn't dividable with blocksize %zu", datalen, blocksize);
+        free(data);
         return PM3_ESOFT;
     }
 
