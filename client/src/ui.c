@@ -316,20 +316,20 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         timenow = gmtime(&now);
         strftime(filename, sizeof(filename), PROXLOG, timenow);
         if (searchHomeFilePath(&my_logfile_path, LOGS_SUBDIR, filename, true) != PM3_SUCCESS) {
-            fprintf(stderr, "[-] Logging disabled!\n\n");
+            printf(_YELLOW_("[-]") " Logging disabled!\n");
             my_logfile_path = NULL;
             logging = 0;
         } else {
             logfile = fopen(my_logfile_path, "a");
             if (logfile == NULL) {
-                fprintf(stderr, "[-] Can't open logfile %s, logging disabled!\n", my_logfile_path);
+                printf(_YELLOW_("[-]") " Can't open logfile %s, logging disabled!\n", my_logfile_path);
                 logging = 0;
             } else {
 
                 if (session.supports_colors) {
-                    printf(_YELLOW_("[=] ") "Session log " _YELLOW_("%s") "\n", my_logfile_path);
+                    printf(_YELLOW_("[=]") " Session log " _YELLOW_("%s") "\n", my_logfile_path);
                 } else {
-                    printf("[=] Session log %s\n", my_logfile_path);
+                    printf(_YELLOW_("[=]") " Session log %s\n", my_logfile_path);
                 }
 
             }
@@ -363,7 +363,6 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     if (g_printAndLog & PRINTANDLOG_PRINT) {
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), session.emoji_mode);
         fprintf(stream, "%s", buffer3);
-//        fprintf(stream, "          "); // cleaning prompt
         fprintf(stream, "\n");
     }
 
