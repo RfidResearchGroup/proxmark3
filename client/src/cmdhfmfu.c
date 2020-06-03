@@ -2127,7 +2127,6 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool read_key = false;
     bool verbose = false;
     size_t filelen = 0;
-    FILE *f;
 
     memset(authkey, 0x00, sizeof(authkey));
 
@@ -2188,35 +2187,17 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_hf_mfu_restore();
 
-    if ((f = fopen(filename, "rb")) == NULL) {
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(filename, "", (void**)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
-        return 1;
+        return PM3_EIO;
     }
 
-    // get filesize to know how memory to allocate
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "Error, when getting filesize");
-        fclose(f);
-        return 1;
-    }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        fclose(f);
-        return 1;
-    }
-
-    // read all data
-    size_t bytes_read = fread(dump, 1, fsize, f);
-    fclose(f);
     if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {
         PrintAndLogEx(ERR, "Error, dump file is too small");
         free(dump);
-        return 1;
+        return PM3_ESOFT;
     }
 
     int res = convert_mfu_dump_format(&dump, &bytes_read, verbose);    
@@ -2232,7 +2213,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     if (pages - 1 != mem->pages) {
         PrintAndLogEx(ERR, "Error, invalid dump, wrong page count");
         free(dump);
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
