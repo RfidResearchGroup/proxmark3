@@ -566,13 +566,7 @@ static int CmdHfLTRestore(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
-    int is_data_loaded = PM3_ESOFT;
-
     char filename[FILE_PATH_SIZE] = {0};
-    char extension[FILE_PATH_SIZE] = {0};
-
-    uint8_t dump_data[CM_MEM_MAX_SIZE] = {0};
-    size_t dump_datalen = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -580,8 +574,9 @@ static int CmdHfLTRestore(const char *Cmd) {
                 return usage_lto_restore();
             case 'f':
                 param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (strlen(filename) == 0)
+                if (strlen(filename) < 5)
                     errors = true;
+
                 cmdp += 2;
                 break;
             default:
@@ -591,40 +586,33 @@ static int CmdHfLTRestore(const char *Cmd) {
         }
     }
 
-    if (errors || (strlen(filename)) == 0) {
-        usage_lto_restore();
-        return PM3_EINVARG;
+    if (errors || strlen(Cmd) == 0 ) {
+        return usage_lto_restore();
     }
 
-    // split file name into prefix and ext.
-    int fnLength;
+    size_t dump_len = 0;
+    char *lowstr = str_dup(filename);
+    str_lower(lowstr);
 
-    fnLength = strlen(filename);
+    if (str_endswith(lowstr, ".bin")) {
 
-    if (fnLength > 4) {
-        memcpy(extension, &filename[fnLength - 4], 4);
-        extension[5] = 0x00;
+        uint8_t *dump = NULL;
+        if (loadFile_safe(filename, "", (void**)&dump, &dump_len) == PM3_SUCCESS) {
+            restoreLTO(dump, true);
+            free(dump);
+        }
+    } else if (str_endswith(lowstr, ".eml")) {
 
-        //  check if valid file extension and attempt to load data
-        if (memcmp(extension, ".bin", 4) == 0) {
-            filename[fnLength - 4] = 0x00;
-            is_data_loaded = loadFile(filename, ".bin", dump_data, sizeof(dump_data), &dump_datalen);
-
-        } else if (memcmp(extension, ".eml", 4) == 0) {
-            filename[fnLength - 4] = 0x00;
-            dump_datalen = 12;
-            is_data_loaded = loadFileEML(filename, (uint8_t *)dump_data, &dump_datalen);
-
-        } else
-            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", filename);
-    }
-
-    if (is_data_loaded == PM3_SUCCESS) {
-        return restoreLTO(dump_data, true);
+        uint8_t *dump = NULL;
+        if (loadFileEML_safe(filename, (void**)&dump, &dump_len) == PM3_SUCCESS) {
+            restoreLTO(dump, true);
+            free(dump);
+        }
     } else {
-        return PM3_EFILE;
+        PrintAndLogEx(WARNING, "Warning: invalid dump filename " _YELLOW_("%s") " to restore", filename);
     }
-
+    free(lowstr);
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
