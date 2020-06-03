@@ -1506,7 +1506,7 @@ static int CmdHelp(const char *Cmd) {
 }
 
 int CmdHFMFP(const char *Cmd) {
-    (void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
+    clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
 
