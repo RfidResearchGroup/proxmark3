@@ -121,7 +121,6 @@ static json_t *OpenJson(CLIParserContext *ctx, int paramnum, char *fname, void *
 
     // CLIGetStrWithReturn(ctx, paramnum, jsonname, &jsonnamelen);
     if (CLIParamStrToBuf(arg_get_str(paramnum), jsonname, sizeof(jsonname), &jsonnamelen))  {
-        CLIParserFree(ctx);
         return NULL;
     }
 
@@ -191,8 +190,10 @@ static int CmdHFFidoRegister(const char *cmd) {
     char fname[250] = {0};
     bool err;
     root = OpenJson(ctx, 5, fname, argtable, &err);
-    if (err)
+    if (err) {
+        CLIParserFree(ctx);
         return 1;
+    }
     if (root) {
         size_t jlen;
         JsonLoadBufAsHex(root, "$.ChallengeParam", data, 32, &jlen);
@@ -430,8 +431,10 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     char fname[250] = {0};
     bool err;
     root = OpenJson(ctx, 7, fname, argtable, &err);
-    if (err)
+    if (err) {
+        CLIParserFree(ctx);
         return 1;
+    }
     if (root) {
         size_t jlen;
         JsonLoadBufAsHex(root, "$.ChallengeParam", data, 32, &jlen);
