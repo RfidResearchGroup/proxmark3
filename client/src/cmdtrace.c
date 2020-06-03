@@ -427,48 +427,23 @@ static int SanityOfflineCheck( bool useTraceBuffer ){
 
 static int CmdTraceLoad(const char *Cmd) {
 
-    FILE *f = NULL;
     char filename[FILE_PATH_SIZE];
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_load();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
 
-    if ((f = fopen(filename, "rb")) == NULL) {
-        PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
-        return PM3_EIO;
-    }
-
-    // get filesize in order to malloc memory
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize < 0) {
-        PrintAndLogEx(FAILED, "error, when getting filesize");
-        fclose(f);
-        return PM3_EIO;
-    }
-    if (fsize < 4) {
-        PrintAndLogEx(FAILED, "error, file is too small");
-        fclose(f);
-        return PM3_ESOFT;
-    }
-
     if (g_trace)
         free(g_trace);
 
-    g_traceLen = 0;
-    g_trace = calloc(fsize, sizeof(uint8_t));
-    if (g_trace == NULL) {
-        PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-        fclose(f);
-        return PM3_EMALLOC;
+    size_t len = 0;
+    if (loadFile_safe(filename, ".trace", (void**)&g_trace, &len) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
+        return PM3_EIO;
     }
-
-    size_t bytes_read = fread(g_trace, 1, fsize, f);
-    g_traceLen = bytes_read;
-    fclose(f);
+    
+    g_traceLen = (long)len;
+    
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%lu") " bytes) loaded from " _YELLOW_("%s"), g_traceLen, filename);
     return PM3_SUCCESS;
 }
