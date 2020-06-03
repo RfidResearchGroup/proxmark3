@@ -80,54 +80,6 @@ int kbd_enter_pressed(void) {
 }
 #endif
 
-// log files functions
-
-// open, appped and close logfile
-void AddLogLine(const char *fn, const char *data, const char *c) {
-    FILE *f = NULL;
-    char filename[FILE_PATH_SIZE] = {0x00};
-    int len = 0;
-
-    len = strlen(fn);
-    if (len > FILE_PATH_SIZE)
-        len = FILE_PATH_SIZE;
-    memcpy(filename, fn, len);
-
-    f = fopen(filename, "a");
-    if (!f) {
-        PrintAndLogEx(ERR, "Could not append log file" _YELLOW_("%s"), filename);
-        return;
-    }
-
-    fprintf(f, "%s", data);
-    fprintf(f, "%s\n", c);
-    fflush(f);
-    fclose(f);
-}
-
-void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len) {
-    AddLogLine(fn, extData, sprint_hex(data, len));
-}
-
-void AddLogUint64(const char *fn, const char *data, const uint64_t value) {
-    char buf[20] = {0};
-    sprintf(buf, "%016" PRIx64 "", value);
-    AddLogLine(fn, data, buf);
-}
-
-void AddLogCurrentDT(const char *fn) {
-    char buf[20] = {0};
-    struct tm *ct, tm_buf;
-    time_t now = time(NULL);
-#if defined(_WIN32)
-    ct = gmtime_s(&tm_buf, &now) == 0 ? &tm_buf : NULL;
-#else
-    ct = gmtime_r(&now, &tm_buf);
-#endif
-    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ct);
-    AddLogLine(fn, "\nanticollision: ", buf);
-}
-
 // create filename on hex uid.
 // param *fn   -  pointer to filename char array
 // param *uid  -  pointer to uid byte array
