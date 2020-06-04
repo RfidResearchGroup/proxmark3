@@ -514,7 +514,7 @@ static int CmdTraceSave(const char *Cmd) {
     if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_save();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
-    saveFile(filename, ".bin", g_trace, g_traceLen);
+    saveFile(filename, ".trace", g_trace, g_traceLen);
     return PM3_SUCCESS;
 }
 
