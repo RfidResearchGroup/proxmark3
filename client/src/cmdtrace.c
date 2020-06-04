@@ -414,6 +414,56 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     return tracepos;
 }
 
+static int download_trace(void) {
+    
+    if (!IfPm3Present()) {
+        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
+        return PM3_EINVARG;
+    }
+
+    // reserve some space.
+    if (g_trace)
+        free(g_trace);
+
+    g_traceLen = 0;
+
+    g_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
+    if (g_trace == NULL) {
+        PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+        return PM3_EMALLOC;
+    }
+
+    PrintAndLogEx(INFO, "downloading tracelog from device");
+
+    // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
+    PacketResponseNG response;
+    if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        free(g_trace);
+        return PM3_ETIMEOUT;
+    }
+
+    g_traceLen = response.oldarg[2];
+
+    // if tracelog buffer was larger and we need to download more.
+    if (g_traceLen > PM3_CMD_DATA_SIZE) {
+
+        free(g_trace);
+        g_trace = calloc(g_traceLen, sizeof(uint8_t));
+        if (g_trace == NULL) {
+            PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+            return PM3_EMALLOC;
+        }
+
+        if (!GetFromDevice(BIG_BUF, g_trace, g_traceLen, 0, NULL, 0, NULL, 2500, false)) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(g_trace);
+            return PM3_ETIMEOUT;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 // sanity check. Don't use proxmark if it is offline and you didn't specify useTraceBuffer
 /*
 static int SanityOfflineCheck( bool useTraceBuffer ){
@@ -429,7 +479,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_load();
+    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_load();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
 
@@ -449,7 +499,11 @@ static int CmdTraceLoad(const char *Cmd) {
 }
 
 static int CmdTraceSave(const char *Cmd) {
-
+    
+    if (g_traceLen == 0) {
+        download_trace();
+    }
+    
     if (g_traceLen == 0) {
         PrintAndLogEx(WARNING, "trace is empty, nothing to save");
         return PM3_SUCCESS;
@@ -457,30 +511,11 @@ static int CmdTraceSave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_save();
+    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_save();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
     saveFile(filename, ".bin", g_trace, g_traceLen);
     return PM3_SUCCESS;
-}
-
-static command_t CommandTable[] = {
-    {"help",    CmdHelp,          AlwaysAvailable, "This help"},
-    {"list",    CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
-    {"load",    CmdTraceLoad,     AlwaysAvailable, "Load trace from file"},
-    {"save",    CmdTraceSave,     AlwaysAvailable, "Save trace buffer to file"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return PM3_SUCCESS;
-}
-
-int CmdTrace(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(CommandTable, Cmd);
 }
 
 int CmdTraceList(const char *Cmd) {
@@ -567,51 +602,7 @@ int CmdTraceList(const char *Cmd) {
     if (errors) return usage_trace_list();
 
     if (isOnline) {
-
-        if (!IfPm3Present()) {
-            PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
-            return PM3_EINVARG;
-        }
-        // reserve some space.
-        if (g_trace)
-            free(g_trace);
-
-        g_traceLen = 0;
-
-        g_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-        if (g_trace == NULL) {
-            PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-            return PM3_EMALLOC;
-        }
-
-        PrintAndLogEx(INFO, "downloading tracelog from device");
-
-        // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
-        PacketResponseNG response;
-        if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            free(g_trace);
-            return PM3_ETIMEOUT;
-        }
-
-        g_traceLen = response.oldarg[2];
-
-        // if tracelog buffer was larger and we need to download more.
-        if (g_traceLen > PM3_CMD_DATA_SIZE) {
-
-            free(g_trace);
-            g_trace = calloc(g_traceLen, sizeof(uint8_t));
-            if (g_trace == NULL) {
-                PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-                return PM3_EMALLOC;
-            }
-
-            if (!GetFromDevice(BIG_BUF, g_trace, g_traceLen, 0, NULL, 0, NULL, 2500, false)) {
-                PrintAndLogEx(WARNING, "command execution time out");
-                free(g_trace);
-                return PM3_ETIMEOUT;
-            }
-        }
+        download_trace();
     }
 
     PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", g_traceLen);
@@ -667,3 +658,21 @@ int CmdTraceList(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static command_t CommandTable[] = {
+    {"help",    CmdHelp,          AlwaysAvailable, "This help"},
+    {"list",    CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
+    {"load",    CmdTraceLoad,     AlwaysAvailable, "Load trace from file"},
+    {"save",    CmdTraceSave,     AlwaysAvailable, "Save trace buffer to file"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdTrace(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
+}
