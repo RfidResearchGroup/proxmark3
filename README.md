@@ -75,6 +75,24 @@ Hardware to run client on
    - Raspberry Pi & Raspberry Pi Zero
    - Jetson Nano
 
+## Precompiled binaries
+We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where @gator96100 has set up a google drive with many mingw binaries which is up-to-date. We link to these files here as to make it easier for users.
+If you are having troubles with these files, contact the package maintainer @gator96100.
+
+- [Precompiled builds for RDV40 dedicated x86](https://drive.google.com/open?id=13zUs-aiQkYaSl5KWrBtuW5IWCoHJPsue)
+- [Precompiled builds for RDV40 dedicated x64](https://drive.google.com/open?id=1SyPB8t5Vo8O0Lh7PjNm3Kv-mO4BNbxjX)
+
+- [Precompiled builds for RDV40 dedicated with Bluetooth addon x86](https://drive.google.com/open?id=1TqWYctkRvkLshQ1ZRBHPLDzYHR-asuMO)
+- [Precompiled builds for RDV40 dedicated with Bluetooth addon x64](https://drive.google.com/open?id=17ful7u2QyYmMQzQzc5fAf8nJvyoDJfSL)
+
+Generice Proxmark3 devices (non RDV4)
+- [Precompiled builds for RRG / Iceman repository x86](https://drive.google.com/open?id=1PI3Xr1mussPBPnYGu4ZjWzGPARK4N7JR)
+- [Precompiled builds for RRG / Iceman repository x64](https://drive.google.com/open?id=1uX9RtYGinuFrpHybu4xq_BE3HrobI20e)
+
+Ref:
+[Link to sticky thread at forum](http://www.proxmark.org/forum/viewtopic.php?pid=24763#p24763)
+
+
 ## Roadmap
 The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
 
