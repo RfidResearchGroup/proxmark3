@@ -127,6 +127,7 @@ static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header)
 
     if (header->IDLenPresent) {
         header->IDLen = (header->ShortRecordBit ? (data[3]) : (data[6]));
+        header->ID = data + header->len + header->TypeLen;
     } else {
         header->IDLen = 0;
     }
@@ -136,7 +137,7 @@ static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header)
     header->RecLen = header->len + header->TypeLen + header->PayloadLen + header->IDLen;
 
     if (header->RecLen > datalen)
-        return 3;
+        return PM3_ESOFT;
 
     return PM3_SUCCESS;
 }
