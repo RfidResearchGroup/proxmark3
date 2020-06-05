@@ -306,10 +306,10 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
             }
             break;
         case ECC_CONTACT:
+            res = 1;
             if (IfPm3Smartcard())
                 res = ExchangeAPDUSC(true, data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
-            else
-                res = 1;
+                
             if (res) {
                 return res;
             }

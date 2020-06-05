@@ -41,8 +41,7 @@ static int usage_sm_raw(void) {
     PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
     PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000041010              - Mastercard");
     PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000031010                - Visa");
-
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_sm_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: sc reader [h|s]");
@@ -51,7 +50,7 @@ static int usage_sm_reader(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc reader");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_sm_info(void) {
     PrintAndLogEx(NORMAL, "Usage: sc info [h|s]");
@@ -60,7 +59,7 @@ static int usage_sm_info(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc info");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "Upgrade RDV4.0 Sim module firmware");
@@ -70,7 +69,7 @@ static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/sim011.bin");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
@@ -79,7 +78,7 @@ static int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc setclock c 2");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_sm_brute(void) {
     PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, using a known list of AID's ");
@@ -90,7 +89,7 @@ static int usage_sm_brute(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc brute t");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int smart_loadjson(const char *preferredName, json_t **root) {
@@ -207,7 +206,7 @@ static float GetATRF(uint8_t *atr, size_t atrlen) {
     return FArray[TA1 >> 4];  // The 4 high-order bits of TA1 (8th MSbit to 5th LSbit) encode fmax and Fi
 }
 
-static int PrintATR(uint8_t *atr, size_t atrlen) {
+static void PrintATR(uint8_t *atr, size_t atrlen) {
 
     uint8_t T0 = atr[1];
     uint8_t K = T0 & 0x0F;
@@ -320,8 +319,6 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
         PrintAndLogEx(INFO, "\tHistorical bytes");
         dump_buffer(&atr[2 + T1len + TD1len + TDilen], K, NULL, 1);
     }
-
-    return 0;
 }
 
 static int smart_wait(uint8_t *data, bool silent) {
@@ -443,13 +440,13 @@ static int CmdSmartRaw(const char *Cmd) {
                 switch (param_gethex_to_eol(Cmd, cmdp + 1, data, sizeof(data), &hexlen)) {
                     case 1:
                         PrintAndLogEx(WARNING, "Invalid HEX value.");
-                        return 1;
+                        return PM3_EINVARG;
                     case 2:
                         PrintAndLogEx(WARNING, "Too many bytes.  Max %zu bytes", sizeof(data));
-                        return 1;
+                        return PM3_EINVARG;
                     case 3:
                         PrintAndLogEx(WARNING, "Hex must have even number of digits.");
-                        return 1;
+                        return PM3_EINVARG;
                 }
                 cmdp++;
                 breakloop = true;
@@ -490,12 +487,12 @@ static int CmdSmartRaw(const char *Cmd) {
 
         uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
         if (!buf)
-            return 1;
+            return PM3_EMALLOC;
 
         int len = smart_response(buf);
         if (len < 0) {
             free(buf);
-            return 2;
+            return PM3_ESOFT;
         }
 
         if (buf[0] == 0x6C) {
@@ -513,7 +510,7 @@ static int CmdSmartRaw(const char *Cmd) {
 
         free(buf);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdSmartUpgrade(const char *Cmd) {
@@ -688,13 +685,13 @@ static int CmdSmartInfo(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
     uint8_t isok = resp.oldarg[0] & 0xFF;
     if (!isok) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
-        return 1;
+        return PM3_ESOFT;
     }
 
     smart_card_atr_t card;
@@ -731,7 +728,7 @@ static int CmdSmartInfo(const char *Cmd) {
         PrintAndLogEx(WARNING, "\t- Di or Fi is RFU.");
     };
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdSmartReader(const char *Cmd) {
@@ -761,19 +758,19 @@ static int CmdSmartReader(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
     uint8_t isok = resp.oldarg[0] & 0xFF;
     if (!isok) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
-        return 1;
+        return PM3_ESOFT;
     }
     smart_card_atr_t card;
     memcpy(&card, (smart_card_atr_t *)resp.data.asBytes, sizeof(smart_card_atr_t));
 
     PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdSmartSetClock(const char *Cmd) {
@@ -806,13 +803,13 @@ static int CmdSmartSetClock(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "smart card select failed");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
     uint8_t isok = resp.oldarg[0] & 0xFF;
     if (!isok) {
         PrintAndLogEx(WARNING, "smart card set clock failed");
-        return 1;
+        return PM3_ESOFT;
     }
 
     switch (clock1) {
@@ -828,13 +825,13 @@ static int CmdSmartSetClock(const char *Cmd) {
         default:
             break;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdSmartList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("7816");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void smart_brute_prim(void) {
@@ -1000,12 +997,12 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)
-        return 1;
+        return PM3_EMALLOC;
 
     PrintAndLogEx(INFO, "Selecting card");
     if (!smart_select(false, NULL)) {
         free(buf);
-        return 1;
+        return PM3_ESOFT;
     }
 
     char *caid = NULL;
@@ -1024,14 +1021,14 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         if (!json_is_object(data)) {
             PrintAndLogEx(ERR, "data %d is not an object\n", i + 1);
             json_decref(root);
-            return 1;
+            return PM3_ESOFT;
         }
 
         jaid = json_object_get(data, "AID");
         if (!json_is_string(jaid)) {
             PrintAndLogEx(ERR, "AID data [%d] is not a string", i + 1);
             json_decref(root);
-            return 1;
+            return PM3_ESOFT;
         }
 
         const char *aid = json_string_value(jaid);
@@ -1093,7 +1090,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
     json_decref(root);
 
     PrintAndLogEx(SUCCESS, "\nSearch completed.");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -1111,7 +1108,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdSmartcard(const char *Cmd) {
@@ -1137,7 +1134,6 @@ int ExchangeAPDUSC(bool silent, uint8_t *datain, int datainlen, bool activateCar
     SendCommandOLD(CMD_SMART_RAW, flags, datainlen, 0, datain, datainlen);
 
     int len = smart_responseEx(dataout, silent);
-
     if (len < 0) {
         return 1;
     }
