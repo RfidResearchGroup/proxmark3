@@ -215,21 +215,41 @@ if [ "$SCRIPT" = "pm3" ]; then
   CMD() { $CLIENT "$@"; }
   HELP() {
       cat << EOF
-Quick helper script for proxmark3 client when working with a Proxmark3 device connected via USB
+
+Quick helper script for proxmark3 client when working with a Proxmark3 device
 
 Description:
     The usage is the same as for the proxmark3 client, with the following differences:
      * the correct port name will be automatically guessed;
      * the script will wait for a Proxmark to be connected (same as option -w of the client).
-    You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
-    Don't use this script if you want to work offline or with the BT addon.
+    You can also specify a first option -n N to access the Nth Proxmark3 connected.
+    Don't use this script if you want to work offline.
     To see a list of available ports, use --list.
 
 Usage:
     $SCRIPT [-n <N>] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
-    $SCRIPT --list
+    $SCRIPT [--list] [--help]
 
-See "$CLIENT -h" for more details on options.
+
+Arguments:
+    --help           this help
+    --list           list all detected com ports
+    -n <N>           connect device refered to the N:th number on the --list output
+    -c 'cmd'         execute the pm3 cmd in client and exit afterwards
+    -i               interactive,  stay in client after executing a cmd or script
+    -s 'script'      execute a cmd script file and exit afterwards
+    -l 'luascript'   execute a lua script file and exit afterwards
+    -w               wait
+    -p <port>        specifiy which port to connect to
+
+
+Samples:
+    ./$SCRIPT                       -- Auto detect/ select com port in the following order BT, USB/CDC, BT DONGLE
+    ./$SCRIPT -p /dev/ttyACM0       -- connect to port /dev/ttyACM0
+    ./$SCRIPT -n 2                  -- use second item from the --list output
+    ./$SCRIPT -c 'lf search' -i     -- run command and stay in client once completed
+
+
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash" ]; then
@@ -420,7 +440,16 @@ while true; do
 done
 
 if [ ${#PM3LIST} -lt "$N" ]; then
-    echo >&2 "[!!] No port found, abort"
+    HELP() {
+      cat << EOF
+[!!] No port found, abort
+
+[?] Hint: try '$SCRIPT --list' to see list of available ports,  and use the -n command like below
+[?]    $SCRIPT [-n <N>]
+    
+EOF
+  }
+    HELP
     exit 1
 fi
 
