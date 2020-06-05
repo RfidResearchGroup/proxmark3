@@ -556,10 +556,13 @@ bool OpenProxmark(char *port, bool wait_for_port, int timeout, bool flash_mode, 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), port);
+        PrintAndLogEx(HINT, "Try the shell script " _YELLOW_("`./pm3 --list`") " to get a list of possible serial ports");
         sp = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", port);
+        PrintAndLogEx(HINT, "Try the shell script " _YELLOW_("`./pm3 --list`") " to get a list of possible serial ports");
+
         sp = NULL;
         return false;
     } else {
