@@ -14,49 +14,28 @@
 
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "zlib.h"
+#include "lz4.h"
 #include "BigBuf.h"
 
 static uint8_t *next_free_memory;
 extern struct common_area common_area;
 extern char __data_src_start__, __data_start__, __data_end__, __bss_start__, __bss_end__;
 
-static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size) {
-    uint8_t *allocated_memory;
-
-    allocated_memory = next_free_memory;
-    next_free_memory += items * size;
-    return allocated_memory;
-}
-
-static void inflate_free(voidpf opaque, voidpf address) {
-    // nothing to do
-}
-
 static void uncompress_data_section(void) {
-    z_stream data_section;
-
     next_free_memory = BigBuf_get_addr();
 
-    // initialize zstream structure
-    data_section.next_in = (uint8_t *) &__data_src_start__;
-    data_section.avail_in = &__data_end__ - &__data_start__;  // uncompressed size. Wrong but doesn't matter.
-    data_section.next_out = (uint8_t *) &__data_start__;
-    data_section.avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
-    data_section.zalloc = &inflate_malloc;
-    data_section.zfree = &inflate_free;
-    data_section.opaque = NULL;
+    int avail_in = *(&__data_start__ + 3);
+        avail_in = (avail_in << 8) + *(&__data_start__+2);
+        avail_in = (avail_in << 8) + *(&__data_start__+1);
+        avail_in = (avail_in << 8) + *(&__data_start__+0);  // compressed size. Correct.
+    int avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
+    // uncompress data segment to RAM
+    int res = LZ4_decompress_safe(&__data_src_start__ + 4, &__data_start__, avail_in, avail_out);
 
-    // initialize zlib for inflate
-    int res = inflateInit2(&data_section, 15);
     if (res < 0)
         return;
-
-    // uncompress data segment to RAM
-    inflate(&data_section, Z_FINISH);
-
     // save the size of the compressed data section
-    common_area.arg1 = data_section.total_in;
+    common_area.arg1 = res;
 }
 
 void __attribute__((section(".startos"))) Vector(void);

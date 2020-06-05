@@ -75,13 +75,13 @@ include Standalone/Makefile.inc
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
 
-#the zlib source files required for decompressing the fpga config at run time
-SRC_ZLIB = inflate.c inffast.c inftrees.c adler32.c zutil.c
-#additional defines required to compile zlib
-ZLIB_CFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED
-APP_CFLAGS += $(ZLIB_CFLAGS)
-# zlib includes:
-APP_CFLAGS += -I../common/zlib
+#the lz4 source files required for decompressing the fpga config at run time
+SRC_LZ4 = lz4.c
+#additional defines required to compile lz4
+LZ4_CFLAGS = -DNEED_MEMMOVE -DLZ4_MEMORY_USAGE=8
+APP_CFLAGS += $(LZ4_CFLAGS)
+# lz4 includes:
+APP_CFLAGS += -I../common/lz4
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant,
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
@@ -93,7 +93,7 @@ THUMBSRC = start.c \
     $(SRC_ISO15693) \
     $(SRC_NFCBARCODE) \
     $(SRC_LF) \
-    $(SRC_ZLIB) \
+    $(SRC_LZ4) \
     $(SRC_LEGIC) \
     $(SRC_FLASH) \
     $(SRC_SMARTCARD) \
