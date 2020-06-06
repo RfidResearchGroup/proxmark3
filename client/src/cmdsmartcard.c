@@ -499,7 +499,7 @@ static int CmdSmartRaw(const char *Cmd) {
             data[4] = buf[1];
 
             clearCommandBuffer();
-            SendCommandOLD(CMD_SMART_RAW, 0, hexlen, 0, data, hexlen);
+            SendCommandMIX(CMD_SMART_RAW, 0, hexlen, 0, data, hexlen);
             len = smart_response(buf);
 
             data[4] = 0;
@@ -507,6 +507,15 @@ static int CmdSmartRaw(const char *Cmd) {
 
         if (decodeTLV && len > 4)
             TLVPrintFromBuffer(buf, len - 2);
+        else {
+            if (len > 16) {
+                for (int i=0; i<len; i += 16) {
+                    PrintAndLogEx(SUCCESS, "%s", sprint_hex_ascii(buf + i, 16)) ;
+                }
+            } else {
+                    PrintAndLogEx(SUCCESS, "%s", sprint_hex_ascii(buf, len)) ;
+            }
+        }
 
         free(buf);
     }
