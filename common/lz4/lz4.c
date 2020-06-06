@@ -1669,7 +1669,7 @@ read_variable_length(const BYTE**ip, const BYTE* lencheck, int loop_check, int i
  *  Note that it is important for performance that this function really get inlined,
  *  in order to remove useless branches during compilation optimization.
  */
-LZ4_FORCE_INLINE int
+int
 LZ4_decompress_generic(
                  const char* const src,
                  char* const dst,
