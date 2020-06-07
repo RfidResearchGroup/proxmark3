@@ -70,7 +70,7 @@ extern int DBGLEVEL;
 #ifndef ABS
 # define ABS(a) ( ((a)<0) ? -(a) : (a) )
 #endif
-#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+#define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm")))
 
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
