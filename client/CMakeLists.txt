@@ -288,6 +288,7 @@ find_library(pm3rrg_rdv4_hardnested REQUIRED)
 find_library(pm3rrg_rdv4_whereami REQUIRED)
 
 target_link_libraries(proxmark3 PRIVATE
+        bz2
         readline
         pthread
         m
@@ -298,7 +299,6 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_tinycbor
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
-        pm3rrg_rdv4_z
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})

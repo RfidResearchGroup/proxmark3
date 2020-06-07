@@ -29,6 +29,7 @@ addons:
       - libnewlib-dev
       - libbluetooth-dev
       - python3-dev
+      - libbz2-dev
   homebrew:
     packages:
       - readline

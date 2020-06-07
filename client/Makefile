@@ -85,11 +85,6 @@ MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIBINC = -I$(MBEDTLSLIBPATH)
 MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 
-## Zlib
-ZLIBPATH = ../common/zlib
-ZLIBINC = -I$(ZLIBPATH)
-ZLIB = $(OBJDIR)/libz.a
-
 ########################################################
 # optional system libraries to replace local libraries #
 ########################################################
@@ -161,20 +156,6 @@ endif
 LDLIBS += $(WHEREAMILIB)
 INCLUDES += $(WHEREAMILIBINC)
 
-## Zlib
-# system library useable? Need to recompress hardnested tables?
-ifneq ($(SKIPZLIBSYSTEM),1)
-    ZLIBINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags zlib 2>/dev/null)
-    ZLIBLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs zlib 2>/dev/null)
-    ifneq ($(ZLIBLDLIBS),)
-        ZLIB = $(ZLIBLDLIBS)
-        ZLIBINC = $(ZLIBINCLUDES)
-        ZLIB_FOUND = 1
-    endif
-endif
-LDLIBS +=$(ZLIB)
-INCLUDES += $(ZLIBINC)
-
 ####################
 # system libraries #
 ####################
@@ -186,6 +167,9 @@ INCLUDES += $(ZLIBINC)
 ifneq ($(platform),Darwin)
     LDLIBS += -Wl,--as-needed -latomic -Wl,--no-as-needed
 endif
+
+## BZIP2
+LDLIBS += -lbz2
 
 ## Bluez (optional)
 ifneq ($(SKIPBT),1)
@@ -392,16 +376,6 @@ else
     endif
 endif
 
-ifeq ($(SKIPZLIBSYSTEM),1)
-    $(info Zlib library:      local library forced)
-else
-    ifeq ($(ZLIB_FOUND),1)
-        $(info Zlib library:      system library found)
-    else
-        $(info Zlib library:      system library not found, using local library)
-    endif
-endif
-
 $(info compiler version:  $(shell $(CC) --version|head -n 1))
 $(info ===================================================================)
 
@@ -585,7 +559,7 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: $(OBJS) amiibo cliparser jansson hardnested lua mbedtls reveng tinycbor whereami zlib lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: $(OBJS) amiibo cliparser jansson hardnested lua mbedtls reveng tinycbor whereami lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
@@ -620,7 +594,6 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) clean
 	@# Just in case someone compiled within these dirs:
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
 
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
@@ -694,17 +667,11 @@ ifneq ($(WHEREAMI_FOUND),1)
 	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) all
 endif
 
-zlib:
-ifneq ($(ZLIB_FOUND),1)
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
-endif
-
 ########
 # misc #
 ########
 
-.PHONY: all clean install uninstall tarbin amiibo cliparser hardnested jansson lua mbedtls reveng tinycbor whereami zlib
+.PHONY: all clean install uninstall tarbin amiibo cliparser hardnested jansson lua mbedtls reveng tinycbor whereami
 
 # version.c should be remade on every compilation
 src/version.c: default_version.c
