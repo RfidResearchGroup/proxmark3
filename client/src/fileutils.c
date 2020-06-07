@@ -1143,7 +1143,8 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 
     // read file
     while (!feof(f)) {
-        size_t filepos = ftell(f);
+        long filepos = ftell(f);
+
         if (!fgets(line, sizeof(line), f)) {
             if (endFilePosition)
                 *endFilePosition = 0;
