@@ -16,6 +16,7 @@
 
 int strlen(const char *str);
 void *memcpy(void *dest, const void *src, int len);
+void *memmove (void *dest, const void *src, size_t len);
 void *memset(void *dest, int c, int len);
 int memcmp(const void *av, const void *bv, int len);
 void memxor(uint8_t *dest, uint8_t *src, size_t len);
