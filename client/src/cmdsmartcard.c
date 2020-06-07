@@ -593,6 +593,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
     if (sha512_size < 128) {
         PrintAndLogEx(FAILED, "SHA-512 file wrong size");
+        free(hashstring);
         free(firmware);
         return PM3_ESOFT;
     }
@@ -601,6 +602,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     uint8_t hash_1[64];
     if (param_gethex(hashstring, 0, hash_1, 128)) {
         PrintAndLogEx(FAILED, "Couldn't read SHA-512 file");
+        free(hashstring);
         free(firmware);
         return PM3_ESOFT;
     }
@@ -608,16 +610,19 @@ static int CmdSmartUpgrade(const char *Cmd) {
     uint8_t hash_2[64];
     if (sha512hash(firmware, firmware_size, hash_2)) {
         PrintAndLogEx(FAILED, "Couldn't calculate SHA-512 of firmware");
+        free(hashstring);
         free(firmware);
         return PM3_ESOFT;
     }
 
     if (memcmp(hash_1, hash_2, 64)) {
         PrintAndLogEx(FAILED, "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)"));
+        free(hashstring);
         free(firmware);
         return PM3_ESOFT;
     }
-    
+    free(hashstring);
+
     PrintAndLogEx(SUCCESS, "Sim module firmware uploading to PM3");
 
     //Send to device
