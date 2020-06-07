@@ -16,6 +16,7 @@
 #include "appmain.h"
 #include "lz4.h"
 #include "BigBuf.h"
+#include "string.h"
 
 static uint8_t *next_free_memory;
 extern struct common_area common_area;
@@ -23,11 +24,8 @@ extern char __data_src_start__, __data_start__, __data_end__, __bss_start__, __b
 
 static void uncompress_data_section(void) {
     next_free_memory = BigBuf_get_addr();
-
-    int avail_in = *(&__data_start__ + 3);
-        avail_in = (avail_in << 8) + *(&__data_start__+2);
-        avail_in = (avail_in << 8) + *(&__data_start__+1);
-        avail_in = (avail_in << 8) + *(&__data_start__+0);  // compressed size. Correct.
+    int avail_in;
+    memcpy(&avail_in, &__data_start__, sizeof(int));
     int avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
     // uncompress data segment to RAM
     int res = LZ4_decompress_safe(&__data_src_start__ + 4, &__data_start__, avail_in, avail_out);

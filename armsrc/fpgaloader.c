@@ -190,10 +190,8 @@ bool FpgaSetupSscDma(uint8_t *buf, int len) {
 static int get_from_fpga_combined_stream(lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
     if (fpga_image_ptr == output_buffer + FPGA_RING_BUFFER_BYTES) { // need more data
         fpga_image_ptr = output_buffer;
-        int cmp_bytes = *(compressed_fpga_stream->next_in + 3);
-            cmp_bytes = (cmp_bytes << 8) + *(compressed_fpga_stream->next_in+2);
-            cmp_bytes = (cmp_bytes << 8) + *(compressed_fpga_stream->next_in+1);
-            cmp_bytes = (cmp_bytes << 8) + *(compressed_fpga_stream->next_in+0);
+        int cmp_bytes;
+        memcpy(&cmp_bytes, compressed_fpga_stream->next_in, sizeof(int));
         compressed_fpga_stream->next_in += 4;
         compressed_fpga_stream->avail_in -= cmp_bytes + 4;
         int res = LZ4_decompress_safe_continue(compressed_fpga_stream->lz4StreamDecode, 
