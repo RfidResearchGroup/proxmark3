@@ -77,6 +77,7 @@ int fileExists(const char *filename);
 //bool create_path(const char *dirname);
 //bool setDefaultPath (savePaths_t pathIndex,const char *Path);  // set a path in the path list session.defaultPaths
 
+char *newfilenamemcopy(const char *preferredName, const char *suffix);
 
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that

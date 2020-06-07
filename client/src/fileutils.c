@@ -225,7 +225,7 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
     return fileName;
 }
 
-static char *newfilenamemcopy(const char *preferredName, const char *suffix) {
+char *newfilenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
     uint16_t preferredNameLen = strlen(preferredName);
@@ -948,12 +948,10 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     if (fileName == NULL) return PM3_EMALLOC;
 
     *datalen = 0;
-    json_t *root;
     json_error_t error;
-
     int retval = PM3_SUCCESS;
 
-    root = json_load_file(fileName, 0, &error);
+    json_t *root = json_load_file(fileName, 0, &error);
     if (!root) {
         PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", fileName, error.line, error.text);
         retval = PM3_ESOFT;
