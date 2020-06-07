@@ -46,7 +46,7 @@ There is very rarely changes to the images so there is no need to setup a fpga t
 Since the FPGA is very old,  the Xilinix WebPack ISE 10.1  is the last working tool chain.  You can download this legacy development on xilinix and register for a free product installation id.
 Or use mine  `11LTAJ5ZJK3PXTUBMF0C0J6C4`    The package to download is about 7Gb and linux based.   Though I recently managed to install it on WSL for Windows 10.
 
-In order to save space,  these fpga images is zlib compressed and included in the fullimage.elf file when compiling the ARM SRC.  `make armsrc`
+In order to save space,  these fpga images are LZ4 compressed and included in the fullimage.elf file when compiling the ARM SRC.  `make armsrc`
 This means we save some precious space on the ARM but its a bit more complex when flashing to fpga since it has to decompress on the fly.  
 
 
