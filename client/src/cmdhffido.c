@@ -201,12 +201,14 @@ static int CmdHFFidoRegister(const char *cmd) {
         CLIGetStrWithReturn(ctx, 6, cdata, &chlen);
         if (chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     } else {
         CLIGetHexWithReturn(ctx, 6, cdata, &chlen);
         if (chlen && chlen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -219,12 +221,14 @@ static int CmdHFFidoRegister(const char *cmd) {
         CLIGetStrWithReturn(ctx, 7, adata, &applen);
         if (applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     } else {
         CLIGetHexWithReturn(ctx, 7, adata, &applen);
         if (applen && applen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -446,8 +450,10 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     CLIGetHexWithReturn(ctx, 8, hdata, &hdatalen);
     if (hdatalen && hdatalen != 65) {
         PrintAndLogEx(ERR, "ERROR: public key length must be 65 bytes only.");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+
     if (hdatalen) {
         memmove(public_key, hdata, hdatalen);
         public_key_loaded = true;
@@ -456,8 +462,10 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     CLIGetHexWithReturn(ctx, 9, hdata, &hdatalen);
     if (hdatalen > 255) {
         PrintAndLogEx(ERR, "ERROR: application parameter length must be less than 255.");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+
     if (hdatalen) {
         keyHandleLen = hdatalen;
         data[64] = keyHandleLen;
@@ -469,15 +477,18 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     } else {
         CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
+
     if (hdatalen)
         memmove(data, hdata, 32);
 
@@ -486,7 +497,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         CLIGetStrWithReturn(ctx, 11, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
-            CLIParserFree(ctx);            
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     } else {
@@ -497,6 +508,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             return PM3_EINVARG;
         }
     }
+
     if (hdatalen)
         memmove(&data[32], hdata, 32);
 
