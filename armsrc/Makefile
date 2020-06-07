@@ -100,6 +100,14 @@ THUMBSRC = start.c \
     $(SRC_FPC) \
     $(SRC_HITAG) \
     $(SRC_SPIFFS) \
+    $(SRC_ISO14443a) \
+    $(SRC_ISO14443b) \
+    $(SRC_CRAPTO1) \
+    $(SRC_ICLASS) \
+    $(SRC_EMV) \
+    $(SRC_CRC) \
+    $(SRC_FELICA) \
+    $(SRC_STANDALONE) \
     appmain.c \
     printf.c \
     dbprint.c \
@@ -114,14 +122,6 @@ THUMBSRC = start.c \
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
-    $(SRC_ISO14443a) \
-    $(SRC_ISO14443b) \
-    $(SRC_CRAPTO1) \
-    $(SRC_ICLASS) \
-    $(SRC_EMV) \
-    $(SRC_CRC) \
-    $(SRC_FELICA) \
-    $(SRC_STANDALONE) \
     parity.c \
     usb_cdc.c \
     cmd.c
