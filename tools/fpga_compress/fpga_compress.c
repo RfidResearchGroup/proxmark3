@@ -151,7 +151,7 @@ typedef struct lz4_stream_s {
 
 static int zlib_decompress(FILE *infile, FILE *outfile) {
 
-    LZ4_streamDecode_t lz4StreamDecode_body = { 0 };
+    LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
     char outbuf[FPGA_RING_BUFFER_BYTES];
 
     fseek(infile, 0L, SEEK_END);
