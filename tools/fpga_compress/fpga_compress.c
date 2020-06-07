@@ -173,7 +173,8 @@ static int zlib_decompress(FILE *infile, FILE *outfile) {
 
     int total_size = 0;
     while (compressed_fpga_stream.avail_in > 0) {
-        const int cmp_bytes = *(int*)(compressed_fpga_stream.next_in);
+        int cmp_bytes;
+        memcpy(&cmp_bytes, compressed_fpga_stream.next_in, sizeof(int));
         compressed_fpga_stream.next_in += 4;
         compressed_fpga_stream.avail_in -= cmp_bytes + 4;
         const int decBytes = LZ4_decompress_safe_continue(compressed_fpga_stream.lz4StreamDecode, compressed_fpga_stream.next_in, outbuf, cmp_bytes, FPGA_RING_BUFFER_BYTES);
