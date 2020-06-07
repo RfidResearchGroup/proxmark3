@@ -34,7 +34,6 @@ static void usage(void) {
     fprintf(stdout, "          Compress hardnested table <infile>. Write result to <outfile>\n\n");
 }
 
-
 static bool all_feof(FILE *infile[], uint8_t num_infiles) {
     for (uint16_t i = 0; i < num_infiles; i++) {
         if (!feof(infile[i])) {
@@ -44,17 +43,15 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles) {
     return true;
 }
 
-
 static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardnested_mode) {
     uint8_t *fpga_config;
-    //int32_t ret;
-    uint8_t c;
 
     if (hardnested_mode) {
         fpga_config = calloc(num_infiles * HARDNESTED_TABLE_SIZE, sizeof(uint8_t));
     } else {
         fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
     }
+
     // read the input files. Interleave them into fpga_config[]
     uint32_t total_size = 0;
     do {
@@ -79,7 +76,8 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
 
         for (uint16_t j = 0; j < num_infiles; j++) {
             for (uint16_t k = 0; k < FPGA_INTERLEAVE_SIZE; k++) {
-                c = (uint8_t)fgetc(infile[j]);
+                uint8_t c = (uint8_t)fgetc(infile[j]);
+                
                 if (!feof(infile[j])) {
                     fpga_config[total_size++] = c;
                 } else if (num_infiles > 1) {
@@ -93,7 +91,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
     uint32_t buffer_size = FPGA_RING_BUFFER_BYTES;
 
     if (num_infiles == 1)
-        buffer_size = 1024*1024; //1M for now
+        buffer_size = 1024 * 1024; //1M for now
 
     uint32_t outsize_max = LZ4_compressBound(buffer_size);
 
@@ -109,40 +107,34 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
         int bytes_to_copy = FPGA_RING_BUFFER_BYTES;
         if (total_size - current_in < FPGA_RING_BUFFER_BYTES)
             bytes_to_copy = total_size - current_in;
+
         memcpy(ring_buffer, fpga_config + current_in, bytes_to_copy);
         int cmp_bytes = LZ4_compress_HC_continue(lz4_streamhc, ring_buffer, outbuf, bytes_to_copy, outsize_max);
+
         fwrite(&cmp_bytes, sizeof(int), 1, outfile);
         fwrite(outbuf, sizeof(char), cmp_bytes, outfile);
+
         current_in += bytes_to_copy;
         current_out += cmp_bytes;
     }
 
     free(ring_buffer);
-
+    free(outbuf);
+    free(fpga_config);
+    
+    fclose(outfile);        
+    for (uint16_t j = 0; j < num_infiles; j++) {
+        fclose(infile[j]);
+    }
+    LZ4_freeStreamHC(lz4_streamhc);
+    
     fprintf(stdout, "compressed %u input bytes to %u output bytes\n", total_size, current_out);
 
     if (current_out == 0) {
         fprintf(stderr, "Error in lz4");
-        free(outbuf);
-        for (uint16_t j = 0; j < num_infiles; j++) {
-            fclose(infile[j]);
-        }
-        fclose(outfile);
-        free(fpga_config);
         return (EXIT_FAILURE);
     }
-
-    free(outbuf);
-
-    for (uint16_t j = 0; j < num_infiles; j++) {
-        fclose(infile[j]);
-    }
-    fclose(outfile);
-    LZ4_freeStreamHC(lz4_streamhc);
-    free(fpga_config);
-
     return (EXIT_SUCCESS);
-
 }
 
 typedef struct lz4_stream_s {
@@ -157,13 +149,22 @@ static int zlib_decompress(FILE *infile, FILE *outfile) {
     char outbuf[FPGA_RING_BUFFER_BYTES];
 
     fseek(infile, 0L, SEEK_END);
-    long int infile_size = ftell(infile);
+    long infile_size = ftell(infile);
     fseek(infile, 0L, SEEK_SET);
+
+    if (infile_size <= 0) {
+        printf("error, when getting filesize");
+        fclose(outfile);
+        fclose(infile);
+        return (EXIT_FAILURE);
+    }
 
     char* inbuf = calloc(infile_size, sizeof(char));
     size_t num_read = fread(inbuf, sizeof(char), infile_size, infile);
 
     if (num_read != infile_size) {
+        fclose(outfile);
+        fclose(infile);
         free(inbuf);
         return (EXIT_FAILURE);
     }
