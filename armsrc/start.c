@@ -28,7 +28,8 @@ static void uncompress_data_section(void) {
     memcpy(&avail_in, &__data_start__, sizeof(int));
     int avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
     // uncompress data segment to RAM
-    int res = LZ4_decompress_safe(&__data_src_start__ + 4, &__data_start__, avail_in, avail_out);
+    uintptr_t p = (uintptr_t)&__data_src_start__;
+    int res = LZ4_decompress_safe((char*)p + 4, &__data_start__, avail_in, avail_out);
 
     if (res < 0)
         return;
