@@ -39,21 +39,13 @@ static void uncompress_data_section(void) {
 void __attribute__((section(".startos"))) Vector(void);
 void Vector(void) {
     /* Stack should have been set up by the bootloader */
-    // char *src;
-    char *dst, *end;
 
     uncompress_data_section();
 
     /* Set up (that is: clear) BSS. */
-    dst = &__bss_start__;
-    end = &__bss_end__;
+    char *dst = &__bss_start__;
+    char *end = &__bss_end__;
     while (dst < end) *dst++ = 0;
-
-    // Set up data segment: Copy from flash to ram
-    // src = &__data_src_start__;
-    // dst = &__data_start__;
-    // end = &__data_end__;
-    // while(dst < end) *dst++ = *src++;
 
     AppMain();
 }
