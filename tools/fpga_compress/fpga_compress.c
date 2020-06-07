@@ -157,7 +157,7 @@ static int zlib_decompress(FILE *infile, FILE *outfile) {
     char outbuf[FPGA_RING_BUFFER_BYTES];
 
     fseek(infile, 0L, SEEK_END);
-    long infile_size = ftell(infile);
+    long int infile_size = ftell(infile);
     fseek(infile, 0L, SEEK_SET);
 
     char* inbuf = calloc(infile_size, sizeof(char));
