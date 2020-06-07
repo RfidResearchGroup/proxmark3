@@ -599,15 +599,17 @@ static int CmdHfLTRestore(const char *Cmd) {
         uint8_t *dump = NULL;
         if (loadFile_safe(filename, "", (void**)&dump, &dump_len) == PM3_SUCCESS) {
             restoreLTO(dump, true);
-            free(dump);
         }
+        free(dump);
+
     } else if (str_endswith(lowstr, ".eml")) {
 
         uint8_t *dump = NULL;
         if (loadFileEML_safe(filename, (void**)&dump, &dump_len) == PM3_SUCCESS) {
             restoreLTO(dump, true);
-            free(dump);
         }
+        free(dump);
+
     } else {
         PrintAndLogEx(WARNING, "Warning: invalid dump filename " _YELLOW_("%s") " to restore", filename);
     }
