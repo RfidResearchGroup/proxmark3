@@ -168,9 +168,8 @@ find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 find_library(pm3rrg_rdv4_whereami REQUIRED)
 
-target_link_libraries(
+target_link_libraries(pm3rrg_rdv4
         bz2
-        pm3rrg_rdv4
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
