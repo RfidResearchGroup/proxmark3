@@ -79,7 +79,7 @@ local function main(args)
 
     local cmdDataLoad = 'data load %s';
     local cwd = core.cwd();
-    
+
     local tracesEM = "find '"..cwd.."/traces/ ' -iname 'em*.pm3' -type f"
     local tracesMOD = "find '"..cwd.."/traces/' -iname 'modulation*.pm3' -type f"
 

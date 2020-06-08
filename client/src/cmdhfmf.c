@@ -3533,7 +3533,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
-         
+
     size_t datalen = 0;
     //int res = loadFile(filename, ".bin", data, maxdatalen, &datalen);
     int res = loadFileEML(filename, data, &datalen);
@@ -3552,24 +3552,24 @@ int CmdHF14AMfELoad(const char *Cmd) {
     // convert plain or old mfu format to new format
     if (blockWidth == 4) {
 
-        res = convert_mfu_dump_format(&data, &datalen, true);    
+        res = convert_mfu_dump_format(&data, &datalen, true);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
             free(data);
             return res;
         }
-        
+
         mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
 
         PrintAndLogEx(INFO, _CYAN_("MFU dump file information"));
         PrintAndLogEx(INFO, "     version  %s", sprint_hex(mfu_dump->version, sizeof(mfu_dump->version)));
         PrintAndLogEx(INFO, "        tb 0  %s", sprint_hex(mfu_dump->tbo, sizeof(mfu_dump->tbo)));
         PrintAndLogEx(INFO, "        tb 1  %s", sprint_hex(mfu_dump->tbo1, sizeof(mfu_dump->tbo1)));
-        for(uint8_t m = 0; m < 3; m++) {
+        for (uint8_t m = 0; m < 3; m++) {
             PrintAndLogEx(INFO, "   counter %d  %s - tearing 0x%02x", m + 1, sprint_hex(mfu_dump->counter_tearing[m], 3),  mfu_dump->counter_tearing[m][3]);
         }
         PrintAndLogEx(INFO, "   signature  %s", sprint_hex(mfu_dump->signature, sizeof(mfu_dump->signature)));
-        PrintAndLogEx(INFO, "        data  %s... (only first 8 bytes showing)", sprint_hex(mfu_dump->data, 8));        
+        PrintAndLogEx(INFO, "        data  %s... (only first 8 bytes showing)", sprint_hex(mfu_dump->data, 8));
         PrintAndLogEx(INFO, "    max data page %d,  data len %d bytes", mfu_dump->pages, (mfu_dump->pages + 1) * 4);
         PrintAndLogEx(INFO, " file header size %d", MFU_DUMP_PREFIX_LENGTH);
         PrintAndLogEx(INFO, "----------------------------------------------");

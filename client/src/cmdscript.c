@@ -84,7 +84,7 @@ static void set_python_path(char *path) {
     }
 
     if (PySys_SetObject("path", syspath)) {
-        PrintAndLogEx(WARNING,"Error setting sys.path object");
+        PrintAndLogEx(WARNING, "Error setting sys.path object");
     }
 }
 
@@ -300,10 +300,10 @@ static int CmdScriptRun(const char *Cmd) {
         wchar_t *py_args[argc];
         py_args[0] = Py_DecodeLocale(preferredName, NULL);
         for (int i = 0; i < argc; i++) {
-            py_args[i+1] = Py_DecodeLocale(argv[i], NULL);
+            py_args[i + 1] = Py_DecodeLocale(argv[i], NULL);
         }
 
-        PySys_SetArgv(argc+1, py_args);
+        PySys_SetArgv(argc + 1, py_args);
 
         // clean up
         for (int i = 0; i < argc; ++i) {

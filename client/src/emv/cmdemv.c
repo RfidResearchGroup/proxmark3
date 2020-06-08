@@ -1380,7 +1380,7 @@ static int CmdEMVScan(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint8_t ODAI_list[4096];
-	size_t ODAI_listlen = 0;
+    size_t ODAI_listlen = 0;
     uint16_t sw = 0;
     int res;
     json_t *root;
@@ -1683,24 +1683,24 @@ static int CmdEMVScan(const char *Cmd) {
                 }
 
                 // Build Input list for Offline Data Authentication
-				// EMV 4.3 book3 10.3, page 96
-				if (first_time && SFIoffline) {  
-					if (SFI < 11) {
-						const unsigned char *abuf = buf;
-						size_t elmlen = len;
-						struct tlv e;
-						if (tlv_parse_tl(&abuf, &elmlen, &e)) {
-							memcpy(ODAI_list + ODAI_listlen, &buf[len - elmlen], elmlen);
-							ODAI_listlen += elmlen;
-						} else {
-							PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error", SFI);
-						}
-					} else {
-						memcpy(ODAI_list + ODAI_listlen, buf, len);
-						ODAI_listlen += len;
-					}
-					first_time = false;
-				}
+                // EMV 4.3 book3 10.3, page 96
+                if (first_time && SFIoffline) {
+                    if (SFI < 11) {
+                        const unsigned char *abuf = buf;
+                        size_t elmlen = len;
+                        struct tlv e;
+                        if (tlv_parse_tl(&abuf, &elmlen, &e)) {
+                            memcpy(ODAI_list + ODAI_listlen, &buf[len - elmlen], elmlen);
+                            ODAI_listlen += elmlen;
+                        } else {
+                            PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error", SFI);
+                        }
+                    } else {
+                        memcpy(ODAI_list + ODAI_listlen, buf, len);
+                        ODAI_listlen += len;
+                    }
+                    first_time = false;
+                }
 
                 if (decodeTLV) {
                     TLVPrintFromBuffer(buf, len);
@@ -1720,18 +1720,18 @@ static int CmdEMVScan(const char *Cmd) {
                 else
                     JsonSaveTLVTreeElm(jsonelm, "$.Data", rsfi, true, true, false);
 
-                tlvdb_free(rsfi);                               
+                tlvdb_free(rsfi);
             }
         }
         break;
     }
 
     // copy Input list for Offline Data Authentication
-	if (ODAI_listlen) {
-		struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
-		tlvdb_add(tlvRoot, oda);
-		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%zu bytes]", ODAI_listlen);
-	}
+    if (ODAI_listlen) {
+        struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
+        tlvdb_add(tlvRoot, oda);
+        PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%zu bytes]", ODAI_listlen);
+    }
 
     // getting certificates
     if (tlvdb_get(tlvRoot, 0x90, NULL)) {
@@ -1791,7 +1791,7 @@ static int CmdEMVRoca(const char *Cmd) {
     size_t len = 0;
     uint16_t sw = 0;
     uint8_t ODAI_list[4096];
-	size_t ODAI_listlen = 0;
+    size_t ODAI_listlen = 0;
     int res;
 
     CLIParserContext *ctx;
@@ -1955,26 +1955,26 @@ static int CmdEMVRoca(const char *Cmd) {
                     PrintAndLogEx(ERR, "SFI[%02x]. APDU error %4x", SFI, sw);
                     continue;
                 }
-                
-				// Build Input list for Offline Data Authentication
-				// EMV 4.3 book3 10.3, page 96
-				if (SFIoffline > 0) {
-					if (SFI < 11) {
-						const unsigned char *abuf = buf;
-						size_t elmlen = len;
-						struct tlv e;
-						if (tlv_parse_tl(&abuf, &elmlen, &e)) {
-							memcpy(ODAI_list + ODAI_listlen, &buf[len - elmlen], elmlen);
-							ODAI_listlen += elmlen;
-						} else {
-							PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error", SFI);
-						}
-					} else {
-						memcpy(ODAI_list + ODAI_listlen, buf, len);
-						ODAI_listlen += len;
-					}
-					SFIoffline--;
-				}
+
+                // Build Input list for Offline Data Authentication
+                // EMV 4.3 book3 10.3, page 96
+                if (SFIoffline > 0) {
+                    if (SFI < 11) {
+                        const unsigned char *abuf = buf;
+                        size_t elmlen = len;
+                        struct tlv e;
+                        if (tlv_parse_tl(&abuf, &elmlen, &e)) {
+                            memcpy(ODAI_list + ODAI_listlen, &buf[len - elmlen], elmlen);
+                            ODAI_listlen += elmlen;
+                        } else {
+                            PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error", SFI);
+                        }
+                    } else {
+                        memcpy(ODAI_list + ODAI_listlen, buf, len);
+                        ODAI_listlen += len;
+                    }
+                    SFIoffline--;
+                }
             }
         }
         break;
@@ -1982,14 +1982,14 @@ static int CmdEMVRoca(const char *Cmd) {
 
     // getting certificates
     int ret = PM3_SUCCESS;
-    
+
     // copy Input list for Offline Data Authentication
-	if (ODAI_listlen) {
-		struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
-		tlvdb_add(tlvRoot, oda);
-		PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%zu bytes]", ODAI_listlen);
-	}
-    
+    if (ODAI_listlen) {
+        struct tlvdb *oda = tlvdb_fixed(0x21, ODAI_listlen, ODAI_list); // not a standard tag
+        tlvdb_add(tlvRoot, oda);
+        PrintAndLogEx(INFO, "Input list for Offline Data Authentication added to TLV [%zu bytes]", ODAI_listlen);
+    }
+
     if (tlvdb_get(tlvRoot, 0x90, NULL)) {
         PrintAndLogEx(INFO, "Recovering certificates");
         PKISetStrictExecution(false);
@@ -2025,7 +2025,7 @@ static int CmdEMVRoca(const char *Cmd) {
             ret = PM3_ESOFT;
             goto out;
         }
-        
+
         PrintAndLogEx(SUCCESS, "ICC Public key recovered     RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
                       sprint_hex(icc_pk->rid, 5),
                       icc_pk->index,

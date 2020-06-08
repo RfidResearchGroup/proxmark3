@@ -43,7 +43,7 @@ def lfsr_bs(state, i):
 
 def f20a_bs(a,b,c,d):
     return (~(((a|b)&c)^(a|d)^b)) # 6 ops
-def f20b_bs(a,b,c,d): 
+def f20b_bs(a,b,c,d):
     return (~(((d|c)&(a^b))^(d|a|b))) # 7 ops
 def f20c_bs(a,b,c,d,e):
     return (~((((((c^e)|d)&a)^b)&(c^b))^(((d^e)|a)&((d^b)|c)))) # 13 ops

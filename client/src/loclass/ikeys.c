@@ -228,13 +228,13 @@ static void printState(const char *desc, uint64_t c) {
         return;
     char s[60] = {0};
     snprintf(s, sizeof(s), "%s : ", desc);
-    
+
     uint8_t x = (c & 0xFF00000000000000) >> 56;
     uint8_t y = (c & 0x00FF000000000000) >> 48;
-    
+
     snprintf(s + strlen(s), sizeof(s) - strlen(s), "  %02x %02x", x, y);
 
-    for (uint8_t i = 0; i < 8; i++) 
+    for (uint8_t i = 0; i < 8; i++)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), " %02x", getSixBitByte(c, i));
 
     PrintAndLogEx(DEBUG, "%s", s);
@@ -353,7 +353,7 @@ void hash0(uint64_t c, uint8_t k[8]) {
  * @param key
  * @param div_key
  */
-void diversifyKey(uint8_t* csn, uint8_t* key, uint8_t* div_key) {
+void diversifyKey(uint8_t *csn, uint8_t *key, uint8_t *div_key) {
     // Prepare the DES key
     mbedtls_des_setkey_enc(&ctx_enc, key);
 
@@ -581,7 +581,7 @@ static int testCryptedCSN(uint64_t crypted_csn, uint64_t expected) {
     PrintAndLogEx(DEBUG, "");
     PrintAndLogEx(DEBUG, "    {csn}      %"PRIx64, crypted_csn);
     PrintAndLogEx(DEBUG, "    {csn-revz} %"PRIx64, crypted_csn_swapped);
-    PrintAndLogEx(DEBUG, "    hash0      %"PRIx64 "   (%s)", resultbyte,  (resultbyte == expected) ?  _GREEN_("OK") : _RED_("FAIL") );
+    PrintAndLogEx(DEBUG, "    hash0      %"PRIx64 "   (%s)", resultbyte, (resultbyte == expected) ?  _GREEN_("OK") : _RED_("FAIL"));
 
     if (resultbyte != expected) {
         PrintAndLogEx(DEBUG, "    expected       " _YELLOW_("%"PRIx64),  expected);
@@ -602,7 +602,7 @@ static int testDES2(uint64_t csn, uint64_t expected) {
     uint64_t crypt_csn = x_bytes_to_num(result, 8);
 
     PrintAndLogEx(DEBUG, "   {csn}    %"PRIx64, crypt_csn);
-    PrintAndLogEx(DEBUG, "   expected %"PRIx64 "    (%s)", expected, (expected == crypt_csn) ? _GREEN_("OK") : _RED_("FAIL") );
+    PrintAndLogEx(DEBUG, "   expected %"PRIx64 "    (%s)", expected, (expected == crypt_csn) ? _GREEN_("OK") : _RED_("FAIL"));
 
     if (expected != crypt_csn)
         return PM3_ESOFT;
@@ -635,7 +635,7 @@ static int doTestsWithKnownInputs(void) {
     res += testCryptedCSN(0x21ba6565071f9299, 0x34e80f88d5cf39ea);
     res += testCryptedCSN(0x14e2adfc5bb7e134, 0x6ac90c6508bd9ea3);
 
-    if (res != PM3_SUCCESS) {        
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "%d res occurred (9 testcases)", res);
         res = PM3_ESOFT;
     } else {

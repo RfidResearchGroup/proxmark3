@@ -61,7 +61,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
         for (uint16_t j = 0; j < num_infiles; j++) {
             for (uint16_t k = 0; k < FPGA_INTERLEAVE_SIZE; k++) {
                 uint8_t c = (uint8_t)fgetc(infile[j]);
-                
+
                 if (!feof(infile[j])) {
                     fpga_config[total_size++] = c;
                 } else if (num_infiles > 1) {
@@ -81,12 +81,12 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
     char *outbuf = calloc(outsize_max, sizeof(char));
 
-    LZ4_streamHC_t* lz4_streamhc = LZ4_createStreamHC();
+    LZ4_streamHC_t *lz4_streamhc = LZ4_createStreamHC();
     LZ4_resetStreamHC_fast(lz4_streamhc, LZ4HC_CLEVEL_MAX);
 
     int current_in = 0;
     int current_out = 0;
-    char * ring_buffer = calloc(buffer_size, sizeof(char));
+    char *ring_buffer = calloc(buffer_size, sizeof(char));
     while (current_in < total_size) {
         int bytes_to_copy = FPGA_RING_BUFFER_BYTES;
         if (total_size - current_in < FPGA_RING_BUFFER_BYTES)
@@ -105,13 +105,13 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
     free(ring_buffer);
     free(outbuf);
     free(fpga_config);
-    
-    fclose(outfile);        
+
+    fclose(outfile);
     for (uint16_t j = 0; j < num_infiles; j++) {
         fclose(infile[j]);
     }
     LZ4_freeStreamHC(lz4_streamhc);
-    
+
     fprintf(stdout, "compressed %u input bytes to %u output bytes\n", total_size, current_out);
 
     if (current_out == 0) {
@@ -122,8 +122,8 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 }
 
 typedef struct lz4_stream_s {
-    LZ4_streamDecode_t* lz4StreamDecode;
-    char* next_in;
+    LZ4_streamDecode_t *lz4StreamDecode;
+    char *next_in;
     int avail_in;
 } lz4_stream;
 
@@ -143,7 +143,7 @@ static int zlib_decompress(FILE *infile, FILE *outfile) {
         return (EXIT_FAILURE);
     }
 
-    char* inbuf = calloc(infile_size, sizeof(char));
+    char *inbuf = calloc(infile_size, sizeof(char));
     size_t num_read = fread(inbuf, sizeof(char), infile_size, infile);
 
     if (num_read != infile_size) {

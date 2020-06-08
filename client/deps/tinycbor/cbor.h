@@ -558,9 +558,9 @@ enum CborPrettyFlags {
 /* cf  https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/ */
 typedef CborError(*CborStreamFunction)(void *token, const char *fmt, ...)
 #if defined(__MINGW32__) || defined(__MINGW64__)
-    __attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)));
+__attribute__((format(__MINGW_PRINTF_FORMAT, 2, 3)));
 #elif defined(__GNUC__)
-    __attribute__((__format__(printf, 2, 3)))
+__attribute__((__format__(printf, 2, 3)))
 #endif
 ;
 

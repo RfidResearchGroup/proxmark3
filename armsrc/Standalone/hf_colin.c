@@ -330,11 +330,11 @@ void ModInfo(void) {
 void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    Dbprintf(">>  HF Mifare ultra fast sniff/sim/clone  a.k.a VIGIKPWN Started  <<");    
+    Dbprintf(">>  HF Mifare ultra fast sniff/sim/clone  a.k.a VIGIKPWN Started  <<");
 
     // turn off all debugging.
     DBGLEVEL = DBG_NONE;
-    
+
     // add_schema(Schemas, Noralsy, &total_schemas);
     // add_schema(Schemas, InfiHexact, &total_schemas);
     // add_schema_from_json_in_spiffs((char *)HFCOLIN_URMETCAPTIVE_JSON);
@@ -504,7 +504,7 @@ failtag:
 
     SpinOff(50);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    
+
     vtsend_cursor_position_restore(NULL);
     DbprintfEx(FLAG_NEWLINE, "\t\t\t%s[   GOT a Tag !   ]%s", _XGREEN_, _XWHITE_);
     cjSetCursLeft();
@@ -854,7 +854,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
     pcs = &mpcs;
 
     int retval = -1;
-    
+
     for (uint8_t i = 0; i < keyCount; i++) {
 
         /* no need for anticollision. just verify tag is still here */

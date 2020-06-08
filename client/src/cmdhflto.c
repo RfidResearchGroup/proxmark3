@@ -586,7 +586,7 @@ static int CmdHfLTRestore(const char *Cmd) {
         }
     }
 
-    if (errors || strlen(Cmd) == 0 ) {
+    if (errors || strlen(Cmd) == 0) {
         return usage_lto_restore();
     }
 
@@ -597,7 +597,7 @@ static int CmdHfLTRestore(const char *Cmd) {
     if (str_endswith(lowstr, ".bin")) {
 
         uint8_t *dump = NULL;
-        if (loadFile_safe(filename, "", (void**)&dump, &dump_len) == PM3_SUCCESS) {
+        if (loadFile_safe(filename, "", (void **)&dump, &dump_len) == PM3_SUCCESS) {
             restoreLTO(dump, true);
         }
         free(dump);
@@ -605,7 +605,7 @@ static int CmdHfLTRestore(const char *Cmd) {
     } else if (str_endswith(lowstr, ".eml")) {
 
         uint8_t *dump = NULL;
-        if (loadFileEML_safe(filename, (void**)&dump, &dump_len) == PM3_SUCCESS) {
+        if (loadFileEML_safe(filename, (void **)&dump, &dump_len) == PM3_SUCCESS) {
             restoreLTO(dump, true);
         }
         free(dump);

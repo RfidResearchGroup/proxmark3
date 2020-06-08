@@ -23,12 +23,12 @@
 #include "lz4.h"       // uncompress
 
 typedef struct lz4_stream_s {
-    LZ4_streamDecode_t* lz4StreamDecode;
-    char * next_in;
+    LZ4_streamDecode_t *lz4StreamDecode;
+    char *next_in;
     int avail_in;
 } lz4_stream;
 
-typedef lz4_stream* lz4_streamp;
+typedef lz4_stream *lz4_streamp;
 
 // remember which version of the bitstream we have already downloaded to the FPGA
 static int downloaded_bitstream = 0;
@@ -194,9 +194,9 @@ static int get_from_fpga_combined_stream(lz4_streamp compressed_fpga_stream, uin
         memcpy(&cmp_bytes, compressed_fpga_stream->next_in, sizeof(int));
         compressed_fpga_stream->next_in += 4;
         compressed_fpga_stream->avail_in -= cmp_bytes + 4;
-        int res = LZ4_decompress_safe_continue(compressed_fpga_stream->lz4StreamDecode, 
+        int res = LZ4_decompress_safe_continue(compressed_fpga_stream->lz4StreamDecode,
                                                compressed_fpga_stream->next_in,
-                                               (char*)output_buffer,
+                                               (char *)output_buffer,
                                                cmp_bytes,
                                                FPGA_RING_BUFFER_BYTES);
         if (res <= 0) {
@@ -232,9 +232,9 @@ static bool reset_fpga_stream(int bitstream_version, lz4_streamp compressed_fpga
     uncompressed_bytes_cnt = 0;
 
     // initialize z_stream structure for inflate:
-    compressed_fpga_stream->next_in = (char*)&_binary_obj_fpga_all_bit_z_start;
+    compressed_fpga_stream->next_in = (char *)&_binary_obj_fpga_all_bit_z_start;
     compressed_fpga_stream->avail_in = &_binary_obj_fpga_all_bit_z_end - &_binary_obj_fpga_all_bit_z_start;
-    
+
     int res = LZ4_setStreamDecode(compressed_fpga_stream->lz4StreamDecode, NULL, 0);
     if (res == 0)
         return false;
@@ -415,7 +415,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
     lz4_stream compressed_fpga_stream;
     LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
     compressed_fpga_stream.lz4StreamDecode = &lz4StreamDecode_body;
-    uint8_t * output_buffer = BigBuf_malloc(FPGA_RING_BUFFER_BYTES);
+    uint8_t *output_buffer = BigBuf_malloc(FPGA_RING_BUFFER_BYTES);
 
     if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer))
         return;

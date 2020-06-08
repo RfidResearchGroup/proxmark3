@@ -509,11 +509,11 @@ static int CmdSmartRaw(const char *Cmd) {
             TLVPrintFromBuffer(buf, len - 2);
         else {
             if (len > 16) {
-                for (int i=0; i<len; i += 16) {
+                for (int i = 0; i < len; i += 16) {
                     PrintAndLogEx(SUCCESS, "%s", sprint_hex_ascii(buf + i, 16)) ;
                 }
             } else {
-                    PrintAndLogEx(SUCCESS, "%s", sprint_hex_ascii(buf, len)) ;
+                PrintAndLogEx(SUCCESS, "%s", sprint_hex_ascii(buf, len)) ;
             }
         }
 
@@ -577,7 +577,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     // load firmware file
     size_t firmware_size = 0;
     uint8_t *firmware = NULL;
-    if (loadFile_safe(filename, "", (void**)&firmware, &firmware_size) != PM3_SUCCESS) {
+    if (loadFile_safe(filename, "", (void **)&firmware, &firmware_size) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Firmware file " _YELLOW_("%s") " not found or locked.", filename);
         return PM3_EFILE;
     }
@@ -585,7 +585,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     // load sha512 file
     size_t sha512_size = 0;
     char *hashstring = NULL;
-    if (loadFile_safe(sha512filename, "", (void**)&hashstring, &sha512_size) != PM3_SUCCESS) {
+    if (loadFile_safe(sha512filename, "", (void **)&hashstring, &sha512_size) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "SHA-512 file not found or locked.");
         free(firmware);
         return PM3_EFILE;

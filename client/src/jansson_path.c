@@ -85,8 +85,8 @@ static void jsonp_error_init(json_error_t *error, const char *source) {
 }
 
 static void jsonp_error_vset(json_error_t *error, int line, int column,
-                      size_t position, enum json_error_code code,
-                      const char *msg, va_list ap) {
+                             size_t position, enum json_error_code code,
+                             const char *msg, va_list ap) {
     if (!error)
         return;
 
@@ -105,8 +105,8 @@ static void jsonp_error_vset(json_error_t *error, int line, int column,
 }
 
 static void jsonp_error_set(json_error_t *error, int line, int column,
-                     size_t position, enum json_error_code code,
-                     const char *msg, ...) {
+                            size_t position, enum json_error_code code,
+                            const char *msg, ...) {
     va_list ap;
     va_start(ap, msg);
     jsonp_error_vset(error, line, column, position, code, msg, ap);

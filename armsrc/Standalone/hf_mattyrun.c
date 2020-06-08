@@ -263,7 +263,7 @@ static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
                 retval = PM3_ESOFT;
                 break;
             };
-            
+
             if (blockNo < NumBlocksPerSector(s) - 1) {
                 emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
             } else {
@@ -356,7 +356,7 @@ void RunMod(void) {
         0x89347350bd36, // INFINEON B 0B
         0x66d2b7dc39ef, // INFINEON B 0C
         0x6bc1e1ae547d, // INFINEON B 0D
-        0x22729a9bd40f,  // INFINEON B 0E       
+        0x22729a9bd40f,  // INFINEON B 0E
         0xd2ece8b9395e, // lib / Nat Bieb
         0x1494E81663D7, // # NSCP default key
         0x569369c5a0e5, // # kiev
@@ -505,10 +505,10 @@ void RunMod(void) {
         if (ecfill) {
             int filled;
             Dbprintf("\tFilling in with key A.");
-            
+
             filled = saMifareECardLoad(sectorsCnt, 0);
             if (filled != PM3_SUCCESS) {
-                
+
                 Dbprintf("\t [✕] Failed filling with A.");
                 Dbprintf("\tFilling in with key B.");
                 filled = saMifareECardLoad(sectorsCnt, 1);

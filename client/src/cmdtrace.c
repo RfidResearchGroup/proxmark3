@@ -95,7 +95,7 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
     while (!is_last_record(*tracepos, traceLen) && !next_record_is_response(*tracepos, trace)) {
 
         tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + *tracepos);
-    
+
         *tracepos += TRACELOG_HDR_LEN + hdr->data_len;
 
         if ((hdr->data_len == 1) && (*data_len + hdr->data_len <= MAX_TOPAZ_READER_CMD_LEN)) {
@@ -153,7 +153,7 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
             char data_len_str[5];
             char temp_str1[3] = {0};
             char temp_str2[3] = {0};
-            
+
             sprintf(data_len_str, "%04x", hdr->data_len);
             strncat(temp_str1, data_len_str, 2);
             temp_str1[2] = '\0';
@@ -257,10 +257,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //1 CRC-command, CRC ok
     //2 Not crc-command
 
-     //--- Draw the data column
+    //--- Draw the data column
     char line[18][120] = {{0}};
 
-   if (data_len == 0) {
+    if (data_len == 0) {
         sprintf(line[0], "<empty trace - possible error>");
         return tracepos;
     }
@@ -401,9 +401,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (is_last_record(tracepos, traceLen)) return traceLen;
 
     if (showWaitCycles && !hdr->isResponse && next_record_is_response(tracepos, trace)) {
-        
+
         tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
-         
+
         PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
                       (EndOfTransmissionTimestamp - first_hdr->timestamp),
                       (next_hdr->timestamp - first_hdr->timestamp),
@@ -415,7 +415,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 }
 
 static int download_trace(void) {
-    
+
     if (!IfPm3Present()) {
         PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
         return PM3_EINVARG;
@@ -487,23 +487,23 @@ static int CmdTraceLoad(const char *Cmd) {
         free(g_trace);
 
     size_t len = 0;
-    if (loadFile_safe(filename, ".trace", (void**)&g_trace, &len) != PM3_SUCCESS) {
+    if (loadFile_safe(filename, ".trace", (void **)&g_trace, &len) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
         return PM3_EIO;
     }
-    
+
     g_traceLen = (long)len;
-    
+
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%lu") " bytes) loaded from " _YELLOW_("%s"), g_traceLen, filename);
     return PM3_SUCCESS;
 }
 
 static int CmdTraceSave(const char *Cmd) {
-    
+
     if (g_traceLen == 0) {
         download_trace();
     }
-    
+
     if (g_traceLen == 0) {
         PrintAndLogEx(WARNING, "trace is empty, nothing to save");
         return PM3_SUCCESS;

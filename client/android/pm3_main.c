@@ -88,7 +88,7 @@ jint Console(JNIEnv *env, jobject instance, jstring cmd_) {
 
     PrintAndLogEx(NORMAL, "");
 
-    char *cmd = (char *) ((*env)->GetStringUTFChars(env, cmd_, 0));
+    char *cmd = (char *)((*env)->GetStringUTFChars(env, cmd_, 0));
     int ret = CommandReceived(cmd);
     if (ret == 99) {
         // exit / quit
@@ -104,7 +104,7 @@ jint Console(JNIEnv *env, jobject instance, jstring cmd_) {
  * Is client running!
  * */
 jboolean IsClientRunning(JNIEnv *env, jobject instance) {
-    return (jboolean) ((jboolean) conn.run);
+    return (jboolean)((jboolean) conn.run);
 }
 
 /*
@@ -116,7 +116,7 @@ jboolean TestPm3(JNIEnv *env, jobject instance) {
         return false;
     }
     bool ret = (TestProxmark() == PM3_SUCCESS);
-    return (jboolean) (ret);
+    return (jboolean)(ret);
 }
 
 /*
@@ -129,8 +129,8 @@ void ClosePm3(JNIEnv *env, jobject instance) {
 /*
  * native function map to jvm
  * */
- 
- //iceman:  todo,  pm3:ify java class root.  Return codes, should match PM3_E* codes.
+
+//iceman:  todo,  pm3:ify java class root.  Return codes, should match PM3_E* codes.
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *jniEnv = NULL;
     if ((*vm)->GetEnv(vm, (void **) &jniEnv, JNI_VERSION_1_4) != JNI_OK) {
@@ -143,14 +143,14 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     jclass clz_test = (*jniEnv)->FindClass(jniEnv, "cn/rrg/devices/Proxmark3RRGRdv4");
     JNINativeMethod methods[] = {
-            {"startExecute", "(Ljava/lang/String;)I", (void *) Console},
-            {"stopExecute",  "()V",                   (void *) ClosePm3},
-            {"isExecuting",  "()Z",                   (void *) IsClientRunning}
+        {"startExecute", "(Ljava/lang/String;)I", (void *) Console},
+        {"stopExecute",  "()V", (void *) ClosePm3},
+        {"isExecuting",  "()Z", (void *) IsClientRunning}
     };
 
     JNINativeMethod methods1[] = {
-            {"testPm3",  "()Z", (void *) TestPm3},
-            {"closePm3", "()V", ClosePm3}
+        {"testPm3",  "()Z", (void *) TestPm3},
+        {"closePm3", "()V", ClosePm3}
     };
 
     if ((*jniEnv)->RegisterNatives(jniEnv, clazz, methods, sizeof(methods) / sizeof(methods[0])) != JNI_OK) {

@@ -1683,7 +1683,7 @@ static int CmdHF15Restore(const char *Cmd) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
         return PM3_EFILE;
     }
-    
+
     if ((datalen % blocksize) != 0) {
         PrintAndLogEx(WARNING, "Datalen %zu isn't dividable with blocksize %zu", datalen, blocksize);
         free(data);
@@ -1704,7 +1704,7 @@ static int CmdHF15Restore(const char *Cmd) {
         if (addressed_mode) {
             char uidhex[17] = {0x00};
             hex_to_buffer((uint8_t *)uidhex, uid, sizeof(uid), sizeof(uidhex) - 1, 0, false, true);
-            hex_to_buffer((uint8_t *)hex, data + i, blocksize, sizeof(hex) - 1, 0, false, true);            
+            hex_to_buffer((uint8_t *)hex, data + i, blocksize, sizeof(hex) - 1, 0, false, true);
             snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %u %s", newPrefix, uidhex, i, hex);
         } else {
             hex_to_buffer((uint8_t *)hex, data + i, blocksize, sizeof(hex) - 1, 0, false, true);
@@ -1718,7 +1718,7 @@ static int CmdHF15Restore(const char *Cmd) {
                 break;
             }
         }
-        
+
         if (tried >= retries) {
             free(data);
             PrintAndLogEx(FAILED, "Restore failed. Too many retries.");
@@ -1729,7 +1729,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
     free(data);
     PrintAndLogEx(INFO, "done");
-    PrintAndLogEx(HINT, "Try reading your card to verify with " _YELLOW_("`hf 15 dump`") );
+    PrintAndLogEx(HINT, "Try reading your card to verify with " _YELLOW_("`hf 15 dump`"));
     return PM3_SUCCESS;
 }
 

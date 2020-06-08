@@ -266,8 +266,8 @@ int demodFDX(void) {
     }
 
     uint8_t bt_par = (extended & 0x100) >> 8;
-    uint8_t bt_temperature = extended & 0xff;    
-    uint8_t bt_calc_parity = (bitcount(bt_temperature) & 0x1) ? 0 : 1;   
+    uint8_t bt_temperature = extended & 0xff;
+    uint8_t bt_calc_parity = (bitcount(bt_temperature) & 0x1) ? 0 : 1;
     uint8_t is_bt_temperature = (bt_calc_parity == bt_par) && !(extended & 0xe00) ;
 
     if (is_bt_temperature) {

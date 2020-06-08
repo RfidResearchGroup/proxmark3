@@ -29,7 +29,7 @@ static void uncompress_data_section(void) {
     int avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
     // uncompress data segment to RAM
     uintptr_t p = (uintptr_t)&__data_src_start__;
-    int res = LZ4_decompress_safe((char*)p + 4, &__data_start__, avail_in, avail_out);
+    int res = LZ4_decompress_safe((char *)p + 4, &__data_start__, avail_in, avail_out);
 
     if (res < 0)
         return;

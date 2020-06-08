@@ -219,7 +219,7 @@ static int sda_test_pk(bool verbose) {
 
     struct emv_pk *ipk = emv_pki_recover_issuer_cert(pk, db);
     if (!ipk) {
-       PrintAndLogEx(WARNING, "Could not recover Issuer certificate!");
+        PrintAndLogEx(WARNING, "Could not recover Issuer certificate!");
         tlvdb_free(db);
         return 2;
     }

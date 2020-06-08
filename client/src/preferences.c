@@ -912,7 +912,7 @@ static int CmdPrefShow(const char *Cmd) {
         char *fn = prefGetFilename();
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, _CYAN_("Preferences loaded from " _YELLOW_("%s")), fn);
-        free(fn);        
+        free(fn);
     } else {
         PrintAndLogEx(ERR, "Preferences not loaded");
         return PM3_ESOFT;

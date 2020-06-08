@@ -3577,9 +3577,9 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 }
 
 static void DesFill2bPattern(
-                        uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t *deskeyListLen,
-                        uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t *aeskeyListLen,
-                        uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t *k3kkeyListLen, uint32_t *startPattern) {
+    uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t *deskeyListLen,
+    uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t *aeskeyListLen,
+    uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t *k3kkeyListLen, uint32_t *startPattern) {
 
     for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
         if (*deskeyListLen != MAX_KEYS_LIST_LEN) {
@@ -3618,10 +3618,10 @@ static void DesFill2bPattern(
 }
 
 static int AuthCheckDesfire(uint8_t *aid,
-                      uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
-                      uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
-                      uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
-                      uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
+                            uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
+                            uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
+                            uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
+                            uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
 
@@ -4078,17 +4078,17 @@ static int CmdHF14aDesChk(const char *Cmd) {
             res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
             if (res == PM3_SUCCESS && endFilePosition)
                 deskeyListLen = keycnt;
-            
+
             keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
             if (res == PM3_SUCCESS && endFilePosition)
                 aeskeyListLen = keycnt;
-            
+
             keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
             if (res == PM3_SUCCESS && endFilePosition)
                 k3kkeyListLen = keycnt;
-            
+
             continue;
         }
     }

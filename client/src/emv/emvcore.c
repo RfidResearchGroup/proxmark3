@@ -309,7 +309,7 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
             res = 1;
             if (IfPm3Smartcard())
                 res = ExchangeAPDUSC(true, data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
-                
+
             if (res) {
                 return res;
             }
@@ -677,12 +677,12 @@ int trSDA(struct tlvdb *tlv) {
         PrintAndLogEx(ERR, "Error: Issuer certificate not found, exiting");
         return 2;
     }
-            
+
     PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
-        sprint_hex(issuer_pk->rid, 5),
-        issuer_pk->index,
-        sprint_hex(issuer_pk->serial, 3)
-     );
+                  sprint_hex(issuer_pk->rid, 5),
+                  issuer_pk->index,
+                  sprint_hex(issuer_pk->serial, 3)
+                 );
 
     const struct tlv *sda_tlv = tlvdb_get(tlv, 0x21, NULL);
     if (!sda_tlv || sda_tlv->len < 1) {
@@ -736,12 +736,12 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         PrintAndLogEx(ERR, "Error: Issuer certificate not found, exiting");
         return 2;
     }
-            
+
     PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
-        sprint_hex(issuer_pk->rid, 5),
-        issuer_pk->index,
-        sprint_hex(issuer_pk->serial, 3)
-     );
+                  sprint_hex(issuer_pk->rid, 5),
+                  issuer_pk->index,
+                  sprint_hex(issuer_pk->serial, 3)
+                 );
 
     struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
     if (!icc_pk) {
@@ -765,7 +765,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             PrintAndLogEx(SUCCESS, "ICC PE Public key recovered. RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
                           sprint_hex(icc_pe_pk->rid, 5),
                           icc_pe_pk->index,
-                          sprint_hex(icc_pe_pk->serial,3)
+                          sprint_hex(icc_pe_pk->serial, 3)
                          );
         }
     } else {
@@ -943,12 +943,12 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
         emv_pk_free(pk);
         return 2;
     }
-                
+
     PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
-        sprint_hex(issuer_pk->rid, 5),
-        issuer_pk->index,
-        sprint_hex(issuer_pk->serial, 3)
-     );
+                  sprint_hex(issuer_pk->rid, 5),
+                  issuer_pk->index,
+                  sprint_hex(issuer_pk->serial, 3)
+                 );
 
     struct emv_pk *icc_pk = emv_pki_recover_icc_cert(issuer_pk, tlv, sda_tlv);
     if (!icc_pk) {
@@ -961,7 +961,7 @@ int trCDA(struct tlvdb *tlv, struct tlvdb *ac_tlv, struct tlv *pdol_data_tlv, st
     PrintAndLogEx(SUCCESS, "ICC Public key recovered. RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
                   sprint_hex(icc_pk->rid, 5),
                   icc_pk->index,
-                  sprint_hex(icc_pk->serial,3)
+                  sprint_hex(icc_pk->serial, 3)
                  );
 
     struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
@@ -1013,10 +1013,10 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
     }
 
     PrintAndLogEx(SUCCESS, "Issuer Public key recovered  RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
-        sprint_hex(issuer_pk->rid, 5),
-        issuer_pk->index,
-        sprint_hex(issuer_pk->serial, 3)
-     );
+                  sprint_hex(issuer_pk->rid, 5),
+                  issuer_pk->index,
+                  sprint_hex(issuer_pk->serial, 3)
+                 );
 
     JsonSaveBufAsHex(root, "$.ApplicationData.RID", issuer_pk->rid, 5);
 
@@ -1033,12 +1033,12 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
         PrintAndLogEx(WARNING, "WARNING: ICC certificate not found, exiting");
         return 2;
     }
-    
+
     PrintAndLogEx(SUCCESS, "ICC Public key recovered     RID " _YELLOW_("%s") " IDX " _YELLOW_("%02hhx") " CSN " _YELLOW_("%s"),
-        sprint_hex(icc_pk->rid, 5),
-        icc_pk->index,
-        sprint_hex(icc_pk->serial, 3)
-     );
+                  sprint_hex(icc_pk->rid, 5),
+                  icc_pk->index,
+                  sprint_hex(icc_pk->serial, 3)
+                 );
 
     char *icc_pk_c = emv_pk_dump_pk(icc_pk);
     JsonSaveStr(root, "$.ApplicationData.ICCPublicKeyDec", icc_pk_c);

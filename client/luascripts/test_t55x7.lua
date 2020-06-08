@@ -39,7 +39,7 @@ script run test_t55x7 [-h] [-t <modulation type>
 ]]
 arguments = [[
     -h       this help
-    -t       (optional, defaults to ASK) 'PSK1', 'PSK2', 'PSK3', 
+    -t       (optional, defaults to ASK) 'PSK1', 'PSK2', 'PSK3',
              'FSK1', 'FSK2', 'FSK1A', 'FSK2A',
              'ASK', 'BI'
 ]]

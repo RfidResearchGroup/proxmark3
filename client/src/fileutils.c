@@ -832,7 +832,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
             continue;
 
         strcleanrn(line, sizeof(line));
-        
+
         int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
         if (res == 0) {
             memcpy(udata + counter, buf, hexlen);
@@ -884,7 +884,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         fclose(f);
         return PM3_EMALLOC;
     }
-    
+
     // 128 + 2 newline chars + 1 null terminator
     char line[131];
     memset(line, 0, sizeof(line));
@@ -911,10 +911,10 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
             continue;
 
         strcleanrn(line, sizeof(line));
-       
+
         res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
         if (res == 0) {
-            memcpy( tmp + counter, buf, hexlen);
+            memcpy(tmp + counter, buf, hexlen);
             counter += hexlen;
         } else {
             retval = PM3_ESOFT;
@@ -1286,11 +1286,11 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
     mfu_df_e retval = MFU_DF_UNKNOWN;
     uint8_t bcc0, bcc1;
     uint8_t ct = 0x88;
- 
+
     // detect new
     mfu_dump_t *new = (mfu_dump_t *)*dump;
     bcc0 = ct ^ new->data[0] ^ new->data[1] ^ new->data[2];
-    bcc1 = new->data[4] ^ new->data[5] ^ new->data[6] ^ new->data[7];   
+    bcc1 = new->data[4] ^ new->data[5] ^ new->data[6] ^ new->data[7];
     if (bcc0 == new->data[3] && bcc1 == new->data[8]) {
         retval = MFU_DF_NEWBIN;
     }
@@ -1316,8 +1316,8 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
     }
 
     if (verbose) {
-        switch(retval) {
-            case MFU_DF_NEWBIN: 
+        switch (retval) {
+            case MFU_DF_NEWBIN:
                 PrintAndLogEx(INFO, "detected " _GREEN_("new") " mfu dump format");
                 break;
             case MFU_DF_OLDBIN:
@@ -1335,8 +1335,8 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
 }
 
 static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
-    
-    mfu_dump_t *mfu = (mfu_dump_t *) calloc( sizeof(mfu_dump_t), sizeof(uint8_t));
+
+    mfu_dump_t *mfu = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu == NULL) {
         return PM3_EMALLOC;
     }
@@ -1344,11 +1344,11 @@ static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose)
     memcpy(mfu->data, *dump, *dumplen);
 
     mfu->pages = *dumplen / 4 - 1;
-    
+
     if (verbose) {
         PrintAndLogEx(SUCCESS, "plain mfu dump format was converted to " _GREEN_("%d") " blocks", mfu->pages + 1);
     }
-    
+
     *dump = (uint8_t *)mfu;
     *dumplen += MFU_DUMP_PREFIX_LENGTH ;
     return PM3_SUCCESS;
@@ -1361,8 +1361,8 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     size_t old_data_len = *dumplen - OLD_MFU_DUMP_PREFIX_LENGTH;
     size_t new_dump_len = old_data_len + MFU_DUMP_PREFIX_LENGTH;
-  
-    mfu_dump_t *mfu_dump = (mfu_dump_t *) calloc( sizeof(mfu_dump_t), sizeof(uint8_t));
+
+    mfu_dump_t *mfu_dump = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu_dump == NULL) {
         return PM3_EMALLOC;
     }
@@ -1370,7 +1370,7 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
     memcpy(mfu_dump->version, old_mfu_dump->version, sizeof(mfu_dump->version));
     memcpy(mfu_dump->tbo, old_mfu_dump->tbo, sizeof(mfu_dump->tbo));
     memcpy(mfu_dump->signature, old_mfu_dump->signature, sizeof(mfu_dump->signature));
-    
+
     mfu_dump->tbo1[0] = old_mfu_dump->tbo1[0];
 
     for (int i = 0; i < 3; i++) {
@@ -1381,7 +1381,7 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     mfu_dump->pages = old_data_len / 4 - 1;
 
-    if (verbose) {  
+    if (verbose) {
         PrintAndLogEx(SUCCESS, "old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);
     }
 
@@ -1396,11 +1396,11 @@ int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
     if (!dump || !dumplen || *dumplen < OLD_MFU_DUMP_PREFIX_LENGTH) {
         return PM3_EINVARG;
     }
-    
+
     mfu_df_e res = detect_mfu_dump_format(dump, dumplen, verbose);
 
-    switch(res) {
-        case MFU_DF_NEWBIN: 
+    switch (res) {
+        case MFU_DF_NEWBIN:
             return PM3_SUCCESS;
         case MFU_DF_OLDBIN:
             return convert_old_mfu_dump(dump, dumplen, verbose);

@@ -481,7 +481,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
     if (memcmp(z_0, result, 4) != 0) {
         PrintAndLogEx(WARNING, _RED_("Failed to verify") " calculated master key (k_cus)! Something is wrong.");
         return PM3_ESOFT;
-    } 
+    }
 
     PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!"));
     return PM3_SUCCESS;
@@ -501,9 +501,9 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     dumpdata *attack = (dumpdata *) calloc(itemsize, sizeof(uint8_t));
     if (attack == NULL) {
         PrintAndLogEx(WARNING, "failed to allocate memory");
-        return PM3_EMALLOC; 
+        return PM3_EMALLOC;
     }
-    
+
     int res = 0;
     for (i = 0 ; i * itemsize < dumpsize ; i++) {
         memcpy(attack, dump + i * itemsize, itemsize);
@@ -670,13 +670,13 @@ int testElite(bool slowtests) {
     int res = PM3_SUCCESS;
     PrintAndLogEx(INFO, "Testing hash1...");
     res += _testHash1();
-    PrintAndLogEx(INFO, "    hash1 (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail") );
+    PrintAndLogEx(INFO, "    hash1 (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
 
     PrintAndLogEx(INFO, "Testing key diversification...");
     res += _test_iclass_key_permutation();
     if (res == PM3_SUCCESS)
-        PrintAndLogEx(INFO, "    key diversification (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail") );
-    
+        PrintAndLogEx(INFO, "    key diversification (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
+
     if (slowtests)
         res += _testBruteforce();
 
