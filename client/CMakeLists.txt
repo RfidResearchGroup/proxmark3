@@ -314,7 +314,6 @@ find_library(pm3rrg_rdv4_whereami REQUIRED)
 target_link_libraries(proxmark3 PRIVATE
         bz2
         readline
-        pthread
         m
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
@@ -326,6 +325,10 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})
+
+if (NOT SKIPPTHREAD EQUAL 1)
+    target_link_libraries(proxmark3 PRIVATE pthread)
+endif (NOT SKIPPTHREAD EQUAL 1)
 
 # OSX have a hard time compiling python3 dependency with older cmake.
 if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
