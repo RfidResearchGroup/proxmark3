@@ -256,11 +256,14 @@ LDLIBS += $(QTLDLIBS)
 CXXINCLUDES += $(QTINCLUDES)
 
 ## Readline
-ifeq ($(platform),Darwin)
-    LDLIBS += -L/usr/local/opt/readline/lib
-    INCLUDES += -I/usr/local/opt/readline/include
+ifneq ($(SKIPREADLINE),1)
+    ifeq ($(platform),Darwin)
+        LDLIBS += -L/usr/local/opt/readline/lib
+        INCLUDES += -I/usr/local/opt/readline/include
+    endif
+    LDLIBS += -lreadline
+    READLINE_FOUND = 1
 endif
-LDLIBS += -lreadline
 
 #######################################################################################################
 CFLAGS ?= $(DEFCFLAGS)
@@ -278,6 +281,10 @@ ifneq (,$(findstring MINGW,$(platform)))
     # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
     PM3CFLAGS += -D_ISOC99_SOURCE
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
+endif
+
+ifeq ($(READLINE_FOUND),1)
+    PM3CFLAGS += -DHAVE_READLINE
 endif
 
 ifeq ($(BT_FOUND),1)
@@ -363,6 +370,16 @@ else
         $(info Python3 library:   Python3 v$(shell pkg-config --modversion python3) found, enabled)
     else
         $(info Python3 library:   Python3 not found, disabled)
+    endif
+endif
+
+ifeq ($(SKIPREADLINE),1)
+    $(info Readline library:  skipped)
+else
+    ifeq ($(READLINE_FOUND),1)
+        $(info Readline library:  enabled)
+    else
+        $(info Readline library:  Readline not found, disabled)
     endif
 endif
 

@@ -49,6 +49,21 @@ if (NOT SKIPPYTHON EQUAL 1)
     pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
+if (NOT SKIPREADLINE EQUAL 1)
+    if (APPLE)
+      find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include NO_DEFAULT_PATH)
+    endif (APPLE)
+    find_path(READLINE_INCLUDE_DIRS readline/readline.h)
+
+    if (APPLE)
+      find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib NO_DEFAULT_PATH)
+    endif (APPLE)
+    find_library(READLINE_LIBRARIES readline)
+    if (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
+        set(READLINE_FOUND ON)
+    endif (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
+endif (NOT SKIPREADLINE EQUAL 1)
+
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
@@ -246,6 +261,14 @@ if (NOT SKIPPYTHON EQUAL 1)
     endif (PYTHON3EMBED_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
 
+if (NOT SKIPREADLINE EQUAL 1)
+    if (READLINE_FOUND)
+        add_definitions("-DHAVE_READLINE")
+        set(ADDITIONAL_DIRS ${READLINE_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+        set(ADDITIONAL_LNK ${READLINE_LIBRARIES} ${ADDITIONAL_LNK})
+    endif (READLINE_FOUND)
+endif(NOT SKIPREADLINE EQUAL 1)
+
 message("===================================================================")
 if (SKIPQT EQUAL 1)
     message("GUI support:       skipped")
@@ -278,6 +301,16 @@ else (SKIPPYTHON EQUAL 1)
         message("Python3 library:   Python3 not found, disabled")
     endif (PYTHON3EMBED_FOUND)
 endif(SKIPPYTHON EQUAL 1)
+
+if (SKIPREADLINE EQUAL 1)
+    message("Readline library:  skipped")
+else (SKIPREADLINE EQUAL 1)
+    if (READLINE_FOUND)
+        message("Readline library:  enabled")
+    else (READLINE_FOUND)
+        message("Readline library:  Readline not found, disabled")
+    endif (READLINE_FOUND)
+endif(SKIPREADLINE EQUAL 1)
 message("===================================================================")
 
 add_executable(proxmark3
@@ -308,13 +341,10 @@ target_include_directories(proxmark3 PRIVATE
         ${ADDITIONAL_DIRS}
 )
 
-if (APPLE)
-    set_target_properties(proxmark3 PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks, -L/usr/local/opt/readline/lib")
-    set_target_properties(proxmark3 PROPERTIES COMPILE_FLAGS "-I/usr/local/opt/readline/include")
-else (APPLE)
+if (NOT APPLE)
     # required for Raspberry Pi, but breaks with clang (OSX). Need to be at the end of the linker line.
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,--as-needed -latomic -Wl,--no-as-needed)
-endif (APPLE)
+endif (NOT APPLE)
 
 
 find_library(pm3rrg_rdv4_cliparser REQUIRED)
@@ -328,7 +358,6 @@ find_library(pm3rrg_rdv4_whereami REQUIRED)
 
 target_link_libraries(proxmark3 PRIVATE
         bz2
-        readline
         m
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser

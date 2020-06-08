@@ -15,8 +15,11 @@
 #include <stdio.h>         // for Mingw readline
 #include <limits.h>
 #include <unistd.h>
+#ifdef HAVE_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
+#include <ctype.h>
 #include "usart_defs.h"
 #include "util_posix.h"
 #include "proxgui.h"
@@ -117,6 +120,7 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
     snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptctx);
 }
 
+#ifdef HAVE_READLINE
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
@@ -132,6 +136,7 @@ static int check_comm(void) {
     }
     return 0;
 }
+#endif
 
 // first slot is always NULL, indicating absence of script when idx=0
 static FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
@@ -208,6 +213,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         }
     }
 
+#ifdef HAVE_READLINE
     char *my_history_path = NULL;
     if (searchHomeFilePath(&my_history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No history will be recorded");
@@ -215,6 +221,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     } else {
         read_history(my_history_path);
     }
+#endif
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
@@ -290,12 +297,25 @@ check_script:
 
                 } else {
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
-                    rl_event_hook = check_comm;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+#ifdef HAVE_READLINE
+                    rl_event_hook = check_comm;
                     cmd = readline(prompt_filtered);
+#else
+                    printf("%s", prompt_filtered);
+                    cmd = NULL;
+                    size_t len = 0;
+                    int ret;
+                    if ((ret = getline(&cmd, &len, stdin)) < 0) {
+                        // TODO this happens also when kbd_enter_pressed() is used, with a key pressed or not
+                        printf("GETLINE ERR %i", ret);
+                        free(cmd);
+                        cmd = NULL;
+                    }
+#endif
                     fflush(NULL);
                 }
             }
@@ -333,6 +353,7 @@ check_script:
                 PrintAndLogEx(NORMAL, "%s%s", prompt_filtered, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
+#ifdef HAVE_READLINE
                 // add to history if not from a script
                 if (!current_cmdscriptfile()) {
                     HIST_ENTRY *entry = history_get(history_length);
@@ -341,6 +362,7 @@ check_script:
                         add_history(cmd);
                     }
                 }
+#endif
                 // process cmd
                 int ret = CommandReceived(cmd);
                 // exit or quit
@@ -367,11 +389,12 @@ check_script:
     while (current_cmdscriptfile())
         pop_cmdscriptfile();
 
+#ifdef HAVE_READLINE
     if (my_history_path) {
         write_history(my_history_path);
         free(my_history_path);
     }
-
+#endif
     if (cmd) {
         free(cmd);
         cmd = NULL;
@@ -681,12 +704,14 @@ int main(int argc, char *argv[]) {
     char *port = NULL;
     uint32_t speed = 0;
 
+#ifdef HAVE_READLINE
     /* initialize history */
     using_history();
 
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
-#endif
+#endif // RL_STATE_READCMD
+#endif // HAVE_READLINE
 
     char *exec_name = argv[0];
 #if defined(_WIN32)

@@ -22,7 +22,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#ifndef ANDROID
+#ifdef HAVE_READLINE
 #include <readline/readline.h>
 #endif
 
@@ -297,8 +297,6 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 }
 
 static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
-    char *saved_line;
-    int saved_point;
     va_list argptr;
     static FILE *logfile = NULL;
     static int logging = 1;
@@ -344,6 +342,8 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #ifdef RL_STATE_READCMD
     // We are using GNU readline. libedit (OSX) doesn't support this flag.
     int need_hack = (rl_readline_state & RL_STATE_READCMD) > 0;
+    char *saved_line;
+    int saved_point;
 
     if (need_hack) {
         saved_point = rl_point;
