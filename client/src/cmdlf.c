@@ -1344,6 +1344,7 @@ out:
     // identify chipset
     if (CheckChipType(isOnline) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+        retval = false;
     }
     return retval;
 }

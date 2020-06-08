@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+// Marshmellow, 
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -51,19 +52,25 @@ static int usage_lf_viking_sim(void) {
     return PM3_SUCCESS;
 }
 
-//by marshmellow
-//see ASKDemod for what args are accepted
 static int CmdVikingDemod(const char *Cmd) {
-    if (ASKDemod(Cmd, false, false, 1) != PM3_SUCCESS) {
+   return demodViking();
+}
+
+//see ASKDemod for what args are accepted
+int demodViking(void) {
+ 
+    if (ASKDemod("", false, false, 1) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
         return PM3_ESOFT;
     }
-    size_t size = DemodBufferLen;
+ 
+ size_t size = DemodBufferLen;
     int ans = detectViking(DemodBuffer, &size);
     if (ans < 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5) ? _RED_("[chksum error]") : "");
         return PM3_ESOFT;
     }
+
     //got a good demod
     uint32_t raw1 = bytebits_to_byte(DemodBuffer + ans, 32);
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + ans + 32, 32);
@@ -76,7 +83,6 @@ static int CmdVikingDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdVikingRead(const char *Cmd) {
     lf_read(false, 10000);
@@ -211,7 +217,4 @@ int detectViking(uint8_t *src, size_t *size) {
     return (int)startIdx;
 }
 
-int demodViking(void) {
-    return CmdVikingDemod("");
-}
 
