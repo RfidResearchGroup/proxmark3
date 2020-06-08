@@ -61,9 +61,9 @@ flasher
 !flasher/
 lua
 luac
-fpga_compress
-mfkey32
-mfkey64
+tools/fpga_compress/fpga_compress
+tools/mfkey/mfkey32
+tools/mfkey/mfkey64
 tools/nonce2key/nonce2key
 
 fpga/*
