@@ -40,9 +40,11 @@ if (NOT MINGW)
         target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_MACOSX)
     elseif (ANDROID)
         # Required:
-        target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_MKSTEMP)
-        # Same as for LUA_USE_LINUX except LUA_USE_POSIX and client-specific LUA_USE_READLINE and LUA_USE_ISATTY
-        target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_DLOPEN LUA_USE_STRTODHEX LUA_USE_AFORMAT LUA_USE_LONGLONG LUA_USE_POPEN LUA_USE_ULONGJMP LUA_USE_GMTIME_R)
+        add_definitions(-D"getlocaledecpoint\(\)='.'")
+        # Same as for LUA_USE_LINUX except LUA_USE_POSIX and client-specific LUA_USE_READLINE
+        target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_DLOPEN LUA_USE_STRTODHEX LUA_USE_AFORMAT LUA_USE_LONGLONG)
+        # Same as for LUA_USE_POSIX except client-specific LUA_USE_ISATTY. LUA_USE_MKSTEMP is needed.
+        target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_MKSTEMP LUA_USE_POPEN LUA_USE_ULONGJMP LUA_USE_GMTIME_R)
     else (APPLE)
         target_compile_definitions(pm3rrg_rdv4_lua PRIVATE LUA_USE_LINUX)
         target_link_libraries(pm3rrg_rdv4_lua INTERFACE dl)
