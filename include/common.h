@@ -72,12 +72,8 @@ extern int DBGLEVEL;
 #endif
 
 
-#if defined(__APPLE__)
-#define RAMFUNC __attribute((long_call, section(".ramfunc")))
-#else
+//#define RAMFUNC __attribute((long_call, section(".ramfunc")))
 #define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm")))
-#endif
-
 
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
