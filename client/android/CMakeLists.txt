@@ -165,11 +165,11 @@ find_library(pm3rrg_rdv4_tinycbor REQUIRED)
 find_library(pm3rrg_rdv4_lua REQUIRED)
 find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
-find_library(pm3rrg_rdv4_z REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 find_library(pm3rrg_rdv4_whereami REQUIRED)
 
 target_link_libraries(
+        bz2
         pm3rrg_rdv4
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_mbedtls
@@ -180,6 +180,5 @@ target_link_libraries(
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_whereami
-        pm3rrg_rdv4_z
         android
         log)
