@@ -8,7 +8,7 @@ os:
   - linux
   - osx
 
-dist: xenial
+dist: bionic
 
 osx_image: xcode11
 
