@@ -283,7 +283,6 @@ find_library(pm3rrg_rdv4_tinycbor REQUIRED)
 find_library(pm3rrg_rdv4_lua REQUIRED)
 find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
-find_library(pm3rrg_rdv4_z REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 find_library(pm3rrg_rdv4_whereami REQUIRED)
 
