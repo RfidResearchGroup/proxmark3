@@ -21,8 +21,6 @@
 #include "fpga.h"
 #include "lz4hc.h"
 
-#define HARDNESTED_TABLE_SIZE (uint32_t)(sizeof(uint32_t) * ((1L<<19)+1))
-
 static void usage(void) {
     fprintf(stdout, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
     fprintf(stdout, "          Combine n FPGA bitstream files and compress them into one.\n\n");
@@ -30,8 +28,6 @@ static void usage(void) {
     fprintf(stdout, "          Extract Version Information from FPGA bitstream files and write it to <outfile>\n\n");
     fprintf(stdout, "       fpga_compress -d <infile> <outfile>\n");
     fprintf(stdout, "          Decompress <infile>. Write result to <outfile>\n\n");
-    fprintf(stdout, "       fpga_compress -t <infile> <outfile>\n");
-    fprintf(stdout, "          Compress hardnested table <infile>. Write result to <outfile>\n\n");
 }
 
 static bool all_feof(FILE *infile[], uint8_t num_infiles) {
@@ -43,30 +39,18 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles) {
     return true;
 }
 
-static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardnested_mode) {
+static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
     uint8_t *fpga_config;
 
-    if (hardnested_mode) {
-        fpga_config = calloc(num_infiles * HARDNESTED_TABLE_SIZE, sizeof(uint8_t));
-    } else {
-        fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
-    }
-
+    fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
     // read the input files. Interleave them into fpga_config[]
     uint32_t total_size = 0;
     do {
 
-        if (total_size >= num_infiles * (hardnested_mode ? HARDNESTED_TABLE_SIZE : FPGA_CONFIG_SIZE)) {
-            if (hardnested_mode) {
-                fprintf(stderr,
-                        "Input file too big (> %" PRIu32 " bytes). This is probably not a hardnested bitflip state table.\n"
-                        , HARDNESTED_TABLE_SIZE);
-
-            } else {
-                fprintf(stderr,
-                        "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
-                        , num_infiles * FPGA_CONFIG_SIZE);
-            }
+        if (total_size >= num_infiles * FPGA_CONFIG_SIZE) {
+            fprintf(stderr,
+                    "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
+                    , num_infiles * FPGA_CONFIG_SIZE);
             for (uint16_t j = 0; j < num_infiles; j++) {
                 fclose(infile[j]);
             }
@@ -376,17 +360,9 @@ int main(int argc, char **argv) {
 
     } else { // Compress or generate version info
 
-        bool hardnested_mode = false;
         bool generate_version_file = false;
         int num_input_files = 0;
-        if (!strcmp(argv[1], "-t")) {  // compress one hardnested table
-            if (argc != 4) {
-                usage();
-                return (EXIT_FAILURE);
-            }
-            hardnested_mode = true;
-            num_input_files = 1;
-        } else if (!strcmp(argv[1], "-v")) {  // generate version info
+        if (!strcmp(argv[1], "-v")) {  // generate version info
             generate_version_file = true;
             num_input_files = argc - 3;
         } else {  // compress 1..n fpga files
@@ -396,7 +372,7 @@ int main(int argc, char **argv) {
         FILE **infiles = calloc(num_input_files, sizeof(FILE *));
         char **infile_names = calloc(num_input_files, sizeof(char *));
         for (uint16_t i = 0; i < num_input_files; i++) {
-            infile_names[i] = argv[i + ((hardnested_mode || generate_version_file) ? 2 : 1)];
+            infile_names[i] = argv[i + (generate_version_file ? 2 : 1)];
             infiles[i] = fopen(infile_names[i], "rb");
             if (infiles[i] == NULL) {
                 fprintf(stderr, "Error. Cannot open input file %s\n\n", infile_names[i]);
@@ -419,7 +395,7 @@ int main(int argc, char **argv) {
                 return (EXIT_FAILURE);
             }
         } else {
-            int ret = zlib_compress(infiles, num_input_files, outfile, hardnested_mode);
+            int ret = zlib_compress(infiles, num_input_files, outfile);
             free(infile_names);
             free(infiles);
             return (ret);

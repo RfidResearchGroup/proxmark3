@@ -3,8 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Change pushed some ARM source to compile with THUMB.  Saves a lot of space of ARM flash memory  @slurdge
- - Change from using ZLIB compression of FPGA images in ARM to LZ4.  15%+ speedups when swapping between HF & LF now  @slurdge
+ - Change use system Bzip2 library instead of Zlib for hardnested tables, tables are now 7x smaller (@doegox)
+ - Change pushed some ARM source to compile with THUMB.  Saves a lot of space of ARM flash memory (@slurdge)
+ - Change from using ZLIB compression of FPGA images in ARM to LZ4.  15%+ speedups when swapping between HF & LF now (@slurdge)
  - Fix `emv scan -w` - hash mismatch, solution similar to below (@iceman1001)
  - Fix 'emv roca' - hash mismatch, merged from offical repo (@pwpiwi)
  - Fix 'lf ti demod' - now calculates correct crc (@iceman1001)
