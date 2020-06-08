@@ -51,7 +51,7 @@ const char *get_executable_directory(void) {
     if (g_android_executable_directory == NULL) {
         char buf[FILE_PATH_SIZE] = {0};
         getcwd(buf, sizeof(buf));
-        strncat(buf, PATHSEP, 1)
+        strncat(buf, PATHSEP, 1);
         g_android_executable_directory = strdup(buf);
     }
     return g_android_executable_directory;
