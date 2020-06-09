@@ -296,7 +296,7 @@ static int CmdHF14AReader(const char *Cmd) {
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown command.");
-                return 1;
+                return PM3_EINVARG;
         }
         cmdp++;
     }
@@ -312,7 +312,7 @@ static int CmdHF14AReader(const char *Cmd) {
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
             if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
             DropField();
-            return 1;
+            return PM3_ESOFT;
         }
 
         iso14a_card_select_t card;
@@ -329,14 +329,14 @@ static int CmdHF14AReader(const char *Cmd) {
         if (select_status == 0) {
             if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
             DropField();
-            return 1;
+            return PM3_ESOFT;
         }
 
         if (select_status == 3) {
             PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
             PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
             DropField();
-            return 1;
+            return PM3_ESOFT;
         }
 
         PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
@@ -356,7 +356,7 @@ static int CmdHF14AReader(const char *Cmd) {
         if (!silent) PrintAndLogEx(INFO, "field dropped.");
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
@@ -385,7 +385,7 @@ static int CmdHF14AInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     infoHF14A(verbose, do_nack_test, do_aid_search);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Collect ISO14443 Type A UIDs
@@ -1773,8 +1773,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
     }
 
+    int isMagic = 0;
     if (isMifareClassic || isMifareUltralight) {
-        detect_classic_magic();
+        isMagic = detect_classic_magic();
 
         if (isMifareClassic) {
             int res = detect_classic_prng();
@@ -1800,10 +1801,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareUltralight)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
 
-    if (isMifarePlus)
+    if (isMifarePlus && isMagic == 0)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
 
-    if (isMifareDESFire)
+    if (isMifareDESFire && isMagic == 0)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
 
     DropField();

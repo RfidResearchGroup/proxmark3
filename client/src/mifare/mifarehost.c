@@ -1117,7 +1117,7 @@ int detect_classic_static_nonce(void) {
 }
 
 /* try to see if card responses to "chinese magic backdoor" commands. */
-void detect_classic_magic(void) {
+int detect_classic_magic(void) {
 
     uint8_t isGeneration = 0;
     PacketResponseNG resp;
@@ -1144,4 +1144,5 @@ void detect_classic_magic(void) {
         default:
             break;
     }
+    return isGeneration;
 }
