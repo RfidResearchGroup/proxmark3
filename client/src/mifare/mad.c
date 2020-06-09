@@ -76,7 +76,7 @@ static const char *mad_json_get_str(json_t *data, const char *name) {
 
 static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool verbose) {
     char lmad[7] = {0};
-    sprintf(lmad, "0x%04x", BSWAP_16(aid)); // must be lowercase
+    sprintf(lmad, "0x%04x", aid); // must be lowercase
 
     json_t *elm = NULL;
 
@@ -139,11 +139,17 @@ static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     return PM3_SUCCESS;
 }
 
-static uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
+static uint16_t madGetAID(uint8_t *sector, bool swapmad, int MADver, int sectorNo) {
+    uint16_t mad;
     if (MADver == 1)
-        return (sector[16 + 2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2]);
+        mad = (sector[16 + 2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2]);
     else
-        return (sector[2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[2 + (sectorNo - 1) * 2]);
+        mad = (sector[2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[2 + (sectorNo - 1) * 2]);
+    if (swapmad) {
+        return BSWAP_16(mad);
+    } else {
+        return mad;
+    }
 }
 
 int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
@@ -199,7 +205,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     return res;
 }
 
-int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen) {
+int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen, bool swapmad) {
     *madlen = 0;
     bool haveMAD2 = false;
     int res = MADCheck(sector0, sector10, false, &haveMAD2);
@@ -209,7 +215,7 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
     }
 
     for (int i = 1; i < 16; i++) {
-        mad[*madlen] = madGetAID(sector0, 1, i);
+        mad[*madlen] = madGetAID(sector0, swapmad, 1, i);
         (*madlen)++;
     }
 
@@ -219,7 +225,7 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
         (*madlen)++;
 
         for (int i = 1; i < 24; i++) {
-            mad[*madlen] = madGetAID(sector10, 2, i);
+            mad[*madlen] = madGetAID(sector10, swapmad, 2, i);
             (*madlen)++;
         }
     }
@@ -235,7 +241,7 @@ static const char *aid_admin[] = {
     "not applicable"
 };
 
-int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
+int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
     open_mad_file(&mad_known_aids, verbose);
 
     // check MAD1 only
@@ -255,7 +261,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
     PrintAndLogEx(INFO, " 00 MAD 1");
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 16; i++) {
-        uint16_t aid = madGetAID(sector, 1, i);
+        uint16_t aid = madGetAID(sector, swapmad, 1, i);
         if (aid < 6) {
             PrintAndLogEx(INFO, " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
         } else if (prev_aid == aid) {
@@ -271,7 +277,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
     return PM3_SUCCESS;
 }
 
-int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
+int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     open_mad_file(&mad_known_aids, verbose);
     PrintAndLogEx(INFO, " 16 MAD 2");
 
@@ -292,7 +298,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
     }
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
-        uint16_t aid = madGetAID(sector, 2, i);
+        uint16_t aid = madGetAID(sector, swapmad, 2, i);
         if (aid < 6) {
             PrintAndLogEx(INFO, " %02d [%04X] (%s)", i + 16, aid, aid_admin[aid]);
         } else if (prev_aid == aid) {

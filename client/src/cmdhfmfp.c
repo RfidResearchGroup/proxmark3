@@ -1297,7 +1297,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
         arg_str0("aA",  "aid",      "print all sectors with aid", NULL),
         arg_str0("kK",  "key",      "key for printing sectors", NULL),
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
-        arg_lit0("",    "be",       "(optional, try BigEndian"),
+        arg_lit0("",    "be",       "(optional, BigEndian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1310,7 +1310,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(4);
-//    bool use_be = arg_get_lit(5);
+    bool swapmad = arg_get_lit(5);
 
     CLIParserFree(ctx);
 
@@ -1338,7 +1338,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     }
 
     bool haveMAD2 = false;
-    MAD1DecodeAndPrint(sector0, verbose, &haveMAD2);
+    MAD1DecodeAndPrint(sector0, swapmad, verbose, &haveMAD2);
 
     if (haveMAD2) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
@@ -1347,7 +1347,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
             return 2;
         }
 
-        MAD2DecodeAndPrint(sector10, verbose);
+        MAD2DecodeAndPrint(sector10, swapmad, verbose);
     }
 
     if (aidlen == 2) {
@@ -1356,7 +1356,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
-        if (MADDecode(sector0, sector10, mad, &madlen)) {
+        if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return 10;
         }
@@ -1451,7 +1451,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen);
+    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
