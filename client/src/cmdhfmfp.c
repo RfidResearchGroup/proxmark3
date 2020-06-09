@@ -1297,6 +1297,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
         arg_str0("aA",  "aid",      "print all sectors with aid", NULL),
         arg_str0("kK",  "key",      "key for printing sectors", NULL),
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
+        arg_lit0("",    "be",       "(optional, try BigEndian"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1309,11 +1310,12 @@ static int CmdHFMFPMAD(const char *Cmd) {
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(4);
+//    bool use_be = arg_get_lit(5);
 
     CLIParserFree(ctx);
 
     if (aidlen != 2 && keylen > 0) {
-        PrintAndLogEx(WARNING, "do not need a key without aid.");
+        PrintAndLogEx(WARNING, "do not need a key without aid");
     }
 
     uint8_t sector0[16 * 4] = {0};
@@ -1321,13 +1323,14 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
         return 2;
     }
 
     if (verbose) {
+        PrintAndLogEx(SUCCESS, "Raw:");
         for (int i = 0; i < 4; i ++)
-            PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));
+            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));
     }
 
     bool haveMAD2 = false;
@@ -1336,7 +1339,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     if (haveMAD2) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
+            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
             return 2;
         }
 
@@ -1345,12 +1348,12 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
     if (aidlen == 2) {
         uint16_t aaid = (aid[0] << 8) + aid[1];
-        PrintAndLogEx(NORMAL, "\n-------------- AID 0x%04x ---------------", aaid);
+        PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
         if (MADDecode(sector0, sector10, mad, &madlen)) {
-            PrintAndLogEx(ERR, "can't decode mad.");
+            PrintAndLogEx(ERR, "can't decode MAD");
             return 10;
         }
 
@@ -1365,7 +1368,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
                 uint8_t vsector[16 * 4] = {0};
                 if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(ERR, "read sector %d error.", i + 1);
+                    PrintAndLogEx(ERR, "error, read sector %d error", i + 1);
                     return 2;
                 }
 

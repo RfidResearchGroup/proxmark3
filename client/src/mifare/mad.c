@@ -140,29 +140,29 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
 
     uint8_t GPB = sector0[3 * 16 + 9];
     if (verbose)
-        PrintAndLogEx(INFO, "GPB: 0x%02x", GPB);
+        PrintAndLogEx(SUCCESS, "GPB: " _GREEN_("0x%02x"), GPB);
 
     // DA (MAD available)
     if (!(GPB & 0x80)) {
-        PrintAndLogEx(ERR, "DA=0! MAD not available.");
+        PrintAndLogEx(ERR, "DA = 0! MAD not available");
         return PM3_ESOFT;
     }
 
     // MA (multi-application card)
     if (verbose) {
         if (GPB & 0x40)
-            PrintAndLogEx(INFO, "Multi application card.");
+            PrintAndLogEx(SUCCESS, "Multi application card");
         else
-            PrintAndLogEx(INFO, "Single application card.");
+            PrintAndLogEx(SUCCESS, "Single application card");
     }
 
     uint8_t MADVer = GPB & 0x03;
     if (verbose)
-        PrintAndLogEx(INFO, "MAD version: %d", MADVer);
+        PrintAndLogEx(SUCCESS, "MAD version: " _GREEN_("%d"), MADVer);
 
     //  MAD version
     if ((MADVer != 0x01) && (MADVer != 0x02)) {
-        PrintAndLogEx(ERR, "Wrong MAD version: 0x%02x", MADVer);
+        PrintAndLogEx(ERR, "Wrong MAD version: " _RED_("0x%02x"), MADVer);
         return PM3_ESOFT;
     };
 
@@ -172,7 +172,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     int res = madCRCCheck(sector0, true, 1);
 
     if (verbose && res == PM3_SUCCESS)
-        PrintAndLogEx(INFO, "CRC8-MAD1 (%s)", _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "CRC8-MAD1 (%s)", _GREEN_("ok"));
 
     if (MADVer == 2 && sector10) {
         int res2 = madCRCCheck(sector10, true, 2);
@@ -180,7 +180,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
             res = res2;
 
         if (verbose && !res2)
-            PrintAndLogEx(INFO, "CRC8-MAD2 (%)", _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8-MAD2 (%)", _GREEN_("ok"));
     }
 
     return res;
@@ -191,7 +191,7 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
     bool haveMAD2 = false;
     int res = MADCheck(sector0, sector10, false, &haveMAD2);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Not a valid MAD");
+        PrintAndLogEx(WARNING, "Not a valid MAD");
         return res;
     }
 
@@ -216,18 +216,12 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
 int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 
     // check MAD1 only
-    int res = MADCheck(sector, NULL, verbose, haveMAD2);
-    if (verbose) {
-        if (res == PM3_SUCCESS)
-            PrintAndLogEx(INFO, "CRC8-MAD1 (%s)", _GREEN_("ok"));
-        else
-            PrintAndLogEx(INFO, "CRC8-MAD1 (%s)", _RED_("fail"));
-    }
+    MADCheck(sector, NULL, verbose, haveMAD2);
 
     // info byte
     uint8_t InfoByte = sector[16 + 1] & 0x3f;
     if (InfoByte) {
-        PrintAndLogEx(INFO, "Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
+        PrintAndLogEx(SUCCESS, "Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
     } else {
         if (verbose)
             PrintAndLogEx(WARNING, "Card publisher sector not present");
@@ -250,14 +244,14 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
     int res = madCRCCheck(sector, true, 2);
     if (verbose) {
         if (res == PM3_SUCCESS)
-            PrintAndLogEx(INFO, "CRC8-MAD2 (%s)", _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8-MAD2 (%s)", _GREEN_("ok"));
         else
-            PrintAndLogEx(INFO, "CRC8-MAD2 (%s)", _RED_("fail"));
+            PrintAndLogEx(WARNING, "CRC8-MAD2 (%s)", _RED_("fail"));
     }
 
     uint8_t InfoByte = sector[1] & 0x3f;
     if (InfoByte) {
-        PrintAndLogEx(INFO, "MAD2 Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
+        PrintAndLogEx(SUCCESS, "MAD2 Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
     } else {
         if (verbose)
             PrintAndLogEx(WARNING, "Card publisher sector not present");
