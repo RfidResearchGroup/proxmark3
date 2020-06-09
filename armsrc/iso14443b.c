@@ -641,9 +641,9 @@ void SimulateIso14443bTag(uint32_t pupi) {
         if (cardSTATE == SIM_NOFIELD) {
 
 #if defined RDV4
-            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-            vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
             if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;

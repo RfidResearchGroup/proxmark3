@@ -108,7 +108,7 @@ void ToSendStuffBit(int b) {
 
 //-----------------------------------------------------------------------------
 // Read an ADC channel and block till it completes, then return the result
-// in ADC units (0 to 1023). Also a routine to average 32 samples and
+// in ADC units (0 to 1023). Also a routine to sum up a number of samples and
 // return that.
 //-----------------------------------------------------------------------------
 static uint16_t ReadAdc(int ch) {
@@ -137,13 +137,12 @@ static uint16_t ReadAdc(int ch) {
 }
 
 // was static - merlok
-uint16_t AvgAdc(int ch) {
+uint16_t SumAdc(int ch, int NbSamples) {
     uint16_t a = 0;
-    for (uint8_t i = 0; i < 32; i++)
+    for (uint8_t i = 0; i < NbSamples; i++)
         a += ReadAdc(ch);
 
-    //division by 32
-    return (a + 15) >> 5;
+    return (a + (NbSamples >> 1) - 1);
 }
 
 static void MeasureAntennaTuning(void) {
@@ -186,7 +185,7 @@ static void MeasureAntennaTuning(void) {
         WDT_HIT();
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
         SpinDelay(20);
-        uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
+        uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14);
         if (i == LF_DIVISOR_125)
             payload.v_lf125 = adcval; // voltage at 125kHz
 
@@ -212,9 +211,9 @@ static void MeasureAntennaTuning(void) {
     SpinDelay(50);
 
 #if defined RDV4
-    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-    payload.v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -226,16 +225,16 @@ static void MeasureAntennaTuning(void) {
 static uint16_t MeasureAntennaTuningHfData(void) {
 
 #if defined RDV4
-    return (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+    return (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 64)) >> 16;
 #else
-    return (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+    return (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 64)) >> 16;
 #endif
 
 }
 
 // Measure LF in milliVolt
 static uint32_t MeasureAntennaTuningLfData(void) {
-    return (MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10;
+    return (MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14;
 }
 
 void ReadMem(int addr) {
@@ -541,7 +540,7 @@ void ListenReaderField(uint8_t limit) {
     LEDsoff();
 
     if (limit == LF_ONLY) {
-        lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
+        lf_av = lf_max = SumAdc(ADC_CHAN_LF, 32) >> 5;
         Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
         lf_baseline = lf_av;
     }
@@ -550,9 +549,9 @@ void ListenReaderField(uint8_t limit) {
 
 #if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+        hf_av = hf_max = SumAdc(ADC_CHAN_HF_RDV40, 32) >> 5;
 #else
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
+        hf_av = hf_max = SumAdc(ADC_CHAN_HF, 32) >> 5;
 #endif
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
@@ -586,7 +585,7 @@ void ListenReaderField(uint8_t limit) {
                     LED_D_OFF();
             }
 
-            lf_av_new = AvgAdc(ADC_CHAN_LF);
+            lf_av_new = SumAdc(ADC_CHAN_LF, 32) >> 5;
             // see if there's a significant change
             if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
                 Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
@@ -605,9 +604,9 @@ void ListenReaderField(uint8_t limit) {
             }
 
 #if defined RDV4
-            hf_av_new = AvgAdc(ADC_CHAN_HF_RDV40);
+            hf_av_new = SumAdc(ADC_CHAN_HF_RDV40, 32) >> 5;
 #else
-            hf_av_new = AvgAdc(ADC_CHAN_HF);
+            hf_av_new = SumAdc(ADC_CHAN_HF, 32) >> 5;
 #endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
