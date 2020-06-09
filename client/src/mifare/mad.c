@@ -261,11 +261,8 @@ static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int MADver, bool ver
     }
 
     if (InfoByte) {
-        uint16_t aid = madGetAID(sector, swapmad, MADver, InfoByte);
-        char fmt[50];
-        sprintf(fmt, "Card publisher sector: %02d, AID 0x%04X%s", InfoByte, aid, "%s");
-        print_aid_description(mad_known_aids, aid, fmt, verbose);
-        return PM3_SUCCESS;
+        PrintAndLogEx(SUCCESS, "Card publisher sector: " _MAGENTA_("0x%02x"), InfoByte);
+        return InfoByte;
     } else {
         PrintAndLogEx(WARNING, "Card publisher not present " _YELLOW_("0x%02x"), InfoByte);
         return PM3_ESOFT;
@@ -278,19 +275,19 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
     // check MAD1 only
     MADCheck(sector, NULL, verbose, haveMAD2);
 
-    MADInfoByteDecode(sector, swapmad, 1, verbose);
+    int InfoByteSector = MADInfoByteDecode(sector, swapmad, 1, verbose);
 
     PrintAndLogEx(INFO, " 00 MAD 1");
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 16; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 1, i);
         if (aid < 6) {
-            PrintAndLogEx(INFO, " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
+            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
         } else if (prev_aid == aid) {
-            PrintAndLogEx(INFO, " %02d [%04X] (continuation)", i, aid);
+            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i, aid);
         } else {
-            char fmt[20];
-            sprintf(fmt, " %02d [%04X]%s", i, aid, "%s");
+            char fmt[30];
+            sprintf(fmt, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
@@ -311,18 +308,18 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
             PrintAndLogEx(WARNING, "CRC8-MAD2 (%s)", _RED_("fail"));
     }
 
-    MADInfoByteDecode(sector, swapmad, 2, verbose);
+    int InfoByteSector = MADInfoByteDecode(sector, swapmad, 2, verbose);
 
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 2, i);
         if (aid < 6) {
-            PrintAndLogEx(INFO, " %02d [%04X] (%s)", i + 16, aid, aid_admin[aid]);
+            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i + 16, aid, aid_admin[aid]);
         } else if (prev_aid == aid) {
-            PrintAndLogEx(INFO, " %02d [%04X] (continuation)", i + 16, aid);
+            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i + 16, aid);
         } else {
-            char fmt[20];
-            sprintf(fmt, " %02d [%04X]%s", i + 16, aid, "%s");
+            char fmt[30];
+            sprintf(fmt, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i + 16, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
