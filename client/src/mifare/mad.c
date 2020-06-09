@@ -110,7 +110,7 @@ static const char *GetAIDDescription(uint16_t AID) {
 }
 
 static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
-    if (MADver == 2) {
+    if (MADver == 1) {
         uint8_t crc = CRC8Mad(&sector[16 + 1], 15 + 16);
         if (crc != sector[16]) {
             PrintAndLogEx(WARNING, _RED_("Wrong MAD %d CRC") " calculated: 0x%02x != 0x%02x", MADver, crc, sector[16]);
