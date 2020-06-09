@@ -4525,6 +4525,11 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
         return PM3_ESOFT;
     }
+    
+    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("MAD Information") " ---------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Raw:");

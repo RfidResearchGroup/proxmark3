@@ -1327,6 +1327,10 @@ static int CmdHFMFPMAD(const char *Cmd) {
         return 2;
     }
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("MAD Information") " ---------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Raw:");
         for (int i = 0; i < 4; i ++)
