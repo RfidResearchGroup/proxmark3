@@ -944,22 +944,31 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *)) {
 
     if (data == NULL) return PM3_EINVARG;
-    char *fileName = filenamemcopy(preferredName, ".json");
-    if (fileName == NULL) return PM3_EMALLOC;
 
     *datalen = 0;
-    json_error_t error;
     int retval = PM3_SUCCESS;
 
-    json_t *root = json_load_file(fileName, 0, &error);
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), path);
+
+    free(path);
+
     if (!root) {
-        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", fileName, error.line, error.text);
+        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", preferredName, error.line, error.text);
         retval = PM3_ESOFT;
         goto out;
     }
 
     if (!json_is_object(root)) {
-        PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", fileName);
+        PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", preferredName);
         retval = PM3_ESOFT;
         goto out;
     }
@@ -980,11 +989,11 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char path[30] = {0};
-            sprintf(path, "$.blocks.%d", i);
+            char blocks[30] = {0};
+            sprintf(blocks, "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, path, &udata[sptr], 16, &len);
+            JsonLoadBufAsHex(root, blocks, &udata[sptr], 16, &len);
             if (!len)
                 break;
 
@@ -1002,11 +1011,11 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char path[30] = {0};
-            sprintf(path, "$.blocks.%d", i);
+            char blocks[30] = {0};
+            sprintf(blocks, "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1024,11 +1033,11 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char path[30] = {0};
-            sprintf(path, "$.blocks.%zu", i);
+            char blocks[30] = {0};
+            sprintf(blocks, "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1046,11 +1055,11 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char path[30] = {0};
-            sprintf(path, "$.blocks.%zu", i);
+            char blocks[30] = {0};
+            sprintf(blocks, "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, path, &udata[sptr], 8, &len);
+            JsonLoadBufAsHex(root, blocks, &udata[sptr], 8, &len);
             if (!len)
                 break;
 
@@ -1067,11 +1076,11 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char path[30] = {0};
-            sprintf(path, "$.blocks.%zu", i);
+            char blocks[30] = {0};
+            sprintf(blocks, "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1079,15 +1088,14 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         }
         *datalen = sptr;
     }
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
+
+out:
 
     if (callback != NULL) {
         (*callback)(root);
     }
-out:
+
     json_decref(root);
-    free(fileName);
     return retval;
 }
 
