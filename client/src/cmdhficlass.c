@@ -1683,10 +1683,13 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
 
     if (bytes_read == 0) {
         PrintAndLogEx(ERR, "file reading error");
+        free(dump);
         return PM3_EFILE;
     }
+
     if (bytes_read < sizeof(iclass_block_t) * (endblock - startblock + 1)) {
         PrintAndLogEx(ERR, "file wrong size");
+        free(dump);
         return PM3_EFILE;
     }
 
@@ -1697,7 +1700,9 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     iclass_block_t tag_data[PM3_CMD_DATA_SIZE / 12];
 
     memcpy(tag_data, dump + startblock * 8, sizeof(iclass_block_t) * (endblock - startblock + 1));
-    
+
+    free(dump);
+        
     uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
