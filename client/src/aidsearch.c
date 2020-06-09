@@ -43,7 +43,6 @@ out:
 }
 
 static int closeAIDFile(json_t *root) {
-
     json_decref(root);
     return PM3_SUCCESS;
 }
@@ -67,7 +66,6 @@ json_t *AIDSearchGetElm(json_t *root, int elmindx) {
 }
 
 int AIDSearchFree(json_t *root) {
-
     return closeAIDFile(root);
 }
 
