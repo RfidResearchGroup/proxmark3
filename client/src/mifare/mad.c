@@ -105,6 +105,13 @@ static int mad_print(json_t **xroot, char *mad, bool verbose, char *out) {
             elm = data;
             break;
         }
+        char low[strlen(fmad)];
+        strcpy(low, fmad);
+        str_lower(low);
+        if (strcmp(mad, low) == 0) {
+            elm = data;
+            break;
+        }        
     }
 
     if (elm == NULL)
@@ -142,15 +149,14 @@ out:
 
 static const char *get_aid_description(uint16_t aid) {
     
-    char result[200];
+    static char result[200];
     char s[7] = {0};
-    sprintf(s, "0x%04x", aid);
+    sprintf(s, "0x%04X", aid);
     int res = mad_print(&mad_known_aids, s, false, result);
     if (res != PM3_SUCCESS) {
         return "";
     }
-    
-    return "";
+    return result;
 }
 
 static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
