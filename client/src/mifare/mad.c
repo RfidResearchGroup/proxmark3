@@ -151,12 +151,12 @@ out:
     return retval;
 }
 
-static const char *get_aid_description(uint16_t aid) {
+static const char *get_aid_description(uint16_t aid, bool verbose) {
     
     static char result[200];
     char s[7] = {0};
     sprintf(s, "0x%04X", aid);
-    int res = mad_print(&mad_known_aids, s, false, result);
+    int res = mad_print(&mad_known_aids, s, verbose, result);
     if (res != PM3_SUCCESS) {
         return "";
     }
@@ -286,7 +286,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
     PrintAndLogEx(INFO, " 00 MAD 1");
     for (int i = 1; i < 16; i++) {
         uint16_t AID = madGetAID(sector, 1, i);
-        PrintAndLogEx(INFO, " %02d [%04X] %s", i, AID, get_aid_description(AID));
+        PrintAndLogEx(INFO, " %02d [%04X] %s", i, AID, get_aid_description(AID, verbose));
     }
 
     return PM3_SUCCESS;
@@ -313,7 +313,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
 
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t aid = madGetAID(sector, 2, i);
-        PrintAndLogEx(INFO, "%02d [%04X] %s", i + 16, aid, get_aid_description(aid));
+        PrintAndLogEx(INFO, "%02d [%04X] %s", i + 16, aid, get_aid_description(aid, verbose));
     }
 
     return PM3_SUCCESS;
