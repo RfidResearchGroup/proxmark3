@@ -1571,7 +1571,7 @@ void TurnReadLFOn(uint32_t delay) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // measure antenna strength.
-    //int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
+    //int adcval = ((MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14);
     WaitUS(delay);
 }
 static void TurnReadLF_off(uint32_t delay) {

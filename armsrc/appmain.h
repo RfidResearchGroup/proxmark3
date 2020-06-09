@@ -31,6 +31,7 @@ void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
 
 uint16_t AvgAdc(int ch);
+uint16_t SumAdc(int ch, int NbSamples);
 
 //void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
