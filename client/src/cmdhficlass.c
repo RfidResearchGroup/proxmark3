@@ -752,10 +752,8 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     //Validations
     if (errors || cmdp == 0) {
-        usage_hf_iclass_eload();
-        return PM3_EINVARG;
+        return usage_hf_iclass_eload();
     }
-
 
     uint8_t *dump = calloc(2048, sizeof(uint8_t));
     if (!dump) {
@@ -772,7 +770,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
             break;
         }
         case EML: {
-            res = loadFileEML(filename, dump, &bytes_read);
+            res = loadFileEML_safe(filename, (void**)&dump, &bytes_read);
             break;
         }
         case JSON: {
@@ -1592,6 +1590,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     bool errors = false;
     bool verbose = false;
     uint8_t cmdp = 0;
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -1675,32 +1674,34 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // file handling and reading
-    FILE *f = fopen(filename, "rb");
-    if (!f) {
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(filename, "", (void**)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
     }
 
-    iclass_block_t tag_data[PM3_CMD_DATA_SIZE / 12];
+    if (bytes_read == 0) {
+        PrintAndLogEx(ERR, "file reading error");
+        return PM3_EFILE;
+    }
+    if (bytes_read < sizeof(iclass_block_t) * (endblock - startblock + 1)) {
+        PrintAndLogEx(ERR, "file wrong size");
+        return PM3_EFILE;
+    }
 
     // read data from file from block 6 --- 19
     // we will use this struct [data 8 bytes][MAC 4 bytes] for each block calculate all mac number for each data
     // then copy to usbcommand->asbytes;
     // max is 32 - 6 = 28 block.  28 x 12 bytes gives 336 bytes
-    int i;
-    fseek(f, startblock * 8, SEEK_SET);
-    size_t bytes_read = fread(tag_data, sizeof(iclass_block_t), endblock - startblock + 1, f);
-    fclose(f);
+    iclass_block_t tag_data[PM3_CMD_DATA_SIZE / 12];
 
-    if (bytes_read == 0) {
-        PrintAndLogEx(ERR, "file reading error.");
-        return PM3_EFILE;
-    }
-
+    memcpy(tag_data, dump + startblock * 8, sizeof(iclass_block_t) * (endblock - startblock + 1));
+    
     uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+    int i;
     int numberAuthRetries = ICLASS_AUTH_RETRY;
     do {
         if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
@@ -1729,9 +1730,9 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     }
 
     if (verbose) {
-        PrintAndLogEx(NORMAL, "------+--------------------------+-------------");
-        PrintAndLogEx(NORMAL, "block | data                     | mac");
-        PrintAndLogEx(NORMAL, "------+--------------------------+-------------");
+        PrintAndLogEx(INFO, "------+--------------------------+-------------");
+        PrintAndLogEx(INFO, "block | data                     | mac");
+        PrintAndLogEx(INFO, "------+--------------------------+-------------");
         uint8_t p[12];
         for (i = 0; i <= endblock - startblock; i++) {
             memcpy(p, data + (i * 12), 12);
@@ -2032,30 +2033,12 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
 
     if (errors || (strlen(Cmd) == 0)) return usage_hf_iclass_readtagfile();
 
-    // file handling and reading
-    FILE *f = fopen(filename, "rb");
-    if (!f) {
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(filename, "", (void**)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
     }
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "Error, when getting filesize");
-        fclose(f);
-        return PM3_EFILE;
-    }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        fclose(f);
-        return PM3_EMALLOC;
-    }
-    size_t bytes_read = fread(dump, 1, fsize, f);
-    fclose(f);
 
     if (verbose) {
         PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
@@ -2063,6 +2046,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
         PrintAndLogEx(INFO, "Printing blocks from");
         PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") " end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
     }
+
     uint8_t *csn = dump;
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
     PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(csn, 8));
@@ -2198,30 +2182,14 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 }
 
 static int loadKeys(char *filename) {
-    FILE *f;
-    f = fopen(filename, "rb");
-    if (!f) {
+
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(filename, "", (void**)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
     }
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
 
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "Error, when getting filesize");
-        fclose(f);
-        return PM3_EFILE;
-    }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        fclose(f);
-        return PM3_EMALLOC;
-    }
-    size_t bytes_read = fread(dump, 1, fsize, f);
-    fclose(f);
     if (bytes_read > ICLASS_KEYS_MAX * 8) {
         PrintAndLogEx(WARNING, "File is too long to load - bytes: %zu", bytes_read);
         free(dump);
