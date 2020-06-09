@@ -53,6 +53,8 @@ while True:
   if(select([pm3_proc.stdout], [], [], 0)[0]):
 
     b = pm3_proc.stdout.read(256).decode("ascii")
+    if "Done" in b:
+        break;
     for c in b:
       if c in "0123456789 mV":
         mv_recbuf += c
