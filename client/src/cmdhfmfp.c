@@ -1415,7 +1415,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    uint16_t ndefAID = 0x03e1;
+    uint16_t ndefAID = 0xe103;
     if (aidlen == 2)
         ndefAID = (aid[0] << 8) + aid[1];
 
@@ -1451,7 +1451,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, true);
+    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
