@@ -128,9 +128,9 @@ static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
 
 static uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
     if (MADver == 1)
-        return (sector[16 + 2 + (sectorNo - 1) * 2] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2 + 1]);
+        return (sector[16 + 2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[16 + 2 + (sectorNo - 1) * 2]);
     else
-        return (sector[2 + (sectorNo - 1) * 2] << 8) + (sector[2 + (sectorNo - 1) * 2 + 1]);
+        return (sector[2 + (sectorNo - 1) * 2 + 1] << 8) + (sector[2 + (sectorNo - 1) * 2]);
 }
 
 int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
