@@ -105,10 +105,10 @@ static int mad_print(json_t **xroot, char *mad, bool verbose, char *out) {
             elm = data;
             break;
         }
-        char low[strlen(fmad)];
-        strcpy(low, fmad);
-        str_lower(low);
-        if (strcmp(mad, low) == 0) {
+        char lmad[strlen(mad)];
+        strcpy(lmad, mad);
+        str_lower(lmad);
+        if (strcmp(lmad, fmad) == 0) {
             elm = data;
             break;
         }        
