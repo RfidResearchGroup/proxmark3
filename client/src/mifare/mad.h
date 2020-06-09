@@ -13,11 +13,6 @@
 
 #include "common.h"
 
-typedef struct {
-    uint16_t AID;
-    const char *Description;
-} madAIDDescr;
-
 int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2);
 int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen);
 int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2);

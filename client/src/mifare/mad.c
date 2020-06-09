@@ -14,20 +14,14 @@
 #include "pm3_cmd.h"
 #include "crc.h"
 #include "util.h"
+#include "fileutils.h"
+#include "jansson.h"
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
-static madAIDDescr madKnownAIDs[] = {
-    {0x0000, "free"},
-    {0x0001, "defect, e.g. access keys are destroyed or unknown"},
-    {0x0002, "reserved"},
-    {0x0003, "contains additional directory info"},
-    {0x0004, "contains card holder information in ASCII format."},
-    {0x0005, "not applicable (above memory size)"},
+static json_t* mad_known_aids = NULL;
 
-    {0x03e1, "NDEF"},
-};
-
-static madAIDDescr madKnownClusterCodes[] = {
+/*
+static madAID_t madKnownClusterCodes[] = {
     {0x00, "cluster: card administration"},
     {0x01, "cluster: miscellaneous applications"},
     {0x02, "cluster: miscellaneous applications"},
@@ -95,18 +89,141 @@ static madAIDDescr madKnownClusterCodes[] = {
     {0xF8, "cluster: miscellaneous applications"},
 };
 
-static const char unknownAID[] = "";
+*/
 
-static const char *GetAIDDescription(uint16_t AID) {
-    for (int i = 0; i < ARRAYLEN(madKnownAIDs); i++)
-        if (madKnownAIDs[i].AID == AID)
-            return madKnownAIDs[i].Description;
 
-    for (int i = 0; i < ARRAYLEN(madKnownClusterCodes); i++)
-        if (madKnownClusterCodes[i].AID == (AID >> 8)) // high byte - cluster code
-            return madKnownClusterCodes[i].Description;
+static int open_mad_file(json_t **root, bool verbose) {
 
-    return unknownAID;
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, "mad", ".json", true);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    int retval = PM3_SUCCESS;
+    json_error_t error;
+
+    *root = json_load_file(path, 0, &error);
+    if (!*root) {
+        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
+        retval = PM3_ESOFT;
+        goto out;
+    }
+
+    if (!json_is_array(*root)) {
+        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        retval = PM3_ESOFT;
+        goto out;
+    }
+
+    if (verbose) 
+        PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %zu records.", path, json_array_size(*root));
+out:
+    free(path);
+    return retval;
+}
+
+static int close_mad_file(json_t *root) {
+    json_decref(root);
+    return PM3_SUCCESS;
+}
+
+
+static const char *mad_json_get_str(json_t *data, const char *name) {
+
+    json_t *jstr = json_object_get(data, name);
+    if (jstr == NULL)
+        return NULL;
+
+    if (!json_is_string(jstr)) {
+        PrintAndLogEx(WARNING, _YELLOW_("`%s`") " is not a string", name);
+        return NULL;
+    }
+
+    const char *cstr = json_string_value(jstr);
+    if (strlen(cstr) == 0)
+        return NULL;
+
+    return cstr;
+}
+
+static int mad_print(json_t **xroot, char *mad, bool verbose, char *out) {
+
+    json_t *root = *xroot;
+    if (root == NULL) {
+        int res = open_mad_file(&root, verbose);
+        if (res != PM3_SUCCESS)
+            return res;
+
+        *xroot = root;
+    }
+
+    int retval = PM3_EUNDEF;
+
+    if (root == NULL)
+        goto out;
+
+    json_t *elm = NULL;
+    
+    for (uint32_t idx = 0; idx < json_array_size(root); idx++) {
+
+        json_t *data = json_array_get(root, idx);
+        if (!json_is_object(data)) {
+            PrintAndLogEx(ERR, "data [%d] is not an object\n", idx);
+            continue;
+        }
+        
+        const char *fmad = mad_json_get_str(data, "mad");
+        if (strcmp(mad, fmad) == 0) {
+            elm = data;
+            break;
+        }
+    }
+
+    if (elm == NULL)
+        goto out;
+
+    retval = PM3_SUCCESS;
+
+    // print here
+    const char *application = mad_json_get_str(elm, "application");
+    const char *company = mad_json_get_str(elm, "company");
+    const char *vmad = mad_json_get_str(elm, "mad");
+    const char *provider = mad_json_get_str(elm, "service_provider");
+    const char *integrator = mad_json_get_str(elm, "system_integrator");
+
+    sprintf(out, "%s [%s]", application, company);
+        
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "MAD               %s", vmad);
+        if (application)
+            PrintAndLogEx(SUCCESS, "Application       %s", application);
+        if (company)
+            PrintAndLogEx(SUCCESS, "Company           %s", company);
+        if (provider)
+            PrintAndLogEx(SUCCESS, "Service provider  %s", provider);
+        if (integrator)
+            PrintAndLogEx(SUCCESS, "System integrator %s", integrator);
+    }
+
+out:
+    if (*xroot == NULL) {
+        close_mad_file(root);
+    }
+    return retval;
+}
+
+static const char *get_aid_description(uint16_t aid) {
+    
+    char result[200];
+    char s[7] = {0};
+    sprintf(s, "0x%04x", aid);
+    int res = mad_print(&mad_known_aids, s, false, result);
+    if (res != PM3_SUCCESS) {
+        return "";
+    }
+    
+    return "";
 }
 
 static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
@@ -232,7 +349,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
     PrintAndLogEx(INFO, " 00 MAD 1");
     for (int i = 1; i < 16; i++) {
         uint16_t AID = madGetAID(sector, 1, i);
-        PrintAndLogEx(INFO, " %02d [%04X] %s", i, AID, GetAIDDescription(AID));
+        PrintAndLogEx(INFO, " %02d [%04X] %s", i, AID, get_aid_description(AID));
     }
 
     return PM3_SUCCESS;
@@ -258,8 +375,8 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
     }
 
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
-        uint16_t AID = madGetAID(sector, 2, i);
-        PrintAndLogEx(INFO, "%02d [%04X] %s", i + 16, AID, GetAIDDescription(AID));
+        uint16_t aid = madGetAID(sector, 2, i);
+        PrintAndLogEx(INFO, "%02d [%04X] %s", i + 16, aid, get_aid_description(aid));
     }
 
     return PM3_SUCCESS;
