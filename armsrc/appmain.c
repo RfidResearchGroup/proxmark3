@@ -529,7 +529,7 @@ at the same place! :-)
 void ListenReaderField(uint8_t limit) {
 #define LF_ONLY 1
 #define HF_ONLY 2
-#define REPORT_CHANGE 10    // report new values only if they have changed at least by REPORT_CHANGE
+#define REPORT_CHANGE 1000    // report new values only if they have changed at least by REPORT_CHANGE mV
 
     uint16_t lf_av = 0, lf_av_new, lf_baseline = 0, lf_max = 0;
     uint16_t hf_av = 0, hf_av_new,  hf_baseline = 0, hf_max = 0;
@@ -543,8 +543,8 @@ void ListenReaderField(uint8_t limit) {
     LEDsoff();
 
     if (limit == LF_ONLY) {
-        lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
-        Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
+        lf_av = lf_max = (MAX_ADC_LF_VOLTAGE * SumAdc(ADC_CHAN_LF, 32)) >> 15;
+        Dbprintf("LF 125/134kHz Baseline: %dmV", lf_av);
         lf_baseline = lf_av;
     }
 
@@ -552,11 +552,11 @@ void ListenReaderField(uint8_t limit) {
 
 #if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+        hf_av = hf_max = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
+        hf_av = hf_max = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
-        Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
+        Dbprintf("HF 13.56MHz Baseline: %dmV", hf_av);
         hf_baseline = hf_av;
     }
 
@@ -588,10 +588,10 @@ void ListenReaderField(uint8_t limit) {
                     LED_D_OFF();
             }
 
-            lf_av_new = AvgAdc(ADC_CHAN_LF);
+            lf_av_new = (MAX_ADC_LF_VOLTAGE * SumAdc(ADC_CHAN_LF, 32)) >> 15;
             // see if there's a significant change
             if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
-                Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
+                Dbprintf("LF 125/134kHz Field Change: %5dmV", lf_av_new);
                 lf_av = lf_av_new;
                 if (lf_av > lf_max)
                     lf_max = lf_av;
@@ -607,13 +607,13 @@ void ListenReaderField(uint8_t limit) {
             }
 
 #if defined RDV4
-            hf_av_new = AvgAdc(ADC_CHAN_HF_RDV40);
+            hf_av_new = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-            hf_av_new = AvgAdc(ADC_CHAN_HF);
+            hf_av_new = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
-                Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
+                Dbprintf("HF 13.56MHz Field Change: %5dmV", hf_av_new);
                 hf_av = hf_av_new;
                 if (hf_av > hf_max)
                     hf_max = hf_av;
