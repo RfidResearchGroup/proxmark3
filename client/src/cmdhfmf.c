@@ -4496,7 +4496,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose",  "show technical data"),
-        arg_str0("aA",  "aid",      "print all sectors with aid", NULL),
+        arg_str0("aA",  "aid",      "print all sectors with specified aid", NULL),
         arg_str0("kK",  "key",      "key for printing sectors", NULL),
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_param_end
@@ -4543,7 +4543,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     if (aidlen == 2) {
         uint16_t aaid = (aid[0] << 8) + aid[1];
-        PrintAndLogEx(NORMAL, "\n-------------- AID 0x%04x ---------------", aaid);
+        PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
@@ -4621,58 +4621,57 @@ static int CmdHFMFNDEF(const char *Cmd) {
     uint8_t data[4096] = {0};
     int datalen = 0;
 
-    PrintAndLogEx(NORMAL, "");
-
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
-        PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
         return PM3_ESOFT;
     }
 
     bool haveMAD2 = false;
     int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
-    if (res) {
-        PrintAndLogEx(ERR, "MAD error %d.", res);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "MAD error %d", res);
         return res;
     }
 
     if (haveMAD2) {
         if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
-            PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
+            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
             return PM3_ESOFT;
         }
     }
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    if (MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen)) {
-        PrintAndLogEx(ERR, "can't decode mad.");
-        return PM3_ESOFT;
+    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "can't decode MAD");
+        return res;
     }
 
-    printf("data reading:");
+    PrintAndLogEx(INFO, "data reading:");
     for (int i = 0; i < madlen; i++) {
         if (ndefAID == mad[i]) {
             uint8_t vsector[16 * 4] = {0};
             if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
-                PrintAndLogEx(ERR, "read sector %d error.", i + 1);
+                PrintAndLogEx(ERR, "error, reading sector %d ", i + 1);
                 return PM3_ESOFT;
             }
 
             memcpy(&data[datalen], vsector, 16 * 3);
             datalen += 16 * 3;
 
-            printf(".");
+            PrintAndLogEx(INPLACE, ".");
         }
     }
-    printf(" OK\n");
+    PrintAndLogEx(NORMAL, "");
 
     if (!datalen) {
-        PrintAndLogEx(ERR, "no NDEF data.");
+        PrintAndLogEx(WARNING, "no NDEF data");
         return PM3_SUCCESS;
     }
 
     if (verbose2) {
-        PrintAndLogEx(NORMAL, "NDEF data:");
+        PrintAndLogEx(SUCCESS, "NDEF data:");
         dump_buffer(data, datalen, stdout, 1);
     }
 

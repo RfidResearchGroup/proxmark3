@@ -1423,63 +1423,61 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     uint8_t data[4096] = {0};
     int datalen = 0;
 
-    PrintAndLogEx(NORMAL, "");
-
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
-        PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
-        return 2;
+        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        return PM3_ESOFT;
     }
 
     bool haveMAD2 = false;
     int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
-    if (res) {
-        PrintAndLogEx(ERR, "MAD error %d.", res);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "MAD error %d", res);
         return res;
     }
 
     if (haveMAD2) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
-            PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
-            return 2;
+            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
+            return PM3_ESOFT;
         }
     }
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    if (MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen)) {
-        PrintAndLogEx(ERR, "can't decode mad.");
-        return 10;
+    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "can't decode MAD");
+        return res;
     }
 
-    printf("data reading:");
+    PrintAndLogEx(INFO, "data reading:");
     for (int i = 0; i < madlen; i++) {
         if (ndefAID == mad[i]) {
             uint8_t vsector[16 * 4] = {0};
             if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
-                PrintAndLogEx(ERR, "read sector %d error.", i + 1);
-                return 2;
+                PrintAndLogEx(ERR, "error, reading sector %d", i + 1);
+                return PM3_ESOFT;
             }
 
             memcpy(&data[datalen], vsector, 16 * 3);
             datalen += 16 * 3;
 
-            printf(".");
+            PrintAndLogEx(INPLACE, ".");
         }
     }
-    printf(" OK\n");
+    PrintAndLogEx(NORMAL, "");
 
     if (!datalen) {
-        PrintAndLogEx(ERR, "no NDEF data.");
-        return 11;
+        PrintAndLogEx(ERR, "no NDEF data");
+        return PM3_SUCCESS;
     }
 
     if (verbose2) {
-        PrintAndLogEx(NORMAL, "NDEF data:");
+        PrintAndLogEx(INFO, "NDEF data:");
         dump_buffer(data, datalen, stdout, 1);
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);
-
     return PM3_SUCCESS;
 }
 

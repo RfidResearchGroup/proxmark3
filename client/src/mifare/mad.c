@@ -11,7 +11,7 @@
 #include "mad.h"
 #include "ui.h"
 #include "commonutil.h"  // ARRAYLEN
-
+#include "pm3_cmd.h"
 #include "crc.h"
 #include "util.h"
 
@@ -110,21 +110,20 @@ static const char *GetAIDDescription(uint16_t AID) {
 }
 
 static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
-    if (MADver == 1) {
+    if (MADver == 2) {
         uint8_t crc = CRC8Mad(&sector[16 + 1], 15 + 16);
         if (crc != sector[16]) {
-            PrintAndLogEx(WARNING, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
-            return 3;
+            PrintAndLogEx(WARNING, _RED_("Wrong MAD %d CRC") " calculated: 0x%02x != 0x%02x", MADver, crc, sector[16]);
+            return PM3_ESOFT;
         };
     } else {
         uint8_t crc = CRC8Mad(&sector[1], 15 + 16 + 16);
         if (crc != sector[0]) {
-            PrintAndLogEx(WARNING, "Wrong MAD%d CRC. Calculated: 0x%02x, from card: 0x%02x", MADver, crc, sector[16]);
-            return 3;
+            PrintAndLogEx(WARNING,  _RED_("Wrong MAD %d CRC") " calculated: 0x%02x != 0x%02x", MADver, crc, sector[16]);
+            return PM3_ESOFT;
         };
     }
-
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
@@ -135,54 +134,53 @@ static uint16_t madGetAID(uint8_t *sector, int MADver, int sectorNo) {
 }
 
 int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
-    int res = 0;
 
-    if (!sector0)
-        return 1;
+    if (sector0 == NULL)
+        return PM3_EINVARG;
 
     uint8_t GPB = sector0[3 * 16 + 9];
     if (verbose)
-        PrintAndLogEx(NORMAL, "GPB: 0x%02x", GPB);
+        PrintAndLogEx(INFO, "GPB: 0x%02x", GPB);
 
     // DA (MAD available)
     if (!(GPB & 0x80)) {
         PrintAndLogEx(ERR, "DA=0! MAD not available.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     // MA (multi-application card)
     if (verbose) {
         if (GPB & 0x40)
-            PrintAndLogEx(NORMAL, "Multi application card.");
+            PrintAndLogEx(INFO, "Multi application card.");
         else
-            PrintAndLogEx(NORMAL, "Single application card.");
+            PrintAndLogEx(INFO, "Single application card.");
     }
 
     uint8_t MADVer = GPB & 0x03;
     if (verbose)
-        PrintAndLogEx(NORMAL, "MAD version: %d", MADVer);
+        PrintAndLogEx(INFO, "MAD version: %d", MADVer);
 
     //  MAD version
     if ((MADVer != 0x01) && (MADVer != 0x02)) {
         PrintAndLogEx(ERR, "Wrong MAD version: 0x%02x", MADVer);
-        return 2;
+        return PM3_ESOFT;
     };
 
     if (haveMAD2)
         *haveMAD2 = (MADVer == 2);
 
-    res = madCRCCheck(sector0, true, 1);
+    int res = madCRCCheck(sector0, true, 1);
 
-    if (verbose && !res)
-        PrintAndLogEx(NORMAL, "CRC8-MAD1 OK.");
+    if (verbose && res == PM3_SUCCESS)
+        PrintAndLogEx(INFO, "CRC8-MAD1 (%s)", _GREEN_("ok"));
 
     if (MADVer == 2 && sector10) {
         int res2 = madCRCCheck(sector10, true, 2);
-        if (!res)
+        if (res == PM3_SUCCESS)
             res = res2;
 
         if (verbose && !res2)
-            PrintAndLogEx(NORMAL, "CRC8-MAD2 OK.");
+            PrintAndLogEx(INFO, "CRC8-MAD2 (%)", _GREEN_("ok"));
     }
 
     return res;
@@ -191,7 +189,11 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
 int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen) {
     *madlen = 0;
     bool haveMAD2 = false;
-    MADCheck(sector0, sector10, false, &haveMAD2);
+    int res = MADCheck(sector0, sector10, false, &haveMAD2);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Not a valid MAD");
+        return res;
+    }
 
     for (int i = 1; i < 16; i++) {
         mad[*madlen] = madGetAID(sector0, 1, i);
@@ -208,51 +210,63 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
             (*madlen)++;
         }
     }
-
-    return 0;
+    return PM3_SUCCESS;
 }
-
 
 int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
 
     // check MAD1 only
-    MADCheck(sector, NULL, verbose, haveMAD2);
+    int res = MADCheck(sector, NULL, verbose, haveMAD2);
+    if (verbose) {
+        if (res == PM3_SUCCESS)
+            PrintAndLogEx(INFO, "CRC8-MAD1 (%s)", _GREEN_("ok"));
+        else
+            PrintAndLogEx(INFO, "CRC8-MAD1 (%s)", _RED_("fail"));
+    }
 
     // info byte
     uint8_t InfoByte = sector[16 + 1] & 0x3f;
     if (InfoByte) {
-        PrintAndLogEx(NORMAL, "Card publisher sector: 0x%02x", InfoByte);
+        PrintAndLogEx(INFO, "Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
     } else {
         if (verbose)
-            PrintAndLogEx(NORMAL, "Card publisher sector not present.");
+            PrintAndLogEx(WARNING, "Card publisher sector not present");
     }
     if (InfoByte == 0x10 || InfoByte >= 0x28)
         PrintAndLogEx(WARNING, "Info byte error");
 
-    PrintAndLogEx(NORMAL, "00 MAD1");
+    PrintAndLogEx(INFO, " 00 MAD 1");
     for (int i = 1; i < 16; i++) {
         uint16_t AID = madGetAID(sector, 1, i);
-        PrintAndLogEx(NORMAL, "%02d [%04X] %s", i, AID, GetAIDDescription(AID));
-    };
+        PrintAndLogEx(INFO, " %02d [%04X] %s", i, AID, GetAIDDescription(AID));
+    }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
-    PrintAndLogEx(NORMAL, "16 MAD2");
+    PrintAndLogEx(INFO, " 16 MAD 2");
 
     int res = madCRCCheck(sector, true, 2);
-
-    if (verbose && !res)
-        PrintAndLogEx(NORMAL, "CRC8-MAD2 OK.");
+    if (verbose) {
+        if (res == PM3_SUCCESS)
+            PrintAndLogEx(INFO, "CRC8-MAD2 (%s)", _GREEN_("ok"));
+        else
+            PrintAndLogEx(INFO, "CRC8-MAD2 (%s)", _RED_("fail"));
+    }
 
     uint8_t InfoByte = sector[1] & 0x3f;
-    PrintAndLogEx(NORMAL, "MAD2 Card publisher sector: 0x%02x", InfoByte);
+    if (InfoByte) {
+        PrintAndLogEx(INFO, "MAD2 Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
+    } else {
+        if (verbose)
+            PrintAndLogEx(WARNING, "Card publisher sector not present");
+    }
 
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t AID = madGetAID(sector, 2, i);
-        PrintAndLogEx(NORMAL, "%02d [%04X] %s", i + 16, AID, GetAIDDescription(AID));
-    };
+        PrintAndLogEx(INFO, "%02d [%04X] %s", i + 16, AID, GetAIDDescription(AID));
+    }
 
-    return 0;
+    return PM3_SUCCESS;
 }

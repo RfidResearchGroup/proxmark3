@@ -1256,7 +1256,7 @@ int CmdHF14A(const char *Cmd) {
 }
 
 static void printTag(const char *tag) {
-    PrintAndLogEx(SUCCESS, "POSSIBLE TYPE:" _YELLOW_("    %s"), tag);
+    PrintAndLogEx(SUCCESS, "   " _YELLOW_("%s"), tag);
 }
 
 
@@ -1274,6 +1274,8 @@ typedef enum {
 static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
     int type = MTNONE;
 
+    PrintAndLogEx(SUCCESS, "Possible types:");
+
     if (sak == 0x00) {
         printTag("NTAG 20x / 21x / 21x TT / I2C plus");
         printTag("MIFARE Ultralight / C / EV1 / Nano");
@@ -1284,10 +1286,12 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
         printTag("TNP3xxx (Activision Game Appliance)");
         type = MTCLASSIC;
     }
+
     if ((sak & 0x04) == 0x04) {
         printTag("Any MIFARE CL1 / NTAG424DNA");
         type |= MTDESFIRE;
     }
+
     if ((sak & 0x08) == 0x08) {
         printTag("MIFARE Classic 1K / Classic 1K CL2");
         printTag("MIFARE Plus 2K / Plus EV1 2K");
@@ -1295,18 +1299,22 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
         type |= MTCLASSIC;
         type |= MTPLUS;
     }
+
     if ((sak & 0x09) == 0x09) {
         printTag("MIFARE Mini 0.3K / Mini CL2 0.3K");
         type |= MTMINI;
     }
+
     if ((sak & 0x10) == 0x10) {
         printTag("MIFARE Plus 2K / Plus CL2 2K");
         type |= MTPLUS;
     }
+
     if ((sak & 0x11) == 0x11) {
         printTag("MIFARE Plus 4K / Plus CL2 4K");
         type |= MTPLUS;
     }
+
     if ((sak & 0x18) == 0x18) {
         if (atqa == 0x0042) {
             printTag("MIFARE Plus 4K / Plus EV1 4K");
@@ -1316,8 +1324,8 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
             printTag("MIFARE Classic 4K / Classic 4K CL2");
             type |= MTCLASSIC;
         }
-
     }
+
     if ((sak & 0x20) == 0x20) {
         if (atqa == 0x0344) {
             printTag("MIFARE DESFire EV1 2K/4K/8K / DESFire EV1 CL2 2K/4K/8K");
@@ -1332,18 +1340,25 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
             type |= MTPLUS;
         }
     }
+
     if ((sak & 0x24) == 0x24) {
         if (atqa == 0x0344) {
             printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
             type |= MTDESFIRE;
         }
     }
+
     if ((sak & 0x28) == 0x28) {
         if (atqa == 0x0344) {
             printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
             type |= MTDESFIRE;
         }
     }
+    
+    if (type == MTNONE) {
+        PrintAndLogEx(WARNING, "   failed to fingerprint");
+    }
+
     return type;
 }
 
@@ -1351,9 +1366,9 @@ typedef struct {
     uint8_t uid0;
     uint8_t uid1;
     const char *desc;
-} uidname;
+} uid_label_name;
 
-const uidname uidmap[] = {
+const uid_label_name uid_label_map[] = {
     // UID0, UID1, TEXT
     {0x02, 0x84, "M24SR64-Y"},
     {0x02, 0xA3, "25TA02KB-P"},
@@ -1367,14 +1382,13 @@ const uidname uidmap[] = {
 
 static void getTagLabel(uint8_t uid0, uint8_t uid1) {
     int i = 0;
-    while (uidmap[i].uid0 != 0x00) {
-        if ((uidmap[i].uid0 == uid0) && (uidmap[i].uid1 == uid1)) {
-            PrintAndLogEx(SUCCESS, _YELLOW_("    %s"), uidmap[i].desc);
+    while (uid_label_map[i].uid0 != 0x00) {
+        if ((uid_label_map[i].uid0 == uid0) && (uid_label_map[i].uid1 == uid1)) {
+            PrintAndLogEx(SUCCESS, _YELLOW_("    %s"), uid_label_map[i].desc);
             return;
         }
         i += 1;
     }
-    return;
 }
 
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
@@ -1414,7 +1428,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "-- ISO14443-a Information -----------------------------------");
+        PrintAndLogEx(SUCCESS, "------ " _CYAN_("ISO14443-a Information") "------------------");
         PrintAndLogEx(SUCCESS, "-------------------------------------------------------------");
     }
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
@@ -1426,7 +1440,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isMifarePlus = false;
     bool isMifareUltralight = false;
     int nxptype = MTNONE;
-    // Double & triple sized UID, can be mapped to a manufacturer.
+
     if (card.uidlen <= 4) {
         nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
 
@@ -1437,9 +1451,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         if ((nxptype & MTOTHER) == MTOTHER)
             isMifareClassic = true;
-    }
-    if (card.uidlen > 4) {
+
+    } else {
+
+        // Double & triple sized UID, can be mapped to a manufacturer.
         PrintAndLogEx(SUCCESS, "MANUFACTURER:    " _YELLOW_("%s"), getTagInfo(card.uid[0]));
+
         switch (card.uid[0]) {
             case 0x04: // NXP
                 nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
@@ -1756,16 +1773,6 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
     }
 
-    if (isMifareUltralight) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
-    }
-    if (isMifarePlus) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
-    }
-    if (isMifareDESFire) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
-    }
-
     if (isMifareClassic || isMifareUltralight) {
         detect_classic_magic();
 
@@ -1789,6 +1796,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         }
     }
+
+    if (isMifareUltralight)
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
+
+    if (isMifarePlus)
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
+
+    if (isMifareDESFire)
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
 
     DropField();
     return select_status;
