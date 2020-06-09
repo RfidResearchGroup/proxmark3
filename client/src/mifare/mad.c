@@ -241,22 +241,44 @@ static const char *aid_admin[] = {
     "not applicable"
 };
 
+static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int MADver, bool verbose) {
+    uint8_t InfoByte;
+    if (MADver == 1) {
+        InfoByte = sector[16 + 1] & 0x3f;
+        if (InfoByte >= 0xF) {
+            PrintAndLogEx(WARNING, "Invalid Info byte (MAD1) value " _YELLOW_("0x%02x"), InfoByte);
+            if (verbose)
+                // I understand the spec in a way that MAD1 InfoByte should not point into MAD2 sectors, @lukaskuzmiak
+                PrintAndLogEx(WARNING, "MAD1 Info byte points outside of MAD1 sector space (0x%02x), report a bug?", InfoByte);
+            return PM3_ESOFT;
+        }
+    } else {
+        InfoByte = sector[1] & 0x3f;
+        if (InfoByte == 0x10 || InfoByte >= 0x28) {
+            PrintAndLogEx(WARNING, "Invalid Info byte (MAD2) value " _YELLOW_("0x%02x"), InfoByte);
+            return PM3_ESOFT;
+        }
+    }
+
+    if (InfoByte) {
+        uint16_t aid = madGetAID(sector, swapmad, MADver, InfoByte);
+        char fmt[50];
+        sprintf(fmt, "Card publisher sector: %02d, AID 0x%04X%s", InfoByte, aid, "%s");
+        print_aid_description(mad_known_aids, aid, fmt, verbose);
+        return PM3_SUCCESS;
+    } else {
+        PrintAndLogEx(WARNING, "Card publisher not present " _YELLOW_("0x%02x"), InfoByte);
+        return PM3_ESOFT;
+    }
+}
+
 int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
     open_mad_file(&mad_known_aids, verbose);
 
     // check MAD1 only
     MADCheck(sector, NULL, verbose, haveMAD2);
 
-    // info byte
-    uint8_t InfoByte = sector[16 + 1] & 0x3f;
-    if (InfoByte) {
-        PrintAndLogEx(SUCCESS, "Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
-    } else {
-        if (verbose)
-            PrintAndLogEx(WARNING, "Card publisher sector not present");
-    }
-    if (InfoByte == 0x10 || InfoByte >= 0x28)
-        PrintAndLogEx(WARNING, "Info byte error");
+    MADInfoByteDecode(sector, swapmad, 1, verbose);
 
     PrintAndLogEx(INFO, " 00 MAD 1");
     uint32_t prev_aid = 0xFFFFFFFF;
@@ -289,13 +311,8 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
             PrintAndLogEx(WARNING, "CRC8-MAD2 (%s)", _RED_("fail"));
     }
 
-    uint8_t InfoByte = sector[1] & 0x3f;
-    if (InfoByte) {
-        PrintAndLogEx(SUCCESS, "MAD2 Card publisher sector: " _GREEN_("0x%02x"), InfoByte);
-    } else {
-        if (verbose)
-            PrintAndLogEx(WARNING, "Card publisher sector not present");
-    }
+    MADInfoByteDecode(sector, swapmad, 2, verbose);
+
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 2, i);
