@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Marshmellow, 
+// Marshmellow,
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -53,18 +53,18 @@ static int usage_lf_viking_sim(void) {
 }
 
 static int CmdVikingDemod(const char *Cmd) {
-   return demodViking();
+    return demodViking();
 }
 
 //see ASKDemod for what args are accepted
 int demodViking(void) {
- 
+
     if (ASKDemod("", false, false, 1) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
         return PM3_ESOFT;
     }
- 
- size_t size = DemodBufferLen;
+
+    size_t size = DemodBufferLen;
     int ans = detectViking(DemodBuffer, &size);
     if (ans < 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5) ? _RED_("[chksum error]") : "");

@@ -28,9 +28,9 @@ p = pyaudio.PyAudio()
 
 # For paFloat32 sample values must be in range [-1.0, 1.0]
 stream = p.open(format=pyaudio.paFloat32,
-		channels=1,
-		rate=sampling_freq,
-		output=True)
+    channels=1,
+    rate=sampling_freq,
+    output=True)
 
 # Initial voltage to frequency values
 min_v = 100.0
@@ -38,9 +38,9 @@ max_v = 0.0
 v = 0
 out_freq = min_freq
 
-# Spawn the Proxmark3 client 
+# Spawn the Proxmark3 client
 pm3_proc = Popen([pm3_client, pm3_reader_dev_file, "-c", pm3_tune_cmd],
-		bufsize=0, env={}, stdin=DEVNULL, stdout=PIPE, stderr=DEVNULL)
+    bufsize=0, env={}, stdin=DEVNULL, stdout=PIPE, stderr=DEVNULL)
 mv_recbuf = ""
 
 # Read voltages from the Proxmark3, generate the sine wave, output to soundcard
@@ -66,7 +66,8 @@ while True:
           max_v = v
 
         # Recalculate the audio frequency to generate
-        out_freq = (max_freq - min_freq) * (max_v - v) / (max_v - min_v) + min_freq
+        out_freq = (max_freq - min_freq) * (max_v - v) / (max_v - min_v) \
+        + min_freq
 
   # Generate the samples and write them to the soundcard
   sinevs = out_freq / sampling_freq * numpy.pi * 2
@@ -75,4 +76,5 @@ while True:
   sinev = sinev if sinev < numpy.pi * 2 else sinev - numpy.pi * 2
   i = (i + 1) % sample_buf_size
   if not i:
-    stream.write((numpy.sin(sample_buf) * volume).astype(numpy.float32).tobytes())
+    stream.write((numpy.sin(sample_buf) * volume).
+        astype(numpy.float32).tobytes())

@@ -1354,7 +1354,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
             type |= MTDESFIRE;
         }
     }
-    
+
     if (type == MTNONE) {
         PrintAndLogEx(WARNING, "   failed to fingerprint");
     }

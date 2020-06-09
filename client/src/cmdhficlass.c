@@ -770,7 +770,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
             break;
         }
         case EML: {
-            res = loadFileEML_safe(filename, (void**)&dump, &bytes_read);
+            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
             break;
         }
         case JSON: {
@@ -1676,7 +1676,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    if (loadFile_safe(filename, "", (void**)&dump, &bytes_read) != PM3_SUCCESS) {
+    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
     }
@@ -1702,7 +1702,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     memcpy(tag_data, dump + startblock * 8, sizeof(iclass_block_t) * (endblock - startblock + 1));
 
     free(dump);
-        
+
     uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -2040,7 +2040,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    if (loadFile_safe(filename, "", (void**)&dump, &bytes_read) != PM3_SUCCESS) {
+    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
     }
@@ -2190,7 +2190,7 @@ static int loadKeys(char *filename) {
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    if (loadFile_safe(filename, "", (void**)&dump, &bytes_read) != PM3_SUCCESS) {
+    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
     }
