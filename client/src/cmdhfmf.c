@@ -4528,8 +4528,8 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     
     
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("MAD Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("MAD Information") " -------------------------------");
+    PrintAndLogEx(INFO, "---------------------------------------------------");
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Raw:");
@@ -4650,7 +4650,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, false);
+    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
