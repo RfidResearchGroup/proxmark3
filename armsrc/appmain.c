@@ -137,11 +137,14 @@ static uint16_t ReadAdc(int ch) {
 }
 
 // was static - merlok
+uint16_t AvgAdc(int ch) {
+    return SumAdc(ch, 32) >> 5;
+}
+
 uint16_t SumAdc(int ch, int NbSamples) {
     uint16_t a = 0;
     for (uint8_t i = 0; i < NbSamples; i++)
         a += ReadAdc(ch);
-
     return (a + (NbSamples >> 1) - 1);
 }
 
@@ -225,9 +228,9 @@ static void MeasureAntennaTuning(void) {
 static uint16_t MeasureAntennaTuningHfData(void) {
 
 #if defined RDV4
-    return (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 64)) >> 16;
+    return (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-    return (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 64)) >> 16;
+    return (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
 
 }
@@ -540,7 +543,7 @@ void ListenReaderField(uint8_t limit) {
     LEDsoff();
 
     if (limit == LF_ONLY) {
-        lf_av = lf_max = SumAdc(ADC_CHAN_LF, 32) >> 5;
+        lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
         Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
         lf_baseline = lf_av;
     }
@@ -549,9 +552,9 @@ void ListenReaderField(uint8_t limit) {
 
 #if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        hf_av = hf_max = SumAdc(ADC_CHAN_HF_RDV40, 32) >> 5;
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
 #else
-        hf_av = hf_max = SumAdc(ADC_CHAN_HF, 32) >> 5;
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
 #endif
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
@@ -585,7 +588,7 @@ void ListenReaderField(uint8_t limit) {
                     LED_D_OFF();
             }
 
-            lf_av_new = SumAdc(ADC_CHAN_LF, 32) >> 5;
+            lf_av_new = AvgAdc(ADC_CHAN_LF);
             // see if there's a significant change
             if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
                 Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
@@ -604,9 +607,9 @@ void ListenReaderField(uint8_t limit) {
             }
 
 #if defined RDV4
-            hf_av_new = SumAdc(ADC_CHAN_HF_RDV40, 32) >> 5;
+            hf_av_new = AvgAdc(ADC_CHAN_HF_RDV40);
 #else
-            hf_av_new = SumAdc(ADC_CHAN_HF, 32) >> 5;
+            hf_av_new = AvgAdc(ADC_CHAN_HF);
 #endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {

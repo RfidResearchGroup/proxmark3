@@ -53,9 +53,9 @@ static uint16_t FpgaSendQueueDelay;
 
 static uint16_t ReadReaderField(void) {
 #if defined RDV4
-    return SumAdc(ADC_CHAN_HF_RDV40, 32) >> 5;
+    return AvgAdc(ADC_CHAN_HF_RDV40);
 #else
-    return SumAdc(ADC_CHAN_HF, 32) >> 5;
+    return AvgAdc(ADC_CHAN_HF);
 #endif
 }
 
