@@ -18,7 +18,7 @@
 #include "jansson.h"
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
-static json_t* mad_known_aids = NULL;
+static json_t *mad_known_aids = NULL;
 
 static int open_mad_file(json_t **root, bool verbose) {
 
@@ -44,7 +44,7 @@ static int open_mad_file(json_t **root, bool verbose) {
         goto out;
     }
 
-    if (verbose) 
+    if (verbose)
         PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %zu records.", path, json_array_size(*root));
 out:
     free(path);
@@ -74,93 +74,52 @@ static const char *mad_json_get_str(json_t *data, const char *name) {
     return cstr;
 }
 
-static int mad_print(json_t **xroot, char *mad, bool verbose, char *out) {
-
-    json_t *root = *xroot;
-    if (root == NULL) {
-        int res = open_mad_file(&root, verbose);
-        if (res != PM3_SUCCESS)
-            return res;
-
-        *xroot = root;
-    }
-
-    int retval = PM3_EUNDEF;
-
-    if (root == NULL)
-        goto out;
+static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool verbose) {
+    char lmad[7] = {0};
+    sprintf(lmad, "0x%04x", BSWAP_16(aid)); // must be lowercase
 
     json_t *elm = NULL;
-    
-    for (uint32_t idx = 0; idx < json_array_size(root); idx++) {
 
+    for (uint32_t idx = 0; idx < json_array_size(root); idx++) {
         json_t *data = json_array_get(root, idx);
         if (!json_is_object(data)) {
             PrintAndLogEx(ERR, "data [%d] is not an object\n", idx);
             continue;
         }
-
         const char *fmad = mad_json_get_str(data, "mad");
-        if (strcmp(mad, fmad) == 0) {
-            elm = data;
-            break;
-        }
-
         char lfmad[strlen(fmad) + 1];
         strcpy(lfmad, fmad);
         str_lower(lfmad);
-        char lmad[strlen(mad) + 1];
-        strcpy(lmad, mad);
-        str_lower(lmad);
         if (strcmp(lmad, lfmad) == 0) {
             elm = data;
             break;
         }
     }
 
-    if (elm == NULL)
-        goto out;
-
-    retval = PM3_SUCCESS;
-
-    // print here
+    if (elm == NULL) {
+        PrintAndLogEx(INFO, fmt, " (unknown)");
+        return PM3_ENODATA;
+    }
+    const char *vmad = mad_json_get_str(elm, "mad");
     const char *application = mad_json_get_str(elm, "application");
     const char *company = mad_json_get_str(elm, "company");
-    const char *vmad = mad_json_get_str(elm, "mad");
     const char *provider = mad_json_get_str(elm, "service_provider");
     const char *integrator = mad_json_get_str(elm, "system_integrator");
-
-    sprintf(out, "%s [%s]", application, company);
-        
+    char result[4 + strlen(application) + strlen(company)];
+    sprintf(result, " %s [%s]", application, company);
+    PrintAndLogEx(INFO, fmt, result);
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "MAD               %s", vmad);
+        PrintAndLogEx(SUCCESS, "    MAD:               %s", vmad);
         if (application)
-            PrintAndLogEx(SUCCESS, "Application       %s", application);
+            PrintAndLogEx(SUCCESS, "    Application:       %s", application);
         if (company)
-            PrintAndLogEx(SUCCESS, "Company           %s", company);
+            PrintAndLogEx(SUCCESS, "    Company:           %s", company);
         if (provider)
-            PrintAndLogEx(SUCCESS, "Service provider  %s", provider);
+            PrintAndLogEx(SUCCESS, "    Service provider:  %s", provider);
         if (integrator)
-            PrintAndLogEx(SUCCESS, "System integrator %s", integrator);
+            PrintAndLogEx(SUCCESS, "    System integrator: %s", integrator);
     }
-
-out:
-    if (*xroot == NULL) {
-        close_mad_file(root);
-    }
-    return retval;
-}
-
-static const char *get_aid_description(uint16_t aid, bool verbose) {
-    
-    static char result[200];
-    char s[7] = {0};
-    sprintf(s, "0x%04X", aid);
-    int res = mad_print(&mad_known_aids, s, verbose, result);
-    if (res != PM3_SUCCESS) {
-        return "";
-    }
-    return result;
+    return PM3_SUCCESS;
 }
 
 static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
@@ -267,7 +226,17 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
     return PM3_SUCCESS;
 }
 
+static const char *aid_admin[] = {
+    "free",
+    "defect",
+    "reserved",
+    "additional directory info",
+    "card holder info",
+    "not applicable"
+};
+
 int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
+    open_mad_file(&mad_known_aids, verbose);
 
     // check MAD1 only
     MADCheck(sector, NULL, verbose, haveMAD2);
@@ -284,15 +253,26 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
         PrintAndLogEx(WARNING, "Info byte error");
 
     PrintAndLogEx(INFO, " 00 MAD 1");
+    uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 16; i++) {
-        uint16_t AID = madGetAID(sector, 1, i);
-        PrintAndLogEx(INFO, " %02d [%04X] %s", i, AID, get_aid_description(AID, verbose));
+        uint16_t aid = madGetAID(sector, 1, i);
+        if (aid < 6) {
+            PrintAndLogEx(INFO, " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
+        } else if (prev_aid == aid) {
+            PrintAndLogEx(INFO, " %02d [%04X] (continuation)", i, aid);
+        } else {
+            char fmt[20];
+            sprintf(fmt, " %02d [%04X]%s", i, aid, "%s");
+            print_aid_description(mad_known_aids, aid, fmt, verbose);
+            prev_aid = aid;
+        }
     }
-
+    close_mad_file(mad_known_aids);
     return PM3_SUCCESS;
 }
 
 int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
+    open_mad_file(&mad_known_aids, verbose);
     PrintAndLogEx(INFO, " 16 MAD 2");
 
     int res = madCRCCheck(sector, true, 2);
@@ -310,11 +290,21 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
         if (verbose)
             PrintAndLogEx(WARNING, "Card publisher sector not present");
     }
-
+    uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t aid = madGetAID(sector, 2, i);
-        PrintAndLogEx(INFO, "%02d [%04X] %s", i + 16, aid, get_aid_description(aid, verbose));
+        if (aid < 6) {
+            PrintAndLogEx(INFO, " %02d [%04X] (%s)", i + 16, aid, aid_admin[aid]);
+        } else if (prev_aid == aid) {
+            PrintAndLogEx(INFO, " %02d [%04X] (continuation)", i + 16, aid);
+        } else {
+            char fmt[20];
+            sprintf(fmt, " %02d [%04X]%s", i + 16, aid, "%s");
+            print_aid_description(mad_known_aids, aid, fmt, verbose);
+            prev_aid = aid;
+        }
     }
+    close_mad_file(mad_known_aids);
 
     return PM3_SUCCESS;
 }
