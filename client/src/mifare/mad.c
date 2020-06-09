@@ -99,19 +99,23 @@ static int mad_print(json_t **xroot, char *mad, bool verbose, char *out) {
             PrintAndLogEx(ERR, "data [%d] is not an object\n", idx);
             continue;
         }
-        
+
         const char *fmad = mad_json_get_str(data, "mad");
         if (strcmp(mad, fmad) == 0) {
             elm = data;
             break;
         }
-        char lmad[strlen(mad)];
+
+        char lfmad[strlen(fmad) + 1];
+        strcpy(lfmad, fmad);
+        str_lower(lfmad);
+        char lmad[strlen(mad) + 1];
         strcpy(lmad, mad);
         str_lower(lmad);
-        if (strcmp(lmad, fmad) == 0) {
+        if (strcmp(lmad, lfmad) == 0) {
             elm = data;
             break;
-        }        
+        }
     }
 
     if (elm == NULL)
