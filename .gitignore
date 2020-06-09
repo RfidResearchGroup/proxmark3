@@ -100,3 +100,6 @@ client/lualibs/pm3_cmd.lua
 fpga_version_info.c
 
 .proxmark3/*
+
+# .tmp files are created during compilation
+*.tmp
