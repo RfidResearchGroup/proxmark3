@@ -148,7 +148,7 @@ static int madCRCCheck(uint8_t *sector, bool verbose, int MADver) {
     } else {
         uint8_t crc = CRC8Mad(&sector[1], 15 + 16 + 16);
         if (crc != sector[0]) {
-            PrintAndLogEx(WARNING,  _RED_("Wrong MAD %d CRC") " calculated: 0x%02x != 0x%02x", MADver, crc, sector[16]);
+            PrintAndLogEx(WARNING,  _RED_("Wrong MAD %d CRC") " calculated: 0x%02x != 0x%02x", MADver, crc, sector[0]);
             return PM3_ESOFT;
         };
     }
@@ -282,10 +282,7 @@ static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int mad_ver, bool ve
         }
     }
 
-    if (info) {
-        return info;
-    }
-    return PM3_ESOFT;
+    return info;
 }
 
 int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
@@ -333,8 +330,6 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 details") " -------------");
     
-    PrintAndLogEx(INFO, " 16 MAD v2");
-
     int res = madCRCCheck(sector, true, 2);
     if (verbose) {
         if (res == PM3_SUCCESS)
@@ -350,6 +345,10 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
     }
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------- " _CYAN_("Listing") " ----------------");
+            
+    PrintAndLogEx(INFO, " 16 MAD v2");
 
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
