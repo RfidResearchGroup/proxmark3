@@ -1517,7 +1517,7 @@ static int CmdHexsamples(const char *Cmd) {
     uint32_t offset = 0;
     char string_buf[25];
     char *string_ptr = string_buf;
-    uint8_t got[512*1024];
+    uint8_t got[pm3_capabilities.bigbuf_size];
 
     sscanf(Cmd, "%u %u", &requested, &offset);
 
@@ -1597,10 +1597,11 @@ int getSamples(uint32_t n, bool verbose) {
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
     // does not line up on byte boundaries
-    uint8_t got[512*1024] = { 0 };
+    uint8_t got[pm3_capabilities.bigbuf_size - 1];
+    memset(got, 0x00, sizeof(got));
 
-    if (n == 0 || n > pm3_capabilities.bigbuf_size)
-        n = pm3_capabilities.bigbuf_size;
+    if (n == 0 || n > pm3_capabilities.bigbuf_size - 1)
+        n = pm3_capabilities.bigbuf_size - 1;
 
     if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 
