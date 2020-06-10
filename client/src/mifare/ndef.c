@@ -437,7 +437,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     size_t indx = 0;
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "NDEF parsing");
+    PrintAndLogEx(INFO, "--- " _CYAN_("NDEF parsing") " ----------------");
     while (indx < ndefLen) {
 
         PrintAndLogEx(INFO, "-----------------------------------------------------");

@@ -1288,16 +1288,17 @@ static int CmdHFMFPMAD(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp mad",
                   "Checks and prints Mifare Application Directory (MAD)",
-                  "Usage:\n\thf mfp mad -> shows MAD if exists\n"
+                  "Usage:\n\thf mfp mad         -> shows MAD if exists\n"
                   "\thf mfp mad -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose",  "show technical data"),
-        arg_str0("aA",  "aid",      "print all sectors with aid", NULL),
-        arg_str0("kK",  "key",      "key for printing sectors", NULL),
+        arg_str0("",    "aid",      "<aid>", "print all sectors with aid"),
+        arg_str0("kK",  "key",      "<key>", "key for printing sectors"),
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_lit0("",    "be",       "(optional, BigEndian)"),
+        arg_lit0("",    "dch",      "decode Card Holder information"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1311,11 +1312,12 @@ static int CmdHFMFPMAD(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(ctx, 4);
     bool swapmad = arg_get_lit(ctx, 5);
+    bool decodeholder = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
 
-    if (aidlen != 2 && keylen > 0) {
-        PrintAndLogEx(WARNING, "do not need a key without aid");
+    if (aidlen != 2 && !decodeholder && keylen > 0) {
+        PrintAndLogEx(WARNING, "Using default MAD keys instead");
     }
 
     uint8_t sector0[16 * 4] = {0};
@@ -1328,8 +1330,8 @@ static int CmdHFMFPMAD(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("MAD Information") " -------------------------------");
-    PrintAndLogEx(INFO, "---------------------------------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Mifare App Directory Information") " ----------------");
+    PrintAndLogEx(INFO, "-----------------------------------------------------");
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Raw:");
@@ -1350,10 +1352,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
         MAD2DecodeAndPrint(sector10, swapmad, verbose);
     }
 
-    if (aidlen == 2) {
-        uint16_t aaid = (aid[0] << 8) + aid[1];
-        PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
-
+    if (aidlen == 2 || decodeholder) {
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
         if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
@@ -1361,27 +1360,66 @@ static int CmdHFMFPMAD(const char *Cmd) {
             return 10;
         }
 
+        // copy default NDEF key
         uint8_t akey[16] = {0};
         memcpy(akey, g_mifarep_ndef_key, 16);
+
+        // user specified key
         if (keylen == 16) {
             memcpy(akey, key, 16);
         }
 
-        for (int i = 0; i < madlen; i++) {
-            if (aaid == mad[i]) {
-                uint8_t vsector[16 * 4] = {0};
-                if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(ERR, "error, read sector %d error", i + 1);
-                    return 2;
-                }
+        uint16_t aaid = 0x0004;
+        if (aidlen == 2) {
+            aaid = (aid[0] << 8) + aid[1];
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
-                for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                    PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+            for (int i = 0; i < madlen; i++) {
+                if (aaid == mad[i]) {
+                    uint8_t vsector[16 * 4] = {0};
+                    if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(ERR, "error, read sector %d error", i + 1);
+                        return PM3_ESOFT;
+                    }
+
+                    for (int j = 0; j < (verbose ? 4 : 3); j ++)
+                        PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+                }
             }
         }
-    }
 
+        if (decodeholder) {
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-------- " _CYAN_("Card Holder Info 0x%04x") " --------", aaid);
+
+            uint8_t data[4096] = {0};
+            int datalen = 0;
+
+            for (int i = 0; i < madlen; i++) {
+                if (aaid == mad[i]) {
+           
+                    uint8_t vsector[16 * 4] = {0};
+                    if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(ERR, "error, read sector %d", i + 1);
+                        return PM3_ESOFT;
+                    }
+
+                    memcpy(&data[datalen], vsector, 16 * 3);
+                    datalen += 16 * 3;
+                }
+            }
+
+            if (!datalen) {
+                PrintAndLogEx(WARNING, "no Card Holder Info data");
+                return PM3_SUCCESS;
+            }
+            MADCardHolderInfoDecode(data, datalen, verbose);
+        }
+    }
     return PM3_SUCCESS;
 }
 
@@ -1390,14 +1428,16 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "Usage:\n\thf mfp ndef -> shows NDEF data\n"
-                  "\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
+                  "Usage:\n"
+                  "\thf mfp ndef                    -> shows NDEF data\n"
+                  "\thf mfp ndef -vv                -> shows NDEF parsed and raw data\n"
+                  "\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7      -> shows NDEF data with custom AID and key\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_litn("vV",  "verbose",  0, 2, "show technical data"),
-        arg_str0("aA",  "aid",      "replace default aid for NDEF", NULL),
-        arg_str0("kK",  "key",      "replace default key for NDEF", NULL),
+        arg_str0("",    "aid",      "<aid>", "replace default aid for NDEF"),
+        arg_str0("kK",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
@@ -1430,8 +1470,12 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     uint8_t data[4096] = {0};
     int datalen = 0;
 
+    if (verbose)
+        PrintAndLogEx(INFO, "reading MAD v1 sector");
+    
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndef -k `") " with your custom key");
         return PM3_ESOFT;
     }
 
@@ -1443,8 +1487,13 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     }
 
     if (haveMAD2) {
+        
+        if (verbose)
+            PrintAndLogEx(INFO, "reading MAD v2 sector");
+
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -k `") " with your custom key");
             return PM3_ESOFT;
         }
     }
@@ -1457,7 +1506,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(INFO, "data reading:");
+    PrintAndLogEx(INFO, "reading data from tag");
     for (int i = 0; i < madlen; i++) {
         if (ndefAID == mad[i]) {
             uint8_t vsector[16 * 4] = {0};
@@ -1469,7 +1518,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
             memcpy(&data[datalen], vsector, 16 * 3);
             datalen += 16 * 3;
 
-            PrintAndLogEx(INPLACE, ".");
+            PrintAndLogEx(INPLACE, "%d", i);
         }
     }
     PrintAndLogEx(NORMAL, "");
@@ -1480,11 +1529,13 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     }
 
     if (verbose2) {
-        PrintAndLogEx(INFO, "NDEF data:");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("MFC NDEF raw") " ----------------");
         dump_buffer(data, datalen, stdout, 1);
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -vv`") " for more details");
     return PM3_SUCCESS;
 }
 

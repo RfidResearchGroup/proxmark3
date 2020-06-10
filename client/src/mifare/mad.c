@@ -20,6 +20,22 @@
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static json_t *mad_known_aids = NULL;
 
+static const char *holder_info_type[] = {
+    "Surname",
+    "Given name",
+    "Sex",
+    "Other"
+};
+
+static const char *aid_admin[] = {
+    "free",
+    "defect",
+    "reserved",
+    "additional directory info",
+    "card holder info",
+    "not applicable"
+};
+
 static int open_mad_file(json_t **root, bool verbose) {
 
     char *path;
@@ -45,7 +61,7 @@ static int open_mad_file(json_t **root, bool verbose) {
     }
 
     if (verbose)
-        PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %zu records.", path, json_array_size(*root));
+        PrintAndLogEx(SUCCESS, "Loaded file " _YELLOW_("`%s`") " (%s) %zu records.", path,  _GREEN_("ok"), json_array_size(*root));
 out:
     free(path);
     return retval;
@@ -157,14 +173,41 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     if (sector0 == NULL)
         return PM3_EINVARG;
 
-    uint8_t GPB = sector0[3 * 16 + 9];
+    uint8_t GPB = sector0[3 * 16 + 9];   
     if (verbose)
-        PrintAndLogEx(SUCCESS, "GPB: " _GREEN_("0x%02x"), GPB);
+        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x"), "GPB", GPB);
 
     // DA (MAD available)
     if (!(GPB & 0x80)) {
         PrintAndLogEx(ERR, "DA = 0! MAD not available");
         return PM3_ESOFT;
+    }
+
+    uint8_t mad_ver = GPB & 0x03;
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("%d"), "MAD version", mad_ver);
+
+    //  MAD version
+    if ((mad_ver != 0x01) && (mad_ver != 0x02)) {
+        PrintAndLogEx(ERR, "Wrong MAD version " _RED_("0x%02x"), mad_ver);
+        return PM3_ESOFT;
+    };
+
+    if (haveMAD2)
+        *haveMAD2 = (mad_ver == 2);
+
+    int res = madCRCCheck(sector0, true, 1);
+
+    if (verbose && res == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " (%s)", "CRC8", sector0[16], _GREEN_("ok"));
+
+    if (mad_ver == 2 && sector10) {
+        int res2 = madCRCCheck(sector10, true, 2);
+        if (res == PM3_SUCCESS)
+            res = res2;
+
+        if (verbose && !res2)
+            PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " (%s)", "CRC8", sector10[0], _GREEN_("ok"));
     }
 
     // MA (multi-application card)
@@ -174,34 +217,6 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
         else
             PrintAndLogEx(SUCCESS, "Single application card");
     }
-
-    uint8_t MADVer = GPB & 0x03;
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "MAD version: " _GREEN_("%d"), MADVer);
-
-    //  MAD version
-    if ((MADVer != 0x01) && (MADVer != 0x02)) {
-        PrintAndLogEx(ERR, "Wrong MAD version: " _RED_("0x%02x"), MADVer);
-        return PM3_ESOFT;
-    };
-
-    if (haveMAD2)
-        *haveMAD2 = (MADVer == 2);
-
-    int res = madCRCCheck(sector0, true, 1);
-
-    if (verbose && res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "CRC8-MAD1 (%s)", _GREEN_("ok"));
-
-    if (MADVer == 2 && sector10) {
-        int res2 = madCRCCheck(sector10, true, 2);
-        if (res == PM3_SUCCESS)
-            res = res2;
-
-        if (verbose && !res2)
-            PrintAndLogEx(SUCCESS, "CRC8-MAD2 (%s)", _GREEN_("ok"));
-    }
-
     return res;
 }
 
@@ -232,83 +247,78 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
     return PM3_SUCCESS;
 }
 
-static const char *holder_info_type[] = {
-    "Surname",
-    "Given name",
-    "Sex",
-    "Other"
-};
-
-int MADCardHolderInfoDecode(uint8_t *data, size_t dataLen, bool verbose) {
+int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose) {
     size_t idx = 0;
-    while (idx < dataLen) {
+    while (idx < datalen) {
         uint8_t len = data[idx] & 0x3f;
         uint8_t type = data[idx] >> 6;
         idx++;
         if (len > 0) {
-            PrintAndLogEx(INFO, "%s: %.*s", holder_info_type[type], len, &data[idx]);
+            PrintAndLogEx(INFO, "%14s " _GREEN_("%.*s"), holder_info_type[type], len, &data[idx]);
             idx += len;
-        } else break;
+        } else {
+            break;
+        }
     }
     return PM3_SUCCESS;
 }
 
-static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int MADver, bool verbose) {
-    uint8_t InfoByte;
-    if (MADver == 1) {
-        InfoByte = sector[16 + 1] & 0x3f;
-        if (InfoByte >= 0xF) {
-            PrintAndLogEx(WARNING, "Invalid Info byte (MAD1) value " _YELLOW_("0x%02x"), InfoByte);
+static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int mad_ver, bool verbose) {
+    uint8_t info;
+    if (mad_ver == 1) {
+        info = sector[16 + 1] & 0x3f;
+        if (info >= 0xF) {
+            PrintAndLogEx(WARNING, "Invalid Info byte (MAD1) value " _YELLOW_("0x%02x"), info);
             if (verbose)
                 // I understand the spec in a way that MAD1 InfoByte should not point into MAD2 sectors, @lukaskuzmiak
-                PrintAndLogEx(WARNING, "MAD1 Info byte points outside of MAD1 sector space (0x%02x), report a bug?", InfoByte);
+                PrintAndLogEx(WARNING, "MAD1 Info byte points outside of MAD1 sector space (0x%02x), report a bug?", info);
             return PM3_ESOFT;
         }
     } else {
-        InfoByte = sector[1] & 0x3f;
-        if (InfoByte == 0x10 || InfoByte >= 0x28) {
-            PrintAndLogEx(WARNING, "Invalid Info byte (MAD2) value " _YELLOW_("0x%02x"), InfoByte);
+        info = sector[1] & 0x3f;
+        if (info == 0x10 || info >= 0x28) {
+            PrintAndLogEx(WARNING, "Invalid Info byte (MAD2) value " _YELLOW_("0x%02x"), info);
             return PM3_ESOFT;
         }
     }
 
-    if (InfoByte) {
-        PrintAndLogEx(SUCCESS, "Card publisher sector: " _MAGENTA_("0x%02x"), InfoByte);
-        return InfoByte;
-    } else {
-        PrintAndLogEx(WARNING, "Card publisher not present " _YELLOW_("0x%02x"), InfoByte);
-        return PM3_ESOFT;
+    if (info) {
+        return info;
     }
+    return PM3_ESOFT;
 }
-
-static const char *aid_admin[] = {
-    "free",
-    "defect",
-    "reserved",
-    "additional directory info",
-    "card holder info",
-    "not applicable"
-};
 
 int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
     open_mad_file(&mad_known_aids, verbose);
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v1 details") " -------------");
+
     // check MAD1 only
     MADCheck(sector, NULL, verbose, haveMAD2);
 
-    int InfoByteSector = MADInfoByteDecode(sector, swapmad, 1, verbose);
+    int ibs = MADInfoByteDecode(sector, swapmad, 1, verbose);
 
-    PrintAndLogEx(INFO, " 00 MAD 1");
+    if (ibs) {
+        PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
+    } else {
+        PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------- " _CYAN_("Listing") " ----------------");
+            
+    PrintAndLogEx(INFO, " 00 MAD v1");
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 16; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 1, i);
         if (aid < 6) {
-            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
+            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
         } else if (prev_aid == aid) {
-            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i, aid);
+            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i, aid);
         } else {
             char fmt[30];
-            sprintf(fmt, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i, aid, "%s");
+            sprintf(fmt, (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
@@ -319,28 +329,38 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
 
 int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     open_mad_file(&mad_known_aids, verbose);
-    PrintAndLogEx(INFO, " 16 MAD 2");
+    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 details") " -------------");
+    
+    PrintAndLogEx(INFO, " 16 MAD v2");
 
     int res = madCRCCheck(sector, true, 2);
     if (verbose) {
         if (res == PM3_SUCCESS)
-            PrintAndLogEx(SUCCESS, "CRC8-MAD2 (%s)", _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8 (%s)", _GREEN_("ok"));
         else
-            PrintAndLogEx(WARNING, "CRC8-MAD2 (%s)", _RED_("fail"));
+            PrintAndLogEx(WARNING, "CRC8 (%s)", _RED_("fail"));
     }
 
-    int InfoByteSector = MADInfoByteDecode(sector, swapmad, 2, verbose);
+    int ibs = MADInfoByteDecode(sector, swapmad, 2, verbose);
+    if (ibs) {
+        PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
+    } else {
+        PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
+    }
+
 
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 2, i);
         if (aid < 6) {
-            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i + 16, aid, aid_admin[aid]);
+            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i + 16, aid, aid_admin[aid]);
         } else if (prev_aid == aid) {
-            PrintAndLogEx(INFO, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i + 16, aid);
+            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i + 16, aid);
         } else {
             char fmt[30];
-            sprintf(fmt, (InfoByteSector == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i + 16, aid, "%s");
+            sprintf(fmt, (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i + 16, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
