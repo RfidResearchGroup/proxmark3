@@ -4490,8 +4490,10 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf mad",
                   "Checks and prints Mifare Application Directory (MAD)",
-                  "Usage:\n\thf mf mad -> shows MAD if exists\n"
-                  "\thf mf mad -a 03e1 -k ffffffffffff -b -> shows NDEF data if exists. read card with custom key and key B\n");
+                  "Usage:\n"
+                  "\thf mf mad                                  -> shows MAD if exists\n"
+                  "\thf mf mad -a 03e1 -k ffffffffffff -b       -> shows NDEF data if exists. read card with custom key and key B\n"
+                  "\thf mf mad -a 0004 -k ffffffffffff --dch    -> decode CardHolder information\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4518,7 +4520,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (aidlen != 2 && !decodeholder && keylen > 0) {
-        PrintAndLogEx(WARNING, "do not need a key without aid/decode card holder");
+        PrintAndLogEx(WARNING, "Using default MAD keys instead");
     }
 
     uint8_t sector0[16 * 4] = {0};
