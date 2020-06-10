@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added Mifare MAD Card Holder Information decoding (@lukaskuzmiak)
  - Change Better precision for HF and LF voltage measurements and Add theremin.py script (@rosco)
  - Added Mifare MAD Info Byte decoding. Easier to identify Card Publisher (@lukaskuzmiak)
  - Change use system Bzip2 library instead of Zlib for hardnested tables, tables are now 7x smaller (@doegox)

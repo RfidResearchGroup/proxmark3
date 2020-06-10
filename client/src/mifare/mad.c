@@ -232,14 +232,26 @@ int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen
     return PM3_SUCCESS;
 }
 
-static const char *aid_admin[] = {
-    "free",
-    "defect",
-    "reserved",
-    "additional directory info",
-    "card holder info",
-    "not applicable"
+static const char *holder_info_type[] = {
+    "Surname",
+    "Given name",
+    "Sex",
+    "Other"
 };
+
+int MADCardHolderInfoDecode(uint8_t *data, size_t dataLen, bool verbose) {
+    size_t idx = 0;
+    while (idx < dataLen) {
+        uint8_t len = data[idx] & 0x3f;
+        uint8_t type = data[idx] >> 6;
+        idx++;
+        if (len > 0) {
+            PrintAndLogEx(INFO, "%s: %.*s", holder_info_type[type], len, &data[idx]);
+            idx += len;
+        } else break;
+    }
+    return PM3_SUCCESS;
+}
 
 static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int MADver, bool verbose) {
     uint8_t InfoByte;
@@ -268,6 +280,15 @@ static int MADInfoByteDecode(uint8_t *sector, bool swapmad, int MADver, bool ver
         return PM3_ESOFT;
     }
 }
+
+static const char *aid_admin[] = {
+    "free",
+    "defect",
+    "reserved",
+    "additional directory info",
+    "card holder info",
+    "not applicable"
+};
 
 int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
     open_mad_file(&mad_known_aids, verbose);
