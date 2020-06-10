@@ -1288,8 +1288,8 @@ static int CmdHFMFPMAD(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp mad",
                   "Checks and prints Mifare Application Directory (MAD)",
-                  "Usage:\n\thf mfp mad         -> shows MAD if exists\n"
-                  "\thf mfp mad -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
+                  "Usage:\n\thf mfp mad                                     -> shows MAD if exists\n"
+                  "\thf mfp mad -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1429,9 +1429,9 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n"
-                  "\thf mfp ndef                    -> shows NDEF data\n"
-                  "\thf mfp ndef -vv                -> shows NDEF parsed and raw data\n"
-                  "\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7      -> shows NDEF data with custom AID and key\n");
+                  "\thf mfp ndef                                             -> shows NDEF data\n"
+                  "\thf mfp ndef -vv                                         -> shows NDEF parsed and raw data\n"
+                  "\thf mfp ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
 
     void *argtable[] = {
         arg_param_begin,
