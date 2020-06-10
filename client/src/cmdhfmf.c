@@ -4500,6 +4500,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         arg_str0("kK",  "key",      "key for printing sectors", NULL),
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_lit0("",    "be",       "(optional, BigEndian)"),
+        arg_lit0("",    "dch",      "decode Card Holder information"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4512,11 +4513,12 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(4);
     bool swapmad = arg_get_lit(5);
+    bool decodeholder = arg_get_lit(6);
 
     CLIParserFree(ctx);
 
-    if (aidlen != 2 && keylen > 0) {
-        PrintAndLogEx(WARNING, "do not need a key without aid");
+    if (aidlen != 2 && !decodeholder && keylen > 0) {
+        PrintAndLogEx(WARNING, "do not need a key without aid/decode card holder");
     }
 
     uint8_t sector0[16 * 4] = {0};
@@ -4549,10 +4551,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         MAD2DecodeAndPrint(sector10, swapmad, verbose);
     }
 
-    if (aidlen == 2) {
-        uint16_t aaid = (aid[0] << 8) + aid[1];
-        PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
-
+    if (aidlen == 2 || decodeholder) {
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
         if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
@@ -4566,18 +4565,52 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             memcpy(akey, key, 6);
         }
 
-        for (int i = 0; i < madlen; i++) {
-            if (aaid == mad[i]) {
-                uint8_t vsector[16 * 4] = {0};
-                if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(ERR, "error, read sector %d", i + 1);
-                    return PM3_ESOFT;
-                }
+        if (aidlen == 2) {
+            uint16_t aaid = (aid[0] << 8) + aid[1];
+            PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
-                for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                    PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+            for (int i = 0; i < madlen; i++) {
+                if (aaid == mad[i]) {
+                    uint8_t vsector[16 * 4] = {0};
+                    if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(ERR, "error, read sector %d", i + 1);
+                        return PM3_ESOFT;
+                    }
+
+                    for (int j = 0; j < (verbose ? 4 : 3); j ++)
+                        PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+                }
             }
+        }
+
+        if (decodeholder) {
+            uint16_t aaid = 0x0004;
+            PrintAndLogEx(INFO, "-------- " _CYAN_("Card Holder Info 0x%04x") " --------", aaid);
+
+            uint8_t data[4096] = {0};
+            int datalen = 0;
+
+            for (int i = 0; i < madlen; i++) {
+                if (aaid == mad[i]) {
+                    uint8_t vsector[16 * 4] = {0};
+                    if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(ERR, "error, read sector %d", i + 1);
+                        return PM3_ESOFT;
+                    }
+
+                    memcpy(&data[datalen], vsector, 16 * 3);
+                    datalen += 16 * 3;
+                }
+            }
+
+            if (!datalen) {
+                PrintAndLogEx(WARNING, "no Card Holder Info data");
+                return PM3_SUCCESS;
+            }
+
+            MADCardHolderInfoDecode(data, datalen, verbose);
         }
     }
 
