@@ -11,6 +11,9 @@
 #include "cliparser.h"
 #include <string.h>
 #include <stdlib.h>
+#ifndef ARRAYLEN
+# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
+#endif
 
 int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
     *ctx = malloc(sizeof(CLIParserContext));
@@ -88,15 +91,14 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
     char *argv[200] = {NULL};
 
     int len = strlen(str);
-    char buf[500] = {0};
-    memset(ctx->buf, 0x00, 500);
-    char *bufptr = buf;
+    memset(ctx->buf, 0x00, ARRAYLEN(ctx->buf));
+    char *bufptr = ctx->buf;
     char *spaceptr = NULL;
     enum ParserState state = PS_FIRST;
 
     argv[argc++] = bufptr;
     // param0 = program name
-    memcpy(buf, ctx->programName, strlen(ctx->programName) + 1); // with 0x00
+    memcpy(ctx->buf, ctx->programName, strlen(ctx->programName) + 1); // with 0x00
     bufptr += strlen(ctx->programName) + 1;
     if (len)
         argv[argc++] = bufptr;
