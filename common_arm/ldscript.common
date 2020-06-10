@@ -9,7 +9,7 @@ ms of the GNU GPL, version 2 or,
 -----------------------------------------------------------------------------
 */
 
-stacksize = DEFINED(stacksize) ? stacksize : 4K;
+stacksize = DEFINED(stacksize) ? stacksize : 5K;
 commonareasize = 0x20;
 
 /* AT91SAM7S256 has 256k Flash and 64k RAM */
