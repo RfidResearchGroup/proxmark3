@@ -883,8 +883,11 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
     int res;
     for (int blockNo = 0; blockNo < 4 * 16; blockNo++) {
         for (int retry = 0; retry < 3; retry++) {
+
+            PrintAndLogEx(INPLACE, "wipe block %d", blockNo);
+
             if (blockNo == 0) {
-                res = mfCSetBlock(blockNo, block0, NULL, params);
+                res = mfCSetBlock(blockNo, block0, NULL, (params | MAGIC_WIPE));
             } else {
                 if (mfIsSectorTrailer(blockNo))
                     res = mfCSetBlock(blockNo, blockK, NULL, params);
@@ -894,16 +897,17 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
 
             if (res == PM3_SUCCESS)
                 break;
-            PrintAndLogEx(WARNING, "Retry block[%d]...", blockNo);
+
+            PrintAndLogEx(WARNING, "retry block %d ...", blockNo);
         }
 
         if (res) {
-            PrintAndLogEx(ERR, "Error setting block[%d]: %d", blockNo, res);
+            PrintAndLogEx(ERR, "error setting block %d (%d)", blockNo, res);
             return res;
         }
     }
     DropField();
-
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
