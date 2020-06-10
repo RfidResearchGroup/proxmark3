@@ -392,6 +392,7 @@ static void SendCapabilities(void) {
     capabilities.version = CAPABILITIES_VERSION;
     capabilities.via_fpc = g_reply_via_fpc;
     capabilities.via_usb = g_reply_via_usb;
+    capabilities.bigbuf_size = BigBuf_get_size();
     capabilities.baudrate = 0; // no real baudrate for USB-CDC
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)
@@ -2051,10 +2052,14 @@ static void PacketReceived(PacketCommandNG *packet) {
     }
 }
 
+extern uint32_t _stack_start;
+
 void  __attribute__((noreturn)) AppMain(void) {
 
     SpinDelay(100);
     BigBuf_initialize();
+
+    _stack_start = 0xdeadbeef;
 
     if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
         /* Initialize common area */
@@ -2120,6 +2125,10 @@ void  __attribute__((noreturn)) AppMain(void) {
 
     for (;;) {
         WDT_HIT();
+
+        if (_stack_start != 0xdeadbeef) {
+            Dbprintf("Stack overflow detected! Please increase stack size.");
+        }
 
         // Check if there is a packet available
         PacketCommandNG rx;

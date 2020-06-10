@@ -567,7 +567,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
-    if (!maxLen) maxLen = BIGBUF_SIZE;
+    if (!maxLen) maxLen = pm3_capabilities.bigbuf_size;
 
     if (invert != 0 && invert != 1) {
         PrintAndLogEx(WARNING, "Invalid argument: %s", Cmd);
@@ -1517,16 +1517,18 @@ static int CmdHexsamples(const char *Cmd) {
     uint32_t offset = 0;
     char string_buf[25];
     char *string_ptr = string_buf;
-    uint8_t got[BIGBUF_SIZE];
+    uint8_t got[512*1024];
 
     sscanf(Cmd, "%u %u", &requested, &offset);
 
     /* if no args send something */
     if (requested == 0)
         requested = 8;
+    if (requested > pm3_capabilities.bigbuf_size)
+        requested = pm3_capabilities.bigbuf_size;
 
     if (offset + requested > sizeof(got)) {
-        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes> + <offset> > %d", BIGBUF_SIZE);
+        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes> + <offset> > %d", pm3_capabilities.bigbuf_size);
         return PM3_EINVARG;
     }
 
@@ -1595,10 +1597,10 @@ int getSamples(uint32_t n, bool verbose) {
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
     // does not line up on byte boundaries
-    uint8_t got[BIGBUF_SIZE - 1] = { 0 };
+    uint8_t got[512*1024] = { 0 };
 
-    if (n == 0 || n > sizeof(got))
-        n = sizeof(got);
+    if (n == 0 || n > pm3_capabilities.bigbuf_size)
+        n = pm3_capabilities.bigbuf_size;
 
     if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 

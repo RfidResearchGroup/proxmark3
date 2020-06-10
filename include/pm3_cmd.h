@@ -175,6 +175,7 @@ typedef struct {
 typedef struct {
     uint8_t version;
     uint32_t baudrate;
+    uint32_t bigbuf_size;
     bool via_fpc                       : 1;
     bool via_usb                       : 1;
     // rdv4
@@ -203,7 +204,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 4
+#define CAPABILITIES_VERSION 5
 extern capabilities_t pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL

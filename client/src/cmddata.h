@@ -79,7 +79,6 @@ int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 int demodIdteck(void);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
-#define BIGBUF_SIZE 40000
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
 
