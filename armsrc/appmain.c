@@ -1659,12 +1659,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             // offset should not be over buffer
-            if (payload->offset >= BIGBUF_SIZE) {
+            if (payload->offset >= BigBuf_get_size()) {
                 reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_EOVFLOW, NULL, 0);
                 break;
             }
             // ensure len bytes copied wont go past end of bigbuf
-            uint16_t len = MIN(BIGBUF_SIZE - payload->offset, sizeof(payload->data));
+            uint16_t len = MIN(BigBuf_get_size() - payload->offset, sizeof(payload->data));
 
             uint8_t *mem = BigBuf_get_addr();
 
@@ -2054,7 +2054,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 void  __attribute__((noreturn)) AppMain(void) {
 
     SpinDelay(100);
-    clear_trace();
+    BigBuf_initialize();
 
     if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
         /* Initialize common area */

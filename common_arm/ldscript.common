@@ -9,6 +9,8 @@ ms of the GNU GPL, version 2 or,
 -----------------------------------------------------------------------------
 */
 
+stacksize = DEFINED(stacksize) ? stacksize : 4K;
+
 /* AT91SAM7S256 has 256k Flash and 64k RAM */
 /* AT91SAM7S512 has 512k Flash and 64k RAM */
 /* boot space = 8192bytes (0x2000) */
@@ -19,6 +21,7 @@ MEMORY
     bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200    /* Main bootloader code, stored in Flash, executed from RAM */
     osimage    : ORIGIN = 0x00102000, LENGTH = 512K - 0x2000     /* Place where the main OS will end up */
     ram        : ORIGIN = 0x00200000, LENGTH = 64K - 0x20        /* RAM, minus small common area */
+    stack      : ORIGIN = 0x00200000 + 64K - 4K - 0x20, LENGTH = stacksize /* Stack */
     commonarea : ORIGIN = 0x00200000 + 64K - 0x20, LENGTH = 0x20 /* Communication between bootloader and main OS */
 }
 
@@ -29,4 +32,5 @@ _bootrom_start = ORIGIN(bootphase1);
 _bootrom_end = ORIGIN(bootphase2) + LENGTH(bootphase2);
 _flash_start = ORIGIN(bootphase1);
 _flash_end = ORIGIN(osimage) + LENGTH(osimage);
+_stack_start = ORIGIN(stack);
 _stack_end = ORIGIN(ram) + LENGTH(ram) - 8;
