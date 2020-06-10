@@ -581,22 +581,22 @@ static int CmdIndalaClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    is_long_uid = arg_get_lit(1);
+    is_long_uid = arg_get_lit(ctx, 1);
 
     // raw param
     CLIGetHexWithReturn(ctx, 3, data, &datalen);
 
-    is_t5555 = arg_get_lit(4);
+    is_t5555 = arg_get_lit(ctx, 4);
 
     if (is_long_uid == false) {
 
         // Heden param
-        cardnumber = arg_get_int_def(2, -1);
+        cardnumber = arg_get_int_def(ctx, 2, -1);
         got_cn = (cardnumber != -1);
 
         // 26b FC/CN param
-        fc = arg_get_int_def(5, 0);
-        cn = arg_get_int_def(6, 0);
+        fc = arg_get_int_def(ctx, 5, 0);
+        cn = arg_get_int_def(ctx, 6, 0);
         got_26 = (fc != 0 && cn != 0);
     }
 

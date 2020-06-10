@@ -2911,7 +2911,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
-    swapEndian = arg_get_lit(2);
+    swapEndian = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     switch (keylen) {

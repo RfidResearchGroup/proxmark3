@@ -378,9 +378,9 @@ static int CmdHF14AInfo(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    verbose = arg_get_lit(1);
-    do_nack_test = arg_get_lit(2);
-    do_aid_search = arg_get_lit(3);
+    verbose = arg_get_lit(ctx, 1);
+    do_nack_test = arg_get_lit(ctx, 2);
+    do_aid_search = arg_get_lit(ctx, 3);
 
     CLIParserFree(ctx);
 
@@ -903,10 +903,10 @@ static int CmdHF14AAPDU(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    activateField = arg_get_lit(1);
-    leaveSignalON = arg_get_lit(2);
-    decodeTLV = arg_get_lit(3);
-    decodeAPDU = arg_get_lit(4);
+    activateField = arg_get_lit(ctx, 1);
+    leaveSignalON = arg_get_lit(ctx, 2);
+    decodeTLV = arg_get_lit(ctx, 3);
+    decodeAPDU = arg_get_lit(ctx, 4);
 
     CLIGetHexWithReturn(ctx, 5, header, &headerlen);
     makeAPDU = headerlen > 0;
@@ -915,8 +915,8 @@ static int CmdHF14AAPDU(const char *Cmd) {
         CLIParserFree(ctx);
         return 1;
     }
-    extendedAPDU = arg_get_lit(6);
-    le = arg_get_int_def(7, 0);
+    extendedAPDU = arg_get_lit(ctx, 6);
+    le = arg_get_int_def(ctx, 7, 0);
 
     if (makeAPDU) {
         uint8_t apdudata[PM3_CMD_DATA_SIZE] = {0};
@@ -1186,9 +1186,9 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t arg0 = FLAG_4B_UID_IN_DATA;
-    if (arg_get_lit(2))
+    if (arg_get_lit(ctx, 2))
         arg0 = FLAG_7B_UID_IN_DATA;
-    if (arg_get_lit(3))
+    if (arg_get_lit(ctx, 3))
         arg0 = FLAG_10B_UID_IN_DATA;
 
     CLIParserFree(ctx);
@@ -1213,8 +1213,8 @@ static int CmdHF14AChaining(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    struct arg_str *str = arg_get_str(1);
-    int len = arg_get_str_len(1);
+    struct arg_str *str = arg_get_str(ctx, 1);
+    int len = arg_get_str_len(ctx, 1);
 
     if (len && (!strcmp(str->sval[0], "enable") || !strcmp(str->sval[0], "1")))
         APDUInFramingEnable = true;

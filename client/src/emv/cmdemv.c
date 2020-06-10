@@ -85,12 +85,12 @@ static int CmdEMVSelect(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool activateField = arg_get_lit(1);
-    bool leaveSignalON = arg_get_lit(2);
-    bool APDULogging = arg_get_lit(3);
-    bool decodeTLV = arg_get_lit(4);
+    bool activateField = arg_get_lit(ctx, 1);
+    bool leaveSignalON = arg_get_lit(ctx, 2);
+    bool APDULogging = arg_get_lit(ctx, 3);
+    bool decodeTLV = arg_get_lit(ctx, 4);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(5))
+    if (arg_get_lit(ctx, 5))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 6, data, &datalen);
@@ -134,12 +134,12 @@ static int CmdEMVSearch(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool activateField = arg_get_lit(1);
-    bool leaveSignalON = arg_get_lit(2);
-    bool APDULogging = arg_get_lit(3);
-    bool decodeTLV = arg_get_lit(4);
+    bool activateField = arg_get_lit(ctx, 1);
+    bool leaveSignalON = arg_get_lit(ctx, 2);
+    bool APDULogging = arg_get_lit(ctx, 3);
+    bool decodeTLV = arg_get_lit(ctx, 4);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(5))
+    if (arg_get_lit(ctx, 5))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     CLIParserFree(ctx);
@@ -186,17 +186,17 @@ static int CmdEMVPPSE(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool activateField = arg_get_lit(1);
-    bool leaveSignalON = arg_get_lit(2);
+    bool activateField = arg_get_lit(ctx, 1);
+    bool leaveSignalON = arg_get_lit(ctx, 2);
     uint8_t PSENum = 2;
-    if (arg_get_lit(3))
+    if (arg_get_lit(ctx, 3))
         PSENum = 1;
-    if (arg_get_lit(4))
+    if (arg_get_lit(ctx, 4))
         PSENum = 2;
-    bool APDULogging = arg_get_lit(5);
-    bool decodeTLV = arg_get_lit(6);
+    bool APDULogging = arg_get_lit(ctx, 5);
+    bool decodeTLV = arg_get_lit(ctx, 6);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(7))
+    if (arg_get_lit(ctx, 7))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     CLIParserFree(ctx);
@@ -245,13 +245,13 @@ static int CmdEMVGPO(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool leaveSignalON = arg_get_lit(1);
-    bool paramsLoadFromFile = arg_get_lit(2);
-    bool dataMakeFromPDOL = arg_get_lit(3);
-    bool APDULogging = arg_get_lit(4);
-    bool decodeTLV = arg_get_lit(5);
+    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool paramsLoadFromFile = arg_get_lit(ctx, 2);
+    bool dataMakeFromPDOL = arg_get_lit(ctx, 3);
+    bool APDULogging = arg_get_lit(ctx, 4);
+    bool decodeTLV = arg_get_lit(ctx, 5);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(6))
+    if (arg_get_lit(ctx, 6))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
@@ -350,11 +350,11 @@ static int CmdEMVReadRecord(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool leaveSignalON = arg_get_lit(1);
-    bool APDULogging = arg_get_lit(2);
-    bool decodeTLV = arg_get_lit(3);
+    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool APDULogging = arg_get_lit(ctx, 2);
+    bool decodeTLV = arg_get_lit(ctx, 3);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(4))
+    if (arg_get_lit(ctx, 4))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 5, data, &datalen);
@@ -413,19 +413,19 @@ static int CmdEMVAC(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool leaveSignalON = arg_get_lit(1);
-    bool trTypeCDA = arg_get_lit(2);
+    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool trTypeCDA = arg_get_lit(ctx, 2);
     uint8_t termDecision = 0xff;
-    if (arg_get_str_len(3)) {
-        if (!strncmp(arg_get_str(3)->sval[0], "aac", 4))
+    if (arg_get_str_len(ctx, 3)) {
+        if (!strncmp(arg_get_str(ctx, 3)->sval[0], "aac", 4))
             termDecision = EMVAC_AAC;
-        if (!strncmp(arg_get_str(3)->sval[0], "tc", 4))
+        if (!strncmp(arg_get_str(ctx, 3)->sval[0], "tc", 4))
             termDecision = EMVAC_TC;
-        if (!strncmp(arg_get_str(3)->sval[0], "arqc", 4))
+        if (!strncmp(arg_get_str(ctx, 3)->sval[0], "arqc", 4))
             termDecision = EMVAC_ARQC;
 
         if (termDecision == 0xff) {
-            PrintAndLogEx(ERR, "ERROR: can't find terminal decision '%s'", arg_get_str(3)->sval[0]);
+            PrintAndLogEx(ERR, "ERROR: can't find terminal decision '%s'", arg_get_str(ctx, 3)->sval[0]);
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -434,13 +434,13 @@ static int CmdEMVAC(const char *Cmd) {
     }
     if (trTypeCDA)
         termDecision = termDecision | EMVAC_CDAREQ;
-    bool paramsLoadFromFile = arg_get_lit(4);
-    bool dataMakeFromCDOL = arg_get_lit(5);
-    bool APDULogging = arg_get_lit(6);
-    bool decodeTLV = arg_get_lit(7);
+    bool paramsLoadFromFile = arg_get_lit(ctx, 4);
+    bool dataMakeFromCDOL = arg_get_lit(ctx, 5);
+    bool APDULogging = arg_get_lit(ctx, 6);
+    bool decodeTLV = arg_get_lit(ctx, 7);
 
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(8))
+    if (arg_get_lit(ctx, 8))
         channel = ECC_CONTACT;
 
     PrintChannel(channel);
@@ -527,10 +527,10 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool leaveSignalON = arg_get_lit(1);
-    bool APDULogging = arg_get_lit(2);
+    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool APDULogging = arg_get_lit(ctx, 2);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(3))
+    if (arg_get_lit(ctx, 3))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     CLIParserFree(ctx);
@@ -584,13 +584,13 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool leaveSignalON = arg_get_lit(1);
-    bool paramsLoadFromFile = arg_get_lit(2);
-    bool dataMakeFromDDOL = arg_get_lit(3);
-    bool APDULogging = arg_get_lit(4);
-    bool decodeTLV = arg_get_lit(5);
+    bool leaveSignalON = arg_get_lit(ctx, 1);
+    bool paramsLoadFromFile = arg_get_lit(ctx, 2);
+    bool dataMakeFromDDOL = arg_get_lit(ctx, 3);
+    bool APDULogging = arg_get_lit(ctx, 4);
+    bool decodeTLV = arg_get_lit(ctx, 5);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(6))
+    if (arg_get_lit(ctx, 6))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
@@ -816,23 +816,23 @@ static int CmdEMVExec(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool activateField = arg_get_lit(1);
-    bool showAPDU = arg_get_lit(2);
-    bool decodeTLV = arg_get_lit(3);
-    bool paramLoadJSON = arg_get_lit(4);
-    bool forceSearch = arg_get_lit(5);
+    bool activateField = arg_get_lit(ctx, 1);
+    bool showAPDU = arg_get_lit(ctx, 2);
+    bool decodeTLV = arg_get_lit(ctx, 3);
+    bool paramLoadJSON = arg_get_lit(ctx, 4);
+    bool forceSearch = arg_get_lit(ctx, 5);
 
     enum TransactionType TrType = TT_MSD;
-    if (arg_get_lit(7))
+    if (arg_get_lit(ctx, 7))
         TrType = TT_QVSDCMCHIP;
-    if (arg_get_lit(8))
+    if (arg_get_lit(ctx, 8))
         TrType = TT_CDA;
-    if (arg_get_lit(9))
+    if (arg_get_lit(ctx, 9))
         TrType = TT_VSDC;
 
-    bool GenACGPO = arg_get_lit(10);
+    bool GenACGPO = arg_get_lit(ctx, 10);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(11))
+    if (arg_get_lit(ctx, 11))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
@@ -1411,23 +1411,23 @@ static int CmdEMVScan(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool showAPDU = arg_get_lit(1);
-    bool decodeTLV = arg_get_lit(2);
-    bool extractTLVElements = arg_get_lit(3);
-    bool paramLoadJSON = arg_get_lit(4);
+    bool showAPDU = arg_get_lit(ctx, 1);
+    bool decodeTLV = arg_get_lit(ctx, 2);
+    bool extractTLVElements = arg_get_lit(ctx, 3);
+    bool paramLoadJSON = arg_get_lit(ctx, 4);
 
     enum TransactionType TrType = TT_MSD;
-    if (arg_get_lit(6))
+    if (arg_get_lit(ctx, 6))
         TrType = TT_QVSDCMCHIP;
-    if (arg_get_lit(7))
+    if (arg_get_lit(ctx, 7))
         TrType = TT_CDA;
-    if (arg_get_lit(8))
+    if (arg_get_lit(ctx, 8))
         TrType = TT_VSDC;
 
-    bool GenACGPO = arg_get_lit(9);
-    bool MergeJSON = arg_get_lit(10);
+    bool GenACGPO = arg_get_lit(ctx, 9);
+    bool MergeJSON = arg_get_lit(ctx, 10);
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(11))
+    if (arg_get_lit(ctx, 11))
         channel = ECC_CONTACT;
     PrintChannel(channel);
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
@@ -1777,8 +1777,8 @@ static int CmdEMVTest(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool ignoreTimeTest = arg_get_lit(1);
-    bool runSlowTests = arg_get_lit(2);
+    bool ignoreTimeTest = arg_get_lit(ctx, 1);
+    bool runSlowTests = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     return ExecuteCryptoTests(true, ignoreTimeTest, runSlowTests);
@@ -1811,15 +1811,15 @@ static int CmdEMVRoca(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    if (arg_get_lit(1)) {
+    if (arg_get_lit(ctx, 1)) {
         CLIParserFree(ctx);
         return roca_self_test();
     }
 
-    bool show_apdu = arg_get_lit(2);
+    bool show_apdu = arg_get_lit(ctx, 2);
 
     EMVCommandChannel channel = ECC_CONTACTLESS;
-    if (arg_get_lit(3))
+    if (arg_get_lit(ctx, 3))
         channel = ECC_CONTACT;
 
     CLIParserFree(ctx);

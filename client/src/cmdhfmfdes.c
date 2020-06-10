@@ -2100,7 +2100,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     uint8_t fid[2] = {0};
     CLIGetHexWithReturn(ctx, 3, fid, &fidlength);
 
-    uint8_t comset = arg_get_int(4);
+    uint8_t comset = arg_get_int(ctx, 4);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(ctx, 5, ar, &arlength);
@@ -2109,7 +2109,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     uint8_t filesize[3] = {0};
     CLIGetHexWithReturn(ctx, 6, filesize, &fsizelen);
 
-    bool isbackup = arg_get_lit(7);
+    bool isbackup = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     swap24(aid);
@@ -2281,7 +2281,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     uint8_t filesize[3] = {0};
     CLIGetHexWithReturn(ctx, 4, filesize, &flength);
 
-    int type = arg_get_int(5);
+    int type = arg_get_int(ctx, 5);
     CLIParserFree(ctx);
 
     if (type > 1) {
@@ -2385,7 +2385,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     int vlength = 0x0;
     CLIGetHexWithReturn(ctx, 3, value.value, &vlength);
 
-    int mode = arg_get_int(4);
+    int mode = arg_get_int(ctx, 4);
     CLIParserFree(ctx);
     swap24(aid);
 
@@ -2485,13 +2485,13 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EMALLOC;
     }
-    if (CLIParamHexToBuf(arg_get_str(4), data, dlength, &dlength)) {
+    if (CLIParamHexToBuf(arg_get_str(ctx, 4), data, dlength, &dlength)) {
         free(data);
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
-    int type = arg_get_int(5);
+    int type = arg_get_int(ctx, 5);
 
     CLIParserFree(ctx);
 
@@ -2597,7 +2597,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     uint8_t fid[2] = {0};
     CLIGetHexWithReturn(ctx, 3, fid, &fidlength);
 
-    uint8_t comset = arg_get_int(4);
+    uint8_t comset = arg_get_int(ctx, 4);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(ctx, 5, ar, &arlength);
@@ -2610,7 +2610,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     uint8_t maxnumrecords[3] = {0};
     CLIGetHexWithReturn(ctx, 7, maxnumrecords, &msizelen);
 
-    bool cyclic = arg_get_lit(8);
+    bool cyclic = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     swap24(aid);
@@ -2724,7 +2724,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     uint8_t _fileno[1] = {0};
     CLIGetHexWithReturn(ctx, 2, _fileno, &filenolen);
 
-    uint8_t comset = arg_get_int(3);
+    uint8_t comset = arg_get_int(ctx, 3);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(ctx, 4, ar, &arlength);
@@ -3452,14 +3452,14 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t cmdAuthMode = arg_get_int_def(1, 0);
-    uint8_t cmdAuthAlgo = arg_get_int_def(2, 0);
+    uint8_t cmdAuthMode = arg_get_int_def(ctx, 1, 0);
+    uint8_t cmdAuthAlgo = arg_get_int_def(ctx, 2, 0);
 
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 3, aid, &aidlength);
     swap24(aid);
-    uint8_t cmdKeyNo  = arg_get_int_def(4, 0);
+    uint8_t cmdKeyNo  = arg_get_int_def(ctx, 4, 0);
 
     uint8_t key[24] = {0};
     int keylen = 0;
@@ -3925,14 +3925,14 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
     int dict_filenamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(3), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
         PrintAndLogEx(FAILED, "File name too long or invalid.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool pattern1b = arg_get_lit(4);
-    bool pattern2b = arg_get_lit(5);
+    bool pattern1b = arg_get_lit(ctx, 4);
+    bool pattern2b = arg_get_lit(ctx, 5);
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
@@ -3964,14 +3964,14 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     uint8_t jsonname[250] = {0};
     int jsonnamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(7), jsonname, sizeof(jsonname), &jsonnamelen)) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 7), jsonname, sizeof(jsonname), &jsonnamelen)) {
         PrintAndLogEx(ERR, "Invalid json name.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     jsonname[jsonnamelen] = 0;
 
-    bool verbose = arg_get_lit(8);
+    bool verbose = arg_get_lit(ctx, 8);
 
     CLIParserFree(ctx);
 

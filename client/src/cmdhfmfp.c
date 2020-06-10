@@ -439,7 +439,7 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
+    bool verbose = arg_get_lit(ctx, 1);
     CLIGetHexWithReturn(ctx, 2, keyNum, &keyNumLen);
     CLIGetHexWithReturn(ctx, 3, key, &keyLen);
     CLIParserFree(ctx);
@@ -505,8 +505,8 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    bool verbose2 = arg_get_lit(1) > 1;
+    bool verbose = arg_get_lit(ctx, 1);
+    bool verbose2 = arg_get_lit(ctx, 1) > 1;
     CLIGetHexWithReturn(ctx, 2, key, &keyLen);
     CLIParserFree(ctx);
 
@@ -572,7 +572,7 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
@@ -621,7 +621,7 @@ static int CmdHFMFPAuth(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
+    bool verbose = arg_get_lit(ctx, 1);
     CLIGetHexWithReturn(ctx, 2, keyn, &keynlen);
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     CLIParserFree(ctx);
@@ -662,11 +662,11 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool verbose = arg_get_lit(1);
-    int blocksCount = arg_get_int_def(2, 1);
-    bool keyB = arg_get_lit(3);
-    int plain = arg_get_lit(4);
-    uint32_t blockn = arg_get_int(5);
+    bool verbose = arg_get_lit(ctx, 1);
+    int blocksCount = arg_get_int_def(ctx, 2, 1);
+    bool keyB = arg_get_lit(ctx, 3);
+    int plain = arg_get_lit(ctx, 4);
+    uint32_t blockn = arg_get_int(ctx, 5);
     CLIGetHexWithReturn(ctx, 6, key, &keylen);
     CLIParserFree(ctx);
 
@@ -774,10 +774,10 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool verbose = arg_get_lit(1);
-    bool keyB = arg_get_lit(2);
-    bool plain = arg_get_lit(3);
-    uint32_t sectorNum = arg_get_int(4);
+    bool verbose = arg_get_lit(ctx, 1);
+    bool keyB = arg_get_lit(ctx, 2);
+    bool plain = arg_get_lit(ctx, 3);
+    uint32_t sectorNum = arg_get_int(ctx, 4);
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
     CLIParserFree(ctx);
 
@@ -873,9 +873,9 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool verbose = arg_get_lit(1);
-    bool keyB = arg_get_lit(2);
-    uint32_t blockNum = arg_get_int(3);
+    bool verbose = arg_get_lit(ctx, 1);
+    bool keyB = arg_get_lit(ctx, 2);
+    uint32_t blockNum = arg_get_int(ctx, 3);
     CLIGetHexWithReturn(ctx, 4, datain, &datainlen);
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
     CLIParserFree(ctx);
@@ -1081,10 +1081,10 @@ static int CmdHFMFPChk(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool keyA = arg_get_lit(1);
-    bool keyB = arg_get_lit(2);
-    uint8_t startSector = arg_get_int_def(3, 0);
-    uint8_t endSector = arg_get_int_def(4, 0);
+    bool keyA = arg_get_lit(ctx, 1);
+    bool keyB = arg_get_lit(ctx, 2);
+    uint8_t startSector = arg_get_int_def(ctx, 3, 0);
+    uint8_t endSector = arg_get_int_def(ctx, 4, 0);
 
     uint8_t vkey[16] = {0};
     int vkeylen = 0;
@@ -1102,14 +1102,14 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
     int dict_filenamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(6), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 6), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
         PrintAndLogEx(FAILED, "File name too long or invalid.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool pattern1b = arg_get_lit(7);
-    bool pattern2b = arg_get_lit(8);
+    bool pattern1b = arg_get_lit(ctx, 7);
+    bool pattern2b = arg_get_lit(ctx, 8);
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
@@ -1141,14 +1141,14 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     uint8_t jsonname[250] = {0};
     int jsonnamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(10), jsonname, sizeof(jsonname), &jsonnamelen)) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 10), jsonname, sizeof(jsonname), &jsonnamelen)) {
         PrintAndLogEx(ERR, "Invalid json name.");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     jsonname[jsonnamelen] = 0;
 
-    bool verbose = arg_get_lit(11);
+    bool verbose = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -1302,15 +1302,15 @@ static int CmdHFMFPMAD(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
+    bool verbose = arg_get_lit(ctx, 1);
     uint8_t aid[2] = {0};
     int aidlen;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[16] = {0};
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
-    bool keyB = arg_get_lit(4);
-    bool swapmad = arg_get_lit(5);
+    bool keyB = arg_get_lit(ctx, 4);
+    bool swapmad = arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
 
@@ -1403,15 +1403,15 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    bool verbose2 = arg_get_lit(1) > 1;
+    bool verbose = arg_get_lit(ctx, 1);
+    bool verbose2 = arg_get_lit(ctx, 1) > 1;
     uint8_t aid[2] = {0};
     int aidlen;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[16] = {0};
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
-    bool keyB = arg_get_lit(4);
+    bool keyB = arg_get_lit(ctx, 4);
 
     CLIParserFree(ctx);
 

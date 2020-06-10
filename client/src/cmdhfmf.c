@@ -4506,16 +4506,16 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(1);
+    bool verbose = arg_get_lit(ctx, 1);
     uint8_t aid[2] = {0};
     int aidlen;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[6] = {0};
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
-    bool keyB = arg_get_lit(4);
-    bool swapmad = arg_get_lit(5);
-    bool decodeholder = arg_get_lit(6);
+    bool keyB = arg_get_lit(ctx, 4);
+    bool swapmad = arg_get_lit(ctx, 5);
+    bool decodeholder = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
 
@@ -4637,15 +4637,15 @@ static int CmdHFMFNDEF(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    bool verbose2 = arg_get_lit(1) > 1;
+    bool verbose = arg_get_lit(ctx, 1);
+    bool verbose2 = arg_get_lit(ctx, 1) > 1;
     uint8_t aid[2] = {0};
     int aidlen;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[6] = {0};
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
-    bool keyB = arg_get_lit(4);
+    bool keyB = arg_get_lit(ctx, 4);
 
     CLIParserFree(ctx);
 
@@ -4746,7 +4746,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
     char keytypestr[2] = "a";
     uint8_t keytype = 0x00;
     int keytypestr_len;
-    int res = CLIParamStrToBuf(arg_get_str(1), (uint8_t *)keytypestr, 1, &keytypestr_len);
+    int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)keytypestr, 1, &keytypestr_len);
     str_lower(keytypestr);
 
     if (res || (keytypestr[0] != 'a' && keytypestr[0] != 'b')) {
@@ -4760,7 +4760,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
 
     uint8_t key[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     int key_len;
-    res = CLIParamHexToBuf(arg_get_str(2), key, 6, &key_len);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), key, 6, &key_len);
     if (res || (!res && key_len > 0 && key_len != 6)) {
         PrintAndLogEx(ERR, "ERROR: not a valid key. Key must be 12 hex digits");
         CLIParserFree(ctx);
@@ -4770,7 +4770,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
     char pers_optionstr[6];
     int opt_len;
     uint8_t pers_option;
-    res = CLIParamStrToBuf(arg_get_str(3), (uint8_t *)pers_optionstr, 5, &opt_len);
+    res = CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)pers_optionstr, 5, &opt_len);
     str_lower(pers_optionstr);
 
     if (res || (!res && opt_len > 0 && opt_len != 5)

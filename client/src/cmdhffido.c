@@ -117,7 +117,7 @@ static json_t *OpenJson(CLIParserContext *ctx, int paramnum, char *fname, void *
     int jsonnamelen = 0;
 
     // CLIGetStrWithReturn(ctx, paramnum, jsonname, &jsonnamelen);
-    if (CLIParamStrToBuf(arg_get_str(paramnum), jsonname, sizeof(jsonname), &jsonnamelen))  {
+    if (CLIParamStrToBuf(arg_get_str(ctx, paramnum), jsonname, sizeof(jsonname), &jsonnamelen))  {
         return NULL;
     }
 
@@ -177,11 +177,11 @@ static int CmdHFFidoRegister(const char *cmd) {
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
 
-    bool APDULogging = arg_get_lit(1);
-    bool verbose = arg_get_lit(2);
-    bool verbose2 = arg_get_lit(2) > 1;
-    bool paramsPlain = arg_get_lit(3);
-    bool showDERTLV = arg_get_lit(4);
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool verbose2 = arg_get_lit(ctx, 2) > 1;
+    bool paramsPlain = arg_get_lit(ctx, 3);
+    bool showDERTLV = arg_get_lit(ctx, 4);
 
     char fname[FILE_PATH_SIZE] = {0};
     bool err;
@@ -418,13 +418,13 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
 
-    bool APDULogging = arg_get_lit(1);
-    bool verbose = arg_get_lit(2);
-    bool paramsPlain = arg_get_lit(3);
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool paramsPlain = arg_get_lit(ctx, 3);
     uint8_t controlByte = 0x08;
-    if (arg_get_lit(5))
+    if (arg_get_lit(ctx, 5))
         controlByte = 0x03;
-    if (arg_get_lit(6))
+    if (arg_get_lit(ctx, 6))
         controlByte = 0x07;
 
     char fname[250] = {0};
@@ -673,11 +673,11 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
 
-    bool APDULogging = arg_get_lit(1);
-    bool verbose = arg_get_lit(2);
-    bool verbose2 = arg_get_lit(2) > 1;
-    bool showDERTLV = arg_get_lit(3);
-    bool showCBOR = arg_get_lit(4);
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool verbose2 = arg_get_lit(ctx, 2) > 1;
+    bool showDERTLV = arg_get_lit(ctx, 3);
+    bool showCBOR = arg_get_lit(ctx, 4);
 
     uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
@@ -798,11 +798,11 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
 
-    bool APDULogging = arg_get_lit(1);
-    bool verbose = arg_get_lit(2);
-    bool verbose2 = arg_get_lit(2) > 1;
-    bool showCBOR = arg_get_lit(3);
-    bool createAllowList = arg_get_lit(4);
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool verbose2 = arg_get_lit(ctx, 2) > 1;
+    bool showCBOR = arg_get_lit(ctx, 3);
+    bool createAllowList = arg_get_lit(ctx, 4);
 
     uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
