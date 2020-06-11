@@ -49,21 +49,6 @@ if (NOT SKIPPYTHON EQUAL 1)
     pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
-if (NOT SKIPREADLINE EQUAL 1)
-    if (APPLE)
-      find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include NO_DEFAULT_PATH)
-    endif (APPLE)
-    find_path(READLINE_INCLUDE_DIRS readline/readline.h)
-
-    if (APPLE)
-      find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib NO_DEFAULT_PATH)
-    endif (APPLE)
-    find_library(READLINE_LIBRARIES readline)
-    if (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
-        set(READLINE_FOUND ON)
-    endif (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
-endif (NOT SKIPREADLINE EQUAL 1)
-
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
@@ -261,14 +246,6 @@ if (NOT SKIPPYTHON EQUAL 1)
     endif (PYTHON3EMBED_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
 
-if (NOT SKIPREADLINE EQUAL 1)
-    if (READLINE_FOUND)
-        add_definitions("-DHAVE_READLINE")
-        set(ADDITIONAL_DIRS ${READLINE_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
-        set(ADDITIONAL_LNK ${READLINE_LIBRARIES} ${ADDITIONAL_LNK})
-    endif (READLINE_FOUND)
-endif(NOT SKIPREADLINE EQUAL 1)
-
 message("===================================================================")
 if (SKIPQT EQUAL 1)
     message("GUI support:       skipped")
@@ -301,16 +278,6 @@ else (SKIPPYTHON EQUAL 1)
         message("Python3 library:   Python3 not found, disabled")
     endif (PYTHON3EMBED_FOUND)
 endif(SKIPPYTHON EQUAL 1)
-
-if (SKIPREADLINE EQUAL 1)
-    message("Readline library:  skipped")
-else (SKIPREADLINE EQUAL 1)
-    if (READLINE_FOUND)
-        message("Readline library:  enabled")
-    else (READLINE_FOUND)
-        message("Readline library:  Readline not found, disabled")
-    endif (READLINE_FOUND)
-endif(SKIPREADLINE EQUAL 1)
 message("===================================================================")
 
 add_executable(proxmark3
@@ -341,10 +308,13 @@ target_include_directories(proxmark3 PRIVATE
         ${ADDITIONAL_DIRS}
 )
 
-if (NOT APPLE)
+if (APPLE)
+    set_target_properties(proxmark3 PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks, -L/usr/local/opt/readline/lib")
+    set_target_properties(proxmark3 PROPERTIES COMPILE_FLAGS "-I/usr/local/opt/readline/include")
+else (APPLE)
     # required for Raspberry Pi, but breaks with clang (OSX). Need to be at the end of the linker line.
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,--as-needed -latomic -Wl,--no-as-needed)
-endif (NOT APPLE)
+endif (APPLE)
 
 
 find_library(pm3rrg_rdv4_cliparser REQUIRED)
@@ -356,8 +326,67 @@ find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 find_library(pm3rrg_rdv4_whereami REQUIRED)
 
-target_link_libraries(proxmark3 PRIVATE
-        bz2
+# If build on android cross, we need to init source and build.
+if(ANDROID)
+    set(READLINE_INSTALL 
+	COMMAND mv ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_SOURCE_DIR}/deps/
+	COMMAND mv ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline/src/readline/libhistory.a ${CMAKE_CURRENT_SOURCE_DIR}/deps/
+    )
+  
+    set(CFLAGES_EXTERNAL_LIB CFLAGS=--target=${CMAKE_C_COMPILER_TARGET})
+
+    include(ExternalProject)
+
+    ExternalProject_Add(ncurses
+        URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.0.tar.gz
+        DOWNLOAD_NAME         ncurses.zip
+        PREFIX                ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
+        CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGES_EXTERNAL_LIB} --host=arm 
+        BUILD_IN_SOURCE       ON
+        BUILD_COMMAND         make -j2 libs
+        INSTALL_COMMAND       ""
+        LOG_DOWNLOAD          ON
+    )
+    ExternalProject_Add_StepTargets(ncurses configure build install)
+
+    ExternalProject_Add(readline
+        URL                   ftp://ftp.gnu.org/gnu/readline/readline-7.0.tar.gz
+        DOWNLOAD_NAME         readline.zip
+        PREFIX                ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
+        CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGES_EXTERNAL_LIB} --host=arm --enable-static
+        BUILD_IN_SOURCE       ON
+        BUILD_COMMAND         make -j2
+        INSTALL_COMMAND       ${READLINE_INSTALL}
+        LOG_DOWNLOAD          ON
+    )
+    ExternalProject_Add_StepTargets(readline configure build install)
+
+    ExternalProject_Add(bzip2
+        GIT_REPOSITORY        https://github.com/xianglin1998/bzip2.git
+        GIT_TAG               master
+        PREFIX                ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
+        CONFIGURE_COMMAND     ""
+        UPDATE_COMMAND        ""
+        BUILD_IN_SOURCE       ON
+        BUILD_COMMAND         make -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGES_EXTERNAL_LIB} libbz2.a
+        INSTALL_COMMAND       mv ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2/src/bzip2/libbz2.a ${CMAKE_CURRENT_SOURCE_DIR}/deps/
+        LOG_DOWNLOAD          ON
+    )
+    ExternalProject_Add_StepTargets(bzip2 configure build install)
+
+    set_target_properties(proxmark3 PROPERTIES COMPILE_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/deps/readline/src/ -I${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2/src/bzip2")
+    set(NCURSES_LIB ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses/src/ncurses/lib/libncurses.a)
+    set(READLINE_LIB ${CMAKE_CURRENT_SOURCE_DIR}/deps/libreadline.a)
+    set(BZIP2_LIB ${CMAKE_CURRENT_SOURCE_DIR}/deps/libbz2.a)
+else()
+    set(READLINE_LIB readline)
+    set(BZIP2_LIB bz2)
+endif(ANDROID)
+
+target_link_libraries(proxmark3 PRIVATE   	
+        ${BZIP2_LIB}
+        ${READLINE_LIB}
+   	${NCURSES_LIB}
         m
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
