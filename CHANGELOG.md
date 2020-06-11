@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix stack size and automatically use available space for BigBuf. Stack is now 5K (@slurdge)
  - Added Mifare MAD Card Holder Information decoding (@lukaskuzmiak)
  - Change Better precision for HF and LF voltage measurements and Add theremin.py script (@rosco)
  - Added Mifare MAD Info Byte decoding. Easier to identify Card Publisher (@lukaskuzmiak)
