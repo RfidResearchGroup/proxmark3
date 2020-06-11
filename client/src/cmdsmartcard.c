@@ -712,7 +712,7 @@ static int CmdSmartInfo(const char *Cmd) {
     memcpy(&card, (smart_card_atr_t *)resp.data.asBytes, sizeof(smart_card_atr_t));
 
     // print header
-    PrintAndLogEx(INFO, "--- Smartcard Information ---------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Smartcard Information") " ---------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, "ISO7618-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
     PrintAndLogEx(INFO, "http://smartcard-atr.apdu.fr/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len));
