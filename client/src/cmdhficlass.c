@@ -465,27 +465,27 @@ static void mem_app_config(const picopass_hdr *hdr) {
     if (applimit < 6) applimit = 26;
     if (kb == 2 && (applimit > 0x1f)) applimit = 26;
 
-    PrintAndLogEx(NORMAL, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
-    PrintAndLogEx(NORMAL, "    AA1: blocks 06-%02X", applimit);
-    PrintAndLogEx(NORMAL, "    AA2: blocks %02X-%02X", applimit + 1, max_blk);
-    PrintAndLogEx(NORMAL, "    OTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
-    PrintAndLogEx(NORMAL, "    KeyAccess:");
+    PrintAndLogEx(INFO, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
+    PrintAndLogEx(INFO, "    AA1: blocks 06-%02X", applimit);
+    PrintAndLogEx(INFO, "    AA2: blocks %02X-%02X", applimit + 1, max_blk);
+    PrintAndLogEx(INFO, "    OTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
+    PrintAndLogEx(INFO, "    KeyAccess:");
 
     uint8_t book = isset(mem, 0x20);
     if (book) {
-        PrintAndLogEx(NORMAL, "    Read A - Kd");
-        PrintAndLogEx(NORMAL, "    Read B - Kc");
-        PrintAndLogEx(NORMAL, "    Write A - Kd");
-        PrintAndLogEx(NORMAL, "    Write B - Kc");
-        PrintAndLogEx(NORMAL, "    Debit  - Kd or Kc");
-        PrintAndLogEx(NORMAL, "    Credit - Kc");
+        PrintAndLogEx(INFO, "    Read A - Kd");
+        PrintAndLogEx(INFO, "    Read B - Kc");
+        PrintAndLogEx(INFO, "    Write A - Kd");
+        PrintAndLogEx(INFO, "    Write B - Kc");
+        PrintAndLogEx(INFO, "    Debit  - Kd or Kc");
+        PrintAndLogEx(INFO, "    Credit - Kc");
     } else {
-        PrintAndLogEx(NORMAL, "    Read A - Kd or Kc");
-        PrintAndLogEx(NORMAL, "    Read B - Kd or Kc");
-        PrintAndLogEx(NORMAL, "    Write A - Kc");
-        PrintAndLogEx(NORMAL, "    Write B - Kc");
-        PrintAndLogEx(NORMAL, "    Debit  - Kd or Kc");
-        PrintAndLogEx(NORMAL, "    Credit - Kc");
+        PrintAndLogEx(INFO, "    Read A - Kd or Kc");
+        PrintAndLogEx(INFO, "    Read B - Kd or Kc");
+        PrintAndLogEx(INFO, "    Write A - Kc");
+        PrintAndLogEx(INFO, "    Write B - Kc");
+        PrintAndLogEx(INFO, "    Debit  - Kd or Kc");
+        PrintAndLogEx(INFO, "    Credit - Kc");
     }
 }
 
@@ -2943,7 +2943,7 @@ int readIclass(bool loop, bool verbose) {
 
             if (readStatus & FLAG_ICLASS_READER_CSN) {
                 PrintAndLogEx(NORMAL, "\n");
-                PrintAndLogEx(SUCCESS, "   CSN: %s", sprint_hex(data, 8));
+                PrintAndLogEx(SUCCESS, "   CSN: " _YELLOW_("%s"), sprint_hex(data, 8));
                 tagFound = true;
             }
 
@@ -2964,17 +2964,19 @@ int readIclass(bool loop, bool verbose) {
                 bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
                 PrintAndLogEx(SUCCESS, " App IA: %s", sprint_hex(data + 8 * 5, 8));
+                PrintAndLogEx(INFO, "------ " _CYAN_("fingerprint") " ------");
 
                 if (isHidRange) {
+                    PrintAndLogEx(SUCCESS, _YELLOW_(" iClass")" (CSN is in HID range)");
+
                     if (legacy)
-                        PrintAndLogEx(SUCCESS, "      : Possible iClass - "_YELLOW_("legacy")" credential tag");
+                        PrintAndLogEx(SUCCESS, "   possible "_YELLOW_("iClass legacy")" credential");
 
                     if (se_enabled)
-                        PrintAndLogEx(SUCCESS, "      : Possible iClass - "_YELLOW_("SE")" credential tag");
+                        PrintAndLogEx(SUCCESS, "   possible "_YELLOW_("iClass SE")" credential");
 
-                    PrintAndLogEx(SUCCESS, "      : Tag is "_YELLOW_("iClass")", CSN is in HID range");
                 } else {
-                    PrintAndLogEx(SUCCESS, "      : Tag is "_YELLOW_("PicoPass")", CSN is not in HID range");
+                    PrintAndLogEx(SUCCESS, _YELLOW_(" PicoPass")" (CSN is not in HID range)");
                 }
             }
 
