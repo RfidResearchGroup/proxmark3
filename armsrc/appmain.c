@@ -363,7 +363,7 @@ static void SendStatus(void) {
     DbpString(_BLUE_("Various"));
     for (uint32_t *p = &_stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
-            Dbprintf("  Max stack usage.........%d", (&_stack_end - p)*4);
+            Dbprintf("  Max stack usage so far..%d", (&_stack_end - p)*4);
             break;
         }
     }
