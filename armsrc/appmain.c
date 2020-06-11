@@ -71,6 +71,8 @@
 uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax = -1;
 
+extern uint32_t _stack_start, _stack_end;
+
 
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
@@ -359,6 +361,12 @@ static void SendStatus(void) {
 #endif
     printConnSpeed();
     DbpString(_BLUE_("Various"));
+    for (uint32_t *p = &_stack_start; ; ++p) {
+        if (*p != 0xdeadbeef) {
+            Dbprintf("  Max stack usage.........%d", (&_stack_end - p)*4);
+            break;
+        }
+    }
     Dbprintf("  DBGLEVEL................%d", DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
@@ -2052,15 +2060,15 @@ static void PacketReceived(PacketCommandNG *packet) {
     }
 }
 
-extern uint32_t _stack_start;
-
 void  __attribute__((noreturn)) AppMain(void) {
 
     SpinDelay(100);
     BigBuf_initialize();
 
-    _stack_start = 0xdeadbeef;
-
+    for (uint32_t * p = &_stack_start; p < (&_stack_end) - 0x80; ++p) {
+        *p = 0xdeadbeef;
+    }
+    
     if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
         /* Initialize common area */
         memset(&common_area, 0, sizeof(common_area));
