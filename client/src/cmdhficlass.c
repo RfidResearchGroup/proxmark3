@@ -388,34 +388,34 @@ static void fuse_config(const picopass_hdr *hdr) {
     uint8_t fuses = hdr->conf.fuses;
 
     if (isset(fuses, FUSE_FPERS))
-        PrintAndLogEx(SUCCESS, "    Mode: Personalization [Programmable]");
+        PrintAndLogEx(SUCCESS, "  Mode: " _GREEN_("Personalization [programmable]"));
     else
-        PrintAndLogEx(SUCCESS, "    Mode: Application [Locked]");
+        PrintAndLogEx(SUCCESS, "  Mode: " _YELLOW_("Application [locked]"));
 
     if (isset(fuses, FUSE_CODING1)) {
-        PrintAndLogEx(SUCCESS, "    Coding: RFU");
+        PrintAndLogEx(SUCCESS, "Coding: RFU");
     } else {
         if (isset(fuses, FUSE_CODING0))
-            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443-2 B/ISO 15693");
+            PrintAndLogEx(SUCCESS, "Coding: " _YELLOW_("ISO 14443-2 B / 15693"));
         else
-            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443B only");
+            PrintAndLogEx(SUCCESS, "Coding: " _YELLOW_("ISO 14443-B only"));
     }
     // 1 1
-    if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "    Crypt: Secured page, keys not locked");
+    if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, " Crypt: Secured page, " _GREEN_("keys not locked"));
     // 1 0
-    if (isset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "    Crypt: Secured page, keys locked");
+    if (isset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(INFO, " Crypt: Secured page, keys locked");
     // 0 1
-    if (notset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "    Crypt: Non secured page");
+    if (notset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, " Crypt: Non secured page");
     // 0 0
-    if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "    Crypt: No auth possible. Read only if RA is enabled");
+    if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(INFO, " Crypt: No auth possible. Read only if RA is enabled");
 
     if (isset(fuses, FUSE_RA))
         PrintAndLogEx(SUCCESS, "    RA: Read access enabled");
     else
-        PrintAndLogEx(WARNING, "    RA: Read access not enabled");
+        PrintAndLogEx(INFO, "    RA: Read access not enabled");
 
-    PrintAndLogEx(INFO, "    Block write lock: %02x", hdr->conf.block_writelock);
-    PrintAndLogEx(INFO, "    EAS: %02x", hdr->conf.eas);
+    PrintAndLogEx(INFO, "    Block write lock 0x%02X", hdr->conf.block_writelock);
+    PrintAndLogEx(INFO, "                 EAS 0x%02X", hdr->conf.eas);
 
 }
 
@@ -465,27 +465,28 @@ static void mem_app_config(const picopass_hdr *hdr) {
     if (applimit < 6) applimit = 26;
     if (kb == 2 && (applimit > 0x1f)) applimit = 26;
 
-    PrintAndLogEx(INFO, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
-    PrintAndLogEx(INFO, "    AA1: blocks 06-%02X", applimit);
-    PrintAndLogEx(INFO, "    AA2: blocks %02X-%02X", applimit + 1, max_blk);
-    PrintAndLogEx(INFO, "    OTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
-    PrintAndLogEx(INFO, "    KeyAccess:");
+    PrintAndLogEx(INFO, "------ " _CYAN_("Memory") "------");
+    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
+    PrintAndLogEx(INFO, "    AA1  blocks 06-%02X", applimit);
+    PrintAndLogEx(INFO, "    AA2  blocks %02X-%02X", applimit + 1, max_blk);
+    PrintAndLogEx(INFO, "    OTP  0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
 
+    PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") "------");
     uint8_t book = isset(mem, 0x20);
     if (book) {
-        PrintAndLogEx(INFO, "    Read A - Kd");
-        PrintAndLogEx(INFO, "    Read B - Kc");
+        PrintAndLogEx(INFO, "     Read A - Kd");
+        PrintAndLogEx(INFO, "     Read B - Kc");
         PrintAndLogEx(INFO, "    Write A - Kd");
         PrintAndLogEx(INFO, "    Write B - Kc");
-        PrintAndLogEx(INFO, "    Debit  - Kd or Kc");
-        PrintAndLogEx(INFO, "    Credit - Kc");
+        PrintAndLogEx(INFO, "      Debit - Kd or Kc");
+        PrintAndLogEx(INFO, "     Credit - Kc");
     } else {
-        PrintAndLogEx(INFO, "    Read A - Kd or Kc");
-        PrintAndLogEx(INFO, "    Read B - Kd or Kc");
+        PrintAndLogEx(INFO, "     Read A - Kd or Kc");
+        PrintAndLogEx(INFO, "     Read B - Kd or Kc");
         PrintAndLogEx(INFO, "    Write A - Kc");
         PrintAndLogEx(INFO, "    Write B - Kc");
-        PrintAndLogEx(INFO, "    Debit  - Kd or Kc");
-        PrintAndLogEx(INFO, "    Credit - Kc");
+        PrintAndLogEx(INFO, "      Debit - Kd or Kc");
+        PrintAndLogEx(INFO, "     Credit - Kc");
     }
 }
 
@@ -689,14 +690,14 @@ static int CmdHFiClassSim(const char *Cmd) {
 }
 
 static int CmdHFiClassInfo(const char *Cmd) {
-    return PM3_SUCCESS;
+    return readIclass(false, true);
 }
 
 static int CmdHFiClassReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_reader();
-    bool findone = (cmdp == '1') ? false : true;
-    return readIclass(findone, true);
+    bool loop_read = (cmdp == '1') ? false : true;
+    return readIclass(loop_read, true);
 }
 
 static int CmdHFiClassReader_Replay(const char *Cmd) {
@@ -2967,7 +2968,7 @@ int readIclass(bool loop, bool verbose) {
                 PrintAndLogEx(INFO, "------ " _CYAN_("fingerprint") " ------");
 
                 if (isHidRange) {
-                    PrintAndLogEx(SUCCESS, _YELLOW_(" iClass")" (CSN is in HID range)");
+                    PrintAndLogEx(SUCCESS, _YELLOW_("iClass")" (CSN is in HID range)");
 
                     if (legacy)
                         PrintAndLogEx(SUCCESS, "   possible "_YELLOW_("iClass legacy")" credential");
@@ -2976,7 +2977,7 @@ int readIclass(bool loop, bool verbose) {
                         PrintAndLogEx(SUCCESS, "   possible "_YELLOW_("iClass SE")" credential");
 
                 } else {
-                    PrintAndLogEx(SUCCESS, _YELLOW_(" PicoPass")" (CSN is not in HID range)");
+                    PrintAndLogEx(SUCCESS, _YELLOW_("PicoPass")" (CSN is not in HID range)");
                 }
             }
 
