@@ -320,7 +320,7 @@ static void TimingIntervalAcquisition(void) {
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 static void printConnSpeed(void) {
-    DbpString(_BLUE_("Transfer Speed"));
+    DbpString(_CYAN_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
 #define CONN_SPEED_TEST_MIN_TIME 500 // in milliseconds
@@ -360,7 +360,7 @@ static void SendStatus(void) {
     printT55xxConfig(); // LF T55XX Config
 #endif
     printConnSpeed();
-    DbpString(_BLUE_("Various"));
+    DbpString(_CYAN_("Various"));
     for (uint32_t *p = &_stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
             Dbprintf("  Max stack usage so far..%d", (&_stack_end - p)*4);
@@ -385,7 +385,7 @@ static void SendStatus(void) {
         Dbprintf(_YELLOW_("  Slow Clock actual speed seems closer to %d kHz"),
                  (16 * MAINCK / 1000) / mainf * delta_time / SLCK_CHECK_MS);
     }
-    DbpString(_BLUE_("Installed StandAlone Mode"));
+    DbpString(_CYAN_("Installed StandAlone Mode"));
     ModInfo();
 
 #ifdef WITH_FLASH
