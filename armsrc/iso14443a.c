@@ -31,9 +31,9 @@ static uint32_t iso14a_timeout;
 // if iso14443a not active - transmit/receive dont try to execute
 static bool hf_field_active = false;
 
-uint8_t colpos = 0;
-int rsamples = 0;
-uint8_t trigger = 0;
+static uint8_t colpos = 0;
+int g_rsamples = 0;
+uint8_t g_trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
 
@@ -67,7 +67,7 @@ static uint8_t iso14_pcb_blocknum = 0;
 #define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1)
 
 // The FPGA will report its internal sending delay in
-uint16_t FpgaSendQueueDelay;
+static uint16_t FpgaSendQueueDelay;
 // the 5 first bits are the number of bits buffered in mod_sig_buf
 // the last three bits are the remaining ticks/2 after the mod_sig_buf shift
 #define DELAY_FPGA_QUEUE (FpgaSendQueueDelay<<1)
@@ -123,7 +123,7 @@ static uint32_t LastProxToAirDuration;
 #define SEC_Z 0xc0
 
 void iso14a_set_trigger(bool enable) {
-    trigger = enable;
+    g_trigger = enable;
 }
 
 void iso14a_set_timeout(uint32_t timeout) {
@@ -184,14 +184,14 @@ static tUart14a Uart;
 // 0011  -   a 2 tick wide pause, or a three tick wide pause shifted left
 // 0111  -   a 2 tick wide pause shifted left
 // 1001  -   a 2 tick wide pause shifted right
-const bool Mod_Miller_LUT[] = {
+static const bool Mod_Miller_LUT[] = {
     false,  true, false, true,  false, false, false, true,
     false,  true, false, false, false, false, false, false
 };
 #define IsMillerModulationNibble1(b) (Mod_Miller_LUT[(b & 0x000000F0) >> 4])
 #define IsMillerModulationNibble2(b) (Mod_Miller_LUT[(b & 0x0000000F)])
 
-tUart14a *GetUart14a() {
+tUart14a *GetUart14a(void) {
     return &Uart;
 }
 
@@ -351,11 +351,11 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 // 8 ticks modulated:                                     A collision. Save the collision position and treat as Sequence D
 // Note 1: the bitstream may start at any time. We therefore need to sync.
 // Note 2: parameter offset is used to determine the position of the parity bits (required for the anticollision command only)
-tDemod14a Demod;
+static tDemod14a Demod;
 
 // Lookup-Table to decide if 4 raw bits are a modulation.
 // We accept three or four "1" in any position
-const bool Mod_Manchester_LUT[] = {
+static const bool Mod_Manchester_LUT[] = {
     false, false, false, false, false, false, false, true,
     false, false, false, true,  false, true,  true,  true
 };
@@ -363,7 +363,7 @@ const bool Mod_Manchester_LUT[] = {
 #define IsManchesterModulationNibble1(b) (Mod_Manchester_LUT[(b & 0x00F0) >> 4])
 #define IsManchesterModulationNibble2(b) (Mod_Manchester_LUT[(b & 0x000F)])
 
-tDemod14a *GetDemod14a() {
+tDemod14a *GetDemod14a(void) {
     return &Demod;
 }
 void Demod14aReset(void) {
@@ -480,7 +480,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 
 // Thinfilm, Kovio mangels ISO14443A in the way that they don't use start bit nor parity bits.
-RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
+static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
     if (Demod.state == DEMOD_14A_UNSYNCD) {
@@ -1150,8 +1150,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     // Such a response is less time critical, so we can prepare them on the fly
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
 #define DYNAMIC_MODULATION_BUFFER_SIZE 512
-    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE];
-    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE];
+    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE] = {0};
+    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE] = {0};
     tag_response_info_t dynamic_response_info = {
         .response = dynamic_response_buffer,
         .response_n = 0,
@@ -1613,7 +1613,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 
 // prepare a delayed transfer. This simply shifts ToSend[] by a number
 // of bits specified in the delay parameter.
-void PrepareDelayedTransfer(uint16_t delay) {
+static void PrepareDelayedTransfer(uint16_t delay) {
     delay &= 0x07;
     if (!delay) return;
 
@@ -1683,7 +1683,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 //-----------------------------------------------------------------------------
 // Prepare reader command (in bits, support short frames) to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
+static void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
     int last = 0;
 
     ToSendReset();
@@ -1759,10 +1759,11 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 //-----------------------------------------------------------------------------
 // Prepare reader command to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *par) {
+/*
+static void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *par) {
     CodeIso14443aBitsAsReaderPar(cmd, len * 8, par);
 }
-
+*/
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
 // Stop when button is pressed (return 1) or field was gone (return 2)
@@ -2144,7 +2145,7 @@ void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t
     CodeIso14443aBitsAsReaderPar(frame, bits, par);
     // Send command to tag
     TransmitFor14443a(ToSend, ToSendMax, timing);
-    if (trigger) LED_A_ON();
+    if (g_trigger) LED_A_ON();
 
     LogTrace(frame, nbytes(bits), (LastTimeProxToAirStart << 4) + DELAY_ARM2AIR_AS_READER, ((LastTimeProxToAirStart + LastProxToAirDuration) << 4) + DELAY_ARM2AIR_AS_READER, par, true);
 }
@@ -2153,7 +2154,7 @@ void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *tim
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
+static void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
     // Generate parity and redirect
     uint8_t par[MAX_PARITY_SIZE] = {0x00};
     GetParity(frame, len / 8, par);
@@ -2167,7 +2168,7 @@ void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
+static int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
     if (!GetIso14443aAnswerFromTag(receivedAnswer, par, offset))
         return false;
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
@@ -2769,7 +2770,7 @@ OUT:
 // Determine the distance between two nonces.
 // Assume that the difference is small, but we don't know which is first.
 // Therefore try in alternating directions.
-int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
+static int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
     if (nt1 == nt2) return 0;
 

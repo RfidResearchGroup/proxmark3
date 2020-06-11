@@ -150,7 +150,8 @@ static int CmdMotorolaClone(const char *Cmd) {
     uint8_t data[8];
     int datalen = 0;
 
-    CLIParserInit("lf indala clone",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf indala clone",
                   "Enables cloning of Motorola card with specified uid onto T55x7\n"
                   "defaults to 64.\n",
                   "\n"
@@ -163,9 +164,9 @@ static int CmdMotorolaClone(const char *Cmd) {
         arg_strx1(NULL, NULL, "<uid (hex)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
-    CLIGetHexWithReturn(1, data, &datalen);
-    CLIParserFree();
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    CLIParserFree(ctx);
 
     //TODO add selection of chip for Q5 or T55x7
     // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;

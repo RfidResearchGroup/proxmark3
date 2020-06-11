@@ -10,22 +10,20 @@
 
 #include "cryptotest.h"
 #include "util.h"
-#include "ui.h"
-
-#include "mbedtls/bignum.h"
-#include "mbedtls/aes.h"
-#include "mbedtls/cmac.h"
-#include "mbedtls/des.h"
-#include "mbedtls/ecp.h"
-#include "mbedtls/rsa.h"
-#include "mbedtls/sha1.h"
-#include "mbedtls/md5.h"
-#include "mbedtls/x509.h"
-#include "mbedtls/base64.h"
-#include "mbedtls/ctr_drbg.h"
-#include "mbedtls/entropy.h"
-#include "mbedtls/timing.h"
-
+#include "ui.h"              // printandlog
+#include "bignum.h"
+#include "aes.h"
+#include "cmac.h"
+#include "des.h"
+#include "ecp.h"
+#include "rsa.h"
+#include "sha1.h"
+#include "md5.h"
+#include "x509.h"
+#include "base64.h"
+#include "ctr_drbg.h"
+#include "entropy.h"
+#include "timing.h"
 #include "crypto_test.h"
 #include "sda_test.h"
 #include "dda_test.h"
@@ -63,7 +61,7 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
         res = mbedtls_timing_self_test(verbose);
         if (!res)
             break;
-        PrintAndLogEx(WARNING, "Repeat timing test %d", i + 1);
+        PrintAndLogEx(WARNING, "Repeat timing test " _RED_("%d"), i + 1);
     }
     if (res && !ignore_time) TestFail = true;
 
@@ -100,12 +98,12 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
     res = roca_self_test();
     if (res) TestFail = true;
 
-    PrintAndLogEx(NORMAL, "\n--------------------------");
+    PrintAndLogEx(INFO, "--------------------------");
 
     if (TestFail)
-        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_("Fail"));
+        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_("fail"));
     else
-        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_("OK"));
+        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_("ok"));
 
     return TestFail;
 }

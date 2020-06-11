@@ -3398,13 +3398,13 @@ void trex_free(TRex *exp) {
 }
 
 TRexBool trex_match(TRex *exp, const TRexChar *text) {
-    const TRexChar *res = NULL;
     exp->_bol = text;
     exp->_eol = text + scstrlen(text);
     exp->_currsubexp = 0;
-    res = trex_matchnode(exp, exp->_nodes, text, NULL);
-    if (res == NULL || res != exp->_eol)
+    const TRexChar *res = trex_matchnode(exp, exp->_nodes, text, NULL);
+    if (res == NULL || res != exp->_eol) {
         return TRex_False;
+    }
     return TRex_True;
 }
 
@@ -4135,7 +4135,8 @@ int arg_parse(int argc, char * *argv, void * *argtable) {
  */
 static void arg_cat(char **pdest, const char *src, size_t *pndest) {
     char *dest = *pdest;
-    char *end  = dest + *pndest;
+    // PM3 fix: leave room for null terminate char
+    char *end  = dest + *pndest - 1;
 
     /*locate null terminator of dest string */
     while (dest < end && *dest != 0)

@@ -64,14 +64,12 @@ exit:
     return res;
 }
 
-static bool print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
+static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     bool candump = true;
     asn1_tag_dump(tlv, stdout, level, &candump);
     if (is_leaf && candump) {
         dump_buffer(tlv->value, tlv->len, stdout, level);
     }
-
-    return true;
 }
 
 int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent) {
@@ -81,7 +79,7 @@ int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent) {
         tlvdb_visit(t, print_cb, NULL, 0);
         tlvdb_free(t);
     } else {
-        PrintAndLogEx(ERR, "Can't parse data as TLV tree.");
+        PrintAndLogEx(ERR, "Can't parse data as TLV tree");
         return 1;
     }
 

@@ -1040,8 +1040,6 @@ json_t *json_loadfd(int input, size_t flags, json_error_t *error) {
 
 json_t *json_load_file(const char *path, size_t flags, json_error_t *error) {
     json_t *result;
-    FILE *fp;
-
     jsonp_error_init(error, path);
 
     if (path == NULL) {
@@ -1049,15 +1047,13 @@ json_t *json_load_file(const char *path, size_t flags, json_error_t *error) {
         return NULL;
     }
 
-    fp = fopen(path, "rb");
+    FILE *fp = fopen(path, "rb");
     if (!fp) {
-        error_set(error, NULL, json_error_cannot_open_file, "unable to open %s: %s",
-                  path, strerror(errno));
+        error_set(error, NULL, json_error_cannot_open_file, "unable to open %s: %s", path, strerror(errno));
         return NULL;
     }
 
     result = json_loadf(fp, flags, error);
-
     fclose(fp);
     return result;
 }

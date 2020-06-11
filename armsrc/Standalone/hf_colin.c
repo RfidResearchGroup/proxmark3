@@ -81,12 +81,12 @@
 
 */
 
-uint8_t cjuid[10];
-uint32_t cjcuid;
-iso14a_card_select_t p_card;
-int currline;
-int currfline;
-int curlline;
+static uint8_t cjuid[10];
+static uint32_t cjcuid;
+static iso14a_card_select_t p_card;
+static int currline;
+static int currfline;
+static int curlline;
 
 // TODO : Implement fast read of KEYS like in RFIdea
 // also http://ext.delaat.net/rp/2015-2016/p04/report.pdf
@@ -104,7 +104,7 @@ static const uint8_t is_hex[] = {
     0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0
 };
 
-static inline uint64_t hex2i(const char *s) {
+static uint64_t hex2i(const char *s) {
     uint64_t val = 0;
     if (s == NULL || s[0] == 0)
         return 0;
@@ -162,7 +162,7 @@ static void scan_keys(const char *str, int len, uint64_t *user_data) {
     }
 }
 
-MFC1KSchema Schemas[MAX_SCHEMAS];
+static MFC1KSchema Schemas[MAX_SCHEMAS];
 
 /*MFC1KSchema Noralsy = {
     .name = "Noralsy",
@@ -196,16 +196,16 @@ MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
               0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76}};
 */
 
-int total_schemas = 0;
+static int total_schemas = 0;
 
-void add_schema(MFC1KSchema *p, MFC1KSchema a, int *schemas_counter) {
+static void add_schema(MFC1KSchema *p, MFC1KSchema a, int *schemas_counter) {
     if (*schemas_counter < MAX_SCHEMAS) {
         p[*schemas_counter] = a;
         *schemas_counter += 1;
     }
 }
-
-void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
+/*
+static void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
     if (*schemas_counter > 0 && index < *schemas_counter && index > -1) {
         int last_index = *schemas_counter - 1;
         for (int i = index; i < last_index; i++) {
@@ -214,33 +214,25 @@ void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
         *schemas_counter -= 1;
     }
 }
-
-void cjSetCursFRight() {
+*/
+static void cjSetCursFRight(void) {
     vtsend_cursor_position(NULL, 98, (currfline));
     currfline++;
 }
 
-void cjSetCursRight() {
+static void cjSetCursRight(void) {
     vtsend_cursor_position(NULL, 59, (currline));
     currline++;
 }
 
-void cjSetCursLeft() {
+static void cjSetCursLeft(void) {
     vtsend_cursor_position(NULL, 0, (curlline));
     curlline++;
 }
 
-void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
+static void cjTabulize(void) { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 
-/*
-void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
-    char tosendkey[13];
-    sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[0], foundKey[1], foundKey[2], foundKey[3], foundKey[4],
-foundKey[5]); cjSetCursRight(); DbprintfEx(FLAG_NEWLINE, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
-}
-*/
-
-char *ReadSchemasFromSPIFFS(char *filename) {
+static char *ReadSchemasFromSPIFFS(char *filename) {
     SpinOff(0);
 
     int changed = rdv40_spiffs_lazy_mount();
@@ -255,7 +247,7 @@ char *ReadSchemasFromSPIFFS(char *filename) {
     return (char *)mem;
 }
 
-void add_schemas_from_json_in_spiffs(char *filename) {
+static void add_schemas_from_json_in_spiffs(char *filename) {
 
     char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
 
@@ -275,7 +267,7 @@ void add_schemas_from_json_in_spiffs(char *filename) {
     }
 }
 
-void ReadLastTagFromFlash() {
+static void ReadLastTagFromFlash(void) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -292,6 +284,7 @@ void ReadLastTagFromFlash() {
     // this one will handle filetype (symlink or not) and resolving by itself
     rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
 
+    // copy 64blocks (16bytes) starting w block0, to emulator mem.
     emlSetMem(mem, 0, 64);
 
     DbprintfEx(FLAG_NEWLINE, "[OK] Last tag recovered from FLASHMEM set to emulator");
@@ -330,16 +323,22 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
     return;
 }
 
-void ModInfo(void) { DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)"); }
+void ModInfo(void) {
+    DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
+}
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    Dbprintf(">>  HF Mifare ultra fast sniff/sim/clone  a.k.a VIGIKPWN Started  <<");
+
+    // turn off all debugging.
+    DBGLEVEL = DBG_NONE;
 
     // add_schema(Schemas, Noralsy, &total_schemas);
     // add_schema(Schemas, InfiHexact, &total_schemas);
     // add_schema_from_json_in_spiffs((char *)HFCOLIN_URMETCAPTIVE_JSON);
     // add_schema(Schemas, UrmetCaptive, &total_schemas);
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     currline = 20;
     curlline = 20;
@@ -386,11 +385,11 @@ void RunMod() {
     ACCBITS : 796788[00]+VALUE
     */
 
-//----------------------------
+// ----------------------------
 //   Set of keys to be used.
 //  This should cover ~98% of
 //  French VIGIK system @2017
-//----------------------------
+// ----------------------------
 
     const uint64_t mfKeys[] = {
         0xffffffffffff, // TRANSPORTS
@@ -459,7 +458,6 @@ void RunMod() {
     bool err = 0;
     bool trapped = 0;
     bool allKeysFound = true;
-
     uint32_t size = mfKeysCnt;
 
     // banner:
@@ -487,7 +485,7 @@ failtag:
     SpinOff(50);
     LED_A_ON();
     uint8_t ticker = 0;
-    // while (!BUTTON_PRESS() && !iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
+
     while (!iso14443a_select_card(cjuid, &p_card, &cjcuid, true, 0, true)) {
         WDT_HIT();
 
@@ -496,7 +494,7 @@ failtag:
             LED_A_INV();
         }
 
-        if (BUTTON_HELD(10) > 0) {
+        if (BUTTON_HELD(10) == BUTTON_HOLD) {
             WDT_HIT();
             DbprintfEx(FLAG_NEWLINE, "\t\t\t[    READING FLASH   ]");
             ReadLastTagFromFlash();
@@ -505,8 +503,8 @@ failtag:
     }
 
     SpinOff(50);
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
     vtsend_cursor_position_restore(NULL);
     DbprintfEx(FLAG_NEWLINE, "\t\t\t%s[   GOT a Tag !   ]%s", _XGREEN_, _XWHITE_);
     cjSetCursLeft();
@@ -534,7 +532,7 @@ failtag:
     uint32_t start_time = GetTickCount();
     uint32_t delta_time = 0;
 
-    //---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
     // WE SHOULD FIND A WAY TO GET UID TO AVOID THIS "TESTRUN"
     // --------------------------------------------------------
     // + HERE IS TO BE THOUGHT AS ONLY A KEY SHOULD BE CHECK
@@ -544,7 +542,7 @@ failtag:
     // `-+ THEN FILL EMULATOR WITH B KEEY
     // `-+ THEN EMULATOR WITH CARD WITH B KEY
     // `-+ IF IT HAS FAILED OF ANY OF SORT THEN WE ARE MARRON LIKE POMALO.
-    //----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
     // AN EVEN BETTER IMPLEMENTATION IS TO CHECK EVERY KEY FOR SECTOR 0 KEY A
     // THEN IF FOUND CHECK THE SAME KEY FOR NEXT SECTOR ONLY KEY A
     // THEN IF FAIL CHECK EVERY SECTOR A KEY FOR EVERY OTHER KEY BUT NOT THE BLOCK
@@ -558,7 +556,7 @@ failtag:
     // DERIVATION
     // THEN IF B KEY IS NOT OF THIS SCHEME CHECK EVERY REMAINING B KEYED SECTOR
     // WITH EVERY REMAINING KEYS, BUT DISCARDING ANY DEFAULT TRANSPORT KEYS.
-    //-----------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------
     // also we could avoid first UID check for every block
 
     // then let's expose this optimal case of well known vigik schemes :
@@ -625,7 +623,6 @@ failtag:
                         break;
                     }
                 }
-
                 /* etc etc for testing schemes quick schemes */
             }
         }
@@ -641,7 +638,7 @@ failtag:
         return;
     }
 
-    /* Settings keys to emulator */
+    // Settings keys to emulator
     emlClearMem();
     uint8_t mblock[16];
     for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
@@ -655,7 +652,7 @@ failtag:
 
     DbprintfEx(FLAG_NEWLINE, "%s>>%s Setting Keys->Emulator MEM...[%sOK%s]", _XYELLOW_, _XWHITE_, _XGREEN_, _XWHITE_);
 
-    /* filling TAG to emulator */
+    // filling TAG to emulator
     int filled;
     cjSetCursLeft();
 
@@ -666,11 +663,10 @@ failtag:
 
         DbprintfEx(FLAG_NEWLINE, "%s>>%s W_FAILURE ! %sTrying fallback B keys....", _XRED_, _XORANGE_, _XWHITE_);
 
-        /* no trace, no dbg  */
+        // no trace, no dbg
         filled = e_MifareECardLoad(sectorsCnt, 1);
         if (filled != PM3_SUCCESS) {
             cjSetCursLeft();
-
             DbprintfEx(FLAG_NEWLINE, "FATAL:EML_FALLBACKFILL_B");
             SpinErr(LED_C, 100, 8);
             SpinOff(100);
@@ -717,10 +713,9 @@ readysim:
     SpinOff(100);
     LED_C_ON();
 
-    DBGLEVEL = DBG_NONE;
-
-    //uint16_t flags=0;
-    /*switch (p_card.uidlen) {
+    /*
+    uint16_t flags = 0;
+    switch (p_card.uidlen) {
         case 10:
             flags = FLAG_10B_UID_IN_DATA;
             break;
@@ -733,19 +728,18 @@ readysim:
         default:
             flags = FLAG_UID_IN_EMUL;
             break;
-    }*/
-
+    }
     // Use UID, SAK, ATQA from EMUL, if uid not defined
-    // if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-    //flags |= FLAG_UID_IN_EMUL;
-    //}
-    //flags |= FLAG_MF_1K;
-    //if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-    //    flags |= FLAG_UID_IN_EMUL;
-    //}
-    //flags = 0x10;
-    uint16_t flags = 0;
-    flags = 16;
+    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
+       flags |= FLAG_UID_IN_EMUL;
+    }
+    flags |= FLAG_MF_1K;
+    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
+        flags |= FLAG_UID_IN_EMUL;
+     }
+    flags = 0x10;
+    */
+    uint16_t flags = FLAG_UID_IN_EMUL;
     DbprintfEx(FLAG_NEWLINE, "\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)", flags, flags);
     cjSetCursLeft();
     SpinOff(1000);
@@ -789,8 +783,6 @@ readysim:
  * - tracing is falsed
  */
 int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
-    DBGLEVEL = DBG_NONE;
-
     uint8_t numSectors = numofsectors;
     uint8_t keyType = keytype;
 
@@ -802,7 +794,6 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
     uint8_t dataoutbuf2[16];
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
     clear_trace();
     set_tracing(false);
 
@@ -810,24 +801,17 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
     if (!iso14443a_select_card(cjuid, &p_card, &cjcuid, true, 0, true)) {
         isOK = false;
-        if (DBGLEVEL >= 1)
-            DbprintfEx(FLAG_RAWPRINT, "Can't select card");
     }
 
     for (uint8_t s = 0; isOK && s < numSectors; s++) {
         uint64_t ui64Key = emlGetKey(s, keyType);
         if (s == 0) {
             if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_FIRST)) {
-
-                if (DBGLEVEL >= 1)
-                    DbprintfEx(FLAG_NEWLINE, "Sector[%2d]. Auth error", s);
                 break;
             }
         } else {
             if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_NESTED)) {
                 isOK = false;
-                if (DBGLEVEL >= 1)
-                    DbprintfEx(FLAG_NEWLINE, "Sector[%2d]. Auth nested error", s);
                 break;
             }
         }
@@ -835,8 +819,6 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(s); blockNo++) {
             if (isOK && mifare_classic_readblock(pcs, cjcuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
                 isOK = false;
-                if (DBGLEVEL >= 1)
-                    DbprintfEx(FLAG_NEWLINE, "Error reading sector %2d block %2d", s, blockNo);
                 break;
             };
             if (isOK) {
@@ -852,23 +834,18 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         }
     }
 
-    if (mifare_classic_halt(pcs, cjcuid)) {
-        if (DBGLEVEL >= 1)
-            DbprintfEx(FLAG_NEWLINE, "Halt error");
-    };
+    int res = mifare_classic_halt(pcs, cjcuid);
+    (void)res;
 
     crypto1_deinit(pcs);
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
     return (isOK) ? PM3_SUCCESS : PM3_EUNDEF;
 }
 
 /* the chk function is a piwi'ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
-int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain,
-                           uint64_t *key) {
-    DBGLEVEL = DBG_NONE;
+int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
+                           uint8_t keyCount, uint8_t *datain, uint64_t *key) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
 
@@ -876,14 +853,16 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     struct Crypto1State *pcs;
     pcs = &mpcs;
 
-    for (int i = 0; i < keyCount; ++i) {
+    int retval = -1;
+
+    for (uint8_t i = 0; i < keyCount; i++) {
 
         /* no need for anticollision. just verify tag is still here */
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
         if (!iso14443a_select_card(cjuid, &p_card, &cjcuid, true, 0, true)) {
             cjSetCursLeft();
             DbprintfEx(FLAG_NEWLINE, "%sFATAL%s : E_MF_LOSTTAG", _XRED_, _XWHITE_);
-            return -1;
+            break;
         }
 
         uint64_t ui64Key = bytes_to_num(datain + i * 6, 6);
@@ -894,15 +873,13 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
             continue;
         }
-        crypto1_deinit(pcs);
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         *key = ui64Key;
-        return i;
+        retval = i;
+        break;
     }
     crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
-    return -1;
+    return retval;
 }
 
 void saMifareMakeTag(void) {
@@ -920,7 +897,6 @@ void saMifareMakeTag(void) {
     int flags = 0;
     for (int blockNum = 0; blockNum < 16 * 4; blockNum++) {
         uint8_t mblock[16];
-        // cnt = 0;
         emlGetMem(mblock, blockNum, 1);
         // switch on field and send magic sequence
         if (blockNum == 0)
@@ -935,21 +911,15 @@ void saMifareMakeTag(void) {
             flags = 0x04 + 0x10;
 
         if (saMifareCSetBlock(0, flags & 0xFE, blockNum, mblock)) {
-            //&& cnt <= retry) {
-            // cnt++;
             cjSetCursFRight();
             if (currfline > 53) {
                 currfline = 54;
             }
             DbprintfEx(FLAG_NEWLINE, "Block :%02x %sOK%s", blockNum, _XGREEN_, _XWHITE_);
-            //                                                      DbprintfEx(FLAG_RAWPRINT,"FATAL:E_MF_CHINESECOOK_NORICE");
-            //                                                      cfail=1;
-            // return;
             continue;
         } else {
             cjSetCursLeft();
             cjSetCursLeft();
-
             DbprintfEx(FLAG_NEWLINE, "`--> %sFAIL%s : CHN_FAIL_BLK_%02x_NOK", _XRED_, _XWHITE_, blockNum);
             cjSetCursFRight();
             DbprintfEx(FLAG_NEWLINE, "%s>>>>%s STOP AT %02x", _XRED_, _XWHITE_, blockNum);
@@ -957,14 +927,9 @@ void saMifareMakeTag(void) {
             break;
         }
         cjSetCursFRight();
-
         DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>> END <<<<<<<<%s", _XYELLOW_, _XWHITE_);
-        // break;
-        /*if (cfail == 1) {
-                DbprintfEx(FLAG_RAWPRINT,"FATAL: E_MF_HARA_KIRI_\r\n");
-                break;
-        } */
     }
+
     if (cfail == 0) {
         SpinUp(50);
         SpinUp(50);

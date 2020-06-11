@@ -23,12 +23,12 @@ typedef struct {
 } pace_version_info_t;
 
 // general functions
-void EPA_Finish();
+void EPA_Finish(void);
 size_t EPA_Parse_CardAccess(uint8_t *data,
                             size_t length,
                             pace_version_info_t *pace_info);
 int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length);
-int EPA_Setup();
+int EPA_Setup(void);
 
 // PACE related functions
 int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password);

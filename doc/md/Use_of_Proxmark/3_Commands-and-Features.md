@@ -21,17 +21,17 @@ Here are some commands to start off with.
 
 To get an overview of the available commands for LF RFID and HF RFID:
 ```
-pm3 --> lf
-pm3 --> hf
+[usb] pm3 --> lf
+[usb] pm3 --> hf
 ```
 
 To search quickly for known LF or HF tags:
 ```
-pm3 --> lf search
-pm3 --> hf search
+[usb] pm3 --> lf search
+[usb] pm3 --> hf search
 ```
 
 To get info on a ISO14443-A tag:
 ```
-pm3 --> hf 14a info
+[usb] pm3 --> hf 14a info
 ```

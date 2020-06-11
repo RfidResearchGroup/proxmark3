@@ -597,7 +597,7 @@ static const cardformat_t FormatTable[] = {
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit" }, // from cardinfo.barkweb.com.au
+    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit", {1, 1, 0, 1, 0}}, // from cardinfo.barkweb.com.au
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };

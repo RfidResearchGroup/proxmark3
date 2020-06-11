@@ -16,8 +16,8 @@
 /// Calculates the value of the CSR DLYBCT field given the desired delay (in ns)
 #define SPI_DLYBCT(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 32000) << 24)
 
-
-uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
+static uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
+#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
@@ -25,7 +25,7 @@ void FlashmemSetSpiBaudrate(uint32_t baudrate) {
 }
 
 // initialize
-bool FlashInit() {
+bool FlashInit(void) {
     FlashSetup(FLASHMEM_SPIBAUDRATE);
 
     StartTicks();
@@ -435,7 +435,7 @@ bool Flash_WipeMemoryPage(uint8_t page) {
     return true;
 }
 // Wipes flash memory completely, fills with 0xFF
-bool Flash_WipeMemory() {
+bool Flash_WipeMemory(void) {
     if (!FlashInit()) {
         if (DBGLEVEL > 3) Dbprintf("Flash_WriteData init fail");
         return false;
@@ -462,7 +462,7 @@ bool Flash_WipeMemory() {
 }
 
 // enable the flash write
-void Flash_WriteEnable() {
+void Flash_WriteEnable(void) {
     FlashSendLastByte(WRITEENABLE);
     if (DBGLEVEL > 3) Dbprintf("Flash Write enabled");
 }

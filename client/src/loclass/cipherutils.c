@@ -164,21 +164,22 @@ void printarr(const char *name, uint8_t *arr, int len) {
     free(output);
 }
 
-void printvar(const char *name, uint8_t *arr, int len) {
-    PrintAndLogEx(INFO, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len));
-}
-
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {
 
     if (arr == NULL) return;
 
     int cx = 0, i;
-    size_t outsize = 100 + strlen(title) + len * 4;
+    size_t outsize = 100 + strlen(title) + (len * 4);
     char *output = calloc(outsize, sizeof(char));
     PrintAndLogEx(INFO, "%s", title);
     for (i = 0;  i < len; i++) {
-        if (i % 16 == 0)
-            cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
+        if (i % 16 == 0) {
+
+            if (i == 0)
+                cx += snprintf(output + cx, outsize - cx, "%02x| ", i);
+            else
+                cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
+        }
         cx += snprintf(output + cx, outsize - cx, "%02x ", *(arr + i));
     }
     PrintAndLogEx(INFO, output);
@@ -203,9 +204,9 @@ static int testBitStream(void) {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogEx(SUCCESS, "    Bitstream test 1 ok");
+        PrintAndLogEx(SUCCESS, "    Bitstream test 1 (%s)", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "    Bitstream test 1 failed");
+        PrintAndLogEx(FAILED, "    Bitstream test 1 (%s)", _RED_("failed"));
         uint8_t i;
         for (i = 0 ; i < ARRAYLEN(input) ; i++) {
             PrintAndLogEx(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
@@ -233,9 +234,9 @@ static int testReversedBitstream(void) {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogEx(SUCCESS, "    Bitstream test 2 ok");
+        PrintAndLogEx(SUCCESS, "    Bitstream test 2 (%s)", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "    Bitstream test 2 failed");
+        PrintAndLogEx(FAILED, "    Bitstream test 2 (%s)", _RED_("failed"));
         uint8_t i;
         for (i = 0 ; i < ARRAYLEN(input) ; i++) {
             PrintAndLogEx(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);
@@ -245,12 +246,12 @@ static int testReversedBitstream(void) {
     return PM3_SUCCESS;
 }
 
-
 int testCipherUtils(void) {
     PrintAndLogEx(INFO, "Testing some internals...");
-    int retval = 0;
-    retval |= testBitStream();
-    retval |= testReversedBitstream();
+    int retval = testBitStream();
+    if (retval == PM3_SUCCESS)
+        retval = testReversedBitstream();
+
     return retval;
 }
 #endif

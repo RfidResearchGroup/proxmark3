@@ -101,4 +101,10 @@
  *                                       *
  *****************************************/
 
+// Proxmark3 stdout/stderr hooking
+#include "ui.h"
+#define fprintf(stream, ...) PrintAndLogEx(INFO, __VA_ARGS__)
+#define fputs(s, stream) PrintAndLogEx(INFO, "%s", s)
+#define puts(s) PrintAndLogEx(SUCCESS, "%s", s)
+
 #endif /* CONFIG_H */

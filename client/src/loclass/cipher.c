@@ -124,8 +124,8 @@ static uint8_t _select(bool x, bool y, uint8_t r) {
 #define _r7 (r & 0x01)
 
 #define _z0  ( (_r0 & _r2) ^ ( _r1 & (!_r3)) ^ (_r2 | _r4) )
-#define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ x ^ y )
-#define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ x )
+#define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ (x) ^ (y) )
+#define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ (x) )
 
     /*
         uint8_t r0 = r >> 7 & 0x1;
@@ -177,10 +177,10 @@ static State successor(uint8_t *k, State s, bool y) {
     State successor = {0, 0, 0, 0};
 
     successor.t = s.t >> 1;
-    successor.t |= (T(s) ^ r0 ^ r4) << 15;
+    successor.t |= ((T(s)) ^ (r0) ^ (r4)) << 15;
 
     successor.b = s.b >> 1;
-    successor.b |= (B(s) ^ r7) << 7;
+    successor.b |= ((B(s)) ^ (r7)) << 7;
 
     bool Tt = T(s);
 
@@ -247,7 +247,6 @@ static void MAC(uint8_t *k, BitstreamIn input, BitstreamOut out) {
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t cc_nr[13] = { 0 };
     uint8_t div_key[8];
-    //cc_nr=(uint8_t*) calloc(length+1, sizeof(uint8_t));
 
     memcpy(cc_nr, cc_nr_p, 12);
     memcpy(div_key, div_key_p, 8);
@@ -260,7 +259,6 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));
     memcpy(mac, dest, 4);
-    //free(cc_nr);
 }
 
 void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]) {
@@ -296,9 +294,9 @@ int testMAC(void) {
     doMAC(cc_nr, div_key, calculated_mac);
 
     if (memcmp(calculated_mac, correct_MAC, 4) == 0) {
-        PrintAndLogEx(SUCCESS, "MAC calculation OK!");
+        PrintAndLogEx(SUCCESS, "    MAC calculation (%s)", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "FAILED: MAC calculation failed:");
+        PrintAndLogEx(FAILED, "    MAC calculation (%s)", _RED_("failed"));
         printarr("    Calculated_MAC", calculated_mac, 4);
         printarr("    Correct_MAC   ", correct_MAC, 4);
         return PM3_ESOFT;

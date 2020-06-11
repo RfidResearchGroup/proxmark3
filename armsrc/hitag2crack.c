@@ -17,9 +17,9 @@
 #define READP0CMD "1100000111"
 #define ERROR_RESPONSE "F402889C"
 
-extern const uint8_t Hitag2Sync[5];
-extern bool CryptoActive;
-extern Hitag_State Hitag_Crypto_State;
+static const uint8_t Hitag2Sync[5];
+static bool CryptoActive;
+static Hitag_State Hitag_Crypto_State;
 
 // hitag2_crack implements the first crack algorithm described in the paper,
 // Gone In 360 Seconds by Verdult, Garcia and Balasch.

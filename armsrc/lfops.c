@@ -261,8 +261,9 @@ void printT55xxConfig(void) {
             else
                 PRN_NA;
 
+        // remove last space
         s[strlen(s)] = 0;
-        DbpString(s);
+        DbpStringEx(FLAG_LOG, s, sizeof(s));
     }
     DbpString("");
 }
@@ -621,7 +622,7 @@ void ReadTItag(void) {
     StopTicks();
 }
 
-void WriteTIbyte(uint8_t b) {
+static void WriteTIbyte(uint8_t b) {
     int i = 0;
 
     // modulate 8 bits out to the antenna
@@ -1534,7 +1535,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         calccrc &= 0xff;
         calccrc = 0xff - calccrc;
 
-        char *crcStr = (crc == calccrc) ? "ok" : "!crc";
+        const char *crcStr = (crc == calccrc) ? "ok" : "!crc";
 
         Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]", version, facilitycode, number, code, code2, crc, crcStr);
         // if we're only looking for one tag
@@ -1570,10 +1571,10 @@ void TurnReadLFOn(uint32_t delay) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // measure antenna strength.
-    //int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
+    //int adcval = ((MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14);
     WaitUS(delay);
 }
-void TurnReadLF_off(uint32_t delay) {
+static void TurnReadLF_off(uint32_t delay) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitUS(delay);
 }
@@ -1585,7 +1586,7 @@ void TurnReadLF_off(uint32_t delay) {
 #define T55_LLR_REF       (136 * 8)
 
 // Write one bit to chip
-void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
+static void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
 
     switch (bit) {
         case 0 :
@@ -1621,7 +1622,7 @@ void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
 // num_bits     - how many bits (low x bits of data)  Max 32 bits at a time
 // max_len      - how many bytes can the bit_array hold (ensure no buffer overflow)
 // returns "Next" bit offset / bits stored (for next store)
-uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t num_bits, uint8_t max_len) {
+static uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t num_bits, uint8_t max_len) {
     int8_t next_offset = start_offset;
 
     // Check if data will fit.
@@ -1645,7 +1646,7 @@ uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t 
 }
 
 // Send one downlink command to the card
-void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
+static void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
 
     /*
     arg bits
@@ -2029,7 +2030,7 @@ void T55xx_ChkPwds(uint8_t flags) {
     Dbprintf("[=] Baseline determined [%u]", baseline);
 
     uint8_t *pwds = BigBuf_get_EM_addr();
-    uint16_t pwdCount = 0;
+    uint16_t pwd_count = 0;
     uint32_t candidate = 0;
 #ifdef WITH_FLASH
 
@@ -2040,20 +2041,27 @@ void T55xx_ChkPwds(uint8_t flags) {
     if (isok != sizeof(counter))
         goto OUT;
 
-    pwdCount = (uint16_t)(counter[1] << 8 | counter[0]);
-
-    if (pwdCount == 0 || pwdCount == 0xFFFF)
+    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
+    if (pwd_count == 0)
         goto OUT;
 
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwdCount * 4);
-    if (isok != pwdCount * 4)
+    // since flash can report way too many pwds, we need to limit it.
+    // bigbuff EM size is determined by CARD_MEMORY_SIZE
+    // a password is 4bytes.
+    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
+
+    // adjust available pwd_count
+    pwd_count = pwd_size_available / 4;
+
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwd_size_available);
+    if (isok != pwd_size_available)
         goto OUT;
 
-    Dbprintf("[=] Password dictionary count %d ", pwdCount);
+    Dbprintf("[=] Password dictionary count %d ", pwd_count);
 #endif
 
     uint32_t pwd = 0, curr = 0, prev = 0;
-    for (uint16_t i = 0; i < pwdCount; ++i) {
+    for (uint16_t i = 0; i < pwd_count; ++i) {
 
         if (BUTTON_PRESS() && !data_available()) {
             goto OUT;
@@ -2107,7 +2115,7 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags) {
 
 
 /*-------------- Cloning routines -----------*/
-void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
+static void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
 
     t55xx_write_block_t cmd;
     cmd.pwd     = 0;
@@ -2281,10 +2289,10 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
 #define FWD_CMD_READ    0x9
 #define FWD_CMD_DISABLE 0x5
 
-uint8_t forwardLink_data[64]; //array of forwarded bits
-uint8_t *forward_ptr;  //ptr for forward message preparation
-uint8_t fwd_bit_sz; //forwardlink bit counter
-uint8_t *fwd_write_ptr;  //forwardlink bit pointer
+static uint8_t forwardLink_data[64]; //array of forwarded bits
+static uint8_t *forward_ptr;  //ptr for forward message preparation
+static uint8_t fwd_bit_sz; //forwardlink bit counter
+static uint8_t *fwd_write_ptr;  //forwardlink bit pointer
 
 //====================================================================
 // prepares command bits
@@ -2299,7 +2307,7 @@ uint8_t *fwd_write_ptr;  //forwardlink bit pointer
 //  These timings work for 4469/4269/4305 (with the 55*8 above)
 //  WRITE_0 = 23*8 , 9*8
 
-uint8_t Prepare_Cmd(uint8_t cmd) {
+static uint8_t Prepare_Cmd(uint8_t cmd) {
 
     *forward_ptr++ = 0; //start bit
     *forward_ptr++ = 0; //second pause for 4050 code
@@ -2319,7 +2327,7 @@ uint8_t Prepare_Cmd(uint8_t cmd) {
 // prepares address bits
 // see EM4469 spec
 //====================================================================
-uint8_t Prepare_Addr(uint8_t addr) {
+static uint8_t Prepare_Addr(uint8_t addr) {
 
     register uint8_t line_parity;
 
@@ -2340,7 +2348,7 @@ uint8_t Prepare_Addr(uint8_t addr) {
 // prepares data bits intreleaved with parity bits
 // see EM4469 spec
 //====================================================================
-uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
+static uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
 
     register uint8_t column_parity;
     register uint8_t i, j;
@@ -2376,7 +2384,7 @@ uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
 // Requires: forwarLink_data filled with valid bits (1 bit per byte)
 // fwd_bit_count set with number of bits to be sent
 //====================================================================
-void SendForward(uint8_t fwd_bit_count) {
+static void SendForward(uint8_t fwd_bit_count) {
 
 // iceman,   21.3us increments for the USclock verification.
 // 55FC * 8us == 440us / 21.3 === 20.65 steps.  could be too short. Go for 56FC instead
@@ -2410,7 +2418,7 @@ void SendForward(uint8_t fwd_bit_count) {
     }
 }
 
-void EM4xLogin(uint32_t pwd) {
+static void EM4xLogin(uint32_t pwd) {
     uint8_t len;
     forward_ptr = forwardLink_data;
     len = Prepare_Cmd(FWD_CMD_LOGIN);

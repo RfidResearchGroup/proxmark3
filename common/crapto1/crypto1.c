@@ -21,6 +21,19 @@
 #include "crapto1.h"
 #include "parity.h"
 
+#ifdef __OPTIMIZE_SIZE__
+int filter(uint32_t const x) {
+    uint32_t f;
+
+    f  = 0xf22c0 >> (x       & 0xf) & 16;
+    f |= 0x6c9c0 >> (x >>  4 & 0xf) &  8;
+    f |= 0x3c8b0 >> (x >>  8 & 0xf) &  4;
+    f |= 0x1e458 >> (x >> 12 & 0xf) &  2;
+    f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
+    return BIT(0xEC57E80A, f);
+}
+#endif
+
 #define SWAPENDIAN(x)\
     (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 

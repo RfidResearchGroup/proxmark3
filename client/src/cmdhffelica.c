@@ -22,7 +22,7 @@
 #include "util.h"
 #include "ui.h"
 #include "mifare.h"     // felica_card_select_t struct
-#include "mbedtls/des.h"
+#include "des.h"
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static int CmdHelp(const char *Cmd);
@@ -1367,7 +1367,8 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         flags |= FELICA_RAW;
     }
 
-    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+// Todo activate once datalen isn't hardcoded anymore...
+//    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
@@ -1632,7 +1633,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         printf(".");
         fflush(stdout);
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
             DropField();
             return PM3_EOPABORTED;
         }

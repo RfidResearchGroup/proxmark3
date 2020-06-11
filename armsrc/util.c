@@ -83,7 +83,7 @@ uint8_t hex2int(char hexchar) {
     }
 }
 
-void LEDsoff() {
+void LEDsoff(void) {
     LED_A_OFF();
     LED_B_OFF();
     LED_C_OFF();
@@ -287,40 +287,6 @@ int BUTTON_HELD(int ms) {
 
     // We should never get here
     return BUTTON_ERROR;
-}
-
-/* Similar to FpgaGatherVersion this formats stored version information
- * into a string representation. It takes a pointer to the struct version_information,
- * verifies the magic properties, then stores a formatted string, prefixed by
- * prefix in dst.
- */
-void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information) {
-    struct version_information *v = (struct version_information *)version_information;
-    dst[0] = 0;
-    strncat(dst, prefix, len - 1);
-    if (v->magic != VERSION_INFORMATION_MAGIC) {
-        strncat(dst, "Missing/Invalid version information\n", len - strlen(dst) - 1);
-        return;
-    }
-    if (v->versionversion != 1) {
-        strncat(dst, "Version information not understood\n", len - strlen(dst) - 1);
-        return;
-    }
-    if (!v->present) {
-        strncat(dst, "Version information not available\n", len - strlen(dst) - 1);
-        return;
-    }
-
-    strncat(dst, v->gitversion, len - strlen(dst) - 1);
-    if (v->clean == 0) {
-        strncat(dst, "-unclean", len - strlen(dst) - 1);
-    } else if (v->clean == 2) {
-        strncat(dst, "-suspect", len - strlen(dst) - 1);
-    }
-
-    strncat(dst, " ", len - strlen(dst) - 1);
-    strncat(dst, v->buildtime, len - strlen(dst) - 1);
-    strncat(dst, "\n", len - strlen(dst) - 1);
 }
 
 bool data_available(void) {

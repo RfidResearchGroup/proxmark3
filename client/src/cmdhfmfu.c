@@ -12,7 +12,7 @@
 #include "cmdparser.h"
 #include "commonutil.h"
 #include "crypto/libpcrypto.h"
-#include "mbedtls/des.h"
+#include "des.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
 #include "comms.h"
@@ -347,8 +347,7 @@ static int ul_select(iso14a_card_select_t *card) {
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    bool ans = false;
-    ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+    bool ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
 
     if (!ans || resp.oldarg[0] < 1) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
@@ -486,7 +485,7 @@ static int ul_fudan_check(void) {
 
     uint8_t cmd[4] = {0x30, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return UL_ERROR;
     if (resp.oldarg[0] != 1) return UL_ERROR;
@@ -541,7 +540,7 @@ static int ul_print_default(uint8_t *data) {
                   sprint_bin(data + 10, 2)
                  );
 
-    PrintAndLogEx(SUCCESS, "OneTimePad: %s - %s\n",
+    PrintAndLogEx(SUCCESS, "OneTimePad: %s - %s",
                   sprint_hex(data + 12, 4),
                   sprint_bin(data + 12, 4)
                  );
@@ -653,66 +652,60 @@ static int ndef_print_CC(uint8_t *data) {
 
 int ul_print_type(uint32_t tagtype, uint8_t spaces) {
 
-    char spc[11] = "          ";
-    spc[10] = 0x00;
-
     if (spaces > 10)
         spaces = 10;
-
-    char *spacer = spc + (10 - spaces);
-
     if (tagtype & UL)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight (MF0ICU1) %s"), spacer, (tagtype & MAGIC) ? "<magic>" : "");
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight (MF0ICU1) %s"), spaces, "", (tagtype & MAGIC) ? "<magic>" : "");
     else if (tagtype & UL_C)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight C (MF0ULC) %s"), spacer, (tagtype & MAGIC) ? "<magic>" : "");
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight C (MF0ULC) %s"), spaces, "", (tagtype & MAGIC) ? "<magic>" : "");
     else if (tagtype & UL_NANO_40)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight Nano 40bytes (MF0UNH00)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight Nano 40bytes (MF0UNH00)"), spaces, "");
     else if (tagtype & UL_EV1_48)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight EV1 48bytes (MF0UL1101)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 48bytes (MF0UL1101)"), spaces, "");
     else if (tagtype & UL_EV1_128)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIFARE Ultralight EV1 128bytes (MF0UL2101)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 128bytes (MF0UL2101)"), spaces, "");
     else if (tagtype & UL_EV1)
-        PrintAndLogEx(NORMAL, "%sTYPE: " _YELLOW_("MIFARE Ultralight EV1 UNKNOWN"), spacer);
+        PrintAndLogEx(NORMAL, "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 UNKNOWN"), spaces, "");
     else if (tagtype & NTAG)
-        PrintAndLogEx(NORMAL, "%sTYPE: " _YELLOW_("NTAG UNKNOWN"), spacer);
+        PrintAndLogEx(NORMAL, "%*sTYPE: " _YELLOW_("NTAG UNKNOWN"), spaces, "");
     else if (tagtype & NTAG_203)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 203 144bytes (NT2H0301F0DT)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 203 144bytes (NT2H0301F0DT)"), spaces, "");
     else if (tagtype & NTAG_210)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 210 48bytes (NT2L1011G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 210 48bytes (NT2L1011G0DU)"), spaces, "");
     else if (tagtype & NTAG_212)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 212 128bytes (NT2L1211G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 212 128bytes (NT2L1211G0DU)"), spaces, "");
     else if (tagtype & NTAG_213)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 213 144bytes (NT2H1311G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 213 144bytes (NT2H1311G0DU)"), spaces, "");
     else if (tagtype & NTAG_213_F)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 213F 144bytes (NT2H1311F0DTL)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 213F 144bytes (NT2H1311F0DTL)"), spaces, "");
     else if (tagtype & NTAG_215)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 215 504bytes (NT2H1511G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 215 504bytes (NT2H1511G0DU)"), spaces, "");
     else if (tagtype & NTAG_216)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 216 888bytes (NT2H1611G0DU)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 216 888bytes (NT2H1611G0DU)"), spaces, "");
     else if (tagtype & NTAG_216_F)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG 216F 888bytes (NT2H1611F0DTL)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 216F 888bytes (NT2H1611F0DTL)"), spaces, "");
     else if (tagtype & NTAG_I2C_1K)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C 888bytes (NT3H1101FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C 888bytes (NT3H1101FHK)"), spaces, "");
     else if (tagtype & NTAG_I2C_2K)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C 1904bytes (NT3H1201FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C 1904bytes (NT3H1201FHK)"), spaces, "");
     else if (tagtype & NTAG_I2C_1K_PLUS)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C plus 888bytes (NT3H2111FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C plus 888bytes (NT3H2111FHK)"), spaces, "");
     else if (tagtype & NTAG_I2C_2K_PLUS)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("NTAG I2C plus 1912bytes (NT3H2211FHK)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG I2C plus 1912bytes (NT3H2211FHK)"), spaces, "");
     else if (tagtype & MY_D)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 (SLE 66RxxS)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 (SLE 66RxxS)"), spaces, "");
     else if (tagtype & MY_D_NFC)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 NFC (SLE 66RxxP)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 NFC (SLE 66RxxP)"), spaces, "");
     else if (tagtype & MY_D_MOVE)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 move (SLE 66R01P)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move (SLE 66R01P)"), spaces, "");
     else if (tagtype & MY_D_MOVE_NFC)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 move NFC (SLE 66R01P)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move NFC (SLE 66R01P)"), spaces, "");
     else if (tagtype & MY_D_MOVE_LEAN)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("INFINEON my-d\x99 move lean (SLE 66R01L)"), spacer);
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move lean (SLE 66R01L)"), spaces, "");
     else if (tagtype & FUDAN_UL)
-        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("FUDAN Ultralight Compatible (or other compatible) %s"), spacer, (tagtype & MAGIC) ? "<magic>" : "");
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("FUDAN Ultralight Compatible (or other compatible) %s"), spaces, "", (tagtype & MAGIC) ? "<magic>" : "");
     else
-        PrintAndLogEx(NORMAL, "%sTYPE: " _YELLOW_("Unknown %06x"), spacer, tagtype);
+        PrintAndLogEx(NORMAL, "%*sTYPE: " _YELLOW_("Unknown %06x"), spaces, "", tagtype);
     return PM3_SUCCESS;
 }
 
@@ -754,11 +747,13 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Configuration"));
 
     bool strg_mod_en = (data[0] & 2);
+
     uint8_t authlim = (data[4] & 0x07);
-    bool nfc_cnf_en = (data[4] & 0x08);
-    bool nfc_cnf_prot_pwd = (data[4] & 0x10);
-    bool cfglck = (data[4] & 0x40);
-    bool prot = (data[4] & 0x80);
+    bool nfc_cnf_prot_pwd = ((data[4] & 0x08) == 0x08);
+    bool nfc_cnf_en  = ((data[4] & 0x10) == 0x10);
+    bool cfglck = ((data[4] & 0x40) == 0x40);
+    bool prot = ((data[4] & 0x80) == 0x80);
+
     uint8_t vctid = data[5];
 
     PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", startPage, startPage, sprint_hex(data, 4));
@@ -844,7 +839,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
         PrintAndLogEx(INFO, "                    - Max number of password attempts is " _YELLOW_("%d"), authlim);
 
     PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_en) ? "enabled" : "disabled");
-    PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "not protected" : "password protection enabled");
+    PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "password protection enabled" : "not protected");
 
     PrintAndLogEx(INFO, "                    - user configuration %s", cfglck ? "permanently locked" : "writeable");
     PrintAndLogEx(INFO, "                    - %s access is protected with password", prot ? "read and write" : "write");
@@ -856,6 +851,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 }
 
 static int ulev1_print_counters(void) {
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counters"));
     uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
@@ -865,7 +861,7 @@ static int ulev1_print_counters(void) {
         len = ulev1_readCounter(i, counter, sizeof(counter));
         if (len == 3) {
             PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
-            PrintAndLogEx(SUCCESS, "            - %02X tearing %s", tear[0], (tear[0] == 0xBD) ? "Ok" : "failure");
+            PrintAndLogEx(SUCCESS, "            - %02X tearing (" _GREEN_("%s") ")", tear[0], (tear[0] == 0xBD) ? "ok" : "failure");
         }
     }
     return len;
@@ -949,7 +945,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     }
 
     PrintAndLogEx(NORMAL, "");
-    if (is_valid == false) {
+    if (is_valid == false || i == ARRAYLEN(nxp_mfu_public_keys)) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
     }
@@ -975,6 +971,22 @@ static int ulev1_print_version(uint8_t *data) {
     PrintAndLogEx(INFO, "            Size: %s", getUlev1CardSizeStr(data[6]));
     PrintAndLogEx(INFO, "   Protocol type: %02X%s", data[7], (data[7] == 0x3) ? ", ISO14443-3 Compliant" : "");
     return PM3_SUCCESS;
+}
+
+static int ntag_print_counter(void) {
+    // NTAG has one counter/tearing.  At address 0x02.
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counter"));
+    uint8_t tear[1] = {0};
+    uint8_t counter[3] = {0, 0, 0};
+    uint16_t len;
+    len = ulev1_readTearing(0x02, tear, sizeof(tear));
+    (void)len;
+    len = ulev1_readCounter(0x02, counter, sizeof(counter));
+    (void)len;
+    PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
+    PrintAndLogEx(SUCCESS, "            - %02X tearing (" _GREEN_("%s")")", tear[0], (tear[0] == 0xBD) ? "ok" : "failure");
+    return len;
 }
 
 /*
@@ -1041,6 +1053,42 @@ uint32_t GetHF14AMfU_Type(void) {
 
         switch (len) {
             case 0x0A: {
+                /*
+                MF0UL1001DUx 0004030100000B03
+                MF0UL1101DUx 0004030101000B03
+                MF0ULH1101DUx 0004030201000B03
+                MF0UL1141DUF 0004030301000B03
+                MF0UL2101Dxy 0004030101000E03
+                MF0UL2101DUx 0004030201000E03
+                MF0UL3101DUx 0004030101001103
+                MF0ULH3101DUx 0004030201001103
+                MF0UL5101DUx 0004030101001303
+                NT2L1011F0DUx 0004040101000B03
+                NT2H1011G0DUD 0004040201000B03
+                NT2L1211F0DUx 0004040101000E03
+                NT2H1311G0DUx 0004040201000F03
+                NT2H1311F0Dxy 0004040401000F03
+                NT2H1411G0DUx 0004040201011103
+                NT2H1511G0DUx 0004040201001103
+                NT2H1511F0Dxy 0004040401001103
+                NT2H1611G0DUx 0004040201001303
+                NT2H1611F0Dxy 0004040401001303
+                NT2H1311C1DTL 0004040201010F03
+                NT2H1311TTDUx 0004040203000F03
+                NT3H1101W0FHK 0004040502001303
+                NT3H1201W0FHK 0004040502001503
+                NT3H1101W0FHK_Variant 0004040502011303
+                NT3H1201 0004040502011503
+                NT3H2111 0004040502021303
+                NT3H2211 0004040502021503
+                nhs 0004040600001303
+                MF0UN0001DUx 0004030102000B03
+                MF0UNH0001DUx 0004030202000B03
+                MF0UN1001DUx 0004030103000B03
+                MF0UNH1001DUx 0004030203000B03
+                NT2L1001G0DUx 0004040102000B03
+                NT2H1001G0DUx 0004040202000B03
+                */
 
                 if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0B", 7) == 0)      { tagtype = UL_EV1_48; break; }
                 else if (memcmp(version, "\x00\x04\x03\x01\x02\x00\x0B", 7) == 0) { tagtype = UL_NANO_40; break; }
@@ -1277,6 +1325,12 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     // NTAG counters?
+    if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216))) {
+        if (ntag_print_counter()) {
+            // failed - re-select
+            if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
+        }
+    }
 
     // Read signature
     if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
@@ -1517,7 +1571,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
+    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -1622,7 +1676,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
+    SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK = resp.oldarg[0] & 0xff;
@@ -1890,7 +1944,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
@@ -1948,16 +2002,42 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         if (hasAuthKey) {
             uint8_t dummy_pack[] = {0, 0};
             ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
-        } else
+        } else {
             ul_select(&card);
+        }
 
         ulev1_getVersion(get_version, sizeof(get_version));
-        for (uint8_t n = 0; n < 3; ++n) {
-            ulev1_readTearing(n, &get_counter_tearing[n][3], 1);
+
+        // ULEV-1 has 3 counters
+        uint8_t n = 0;
+
+        // NTAG has 1 counter, at 0x02
+        if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216))) {
+            n = 2;
+        }
+
+        // NTAG can have nfc counter pwd protection enabled
+        for (; n < 3; n++) {
+
+            if (hasAuthKey) {
+                uint8_t dummy_pack[] = {0, 0};
+                ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            } else {
+                ul_select(&card);
+            }
             ulev1_readCounter(n, &get_counter_tearing[n][0], 3);
+
+            if (hasAuthKey) {
+                uint8_t dummy_pack[] = {0, 0};
+                ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            } else {
+                ul_select(&card);
+            }
+            ulev1_readTearing(n, &get_counter_tearing[n][3], 1);
         }
 
         DropField();
+
         if (hasAuthKey) {
             uint8_t dummy_pack[] = {0, 0};
             ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
@@ -2010,7 +2090,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
     uint16_t datalen = pages * 4 + MFU_DUMP_PREFIX_LENGTH;
     saveFile(filename, ".bin", (uint8_t *)&dump_file_data, datalen);
-    saveFileJSON(filename, jsfMfuMemory, (uint8_t *)&dump_file_data, datalen);
+    saveFileJSON(filename, jsfMfuMemory, (uint8_t *)&dump_file_data, datalen, NULL);
 
     if (is_partial)
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
@@ -2045,8 +2125,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool write_special = false;
     bool write_extra = false;
     bool read_key = false;
+    bool verbose = false;
     size_t filelen = 0;
-    FILE *f;
 
     memset(authkey, 0x00, sizeof(authkey));
 
@@ -2093,6 +2173,10 @@ static int CmdHF14AMfURestore(const char *Cmd) {
                 cmdp++;
                 read_key = true;
                 break;
+            case 'v':
+                cmdp++;
+                verbose = true;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
                 errors = true;
@@ -2103,41 +2187,22 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_hf_mfu_restore();
 
-    if ((f = fopen(filename, "rb")) == NULL) {
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(filename, "", (void **)&dump, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
-        return 1;
+        return PM3_EIO;
     }
 
-    // get filesize to know how memory to allocate
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "Error, when getting filesize");
-        fclose(f);
-        return 1;
-    }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        fclose(f);
-        return 1;
-    }
-
-    // read all data
-    size_t bytes_read = fread(dump, 1, fsize, f);
-    fclose(f);
     if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {
         PrintAndLogEx(ERR, "Error, dump file is too small");
         free(dump);
-        return 1;
+        return PM3_ESOFT;
     }
 
-    // convert old format to new format, if need
-    int res = convertOldMfuDump(&dump, &bytes_read);
+    int res = convert_mfu_dump_format(&dump, &bytes_read, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed convert on load to new Ultralight/NTAG format");
+        PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
         free(dump);
         return res;
     }
@@ -2148,7 +2213,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     if (pages - 1 != mem->pages) {
         PrintAndLogEx(ERR, "Error, invalid dump, wrong page count");
         free(dump);
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
@@ -2766,7 +2831,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "Reading block BEFORE attack");
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -2782,7 +2847,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, ".....");
         clearCommandBuffer();
 
-        SendCommandOLD(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
+        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
         if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
             PrintAndLogEx(WARNING, "Failed");
             return PM3_ESOFT;
@@ -2791,7 +2856,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "Reading block AFTER attack");
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             uint8_t isOK = resp.oldarg[0] & 0xff;
             if (isOK) {
@@ -2832,7 +2897,8 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     uint8_t *p_key = key;
     uint8_t pack[4] = {0, 0, 0, 0};
 
-    CLIParserInit("hf mfu ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\thf mfu ndef -> shows NDEF data\n"
                   "\thf mfu ndef -k ffffffff -> shows NDEF data with key\n");
@@ -2843,10 +2909,10 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         arg_lit0("lL", "key", "(optional) swap entered key's endianness"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
-    CLIGetHexWithReturn(1, key, &keylen);
-    swapEndian = arg_get_lit(2);
-    CLIParserFree();
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
+    swapEndian = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
     switch (keylen) {
         case 0:

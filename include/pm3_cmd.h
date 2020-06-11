@@ -121,6 +121,20 @@ typedef struct {
     int32_t samples_to_skip;
     bool verbose;
 } PACKED sample_config;
+
+typedef struct {
+    uint32_t timestamp;
+    uint16_t duration;
+    uint16_t data_len : 15;
+    bool isResponse : 1;
+    uint8_t frame[];
+    // data_len         bytes of data
+    // ceil(data_len/8) bytes of parity
+} PACKED tracelog_hdr_t;
+
+#define TRACELOG_HDR_LEN        sizeof(tracelog_hdr_t)
+#define TRACELOG_PARITY_LEN(x)  (((x)->data_len - 1) / 8 + 1)
+
 /*
 typedef struct {
     uint16_t start_gap;

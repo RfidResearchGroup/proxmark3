@@ -24,6 +24,9 @@ CROSS  ?= arm-none-eabi-
 CC = gcc
 CXX = g++
 LD = g++
+SH = sh
+BASH = bash
+PERL = perl
 
 PATHSEP=/
 PREFIX ?=              /usr/local
@@ -45,21 +48,56 @@ else
     RANLIB= ranlib
 endif
 
-DEFCFLAGS = -Wall -Werror -O3
+DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
 # Some more warnings we want as errors:
-DEFCFLAGS += -Wcast-align -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers
+DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits -Wold-style-definition
 # Some more warnings we need first to eliminate, so temporarely tolerated:
-DEFCFLAGS += -Wno-error=cast-align
-# TODO?:
-#DEFCFLAGS += -Wunused-parameter -Wold-style-declaration -Wsign-compare -Wimplicit-fallthrough=3 -Wtype-limits -Wmissing-field-initializers -Wunused-but-set-parameter -Wswitch-enum -Wold-style-definition
-#DEFCFLAGS += -Wno-error=unused-parameter -Wno-error=old-style-declaration -Wno-error=sign-compare -Wno-error=implicit-fallthrough -Wno-error=type-limits -Wno-error=missing-field-initializers -Wno-error=unused-but-set-parameter -Wno-error=switch-enum -Wno-error=old-style-definition
-# unknown to clang:     -Wclobbered -Wmissing-parameter-type -Wcast-function-type
-# unknown to clang < 8: -Woverride-init
-# unknown to gcc < 6:   -Wshift-negative-value
+DEFCFLAGS += -Wcast-align -Wno-error=cast-align
+DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
 
 ifeq ($(platform),Darwin)
 # their readline has strict-prototype issues
-DEFCFLAGS += -Wstrict-prototypes -Wno-error=strict-prototypes
+DEFCFLAGS += -Wno-strict-prototypes
 else
 DEFCFLAGS += -Wstrict-prototypes
+endif
+
+# Next ones are activated only if GCCEXTRA=1 or CLANGEXTRA=1
+EXTRACFLAGS =
+EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
+EXTRACFLAGS += -Wsign-compare -Wno-error=sign-compare
+EXTRACFLAGS += -Wconversion -Wno-error=conversion -Wno-error=sign-conversion -Wno-error=float-conversion
+
+# unknown to clang or old gcc:
+# First we activate Wextra then we explicitly list those we know about
+# Those without -Wno-error are supposed to be completely solved
+GCCEXTRACFLAGS = -Wextra
+GCCEXTRACFLAGS += -Wclobbered -Wno-error=clobbered
+GCCEXTRACFLAGS += -Wcast-function-type
+GCCEXTRACFLAGS += -Wimplicit-fallthrough=3 -Wno-error=implicit-fallthrough
+GCCEXTRACFLAGS += -Wmissing-parameter-type
+GCCEXTRACFLAGS += -Wold-style-declaration -Wno-error=old-style-declaration
+GCCEXTRACFLAGS += -Woverride-init
+GCCEXTRACFLAGS += -Wshift-negative-value
+GCCEXTRACFLAGS += -Wunused-but-set-parameter -Wno-error=unused-but-set-parameter
+ifeq ($(GCCEXTRA),1)
+  DEFCFLAGS += $(GCCEXTRACFLAGS) $(EXTRACFLAGS)
+endif
+# unknown to gcc or old clang:
+# First we activate Wextra then we explicitly list those we know about
+# Those without -Wno-error are supposed to be completely solved
+CLANGEXTRACFLAGS = -Wextra
+CLANGEXTRACFLAGS += -Wtautological-type-limit-compare
+CLANGEXTRACFLAGS += -Wnull-pointer-arithmetic
+CLANGEXTRACFLAGS += -Woverride-init
+CLANGEXTRACFLAGS += -Wshift-negative-value
+CLANGEXTRACFLAGS += -Wimplicit-fallthrough
+ifeq ($(CLANGEXTRA),1)
+  DEFCFLAGS += $(CLANGEXTRACFLAGS) $(EXTRACFLAGS)
+endif
+ifeq ($(CLANGEVERYTHING),1)
+  DEFCFLAGS += -Weverything -Wno-error
+endif
+ifeq ($(NOERROR),1)
+  DEFCFLAGS += -Wno-error
 endif

@@ -25,7 +25,7 @@
 #define RECEIVE_SIZE 64
 
 // the block number for the ISO14443-4 PCB
-uint8_t pcb_blocknum = 0;
+static uint8_t pcb_blocknum = 0;
 // Deselect card by sending a s-block. the crc is precalced for speed
 static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 
@@ -33,10 +33,10 @@ static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 /*                                       PCB   CID   CMD    PAYLOAD    */
 //static uint8_t __res[MAX_FRAME_SIZE];
 
-struct desfire_key skey = {0};
+static struct desfire_key skey = {0};
 static desfirekey_t sessionkey = &skey;
 
-bool InitDesfireCard() {
+bool InitDesfireCard(void) {
 
     pcb_blocknum = 0;
 
@@ -107,7 +107,7 @@ void MifareSendCommand(uint8_t *datain) {
     LED_B_OFF();
 }
 
-void MifareDesfireGetInformation() {
+void MifareDesfireGetInformation(void) {
 
     LEDsoff();
 
@@ -683,7 +683,7 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 // crc_update(&desfire_crc32, byte, 8);
 // uint32_t crc = crc_finish(&desfire_crc32);
 
-void OnSuccess() {
+void OnSuccess(void) {
     pcb_blocknum = 0;
     ReaderTransmit(deselect_cmd, 3, NULL);
     if (mifare_ultra_halt()) {

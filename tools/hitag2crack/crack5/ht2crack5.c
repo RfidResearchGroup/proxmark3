@@ -55,7 +55,7 @@ bitslice_t bs_zeroes, bs_ones;
 #define get_bit(n, word) ((word >> (n)) & 1)
 #define get_vector_bit(slice, value) get_bit(slice&0x3f, value.bytes64[slice>>6])
 
-const uint64_t expand(uint64_t mask, uint64_t value) {
+static uint64_t expand(uint64_t mask, uint64_t value) {
     uint64_t fill = 0;
     for (uint64_t bit_index = 0; bit_index < 48; bit_index++) {
         if (mask & 1) {
@@ -67,7 +67,7 @@ const uint64_t expand(uint64_t mask, uint64_t value) {
     return fill;
 }
 
-void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value, const size_t bit_len, bool reverse) {
+static void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value, const size_t bit_len, bool reverse) {
     size_t bit_idx;
     for (bit_idx = 0; bit_idx < bit_len; bit_idx++) {
         bool bit;
@@ -84,7 +84,7 @@ void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value, const 
     }
 }
 
-const uint64_t unbitslice(const bitslice_t *restrict b, const uint8_t s, const uint8_t n) {
+static uint64_t unbitslice(const bitslice_t *restrict b, const uint8_t s, const uint8_t n) {
     uint64_t result = 0;
     for (uint8_t i = 0; i < n; ++i) {
         result <<= 1;
@@ -93,6 +93,24 @@ const uint64_t unbitslice(const bitslice_t *restrict b, const uint8_t s, const u
     return result;
 }
 
+
+// determine number of logical CPU cores (use for multithreaded functions)
+static int num_CPUs(void) {
+#if defined(_WIN32)
+#include <sysinfoapi.h>
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    return sysinfo.dwNumberOfProcessors;
+#else
+#include <unistd.h>
+    int count = sysconf(_SC_NPROCESSORS_ONLN);
+    if (count < 2)
+        count = 2;
+    return count;
+#endif
+}
+
+
 uint32_t uid, nR1, aR1, nR2, aR2;
 
 uint64_t candidates[(1 << 20)];
@@ -100,7 +118,7 @@ bitslice_t initial_bitslices[48];
 size_t filter_pos[20] = {4, 7, 9, 13, 16, 18, 22, 24, 27, 30, 32, 35, 45, 47  };
 size_t thread_count = 8;
 uint64_t layer_0_found;
-void *find_state(void *thread_d);
+static void *find_state(void *thread_d);
 static void try_state(uint64_t s);
 
 int main(int argc, char *argv[]) {
@@ -116,12 +134,7 @@ int main(int argc, char *argv[]) {
 
     uint32_t target = 0;
 
-#ifndef __WIN32
-    thread_count = sysconf(_SC_NPROCESSORS_CONF);
-    if (thread_count < 2)
-        thread_count = 2;
-#endif  /* _WIN32 */
-
+    thread_count = num_CPUs();
 
     if (!strncmp(argv[1], "0x", 2) || !strncmp(argv[1], "0X", 2)) {
         uid = rev32(hexreversetoulong(argv[1] + 2));
@@ -188,7 +201,7 @@ int main(int argc, char *argv[]) {
     exit(1);
 }
 
-void *find_state(void *thread_d) {
+static void *find_state(void *thread_d) {
     uint64_t thread = (uint64_t)thread_d;
 
     for (uint64_t index = thread; index < layer_0_found; index += thread_count) {

@@ -12,6 +12,7 @@
 
 #include "string.h"
 #include "dbprint.h"
+#include "pm3_cmd.h"
 
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
 // Also used to hold various smaller buffers and the Mifare Emulator Memory.
@@ -146,40 +147,36 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     if (!tracing) return false;
 
     uint8_t *trace = BigBuf_get_addr();
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + traceLen);
 
     uint32_t num_paritybytes = (iLen - 1) / 8 + 1; // number of valid paritybytes in *parity
-    uint32_t duration = timestamp_end - timestamp_start;
 
     // Return when trace is full
-    if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= BigBuf_max_traceLen()) {
+    if (TRACELOG_HDR_LEN + iLen + num_paritybytes >= BigBuf_max_traceLen() - traceLen) {
         tracing = false; // don't trace any more
         return false;
     }
-    // Traceformat:
-    // 32 bits timestamp (little endian)
-    // 16 bits duration (little endian)
-    // 16 bits data length (little endian, Highest Bit used as readerToTag flag)
-    // y Bytes data
-    // x Bytes parity (one byte per 8 bytes data)
 
-    // timestamp (start)
-    trace[traceLen++] = ((timestamp_start >> 0) & 0xff);
-    trace[traceLen++] = ((timestamp_start >> 8) & 0xff);
-    trace[traceLen++] = ((timestamp_start >> 16) & 0xff);
-    trace[traceLen++] = ((timestamp_start >> 24) & 0xff);
-
-    // duration
-    trace[traceLen++] = ((duration >> 0) & 0xff);
-    trace[traceLen++] = ((duration >> 8) & 0xff);
-
-    // data length
-    trace[traceLen++] = ((iLen >> 0) & 0xff);
-    trace[traceLen++] = ((iLen >> 8) & 0xff);
-
-    // readerToTag flag
-    if (!readerToTag) {
-        trace[traceLen - 1] |= 0x80;
+    uint32_t duration;
+    if (timestamp_end > timestamp_start) {
+        duration = timestamp_end - timestamp_start;
+    } else {
+        duration = (UINT32_MAX - timestamp_start) + timestamp_end;
     }
+
+    if (duration > 0x7FFF) {
+        if (DBGLEVEL >= DBG_DEBUG) {
+            Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x start:0x%08x end:0x%08x", duration, timestamp_start, timestamp_end);
+            Dbprintf("Forcing duration = 0");
+        }
+        duration = 0;
+    }
+
+    hdr->timestamp = timestamp_start;
+    hdr->duration = duration;
+    hdr->data_len = iLen;
+    hdr->isResponse = !readerToTag;
+    traceLen += TRACELOG_HDR_LEN;
 
     // data bytes
     if (btBytes != NULL && iLen != 0) {

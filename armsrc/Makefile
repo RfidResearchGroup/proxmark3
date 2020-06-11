@@ -20,8 +20,7 @@ endif
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS) \
-             -DON_DEVICE \
-             -fno-strict-aliasing -ffunction-sections -fdata-sections
+             -ffunction-sections -fdata-sections
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
@@ -76,13 +75,13 @@ include Standalone/Makefile.inc
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
 
-#the zlib source files required for decompressing the fpga config at run time
-SRC_ZLIB = inflate.c inffast.c inftrees.c adler32.c zutil.c
-#additional defines required to compile zlib
-ZLIB_CFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED
-APP_CFLAGS += $(ZLIB_CFLAGS)
-# zlib includes:
-APP_CFLAGS += -I../common/zlib
+#the lz4 source files required for decompressing the fpga config at run time
+SRC_LZ4 = lz4.c
+#additional defines required to compile lz4
+LZ4_CFLAGS = -DLZ4_MEMORY_USAGE=8
+APP_CFLAGS += $(LZ4_CFLAGS)
+# lz4 includes:
+APP_CFLAGS += -I../common/lz4
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant,
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
@@ -94,13 +93,21 @@ THUMBSRC = start.c \
     $(SRC_ISO15693) \
     $(SRC_NFCBARCODE) \
     $(SRC_LF) \
-    $(SRC_ZLIB) \
+    $(SRC_LZ4) \
     $(SRC_LEGIC) \
     $(SRC_FLASH) \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_HITAG) \
     $(SRC_SPIFFS) \
+    $(SRC_ISO14443a) \
+    $(SRC_ISO14443b) \
+    $(SRC_CRAPTO1) \
+    $(SRC_ICLASS) \
+    $(SRC_EMV) \
+    $(SRC_CRC) \
+    $(SRC_FELICA) \
+    $(SRC_STANDALONE) \
     appmain.c \
     printf.c \
     dbprint.c \
@@ -115,14 +122,6 @@ THUMBSRC = start.c \
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
-    $(SRC_ISO14443a) \
-    $(SRC_ISO14443b) \
-    $(SRC_CRAPTO1) \
-    $(SRC_ICLASS) \
-    $(SRC_EMV) \
-    $(SRC_CRC) \
-    $(SRC_FELICA) \
-    $(SRC_STANDALONE) \
     parity.c \
     usb_cdc.c \
     cmd.c
@@ -132,8 +131,6 @@ VERSIONSRC = version.c \
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common_arm/Makefile.common
-
-COMMON_FLAGS =  -Os
 
 INSTALLFW = $(OBJDIR)/fullimage.elf
 ifneq (,$(FWTAG))
@@ -145,16 +142,19 @@ endif
 OBJS = $(OBJDIR)/fullimage.s19
 FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 
-all: $(OBJS)
+all: showinfo $(OBJS)
+
+showinfo:
+	$(info compiler version:  $(shell $(CC) --version|head -n 1))
 
 .DELETE_ON_ERROR:
 
 # version.c should be remade on every time fullimage.stage1.elf should be remade
 version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [-] GEN $@)
-	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
+	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 
-fpga_version_info.c: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
+fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
 	$(Q)$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
 
@@ -176,7 +176,7 @@ $(FPGA_COMPRESSOR):
 
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.nodata.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
@@ -204,7 +204,7 @@ $(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
 
 $(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.nodata.o $(OBJDIR)/fullimage.data.o
 	$(info [=] LD $@)
-	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
+	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
 
 tarbin: $(OBJS)
 	$(info TAR $@)

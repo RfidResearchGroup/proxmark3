@@ -6,7 +6,7 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script will program a T55x7 TAG with the configuration: block 0x00 data 0x00088040
 The outlined procedure is as following:
@@ -31,7 +31,6 @@ In all 12 individual test for the PSK demod
 ]]
 example = [[
     1. script run test_t55x7_psk
-    2. script run test_t55x7_psk -o
 ]]
 usage = [[
 script run test_t55x7_psk [-h]

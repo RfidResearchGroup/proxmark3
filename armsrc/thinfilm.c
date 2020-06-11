@@ -49,9 +49,9 @@ void ReadThinFilm(void) {
 #define SEC_D 0xf0
 #define SEC_E 0x0f
 #define SEC_F 0x00
-uint16_t FpgaSendQueueDelay;
+static uint16_t FpgaSendQueueDelay;
 
-uint16_t ReadReaderField(void) {
+static uint16_t ReadReaderField(void) {
 #if defined RDV4
     return AvgAdc(ADC_CHAN_HF_RDV40);
 #else
@@ -71,7 +71,7 @@ static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
     ToSendMax++;
 }
 
-int EmSendCmdThinfilmRaw(uint8_t *resp, uint16_t respLen) {
+static int EmSendCmdThinfilmRaw(uint8_t *resp, uint16_t respLen) {
     volatile uint8_t b;
     uint16_t i = 0;
     uint32_t ThisTransferTime;

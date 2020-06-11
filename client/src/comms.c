@@ -24,8 +24,6 @@
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
 
-uint8_t gui_serial_port_name[FILE_PATH_SIZE];
-
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 
@@ -38,7 +36,7 @@ static bool comm_thread_dead = false;
 // Transmit buffer.
 static PacketCommandOLD txBuffer;
 static PacketCommandNGRaw txBufferNG;
-size_t txBufferNGLen;
+static size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t txBufferSig = PTHREAD_COND_INITIALIZER;
@@ -537,43 +535,42 @@ bool IsCommunicationThreadDead(void) {
     return ret;
 }
 
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
+bool OpenProxmark(char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
-    char *portname = (char *)port;
     if (!wait_for_port) {
-        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), portname);
-        sp = uart_open(portname, speed);
+        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);
+        sp = uart_open(port, speed);
     } else {
-        PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), portname);
+        PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), port);
         fflush(stdout);
         int openCount = 0;
-        PrintAndLogEx(INPLACE, "");
+        PrintAndLogEx(INPLACE, "% 3i", timeout);
         do {
-            sp = uart_open(portname, speed);
+            sp = uart_open(port, speed);
             msleep(500);
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(INPLACE, "% 3i", timeout - openCount - 1);
+
         } while (++openCount < timeout && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
     }
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), port);
+        PrintAndLogEx(HINT, "Try the shell script " _YELLOW_("`./pm3 --list`") " to get a list of possible serial ports");
         sp = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", port);
+        PrintAndLogEx(HINT, "Try the shell script " _YELLOW_("`./pm3 --list`") " to get a list of possible serial ports");
+
         sp = NULL;
         return false;
     } else {
         // start the communication thread
-        if (portname != (char *)conn.serial_port_name) {
-            uint16_t len = MIN(strlen(portname), FILE_PATH_SIZE - 1);
+        if (port != conn.serial_port_name) {
+            uint16_t len = MIN(strlen(port), FILE_PATH_SIZE - 1);
             memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
-            memcpy(conn.serial_port_name, portname, len);
-
-            memset(gui_serial_port_name, 0, FILE_PATH_SIZE);
-            memcpy(gui_serial_port_name, portname, len);
+            memcpy(conn.serial_port_name, port, len);
         }
         conn.run = true;
         conn.block_after_ACK = flash_mode;
@@ -605,24 +602,25 @@ int TestProxmark(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_PING, data, len);
 
-    uint32_t timeout = 1000;
+    uint32_t timeout;
 
 #ifdef USART_SLOW_LINK
     // 10s timeout for slow FPC, e.g. over BT
     // as this is the very first command sent to the pm3
     // that initiates the BT connection
     timeout = 10000;
+#else
+    timeout = 1000;
 #endif
 
     if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == 0) {
         return PM3_ETIMEOUT;
     }
 
-    bool error = false;
-    error = memcmp(data, resp.data.asBytes, len) != 0;
-
-    if (error)
+    bool error = memcmp(data, resp.data.asBytes, len) != 0;
+    if (error) {
         return PM3_EIO;
+    }
 
     SendCommandNG(CMD_CAPABILITIES, NULL, 0);
     if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == 0) {
@@ -830,6 +828,9 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (getReply(response)) {
 
+            if (response->cmd == CMD_ACK)
+                return true;
+
             // sample_buf is a array pointer, located in data.c
             // arg0 = offset in transfer. Startindex of this chunk
             // arg1 = length bytes to transfer
@@ -852,8 +853,6 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
                 memcpy(dest + offset, response->data.asBytes, copy_bytes);
                 bytes_completed += copy_bytes;
-            } else if (response->cmd == CMD_ACK) {
-                return true;
             } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
                 uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
                 PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
@@ -870,8 +869,8 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
-            PrintAndLogEx(NORMAL, "Waiting for a response from the Proxmark3...");
-            PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
+            PrintAndLogEx(INFO, "Waiting for a response from the Proxmark3...");
+            PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
     }

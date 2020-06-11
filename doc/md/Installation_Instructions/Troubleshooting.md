@@ -18,8 +18,10 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
   * [Usb cable](#usb-cable)
-  * [WSL 2  explorer.exe . doesnt work](#WSL-2)
+  * [WSL explorer.exe . doesnt work](#WSL)
   * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
+  * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
+  * [Target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -167,7 +169,7 @@ It's needed to have a good USB cable to connect Proxmark3 to USB. If you have st
 
 - check your cable with a USB tester (or try to change it). It needs to have a resistance smaller or equal to 0.3 Ohm.
 
-## WSL 2
+## WSL
 When ```explorer.exe .``` doesn't work.  
 Trying to access the dump files created in WSL,  you will need to run ```explorer.exe .```  but sometimes this doesn't work.
 [As seen here](https://github.com/microsoft/WSL/issues/4027)  they suggest checking the following registry value for *P9NP*
@@ -178,3 +180,46 @@ Trying to access the dump files created in WSL,  you will need to run ```explore
 Some reports has stated that they needed to execute the Proxmark3 as root on their *nix system.  
 Try running it with
     `sudo ./pm3`  
+
+## libQt5Core.so.5 not found
+On WSL1 / updated to Ubuntu 20.04,  there is a slight chance you experience problems when compiling the repo with QT5.
+The following steps is needed to make the development environment happy again.   
+```
+sudo apt reinstall qtbase5-dev
+sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
+```
+
+## target attribute is not supported on this machine
+If you get the message ```error: target attribute is not supported on this machine [-Werror=attributes]```
+when trying to compile,  its because you have an older arm-none-eabi tool chain. 
+
+On OSX/Homebrew, the solution is to reinstall the brew.  It will trigger a new download of a later tool chain.
+```
+brew remove proxmark3
+brew reinstall proxmark3
+```
+
+On Ubuntu 16.04 (xenial) you should either conside a later release or you can install a later toolchain.
+
+
+sample error output:
+```
+[*] MAKE armsrc/all
+compiler version:  arm-none-eabi-gcc (GNU Tools for ARM Embedded Processors) 5.4.1 20160919 (release) [ARM/embedded-5-branch revision 240496]
+
+[-] CC start.c
+In file included from start.c:18:0:
+BigBuf.h:41:1: error: target attribute is not supported on this machine [-Werror=attributes]
+ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
+ ^
+cc1: all warnings being treated as errors
+In file included from iso15693.c:72:0:
+ticks.h:25:1: error: target attribute is not supported on this machine [-Werror=attributes]
+ uint32_t RAMFUNC GetTickCount(void);
+ ^
+ticks.h:26:1: error: target attribute is not supported on this machine [-Werror=attributes]
+ uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks);
+ ^
+```
+
+

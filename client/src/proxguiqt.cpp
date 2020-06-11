@@ -34,11 +34,12 @@
 
 extern "C" int preferences_save(void);
 
-bool g_useOverlays = false;
-int g_absVMax = 0;
-uint32_t startMax; // Maximum offset in the graph (right side of graph)
-uint32_t PageWidth; // How many samples are currently visible on this 'page' / graph
-int unlockStart = 0;
+static int s_Buff[MAX_GRAPH_TRACE_LEN];
+static bool g_useOverlays = false;
+static int g_absVMax = 0;
+static uint32_t startMax; // Maximum offset in the graph (right side of graph)
+static uint32_t PageWidth; // How many samples are currently visible on this 'page' / graph
+static int unlockStart = 0;
 
 void ProxGuiQT::ShowGraphWindow(void) {
     emit ShowGraphWindowSignal();
@@ -233,7 +234,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     setLayout(layout);
 
     // plot window title
-    QString pt = QString("[*]Plot [ %1 ]").arg((char *)gui_serial_port_name);
+    QString pt = QString("[*]Plot [ %1 ]").arg(conn.serial_port_name);
     setWindowTitle(pt);
 
     // shows plot window on the screen.
@@ -247,7 +248,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     }
 
     // Olverlays / slider window title
-    QString ct = QString("[*]Slider [ %1 ]").arg((char *)gui_serial_port_name);
+    QString ct = QString("[*]Slider [ %1 ]").arg(conn.serial_port_name);
     controlWidget->setWindowTitle(ct);
 
     controlWidget->show();

@@ -40,7 +40,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size);
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF();
+uint32_t SniffLF(void);
 
 uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
                        bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip);
@@ -73,7 +73,7 @@ void initSampleBuffer(uint32_t *sample_size);
 void initSampleBufferEx(uint32_t *sample_size, bool use_malloc);
 void logSampleSimple(uint8_t sample);
 void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg);
-uint32_t getSampleCounter();
+uint32_t getSampleCounter(void);
 
 /**
 * Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
@@ -97,8 +97,8 @@ void LFSetupFPGAForADC(int divisor, bool reader_field);
  */
 void setSamplingConfig(sample_config *sc);
 
-sample_config *getSamplingConfig();
+sample_config *getSamplingConfig(void);
 
-void printConfig();
+void printConfig(void);
 
 #endif // __LFSAMPLING_H

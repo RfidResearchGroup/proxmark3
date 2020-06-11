@@ -70,10 +70,12 @@
 #define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
 uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax = -1;
+
+
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
-int button_status = BUTTON_NO_CLICK;
-bool allow_send_wtx = false;
+static int button_status = BUTTON_NO_CLICK;
+static bool allow_send_wtx = false;
 
 inline void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
@@ -106,7 +108,7 @@ void ToSendStuffBit(int b) {
 
 //-----------------------------------------------------------------------------
 // Read an ADC channel and block till it completes, then return the result
-// in ADC units (0 to 1023). Also a routine to average 32 samples and
+// in ADC units (0 to 1023). Also a routine to sum up a number of samples and
 // return that.
 //-----------------------------------------------------------------------------
 static uint16_t ReadAdc(int ch) {
@@ -136,15 +138,17 @@ static uint16_t ReadAdc(int ch) {
 
 // was static - merlok
 uint16_t AvgAdc(int ch) {
-    uint16_t a = 0;
-    for (uint8_t i = 0; i < 32; i++)
-        a += ReadAdc(ch);
-
-    //division by 32
-    return (a + 15) >> 5;
+    return SumAdc(ch, 32) >> 5;
 }
 
-void MeasureAntennaTuning(void) {
+uint16_t SumAdc(int ch, int NbSamples) {
+    uint16_t a = 0;
+    for (uint8_t i = 0; i < NbSamples; i++)
+        a += ReadAdc(ch);
+    return (a + (NbSamples >> 1) - 1);
+}
+
+static void MeasureAntennaTuning(void) {
 
     uint32_t peak = 0;
 
@@ -184,7 +188,7 @@ void MeasureAntennaTuning(void) {
         WDT_HIT();
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
         SpinDelay(20);
-        uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
+        uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14);
         if (i == LF_DIVISOR_125)
             payload.v_lf125 = adcval; // voltage at 125kHz
 
@@ -210,9 +214,9 @@ void MeasureAntennaTuning(void) {
     SpinDelay(50);
 
 #if defined RDV4
-    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-    payload.v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -221,19 +225,19 @@ void MeasureAntennaTuning(void) {
 }
 
 // Measure HF in milliVolt
-uint16_t MeasureAntennaTuningHfData(void) {
+static uint16_t MeasureAntennaTuningHfData(void) {
 
 #if defined RDV4
-    return (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+    return (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-    return (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+    return (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
 
 }
 
 // Measure LF in milliVolt
-uint32_t MeasureAntennaTuningLfData(void) {
-    return (MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10;
+static uint32_t MeasureAntennaTuningLfData(void) {
+    return (MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14;
 }
 
 void ReadMem(int addr) {
@@ -242,11 +246,10 @@ void ReadMem(int addr) {
     Dbprintf("%x: %02x %02x %02x %02x %02x %02x %02x %02x", addr, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 }
 
-/* osimage version information is linked in */
-extern struct version_information version_information;
+/* osimage version information is linked in, cf commonutil.h */
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, __data_src_start__;
-void SendVersion(void) {
+static void SendVersion(void) {
     char temp[PM3_CMD_DATA_SIZE - 12]; /* Limited data payload in USB packets */
     char VersionString[PM3_CMD_DATA_SIZE - 12] = { '\0' };
 
@@ -256,17 +259,19 @@ void SendVersion(void) {
      */
     char *bootrom_version = *(char **)&_bootphase1_version_pointer;
 
-    strncat(VersionString, " [ ARM ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, " "_YELLOW_("[ ARM ]")"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 
     if (bootrom_version < &_flash_start || bootrom_version >= &_flash_end) {
         strcat(VersionString, "bootrom version information appears invalid\n");
     } else {
         FormatVersionInformation(temp, sizeof(temp), "  bootrom: ", bootrom_version);
         strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+        strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
     }
 
     FormatVersionInformation(temp, sizeof(temp), "       os: ", &version_information);
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
 
 #if defined(__clang__)
     strncat(VersionString, "  compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
@@ -274,11 +279,11 @@ void SendVersion(void) {
     strncat(VersionString, "  compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 
-    strncat(VersionString, "\n [ FPGA ]\n ", sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, "\n "_YELLOW_("[ FPGA ]")"\n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
-    for (int i = 0; i < fpga_bitstream_num; i++) {
-        strncat(VersionString, fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
-        if (i < fpga_bitstream_num - 1) {
+    for (int i = 0; i < g_fpga_bitstream_num; i++) {
+        strncat(VersionString, g_fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
+        if (i < g_fpga_bitstream_num - 1) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
@@ -302,7 +307,7 @@ void SendVersion(void) {
     reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
 }
 
-void TimingIntervalAcquisition(void) {
+static void TimingIntervalAcquisition(void) {
     // trigger new acquisition by turning main oscillator off and on
     mck_from_pll_to_slck();
     mck_from_slck_to_pll();
@@ -312,7 +317,7 @@ void TimingIntervalAcquisition(void) {
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
-void printConnSpeed(void) {
+static void printConnSpeed(void) {
     DbpString(_BLUE_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
@@ -339,7 +344,7 @@ void printConnSpeed(void) {
 /**
   * Prints runtime information about the PM3.
 **/
-void SendStatus(void) {
+static void SendStatus(void) {
     BigBuf_print_status();
     Fpga_print_status();
 #ifdef WITH_FLASH
@@ -382,15 +387,15 @@ void SendStatus(void) {
     reply_ng(CMD_STATUS, PM3_SUCCESS, NULL, 0);
 }
 
-void SendCapabilities(void) {
+static void SendCapabilities(void) {
     capabilities_t capabilities;
     capabilities.version = CAPABILITIES_VERSION;
-    capabilities.via_fpc = reply_via_fpc;
-    capabilities.via_usb = reply_via_usb;
+    capabilities.via_fpc = g_reply_via_fpc;
+    capabilities.via_usb = g_reply_via_usb;
     capabilities.baudrate = 0; // no real baudrate for USB-CDC
 #ifdef WITH_FPC_USART
-    if (reply_via_fpc)
-        capabilities.baudrate = usart_baudrate;
+    if (g_reply_via_fpc)
+        capabilities.baudrate = g_usart_baudrate;
 #endif
 
 #ifdef WITH_FLASH
@@ -524,7 +529,7 @@ at the same place! :-)
 void ListenReaderField(uint8_t limit) {
 #define LF_ONLY 1
 #define HF_ONLY 2
-#define REPORT_CHANGE 10    // report new values only if they have changed at least by REPORT_CHANGE
+#define REPORT_CHANGE 1000    // report new values only if they have changed at least by REPORT_CHANGE mV
 
     uint16_t lf_av = 0, lf_av_new, lf_baseline = 0, lf_max = 0;
     uint16_t hf_av = 0, hf_av_new,  hf_baseline = 0, hf_max = 0;
@@ -538,8 +543,8 @@ void ListenReaderField(uint8_t limit) {
     LEDsoff();
 
     if (limit == LF_ONLY) {
-        lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
-        Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
+        lf_av = lf_max = (MAX_ADC_LF_VOLTAGE * SumAdc(ADC_CHAN_LF, 32)) >> 15;
+        Dbprintf("LF 125/134kHz Baseline: %dmV", lf_av);
         lf_baseline = lf_av;
     }
 
@@ -547,11 +552,11 @@ void ListenReaderField(uint8_t limit) {
 
 #if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+        hf_av = hf_max = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
+        hf_av = hf_max = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
-        Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
+        Dbprintf("HF 13.56MHz Baseline: %dmV", hf_av);
         hf_baseline = hf_av;
     }
 
@@ -583,10 +588,10 @@ void ListenReaderField(uint8_t limit) {
                     LED_D_OFF();
             }
 
-            lf_av_new = AvgAdc(ADC_CHAN_LF);
+            lf_av_new = (MAX_ADC_LF_VOLTAGE * SumAdc(ADC_CHAN_LF, 32)) >> 15;
             // see if there's a significant change
             if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
-                Dbprintf("LF 125/134kHz Field Change: %5dmV", (MAX_ADC_LF_VOLTAGE * lf_av_new) >> 10);
+                Dbprintf("LF 125/134kHz Field Change: %5dmV", lf_av_new);
                 lf_av = lf_av_new;
                 if (lf_av > lf_max)
                     lf_max = lf_av;
@@ -602,13 +607,13 @@ void ListenReaderField(uint8_t limit) {
             }
 
 #if defined RDV4
-            hf_av_new = AvgAdc(ADC_CHAN_HF_RDV40);
+            hf_av_new = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-            hf_av_new = AvgAdc(ADC_CHAN_HF);
+            hf_av_new = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
-                Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
+                Dbprintf("HF 13.56MHz Field Change: %5dmV", hf_av_new);
                 hf_av = hf_av_new;
                 if (hf_av > hf_max)
                     hf_max = hf_av;
@@ -701,8 +706,8 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_BREAK_LOOP:
             break;
         case CMD_QUIT_SESSION: {
-            reply_via_fpc = false;
-            reply_via_usb = false;
+            g_reply_via_fpc = false;
+            g_reply_via_usb = false;
             break;
         }
         // emulator
@@ -1428,7 +1433,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // upload file from client
             uint8_t *mem = BigBuf_get_addr();
             memcpy(mem + packet->oldarg[0], packet->data.asBytes, PM3_CMD_DATA_SIZE);
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
         case CMD_SMART_UPGRADE: {
@@ -1628,7 +1633,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg1 = RFU
             // arg2 = tracelen?
             // asbytes = samplingconfig array
-            reply_old(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
+            reply_mix(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
             LED_B_OFF();
             break;
         }
@@ -1759,7 +1764,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs((char *)filename);
             if (changed) rdv40_spiffs_lazy_unmount();
-            reply_old(CMD_ACK, size, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, size, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1935,7 +1940,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Flash_UniqueID(info->flashid);
                 FlashStop();
             }
-            reply_old(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
+            reply_mix(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
             BigBuf_free();
 
             LED_B_OFF();

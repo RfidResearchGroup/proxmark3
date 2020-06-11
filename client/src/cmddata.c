@@ -1624,7 +1624,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
-        int j = 0;
+        uint32_t j = 0;
         for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             GraphBuffer[j] = ((int) sample) - 127;
@@ -1634,7 +1634,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
 
     } else {
-        for (int j = 0; j < n; j++) {
+        for (uint32_t j = 0; j < n; j++) {
             GraphBuffer[j] = ((int)got[j]) - 127;
         }
         GraphTraceLen = n;
@@ -1671,19 +1671,21 @@ int CmdTuneSamples(const char *Cmd) {
     RepaintGraphWindow();
 
     int timeout = 0;
+    int timeout_max = 20;
     PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
     PacketResponseNG resp;
-    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 2000)) {
-        timeout++;
-        printf(".");
+    PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
+    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500)) {
         fflush(stdout);
-        if (timeout > 7) {
+        if (timeout >= timeout_max) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return PM3_ETIMEOUT;
         }
+        timeout++;
+        PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
     }
 
     if (resp.status != PM3_SUCCESS) {
@@ -1728,10 +1730,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%sLF antenna is %s \n"
-                  , (package->peak_v < LF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
-                  , judgement
-                 );
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s \n", judgement);
 
     // HF evaluation
     if (package->v_hf > NON_VOLTAGE)
@@ -1746,10 +1745,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%sHF antenna is %s"
-                  , (package->v_hf < HF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
-                  , judgement
-                 );
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s \n", judgement);
 
     // graph LF measurements
     // even here, these values has 3% error.
@@ -1810,7 +1806,7 @@ static int CmdLoad(const char *Cmd) {
 
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "loaded %zu samples", GraphTraceLen);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", GraphTraceLen);
 
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
@@ -2296,7 +2292,8 @@ static int CmdDataNDEF(const char *Cmd) {
 #define MAX_NDEF_LEN  2048
 #endif
 
-    CLIParserInit("data ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
 
@@ -2305,12 +2302,12 @@ static int CmdDataNDEF(const char *Cmd) {
         arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
-    CLIGetHexWithReturn(1, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    CLIParserFree(ctx);
     if (datalen == 0)
         return PM3_EINVARG;
 

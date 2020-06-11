@@ -47,7 +47,7 @@ typedef int ssize_t;
 
 #define NBBY    8               /* number of bits in a byte */
 
-char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+static char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 #define hex2ascii(hex)  (hex2ascii_data[hex])
 #define toupper(c)      ((c) - 0x20 * (((c) >= 'a') && ((c) <= 'z')))
 
