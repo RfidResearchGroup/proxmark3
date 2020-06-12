@@ -26,6 +26,7 @@
 #include "dol.h"
 #include "ui.h"
 #include "emv_tags.h"
+#include "fileutils.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -1426,15 +1427,19 @@ static int CmdEMVScan(const char *Cmd) {
 
     bool GenACGPO = arg_get_lit(ctx, 9);
     bool MergeJSON = arg_get_lit(ctx, 10);
+
     EMVCommandChannel channel = ECC_CONTACTLESS;
     if (arg_get_lit(ctx, 11))
         channel = ECC_CONTACT;
+
     PrintChannel(channel);
+
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
-    uint8_t relfname[250] = {0};
-    char *crelfname = (char *)relfname;
-    int relfnamelen = 0;
-    CLIGetStrWithReturn(ctx, 12, relfname, &relfnamelen);
+
+    uint8_t filename[FILE_PATH_SIZE] = {0};
+    int filenamelen = 0;
+    CLIGetStrWithReturn(ctx, 12, filename, &filenamelen);
+
     CLIParserFree(ctx);
 
     if (!IfPm3Smartcard()) {
@@ -1447,22 +1452,23 @@ static int CmdEMVScan(const char *Cmd) {
     SetAPDULogging(showAPDU);
 
     // current path + file name
-    if (!strstr(crelfname, ".json"))
-        strcat(crelfname, ".json");
+    char *fname = newfilenamemcopy((char*)filename, ".json");
+    if (fname == NULL) {
+        return PM3_EMALLOC;
+    }
 
-    char fname[strlen(get_my_executable_directory()) + strlen(crelfname) + 1];
-    strcpy(fname, get_my_executable_directory());
-    strcat(fname, crelfname);
 
     if (MergeJSON) {
         root = json_load_file(fname, 0, &error);
         if (!root) {
             PrintAndLogEx(ERR, "Json error on line %d: %s", error.line, error.text);
+            free(fname);
             return PM3_EFILE;
         }
 
         if (!json_is_object(root)) {
             PrintAndLogEx(ERR, "Invalid json format. root must be an object");
+            free(fname);
             return PM3_EFILE;
         }
     } else {
@@ -1480,6 +1486,7 @@ static int CmdEMVScan(const char *Cmd) {
 
         iso14a_card_select_t card;
         if (Hf14443_4aGetCardData(&card)) {
+            free(fname);
             return PM3_ERFTRANS;
         }
 
@@ -1495,6 +1502,7 @@ static int CmdEMVScan(const char *Cmd) {
         smart_select(true, &card);
         if (!card.atr_len) {
             PrintAndLogEx(ERR, "Can't get ATR from a smart card.");
+            free(fname);
             return PM3_ERFTRANS;
         }
 
@@ -1538,6 +1546,7 @@ static int CmdEMVScan(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't found any of EMV AID, exiting...");
             tlvdb_free(tlvSelect);
             DropFieldEx(channel);
+            free(fname);
             return PM3_ERFTRANS;
         }
 
@@ -1554,6 +1563,7 @@ static int CmdEMVScan(const char *Cmd) {
     if (!AIDlen) {
         PrintAndLogEx(INFO, "Can't select AID. EMV AID not found, exiting...");
         DropFieldEx(channel);
+        free(fname);
         return PM3_ERFTRANS;
     }
 
@@ -1573,6 +1583,7 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't select AID (%d), exiting...", res);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
+        free(fname);
         return PM3_ERFTRANS;
     }
 
@@ -1589,6 +1600,7 @@ static int CmdEMVScan(const char *Cmd) {
         JsonSaveTLVTree(root, root, "$.Application.FCITemplate", fci);
     else
         JsonSaveTLVTreeElm(root, "$.Application.FCITemplate", fci, true, true, false);
+
     tlvdb_free(fci);
 
     // create transaction parameters
@@ -1601,6 +1613,7 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't create PDOL TLV");
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
+        free(fname);
         return PM3_ESOFT;
     }
 
@@ -1611,6 +1624,7 @@ static int CmdEMVScan(const char *Cmd) {
         tlvdb_free(tlvRoot);
         free(pdol_data_tlv);
         DropFieldEx(channel);
+        free(fname);
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
@@ -1625,6 +1639,7 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "GPO error(%d): %4x, exiting...", res, sw);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
+        free(fname);
         return PM3_ERFTRANS;
     }
     ProcessGPOResponseFormat1(tlvRoot, buf, len, decodeTLV);
@@ -1749,9 +1764,12 @@ static int CmdEMVScan(const char *Cmd) {
     res = json_dump_file(root, fname, JSON_INDENT(2));
     if (res) {
         PrintAndLogEx(ERR, "Can't save the file: %s", fname);
+        free(fname);
         return PM3_EFILE;
     }
+
     PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
+    free(fname);
 
     // free json object
     json_decref(root);
