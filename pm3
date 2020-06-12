@@ -115,7 +115,7 @@ function get_pm3_list_Windows {
     # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
     #BT direct SERIAL PORTS (COM)
     if $FINDBTRFCOMM; then
-        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk '$0 ~ /COM/{print substr($6,2,5)}'); do
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk 'match($0,/COM([0-9]+)/,m){print m[1]}'); do
             DEV=${DEV/ */}
             PM3LIST+=("$DEV")
             if [ ${#PM3LIST[*]} -ge "$N" ]; then
