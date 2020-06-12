@@ -1384,8 +1384,6 @@ static int CmdEMVScan(const char *Cmd) {
     size_t ODAI_listlen = 0;
     uint16_t sw = 0;
     int res;
-    json_t *root;
-    json_error_t error;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv scan",
@@ -1451,24 +1449,20 @@ static int CmdEMVScan(const char *Cmd) {
 
     SetAPDULogging(showAPDU);
 
+    json_t *root;
+    json_error_t error;
+
     // current path + file name
-    char *fname = newfilenamemcopy((char*)filename, ".json");
-    if (fname == NULL) {
-        return PM3_EMALLOC;
-    }
-
-
     if (MergeJSON) {
-        root = json_load_file(fname, 0, &error);
+
+        root = json_load_file( (char*)filename, 0, &error);
         if (!root) {
             PrintAndLogEx(ERR, "Json error on line %d: %s", error.line, error.text);
-            free(fname);
             return PM3_EFILE;
         }
 
         if (!json_is_object(root)) {
             PrintAndLogEx(ERR, "Invalid json format. root must be an object");
-            free(fname);
             return PM3_EFILE;
         }
     } else {
@@ -1486,7 +1480,6 @@ static int CmdEMVScan(const char *Cmd) {
 
         iso14a_card_select_t card;
         if (Hf14443_4aGetCardData(&card)) {
-            free(fname);
             return PM3_ERFTRANS;
         }
 
@@ -1502,7 +1495,6 @@ static int CmdEMVScan(const char *Cmd) {
         smart_select(true, &card);
         if (!card.atr_len) {
             PrintAndLogEx(ERR, "Can't get ATR from a smart card.");
-            free(fname);
             return PM3_ERFTRANS;
         }
 
@@ -1546,7 +1538,6 @@ static int CmdEMVScan(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't found any of EMV AID, exiting...");
             tlvdb_free(tlvSelect);
             DropFieldEx(channel);
-            free(fname);
             return PM3_ERFTRANS;
         }
 
@@ -1563,7 +1554,6 @@ static int CmdEMVScan(const char *Cmd) {
     if (!AIDlen) {
         PrintAndLogEx(INFO, "Can't select AID. EMV AID not found, exiting...");
         DropFieldEx(channel);
-        free(fname);
         return PM3_ERFTRANS;
     }
 
@@ -1583,7 +1573,6 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't select AID (%d), exiting...", res);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        free(fname);
         return PM3_ERFTRANS;
     }
 
@@ -1613,7 +1602,6 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't create PDOL TLV");
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        free(fname);
         return PM3_ESOFT;
     }
 
@@ -1624,7 +1612,6 @@ static int CmdEMVScan(const char *Cmd) {
         tlvdb_free(tlvRoot);
         free(pdol_data_tlv);
         DropFieldEx(channel);
-        free(fname);
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
@@ -1639,7 +1626,6 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(ERR, "GPO error(%d): %4x, exiting...", res, sw);
         tlvdb_free(tlvRoot);
         DropFieldEx(channel);
-        free(fname);
         return PM3_ERFTRANS;
     }
     ProcessGPOResponseFormat1(tlvRoot, buf, len, decodeTLV);
@@ -1761,15 +1747,24 @@ static int CmdEMVScan(const char *Cmd) {
 
     DropFieldEx(channel);
 
-    res = json_dump_file(root, fname, JSON_INDENT(2));
-    if (res) {
-        PrintAndLogEx(ERR, "Can't save the file: %s", fname);
+
+    if (MergeJSON == false) {
+        // create unique new name
+        char *fname = newfilenamemcopy((char*)filename, ".json");
+        if (fname == NULL) {
+            return PM3_EMALLOC;
+        }
+        strcpy((char*)filename, fname);
         free(fname);
+    }
+
+    res = json_dump_file(root, (char*)filename, JSON_INDENT(2));
+    if (res) {
+        PrintAndLogEx(ERR, "Can't save the file: %s", filename);
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
-    free(fname);
+    PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", filename);
 
     // free json object
     json_decref(root);
