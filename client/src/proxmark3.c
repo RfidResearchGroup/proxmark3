@@ -726,6 +726,28 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
+    // color management:
+    // 1. default = no color
+    // 2. enable colors if OS seems to support colors and if stdin/stdout aren't redirected
+    // 3. load prefs if available, overwrite colors choice if needed
+    // 4. disable colors anyway if stdin/stdout are redirected
+    //
+    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
+    //   struct stat tmp_stat;
+    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+    session.stdinOnTTY = isatty(STDIN_FILENO);
+    session.stdoutOnTTY = isatty(STDOUT_FILENO);
+    session.supports_colors = false;
+    session.emoji_mode = ALTTEXT;
+    if (session.stdinOnTTY && session.stdoutOnTTY) {
+#if defined(__linux__) || defined(__APPLE__)
+        session.supports_colors = true;
+        session.emoji_mode = EMOJI;
+#elif defined(_WIN32)
+        session.supports_colors = DetectWindowsAnsiSupport();
+        session.emoji_mode = ALTTEXT;
+#endif
+    }
     for (int i = 1; i < argc; i++) {
 
         if (argv[i][0] != '-') {
@@ -914,33 +936,10 @@ int main(int argc, char *argv[]) {
     // settings_save ();
     // End Settings
 
-    session.stdinOnTTY = isatty(STDIN_FILENO);
-    session.stdoutOnTTY = isatty(STDOUT_FILENO);
-    // it's okay to use color if:
-    // * Linux or OSX
-    // * Not redirected to a file but printed to term
-    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
-    //   struct stat tmp_stat;
-    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-    if (!session.preferences_loaded) {
-        if (session.stdinOnTTY && session.stdoutOnTTY) {
-#if defined(__linux__) || defined(__APPLE__)
-            session.supports_colors = true;
-            session.emoji_mode = EMOJI;
-#elif defined(_WIN32)
-            session.supports_colors = DetectWindowsAnsiSupport();
-            session.emoji_mode = ALTTEXT;
-#else
-            session.supports_colors = false;
-            session.emoji_mode = ALTTEXT;
-#endif
-        }
-    } else {
-        // even if prefs, we disable colors if stdin or stdout is not a TTY
-        if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
-            session.supports_colors = false;
-            session.emoji_mode = ALTTEXT;
-        }
+    // even if prefs, we disable colors if stdin or stdout is not a TTY
+    if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
+        session.supports_colors = false;
+        session.emoji_mode = ALTTEXT;
     }
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
