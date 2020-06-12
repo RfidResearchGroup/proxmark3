@@ -629,7 +629,6 @@ finish2:
     return ret;
 }
 
-/*
 // Check if windows AnsiColor Support is enabled in the registery
 // [HKEY_CURRENT_USER\Console]
 //     "VirtualTerminalLevel"=dword:00000001
@@ -637,9 +636,9 @@ finish2:
 // [HKEY_CURRENT_USER\Console]
 //     "ForceV2"=dword:00000001
 
+#if defined(_WIN32)
 static bool DetectWindowsAnsiSupport(void) {
     bool ret = false;
-#if defined(_WIN32)
     HKEY hKey = NULL;
     bool virtualTerminalLevelSet = false;
     bool forceV2Set = false;
@@ -681,10 +680,9 @@ static bool DetectWindowsAnsiSupport(void) {
     }
     // If both VirtualTerminalLevel and ForceV2 is set, AnsiColor should work
     ret = virtualTerminalLevelSet && forceV2Set;
-#endif
     return ret;
 }
-*/
+#endif
 
 int main(int argc, char *argv[]) {
     srand(time(0));
@@ -929,8 +927,11 @@ int main(int argc, char *argv[]) {
 #if defined(__linux__) || defined(__APPLE__)
             session.supports_colors = true;
             session.emoji_mode = EMOJI;
-#else
+#elif defined(_WIN32)
             session.supports_colors = DetectWindowsAnsiSupport();
+            session.emoji_mode = ALTTEXT;
+#else
+            session.supports_colors = false;
             session.emoji_mode = ALTTEXT;
 #endif
         }
