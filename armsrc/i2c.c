@@ -626,9 +626,8 @@ int I2C_get_version(uint8_t *maj, uint8_t *min) {
         *maj = resp[0];
         *min = resp[1];
         return PM3_SUCCESS;
-    } else {
-        return PM3_EDEVNOTSUPP;
     }
+    return PM3_EDEVNOTSUPP;
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.
