@@ -326,7 +326,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
             } else {
 
                 if (session.supports_colors) {
-                    printf(_YELLOW_("[=]") " Session log " _YELLOW_("%s") "\n", my_logfile_path);
+                    printf("["_YELLOW_("=")"] Session log " _YELLOW_("%s") "\n", my_logfile_path);
                 } else {
                     printf("[=] Session log %s\n", my_logfile_path);
                 }
