@@ -44,6 +44,7 @@ session_arg_t session;
 double CursorScaleFactor = 1;
 int PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
 uint32_t CursorCPos = 0, CursorDPos = 0;
+double GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = 0;
 int GridOffset = 0;
 bool GridLocked = false;
@@ -201,34 +202,34 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     switch (level) {
         case ERR:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix,  _RED_("[!!]") " :rotating_light: ", sizeof(prefix) - 1);
+                strncpy(prefix,  "[" _RED_("!!") "] :rotating_light: ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _RED_("[!!] "), sizeof(prefix) - 1);
+                strncpy(prefix, "[" _RED_("!!") "] ", sizeof(prefix) - 1);
             stream = stderr;
             break;
         case FAILED:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix, _RED_("[-]") " :no_entry: ", sizeof(prefix) - 1);
+                strncpy(prefix, "[" _RED_("-") "] :no_entry: ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _RED_("[-] "), sizeof(prefix) - 1);
+                strncpy(prefix, "[" _RED_("-") "] ", sizeof(prefix) - 1);
             break;
         case DEBUG:
-            strncpy(prefix, _BLUE_("[#] "), sizeof(prefix) - 1);
+            strncpy(prefix, "[" _BLUE_("#") "] ", sizeof(prefix) - 1);
             break;
         case HINT:
-            strncpy(prefix, _YELLOW_("[?] "), sizeof(prefix) - 1);
+            strncpy(prefix, "[" _YELLOW_("?") "] ", sizeof(prefix) - 1);
             break;
         case SUCCESS:
-            strncpy(prefix, _GREEN_("[+] "), sizeof(prefix) - 1);
+            strncpy(prefix, "[" _GREEN_("+") "] ", sizeof(prefix) - 1);
             break;
         case WARNING:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix, _CYAN_("[!]") " :warning:  ", sizeof(prefix) - 1);
+                strncpy(prefix, "[" _CYAN_("!") "] :warning:  ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _CYAN_("[!] "), sizeof(prefix) - 1);
+                strncpy(prefix, "[" _CYAN_("!") "] ", sizeof(prefix) - 1);
             break;
         case INFO:
-            strncpy(prefix, _YELLOW_("[=] "), sizeof(prefix) - 1);
+            strncpy(prefix, "[" _YELLOW_("=") "] ", sizeof(prefix) - 1);
             break;
         case INPLACE:
             if (session.emoji_mode == EMOJI) {
