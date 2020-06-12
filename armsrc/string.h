@@ -16,6 +16,7 @@
 
 int strlen(const char *str);
 void *memcpy(void *dest, const void *src, int len);
+void *memmove(void *dest, const void *src, size_t len);
 void *memset(void *dest, int c, int len);
 int memcmp(const void *av, const void *bv, int len);
 void memxor(uint8_t *dest, uint8_t *src, size_t len);
@@ -33,6 +34,8 @@ char *strrchr(const char *s, int c);
 size_t strcspn(const char *s1, const char *s2);
 char *strpbrk(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
+unsigned long strtoul(const char *p, char **out_p, int base);
+long strtol(const char *p, char **out_p, int base);
 char c_tolower(int c);
 char c_isprint(unsigned char c);
 

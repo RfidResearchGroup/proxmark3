@@ -65,7 +65,7 @@ static uint32_t hitag2_crypt(uint64_t s) {
 
 // this function is a modification of the filter function f, based heavily
 // on the hitag2_crypt function in Rfidler
-int fnP(uint64_t klowery) {
+static int fnP(uint64_t klowery) {
     const uint32_t ht2_function4a = 0x2C79; // 0010 1100 0111 1001
     const uint32_t ht2_function4b = 0x6671; // 0110 0110 0111 0001
     const uint32_t ht2_function4p = 0xAE83; // 1010 1110 1000 0011
@@ -84,7 +84,7 @@ int fnP(uint64_t klowery) {
 }
 
 // comparison function for sorting/searching Tklower entries
-int Tk_cmp(const void *v1, const void *v2) {
+static int Tk_cmp(const void *v1, const void *v2) {
     const struct Tklower *Tk1 = (struct Tklower *)v1;
     const struct Tklower *Tk2 = (struct Tklower *)v2;
 
@@ -98,7 +98,7 @@ int Tk_cmp(const void *v1, const void *v2) {
 }
 
 // test for bad guesses of kmiddle
-int is_kmiddle_badguess(uint64_t z, struct Tklower *Tk, int max, int aR0) {
+static int is_kmiddle_badguess(uint64_t z, struct Tklower *Tk, int max, int aR0) {
 
     struct Tklower *result, target;
 
@@ -122,7 +122,7 @@ int is_kmiddle_badguess(uint64_t z, struct Tklower *Tk, int max, int aR0) {
 }
 
 // function to test if a partial key is valid
-int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint64_t aR) {
+static int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint64_t aR) {
     uint64_t kupper;
     uint64_t key;
     Hitag_State hstate;
@@ -146,12 +146,6 @@ int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint64_t aR
     }
     return 0;
 }
-
-
-
-
-
-
 
 // some notes on how I think this attack should work.
 // due to the way fc works, in a number of cases, it doesn't matter what
@@ -177,8 +171,7 @@ int testkey(uint64_t *out, uint64_t uid, uint64_t pkey, uint64_t nR, uint64_t aR
 // limit our guesses to a smaller set than a full brute force and
 // effectively work out candidates for the lower 34 bits of the key.
 
-
-void *crack(void *d) {
+static void *crack(void *d) {
     struct threaddata *data = (struct threaddata *)d;
     uint64_t uid;
     struct nRaR *TnRaR;
@@ -187,21 +180,14 @@ void *crack(void *d) {
     Hitag_State hstate;
     int i, j;
 
-    uint64_t klower;
-    uint64_t kmiddle;
-    uint64_t y;
+    uint64_t klower, kmiddle, klowery;
+    uint64_t y, b, z, bit;
     uint64_t ytmp;
-    uint64_t klowery;
     unsigned int count;
-    uint64_t bit;
-    uint64_t b;
-    uint64_t z;
-    uint64_t foundkey;
-    uint64_t revkey;
+    uint64_t foundkey, revkey;
     int ret;
     unsigned int found;
     unsigned int badguess;
-
     struct Tklower *Tk = NULL;
 
     if (!data) {
@@ -216,7 +202,7 @@ void *crack(void *d) {
     // create space for tables
     Tk = (struct Tklower *)malloc(sizeof(struct Tklower) * 0x40000);
     if (!Tk) {
-        printf("cannot malloc Tk\n");
+        printf("Failed to allocate memory (Tk)\n");
         exit(1);
     }
 
@@ -301,6 +287,7 @@ void *crack(void *d) {
         }
     }
 
+    free(Tk);
     return NULL;
 }
 int main(int argc, char *argv[]) {
@@ -321,7 +308,7 @@ int main(int argc, char *argv[]) {
     struct threaddata *tdata = NULL;
 
     if (argc < 3) {
-        printf("ht2crack3 uid nRaRfile\n");
+        printf("%s uid nRaRfile\n", argv[0]);
         exit(1);
     }
 
@@ -383,7 +370,6 @@ int main(int argc, char *argv[]) {
 
     // close file
     fclose(fp);
-    fp = NULL;
 
     printf("Loaded %u NrAr pairs\n", numnrar);
 

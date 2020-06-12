@@ -24,12 +24,13 @@
 #include "util_posix.h"
 #include "protocols.h"
 #include "ui.h"
+#include "proxgui.h"
 #include "graph.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
 
-uint64_t g_em410xid = 0;
+static uint64_t g_em410xid = 0;
 
 static int CmdHelp(const char *Cmd);
 
@@ -930,11 +931,11 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     // report back
     if (verbose || g_debugMode) {
         if (start >= 0) {
-            PrintAndLogEx(NORMAL, "\nNote: one block = 50 bits (32 data, 12 parity, 6 marker)");
+            PrintAndLogEx(INFO, "\nNote: one block = 50 bits (32 data, 12 parity, 6 marker)");
         } else {
-            PrintAndLogEx(NORMAL, "No data found!, clock tried: " _YELLOW_("%d"), clk);
-            PrintAndLogEx(NORMAL, "Try again with more samples.");
-            PrintAndLogEx(NORMAL, "  or after a " _YELLOW_("'data askedge'") " command to clean up the read");
+            PrintAndLogEx(INFO, "No data found!, clock tried: " _YELLOW_("%d"), clk);
+            PrintAndLogEx(HINT, "Try again with more samples");
+            PrintAndLogEx(HINT, " or after a " _YELLOW_("'data askedge'") " command to clean up the read");
             return PM3_ESOFT;
         }
     } else if (start < 0) {
@@ -1001,20 +1002,22 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     //print full code:
     if (verbose || g_debugMode || AllPTest) {
         if (!complete) {
-            PrintAndLogEx(NORMAL, _RED_("* **Warning!"));
-            PrintAndLogEx(NORMAL, "Partial data - no end found!");
-            PrintAndLogEx(NORMAL, "Try again with more samples.");
+            PrintAndLogEx(WARNING, _RED_("* **Warning!"));
+            PrintAndLogEx(INFO, "Partial data - no end found!");
+            PrintAndLogEx(HINT, "Try again with more samples.");
         }
-        PrintAndLogEx(NORMAL, "Found data at sample: %i - using clock: %i", start, clk);
+        PrintAndLogEx(INFO, "Found data at sample: %i - using clock: %i", start, clk);
         end = block;
+        PrintAndLogEx(INFO, "blk | data");
+        PrintAndLogEx(INFO, "----+--------------");
         for (block = 0; block < end; block++) {
-            PrintAndLogEx(NORMAL, "Block %d: %08x", block, Code[block]);
+            PrintAndLogEx(INFO, "%03d | %08x", block, Code[block]);
         }
-
-        PrintAndLogEx(NORMAL, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
+        PrintAndLogEx(INFO, "----+--------------");
+        PrintAndLogEx( (AllPTest) ? SUCCESS : WARNING, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
 
         if (AllPTest == false) {
-            PrintAndLogEx(NORMAL, "Try cleaning the read samples with " _YELLOW_("'data askedge'"));
+            PrintAndLogEx(HINT, "Try cleaning the read samples with " _YELLOW_("'data askedge'"));
         }
     }
 
@@ -1054,7 +1057,7 @@ static int CmdEM4x50Dump(const char *Cmd) {
 
 #define EM_PREAMBLE_LEN 6
 // download samples from device and copy to Graphbuffer
-static bool downloadSamplesEM() {
+static bool downloadSamplesEM(void) {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
     uint8_t got[6000];
@@ -1096,7 +1099,7 @@ static bool doPreambleSearch(size_t *startIdx) {
     return true;
 }
 
-static bool detectFSK() {
+static bool detectFSK(void) {
     // detect fsk clock
     if (GetFskClock("", false) == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK clock failed");
@@ -1111,7 +1114,7 @@ static bool detectFSK() {
     return true;
 }
 // PSK clocks should be easy to detect ( but difficult to demod a non-repeating pattern... )
-static bool detectPSK() {
+static bool detectPSK(void) {
     int ans = GetPskClock("", false);
     if (ans <= 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK clock failed");
@@ -1135,7 +1138,7 @@ static bool detectPSK() {
     return true;
 }
 // try manchester - NOTE: ST only applies to T55x7 tags.
-static bool detectASK_MAN() {
+static bool detectASK_MAN(void) {
     bool stcheck = false;
     if (ASKDemod_ext("0 0 0", false, false, 1, &stcheck) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
@@ -1144,7 +1147,7 @@ static bool detectASK_MAN() {
     return true;
 }
 
-static bool detectASK_BI() {
+static bool detectASK_BI(void) {
     int ans = ASKbiphaseDemod("0 0 1", false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase normal demod failed");
@@ -1157,7 +1160,7 @@ static bool detectASK_BI() {
     }
     return true;
 }
-static bool detectNRZ() {
+static bool detectNRZ(void) {
     int ans = NRZrawDemod("0 0 1", false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ normal demod failed");
@@ -1606,21 +1609,21 @@ static void printEM4x05config(uint32_t wordData) {
     uint8_t disable = (wordData & EM4x05_DISABLE_ALLOWED) >> 23;
     uint8_t rtf = (wordData & EM4x05_READER_TALK_FIRST) >> 24;
     uint8_t pigeon = (wordData & (1 << 26)) >> 26;
-    PrintAndLogEx(NORMAL, "ConfigWord: %08X (Word 4)\n", wordData);
-    PrintAndLogEx(NORMAL, "Config Breakdown:");
-    PrintAndLogEx(NORMAL, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
-    PrintAndLogEx(NORMAL, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
-    PrintAndLogEx(NORMAL, "    PSK CF:   %u | %s", PSKcf, cf);
-    PrintAndLogEx(NORMAL, "     Delay:   %u | %s", delay, cdelay);
-    PrintAndLogEx(NORMAL, " LastWordR:  %02u | Address of last word for default read - meaning %u blocks are output", LWR, numblks);
-    PrintAndLogEx(NORMAL, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required"));
-    PrintAndLogEx(NORMAL, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
-    PrintAndLogEx(NORMAL, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required"));
-    PrintAndLogEx(NORMAL, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
-    PrintAndLogEx(NORMAL, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
-    PrintAndLogEx(NORMAL, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
-    PrintAndLogEx(NORMAL, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
-    PrintAndLogEx(NORMAL, "    Pigeon:   %u | Pigeon mode is %s\n", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
+    PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)\n", wordData);
+    PrintAndLogEx(INFO, "Config Breakdown:");
+    PrintAndLogEx(INFO, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
+    PrintAndLogEx(INFO, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
+    PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
+    PrintAndLogEx(INFO, "     Delay:   %u | %s", delay, cdelay);
+    PrintAndLogEx(INFO, " LastWordR:  %02u | Address of last word for default read - meaning %u blocks are output", LWR, numblks);
+    PrintAndLogEx(INFO, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required"));
+    PrintAndLogEx(INFO, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
+    PrintAndLogEx(INFO, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required"));
+    PrintAndLogEx(INFO, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
+    PrintAndLogEx(INFO, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
+    PrintAndLogEx(INFO, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
+    PrintAndLogEx(INFO, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
+    PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s\n", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
 }
 
 static void printEM4x05info(uint32_t block0, uint32_t serial) {
@@ -1649,36 +1652,36 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "Unknown");
             break;
     }
-    PrintAndLogEx(NORMAL, "%s", ctstr);
+    PrintAndLogEx(SUCCESS, "%s", ctstr);
 
     switch (cap) {
         case 3:
-            PrintAndLogEx(NORMAL, "  Cap Type:   %u | 330pF", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | 330pF", cap);
             break;
         case 2:
-            PrintAndLogEx(NORMAL, "  Cap Type:   %u | %spF", cap, (chipType == 2) ? "75" : "210");
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | %spF", cap, (chipType == 2) ? "75" : "210");
             break;
         case 1:
-            PrintAndLogEx(NORMAL, "  Cap Type:   %u | 250pF", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | 250pF", cap);
             break;
         case 0:
-            PrintAndLogEx(NORMAL, "  Cap Type:   %u | no resonant capacitor", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | no resonant capacitor", cap);
             break;
         default:
-            PrintAndLogEx(NORMAL, "  Cap Type:   %u | unknown", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | unknown", cap);
             break;
     }
 
-    PrintAndLogEx(NORMAL, " Cust Code: %03u | %s", custCode, (custCode == 0x200) ? "Default" : "Unknown");
+    PrintAndLogEx(SUCCESS, " Cust Code: %03u | %s", custCode, (custCode == 0x200) ? "Default" : "Unknown");
     if (serial != 0)
-        PrintAndLogEx(NORMAL, "\n  Serial #: " _YELLOW_("%08X") "\n", serial);
+        PrintAndLogEx(SUCCESS, "\n  Serial #: " _YELLOW_("%08X"), serial);
 }
 
 static void printEM4x05ProtectionBits(uint32_t word) {
     for (uint8_t i = 0; i < 15; i++) {
-        PrintAndLogEx(NORMAL, "      Word:  %02u | %s", i, (((1 << i) & word) || i < 2) ? _RED_("write Locked") : "unlocked");
+        PrintAndLogEx(INFO, "      Word:  %02u | %s", i, (((1 << i) & word) || i < 2) ? _RED_("write Locked") : "unlocked");
         if (i == 14)
-            PrintAndLogEx(NORMAL, "      Word:  %02u | %s", i + 1, (((1 << i) & word) || i < 2) ? _RED_("write locked") : "unlocked");
+            PrintAndLogEx(INFO, "      Word:  %02u | %s", i + 1, (((1 << i) & word) || i < 2) ? _RED_("write locked") : "unlocked");
     }
 }
 

@@ -29,7 +29,7 @@ struct tlv {
 };
 
 struct tlvdb;
-typedef bool (*tlv_cb)(void *data, const struct tlv *tlv, int level, bool is_leaf);
+typedef void (*tlv_cb)(void *data, const struct tlv *tlv, int level, bool is_leaf);
 
 struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value);
 struct tlvdb *tlvdb_external(tlv_tag_t tag, size_t len, const unsigned char *value);

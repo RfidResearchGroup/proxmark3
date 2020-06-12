@@ -39,7 +39,7 @@ typedef struct {
     cardformatdescriptor_t Fields;
 } cardformat_t;
 
-void HIDListFormats();
+void HIDListFormats(void);
 int HIDFindCardFormat(const char *format);
 cardformat_t HIDGetCardFormat(int idx);
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed);

@@ -65,7 +65,8 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 //-----------------------------------------------------------------------------
 
 // Returns true if a pulse/pause is received within timeout
-static inline bool wait_for(bool value, const uint32_t timeout) {
+// Note: inlining this function would fail with -Os
+static bool wait_for(bool value, const uint32_t timeout) {
     while ((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
         if (GetCountSspClk() > timeout) {
             return false;
@@ -83,7 +84,7 @@ static inline bool wait_for(bool value, const uint32_t timeout) {
 //  - A bit length >80.2us is a 1
 //  - A bit length <80.2us is a 0
 //  - A bit length >148.6us is a code violation
-static inline int8_t rx_bit() {
+static int8_t rx_bit(void) {
     // backup ts for threshold calculation
     uint32_t bit_start = last_frame_end;
 
@@ -126,7 +127,8 @@ static inline int8_t rx_bit() {
 // Note: The Subcarrier is not disabled during bits to prevent glitches. This is
 //       not mandatory but results in a cleaner signal. tx_frame will disable
 //       the subcarrier when the frame is done.
-static inline void tx_bit(bool bit) {
+// Note: inlining this function would fail with -Os
+static void tx_bit(bool bit) {
     LED_C_ON();
 
     if (bit) {
@@ -177,7 +179,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
     LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
 }
 
-static void tx_ack() {
+static void tx_ack(void) {
     // wait for ack timeslot
     last_frame_end += TAG_ACK_WAIT;
     legic_prng_forward(TAG_ACK_WAIT / TAG_BIT_PERIOD - 1);
@@ -298,7 +300,7 @@ static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
     return 0;
 }
 
-static void init_tag() {
+static void init_tag(void) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR

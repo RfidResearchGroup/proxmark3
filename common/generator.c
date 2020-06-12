@@ -34,7 +34,7 @@
 // XYZ 3D printing
 // Vinglock
 //------------------------------------
-void transform_D(uint8_t *ru) {
+static void transform_D(uint8_t *ru) {
 
     const uint32_t c_D[] = {
         0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
@@ -111,18 +111,17 @@ uint32_t ul_ev1_pwdgenB(uint8_t *uid) {
 // Lego Dimension pwd generation algo nickname C.
 uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
     uint32_t pwd = 0;
-    uint8_t base[] = {
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x28,
-        0x63, 0x29, 0x20, 0x43, 0x6f, 0x70, 0x79, 0x72,
-        0x69, 0x67, 0x68, 0x74, 0x20, 0x4c, 0x45, 0x47,
-        0x4f, 0x20, 0x32, 0x30, 0x31, 0x34, 0xaa, 0xaa
+    uint32_t base[] = {
+        0xffffffff, 0x28ffffff,
+        0x43202963, 0x7279706f,
+        0x74686769, 0x47454c20,
+        0x3032204f, 0xaaaa3431
     };
 
     memcpy(base, uid, 7);
 
-    for (int i = 0; i < 32; i += 4) {
-        uint32_t b = *(uint32_t *)(base + i);
-        pwd = b + ROTR(pwd, 25) + ROTR(pwd, 10) - pwd;
+    for (int i = 0; i < 8; i++) {
+        pwd = base[i] + ROTR(pwd, 25) + ROTR(pwd, 10) - pwd;
     }
     return BSWAP_32(pwd);
 }
@@ -215,6 +214,7 @@ int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    if (keytype > 2) return PM3_EINVARG;
     *key = 0;
     return PM3_SUCCESS;
 }
@@ -234,6 +234,7 @@ int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    if (keytype > 2) return PM3_EINVARG;
     *key = 0;
     return PM3_SUCCESS;
 }
@@ -254,6 +255,7 @@ int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 4) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    if (keytype > 2) return PM3_EINVARG;
 
     if (sector == 0) {
         // A
@@ -415,21 +417,21 @@ int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
 //------------------------------------
 // Self tests
 //------------------------------------
-int generator_selftest() {
+int generator_selftest(void) {
 
 #define NUM_OF_TEST     5
 
     PrintAndLogEx(INFO, "PWD / KEY generator selftest");
     PrintAndLogEx(INFO, "----------------------------");
 
-    bool success = false;
     uint8_t testresult = 0;
 
     uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
     uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
-    success = (pwd1 == 0x8432EB17);
+    bool success = (pwd1 == 0x8432EB17);
     if (success)
         testresult++;
+
     PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid1, 7), pwd1, success ? "OK" : "->8432EB17<-");
 
     uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};

@@ -109,7 +109,7 @@ static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response, 
     status = topaz_send_cmd(rid_cmd, sizeof(rid_cmd), rid_response, &resp_len, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         topaz_switch_off_field();
-        return PM3_EWRONGANSVER; // RID failed
+        return PM3_EWRONGANSWER; // RID failed
     }
 
     return PM3_SUCCESS;
@@ -529,7 +529,7 @@ int readTopazUid(bool verbose) {
         return PM3_ESOFT;
     }
 
-    if (status == PM3_EWRONGANSVER) {
+    if (status == PM3_EWRONGANSWER) {
         if (verbose) PrintAndLogEx(ERR, "Error: tag didn't answer to RID");
         topaz_switch_off_field();
         return PM3_ESOFT;

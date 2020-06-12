@@ -15,8 +15,11 @@
 #include <stdio.h>         // for Mingw readline
 #include <limits.h>
 #include <unistd.h>
+#ifdef HAVE_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
+#include <ctype.h>
 #include "usart_defs.h"
 #include "util_posix.h"
 #include "proxgui.h"
@@ -29,81 +32,78 @@
 #include "flash.h"
 #include "preferences.h"
 
-#ifdef _WIN32
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
-
 // Used to enable/disable use of preferences json file
 #define USE_PREFERENCE_FILE
 
-#ifdef _WIN32
+#define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
+#define BANNERMSG2 "   https://github.com/rfidresearchgroup/proxmark3/"
+#define BANNERMSG3 " bleeding edge :coffee:"
 
-static void utf8_showBanner(void) {
+typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
 
-    char sq[] = { 0xE2, 0x96, 0x88, 0x00 }; // square block
-    char tr[] = { 0xE2, 0x95, 0x97, 0x00 }; // top rigth corner
-    char tl[] = { 0xE2, 0x95, 0x94, 0x00 }; // top left corner
-    char br[] = { 0xE2, 0x95, 0x9D, 0x00 }; // bottom right corner
-    char bl[] = { 0xE2, 0x95, 0x9A, 0x00 }; // bottom left corner
-    char hl[] = { 0xE2, 0x95, 0x90, 0x00 }; // horiz line
-    char vl[] = { 0xE2, 0x95, 0x91, 0x00 }; // vert line
-    char msg1 [60];
-    char msg2 [60];
-    char msg3 [60];
+static void showBanner_logo(LogoMode mode) {
+    switch (mode) {
+        case UTF8: {
+            const char *sq = "\xE2\x96\x88"; // square block
+            const char *tr = "\xE2\x95\x97"; // top right corner
+            const char *tl = "\xE2\x95\x94"; // top left corner
+            const char *br = "\xE2\x95\x9D"; // bottom right corner
+            const char *bl = "\xE2\x95\x9A"; // bottom left corner
+            const char *hl = "\xE2\x95\x90"; // horiz line
+            const char *vl = "\xE2\x95\x91"; // vert line
+            const char *__ = " ";
 
-    strcpy(msg1, "    :snowflake:  iceman@icesql.net :coffee:");
-    strcpy(msg2, "   https://github.com/rfidresearchgroup/proxmark3/");
-    strcpy(msg3, "pre-release v4.0");
-
-    g_printAndLog = PRINTANDLOG_PRINT;
-
-    PrintAndLogEx(NORMAL, "\n");
-
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s   %s%s%s%s %s%s%s%s%s "), sq, sq, sq, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, sq, tr);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s   %s%s%s%s"), sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, sq, sq, sq, sq, vl, hl, hl, sq, vl);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s%s"), sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, sq, sq, sq, sq, tl, br);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")" %s", sq, sq, tr, hl, hl, hl, br, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, hl, hl, sq, vl, msg1);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")" %s", sq, sq, vl, sq, sq, vl, bl, hl, br, sq, sq, vl, sq, sq, sq, sq, tl, br, msg2);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")" %s", bl, hl, br, bl, hl, br, bl, hl, br, bl, hl, hl, hl, br, msg3);
-
-    PrintAndLogEx(NORMAL, "");
-    fflush(stdout);
-    g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, sq, sq, sq, sq, tr, __, sq, sq, sq, tr, __, __, __, sq, sq, sq, tr, sq, sq, sq, sq, sq, tr, __);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, __, sq, sq, sq, sq, vl, bl, hl, hl, hl, sq, sq, tr);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, __, sq, sq, sq, sq, tl, br);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG1,
+                          sq, sq, tl, hl, hl, hl, br, __, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, __, bl, hl, hl, sq, sq, tr);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG2,
+                          sq, sq, vl, __, __, __, __, __, sq, sq, vl, __, bl, hl, br, __, sq, sq, vl, sq, sq, sq, sq, sq, tl, br);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG3,
+                          bl, hl, br, __, __, __, __, __, bl, hl, br, __, __, __, __, __, bl, hl, br, bl, hl, hl, hl, hl, br, __);
+            break;
+        }
+        case ANSI: {
+            PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗█████╗ "));
+            PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║╚═══██╗"));
+            PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
+            PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║ ╚══██╗") " " BANNERMSG1);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║█████╔╝") " " BANNERMSG2);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝╚════╝ ") " " BANNERMSG3);
+            break;
+        }
+        case ASCII: {
+            PrintAndLogEx(NORMAL, "  ######. ###.   ###.#####. ");
+            PrintAndLogEx(NORMAL, "  ##...##.####. ####. ...##.");
+            PrintAndLogEx(NORMAL, "  ######..##.####.##. ####..");
+            PrintAndLogEx(NORMAL, "  ##..... ##..##..##.  ..##." " " BANNERMSG1);
+            PrintAndLogEx(NORMAL, "  ##.     ##.  .. ##.#####.." " " BANNERMSG2);
+            PrintAndLogEx(NORMAL, "   ..      ..      .. ..... " " " BANNERMSG3);
+            break;
+        }
+    }
 }
-
-#endif
 
 static void showBanner(void) {
 
-#ifdef _WIN32
-    // If on windows and using UTF-8 then we need utf-8 ascii art for banner.
-    if (GetConsoleCP() == 65001) {
-        utf8_showBanner();
-        return;
-    }
-#endif
-
     g_printAndLog = PRINTANDLOG_PRINT;
-
     PrintAndLogEx(NORMAL, "\n");
-#if defined(__linux__) || (__APPLE__) || (_WIN32)
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "     :snowflake:  iceman@icesql.net :coffee:");
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "    https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") " pre-release v4.0");
+
+#if defined(_WIN32)
+    if (GetConsoleCP() == 65001) {
+        // If on Windows and using UTF-8 then we need utf-8 ascii art for banner.
+        showBanner_logo(UTF8);
+    } else {
+        showBanner_logo(ANSI);
+    }
+#elif defined(__linux__) || defined(__APPLE__)
+    showBanner_logo(ANSI);
 #else
-    PrintAndLogEx(NORMAL, "  ======. ===.   ===. ====.");
-    PrintAndLogEx(NORMAL, "  ==...==.====. ====.   ..=.");
-    PrintAndLogEx(NORMAL, "  ======..==.====.==. ====..");
-    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=.    iceman@icesql.net :coffee:");
-    PrintAndLogEx(NORMAL, "  ==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, "  ...     ...     ... .....  pre-release v4.0");
+    showBanner_logo(ASCII);
 #endif
 //    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
 //    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
@@ -116,10 +116,11 @@ static void showBanner(void) {
 static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 
-static void prompt_compose(char *buf, size_t buflen, const char *prompt_ctx, const char *prompt_dev) {
-    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
+static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev) {
+    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptctx);
 }
 
+#ifdef HAVE_READLINE
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
@@ -135,31 +136,35 @@ static int check_comm(void) {
     }
     return 0;
 }
+#endif
 
 // first slot is always NULL, indicating absence of script when idx=0
-FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
-uint8_t cmdscriptfile_idx = 0;
-bool cmdscriptfile_stayafter = false;
+static FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
+static uint8_t cmdscriptfile_idx = 0;
+static bool cmdscriptfile_stayafter = false;
 
 int push_cmdscriptfile(char *path, bool stayafter) {
     if (cmdscriptfile_idx == MAX_NESTED_CMDSCRIPT) {
         PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", path);
         return PM3_EMALLOC;
     }
-    FILE *tmp = fopen(path, "r");
-    if (tmp == NULL)
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL)
         return PM3_EFILE;
+
     if (cmdscriptfile_idx == 0)
         cmdscriptfile_stayafter = stayafter;
-    cmdscriptfile[++cmdscriptfile_idx] = tmp;
+
+    cmdscriptfile[++cmdscriptfile_idx] = f;
     return PM3_SUCCESS;
 }
 
-static FILE *current_cmdscriptfile() {
+static FILE *current_cmdscriptfile(void) {
     return cmdscriptfile[cmdscriptfile_idx];
 }
 
-static bool pop_cmdscriptfile() {
+static bool pop_cmdscriptfile(void) {
     fclose(cmdscriptfile[cmdscriptfile_idx]);
     cmdscriptfile[cmdscriptfile_idx--] = NULL;
     if (cmdscriptfile_idx == 0)
@@ -208,13 +213,15 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         }
     }
 
+#ifdef HAVE_READLINE
     char *my_history_path = NULL;
-    if (searchHomeFilePath(&my_history_path, PROXHISTORY, true) != PM3_SUCCESS) {
+    if (searchHomeFilePath(&my_history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No history will be recorded");
         my_history_path = NULL;
     } else {
         read_history(my_history_path);
     }
+#endif
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
@@ -238,6 +245,7 @@ check_script:
             if (fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile()) == NULL) {
                 if (!pop_cmdscriptfile())
                     break;
+
                 goto check_script;
             } else {
                 prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
@@ -289,12 +297,25 @@ check_script:
 
                 } else {
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
-                    rl_event_hook = check_comm;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+#ifdef HAVE_READLINE
+                    rl_event_hook = check_comm;
                     cmd = readline(prompt_filtered);
+#else
+                    printf("%s", prompt_filtered);
+                    cmd = NULL;
+                    size_t len = 0;
+                    int ret;
+                    if ((ret = getline(&cmd, &len, stdin)) < 0) {
+                        // TODO this happens also when kbd_enter_pressed() is used, with a key pressed or not
+                        printf("GETLINE ERR %i", ret);
+                        free(cmd);
+                        cmd = NULL;
+                    }
+#endif
                     fflush(NULL);
                 }
             }
@@ -326,9 +347,13 @@ check_script:
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
                 prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
-                PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
+                // always filter RL magic separators if not using readline
+                char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
+                memcpy_filter_rlmarkers(prompt_filtered, prompt, sizeof(prompt_filtered));
+                PrintAndLogEx(NORMAL, "%s%s", prompt_filtered, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
+#ifdef HAVE_READLINE
                 // add to history if not from a script
                 if (!current_cmdscriptfile()) {
                     HIST_ENTRY *entry = history_get(history_length);
@@ -337,6 +362,7 @@ check_script:
                         add_history(cmd);
                     }
                 }
+#endif
                 // process cmd
                 int ret = CommandReceived(cmd);
                 // exit or quit
@@ -363,11 +389,12 @@ check_script:
     while (current_cmdscriptfile())
         pop_cmdscriptfile();
 
+#ifdef HAVE_READLINE
     if (my_history_path) {
         write_history(my_history_path);
         free(my_history_path);
     }
-
+#endif
     if (cmd) {
         free(cmd);
         cmd = NULL;
@@ -435,30 +462,36 @@ static void set_my_user_directory(void) {
     // if not found, default to current directory
     if (my_user_directory == NULL) {
 
-        char *cwd_Buffer = NULL;
         uint16_t pathLen = FILENAME_MAX; // should be a good starting point
         bool error = false;
+        char *cwd_buffer = (char *)calloc(pathLen, sizeof(uint8_t));
 
-        cwd_Buffer = (char *)calloc(pathLen, sizeof(uint8_t));
-
-        while (!error && (GetCurrentDir(cwd_Buffer, pathLen) == NULL)) {
+        while (!error && (GetCurrentDir(cwd_buffer, pathLen) == NULL)) {
             if (errno == ERANGE) {  // Need bigger buffer
                 pathLen += 10;      // if buffer was too small add 10 characters and try again
-                cwd_Buffer = realloc(cwd_Buffer, pathLen);
+                char *tmp = realloc(cwd_buffer, pathLen);
+                if (tmp == NULL) {
+                    PrintAndLogEx(WARNING, "failed to allocate memory");
+                    free(cwd_buffer);
+                    return;
+                }
+                cwd_buffer = tmp;
             } else {
-                error = true;
-                free(cwd_Buffer);
-                cwd_Buffer = NULL;
+                free(cwd_buffer);
+                return;
             }
-            printf("Len... %d\n", pathLen);
+            PrintAndLogEx(NORMAL, "Len... %d", pathLen);
         }
 
         if (!error) {
 
-            for (int i = 0; i < strlen(cwd_Buffer); i++)
-                if (cwd_Buffer[i] == '\\') cwd_Buffer[i] = '/';
+            for (int i = 0; i < strlen(cwd_buffer); i++) {
+                if (cwd_buffer[i] == '\\') {
+                    cwd_buffer[i] = '/';
+                }
+            }
 
-            my_user_directory = cwd_Buffer;
+            my_user_directory = cwd_buffer;
         }
     }
 }
@@ -544,11 +577,11 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
 
     PrintAndLogEx(SUCCESS, "About to use the following file%s:", num_files > 1 ? "s" : "");
     for (int i = 0 ; i < num_files; ++i) {
-        PrintAndLogEx(SUCCESS, "    %s", filepaths[i]);
+        PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), filepaths[i]);
     }
 
     if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
-        PrintAndLogEx(NORMAL, _GREEN_("Found"));
+        PrintAndLogEx(NORMAL, _GREEN_(" found"));
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
         ret = PM3_ETIMEOUT;
@@ -572,7 +605,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         PrintAndLogEx(NORMAL, "");
     }
 
-    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
+    PrintAndLogEx(SUCCESS, _CYAN_("Flashing..."));
 
     for (int i = 0; i < num_files; i++) {
         ret = flash_write(&files[i]);
@@ -580,7 +613,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
             goto finish;
         }
         flash_free(&files[i]);
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
     }
 
 finish:
@@ -592,9 +625,9 @@ finish2:
             free(filepaths[i]);
     }
     if (ret == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+        PrintAndLogEx(SUCCESS, _CYAN_("All done"));
     else
-        PrintAndLogEx(ERR, "Aborted on error.");
+        PrintAndLogEx(ERR, "Aborted on error");
     PrintAndLogEx(NORMAL, "\nHave a nice day!");
     return ret;
 }
@@ -671,12 +704,14 @@ int main(int argc, char *argv[]) {
     char *port = NULL;
     uint32_t speed = 0;
 
+#ifdef HAVE_READLINE
     /* initialize history */
     using_history();
 
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
-#endif
+#endif // RL_STATE_READCMD
+#endif // HAVE_READLINE
 
     char *exec_name = argv[0];
 #if defined(_WIN32)
@@ -690,22 +725,13 @@ int main(int argc, char *argv[]) {
 
     bool flash_mode = false;
     bool flash_can_write_bl = false;
+    bool debug_mode_forced = false;
     int flash_num_files = 0;
     char *flash_filenames[FLASH_MAX_FILES];
 
     // set global variables soon enough to get the log path
     set_my_executable_path();
     set_my_user_directory();
-
-#ifdef USE_PREFERENCE_FILE
-    // Load Settings and assign
-    // This will allow the command line to override the settings.json values
-    preferences_load();
-    // quick patch for debug level
-    g_debugMode = session.client_debug_level;
-    // settings_save ();
-    // End Settings
-#endif
 
     for (int i = 1; i < argc; i++) {
 
@@ -778,6 +804,7 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             g_debugMode = demod;
+            debug_mode_forced = true;
             i++;
             continue;
         }
@@ -885,6 +912,17 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+#ifdef USE_PREFERENCE_FILE
+    // Load Settings and assign
+    // This will allow the command line to override the settings.json values
+    preferences_load();
+    // quick patch for debug level
+    if (! debug_mode_forced)
+        g_debugMode = session.client_debug_level;
+    // settings_save ();
+    // End Settings
+#endif
+
 #ifndef USE_PREFERENCE_FILE
     // comment next 2 lines to use session values set from settings_load
     session.supports_colors = DetectWindowsAnsiSupport();
@@ -893,7 +931,7 @@ int main(int argc, char *argv[]) {
 
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
-#if defined(__linux__) || (__APPLE__)
+#if defined(__linux__) || defined(__APPLE__)
     // it's okay to use color if:
     // * Linux or OSX
     // * Not redirected to a file but printed to term

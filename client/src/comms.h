@@ -16,6 +16,10 @@
 #include "pm3_cmd.h"    // Packet structs
 #include "util.h"       // FILE_PATH_SIZE
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef DropField
 #define DropField() { \
         clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
@@ -56,12 +60,10 @@ typedef struct {
     // To memorise baudrate
     uint32_t uart_speed;
     uint16_t last_command;
-    uint8_t serial_port_name[FILE_PATH_SIZE];
+    char serial_port_name[FILE_PATH_SIZE];
 } communication_arg_t;
 
 extern communication_arg_t conn;
-
-extern uint8_t gui_serial_port_name[FILE_PATH_SIZE];
 
 void *uart_receiver(void *targ);
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
@@ -72,7 +74,7 @@ void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
 bool IsCommunicationThreadDead(void);
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
+bool OpenProxmark(char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
 int TestProxmark(void);
 void CloseProxmark(void);
 
@@ -83,6 +85,9 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
 //bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 

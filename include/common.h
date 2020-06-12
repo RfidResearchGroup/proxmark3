@@ -24,17 +24,29 @@
 #define PM3_USER_DIRECTORY   PATHSEP ".proxmark3" PATHSEP
 
 // PM3 subdirectories:
+#define PYTHON_SCRIPTS_SUBDIR "pyscripts" PATHSEP
 #define CMD_SCRIPTS_SUBDIR   "cmdscripts" PATHSEP
 #define DICTIONARIES_SUBDIR  "dictionaries" PATHSEP
 #define LUA_LIBRARIES_SUBDIR "lualibs" PATHSEP
 #define LUA_SCRIPTS_SUBDIR   "luascripts" PATHSEP
 #define RESOURCES_SUBDIR     "resources" PATHSEP
 #define TRACES_SUBDIR        "traces" PATHSEP
+#define LOGS_SUBDIR          "logs" PATHSEP
 #define FIRMWARES_SUBDIR     "firmware" PATHSEP
-#define BOOTROM_SUBDIR       "bootrom/obj" PATHSEP
-#define FULLIMAGE_SUBDIR     "armsrc/obj" PATHSEP
+#define BOOTROM_SUBDIR       "bootrom" PATHSEP "obj" PATHSEP
+#define FULLIMAGE_SUBDIR     "armsrc" PATHSEP "obj" PATHSEP
 
 #define PACKED __attribute__((packed))
+
+#define VERSION_INFORMATION_MAGIC 0x56334d50 // "PM3V"
+struct version_information {
+    int magic; /* Magic sequence to identify this as a correct version information structure. Must be VERSION_INFORMATION_MAGIC */
+    char versionversion; /* Must be 1 */
+    char present; /* 1 if the version information could be created at compile time, otherwise 0 and the remaining fields (except for magic) are empty */
+    char clean; /* 1: Tree was clean, no local changes. 0: Tree was unclean. 2: Couldn't be determined */
+    char gitversion[50]; /* String with the git revision */
+    char buildtime[30]; /* string with the build time */
+} PACKED;
 
 // debug
 #define DBG_NONE          0 // no messages
@@ -58,7 +70,10 @@ extern int DBGLEVEL;
 #ifndef ABS
 # define ABS(a) ( ((a)<0) ? -(a) : (a) )
 #endif
-#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+
+
+//#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+#define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm")))
 
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))

@@ -37,7 +37,7 @@ enum MifareAuthSeq {
 static enum MifareAuthSeq MifareAuthState;
 static TAuthData AuthData;
 
-void ClearAuthData() {
+void ClearAuthData(void) {
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;
@@ -509,7 +509,7 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     if (cmd[1] >= 0x2D && cmd[1] <= 0x9F) snprintf(exp, size, "Optional RFU");
     else if (cmd[1] >= 0xA0 && cmd[1] <= 0xDF) snprintf(exp, size, "Cust IC MFG dependent");
-    else if (cmd[1] >= 0xE0 && cmd[1] <= 0xFF) snprintf(exp, size, "Proprietary IC MFG dependent");
+    else if (cmd[1] >= 0xE0) snprintf(exp, size, "Proprietary IC MFG dependent");
     else
         snprintf(exp, size, "?");
 }

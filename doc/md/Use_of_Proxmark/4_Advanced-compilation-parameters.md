@@ -19,6 +19,14 @@ make clean
 make SKIPQT=1
 ```
 
+On Linux hosts, if the Bluez headers and library are present, the client will be compiled with native Bluetooth support. It's possible to explicitly skip Bluetooth support with:
+
+```
+make clean
+make SKIPBT=1
+```
+
+
 ## Firmware
 
 By default, the firmware is of course tuned for the Proxmark3 Rdv4.0 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.
@@ -74,6 +82,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 |                 | No standalone mode
 | LF_SKELETON     | standalone mode skeleton - Iceman
 | LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
+| LF_EM4100RSWB   | LF EM4100 read/write/clone/brute mode - Monster1024
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
 | LF_ICEHID       | LF HID collector to flashmem - Iceman

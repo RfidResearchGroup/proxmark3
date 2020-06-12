@@ -64,8 +64,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 //-----------------------------------------------------------------------------
 // I/O interface abstraction (FPGA -> ARM)
 //-----------------------------------------------------------------------------
-
-static inline uint8_t rx_byte_from_fpga() {
+static uint8_t rx_byte_from_fpga(void) {
     for (;;) {
         WDT_HIT();
 
@@ -92,7 +91,8 @@ static inline uint8_t rx_byte_from_fpga() {
 //
 // Note: The SSC receiver is never synchronized the calculation may be performed
 // on a i/q pair from two subsequent correlations, but does not matter.
-static inline int32_t sample_power() {
+// Note: inlining this function would fail with -Os
+static int32_t sample_power(void) {
     int32_t q = (int8_t)rx_byte_from_fpga();
     q = ABS(q);
     int32_t i = (int8_t)rx_byte_from_fpga();
@@ -108,7 +108,9 @@ static inline int32_t sample_power() {
 //
 // Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame
 // has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
-static inline bool rx_bit() {
+
+// Note: inlining this function would fail with -Os
+static bool rx_bit(void) {
     int32_t power;
 
     for (size_t i = 0; i < 5; ++i) {
@@ -127,7 +129,7 @@ static inline bool rx_bit() {
 // be circumvented, but the adventage over bitbang would be little.
 //-----------------------------------------------------------------------------
 
-static inline void tx_bit(bool bit) {
+static void tx_bit(bool bit) {
     // insert pause
     LOW(GPIO_SSC_DOUT);
     last_frame_end += RWD_TIME_PAUSE;
@@ -206,7 +208,7 @@ static uint32_t rx_frame(uint8_t len) {
     return frame;
 }
 
-static bool rx_ack() {
+static bool rx_ack(void) {
     // change fpga into rx mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
                       | FPGA_HF_READER_RX_XCORR_848_KHZ
@@ -382,7 +384,7 @@ static int16_t read_byte(uint16_t index, uint8_t cmd_sz) {
 
 // Transmit write command, wait until (3.6ms) the tag sends back an unencrypted
 // ACK ('1' bit) and forward the prng time based.
-bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
+static bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
     uint32_t cmd = index << 1 | LEGIC_WRITE;          // prepare command
     uint8_t  crc = calc_crc4(cmd, addr_sz + 1, byte); // calculate crc
     cmd |= byte << (addr_sz + 1);                     // append value
@@ -431,7 +433,7 @@ void LegicRfInfo(void) {
 
     // read MCC and check against UID
     int16_t mcc = read_byte(4, card.cmdsize);
-    int16_t calc_mcc = CRC8Legic(card.uid, 4);;
+    int16_t calc_mcc = CRC8Legic(card.uid, 4);
     if (mcc != calc_mcc) {
         reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;

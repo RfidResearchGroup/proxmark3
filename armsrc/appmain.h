@@ -13,10 +13,8 @@
 
 #include "common.h"
 
-extern const uint8_t OddByteParity[256];
-extern int rsamples;   // = 0;
-extern uint8_t trigger;
-extern bool allow_send_wtx;
+extern int g_rsamples;   // = 0;
+extern uint8_t g_trigger;
 
 // ADC Vref = 3300mV, and an (10M+1M):1M voltage divider on the HF input can measure voltages up to 36300 mV
 #define MAX_ADC_HF_VOLTAGE 36300
@@ -33,6 +31,7 @@ void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
 
 uint16_t AvgAdc(int ch);
+uint16_t SumAdc(int ch, int NbSamples);
 
 //void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);

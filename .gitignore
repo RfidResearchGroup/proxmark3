@@ -40,6 +40,7 @@ Makefile.platform
 
 # cmake
 client/build/
+client/android/build/
 
 # Coverity
 cov-int/
@@ -60,9 +61,9 @@ flasher
 !flasher/
 lua
 luac
-fpga_compress
-mfkey32
-mfkey64
+tools/fpga_compress/fpga_compress
+tools/mfkey/mfkey32
+tools/mfkey/mfkey64
 tools/nonce2key/nonce2key
 
 fpga/*
@@ -87,7 +88,7 @@ client/dumps/*
 *.ice
 *.new
 armsrc/TEMP EMV/*
-tools/mf_nonce_brute/*
+tools/mf_nonce_brute/mf_nonce_brute
 tools/andrew/*
 tools/jtag_openocd/openocd_configuration
 ppls patches/*
@@ -99,3 +100,6 @@ client/lualibs/pm3_cmd.lua
 fpga_version_info.c
 
 .proxmark3/*
+
+# .tmp files are created during compilation
+*.tmp

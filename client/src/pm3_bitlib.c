@@ -92,16 +92,18 @@ typedef size_t lua_UInteger;
 #define LOGICAL_SHIFT(name, op)                                         \
     static int bit_ ## name(lua_State *L) {                               \
         lua_Number f;                                                       \
+        lua_Number n = luaL_checknumber(L, 2);                              \
         lua_pushinteger(L, BIT_TRUNCATE(BIT_TRUNCATE((lua_UInteger)TOBIT(L, 1, f)) op \
-                                        (unsigned)luaL_checknumber(L, 2))); \
+                                        (unsigned)n)); \
         return 1;                                                           \
     }
 
 #define ARITHMETIC_SHIFT(name, op)                                      \
     static int bit_ ## name(lua_State *L) {                               \
         lua_Number f;                                                       \
+        lua_Number n = luaL_checknumber(L, 2);                              \
         lua_pushinteger(L, BIT_TRUNCATE((lua_Integer)TOBIT(L, 1, f) op      \
-                                        (unsigned)luaL_checknumber(L, 2))); \
+                                        (unsigned)n)); \
         return 1;                                                           \
     }
 
@@ -126,6 +128,7 @@ static const struct luaL_Reg bitlib[] = {
     {NULL, NULL}
 };
 
+LUALIB_API int luaopen_bit(lua_State *L);
 LUALIB_API int luaopen_bit(lua_State *L) {
     luaL_newlib(L, bitlib);
     //luaL_register(L, "bit", bitlib);

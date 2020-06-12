@@ -79,7 +79,7 @@ static int usage_auto(void) {
     return PM3_SUCCESS;
 }
 
-static void AppendDate(char *s, size_t slen, char *fmt) {
+static void AppendDate(char *s, size_t slen, const char *fmt) {
     struct tm *ct, tm_buf;
     time_t now = time(NULL);
 #if defined(_WIN32)
@@ -287,7 +287,7 @@ int CommandReceived(char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-command_t *getTopLevelCommandTable() {
+command_t *getTopLevelCommandTable(void) {
     return CommandTable;
 }
 

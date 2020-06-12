@@ -36,6 +36,7 @@
 #include "printf.h"
 #include "iso14443a.h"
 #include "dbprint.h"
+#include "BigBuf.h"
 
 #ifndef AddCrc14A
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
@@ -45,9 +46,9 @@ static mbedtls_des_context ctx;
 static mbedtls_des3_context ctx3;
 static mbedtls_aes_context actx;
 
-static inline void update_key_schedules(desfirekey_t key);
+static void update_key_schedules(desfirekey_t key);
 
-static inline void update_key_schedules(desfirekey_t key) {
+static void update_key_schedules(desfirekey_t key) {
     // DES_set_key ((DES_cblock *)key->data, &(key->ks1));
     // DES_set_key ((DES_cblock *)(key->data + 8), &(key->ks2));
     // if (T_3K3DES == key->type) {
@@ -282,7 +283,10 @@ void cmac_generate_subkeys(desfirekey_t key) {
 
 void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac) {
     int kbs = key_block_size(key);
-    uint8_t *buffer = malloc(padded_data_length(len, kbs));
+    if (kbs == 0)
+        return;
+
+    uint8_t *buffer = BigBuf_malloc(padded_data_length(len, kbs));
 
     memcpy(buffer, data, len);
 
@@ -299,7 +303,7 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
     mifare_cypher_blocks_chained(NULL, key, ivect, buffer, len, MCD_SEND, MCO_ENCYPHER);
 
     memcpy(cmac, ivect, kbs);
-    free(buffer);
+    //free(buffer);
 }
 
 size_t key_block_size(const desfirekey_t key) {
@@ -538,7 +542,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                         }
 
                         size_t edl = enciphered_data_length(tag, *nbytes - 1, communication_settings);
-                        edata = malloc(edl);
+                        edata = BigBuf_malloc(edl);
 
                         memcpy(edata, data, *nbytes - 1);
                         memset((uint8_t *)edata + *nbytes - 1, 0, edl - *nbytes + 1);

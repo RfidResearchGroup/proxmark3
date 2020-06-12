@@ -22,6 +22,7 @@
 #include "cliparser.h"
 #include "commonutil.h"
 #include "ui.h"         // PrintAndLog
+#include "proxgui.h"
 #include "lfdemod.h"    // parityTest, bitbytes_to_byte
 #include "cmddata.h"
 #include "cmdlf.h"      // lf_read
@@ -559,7 +560,8 @@ static int CmdIndalaClone(const char *Cmd) {
     uint8_t fc = 0;
     uint16_t cn = 0;
 
-    CLIParserInit("lf indala clone",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf indala clone",
                   "clone INDALA tag to T55x7 (or to q5/T5555)",
                   "Examples:\n"
                   "\tlf indala clone --heden 888\n"
@@ -577,28 +579,28 @@ static int CmdIndalaClone(const char *Cmd) {
         arg_int0("", "cn",      "<decimal>", "Cardnumber (26 bit format)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    is_long_uid = arg_get_lit(1);
+    is_long_uid = arg_get_lit(ctx, 1);
 
     // raw param
-    CLIGetHexWithReturn(3, data, &datalen);
+    CLIGetHexWithReturn(ctx, 3, data, &datalen);
 
-    is_t5555 = arg_get_lit(4);
+    is_t5555 = arg_get_lit(ctx, 4);
 
     if (is_long_uid == false) {
 
         // Heden param
-        cardnumber = arg_get_int_def(2, -1);
+        cardnumber = arg_get_int_def(ctx, 2, -1);
         got_cn = (cardnumber != -1);
 
         // 26b FC/CN param
-        fc = arg_get_int_def(5, 0);
-        cn = arg_get_int_def(6, 0);
+        fc = arg_get_int_def(ctx, 5, 0);
+        cn = arg_get_int_def(ctx, 6, 0);
         got_26 = (fc != 0 && cn != 0);
     }
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     if (is_long_uid) {
         // 224 BIT UID
@@ -838,10 +840,11 @@ int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
         goto inv;
     }
 
-inv:
     if (res == 0) {
         return -4;
     }
+
+inv:
 
     *invert ^= 1;
 
@@ -857,7 +860,7 @@ out:
 
     *size = found_size;
 
-    if (found_size != 224 && found_size != 64) {
+    if (found_size < 64) {
         PrintAndLogEx(INFO, "DEBUG: detectindala | %zu", found_size);
         return -5;
     }

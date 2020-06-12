@@ -131,7 +131,7 @@ Remember only one can be selected at a time for now.
 
 The final steps is to 
 - force recompilation of all code.  ```make clean```
-- compile ```make -j8```
+- compile ```make -j```
 - flash your device
 - connect to your device
 - press button long time to trigger ledshow and enter your new standalone mode

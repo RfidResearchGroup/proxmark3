@@ -45,7 +45,7 @@
 #include "ikeys.h"
 #include "elite_crack.h"
 #include "fileutils.h"
-#include "mbedtls/des.h"
+#include "des.h"
 #include "util_posix.h"
 
 /**
@@ -221,15 +221,16 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
     // Once again, key is on iclass-format
     desencrypt_iclass(key64, key64_negated, z[0]);
 
-//    PrintAndLogEx(NORMAL, "\n"); PrintAndLogEx(NORMAL, "High security custom key (Kcus):");
-//    printvar("z0  ",  z[0],8);
+//    PrintAndLogEx(NORMAL, "");
+//    PrintAndLogEx(INFO, "High security custom key (Kcus):");
+//    PrintAndLogEx(INFO, "z0  %s", sprint_hex(z[0],8));
 
     uint8_t y[8][8] = {{0}, {0}};
 
     // y[0]=DES_dec(z[0],~key)
     // Once again, key is on iclass-format
     desdecrypt_iclass(z[0], key64_negated, y[0]);
-//    printvar("y0  ",  y[0],8);
+//    PrintAndLogEx(INFO, "y0  %s",  sprint_hex(y[0],8));
 
     for (i = 1; i < 8; i++) {
         // z [i] = DES dec (rk(K cus , i), z [i−1] )
@@ -272,9 +273,9 @@ static int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
     memcpy(item, dump + i * itemsize, itemsize);
 
     if (true) {
-        printvar("csn", item->csn, sizeof(item->csn));
-        printvar("cc_nr", item->cc_nr, sizeof(item->cc_nr));
-        printvar("mac", item->mac, sizeof(item->mac));
+        PrintAndLogEx(INFO, "csn    %s", sprint_hex(item->csn, sizeof(item->csn)));
+        PrintAndLogEx(INFO, "cc_nr  %s", sprint_hex(item->cc_nr, sizeof(item->cc_nr)));
+        PrintAndLogEx(INFO, "mac    %s", sprint_hex(item->mac, sizeof(item->mac)));
     }
     return 0;
 }
@@ -292,7 +293,7 @@ static int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
  * @return
  */
 int bruteforceItem(dumpdata item, uint16_t keytable[]) {
-    int errors = 0;
+
     int found = false;
     uint8_t key_sel_p[8] = {0};
     uint8_t div_key[8] = {0};
@@ -326,14 +327,14 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 
         if (numbytes_to_recover > 3) {
             PrintAndLogEx(FAILED, "The CSN requires > 3 byte bruteforce, not supported");
-            printvar("[-] CSN", item.csn, 8);
-            printvar("[-] HASH1", key_index, 8);
+            PrintAndLogEx(INFO, "CSN   %s", sprint_hex(item.csn, 8));
+            PrintAndLogEx(INFO, "HASH1 %s", sprint_hex(key_index, 8));
             PrintAndLogEx(NORMAL, "");
             //Before we exit, reset the 'BEING_CRACKED' to zero
             keytable[bytes_to_recover[0]]  &= ~BEING_CRACKED;
             keytable[bytes_to_recover[1]]  &= ~BEING_CRACKED;
             keytable[bytes_to_recover[2]]  &= ~BEING_CRACKED;
-            return 1;
+            return PM3_ESOFT;
         }
     }
 
@@ -399,11 +400,13 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
         }
     }
 
+    int errors = PM3_SUCCESS;
+
     if (!found) {
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(WARNING, "Failed to recover %d bytes using the following CSN", numbytes_to_recover);
-        printvar("[!] CSN", item.csn, 8);
-        errors++;
+        PrintAndLogEx(INFO, "CSN  %s", sprint_hex(item.csn, 8));
+        errors = PM3_ESOFT;
 
         //Before we exit, reset the 'BEING_CRACKED' to zero
         for (i = 0; i < numbytes_to_recover; i++) {
@@ -468,20 +471,20 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
     mbedtls_des_crypt_ecb(&ctx_e, key64_negated, result);
     PrintAndLogEx(NORMAL, "\n");
     PrintAndLogEx(SUCCESS, "-- High security custom key (Kcus) --");
-    printvar("[+] Standard format   ", key64_stdformat, 8);
-    printvar("[+] iClass format     ", key64, 8);
+    PrintAndLogEx(SUCCESS, "Standard format  %s", sprint_hex(key64_stdformat, 8));
+    PrintAndLogEx(SUCCESS, "iClass format    %s", sprint_hex(key64, 8));
 
     if (master_key != NULL)
         memcpy(master_key, key64, 8);
 
+    PrintAndLogEx(NORMAL, "\n");
     if (memcmp(z_0, result, 4) != 0) {
         PrintAndLogEx(WARNING, _RED_("Failed to verify") " calculated master key (k_cus)! Something is wrong.");
-        return 1;
-    } else {
-        PrintAndLogEx(NORMAL, "\n");
-        PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!"));
+        return PM3_ESOFT;
     }
-    return 0;
+
+    PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!"));
+    return PM3_SUCCESS;
 }
 /**
  * @brief Same as bruteforcefile, but uses a an array of dumpdata instead
@@ -492,27 +495,29 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
  */
 int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     uint8_t i;
-    int errors = 0;
     size_t itemsize = sizeof(dumpdata);
-
     uint64_t t1 = msclock();
 
     dumpdata *attack = (dumpdata *) calloc(itemsize, sizeof(uint8_t));
+    if (attack == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
+    int res = 0;
     for (i = 0 ; i * itemsize < dumpsize ; i++) {
         memcpy(attack, dump + i * itemsize, itemsize);
-        errors += bruteforceItem(*attack, keytable);
-        if (errors)
+        res += bruteforceItem(*attack, keytable);
+        if (res != PM3_SUCCESS)
             break;
     }
     free(attack);
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds", t1 / 1000);
 
-
-    if (errors) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") " again and collect new data");
-        return 1;
+        return PM3_ESOFT;
     }
 
     // Pick out the first 16 bytes of the keytable.
@@ -526,11 +531,10 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 
         if (!(keytable[i] & CRACKED)) {
             PrintAndLogEx(WARNING, "Warning: we are missing byte %d, custom key calculation will fail...", i);
-            return 1;
+            return PM3_ESOFT;
         }
     }
-    errors += calculateMasterKey(first16bytes, NULL);
-    return errors;
+    return calculateMasterKey(first16bytes, NULL);
 }
 /**
  * Perform a bruteforce against a file which has been saved by pm3
@@ -568,7 +572,7 @@ int bruteforceFileNoKeys(const char *filename) {
 // ----------------------------------------------------------------------------
 // TEST CODE BELOW
 // ----------------------------------------------------------------------------
-static int _testBruteforce() {
+static int _testBruteforce(void) {
 
     PrintAndLogEx(INFO, "Testing crack from dumpfile...");
 
@@ -588,15 +592,14 @@ static int _testBruteforce() {
         **** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
     **/
     uint16_t keytable[128] = {0};
-    int errors = bruteforceFile("iclass_dump.bin", keytable);
-    if (errors) {
+    int res = bruteforceFile("iclass_dump.bin", keytable);
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error: The file " _YELLOW_("iclass_dump.bin") "was not found!");
     }
-
-    return errors;
+    return res;
 }
 
-static int _test_iclass_key_permutation() {
+static int _test_iclass_key_permutation(void) {
     uint8_t testcase[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
     uint8_t testcase_output[8] = {0};
     uint8_t testcase_output_correct[8] = {0x8a, 0x0d, 0xb9, 0x88, 0xbb, 0xa7, 0x90, 0xea};
@@ -608,21 +611,21 @@ static int _test_iclass_key_permutation() {
         PrintAndLogEx(ERR, "Error with iclass key permute!");
         printarr("testcase_output", testcase_output, 8);
         printarr("testcase_output_correct", testcase_output_correct, 8);
-        return 1;
+        return PM3_ESOFT;
 
     }
     if (memcmp(testcase, testcase_output_rev, 8) != 0) {
         PrintAndLogEx(ERR, "Error with reverse iclass key permute");
         printarr("testcase", testcase, 8);
         printarr("testcase_output_rev", testcase_output_rev, 8);
-        return 1;
+        return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Iclass key permutation OK!");
-    return 0;
+    PrintAndLogEx(SUCCESS, "Iclass key permutation (%s)", _GREEN_("OK"));
+    return PM3_SUCCESS;
 }
 
-static int _testHash1() {
+static int _testHash1(void) {
     uint8_t expected[8] = {0x7E, 0x72, 0x2F, 0x40, 0x2D, 0x02, 0x51, 0x42};
     uint8_t csn[8] = {0x01, 0x02, 0x03, 0x04, 0xF7, 0xFF, 0x12, 0xE0};
     uint8_t k[8] = {0};
@@ -632,9 +635,9 @@ static int _testHash1() {
         PrintAndLogEx(ERR, "Error with hash1!");
         printarr("calculated", k, 8);
         printarr("expected", expected, 8);
-        return 1;
+        return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int testElite(bool slowtests) {
@@ -661,15 +664,21 @@ int testElite(bool slowtests) {
     hash2(k_cus, keytable);
     printarr_human_readable("Hash2", keytable, 128);
     if (keytable[3] == 0xA1 && keytable[0x30] == 0xA3 && keytable[0x6F] == 0x95) {
-        PrintAndLogEx(SUCCESS, "Hash2 looks fine...");
+        PrintAndLogEx(SUCCESS, "    Hash2 (%s)", _GREEN_("ok"));
     }
 
-    int errors = 0 ;
+    int res = PM3_SUCCESS;
     PrintAndLogEx(INFO, "Testing hash1...");
-    errors += _testHash1();
-    PrintAndLogEx(INFO, "Testing key diversification ...");
-    errors += _test_iclass_key_permutation();
+    res += _testHash1();
+    PrintAndLogEx(INFO, "    hash1 (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
+
+    PrintAndLogEx(INFO, "Testing key diversification...");
+    res += _test_iclass_key_permutation();
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(INFO, "    key diversification (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
+
     if (slowtests)
-        errors += _testBruteforce();
-    return errors;
+        res += _testBruteforce();
+
+    return res;
 }

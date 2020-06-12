@@ -23,6 +23,7 @@
 #include <locale.h>
 #include <math.h>
 #include <time.h> // MingW
+#include <bzlib.h>
 
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"
@@ -35,7 +36,6 @@
 #include "hardnested_bruteforce.h"
 #include "hardnested_bf_core.h"
 #include "hardnested_bitarray_core.h"
-#include "zlib/zlib.h"
 #include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
@@ -44,7 +44,7 @@
 #define IGNORE_BITFLIP_THRESHOLD        0.99 // ignore bitflip arrays which have nearly only valid states
 
 #define STATE_FILES_DIRECTORY           "hardnested_tables/"
-#define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.z"
+#define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.bz2"
 
 #define DEBUG_KEY_ELIMINATION
 // #define DEBUG_REDUCTION
@@ -75,9 +75,12 @@ static float brute_force_per_second;
 
 static void get_SIMD_instruction_set(char *instruction_set) {
     switch (GetSIMDInstrAuto()) {
+#if defined(COMPILER_HAS_SIMD_AVX512)
         case SIMD_AVX512:
             strcpy(instruction_set, "AVX512F");
             break;
+#endif
+#if defined(COMPILER_HAS_SIMD)
         case SIMD_AVX2:
             strcpy(instruction_set, "AVX2");
             break;
@@ -90,7 +93,9 @@ static void get_SIMD_instruction_set(char *instruction_set) {
         case SIMD_MMX:
             strcpy(instruction_set, "MMX");
             break;
-        default:
+#endif
+        case SIMD_AUTO:
+        case SIMD_NONE:
             strcpy(instruction_set, "no");
             break;
     }
@@ -202,32 +207,23 @@ static int compare_count_bitflip_bitarrays(const void *b1, const void *b2) {
 }
 
 
-static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size) {
-    return calloc(items * size, sizeof(uint8_t));
-}
-
-
-static void inflate_free(voidpf opaque, voidpf address) {
-    free(address);
-}
-
 #define OUTPUT_BUFFER_LEN 80
 #define INPUT_BUFFER_LEN 80
 
 //----------------------------------------------------------------------------
-// Initialize decompression of the respective (HF or LF) FPGA stream
+// Initialize decompression of the respective bitflip_bitarray stream
 //----------------------------------------------------------------------------
-static void init_inflate(z_streamp compressed_stream, uint8_t *input_buffer, uint32_t insize, uint8_t *output_buffer, uint32_t outsize) {
+static void init_bunzip2(bz_stream *compressed_stream, char *input_buffer, uint32_t insize, char *output_buffer, uint32_t outsize) {
 
-    // initialize z_stream structure for inflate:
+    // initialize bz_stream structure for bunzip2:
     compressed_stream->next_in = input_buffer;
     compressed_stream->avail_in = insize;
     compressed_stream->next_out = output_buffer;
     compressed_stream->avail_out = outsize;
-    compressed_stream->zalloc = &inflate_malloc;
-    compressed_stream->zfree = &inflate_free;
+    compressed_stream->bzalloc = NULL;
+    compressed_stream->bzfree = NULL;
 
-    inflateInit2(compressed_stream, 0);
+    BZ2_bzDecompressInit(compressed_stream, 0, 0);
 
 }
 
@@ -237,7 +233,7 @@ static void init_bitflip_bitarrays(void) {
     uint8_t line = 0;
 #endif
 
-    z_stream compressed_stream;
+    bz_stream compressed_stream;
 
     char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + strlen(STATE_FILE_TEMPLATE) + 1];
     char state_file_name[strlen(STATE_FILE_TEMPLATE) + 1];
@@ -271,36 +267,36 @@ static void init_bitflip_bitarrays(void) {
                 }
                 uint32_t filesize = (uint32_t)fsize;
                 rewind(statesfile);
-                uint8_t input_buffer[filesize];
+                char input_buffer[filesize];
                 size_t bytesread = fread(input_buffer, 1, filesize, statesfile);
                 if (bytesread != filesize) {
                     PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                     fclose(statesfile);
-                    //inflateEnd(&compressed_stream);
+                    //BZ2_bzDecompressEnd(&compressed_stream);
                     exit(5);
                 }
                 fclose(statesfile);
                 uint32_t count = 0;
-                init_inflate(&compressed_stream, input_buffer, filesize, (uint8_t *)&count, sizeof(count));
-                int res = inflate(&compressed_stream, Z_SYNC_FLUSH);
-                if (res != Z_OK) {
-                    PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
-                    inflateEnd(&compressed_stream);
+                init_bunzip2(&compressed_stream, input_buffer, filesize, (char *)&count, sizeof(count));
+                int res = BZ2_bzDecompress(&compressed_stream);
+                if (res != BZ_OK) {
+                    PrintAndLogEx(ERR, "Bunzip2 error. Aborting...\n");
+                    BZ2_bzDecompressEnd(&compressed_stream);
                     exit(4);
                 }
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
                     if (bitset == NULL) {
                         PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
-                        inflateEnd(&compressed_stream);
+                        BZ2_bzDecompressEnd(&compressed_stream);
                         exit(4);
                     }
-                    compressed_stream.next_out = (uint8_t *)bitset;
+                    compressed_stream.next_out = (char *)bitset;
                     compressed_stream.avail_out = sizeof(uint32_t) * (1 << 19);
-                    res = inflate(&compressed_stream, Z_SYNC_FLUSH);
-                    if (res != Z_OK && res != Z_STREAM_END) {
-                        PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
-                        inflateEnd(&compressed_stream);
+                    res = BZ2_bzDecompress(&compressed_stream);
+                    if (res != BZ_OK && res != BZ_STREAM_END) {
+                        PrintAndLogEx(ERR, "Bunzip2 error. Aborting...\n");
+                        BZ2_bzDecompressEnd(&compressed_stream);
                         exit(4);
                     }
                     effective_bitflip[odd_even][num_effective_bitflips[odd_even]++] = bitflip;
@@ -315,7 +311,7 @@ static void init_bitflip_bitarrays(void) {
                     }
 #endif
                 }
-                inflateEnd(&compressed_stream);
+                BZ2_bzDecompressEnd(&compressed_stream);
             }
         }
         effective_bitflip[odd_even][num_effective_bitflips[odd_even]] = 0x400; // EndOfList marker
@@ -494,7 +490,7 @@ static void free_sum_bitarrays(void) {
 
 
 #ifdef DEBUG_KEY_ELIMINATION
-char failstr[250] = "";
+static char failstr[250] = "";
 #endif
 
 static const float p_K0[NUM_SUMS] = { // the probability that a random nonce has a Sum Property K
@@ -793,7 +789,8 @@ static void update_p_K(void) {
         }
         for (uint8_t sum_a8_idx = 0; sum_a8_idx < NUM_SUMS; sum_a8_idx++) {
             uint16_t sum_a8 = sums[sum_a8_idx];
-            my_p_K[sum_a8_idx] = (float)estimated_num_states_coarse(sum_a0, sum_a8) / total_count;
+            float f = estimated_num_states_coarse(sum_a0, sum_a8);
+            my_p_K[sum_a8_idx] = f / total_count;
         }
         // PrintAndLogEx(NORMAL, "my_p_K = [");
         // for (uint8_t sum_a8_idx = 0; sum_a8_idx < NUM_SUMS; sum_a8_idx++) {
@@ -1229,7 +1226,8 @@ static void check_for_BitFlipProperties(bool time_budget) {
         args[i][1] = MIN(args[i][0] + bytes_per_thread - 1, 255);
         args[i][2] = time_budget;
     }
-    args[NUM_CHECK_BITFLIPS_THREADS - 1][1] = MAX(args[NUM_CHECK_BITFLIPS_THREADS - 1][1], 255);
+    // args[][] is uint8_t so max 255, no need to check it
+    // args[NUM_CHECK_BITFLIPS_THREADS - 1][1] = MAX(args[NUM_CHECK_BITFLIPS_THREADS - 1][1], 255);
 
     // start threads
     for (uint8_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
@@ -1302,7 +1300,7 @@ static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t 
 
 }
 
-static void simulate_acquire_nonces() {
+static void simulate_acquire_nonces(void) {
     time_t time1 = time(NULL);
     last_sample_clock = 0;
     sample_period = 1000; // for simulation
@@ -1739,24 +1737,24 @@ static void bitarray_to_list(uint8_t byte, uint32_t *bitarray, uint32_t *state_l
 }
 
 
-static void add_cached_states(statelist_t *candidates, uint16_t part_sum_a0, uint16_t part_sum_a8, odd_even_t odd_even) {
-    candidates->states[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl;
-    candidates->len[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len;
+static void add_cached_states(statelist_t *cands, uint16_t part_sum_a0, uint16_t part_sum_a8, odd_even_t odd_even) {
+    cands->states[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl;
+    cands->len[odd_even] = sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len;
     return;
 }
 
 
-static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, uint8_t part_sum_a8, odd_even_t odd_even) {
+static void add_matching_states(statelist_t *cands, uint8_t part_sum_a0, uint8_t part_sum_a8, odd_even_t odd_even) {
     const uint32_t worstcase_size = 1 << 20;
-    candidates->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
-    if (candidates->states[odd_even] == NULL) {
+    cands->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
+    if (cands->states[odd_even] == NULL) {
         PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - statelist.\n");
         exit(4);
     }
-    uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
-    if (candidates_bitarray == NULL) {
+    uint32_t *cands_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
+    if (cands_bitarray == NULL) {
         PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - bitarray.\n");
-        free(candidates->states[odd_even]);
+        free(cands->states[odd_even]);
         exit(4);
     }
 
@@ -1764,21 +1762,21 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
     uint32_t *bitarray_a8 = part_sum_a8_bitarrays[odd_even][part_sum_a8 / 2];
     uint32_t *bitarray_bitflips = nonces[best_first_bytes[0]].states_bitarray[odd_even];
 
-    bitarray_AND4(candidates_bitarray, bitarray_a0, bitarray_a8, bitarray_bitflips);
+    bitarray_AND4(cands_bitarray, bitarray_a0, bitarray_a8, bitarray_bitflips);
 
-    bitarray_to_list(best_first_bytes[0], candidates_bitarray, candidates->states[odd_even], &(candidates->len[odd_even]), odd_even);
+    bitarray_to_list(best_first_bytes[0], cands_bitarray, cands->states[odd_even], &(cands->len[odd_even]), odd_even);
 
-    if (candidates->len[odd_even] == 0) {
-        free(candidates->states[odd_even]);
-        candidates->states[odd_even] = NULL;
-    } else if (candidates->len[odd_even] + 1 < worstcase_size) {
-        candidates->states[odd_even] = realloc(candidates->states[odd_even], sizeof(uint32_t) * (candidates->len[odd_even] + 1));
+    if (cands->len[odd_even] == 0) {
+        free(cands->states[odd_even]);
+        cands->states[odd_even] = NULL;
+    } else if (cands->len[odd_even] + 1 < worstcase_size) {
+        cands->states[odd_even] = realloc(cands->states[odd_even], sizeof(uint32_t) * (cands->len[odd_even] + 1));
     }
-    free_bitarray(candidates_bitarray);
+    free_bitarray(cands_bitarray);
 
     pthread_mutex_lock(&statelist_cache_mutex);
-    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl = candidates->states[odd_even];
-    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len = candidates->len[odd_even];
+    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].sl = cands->states[odd_even];
+    sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].len = cands->len[odd_even];
     sl_cache[part_sum_a0 / 2][part_sum_a8 / 2][odd_even].cache_status = COMPLETED;
     pthread_mutex_unlock(&statelist_cache_mutex);
     return;
@@ -2108,7 +2106,7 @@ static uint16_t SumProperty(struct Crypto1State *s) {
     return (sum_odd * (16 - sum_even) + (16 - sum_odd) * sum_even);
 }
 
-static void Tests() {
+static void Tests(void) {
 
     if (known_target_key == -1)
         return;

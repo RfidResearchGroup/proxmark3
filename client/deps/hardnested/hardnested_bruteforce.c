@@ -433,7 +433,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
 }
 
 
-float brute_force_benchmark() {
+float brute_force_benchmark(void) {
     statelist_t test_candidates[NUM_BRUTE_FORCE_THREADS];
 
     test_candidates[0].states[ODD_STATE] = malloc((TEST_BENCH_SIZE + 1) * sizeof(uint32_t));

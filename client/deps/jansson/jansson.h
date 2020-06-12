@@ -302,14 +302,6 @@ int json_equal(const json_t *json1, const json_t *json2);
 json_t *json_copy(json_t *json) JANSSON_ATTRS(warn_unused_result);
 json_t *json_deep_copy(const json_t *json) JANSSON_ATTRS(warn_unused_result);
 
-json_t *json_path_get(const json_t *json, const char *path);
-int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error);
-
-static JSON_INLINE
-int json_path_set(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error) {
-    return json_path_set_new(json, path, json_incref(value), flags, error);
-}
-
 /* decoding */
 
 #define JSON_REJECT_DUPLICATES  0x1

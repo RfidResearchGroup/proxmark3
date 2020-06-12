@@ -240,7 +240,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl, int flash_
         goto fail;
     }
 
-    PrintAndLogEx(SUCCESS, _BLUE_("Loading ELF file") _YELLOW_(" %s"), name);
+    PrintAndLogEx(SUCCESS, _CYAN_("Loading ELF file") _YELLOW_(" %s"), name);
 
     if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
         PrintAndLogEx(ERR, "Error while reading ELF file header");
@@ -356,7 +356,7 @@ static int enter_bootloader(char *serial_port_name) {
         return PM3_SUCCESS;
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
-        PrintAndLogEx(SUCCESS, _BLUE_("Entering bootloader..."));
+        PrintAndLogEx(SUCCESS, _CYAN_("Entering bootloader..."));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
                 && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
@@ -375,7 +375,7 @@ static int enter_bootloader(char *serial_port_name) {
         msleep(1000);
 
         if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
-            PrintAndLogEx(NORMAL, " " _GREEN_("Found"));
+            PrintAndLogEx(NORMAL, _GREEN_(" found"));
             return PM3_SUCCESS;
         } else {
             PrintAndLogEx(ERR, _RED_("Error:") " Proxmark3 not found.");

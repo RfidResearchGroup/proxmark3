@@ -1,10 +1,21 @@
-# Trace command notes
+<a id="top"></a>
+# Notes about the tracelog
+
+## Table of Contents
+ * [Command](#trace-command)
+ * [File format](#tracelog-format)
+ * [Wireshark dissector interoperability](#trace-and-wireshark)
+
+
+## Trace command
+^[Top](#top)
 
 The `trace` command lists the data exchange by the proxmark3 and a tag or a reader in human readable form.
 
 With `trace list` a table is shown which gives timing information, the src of the data bytes, the transmitted/received bytes itself, a check if the CRC was correct and some decoding of the command.
 
-## Timing
+### Timing
+^[Top](#top)
 
 The Start and the End coloumn lists timestamps when the transmission of the shown data started (time of first bit) and when it ended (end of last modulation).
 
@@ -20,26 +31,58 @@ The unit for this time information depends on the protocol in use:
 
 By specifing the option ```f``` (e.g. ```trace list 14a f```) the frame delay times are shown. (So you don't have to do the math by your own).
 
-## Sources
+### Sources
+^[Top](#top)
 
 If the data is marked as a response the source is shown as Tag. Otherwise it is marked as Reader (Rdr).
 
-## Data
+### Data
+^[Top](#top)
 
 This coloumn show the raw bytes trasmitted over the air. With option ```c``` CRC bytes are marked in square brackets.
 
-## CRC
+### CRC
+^[Top](#top)
 
 Marks if the transmitted CRC matches with the calculated CRC.
 
-## Annotation
+### Annotation
+^[Top](#top)
 
 Annotations provide a rough decoding of the transmitted data. For ISO14443A a more detailed decoding is available with Wireshark (s. next chapter)
 
+## Tracelog format
+^[Top](#top)
 
---
+The binary format for the dynamic tracelog is as following.
 
-# Trace and Wireshark
+```
+ /*
+   Traceformat:
+   32 bits timestamp (little endian)
+   16 bits duration (little endian)
+   15 bits data length (little endian) (0x7FFF)
+   1 bit isResponse (0=reader to tag, 1=tag to reader)
+   data length Bytes data
+   x Bytes parity,  where x == ceil(data length/8)
+*/
+
+typedef struct {
+    uint32_t timestamp;
+    uint16_t duration;
+    uint16_t data_len : 15;
+    bool isResponse : 1;
+    uint8_t frame[];
+    // data_len         bytes of data
+    // ceil(data_len/8) bytes of parity
+} PACKED tracelog_hdr_t;
+
+#define TRACELOG_HDR_LEN        sizeof(tracelog_hdr_t)
+#define TRACELOG_PARITY_LEN(x)  (((x)->data_len - 1) / 8 + 1)
+```
+
+## Trace and Wireshark
+^[Top](#top)
 
 To get a more detailed explanation of the transmitted data for ISO14443A traces the output can be converted to a pcapng file to read it with [Wireshark](https://www.wireshark.org/).
 
