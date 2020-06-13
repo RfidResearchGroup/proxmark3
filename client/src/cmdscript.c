@@ -19,7 +19,6 @@
 #include <wchar.h>
 #endif
 
-
 #include "cmdparser.h"    // command_t
 #include "scripting.h"
 #include "comms.h"
@@ -32,6 +31,68 @@
 #include "proxmark3.h"
 #include "ui.h"
 #include "fileutils.h"
+
+#ifdef HAVE_PYTHON
+// Partly ripped from PyRun_SimpleFileExFlags
+// but does not terminate client on sys.exit
+// and print exit code only if != 0
+static int Pm3PyRun_SimpleFileNoExit(FILE *fp, const char *filename)
+{
+    PyObject *m, *d, *v;
+    int set_file_name = 0, ret = -1;
+    m = PyImport_AddModule("__main__");
+    if (m == NULL)
+        return -1;
+    Py_INCREF(m);
+    d = PyModule_GetDict(m);
+    if (PyDict_GetItemString(d, "__file__") == NULL) {
+        PyObject *f;
+        f = PyUnicode_DecodeFSDefault(filename);
+        if (f == NULL)
+            goto done;
+        if (PyDict_SetItemString(d, "__file__", f) < 0) {
+            Py_DECREF(f);
+            goto done;
+        }
+        if (PyDict_SetItemString(d, "__cached__", Py_None) < 0) {
+            Py_DECREF(f);
+            goto done;
+        }
+        set_file_name = 1;
+        Py_DECREF(f);
+    }
+    v = PyRun_FileExFlags(fp, filename, Py_file_input, d, d, 1, NULL);
+    if (v == NULL) {
+        Py_CLEAR(m);
+        if (PyErr_ExceptionMatches(PyExc_SystemExit)) {
+            // PyErr_Print() exists if SystemExit so we've to handle it ourselves
+            PyObject *ty = 0, *er = 0, *tr = 0;
+            PyErr_Fetch(&ty, &er, &tr);
+            long err = PyLong_AsLong(er);
+            if (err) {
+                PrintAndLogEx(WARNING, "\nScript terminated by " _YELLOW_("SystemExit %li"), err);
+            } else {
+                ret = 0;
+            }
+            Py_DECREF(ty);
+            Py_DECREF(er);
+            Py_DECREF(er);
+            PyErr_Clear();
+            goto done;
+        } else {
+            PyErr_Print();
+        }
+        goto done;
+    }
+    Py_DECREF(v);
+    ret = 0;
+  done:
+    if (set_file_name && PyDict_DelItemString(d, "__file__"))
+        PyErr_Clear();
+    Py_XDECREF(m);
+    return ret;
+}
+#endif // HAVE_PYTHON
 
 typedef enum {
     PM3_UNSPECIFIED,
@@ -319,13 +380,17 @@ static int CmdScriptRun(const char *Cmd) {
             free(script_path);
             return PM3_ESOFT;
         }
-
-        PyRun_SimpleFileExFlags(f, preferredName, 1, NULL);
+        int ret = Pm3PyRun_SimpleFileNoExit(f, preferredName);
         Py_Finalize();
         PyMem_RawFree(program);
         free(script_path);
-        PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
-        return PM3_SUCCESS;
+        if (ret) {
+            PrintAndLogEx(WARNING, "\nfinished " _YELLOW_("%s") " with exception", preferredName);
+            return PM3_ESOFT;
+        } else {
+            PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
+            return PM3_SUCCESS;
+        }
     }
 #endif
 

@@ -258,7 +258,7 @@ static command_t CommandTable[] = {
     {"lf",      CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
     {"mem",     CmdFlashMem,  IfPm3Flash,              "{ Flash Memory manipulation... }"},
     {"reveng",  CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software }"},
-    {"sc",      CmdSmartcard, IfPm3Smartcard,          "{ Smart card ISO-7816 commands... }"},
+    {"sc",      CmdSmartcard, AlwaysAvailable,          "{ Smart card ISO-7816 commands... }"},
     {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
