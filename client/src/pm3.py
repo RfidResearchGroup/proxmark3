@@ -62,25 +62,16 @@ class _SwigNonDynamicMeta(type):
 
 
 
-def init():
-    return _pm3.init()
-
-def exit(ctx):
-    return _pm3.exit(ctx)
-
-def get_current_context():
-    return _pm3.get_current_context()
-
-def open(ctx, port):
-    return _pm3.open(ctx, port)
-
-def get_dev(ctx, n):
-    return _pm3.get_dev(ctx, n)
+def open(port):
+    return _pm3.open(port)
 
 def console(dev, cmd):
     return _pm3.console(dev, cmd)
 
 def close(dev):
     return _pm3.close(dev)
+
+def get_current_dev():
+    return _pm3.get_current_dev()
 
 
