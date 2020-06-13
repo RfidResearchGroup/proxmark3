@@ -283,7 +283,7 @@ void cmac_generate_subkeys(desfirekey_t key) {
 void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac) {
     int kbs = key_block_size(key);
     if (kbs == 0) {
-       return;
+        return;
     }
 
     uint8_t *buffer = malloc(padded_data_length(len, kbs));
@@ -407,7 +407,7 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 
         /* pass through */
         case MDCM_MACED:
-            communication_settings|=NO_CRC;
+            communication_settings |= NO_CRC;
 
             switch (DESFIRE(tag)->authentication_scheme) {
                 case AS_LEGACY:
@@ -511,8 +511,8 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes, int communication_settings) {
     void *res = data;
     void *edata = NULL;
-    tag->crypto_buffer_size=*nbytes*2;
-    tag->crypto_buffer=(uint8_t*)malloc(tag->crypto_buffer_size);
+    tag->crypto_buffer_size = *nbytes * 2;
+    tag->crypto_buffer = (uint8_t *)malloc(tag->crypto_buffer_size);
 
     uint8_t first_cmac_byte = 0x00;
 
@@ -533,7 +533,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
         /* pass through */
         case MDCM_MACED:
-            communication_settings|=NO_CRC;
+            communication_settings |= NO_CRC;
             switch (DESFIRE(tag)->authentication_scheme) {
                 case AS_LEGACY:
                     if (communication_settings & MAC_VERIFY) {
@@ -551,12 +551,12 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                         edata = malloc(edl);
 
                         memcpy(edata, data, *nbytes);
-                        memset((uint8_t *)edata + *nbytes , 0, edl - *nbytes);
+                        memset((uint8_t *)edata + *nbytes, 0, edl - *nbytes);
 
                         mifare_cypher_blocks_chained(tag, NULL, NULL, edata, edl, MCD_SEND, MCO_ENCYPHER);
 
                         if (0 != memcmp((uint8_t *)data + *nbytes, (uint8_t *)edata + edl - 8, 4)) {
-                            PrintAndLogEx(NORMAL, "Expected MAC %s", sprint_hex(data+*nbytes, key_macing_length(key)));
+                            PrintAndLogEx(NORMAL, "Expected MAC %s", sprint_hex(data + *nbytes, key_macing_length(key)));
                             PrintAndLogEx(NORMAL, "Actual MAC %s", sprint_hex(edata + edl - 8, key_macing_length(key)));
 #ifdef WITH_DEBUG
                             Dbprintf("MACing not verified");
@@ -653,7 +653,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                 case AS_NEW:
                     /* Move status between payload and CRC */
                     res = DESFIRE(tag)->crypto_buffer;
-                    if (res!=NULL) {
+                    if (res != NULL) {
                         memcpy(res, data, *nbytes);
 
                         crc_pos = (*nbytes) - 16 - 3;
@@ -737,8 +737,8 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
     }
     free(tag->crypto_buffer);
-    tag->crypto_buffer_size=0;
-    tag->crypto_buffer=NULL;
+    tag->crypto_buffer_size = 0;
+    tag->crypto_buffer = NULL;
     return res;
 }
 
@@ -872,8 +872,7 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
 #define CRC32_PRESET 0xFFFFFFFF
 
 static void
-desfire_crc32_byte(uint32_t *crc, const uint8_t value)
-{
+desfire_crc32_byte(uint32_t *crc, const uint8_t value) {
     /* x32 + x26 + x23 + x22 + x16 + x12 + x11 + x10 + x8 + x7 + x5 + x4 + x2 + x + 1 */
     const uint32_t poly = 0xEDB88320;
 
@@ -886,8 +885,7 @@ desfire_crc32_byte(uint32_t *crc, const uint8_t value)
     }
 }
 
-void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc)
-{
+void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     uint32_t desfire_crc = CRC32_PRESET;
     for (size_t i = 0; i < len; i++) {
         desfire_crc32_byte(&desfire_crc, data[i]);
@@ -896,17 +894,14 @@ void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc)
     *((uint32_t *)(crc)) = htole32(desfire_crc);
 }
 
-void desfire_crc32_append(uint8_t *data, const size_t len)
-{
+void desfire_crc32_append(uint8_t *data, const size_t len) {
     desfire_crc32(data, len, data + len);
 }
 
-void iso14443a_crc_append(uint8_t* data, size_t len)
-{
-    return compute_crc(CRC_14443_A, data, len, data+len, data+len+1);
+void iso14443a_crc_append(uint8_t *data, size_t len) {
+    return compute_crc(CRC_14443_A, data, len, data + len, data + len + 1);
 }
 
-void iso14443a_crc(uint8_t* data, size_t len, uint8_t* pbtCrc)
-{
-    return compute_crc(CRC_14443_A, data, len, pbtCrc, pbtCrc+1);
+void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc) {
+    return compute_crc(CRC_14443_A, data, len, pbtCrc, pbtCrc + 1);
 }

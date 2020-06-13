@@ -131,6 +131,6 @@ void cmac(const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t l
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);
-void iso14443a_crc_append(uint8_t* data, size_t len);
-void iso14443a_crc(uint8_t* data, size_t len, uint8_t* pbtCrc);
+void iso14443a_crc_append(uint8_t *data, size_t len);
+void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc);
 #endif
