@@ -560,7 +560,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                             PrintAndLogEx(NORMAL, "Expected MAC %s", sprint_hex(data + *nbytes, key_macing_length(key)));
                             PrintAndLogEx(NORMAL, "Actual MAC %s", sprint_hex(edata + edl - 8, key_macing_length(key)));
 #endif
-                            #ifdef WITH_DEBUG
+#ifdef WITH_DEBUG
                             Dbprintf("MACing not verified");
                             hexdump((uint8_t *)data + *nbytes, key_macing_length(key), "Expect ", 0);
                             hexdump((uint8_t *)edata + edl - 8, key_macing_length(key), "Actual ", 0);
@@ -896,6 +896,10 @@ desfire_crc32_byte(uint32_t *crc, const uint8_t value) {
             *crc ^= poly;
     }
 }
+
+#ifndef htole32
+    #define htole32(x) (x)
+#endif
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
     uint32_t desfire_crc = CRC32_PRESET;
