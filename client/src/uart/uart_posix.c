@@ -48,10 +48,16 @@
 #include <fcntl.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
-#include "sys/socket.h"
-#include "sys/un.h"
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#ifdef HAVE_BLUEZ
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/rfcomm.h>
+#endif
 
 #include "comms.h"
+#include "ui.h"
 
 // Taken from https://github.com/unbit/uwsgi/commit/b608eb1772641d525bfde268fe9d6d8d0d5efde7
 #ifndef SOL_TCP
@@ -71,8 +77,8 @@ struct timeval timeout = {
     .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000
 };
 
-uint32_t newtimeout_value = 0;
-bool newtimeout_pending = false;
+static uint32_t newtimeout_value = 0;
+static bool newtimeout_pending = false;
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
@@ -82,17 +88,36 @@ int uart_reconfigure_timeouts(uint32_t value) {
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
-    if (sp == 0) return INVALID_SERIAL_PORT;
+
+    if (sp == 0) {
+        PrintAndLogEx(ERR, "UART failed to allocate memory");
+        return INVALID_SERIAL_PORT;
+    }
 
     // init timeouts
     timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
 
-    if (memcmp(pcPortName, "tcp:", 4) == 0) {
-        struct addrinfo *addr = NULL, *rp;
-        char *addrstr = strdup(pcPortName + 4);
+    char *prefix = strdup(pcPortName);
+    if (prefix == NULL) {
+        PrintAndLogEx(ERR, "error: malloc");
+        free(sp);
+        return INVALID_SERIAL_PORT;
+    }
+    str_lower(prefix);
 
+    if (memcmp(prefix, "tcp:", 4) == 0) {
+        free(prefix);
+
+        if (strlen(pcPortName) <= 4) {
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        struct addrinfo *addr = NULL, *rp;
+
+        char *addrstr = strdup(pcPortName + 4);
         if (addrstr == NULL) {
-            printf("Error: strdup\n");
+            PrintAndLogEx(ERR, "error: malloc");
             free(sp);
             return INVALID_SERIAL_PORT;
         }
@@ -116,7 +141,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {
-            printf("Error: getaddrinfo: %s\n", gai_strerror(s));
+            PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
             freeaddrinfo(addr);
             free(addrstr);
             free(sp);
@@ -137,7 +162,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         if (rp == NULL) {               /* No address succeeded */
-            printf("Error: Could not connect\n");
+            PrintAndLogEx(ERR, "error: Could not connect");
             freeaddrinfo(addr);
             free(addrstr);
             free(sp);
@@ -158,11 +183,61 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         return sp;
     }
 
+    if (memcmp(prefix, "bt:", 3) == 0) {
+        free(prefix);
+
+#ifdef HAVE_BLUEZ
+        if (strlen(pcPortName) != 20) {
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        char *addrstr = strndup(pcPortName + 3, 17);
+        if (addrstr == NULL) {
+            PrintAndLogEx(ERR, "error: malloc");
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        struct sockaddr_rc addr = { 0 };
+        addr.rc_family = AF_BLUETOOTH;
+        addr.rc_channel = (uint8_t) 1;
+        if (str2ba(addrstr, &addr.rc_bdaddr) != 0) {
+            PrintAndLogEx(ERR, "Invalid Bluetooth MAC address " _RED_("%s"), addrstr);
+            free(addrstr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        int sfd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+        if (sfd == -1) {
+            PrintAndLogEx(ERR, "Error opening Bluetooth socket");
+            free(addrstr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+            PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
+            close(sfd);
+            free(addrstr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        sp->fd = sfd;
+        return sp;
+#else // HAVE_BLUEZ
+        PrintAndLogEx(ERR, "Sorry, this client doesn't support native Bluetooth addresses");
+        free(sp);
+        return INVALID_SERIAL_PORT;
+#endif // HAVE_BLUEZ
+    }
     // The socket for abstract namespace implement.
     // Is local socket buffer, not a TCP or any net connection!
     // so, you can't connect with address like: 127.0.0.1, or any IP
     // see http://man7.org/linux/man-pages/man7/unix.7.html
-    if (memcmp(pcPortName, "socket:", 7) == 0) {
+    if (memcmp(prefix, "socket:", 7) == 0) {
+        free(prefix);
+
         if (strlen(pcPortName) <= 7) {
             free(sp);
             return INVALID_SERIAL_PORT;
@@ -202,6 +277,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         sp->fd = localsocket;
         return sp;
     }
+
+    free(prefix);
 
     sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
     if (sp->fd == -1) {
@@ -259,7 +336,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         speed = 115200;
         if (!uart_set_speed(sp, speed)) {
             uart_close(sp);
-            printf("[!] UART error while setting baudrate\n");
+            PrintAndLogEx(ERR, "UART error while setting baudrate");
             return INVALID_SERIAL_PORT;
         }
     }

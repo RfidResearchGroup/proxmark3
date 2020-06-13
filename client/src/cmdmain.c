@@ -79,7 +79,7 @@ static int usage_auto(void) {
     return PM3_SUCCESS;
 }
 
-static void AppendDate(char *s, size_t slen, char *fmt) {
+static void AppendDate(char *s, size_t slen, const char *fmt) {
     struct tm *ct, tm_buf;
     time_t now = time(NULL);
 #if defined(_WIN32)
@@ -258,7 +258,7 @@ static command_t CommandTable[] = {
     {"lf",      CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
     {"mem",     CmdFlashMem,  IfPm3Flash,              "{ Flash Memory manipulation... }"},
     {"reveng",  CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software }"},
-    {"sc",      CmdSmartcard, IfPm3Smartcard,          "{ Smart card ISO-7816 commands... }"},
+    {"sc",      CmdSmartcard, AlwaysAvailable,          "{ Smart card ISO-7816 commands... }"},
     {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
@@ -287,7 +287,7 @@ int CommandReceived(char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-command_t *getTopLevelCommandTable() {
+command_t *getTopLevelCommandTable(void) {
     return CommandTable;
 }
 

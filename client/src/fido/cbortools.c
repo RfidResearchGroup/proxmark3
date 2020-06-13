@@ -130,7 +130,7 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
         CborError err;
         CborType type = cbor_value_get_type(it);
 //printf("^%x^", type);
-        bool got_next;
+        bool got_next = false;
 
         switch (type) {
             case CborMapType:
@@ -155,8 +155,18 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
                 got_next = true;
                 break;
             }
-
-            default: {
+            case CborByteStringType:
+            case CborTextStringType:
+            case CborTagType:
+            case CborSimpleType:
+            case CborBooleanType:
+            case CborNullType:
+            case CborUndefinedType:
+            case CborHalfFloatType:
+            case CborFloatType:
+            case CborDoubleType:
+            case CborInvalidType:
+            case CborIntegerType: {
                 err = dumpelm(it, &got_next, (isMapType && (elmCount % 2)) ? 0 : nestingLevel);
                 if (err)
                     return err;

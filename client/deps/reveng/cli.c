@@ -97,7 +97,10 @@ int reveng_main(int argc, char *argv[]) {
     SETBMP();
 
 //  pos=0; --- not in this ver of getopt
+    int err = 0;
     optind = 1;
+    // Remember to consume always all the option string till getopt returns -1 !
+    // else next invocations will be corrupted
     do {
         c = getopt(argc, argv, "?A:BDFGLMP:SVXa:bcdefhi:k:lm:p:q:rstuvw:x:yz");
         switch (c) {
@@ -105,8 +108,8 @@ int reveng_main(int argc, char *argv[]) {
             case 'a': /* a: bits per character */
                 if ((obperhx = atoi(optarg)) > BMP_BIT) {
                     fprintf(stderr, "%s: argument to -%c must be between 1 and %d\n", myname, c, BMP_BIT);
-                    return 0;
-                    //exit(EXIT_FAILURE);
+                    err = 1;
+                    break;
                 }
                 if (c == 'a') ibperhx = obperhx;
                 break;
@@ -130,8 +133,8 @@ int reveng_main(int argc, char *argv[]) {
             case 'v': /* v  calculate reversed CRC */
                 if (mode) {
                     fprintf(stderr, "%s: more than one mode switch specified.  Use %s -h for help.\n", myname, myname);
-                    return 0;
-                    //exit(EXIT_FAILURE);
+                    err = 1;
+                    break;
                 }
                 mode = c;
                 break;
@@ -151,8 +154,7 @@ int reveng_main(int argc, char *argv[]) {
             case '?': /* ?  get help / usage */
             default:
                 usage();
-                return 0;
-                //exit(EXIT_FAILURE);
+                err = 1;
                 break;
             case 'i': /* i: Init value */
                 pptr = &model.init;
@@ -184,12 +186,13 @@ int reveng_main(int argc, char *argv[]) {
             case 'm': /* m: select preset CRC model */
                 if (!(c = mbynam(&model, optarg))) {
                     fprintf(stderr, "%s: preset model '%s' not found.  Use %s -D to list presets.\n", myname, optarg, myname);
-                    return 0;
-                    //exit(EXIT_FAILURE);
+                    err = 1;
+                    break;
                 }
                 if (c < 0) {
                     uerror("no preset models available");
-                    return 0;
+                    err = 1;
+                    break;
                 }
                 /* must set width so that parameter to -ipx is not zeroed */
                 width = plen(model.spoly);
@@ -245,6 +248,9 @@ ipqx:
                 ;
         }
     } while (c != -1);
+
+    if (err)
+        return 0;
 
     /* canonicalise the model, so the one we dump is the one we
      * calculate with (not with -s, spoly may be blank which will

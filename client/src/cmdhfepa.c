@@ -92,8 +92,8 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
         while (Cmd[skip] != ' ' && Cmd[skip] != '\0') {
             // convert
             scan_return = sscanf(Cmd + skip,
-                                 "%2X%n",
-                                 (unsigned int *)(apdus[i] + apdu_lengths[i]),
+                                 "%2" SCNx8 "%n",
+                                 apdus[i] + apdu_lengths[i],
                                  &skip_add
                                 );
 

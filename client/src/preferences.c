@@ -29,22 +29,13 @@
 static int CmdHelp(const char *Cmd);
 static int setCmdHelp(const char *Cmd);
 
-// Load all settings into memory (struct)
-#ifdef _WIN32
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
-
 static char *prefGetFilename(void) {
     char *path;
 
-    if (searchHomeFilePath(&path, preferencesFilename, false) == PM3_SUCCESS)
+    if (searchHomeFilePath(&path, NULL, preferencesFilename, false) == PM3_SUCCESS)
         return path;
     else
-        return preferencesFilename;
+        return strdup(preferencesFilename);
 }
 
 int preferences_load(void) {
@@ -61,9 +52,7 @@ int preferences_load(void) {
     session.overlay.y = 60 + session.plot.y + session.plot.h;
     session.overlay.h = 200;
     session.overlay.w = session.plot.w;
-    session.emoji_mode = ALIAS;
     session.show_hints = false;
-    session.supports_colors = false;
 
 //    setDefaultPath (spDefault, "");
 //    setDefaultPath (spDump, "");
@@ -95,10 +84,10 @@ int preferences_load(void) {
     size_t dummyDL = 0x00;
 
     // to better control json cant find file error msg.
-    char* fn = prefGetFilename();
+    char *fn = prefGetFilename();
     if (fileExists(fn)) {
-        PrintAndLogEx(INFO, "Loading Preferences...");
-        if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Loading preferences...");
+        if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL, &preferences_load_callback) == PM3_SUCCESS) {
             session.preferences_loaded = true;
         }
     }
@@ -113,13 +102,13 @@ int preferences_load(void) {
 int preferences_save(void) {
     // Note sure if backup has value ?
 
-    PrintAndLogEx(INFO, "Saving Preferences...");
+    PrintAndLogEx(INFO, "Saving preferences...");
 
-    char* fn = prefGetFilename();
+    char *fn = prefGetFilename();
     int fnLen = strlen(fn) + 5; // .bak\0
 
     // [FILENAME_MAX+sizeof(preferencesFilename)+10]
-    char* backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
+    char *backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
     if (backupFilename == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         free(fn);
@@ -148,7 +137,7 @@ int preferences_save(void) {
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
 
-    if (saveFileJSON(fn, jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
+    if (saveFileJSON(fn, jsfCustom, &dummyData, dummyDL, &preferences_save_callback) != PM3_SUCCESS)
         PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", fn);
 
     free(fn);
@@ -314,7 +303,7 @@ void preferences_load_callback(json_t *root) {
 
 // Help Functions
 
-static int usage_set_emoji() {
+static int usage_set_emoji(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set emoji <alias | emoji | alttext | erase>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
@@ -325,7 +314,7 @@ static int usage_set_emoji() {
     return PM3_SUCCESS;
 }
 
-static int usage_set_color() {
+static int usage_set_color(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set color <off | ansi>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
@@ -334,7 +323,7 @@ static int usage_set_color() {
     return PM3_SUCCESS;
 }
 
-static int usage_set_debug() {
+static int usage_set_debug(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set clientdebug <off | simple | full>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
@@ -344,7 +333,7 @@ static int usage_set_debug() {
     return PM3_SUCCESS;
 }
 /*
-static int usage_set_devicedebug() {
+static int usage_set_devicedebug(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set devicedebug <off | error | info | debug | extended>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
@@ -357,7 +346,7 @@ static int usage_set_devicedebug() {
     return PM3_SUCCESS;
 }
 */
-static int usage_set_hints() {
+static int usage_set_hints(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set hints <off | on>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
@@ -366,7 +355,7 @@ static int usage_set_hints() {
     return PM3_SUCCESS;
 }
 /*
-static int usage_set_savePaths() {
+static int usage_set_savePaths(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set savepaths [help] [create] [default <path>] [dump <path>] [trace <path>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
@@ -382,7 +371,7 @@ static int usage_set_savePaths() {
 // typedef enum preferenceId {prefNONE,prefHELP,prefEMOJI,prefCOLOR,prefPLOT,prefOVERLAY,prefHINTS,prefCLIENTDEBUG} preferenceId_t;
 typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
 
-const char *prefShowMsg(prefShowOpt_t Opt) {
+static const char *prefShowMsg(prefShowOpt_t Opt) {
     switch (Opt) {
         case prefShowOLD:
             return _YELLOW_("[old]");
@@ -395,7 +384,7 @@ const char *prefShowMsg(prefShowOpt_t Opt) {
     return "";
 }
 
-void showEmojiState(prefShowOpt_t Opt) {
+static void showEmojiState(prefShowOpt_t Opt) {
 
     switch (session.emoji_mode) {
         case ALIAS:
@@ -415,7 +404,7 @@ void showEmojiState(prefShowOpt_t Opt) {
     }
 }
 
-void showColorState(prefShowOpt_t Opt) {
+static void showColorState(prefShowOpt_t Opt) {
 
     if (session.supports_colors)
         PrintAndLogEx(NORMAL, "   %s color.................. "_GREEN_("ansi"), prefShowMsg(Opt));
@@ -423,7 +412,7 @@ void showColorState(prefShowOpt_t Opt) {
         PrintAndLogEx(NORMAL, "   %s color.................. "_WHITE_("off"), prefShowMsg(Opt));
 }
 
-void showClientDebugState(prefShowOpt_t Opt) {
+static void showClientDebugState(prefShowOpt_t Opt) {
 
     switch (session.client_debug_level) {
         case cdbOFF:
@@ -440,7 +429,7 @@ void showClientDebugState(prefShowOpt_t Opt) {
     }
 }
 /*
-void showDeviceDebugState(prefShowOpt_t Opt) {
+static void showDeviceDebugState(prefShowOpt_t Opt) {
     switch (session.device_debug_level) {
         case ddbOFF:
             PrintAndLogEx(NORMAL, "   %s device debug........... "_WHITE_("off"), prefShowMsg(Opt));
@@ -463,7 +452,7 @@ void showDeviceDebugState(prefShowOpt_t Opt) {
 }
 */
 /*
-void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
+static void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
 
     char tempStr[50];
 
@@ -485,18 +474,19 @@ void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
     else
         PrintAndLogEx(NORMAL, "   %s %s "_GREEN_("%s"), prefShowMsg(Opt), tempStr, session.defaultPaths[pathIndex]);
 }
-*/
-void showPlotPosState(void) {
+
+static void showPlotPosState(void) {
     PrintAndLogEx(NORMAL, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.plot.x, session.plot.y, session.plot.h, session.plot.w);
 }
 
-void showOverlayPosState(void) {
+static void showOverlayPosState(void) {
     PrintAndLogEx(NORMAL, "    Slider/Overlay window.. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.overlay.x, session.overlay.y, session.overlay.h, session.overlay.w);
 }
+*/
 
-void showHintsState(prefShowOpt_t Opt) {
+static void showHintsState(prefShowOpt_t Opt) {
     if (session.show_hints)
         PrintAndLogEx(NORMAL, "   %s hints.................. "_GREEN_("on"), prefShowMsg(Opt));
     else
@@ -850,28 +840,28 @@ static int setCmdSavePaths (const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-*/
 
-int getCmdHelp(const char *Cmd) {
+static int getCmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
+*/
 
-int getCmdEmoji(const char *Cmd) {
+static int getCmdEmoji(const char *Cmd) {
     showEmojiState(prefShowNone);
     return PM3_SUCCESS;
 }
 
-int getCmdHint(const char *Cmd) {
+static int getCmdHint(const char *Cmd) {
     showHintsState(prefShowNone);
     return PM3_SUCCESS;
 }
 
-int getCmdColor(const char *Cmd) {
+static int getCmdColor(const char *Cmd) {
     showColorState(prefShowNone);
     return PM3_SUCCESS;
 }
 
-int getCmdDebug(const char *Cmd) {
+static int getCmdDebug(const char *Cmd) {
     showClientDebugState(prefShowNone);
     return PM3_SUCCESS;
 }
@@ -904,30 +894,28 @@ static int setCmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdPrefGet(const char *Cmd) {
+static int CmdPrefGet(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(getCommandTable, Cmd);
 }
 
-int CmdPrefSet(const char *Cmd) {
+static int CmdPrefSet(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(setCommandTable, Cmd);
 }
 
 static int CmdPrefShow(const char *Cmd) {
 
-    char* fn = prefGetFilename();
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, _CYAN_("Preferences loaded from %s"), fn);
-
-    free(fn);
-
-    if (!session.preferences_loaded) {
+    if (session.preferences_loaded) {
+        char *fn = prefGetFilename();
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, _CYAN_("Preferences loaded from " _YELLOW_("%s")), fn);
+        free(fn);
+    } else {
         PrintAndLogEx(ERR, "Preferences not loaded");
         return PM3_ESOFT;
     }
 
-    // PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), fn);
     showEmojiState(prefShowNone);
     showHintsState(prefShowNone);
     showColorState(prefShowNone);
@@ -939,7 +927,6 @@ static int CmdPrefShow(const char *Cmd) {
 
     showClientDebugState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 /*

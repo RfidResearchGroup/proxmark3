@@ -27,12 +27,12 @@ Default LF config is set to:
     samples_to_skip = 0
     verbose = YES
     */
-sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
+static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
 
-void printConfig() {
+void printConfig(void) {
     uint32_t d = config.divisor;
-    DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
+    DbpString(_CYAN_("LF Sampling config"));
+    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")" )", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
     Dbprintf("  [b] bits per sample.....%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
@@ -90,7 +90,7 @@ sample_config *getSamplingConfig(void) {
  * @param stream
  * @param bit
  */
-void pushBit(BitstreamOut *stream, uint8_t bit) {
+static void pushBit(BitstreamOut *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
@@ -100,34 +100,37 @@ void pushBit(BitstreamOut *stream, uint8_t bit) {
 }
 
 // Holds bit packed struct of samples.
-BitstreamOut data = {0, 0, 0};
+static BitstreamOut data = {0, 0, 0};
 
 // internal struct to keep track of samples gathered
-sampling_t samples = {0, 0, 0, 0};
+static sampling_t samples = {0, 0, 0, 0};
 
 void initSampleBuffer(uint32_t *sample_size) {
     initSampleBufferEx(sample_size, false);
 }
 
 void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
-
+    if (sample_size == NULL) {
+        Dbprintf("initSampleBufferEx, param NULL");
+        return;
+    }
     BigBuf_free();
+
 
     // We can't erase the buffer now, it would drastically delay the acquisition
 
     if (use_malloc) {
 
-        if (sample_size == NULL || *sample_size == 0) {
+        if (*sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
             data.buffer = BigBuf_get_addr();
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
             data.buffer = BigBuf_malloc(*sample_size);
-
         }
 
     } else {
-        if (sample_size == NULL || *sample_size == 0) {
+        if (*sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
         }
         data.buffer = BigBuf_get_addr();
@@ -140,7 +143,7 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
     samples.total_saved = 0;
 }
 
-uint32_t getSampleCounter() {
+uint32_t getSampleCounter(void) {
     return samples.total_saved;
 }
 
@@ -256,7 +259,8 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     while (!BUTTON_PRESS()) {
 
         // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
+        // interruptible only when logging not yet triggered
+        if ((checked == 1000) && (trigger_threshold > 0)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -342,7 +346,7 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
     return DoAcquisition(1, 8, 0, trigger_threshold, verbose, sample_size, cancel_after, 0);
 }
 
-uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
+static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
     if (verbose)
         printConfig();
 
@@ -364,7 +368,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size) {
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF() {
+uint32_t SniffLF(void) {
     BigBuf_Clear_ext(false);
     return ReadLF(false, true, 0);
 }
@@ -522,7 +526,7 @@ void doCotagAcquisition(size_t sample_size) {
     computeSignalProperties(dest, bufsize);
 }
 
-uint32_t doCotagAcquisitionManchester() {
+uint32_t doCotagAcquisitionManchester(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();

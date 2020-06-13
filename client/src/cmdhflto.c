@@ -109,7 +109,7 @@ static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16
 
     arg1 |= len;
 
-    SendCommandOLD(CMD_HF_ISO14443A_READER, arg0, arg1, 0, cmd, len);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, arg0, arg1, 0, cmd, len);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -149,14 +149,14 @@ static int lto_select(uint8_t *id_response, uint8_t id_len, uint8_t *type_respon
     resp_len = id_len;
     status = lto_send_cmd_raw(select_sn_cmd, sizeof(select_sn_cmd), id_response, &resp_len, false, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
-        return PM3_EWRONGANSVER; // REQUEST SERIAL NUMBER failed
+        return PM3_EWRONGANSWER; // REQUEST SERIAL NUMBER failed
     }
 
     memcpy(select_cmd + 2, id_response, sizeof(select_cmd) - 2);
     resp_len = 1;
     status = lto_send_cmd_raw(select_cmd, sizeof(select_cmd), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // SELECT failed
+        return PM3_EWRONGANSWER; // SELECT failed
     }
 
     // tag is now INIT and SELECTED.
@@ -222,12 +222,12 @@ static int lto_rdbl(uint8_t blk, uint8_t *block_responce, uint8_t *block_cnt_res
 
     int status = lto_send_cmd_raw(rdbl_cmd, sizeof(rdbl_cmd), block_responce, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
-        return PM3_EWRONGANSVER; // READ BLOCK failed
+        return PM3_EWRONGANSWER; // READ BLOCK failed
     }
 
     status = lto_send_cmd_raw(rdbl_cnt_cmd, sizeof(rdbl_cnt_cmd), block_cnt_responce, &resp_len, false, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
-        return PM3_EWRONGANSVER; // READ BLOCK CONTINUE failed
+        return PM3_EWRONGANSWER; // READ BLOCK CONTINUE failed
     }
 
     return PM3_SUCCESS;
@@ -334,17 +334,17 @@ static int lto_wrbl(uint8_t blk, uint8_t *data, bool verbose) {
 
     int status = lto_send_cmd_raw(wrbl_cmd, sizeof(wrbl_cmd), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+        return PM3_EWRONGANSWER; // WRITE BLOCK failed
     }
 
     status = lto_send_cmd_raw(wrbl_d00_d15, sizeof(wrbl_d00_d15), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+        return PM3_EWRONGANSWER; // WRITE BLOCK failed
     }
 
     status = lto_send_cmd_raw(wrbl_d16_d31, sizeof(wrbl_d16_d31), resp, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
-        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+        return PM3_EWRONGANSWER; // WRITE BLOCK failed
     }
 
     return PM3_SUCCESS;
@@ -566,13 +566,7 @@ static int CmdHfLTRestore(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
-    int is_data_loaded = PM3_ESOFT;
-
     char filename[FILE_PATH_SIZE] = {0};
-    char extension[FILE_PATH_SIZE] = {0};
-
-    uint8_t dump_data[CM_MEM_MAX_SIZE] = {0};
-    size_t dump_datalen = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -580,8 +574,9 @@ static int CmdHfLTRestore(const char *Cmd) {
                 return usage_lto_restore();
             case 'f':
                 param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (strlen(filename) == 0)
+                if (strlen(filename) < 5)
                     errors = true;
+
                 cmdp += 2;
                 break;
             default:
@@ -591,40 +586,35 @@ static int CmdHfLTRestore(const char *Cmd) {
         }
     }
 
-    if (errors || (strlen(filename)) == 0) {
-        usage_lto_restore();
-        return PM3_EINVARG;
+    if (errors || strlen(Cmd) == 0) {
+        return usage_lto_restore();
     }
 
-    // split file name into prefix and ext.
-    int fnLength;
+    size_t dump_len = 0;
+    char *lowstr = str_dup(filename);
+    str_lower(lowstr);
 
-    fnLength = strlen(filename);
+    if (str_endswith(lowstr, ".bin")) {
 
-    if (fnLength > 4) {
-        memcpy(extension, &filename[fnLength - 4], 4);
-        extension[5] = 0x00;
+        uint8_t *dump = NULL;
+        if (loadFile_safe(filename, "", (void **)&dump, &dump_len) == PM3_SUCCESS) {
+            restoreLTO(dump, true);
+        }
+        free(dump);
 
-        //  check if valid file extension and attempt to load data
-        if (memcmp(extension, ".bin", 4) == 0) {
-            filename[fnLength - 4] = 0x00;
-            is_data_loaded = loadFile(filename, ".bin", dump_data, sizeof(dump_data), &dump_datalen);
+    } else if (str_endswith(lowstr, ".eml")) {
 
-        } else if (memcmp(extension, ".eml", 4) == 0) {
-            filename[fnLength - 4] = 0x00;
-            dump_datalen = 12;
-            is_data_loaded = loadFileEML(filename, (uint8_t *)dump_data, &dump_datalen);
+        uint8_t *dump = NULL;
+        if (loadFileEML_safe(filename, (void **)&dump, &dump_len) == PM3_SUCCESS) {
+            restoreLTO(dump, true);
+        }
+        free(dump);
 
-        } else
-            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")" to restore!\n", filename);
-    }
-
-    if (is_data_loaded == PM3_SUCCESS) {
-        return restoreLTO(dump_data, true);
     } else {
-        return PM3_EFILE;
+        PrintAndLogEx(WARNING, "Warning: invalid dump filename " _YELLOW_("%s") " to restore", filename);
     }
-
+    free(lowstr);
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {

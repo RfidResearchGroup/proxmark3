@@ -13,6 +13,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //#include <stdlib.h>  //size_t
 
 int CmdData(const char *Cmd);
@@ -75,12 +79,13 @@ int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 int demodIdteck(void);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
-#define BIGBUF_SIZE 40000
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
 
 extern int g_DemodClock;
 extern size_t g_DemodStartIdx;
-extern uint8_t g_debugMode;
 
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -18,6 +18,7 @@
 #include "commonutil.h"          // ARRAYLEN
 #include "cmdparser.h"           // for command_t
 #include "ui.h"                  // for show graph controls
+#include "proxgui.h"
 #include "graph.h"               // for graph data
 #include "comms.h"
 #include "lfdemod.h"             // for demod code
@@ -287,7 +288,7 @@ static int usage_data_buffclear(void) {
     PrintAndLogEx(NORMAL, "       h              This help");
     return PM3_SUCCESS;
 }
-static int usage_data_fsktonrz() {
+static int usage_data_fsktonrz(void) {
     PrintAndLogEx(NORMAL, "Usage: data fsktonrz c <clock> l <fc_low> f <fc_high>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
@@ -566,7 +567,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
-    if (!maxLen) maxLen = BIGBUF_SIZE;
+    if (!maxLen) maxLen = pm3_capabilities.bigbuf_size;
 
     if (invert != 0 && invert != 1) {
         PrintAndLogEx(WARNING, "Invalid argument: %s", Cmd);
@@ -1516,16 +1517,18 @@ static int CmdHexsamples(const char *Cmd) {
     uint32_t offset = 0;
     char string_buf[25];
     char *string_ptr = string_buf;
-    uint8_t got[BIGBUF_SIZE];
+    uint8_t got[pm3_capabilities.bigbuf_size];
 
     sscanf(Cmd, "%u %u", &requested, &offset);
 
     /* if no args send something */
     if (requested == 0)
         requested = 8;
+    if (requested > pm3_capabilities.bigbuf_size)
+        requested = pm3_capabilities.bigbuf_size;
 
     if (offset + requested > sizeof(got)) {
-        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes> + <offset> > %d", BIGBUF_SIZE);
+        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes> + <offset> > %d", pm3_capabilities.bigbuf_size);
         return PM3_EINVARG;
     }
 
@@ -1594,10 +1597,11 @@ int getSamples(uint32_t n, bool verbose) {
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
     // does not line up on byte boundaries
-    uint8_t got[BIGBUF_SIZE - 1] = { 0 };
+    uint8_t got[pm3_capabilities.bigbuf_size - 1];
+    memset(got, 0x00, sizeof(got));
 
-    if (n == 0 || n > sizeof(got))
-        n = sizeof(got);
+    if (n == 0 || n > pm3_capabilities.bigbuf_size - 1)
+        n = pm3_capabilities.bigbuf_size - 1;
 
     if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 
@@ -1623,7 +1627,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
-        int j = 0;
+        uint32_t j = 0;
         for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             GraphBuffer[j] = ((int) sample) - 127;
@@ -1633,7 +1637,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
 
     } else {
-        for (int j = 0; j < n; j++) {
+        for (uint32_t j = 0; j < n; j++) {
             GraphBuffer[j] = ((int)got[j]) - 127;
         }
         GraphTraceLen = n;
@@ -1670,19 +1674,21 @@ int CmdTuneSamples(const char *Cmd) {
     RepaintGraphWindow();
 
     int timeout = 0;
+    int timeout_max = 20;
     PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
     PacketResponseNG resp;
-    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 2000)) {
-        timeout++;
-        printf(".");
+    PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
+    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500)) {
         fflush(stdout);
-        if (timeout > 7) {
+        if (timeout >= timeout_max) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return PM3_ETIMEOUT;
         }
+        timeout++;
+        PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
     }
 
     if (resp.status != PM3_SUCCESS) {
@@ -1727,10 +1733,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%sLF antenna is %s \n"
-                  , (package->peak_v < LF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
-                  , judgement
-                 );
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s \n", judgement);
 
     // HF evaluation
     if (package->v_hf > NON_VOLTAGE)
@@ -1745,10 +1748,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx(NORMAL, "%sHF antenna is %s"
-                  , (package->v_hf < HF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
-                  , judgement
-                 );
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s \n", judgement);
 
     // graph LF measurements
     // even here, these values has 3% error.
@@ -1809,7 +1809,7 @@ static int CmdLoad(const char *Cmd) {
 
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "loaded %zu samples", GraphTraceLen);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", GraphTraceLen);
 
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
@@ -2295,7 +2295,8 @@ static int CmdDataNDEF(const char *Cmd) {
 #define MAX_NDEF_LEN  2048
 #endif
 
-    CLIParserInit("data ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
 
@@ -2304,12 +2305,12 @@ static int CmdDataNDEF(const char *Cmd) {
         arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
-    CLIGetHexWithReturn(1, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    CLIParserFree(ctx);
     if (datalen == 0)
         return PM3_EINVARG;
 

@@ -863,7 +863,7 @@ struct json_scanf_info {
 int json_unescape(const char *src, int slen, char *dst, int dlen) WEAK;
 int json_unescape(const char *src, int slen, char *dst, int dlen) {
     if (dst == NULL || dlen == 0)
-	    return JSON_STRING_INVALID;
+        return JSON_STRING_INVALID;
 
     char *send = (char *) src + slen;
     char *dend = dst + dlen;
@@ -1471,10 +1471,9 @@ char *json_vasprintf(const char *fmt, va_list ap) {
 
 char *json_asprintf(const char *fmt, ...) WEAK;
 char *json_asprintf(const char *fmt, ...) {
-    char *result = NULL;
     va_list ap;
     va_start(ap, fmt);
-    result = json_vasprintf(fmt, ap);
+    char *result = json_vasprintf(fmt, ap);
     va_end(ap);
     return result;
 }

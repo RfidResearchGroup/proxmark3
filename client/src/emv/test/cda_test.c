@@ -17,16 +17,16 @@
 #include <config.h>
 #endif
 
+#include <string.h>     // memcpy
+#include <stdlib.h>     // malloc
+#include "cda_test.h"
+
 #include "../emv_pk.h"
 #include "../crypto.h"
 #include "../dump.h"
 #include "../tlv.h"
 #include "../emv_pki.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "cda_test.h"
+#include "ui.h"             // printandlog
 
 struct emv_pk c_mchip_05 = {
     .rid = { 0xa0, 0x00, 0x00, 0x00, 0x04, },
@@ -56,6 +56,7 @@ struct emv_pk c_mchip_05 = {
         0x10, 0xd2, 0x7b, 0x3e, 0xfc, 0xcd, 0x8f, 0x83, 0xde, 0x30, 0x52, 0xca, 0xd1, 0xe4, 0x89, 0x38,
         0xc6, 0x8d, 0x09, 0x5a, 0xac, 0x91, 0xb5, 0xf3, 0x7e, 0x28, 0xbb, 0x49, 0xec, 0x7e, 0xd5, 0x97,
     },
+    .expire = 0,
 };
 
 const unsigned char c_issuer_cert[] = {
@@ -122,6 +123,7 @@ const unsigned char c_ssd1[] = {
     0x03, 0x8d, 0x0c, 0x91, 0x0a, 0x8a, 0x02, 0x95, 0x05, 0x9f, 0x37, 0x04, 0x9f, 0x4c, 0x08,
     0x39, 0x00,
 };
+
 static const struct tlv ssd1_tlv = {
     .len = sizeof(c_ssd1),
     .value = c_ssd1,
@@ -145,6 +147,7 @@ const unsigned char c_crm1[] = {
     0x00, 0x00, 0x00, 0x06, 0x43, 0x14, 0x09, 0x25, 0x50, 0x12, 0x34, 0x57, 0x79, 0x23, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x03, 0x00,
 };
+
 static const struct tlv crm1_tlv = {
     .len = sizeof(c_crm1),
     .value = c_crm1,
@@ -168,7 +171,7 @@ static int cda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("issuer cert:\n");
+        PrintAndLogEx(INFO, "issuer cert:");
         dump_buffer(ipk_data, ipk_data_len, stdout, 0);
     }
 
@@ -198,7 +201,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash:\n");
+        PrintAndLogEx(INFO, "crypto hash:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -227,7 +230,7 @@ static int cda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("icc cert:\n");
+        PrintAndLogEx(INFO, "icc cert:");
         dump_buffer(iccpk_data, iccpk_data_len, stdout, 0);
     }
 
@@ -256,7 +259,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash1.1:\n");
+        PrintAndLogEx(INFO, "crypto hash1.1:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -283,7 +286,7 @@ static int cda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("SDAD:\n");
+        PrintAndLogEx(INFO, "SDAD:");
         dump_buffer(sdad, sdad_len, stdout, 0);
     }
 
@@ -304,7 +307,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash2:\n");
+        PrintAndLogEx(INFO, "crypto hash2:");
         dump_buffer(h2, 20, stdout, 0);
     }
 
@@ -327,7 +330,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash2.1:\n");
+        PrintAndLogEx(INFO, "crypto hash2.1:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -338,9 +341,7 @@ static int cda_test_raw(bool verbose) {
     }
 
     crypto_hash_close(ch);
-
     free(sdad);
-
     return 0;
 }
 
@@ -355,7 +356,7 @@ static int cda_test_pk(bool verbose) {
 
     struct emv_pk *ipk = emv_pki_recover_issuer_cert(pk, db);
     if (!ipk) {
-        fprintf(stderr, "Could not recover Issuer certificate!\n");
+        PrintAndLogEx(WARNING, "Could not recover Issuer certificate!");
         tlvdb_free(db);
         return 2;
     }
@@ -366,7 +367,7 @@ static int cda_test_pk(bool verbose) {
 
     struct emv_pk *iccpk = emv_pki_recover_icc_cert(ipk, db, &ssd1_tlv);
     if (!iccpk) {
-        fprintf(stderr, "Could not recover ICC certificate!\n");
+        PrintAndLogEx(WARNING, "Could not recover ICC certificate!");
         emv_pk_free(ipk);
         tlvdb_free(db);
         return 2;
@@ -386,7 +387,7 @@ static int cda_test_pk(bool verbose) {
                                               &crm1_tlv,
                                               NULL);
     if (!idndb) {
-        fprintf(stderr, "Could not recover IDN!\n");
+        PrintAndLogEx(WARNING, "Could not recover IDN!");
         tlvdb_free(cda_db);
         emv_pk_free(iccpk);
         emv_pk_free(ipk);
@@ -396,7 +397,7 @@ static int cda_test_pk(bool verbose) {
 
     const struct tlv *idn = tlvdb_get(idndb, 0x9f4c, NULL);
     if (!idn) {
-        fprintf(stderr, "IDN not found!\n");
+        PrintAndLogEx(WARNING, "IDN not found!");
         tlvdb_free(idndb);
         tlvdb_free(cda_db);
         emv_pk_free(iccpk);
@@ -406,7 +407,7 @@ static int cda_test_pk(bool verbose) {
     }
 
     if (verbose) {
-        printf("IDN:\n");
+        PrintAndLogEx(INFO, "IDN:");
         dump_buffer(idn->value, idn->len, stdout, 0);
     }
 
@@ -415,27 +416,22 @@ static int cda_test_pk(bool verbose) {
     emv_pk_free(iccpk);
     emv_pk_free(ipk);
     tlvdb_free(db);
-
     return 0;
 }
 
 int exec_cda_test(bool verbose) {
-    int ret;
-    fprintf(stdout, "\n");
-
-    ret = cda_test_raw(verbose);
+    int ret = cda_test_raw(verbose);
     if (ret) {
-        fprintf(stderr, "CDA raw test: failed\n");
+        PrintAndLogEx(WARNING, "CDA raw test: (%s)", _RED_("failed"));
         return ret;
     }
-    fprintf(stdout, "CDA raw test: passed\n");
+    PrintAndLogEx(INFO, "CDA raw test: (%s)", _GREEN_("passed"));
 
     ret = cda_test_pk(verbose);
     if (ret) {
-        fprintf(stderr, "CDA test pk: failed\n");
+        PrintAndLogEx(WARNING, "CDA test pk: (%s)", _RED_("failed"));
         return ret;
     }
-    fprintf(stdout, "CDA test pk: passed\n");
-
+    PrintAndLogEx(INFO, "CDA test pk: (%s)", _GREEN_("passed"));
     return 0;
 }

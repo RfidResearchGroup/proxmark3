@@ -10,7 +10,11 @@
 #include "cmdhflegic.h"
 
 #include <stdio.h> // for Mingw readline
+#include <ctype.h> // tolower
+
+#ifdef HAVE_READLINE
 #include <readline/readline.h>
+#endif
 
 #include "cmdparser.h"    // command_t
 #include "comms.h"        // clearCommandBuffer
@@ -69,12 +73,13 @@ static int usage_legic_sim(void) {
 }
 static int usage_legic_wrbl(void) {
     PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] [o <offset>] [d <data (hex symbols)>]\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] [o <offset>] [d <data (hex symbols)>] [y]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start writing");
     //PrintAndLogEx(NORMAL, "  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
     PrintAndLogEx(NORMAL, "      d <data>      : (hex symbols) bytes to write ");
+    PrintAndLogEx(NORMAL, "      y             : Auto-confirm dangerous operations ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic wrbl o 10 d 11223344    - Write 0x11223344 starting from offset 0x10"));
@@ -592,6 +597,7 @@ static int CmdLegicWrbl(const char *Cmd) {
     uint8_t *data = NULL;
     uint8_t cmdp = 0;
     bool errors = false;
+    bool autoconfirm = false;
     int len = 0, bg, en;
     uint32_t offset = 0, IV = 0x55;
 
@@ -651,6 +657,10 @@ static int CmdLegicWrbl(const char *Cmd) {
                 errors = true;
                 break;
             }
+            case 'y': {
+                autoconfirm = true;
+                break;
+            }
             default: {
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -689,12 +699,24 @@ static int CmdLegicWrbl(const char *Cmd) {
         return PM3_EOUTOFBOUND;
     }
 
-    if (offset == 5 || offset == 6) {
+    if ((offset == 5 || offset == 6) && (! autoconfirm)) {
         PrintAndLogEx(NORMAL, "############# DANGER ################");
         PrintAndLogEx(NORMAL, "# changing the DCF is irreversible  #");
         PrintAndLogEx(NORMAL, "#####################################");
-        char *answer = readline("do you really want to continue? y(es) n(o) : ");
-        bool overwrite = (answer[0] == 'y' || answer[0] == 'Y');
+        const char *confirm = "Do you really want to continue? y(es)/n(o) : ";
+        bool overwrite = false;
+#ifdef HAVE_READLINE
+        char *answer = readline(confirm);
+        overwrite = (answer[0] == 'y' || answer[0] == 'Y');
+#else
+        printf("%s", confirm);
+        char *answer = NULL;
+        size_t anslen = 0;
+        if (getline(&answer, &anslen, stdin) > 0) {
+            overwrite = (answer[0] == 'y' || answer[0] == 'Y');
+        }
+#endif
+        free(answer);
         if (!overwrite) {
             PrintAndLogEx(NORMAL, "command cancelled");
             return PM3_EOPABORTED;
@@ -880,7 +902,7 @@ int legic_get_type(legic_card_select_t *card) {
     if (!isOK)
         return PM3_ESOFT;
 
-    memcpy(card, (legic_card_select_t *)resp.data.asBytes, sizeof(legic_card_select_t));
+    memcpy(card, resp.data.asBytes, sizeof(legic_card_select_t));
     return PM3_SUCCESS;
 }
 void legic_chk_iv(uint32_t *iv) {
@@ -1015,7 +1037,7 @@ static int CmdLegicDump(const char *Cmd) {
 
     saveFile(filename, ".bin", data, readlen);
     saveFileEML(filename, data, readlen, 8);
-    saveFileJSON(filename, jsfLegic, data, readlen);
+    saveFileJSON(filename, jsfLegic, data, readlen, NULL);
     free(data);
     return PM3_SUCCESS;
 }
@@ -1288,7 +1310,7 @@ static int CmdLegicESave(const char *Cmd) {
 
     saveFile(filename, ".bin", data, numofbytes);
     saveFileEML(filename, data, numofbytes, 8);
-    saveFileJSON(filename, jsfLegic, data, numofbytes);
+    saveFileJSON(filename, jsfLegic, data, numofbytes, NULL);
     return PM3_SUCCESS;
 }
 

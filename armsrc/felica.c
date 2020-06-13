@@ -35,13 +35,13 @@ static uint32_t felica_lasttime_prox2air_start;
 static void iso18092_setup(uint8_t fpga_minor_mode);
 static uint8_t felica_select_card(felica_card_select_t *card);
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed);
-bool WaitForFelicaReply(uint16_t maxbytes);
+static bool WaitForFelicaReply(uint16_t maxbytes);
 
-void iso18092_set_timeout(uint32_t timeout) {
+static void iso18092_set_timeout(uint32_t timeout) {
     felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) + 2;
 }
 
-uint32_t iso18092_get_timeout(void) {
+static uint32_t iso18092_get_timeout(void) {
     return felica_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) - 2;
 }
 
@@ -80,7 +80,7 @@ static struct {
 # define SYNC_16BIT 0xB24D
 #endif
 
-static void FelicaFrameReset() {
+static void FelicaFrameReset(void) {
     FelicaFrame.state = STATE_UNSYNCD;
     FelicaFrame.posCnt = 0;
     FelicaFrame.crc_ok = false;
@@ -431,7 +431,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
                 );
                 if (DBGLEVEL >= DBG_DEBUG) Dbprintf("All bytes received! STATE_FULL");
                 return true;
-            } else if (c++ > timeout && FelicaFrame.state == STATE_UNSYNCD) {
+            } else if (c++ > timeout && (FelicaFrame.state == STATE_UNSYNCD || FelicaFrame.state == STATE_TRYING_SYNC)) {
                 if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Error: Timeout! STATE_UNSYNCD");
                 return false;
             }
@@ -481,7 +481,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     LED_D_ON();
 }
 
-void felica_reset_frame_mode() {
+static void felica_reset_frame_mode(void) {
     switch_off();
     //Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
@@ -738,7 +738,7 @@ void felica_sim_lite(uint64_t uid) {
 
 #define RES_SVC_LEN 11 + 3
 
-void felica_dump_lite_s() {
+void felica_dump_lite_s(void) {
     uint8_t ndef[8];
     uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};
     uint16_t liteblks[28] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x90, 0x91, 0x92, 0xa0};

@@ -13,7 +13,7 @@
 #include "fileutils.h"
 #include "pm3_cmd.h"
 
-int openAIDFile(json_t **root, bool verbose) {
+static int openAIDFile(json_t **root, bool verbose) {
     json_error_t error;
 
     char *path;
@@ -42,8 +42,7 @@ out:
     return retval;
 }
 
-int closeAIDFile(json_t *root) {
-
+static int closeAIDFile(json_t *root) {
     json_decref(root);
     return PM3_SUCCESS;
 }
@@ -67,11 +66,10 @@ json_t *AIDSearchGetElm(json_t *root, int elmindx) {
 }
 
 int AIDSearchFree(json_t *root) {
-
     return closeAIDFile(root);
 }
 
-const char *jsonStrGet(json_t *data, char *name) {
+static const char *jsonStrGet(json_t *data, const char *name) {
     json_t *jstr;
 
     jstr = json_object_get(data, name);
@@ -88,7 +86,7 @@ const char *jsonStrGet(json_t *data, char *name) {
     return cstr;
 }
 
-bool aidCompare(const char *aidlarge, const char *aidsmall) {
+static bool aidCompare(const char *aidlarge, const char *aidsmall) {
     if (strcmp(aidlarge, aidsmall) == 0)
         return true;
 
@@ -122,8 +120,8 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
         goto out;
 
     json_t *elm = NULL;
-    int maxaidlen = 0;
-    for (int elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+    uint32_t maxaidlen = 0;
+    for (uint32_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
         json_t *data = AIDSearchGetElm(root, elmindx);
         if (data == NULL)
             continue;

@@ -113,7 +113,7 @@ static char iso_type = 0;
 //-----------------------------------------------------------------------------
 // Wrapper for sending APDUs to type A and B cards
 //-----------------------------------------------------------------------------
-int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response) {
+static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response) {
     switch (iso_type) {
         case 'a':
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
@@ -130,7 +130,7 @@ int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response) {
 //-----------------------------------------------------------------------------
 // Closes the communication channel and turns off the field
 //-----------------------------------------------------------------------------
-void EPA_Finish() {
+void EPA_Finish(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     iso_type = 0;
@@ -501,7 +501,7 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
 // Set up a communication channel (Card Select, PPS)
 // Returns 0 on success or a non-zero error code on failure
 //-----------------------------------------------------------------------------
-int EPA_Setup() {
+int EPA_Setup(void) {
 
     // first, look for type A cards
     // power up the field

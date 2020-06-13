@@ -42,7 +42,7 @@ void ModInfo(void) {
 }
 
 // samy's sniff and repeat routine for LF
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     Dbprintf(">>  LF HID corporate bruteforce a.k.a CorporateBrute Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -85,7 +85,7 @@ void RunMod() {
             // so next button push begins playing what we recorded
             playing = 0;
             cardRead = 1;
-        } else if (button_pressed > 0 && cardRead == 1) {
+        } else if (button_pressed == BUTTON_HOLD && cardRead == 1) {
             LEDsoff();
             LED(selected + 1, 0);
             LED(LED_A, 0);
@@ -109,7 +109,7 @@ void RunMod() {
         }
 
         // Change where to record (or begin playing)
-        else if (button_pressed) {
+        else if (button_pressed != BUTTON_NO_CLICK) {
             // Next option if we were previously playing
             if (playing)
                 selected = (selected + 1) % OPTS;
@@ -131,7 +131,7 @@ void RunMod() {
                 CmdHIDsimTAG(0, high[selected], low[selected], 0, 0);
                 DbpString("[=] done playing");
 
-                if (BUTTON_HELD(1000) > 0)
+                if (BUTTON_HELD(1000) == BUTTON_HOLD)
                     goto out;
 
                 /* We pressed a button so ignore it here with a delay */
@@ -169,7 +169,7 @@ void RunMod() {
 
                     // Needed for exiting from proxbrute when button is pressed
                     if (BUTTON_PRESS()) {
-                        if (BUTTON_HELD(1000) > 0) {
+                        if (BUTTON_HELD(1000) == BUTTON_HOLD) {
                             goto out;
                         } else {
                             while (BUTTON_PRESS()) {
@@ -199,7 +199,7 @@ void RunMod() {
 
                     // Needed for exiting from proxbrute when button is pressed
                     if (BUTTON_PRESS()) {
-                        if (BUTTON_HELD(1000) > 0) {
+                        if (BUTTON_HELD(1000) == BUTTON_HOLD) {
                             goto out;
                         } else {
                             while (BUTTON_PRESS()) { WDT_HIT(); }
@@ -220,7 +220,7 @@ void RunMod() {
                 }
 
                 DbpString("[=] done bruteforcing");
-                if (BUTTON_HELD(1000) > 0)
+                if (BUTTON_HELD(1000) == BUTTON_HOLD)
                     goto out;
 
                 /* We pressed a button so ignore it here with a delay */

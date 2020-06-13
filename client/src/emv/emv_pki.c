@@ -26,6 +26,7 @@
 #include "crypto.h"
 #include "dump.h"
 #include "util.h"
+#include "ui.h"
 
 static bool strictExecution = true;
 void PKISetStrictExecution(bool se) {
@@ -53,12 +54,12 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
         return NULL;
 
     if (!cert_tlv) {
-        printf("ERROR: Can't find certificate\n");
+        PrintAndLogEx(WARNING, "ERROR: Can't find certificate");
         return NULL;
     }
 
     if (cert_tlv->len != enc_pk->mlen) {
-        printf("ERROR: Certificate length (%zu) not equal key length (%zu)\n", cert_tlv->len, enc_pk->mlen);
+        PrintAndLogEx(WARNING, "ERROR: Certificate length (%zu) not equal key length (%zu)", cert_tlv->len, enc_pk->mlen);
         return NULL;
     }
     kcp = crypto_pk_open(enc_pk->pk_algo,
@@ -71,19 +72,19 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
     crypto_pk_close(kcp);
 
     /*  if (true){
-            printf("Recovered data:\n");
+            PrintAndLogEx(SUCCESS, "Recovered data:\n");
             dump_buffer(data, data_len, stdout, 0);
         }*/
 
     if (data[data_len - 1] != 0xbc || data[0] != 0x6a || data[1] != msgtype) {
-        printf("ERROR: Certificate format\n");
+        PrintAndLogEx(WARNING, "ERROR: Certificate format");
         free(data);
         return NULL;
     }
 
     size_t hash_pos = emv_pki_hash_psn[msgtype];
     if (hash_pos == 0 || hash_pos > data_len) {
-        printf("ERROR: Cant get hash position in the certificate\n");
+        PrintAndLogEx(WARNING, "ERROR: Cant get hash position in the certificate");
         free(data);
         return NULL;
     }
@@ -91,7 +92,7 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
     struct crypto_hash *ch;
     ch = crypto_hash_open(data[hash_pos]);
     if (!ch) {
-        printf("ERROR: Cant do hash\n");
+        PrintAndLogEx(WARNING, "ERROR: Cant do hash");
         free(data);
         return NULL;
     }
@@ -113,9 +114,9 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
     memset(hash, 0, hash_len);
     memcpy(hash, crypto_hash_read(ch), hash_len);
     if (memcmp(data + data_len - 1 - hash_len, hash, hash_len)) {
-        printf("ERROR: Calculated wrong hash\n");
-        printf("decoded:    %s\n", sprint_hex(data + data_len - 1 - hash_len, hash_len));
-        printf("calculated: %s\n", sprint_hex(hash, hash_len));
+        PrintAndLogEx(WARNING, "ERROR: Calculated wrong hash");
+        PrintAndLogEx(WARNING, "decoded:    " _YELLOW_("%s"), sprint_hex(data + data_len - 1 - hash_len, hash_len));
+        PrintAndLogEx(WARNING, "calculated: " _YELLOW_("%s"), sprint_hex(hash, hash_len));
 
         if (strictExecution) {
             crypto_hash_close(ch);
@@ -125,16 +126,12 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
     }
 
     crypto_hash_close(ch);
-
     *len = data_len - hash_len - 1;
-
     return data;
 }
 
 static unsigned emv_cn_length(const struct tlv *tlv) {
-    int i;
-
-    for (i = 0; i < tlv->len; i++) {
+    for (int i = 0; i < tlv->len; i++) {
         unsigned char c = tlv->value[i];
 
         if (c >> 4 == 0xf)
@@ -143,7 +140,6 @@ static unsigned emv_cn_length(const struct tlv *tlv) {
         if ((c & 0xf) == 0xf)
             return 2 * i + 1;
     }
-
     return 2 * tlv->len;
 }
 
@@ -185,7 +181,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
     else if (msgtype == 4)
         pan_length = 10;
     else {
-        printf("ERROR: Message type must be 2 or 4\n");
+        PrintAndLogEx(WARNING, "ERROR: Message type must be 2 or 4");
         return NULL;
     }
 
@@ -198,12 +194,12 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
                                   sdatl_tlv,
                                   NULL);
     if (!data || data_len < 11 + pan_length) {
-        printf("ERROR: Can't decode message\n");
+        PrintAndLogEx(WARNING, "ERROR: Can't decode message");
         return NULL;
     }
 
     if (showData) {
-        printf("Recovered data:\n");
+        PrintAndLogEx(SUCCESS, "Recovered data:");
         dump_buffer(data, data_len, stdout, 0);
     }
 
@@ -219,7 +215,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
 
     if (((msgtype == 2) && (pan2_len < 4 || pan2_len > pan_len)) ||
             ((msgtype == 4) && (pan2_len != pan_len))) {
-        printf("ERROR: Invalid PAN lengths\n");
+        PrintAndLogEx(WARNING, "ERROR: Invalid PAN lengths");
         free(data);
 
         return NULL;
@@ -228,9 +224,9 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
     unsigned i;
     for (i = 0; i < pan2_len; i++)
         if (emv_cn_get(pan_tlv, i) != emv_cn_get(&pan2_tlv, i)) {
-            printf("ERROR: PAN data mismatch\n");
-            printf("tlv  pan=%s\n", sprint_hex(pan_tlv->value, pan_tlv->len));
-            printf("cert pan=%s\n", sprint_hex(pan2_tlv.value, pan2_tlv.len));
+            PrintAndLogEx(WARNING, "ERROR: PAN data mismatch");
+            PrintAndLogEx(WARNING, "tlv  pan " _YELLOW_("%s"), sprint_hex(pan_tlv->value, pan_tlv->len));
+            PrintAndLogEx(WARNING, "cert pan " _YELLOW_("%s"), sprint_hex(pan2_tlv.value, pan2_tlv.len));
             free(data);
 
             return NULL;
@@ -238,7 +234,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
 
     pk_len = data[9 + pan_length];
     if (pk_len > data_len - 11 - pan_length + rem_tlv->len) {
-        printf("ERROR: Invalid pk length\n");
+        PrintAndLogEx(WARNING, "ERROR: Invalid pk length");
         free(data);
         return NULL;
     }
@@ -268,7 +264,6 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
     memcpy(pk->exp, exp_tlv->value, exp_tlv->len);
 
     free(data);
-
     return pk;
 }
 
@@ -354,7 +349,6 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
     return NULL;
 }
 
-
 struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct tlvdb *db, const struct tlv *sda_tlv, bool showData) {
     size_t data_len;
 
@@ -380,16 +374,15 @@ struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct t
         return NULL;
 
     if (showData) {
-        printf("Recovered data:\n");
+        PrintAndLogEx(SUCCESS, "Recovered data:");
         dump_buffer(data, data_len, stdout, 0);
     }
 
     struct tlvdb *dac_db = tlvdb_fixed(0x9f45, 2, data + 3);
-
     free(data);
-
     return dac_db;
 }
+
 struct tlvdb *emv_pki_recover_dac(const struct emv_pk *enc_pk, const struct tlvdb *db, const struct tlv *sda_tlv) {
     return emv_pki_recover_dac_ex(enc_pk, db, sda_tlv, false);
 }
@@ -415,7 +408,7 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
     }
 
     if (showData) {
-        printf("Recovered data:\n");
+        PrintAndLogEx(SUCCESS, "Recovered data:");
         dump_buffer(data, data_len, stdout, 0);
     }
 
@@ -427,9 +420,7 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
 
     // 9f4c ICC Dynamic Number
     struct tlvdb *idn_db = tlvdb_fixed(0x9f4c, idn_len, data + 5);
-
     free(data);
-
     return idn_db;
 }
 
@@ -453,7 +444,7 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
     }
 
     if (showData) {
-        printf("Recovered data:\n");
+        PrintAndLogEx(SUCCESS, "Recovered data:");
         dump_buffer(data, data_len, stdout, 0);
     }
 
@@ -471,22 +462,20 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
     return atc_db;
 }
 
-static bool tlv_hash(void *data, const struct tlv *tlv, int level, bool is_leaf) {
+static void tlv_hash(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     struct crypto_hash *ch = data;
     size_t tag_len;
     unsigned char *tag;
 
     if (tlv_is_constructed(tlv))
-        return true;
+        return;
 
     if (tlv->tag == 0x9f4b)
-        return true;
+        return;
 
     tag = tlv_encode(tlv, &tag_len);
     crypto_hash_write(ch, tag, tag_len);
     free(tag);
-
-    return true;
 }
 
 struct tlvdb *emv_pki_perform_cda(const struct emv_pk *enc_pk, const struct tlvdb *db,
@@ -496,6 +485,7 @@ struct tlvdb *emv_pki_perform_cda(const struct emv_pk *enc_pk, const struct tlvd
                                   const struct tlv *crm2_tlv) {
     return emv_pki_perform_cda_ex(enc_pk, db, this_db, pdol_data_tlv, crm1_tlv, crm2_tlv, false);
 }
+
 struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct tlvdb *db,
                                      const struct tlvdb *this_db,     // AC TLV result
                                      const struct tlv *pdol_data_tlv, // PDOL
@@ -515,23 +505,23 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
                                                  un_tlv,
                                                  NULL);
     if (!data || data_len < 3) {
-        printf("ERROR: can't decode message. len %zu\n", data_len);
+        PrintAndLogEx(WARNING, "ERROR: can't decode message. [%zu bytes]", data_len);
         return NULL;
     }
 
     if (showData) {
-        printf("Recovered data:\n");
+        PrintAndLogEx(SUCCESS, "Recovered data:");
         dump_buffer(data, data_len, stdout, 0);
     }
 
     if (data[3] < 30 || data[3] > data_len - 4) {
-        printf("ERROR: Invalid data length\n");
+        PrintAndLogEx(WARNING, "ERROR: Invalid data length");
         free(data);
         return NULL;
     }
 
     if (!cid_tlv || cid_tlv->len != 1 || cid_tlv->value[0] != data[5 + data[4]]) {
-        printf("ERROR: CID mismatch\n");
+        PrintAndLogEx(WARNING, "ERROR: CID mismatch");
         free(data);
         return NULL;
     }
@@ -539,7 +529,7 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
     struct crypto_hash *ch;
     ch = crypto_hash_open(enc_pk->hash_algo);
     if (!ch) {
-        printf("ERROR: can't create hash\n");
+        PrintAndLogEx(WARNING, "ERROR: can't create hash");
         free(data);
         return NULL;
     }
@@ -554,7 +544,7 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
     tlvdb_visit(this_db, tlv_hash, ch, 0);
 
     if (memcmp(data + 5 + data[4] + 1 + 8, crypto_hash_read(ch), 20)) {
-        printf("ERROR: calculated hash error\n");
+        PrintAndLogEx(WARNING, "ERROR: calculated hash error");
         crypto_hash_close(ch);
         free(data);
         return NULL;
@@ -563,7 +553,7 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
 
     size_t idn_len = data[4];
     if (idn_len > data[3] - 1) {
-        printf("ERROR: Invalid IDN length\n");
+        PrintAndLogEx(WARNING, "ERROR: Invalid IDN length");
         free(data);
         return NULL;
     }

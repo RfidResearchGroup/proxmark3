@@ -15,8 +15,10 @@ ifeq ($(DEFSBEENHERE),)
     $(error Can't find Makefile.defs)
 endif
 
-CFLAGS ?= -Wall -Werror -O3
+CFLAGS ?= $(DEFCFLAGS)
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
+LDFLAGS += $(MYLDFLAGS)
+LDLIBS += $(MYLDLIBS)
 
 vpath %.c $(MYSRCPATHS)
 
@@ -66,7 +68,7 @@ $(BINDIR)/$(LIB_A): $(MYOBJS)
 
 $(BINDIR)/% : $(OBJDIR)/%.o $(MYOBJS) $(MYLIBS)
 	$(info [=] LD $(notdir $@))
-	$(Q)$(LD) $(LDFLAGS) $(MYOBJS) $< -o $@ $(MYLIBS)
+	$(Q)$(LD) $(LDFLAGS) $(MYOBJS) $< -o $@ $(MYLIBS) $(MYLDLIBS)
 
 $(OBJDIR)/%.o : %.c | $(OBJDIR)
 	$(info [-] CC $<)

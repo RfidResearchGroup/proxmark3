@@ -80,55 +80,6 @@ int kbd_enter_pressed(void) {
 }
 #endif
 
-// log files functions
-
-// open, appped and close logfile
-void AddLogLine(const char *fn, const char *data, const char *c) {
-    FILE *f = NULL;
-    char filename[FILE_PATH_SIZE] = {0x00};
-    int len = 0;
-
-    len = strlen(fn);
-    if (len > FILE_PATH_SIZE)
-        len = FILE_PATH_SIZE;
-    memcpy(filename, fn, len);
-
-    f = fopen(filename, "a");
-    if (!f) {
-        PrintAndLogEx(ERR, "Could not append log file" _YELLOW_("%s"), filename);
-        return;
-    }
-
-    fprintf(f, "%s", data);
-    fprintf(f, "%s\n", c);
-    fflush(f);
-    fclose(f);
-}
-
-void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len) {
-    AddLogLine(fn, extData, sprint_hex(data, len));
-}
-
-void AddLogUint64(const char *fn, const char *data, const uint64_t value) {
-    char buf[20] = {0};
-    memset(buf, 0x00, sizeof(buf));
-    sprintf(buf, "%016" PRIx64 "", value);
-    AddLogLine(fn, data, buf);
-}
-
-void AddLogCurrentDT(const char *fn) {
-    char buf[20] = {0};
-    struct tm *ct, tm_buf;
-    time_t now = time(NULL);
-#if defined(_WIN32)
-    ct = gmtime_s(&tm_buf, &now) == 0 ? &tm_buf : NULL;
-#else
-    ct = gmtime_r(&now, &tm_buf);
-#endif
-    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ct);
-    AddLogLine(fn, "\nanticollision: ", buf);
-}
-
 // create filename on hex uid.
 // param *fn   -  pointer to filename char array
 // param *uid  -  pointer to uid byte array
@@ -195,9 +146,9 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
     size_t i;
     memset(tmp, 0x00, hex_max_len);
 
-    size_t maxLen = (hex_len > hex_max_len) ? hex_max_len : hex_len;
+    size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
 
-    for (i = 0; i < maxLen; ++i, tmp += 2 + spaces_between) {
+    for (i = 0; i < max_len; ++i, tmp += 2 + spaces_between) {
         sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
 
         for (size_t j = 0; j < spaces_between; j++)
@@ -205,10 +156,12 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
     }
 
     i *= (2 + spaces_between);
-    size_t minStrLen = min_str_len > i ? min_str_len : 0;
-    if (minStrLen > hex_max_len)
-        minStrLen = hex_max_len;
-    for (; i < minStrLen; i++, tmp += 1)
+
+    size_t mlen = min_str_len > i ? min_str_len : 0;
+    if (mlen > hex_max_len)
+        mlen = hex_max_len;
+
+    for (; i < mlen; i++, tmp += 1)
         sprintf(tmp, " ");
 
     // remove last space
@@ -821,12 +774,6 @@ void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length
     memcpy(target, source, length);
     target += length;
     *(target) = GetParity(source + length / 2, EVEN, length / 2);
-}
-
-// xor two arrays together for len items.  The dst array contains the new xored values.
-void xor(unsigned char *dst, unsigned char *src, size_t len) {
-    for (; len > 0; len--, dst++, src++)
-        *dst ^= *src;
 }
 
 // Pack a bitarray into a uint32_t.

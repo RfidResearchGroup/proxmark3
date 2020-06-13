@@ -18,23 +18,22 @@
 #include "ticks.h"
 #include "string.h"
 #include "BigBuf.h"
+#include "commonutil.h"
 
 #define MAX_IND 16 // 4 LEDs - 2^4 combinations
 #define CLOCK 64 //for 125kHz
 
 // low & high - array for storage IDs. Its length must be equal.
 // Predefined IDs must be stored in low[].
-// In high[] must be nulls
-uint64_t low[] = {0x565A1140BE, 0x365A398149, 0x5555555555, 0xFFFFFFFFFF};
-uint32_t high[] = {0, 0, 0, 0};
-uint8_t *bba, slots_count;
-int buflen;
+static uint64_t low[] = {0x565A1140BE, 0x365A398149, 0x5555555555, 0xFFFFFFFFFF};
+static uint8_t *bba, slots_count;
+static int buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 simulator standalone mode");
 }
 
-uint64_t ReversQuads(uint64_t bits) {
+static uint64_t ReversQuads(uint64_t bits) {
     uint64_t result = 0;
     for (int i = 0; i < 16; i++) {
         result += ((bits >> (60 - 4 * i)) & 0xf) << (4 * i);
@@ -42,14 +41,14 @@ uint64_t ReversQuads(uint64_t bits) {
     return result >> 24;
 }
 
-void FillBuff(uint8_t bit) {
+static void FillBuff(uint8_t bit) {
     memset(bba + buflen, bit, CLOCK / 2);
     buflen += (CLOCK / 2);
     memset(bba + buflen, bit ^ 1, CLOCK / 2);
     buflen += (CLOCK / 2);
 }
 
-void ConstructEM410xEmulBuf(uint64_t id) {
+static void ConstructEM410xEmulBuf(uint64_t id) {
 
     int i, j, binary[4], parity[4];
     buflen = 0;
@@ -70,7 +69,7 @@ void ConstructEM410xEmulBuf(uint64_t id) {
     FillBuff(0);
 }
 
-void LED_Slot(int i) {
+static void LED_Slot(int i) {
     LEDsoff();
     if (slots_count > 4) {
         LED(i % MAX_IND, 0); //binary indication for slots_count > 4
@@ -79,7 +78,7 @@ void LED_Slot(int i) {
     }
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf("[=] >>  LF EM4100 simulator started  <<");

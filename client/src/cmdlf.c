@@ -25,6 +25,7 @@
 
 #include "lfdemod.h"        // device/client demods of LF signals
 #include "ui.h"             // for show graph controls
+#include "proxgui.h"
 #include "graph.h"          // for graph data
 #include "cmddata.h"        // for `lf search`
 #include "cmdlfawid.h"      // for awid menu
@@ -54,7 +55,7 @@
 #include "cmdlfmotorola.h"  // for Motorola menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 
-bool g_lf_threshold_set = false;
+static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
@@ -669,7 +670,7 @@ int CmdLFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void ChkBitstream() {
+static void ChkBitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
@@ -702,6 +703,8 @@ int CmdLFSim(const char *Cmd) {
 
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
 
+    PacketResponseNG resp;
+
     struct pupload {
         uint8_t flag;
         uint16_t offset;
@@ -726,9 +729,12 @@ int CmdLFSim(const char *Cmd) {
         for (uint16_t j = 0; j < len; j++)
             payload_up.data[j] = GraphBuffer[i + j];
 
-
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
-        WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, NULL);
+        WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Bigbuf is full.");
+            break;
+        }
         printf(".");
         fflush(stdout);
         payload_up.flag = 0;
@@ -750,7 +756,6 @@ int CmdLFSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
-    PacketResponseNG resp;
     WaitForResponse(CMD_LF_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
@@ -1339,6 +1344,7 @@ out:
     // identify chipset
     if (CheckChipType(isOnline) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+        retval = false;
     }
     return retval;
 }

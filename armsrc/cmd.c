@@ -36,11 +36,11 @@
 #include "string.h"
 
 // Flags to tell where to add CRC on sent replies
-bool reply_with_crc_on_usb = false;
-bool reply_with_crc_on_fpc = true;
+bool g_reply_with_crc_on_usb = false;
+bool g_reply_with_crc_on_fpc = true;
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
-bool reply_via_fpc = false;
-bool reply_via_usb = false;
+bool g_reply_via_fpc = false;
+bool g_reply_via_usb = false;
 
 int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
@@ -62,15 +62,17 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
         }
     }
 
+#ifdef WITH_FPC_USART_HOST
     int resultfpc = PM3_EUNDEF;
+#endif
     int resultusb = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
-    if (reply_via_usb) {
+    if (g_reply_via_usb) {
         resultusb = usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
     }
 
-    if (reply_via_fpc) {
+    if (g_reply_via_fpc) {
 #ifdef WITH_FPC_USART_HOST
         resultfpc = usart_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 #else
@@ -78,8 +80,10 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
 #endif
     }
     // we got two results, let's prioritize the faulty one and USB over FPC.
-    if (reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
-    if (reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
+    if (g_reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
+#ifdef WITH_FPC_USART_HOST
+    if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
+#endif
     return PM3_SUCCESS;
 }
 
@@ -108,7 +112,7 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
 
     PacketResponseNGPostamble *tx_post = (PacketResponseNGPostamble *)((uint8_t *)&txBufferNG + sizeof(PacketResponseNGPreamble) + len);
     // Note: if we send to both FPC & USB, we'll set CRC for both if any of them require CRC
-    if ((reply_via_fpc && reply_with_crc_on_fpc) || ((reply_via_usb) && reply_with_crc_on_usb)) {
+    if ((g_reply_via_fpc && g_reply_with_crc_on_fpc) || ((g_reply_via_usb) && g_reply_with_crc_on_usb)) {
         uint8_t first, second;
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketResponseNGPreamble) + len, &first, &second);
         tx_post->crc = (first << 8) + second;
@@ -117,14 +121,16 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
     }
     txBufferNGLen = sizeof(PacketResponseNGPreamble) + len + sizeof(PacketResponseNGPostamble);
 
+#ifdef WITH_FPC_USART_HOST
     int resultfpc = PM3_EUNDEF;
+#endif
     int resultusb = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
-    if (reply_via_usb) {
+    if (g_reply_via_usb) {
         resultusb = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
     }
-    if (reply_via_fpc) {
+    if (g_reply_via_fpc) {
 #ifdef WITH_FPC_USART_HOST
         resultfpc = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
 #else
@@ -132,8 +138,10 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
 #endif
     }
     // we got two results, let's prioritize the faulty one and USB over FPC.
-    if (reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
-    if (reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
+    if (g_reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
+#ifdef WITH_FPC_USART_HOST
+    if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
+#endif
     return PM3_SUCCESS;
 }
 
@@ -208,8 +216,8 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             if ((first << 8) + second != rx->crc)
                 return PM3_EIO;
         }
-        reply_via_usb = usb;
-        reply_via_fpc = fpc;
+        g_reply_via_usb = usb;
+        g_reply_via_fpc = fpc;
     } else {                               // Old style command
         PacketCommandOLD rx_old;
         memcpy(&rx_old, &rx_raw.pre, sizeof(PacketCommandNGPreamble));
@@ -217,8 +225,8 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         if (bytes != sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble))
             return PM3_EIO;
 
-        reply_via_usb = usb;
-        reply_via_fpc = fpc;
+        g_reply_via_usb = usb;
+        g_reply_via_fpc = fpc;
         rx->ng = false;
         rx->magic = 0;
         rx->crc = 0;

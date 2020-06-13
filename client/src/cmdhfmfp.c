@@ -168,7 +168,6 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
     };
 
     uint8_t i;
-    int res;
     bool is_valid = false;
 
     for (i = 0; i < ARRAYLEN(nxp_plus_public_keys); i++) {
@@ -177,7 +176,7 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
         uint8_t key[PUBLIC_PLUS_ECDA_KEYLEN];
         param_gethex_to_eol(nxp_plus_public_keys[i].value, 0, key, PUBLIC_PLUS_ECDA_KEYLEN, &dl);
 
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
+        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
         is_valid = (res == 0);
         if (is_valid)
             break;
@@ -186,7 +185,7 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
 
-    if (is_valid == false) {
+    if (is_valid == false || i == ARRAYLEN(nxp_plus_public_keys)) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
     }
@@ -425,7 +424,8 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
     uint8_t key[64] = {0};
     int keyLen = 0;
 
-    CLIParserInit("hf mfp wrp",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp wrp",
                   "Executes Write Perso command. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp wrp 4000 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000 \n"
                   "\thf mfp wrp 4000 -> write default key(0xff..0xff) to key number 4000");
@@ -437,12 +437,12 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
         arg_strx0(NULL,  NULL,     "<HEX key (16b)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    CLIGetHexWithReturn(2, keyNum, &keyNumLen);
-    CLIGetHexWithReturn(3, key, &keyLen);
-    CLIParserFree();
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIGetHexWithReturn(ctx, 2, keyNum, &keyNumLen);
+    CLIGetHexWithReturn(ctx, 3, key, &keyLen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -491,7 +491,8 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
     uint8_t data[250] = {0};
     int datalen = 0;
 
-    CLIParserInit("hf mfp initp",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp initp",
                   "Executes Write Perso command for all card's keys. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp initp 000102030405060708090a0b0c0d0e0f -> fill all the keys with key (00..0f)\n"
                   "\thf mfp initp -vv -> fill all the keys with default key(0xff..0xff) and show all the data exchange");
@@ -502,12 +503,12 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
         arg_strx0(NULL,  NULL,      "<HEX key (16b)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    bool verbose2 = arg_get_lit(1) > 1;
-    CLIGetHexWithReturn(2, key, &keyLen);
-    CLIParserFree();
+    bool verbose = arg_get_lit(ctx, 1);
+    bool verbose2 = arg_get_lit(ctx, 1) > 1;
+    CLIGetHexWithReturn(ctx, 2, key, &keyLen);
+    CLIParserFree(ctx);
 
     if (keyLen && keyLen != 16) {
         PrintAndLogEx(ERR, "Key length must be 16 bytes instead of: %d", keyLen);
@@ -558,7 +559,8 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
 }
 
 static int CmdHFMFPCommitPerso(const char *Cmd) {
-    CLIParserInit("hf mfp commitp",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp commitp",
                   "Executes Commit Perso command. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp commitp ->  \n");
 
@@ -568,10 +570,10 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
         arg_int0(NULL,  NULL,      "SL mode", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    CLIParserFree();
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -604,7 +606,8 @@ static int CmdHFMFPAuth(const char *Cmd) {
     uint8_t key[250] = {0};
     int keylen = 0;
 
-    CLIParserInit("hf mfp auth",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp auth",
                   "Executes AES authentication command for Mifare Plus card",
                   "Usage:\n\thf mfp auth 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
                   "\thf mfp auth 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data\n");
@@ -616,12 +619,12 @@ static int CmdHFMFPAuth(const char *Cmd) {
         arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    CLIGetHexWithReturn(2, keyn, &keynlen);
-    CLIGetHexWithReturn(3, key, &keylen);
-    CLIParserFree();
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIGetHexWithReturn(ctx, 2, keyn, &keynlen);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    CLIParserFree(ctx);
 
     if (keynlen != 2) {
         PrintAndLogEx(ERR, "ERROR: <Key Num> must be 2 bytes long instead of: %d", keynlen);
@@ -641,7 +644,8 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     uint8_t key[250] = {0};
     int keylen = 0;
 
-    CLIParserInit("hf mfp rdbl",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp rdbl",
                   "Reads several blocks from Mifare Plus card.",
                   "Usage:\n\thf mfp rdbl 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data\n"
                   "\thf mfp rdbl 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
@@ -656,15 +660,15 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool verbose = arg_get_lit(1);
-    int blocksCount = arg_get_int_def(2, 1);
-    bool keyB = arg_get_lit(3);
-    int plain = arg_get_lit(4);
-    uint32_t blockn = arg_get_int(5);
-    CLIGetHexWithReturn(6, key, &keylen);
-    CLIParserFree();
+    bool verbose = arg_get_lit(ctx, 1);
+    int blocksCount = arg_get_int_def(ctx, 2, 1);
+    bool keyB = arg_get_lit(ctx, 3);
+    int plain = arg_get_lit(ctx, 4);
+    uint32_t blockn = arg_get_int(ctx, 5);
+    CLIGetHexWithReturn(ctx, 6, key, &keylen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -753,7 +757,8 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     uint8_t key[250] = {0};
     int keylen = 0;
 
-    CLIParserInit("hf mfp rdsc",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp rdsc",
                   "Reads one sector from Mifare Plus card.",
                   "Usage:\n\thf mfp rdsc 0 000102030405060708090a0b0c0d0e0f -> executes authentication and read sector 0 data\n"
                   "\thf mfp rdsc 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF and some additional data\n");
@@ -767,14 +772,14 @@ static int CmdHFMFPRdsc(const char *Cmd) {
         arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool verbose = arg_get_lit(1);
-    bool keyB = arg_get_lit(2);
-    bool plain = arg_get_lit(3);
-    uint32_t sectorNum = arg_get_int(4);
-    CLIGetHexWithReturn(5, key, &keylen);
-    CLIParserFree();
+    bool verbose = arg_get_lit(ctx, 1);
+    bool keyB = arg_get_lit(ctx, 2);
+    bool plain = arg_get_lit(ctx, 3);
+    uint32_t sectorNum = arg_get_int(ctx, 4);
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -851,7 +856,8 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     uint8_t datain[250] = {0};
     int datainlen = 0;
 
-    CLIParserInit("hf mfp wrbl",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp wrbl",
                   "Writes one block to Mifare Plus card.",
                   "Usage:\n\thf mfp wrbl 1 ff0000000000000000000000000000ff 000102030405060708090a0b0c0d0e0f -> writes block 1 data\n"
                   "\thf mfp wrbl 2 ff0000000000000000000000000000ff -v -> writes block 2 data with default key 0xFF..0xFF and some additional data\n");
@@ -865,14 +871,14 @@ static int CmdHFMFPWrbl(const char *Cmd) {
         arg_str0(NULL,  NULL,      "<Key (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool verbose = arg_get_lit(1);
-    bool keyB = arg_get_lit(2);
-    uint32_t blockNum = arg_get_int(3);
-    CLIGetHexWithReturn(4, datain, &datainlen);
-    CLIGetHexWithReturn(5, key, &keylen);
-    CLIParserFree();
+    bool verbose = arg_get_lit(ctx, 1);
+    bool keyB = arg_get_lit(ctx, 2);
+    uint32_t blockNum = arg_get_int(ctx, 3);
+    CLIGetHexWithReturn(ctx, 4, datain, &datainlen);
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
@@ -949,9 +955,9 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 #define AES_KEY_LEN        16
 #define MAX_KEYS_LIST_LEN  1024
 
-int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
-                uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
-                bool verbose) {
+static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
+                       uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
+                       bool verbose) {
     int res;
     bool selectCard = true;
     uint8_t keyn[2] = {0};
@@ -1027,7 +1033,7 @@ int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint
     return PM3_SUCCESS;
 }
 
-void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyListLen, uint32_t *startPattern) {
+static void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], uint32_t *keyListLen, uint32_t *startPattern) {
     for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
         keyList[*keyListLen][0] = (pt >> 8) & 0xff;
         keyList[*keyListLen][1] = pt & 0xff;
@@ -1045,10 +1051,11 @@ void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyL
 static int CmdHFMFPChk(const char *Cmd) {
     int res;
     uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
-    size_t keyListLen = 0;
+    uint32_t keyListLen = 0;
     uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
 
-    CLIParserInit("hf mfp chk",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp chk",
                   "Checks keys with Mifare Plus card.",
                   "Usage:\n"
                   "    hf mfp chk -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B\n"
@@ -1072,60 +1079,60 @@ static int CmdHFMFPChk(const char *Cmd) {
         arg_lit0("vV",  "verbose",   "verbose mode."),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool keyA = arg_get_lit(1);
-    bool keyB = arg_get_lit(2);
-    uint8_t startSector = arg_get_int_def(3, 0);
-    uint8_t endSector = arg_get_int_def(4, 0);
+    bool keyA = arg_get_lit(ctx, 1);
+    bool keyB = arg_get_lit(ctx, 2);
+    uint8_t startSector = arg_get_int_def(ctx, 3, 0);
+    uint8_t endSector = arg_get_int_def(ctx, 4, 0);
 
     uint8_t vkey[16] = {0};
     int vkeylen = 0;
-    CLIGetHexWithReturn(5, vkey, &vkeylen);
+    CLIGetHexWithReturn(ctx, 5, vkey, &vkeylen);
     if (vkeylen > 0) {
         if (vkeylen == 16) {
             memcpy(&keyList[keyListLen], vkey, 16);
             keyListLen++;
         } else {
             PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
-            CLIParserFree();
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
 
     uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
     int dict_filenamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(6), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 6), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
         PrintAndLogEx(FAILED, "File name too long or invalid.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool pattern1b = arg_get_lit(7);
-    bool pattern2b = arg_get_lit(8);
+    bool pattern1b = arg_get_lit(ctx, 7);
+    bool pattern2b = arg_get_lit(ctx, 8);
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     if (dict_filenamelen && (pattern1b || pattern2b)) {
         PrintAndLogEx(ERR, "Pattern search mode and dictionary mode can't be used in one command.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t startPattern = 0x0000;
     uint8_t vpattern[2];
     int vpatternlen = 0;
-    CLIGetHexWithReturn(9, vpattern, &vpatternlen);
+    CLIGetHexWithReturn(ctx, 9, vpattern, &vpatternlen);
     if (vpatternlen > 0) {
         if (vpatternlen > 0 && vpatternlen <= 2) {
             startPattern = (vpattern[0] << 8) + vpattern[1];
         } else {
             PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
-            CLIParserFree();
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
         if (!pattern2b)
@@ -1134,21 +1141,22 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     uint8_t jsonname[250] = {0};
     int jsonnamelen = 0;
-    if (CLIParamStrToBuf(arg_get_str(10), jsonname, sizeof(jsonname), &jsonnamelen)) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 10), jsonname, sizeof(jsonname), &jsonnamelen)) {
         PrintAndLogEx(ERR, "Invalid json name.");
-        CLIParserFree();
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     jsonname[jsonnamelen] = 0;
 
-    bool verbose = arg_get_lit(11);
+    bool verbose = arg_get_lit(ctx, 11);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     uint8_t startKeyAB = 0;
     uint8_t endKeyAB = 1;
     if (keyA && !keyB)
         endKeyAB = 0;
+
     if (!keyA && keyB)
         startKeyAB = 1;
 
@@ -1170,7 +1178,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     // dictionary mode
     size_t endFilePosition = 0;
     if (dict_filenamelen) {
-        uint16_t keycnt = 0;
+        uint32_t keycnt = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
         keyListLen = keycnt;
         if (endFilePosition)
@@ -1190,7 +1198,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(ERR, "Key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " keys", keyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " keys", keyListLen);
     }
 
     if (!verbose)
@@ -1210,7 +1218,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         if (dict_filenamelen && endFilePosition) {
             if (!verbose)
                 printf("d");
-            uint16_t keycnt = 0;
+            uint32_t keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
             keyListLen = keycnt;
             continue;
@@ -1269,7 +1277,7 @@ static int CmdHFMFPChk(const char *Cmd) {
 
         // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
         memcpy(&data[14 + atslen], foundKeys, 2 * 64 * (AES_KEY_LEN + 1));
-        saveFileJSON((char *)jsonname, jsfMfPlusKeys, data, 64);
+        saveFileJSON((char *)jsonname, jsfMfPlusKeys, data, 64, NULL);
     }
 
     return PM3_SUCCESS;
@@ -1277,34 +1285,39 @@ static int CmdHFMFPChk(const char *Cmd) {
 
 static int CmdHFMFPMAD(const char *Cmd) {
 
-    CLIParserInit("hf mfp mad",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp mad",
                   "Checks and prints Mifare Application Directory (MAD)",
-                  "Usage:\n\thf mfp mad -> shows MAD if exists\n"
-                  "\thf mfp mad -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
+                  "Usage:\n\thf mfp mad                                     -> shows MAD if exists\n"
+                  "\thf mfp mad -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data if exists\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose",  "show technical data"),
-        arg_str0("aA",  "aid",      "print all sectors with aid", NULL),
-        arg_str0("kK",  "key",      "key for printing sectors", NULL),
+        arg_str0("",    "aid",      "<aid>", "print all sectors with aid"),
+        arg_str0("kK",  "key",      "<key>", "key for printing sectors"),
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
+        arg_lit0("",    "be",       "(optional, BigEndian)"),
+        arg_lit0("",    "dch",      "decode Card Holder information"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
+    bool verbose = arg_get_lit(ctx, 1);
     uint8_t aid[2] = {0};
     int aidlen;
-    CLIGetHexWithReturn(2, aid, &aidlen);
+    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[16] = {0};
     int keylen;
-    CLIGetHexWithReturn(3, key, &keylen);
-    bool keyB = arg_get_lit(4);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    bool keyB = arg_get_lit(ctx, 4);
+    bool swapmad = arg_get_lit(ctx, 5);
+    bool decodeholder = arg_get_lit(ctx, 6);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
-    if (aidlen != 2 && keylen > 0) {
-        PrintAndLogEx(WARNING, "do not need a key without aid.");
+    if (aidlen != 2 && !decodeholder && keylen > 0) {
+        PrintAndLogEx(WARNING, "Using default MAD keys instead");
     }
 
     uint8_t sector0[16 * 4] = {0};
@@ -1312,93 +1325,137 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
+        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
         return 2;
     }
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Mifare App Directory Information") " ----------------");
+    PrintAndLogEx(INFO, "-----------------------------------------------------");
+
     if (verbose) {
+        PrintAndLogEx(SUCCESS, "Raw:");
         for (int i = 0; i < 4; i ++)
-            PrintAndLogEx(NORMAL, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));
+            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));
     }
 
     bool haveMAD2 = false;
-    MAD1DecodeAndPrint(sector0, verbose, &haveMAD2);
+    MAD1DecodeAndPrint(sector0, swapmad, verbose, &haveMAD2);
 
     if (haveMAD2) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
+            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
             return 2;
         }
 
-        MAD2DecodeAndPrint(sector10, verbose);
+        MAD2DecodeAndPrint(sector10, swapmad, verbose);
     }
 
-    if (aidlen == 2) {
-        uint16_t aaid = (aid[0] << 8) + aid[1];
-        PrintAndLogEx(NORMAL, "\n-------------- AID 0x%04x ---------------", aaid);
-
+    if (aidlen == 2 || decodeholder) {
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
-        if (MADDecode(sector0, sector10, mad, &madlen)) {
-            PrintAndLogEx(ERR, "can't decode mad.");
+        if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
+            PrintAndLogEx(ERR, "can't decode MAD");
             return 10;
         }
 
+        // copy default NDEF key
         uint8_t akey[16] = {0};
         memcpy(akey, g_mifarep_ndef_key, 16);
+
+        // user specified key
         if (keylen == 16) {
             memcpy(akey, key, 16);
         }
 
-        for (int i = 0; i < madlen; i++) {
-            if (aaid == mad[i]) {
-                uint8_t vsector[16 * 4] = {0};
-                if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(ERR, "read sector %d error.", i + 1);
-                    return 2;
-                }
+        uint16_t aaid = 0x0004;
+        if (aidlen == 2) {
+            aaid = (aid[0] << 8) + aid[1];
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
-                for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                    PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+            for (int i = 0; i < madlen; i++) {
+                if (aaid == mad[i]) {
+                    uint8_t vsector[16 * 4] = {0};
+                    if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(ERR, "error, read sector %d error", i + 1);
+                        return PM3_ESOFT;
+                    }
+
+                    for (int j = 0; j < (verbose ? 4 : 3); j ++)
+                        PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+                }
             }
         }
-    }
 
+        if (decodeholder) {
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-------- " _CYAN_("Card Holder Info 0x%04x") " --------", aaid);
+
+            uint8_t data[4096] = {0};
+            int datalen = 0;
+
+            for (int i = 0; i < madlen; i++) {
+                if (aaid == mad[i]) {
+           
+                    uint8_t vsector[16 * 4] = {0};
+                    if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(ERR, "error, read sector %d", i + 1);
+                        return PM3_ESOFT;
+                    }
+
+                    memcpy(&data[datalen], vsector, 16 * 3);
+                    datalen += 16 * 3;
+                }
+            }
+
+            if (!datalen) {
+                PrintAndLogEx(WARNING, "no Card Holder Info data");
+                return PM3_SUCCESS;
+            }
+            MADCardHolderInfoDecode(data, datalen, verbose);
+        }
+    }
     return PM3_SUCCESS;
 }
 
 static int CmdHFMFPNDEF(const char *Cmd) {
 
-    CLIParserInit("hf mfp ndef",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "Usage:\n\thf mfp ndef -> shows NDEF data\n"
-                  "\thf mfp ndef -a 03e1 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
+                  "Usage:\n"
+                  "\thf mfp ndef                                             -> shows NDEF data\n"
+                  "\thf mfp ndef -vv                                         -> shows NDEF parsed and raw data\n"
+                  "\thf mfp ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_litn("vV",  "verbose",  0, 2, "show technical data"),
-        arg_str0("aA",  "aid",      "replace default aid for NDEF", NULL),
-        arg_str0("kK",  "key",      "replace default key for NDEF", NULL),
+        arg_str0("",    "aid",      "<aid>", "replace default aid for NDEF"),
+        arg_str0("kK",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(1);
-    bool verbose2 = arg_get_lit(1) > 1;
+    bool verbose = arg_get_lit(ctx, 1);
+    bool verbose2 = arg_get_lit(ctx, 1) > 1;
     uint8_t aid[2] = {0};
     int aidlen;
-    CLIGetHexWithReturn(2, aid, &aidlen);
+    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[16] = {0};
     int keylen;
-    CLIGetHexWithReturn(3, key, &keylen);
-    bool keyB = arg_get_lit(4);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    bool keyB = arg_get_lit(ctx, 4);
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
-    uint16_t ndefAID = 0x03e1;
+    uint16_t ndefAID = 0xe103;
     if (aidlen == 2)
         ndefAID = (aid[0] << 8) + aid[1];
 
@@ -1413,63 +1470,72 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     uint8_t data[4096] = {0};
     int datalen = 0;
 
-    PrintAndLogEx(NORMAL, "");
-
+    if (verbose)
+        PrintAndLogEx(INFO, "reading MAD v1 sector");
+    
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
-        PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
-        return 2;
+        PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndef -k `") " with your custom key");
+        return PM3_ESOFT;
     }
 
     bool haveMAD2 = false;
     int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
-    if (res) {
-        PrintAndLogEx(ERR, "MAD error %d.", res);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "MAD error %d", res);
         return res;
     }
 
     if (haveMAD2) {
+        
+        if (verbose)
+            PrintAndLogEx(INFO, "reading MAD v2 sector");
+
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
-            PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
-            return 2;
+            PrintAndLogEx(ERR, "error, read sector 0x10. card don't have MAD or don't have MAD on default keys");
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -k `") " with your custom key");
+            return PM3_ESOFT;
         }
     }
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    if (MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen)) {
-        PrintAndLogEx(ERR, "can't decode mad.");
-        return 10;
+    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, false);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "can't decode MAD");
+        return res;
     }
 
-    printf("data reading:");
+    PrintAndLogEx(INFO, "reading data from tag");
     for (int i = 0; i < madlen; i++) {
         if (ndefAID == mad[i]) {
             uint8_t vsector[16 * 4] = {0};
             if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
-                PrintAndLogEx(ERR, "read sector %d error.", i + 1);
-                return 2;
+                PrintAndLogEx(ERR, "error, reading sector %d", i + 1);
+                return PM3_ESOFT;
             }
 
             memcpy(&data[datalen], vsector, 16 * 3);
             datalen += 16 * 3;
 
-            printf(".");
+            PrintAndLogEx(INPLACE, "%d", i);
         }
     }
-    printf(" OK\n");
+    PrintAndLogEx(NORMAL, "");
 
     if (!datalen) {
-        PrintAndLogEx(ERR, "no NDEF data.");
-        return 11;
+        PrintAndLogEx(ERR, "no NDEF data");
+        return PM3_SUCCESS;
     }
 
     if (verbose2) {
-        PrintAndLogEx(NORMAL, "NDEF data:");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("MFC NDEF raw") " ----------------");
         dump_buffer(data, datalen, stdout, 1);
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);
-
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -vv`") " for more details");
     return PM3_SUCCESS;
 }
 
@@ -1496,7 +1562,7 @@ static int CmdHelp(const char *Cmd) {
 }
 
 int CmdHFMFP(const char *Cmd) {
-    (void)WaitForResponseTimeout(CMD_ACK, NULL, 100);
+    clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
 

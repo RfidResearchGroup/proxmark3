@@ -108,7 +108,7 @@ static enum spiffs_mount_status {
     RDV40_SPIFFS_UNKNOWN
 } RDV40_SPIFFS_MOUNT_STATUS;
 
-int rdv40_spiffs_mounted() {
+static int rdv40_spiffs_mounted(void) {
     int ret = 0;
 
     switch (RDV40_SPIFFS_MOUNT_STATUS) {
@@ -124,7 +124,7 @@ int rdv40_spiffs_mounted() {
     return ret;
 }
 
-int rdv40_spiffs_mount() {
+int rdv40_spiffs_mount(void) {
     if (rdv40_spiffs_mounted()) {
         Dbprintf("ERR: SPIFFS already mounted !");
         return SPIFFS_ERR_MOUNTED;
@@ -146,7 +146,7 @@ int rdv40_spiffs_mount() {
     return ret;
 }
 
-int rdv40_spiffs_unmount() {
+int rdv40_spiffs_unmount(void) {
     if (!rdv40_spiffs_mounted()) {
         Dbprintf("ERR: SPIFFS not mounted !");
         return SPIFFS_ERR_NOT_MOUNTED;
@@ -162,7 +162,7 @@ int rdv40_spiffs_unmount() {
     return ret;
 }
 
-int rdv40_spiffs_check() {
+int rdv40_spiffs_check(void) {
     rdv40_spiffs_lazy_mount();
     SPIFFS_check(&fs);
     SPIFFS_gc_quick(&fs, 0);
@@ -195,17 +195,17 @@ void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size) {
     SPIFFS_close(&fs, fd);
 }
 
-void rename_in_spiffs(const char *old_filename, const char *new_filename) {
+static void rename_in_spiffs(const char *old_filename, const char *new_filename) {
     if (SPIFFS_rename(&fs, old_filename, new_filename) < 0)
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
 }
 
-void remove_from_spiffs(const char *filename) {
+static void remove_from_spiffs(const char *filename) {
     if (SPIFFS_remove(&fs, filename) < 0)
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
 }
 
-spiffs_stat stat_in_spiffs(const char *filename) {
+static spiffs_stat stat_in_spiffs(const char *filename) {
     spiffs_stat s;
     if (SPIFFS_stat(&fs, filename, &s) < 0)
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
@@ -217,7 +217,7 @@ uint32_t size_in_spiffs(const char *filename) {
     return s.size;
 }
 
-rdv40_spiffs_fsinfo info_of_spiffs() {
+static rdv40_spiffs_fsinfo info_of_spiffs(void) {
     rdv40_spiffs_fsinfo fsinfo;
     fsinfo.blockSize = SPIFFS_CFG_LOG_BLOCK_SZ;
     fsinfo.pageSize = LOG_PAGE_SIZE;
@@ -238,7 +238,7 @@ int exists_in_spiffs(const char *filename) {
     return rc == SPIFFS_OK;
 }
 
-RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
+static RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
     RDV40SpiFFSFileType filetype = RDV40_SPIFFS_FILETYPE_UNKNOWN;
     char symlinked[SPIFFS_OBJ_NAME_LEN];
     sprintf(symlinked, "%s.lnk", filename);
@@ -270,16 +270,16 @@ RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
     }
     return filetype;
 }
-
-int is_valid_filename(const char *filename) {
+/*
+static int is_valid_filename(const char *filename) {
     if (filename == NULL) {
         return false;
     }
     uint32_t len = strlen(filename);
     return len > 0 && len < SPIFFS_OBJ_NAME_LEN;
 }
-
-void copy_in_spiffs(const char *src, const char *dst) {
+*/
+static void copy_in_spiffs(const char *src, const char *dst) {
     uint32_t size = size_in_spiffs((char *)src);
     uint8_t *mem = BigBuf_malloc(size);
     read_from_spiffs((char *)src, (uint8_t *)mem, size);
@@ -297,7 +297,7 @@ void copy_in_spiffs(const char *src, const char *dst) {
 //                1 if the mount status actually changed
 // so you know what to do IN CASE you wished to set things "back to previous
 // state"
-int rdv40_spiffs_lazy_mount() {
+int rdv40_spiffs_lazy_mount(void) {
     int changed = 0;
     if (!rdv40_spiffs_mounted()) {
         changed = rdv40_spiffs_mount();
@@ -309,7 +309,7 @@ int rdv40_spiffs_lazy_mount() {
 }
 
 // unmount if not already
-int rdv40_spiffs_lazy_unmount() {
+int rdv40_spiffs_lazy_unmount(void) {
     int changed = 0;
     if (rdv40_spiffs_mounted()) {
         changed = rdv40_spiffs_unmount();
@@ -362,7 +362,7 @@ void my_lazy_spiffs_act(){
      // this lazy_mount since needed and can also report back the change on
 state implied by eventual mount, if needed rdv40_spiffs_lazy_read((const char
 *)".SHOULDRESET",(uint8_t *)resetret,4); if( resetret == "YESS" ) { uint8_t
-changed = rdv40_spiffs_lazy_format(); // this will imply change only if we where
+changed = rdv40_spiffs_lazy_format(void); // this will imply change only if we where
 already mounted beforehand, was the case after our reading without further
 rollback rdv40_spiffs_lazy_mount_rollback(changed); // so if we were mounted
 just get back to this state. If not, just don't.
@@ -400,20 +400,20 @@ int rdv40_spiffs_lazy_mount_rollback(int changed) {
 // statement or some function taking function parameters
 // TODO : forbid writing to a filename which already exists as lnk !
 // TODO : forbid writing to a filename.lnk which already exists without lnk !
-int rdv40_spiffs_write(char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+int rdv40_spiffs_write(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         write_to_spiffs(filename, src, size);
     )
 }
 
-int rdv40_spiffs_append(char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+int rdv40_spiffs_append(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         append_to_spiffs(filename, src, size);
     )
 }
 
 // todo integrate reading symlinks transparently
-int rdv40_spiffs_read(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+int rdv40_spiffs_read(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         read_from_spiffs(filename, dst, size);
     )
@@ -444,7 +444,7 @@ int rdv40_spiffs_stat(char *filename, uint32_t *buf, RDV40SpiFFSSafetyLevel leve
     )
 }
 
-int rdv40_spiffs_getfsinfo(rdv40_spiffs_fsinfo *fsinfo, RDV40SpiFFSSafetyLevel level) {
+static int rdv40_spiffs_getfsinfo(rdv40_spiffs_fsinfo *fsinfo, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(         //
         *fsinfo = info_of_spiffs(); //
     )
@@ -536,13 +536,13 @@ int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, R
 ////////////////////////////////////////////////////////////////////////////////
 
 ///////// MISC HIGH LEVEL FUNCTIONS ////////////////////////////////////////////
-#define SPIFFS_BANNER  DbpString(_BLUE_("Flash Memory FileSystem tree (SPIFFS)"));
+#define SPIFFS_BANNER  DbpString(_CYAN_("Flash Memory FileSystem tree (SPIFFS)"));
 
-void rdv40_spiffs_safe_print_fsinfo() {
+void rdv40_spiffs_safe_print_fsinfo(void) {
     rdv40_spiffs_fsinfo fsinfo;
     rdv40_spiffs_getfsinfo(&fsinfo, RDV40_SPIFFS_SAFETY_SAFE);
 
-    DbpString(_BLUE_("Flash Memory FileSystem Info (SPIFFS)"));
+    DbpString(_CYAN_("Flash Memory FileSystem Info (SPIFFS)"));
 
 
     Dbprintf("  Logical Block Size........." _YELLOW_("%d")" bytes", fsinfo.blockSize);
@@ -570,7 +570,7 @@ void rdv40_spiffs_safe_print_fsinfo() {
 void rdv40_spiffs_safe_print_tree(uint8_t banner) {
 
     if (banner) {
-        DbpString(_BLUE_("Flash Memory FileSystem tree (SPIFFS)"));
+        DbpString(_CYAN_("Flash Memory FileSystem tree (SPIFFS)"));
         Dbprintf("-------------------------------------");
     }
 
@@ -603,7 +603,7 @@ void rdv40_spiffs_safe_print_tree(uint8_t banner) {
 
 
 // Selftest function
-void test_spiffs() {
+void test_spiffs(void) {
     Dbprintf("----------------------------------------------");
     Dbprintf("Testing SPIFFS operations");
     Dbprintf("----------------------------------------------");

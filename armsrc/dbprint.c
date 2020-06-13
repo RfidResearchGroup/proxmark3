@@ -22,7 +22,7 @@
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
-void DbpStringEx(uint32_t flags, char *src, size_t srclen) {
+void DbpStringEx(uint32_t flags, const char *src, size_t srclen) {
 #if DEBUG
     struct {
         uint16_t flag;
@@ -35,7 +35,7 @@ void DbpStringEx(uint32_t flags, char *src, size_t srclen) {
 #endif
 }
 
-void DbpString(char *str) {
+void DbpString(const char *str) {
 #if DEBUG
     DbpStringEx(FLAG_LOG, str, strlen(str));
 #endif
@@ -98,7 +98,7 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 #endif
 }
 
-void print_result(char *name, uint8_t *buf, size_t len) {
+void print_result(const char *name, uint8_t *buf, size_t len) {
 
     uint8_t *p = buf;
     uint16_t tmp = len & 0xFFF0;

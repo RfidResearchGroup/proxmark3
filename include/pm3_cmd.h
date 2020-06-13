@@ -121,6 +121,20 @@ typedef struct {
     int32_t samples_to_skip;
     bool verbose;
 } PACKED sample_config;
+
+typedef struct {
+    uint32_t timestamp;
+    uint16_t duration;
+    uint16_t data_len : 15;
+    bool isResponse : 1;
+    uint8_t frame[];
+    // data_len         bytes of data
+    // ceil(data_len/8) bytes of parity
+} PACKED tracelog_hdr_t;
+
+#define TRACELOG_HDR_LEN        sizeof(tracelog_hdr_t)
+#define TRACELOG_PARITY_LEN(x)  (((x)->data_len - 1) / 8 + 1)
+
 /*
 typedef struct {
     uint16_t start_gap;
@@ -161,6 +175,7 @@ typedef struct {
 typedef struct {
     uint8_t version;
     uint32_t baudrate;
+    uint32_t bigbuf_size;
     bool via_fpc                       : 1;
     bool via_usb                       : 1;
     // rdv4
@@ -189,7 +204,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 4
+#define CAPABILITIES_VERSION 5
 extern capabilities_t pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
@@ -613,7 +628,7 @@ typedef struct {
 // Initialization error                 pm3:        error related to trying to initalize the pm3 / fpga for different operations
 #define PM3_EINIT             -15
 // Expected a different answer error    client/pm3: error when expecting one answer and got another one
-#define PM3_EWRONGANSVER      -16
+#define PM3_EWRONGANSWER      -16
 // Memory out-of-bounds error           client/pm3: error when a read/write is outside the expected array
 #define PM3_EOUTOFBOUND       -17
 // exchange with card error             client/pm3: error when cant get answer from card or got an incorrect answer

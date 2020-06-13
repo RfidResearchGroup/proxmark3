@@ -99,8 +99,6 @@ struct desfire_tag {
     uint32_t selected_application;
 };
 typedef struct desfire_tag *desfiretag_t;
-void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc);
-void crc32_append(uint8_t *data, const size_t len);
 void des_encrypt(void *out, const void *in, const void *key);
 void des_decrypt(void *out, const void *in, const void *key);
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);

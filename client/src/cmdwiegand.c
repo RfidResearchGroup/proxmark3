@@ -24,11 +24,11 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_wiegand_list() {
+static int usage_wiegand_list(void) {
     PrintAndLogEx(NORMAL, "List available wiegand formats");
     return PM3_SUCCESS;
 }
-static int usage_wiegand_encode() {
+static int usage_wiegand_encode(void) {
     PrintAndLogEx(NORMAL, "Encode wiegand formatted number to raw hex");
     PrintAndLogEx(NORMAL, "Usage:  wiegand encode [w <format>] [<field> <value (decimal)>] {...}");
     PrintAndLogEx(NORMAL, "Options:");
@@ -42,7 +42,7 @@ static int usage_wiegand_encode() {
     PrintAndLogEx(NORMAL, "      wiegand encode w H10301 f 101 c 1337");
     return PM3_SUCCESS;
 }
-static int usage_wiegand_decode() {
+static int usage_wiegand_decode(void) {
     PrintAndLogEx(NORMAL, "Decode raw hex to wiegand format");
     PrintAndLogEx(NORMAL, "Usage:  wiegand decode [id] <p>");
     PrintAndLogEx(NORMAL, "        p         ignore invalid parity");
@@ -52,7 +52,7 @@ static int usage_wiegand_decode() {
     return PM3_SUCCESS;
 }
 
-void PrintTagId(wiegand_message_t *packed) {
+static void PrintTagId(wiegand_message_t *packed) {
     if (packed->Top != 0) {
         PrintAndLogEx(SUCCESS, "Card ID: %X%08X%08X",
                       (uint32_t)packed->Top,

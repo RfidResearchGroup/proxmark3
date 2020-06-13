@@ -18,7 +18,7 @@ void ModInfo(void) {
     DbpString("  LF skeleton mode -  aka Skeleton (iceman)");
 }
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     Dbprintf("[=] LF skeleton code a.k.a Skeleton started");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -35,7 +35,7 @@ void RunMod() {
 
         Dbprintf("button %d", button_pressed);
 
-        if (button_pressed)
+        if (button_pressed != BUTTON_NO_CLICK)
             break;
     }
 

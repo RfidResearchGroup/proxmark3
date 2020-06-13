@@ -263,7 +263,6 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
     */
 
     uint8_t i;
-    int res;
     bool is_valid = false;
     for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
 
@@ -271,14 +270,14 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         uint8_t key[PUBLIC_ECDA_KEYLEN];
         param_gethex_to_eol(nxp_15693_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
 
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, false);
+        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, false);
         is_valid = (res == 0);
         if (is_valid)
             break;
     }
 
     PrintAndLogEx(NORMAL, "");
-    if (is_valid == false) {
+    if (is_valid == false || i == ARRAYLEN(nxp_15693_public_keys)) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
     }
@@ -470,8 +469,8 @@ static int usage_15_restore(void) {
         {"h", "this help"},
         {"-2", "use slower '1 out of 256' mode"},
         {"-o", "set OPTION Flag (needed for TI)"},
+        {"a", "use addressed mode"},
         {"r <NUM>", "numbers of retries on error, default is 3"},
-        {"u <UID>", "load hf-15-<UID>-dump.bin"},
         {"f <filename>", "load <filename>"},
         {"b <block size>", "block size, default is 4"}
     };
@@ -746,14 +745,14 @@ static int NxpSysInfo(uint8_t *uid) {
 
         if (status < 2) {
             PrintAndLogEx(WARNING, "iso15693 card doesn't answer to NXP systeminfo command");
-            return PM3_EWRONGANSVER;
+            return PM3_EWRONGANSWER;
         }
 
         recv = resp.data.asBytes;
 
         if (recv[0] & ISO15_RES_ERROR) {
             PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-            return PM3_EWRONGANSVER;
+            return PM3_EWRONGANSWER;
         }
 
         bool support_signature = (recv[5] & 0x01);
@@ -855,14 +854,14 @@ static int NxpSysInfo(uint8_t *uid) {
 
             if (status < 2) {
                 PrintAndLogEx(WARNING, "iso15693 card doesn't answer to READ SIGNATURE command");
-                return PM3_EWRONGANSVER;
+                return PM3_EWRONGANSWER;
             }
 
             recv = resp.data.asBytes;
 
             if (recv[0] & ISO15_RES_ERROR) {
                 PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-                return PM3_EWRONGANSVER;
+                return PM3_EWRONGANSWER;
             }
 
             uint8_t signature[32] = {0x00};
@@ -916,14 +915,14 @@ static int CmdHF15Info(const char *Cmd) {
 
     if (status < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     memcpy(uid, recv + 2, sizeof(uid));
@@ -1090,7 +1089,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1149,7 +1148,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1273,7 +1272,7 @@ static int CmdHF15Dump(const char *Cmd) {
     size_t datalen = blocknum * 4;
     saveFile(filename, ".bin", data, datalen);
     saveFileEML(filename, data, datalen, 4);
-    saveFileJSON(filename, jsf15, data, datalen);
+    saveFileJSON(filename, jsf15, data, datalen, NULL);
     return PM3_SUCCESS;
 }
 
@@ -1430,7 +1429,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     uint32_t status = resp.oldarg[0];
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 card select failed");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
@@ -1442,7 +1441,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(FAILED, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     // skip status byte
@@ -1512,7 +1511,7 @@ static int CmdHF15Read(const char *Cmd) {
     uint32_t status = resp.oldarg[0];
     if (status < 2) {
         PrintAndLogEx(ERR, "iso15693 card select failed");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
@@ -1524,7 +1523,7 @@ static int CmdHF15Read(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     // print response
@@ -1598,7 +1597,7 @@ static int CmdHF15Write(const char *Cmd) {
     uint32_t status = resp.oldarg[0];
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 card select failed");
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     recv = resp.data.asBytes;
@@ -1610,7 +1609,7 @@ static int CmdHF15Write(const char *Cmd) {
 
     if (recv[0] & ISO15_RES_ERROR) {
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSVER;
+        return PM3_EWRONGANSWER;
     }
 
     PrintAndLogEx(NORMAL, "OK");
@@ -1618,34 +1617,29 @@ static int CmdHF15Write(const char *Cmd) {
 }
 
 static int CmdHF15Restore(const char *Cmd) {
-    FILE *f;
 
-    uint8_t uid[8] = {0x00};
+    char newPrefix[60] = {0x00};
     char filename[FILE_PATH_SIZE] = {0x00};
-    char buff[255] = {0x00};
     size_t blocksize = 4;
-    uint8_t cmdp = 0;
-    char newCmdPrefix[FILE_PATH_SIZE + 1] = {0x00}, tmpCmd[FILE_PATH_SIZE + 262] = {0x00};
-    char param[FILE_PATH_SIZE] = "";
-    char hex[255] = "";
-    uint8_t retries = 3, i = 0;
-    int retval = 0;
+    uint8_t cmdp = 0, retries = 3;
+    bool addressed_mode = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case '-':
+            case '-': {
+                char param[3] = "";
                 param_getstr(Cmd, cmdp, param, sizeof(param));
                 switch (param[1]) {
                     case '2':
                     case 'o':
-                        strncpy(newCmdPrefix, " ", sizeof(newCmdPrefix) - 1);
-                        strncat(newCmdPrefix, param, sizeof(newCmdPrefix) - strlen(newCmdPrefix) - 1);
+                        sprintf(newPrefix, " %s", param);
                         break;
                     default:
-                        PrintAndLogEx(WARNING, "Unknown parameter '%s'", param);
+                        PrintAndLogEx(WARNING, "11 Unknown parameter " _YELLOW_("'%s'"), param);
                         return usage_15_restore();
                 }
                 break;
+            }
             case 'f':
                 param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
                 cmdp++;
@@ -1658,15 +1652,13 @@ static int CmdHF15Restore(const char *Cmd) {
                 blocksize = param_get8ex(Cmd, cmdp + 1, 4, 10);
                 cmdp++;
                 break;
-            case 'u':
-                param_getstr(Cmd, cmdp + 1, buff, FILE_PATH_SIZE);
-                cmdp++;
-                snprintf(filename, sizeof(filename), "hf-15-%s-dump.bin", buff);
+            case 'a':
+                addressed_mode = true;
                 break;
             case 'h':
                 return usage_15_restore();
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter " _YELLOW_("'%c'"), param_getchar(Cmd, cmdp));
                 return usage_15_restore();
         }
         cmdp++;
@@ -1679,62 +1671,65 @@ static int CmdHF15Restore(const char *Cmd) {
         return usage_15_restore();
     }
 
-    if ((f = fopen(filename, "rb")) == NULL) {
+    uint8_t uid[8] = {0x00};
+    if (!getUID(uid)) {
+        PrintAndLogEx(WARNING, "No tag found");
+        return PM3_ESOFT;
+    }
 
-        PrintAndLogEx(WARNING, "Could not find file %s", filename);
+    size_t datalen = 0;
+    uint8_t *data = NULL;
+    if (loadFile_safe(filename, ".bin", (void **)&data, &datalen) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
         return PM3_EFILE;
     }
 
-    if (!getUID(uid)) {
-        PrintAndLogEx(WARNING, "No tag found");
-        fclose(f);
+    if ((datalen % blocksize) != 0) {
+        PrintAndLogEx(WARNING, "Datalen %zu isn't dividable with blocksize %zu", datalen, blocksize);
+        free(data);
         return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Restoring data blocks.");
 
-    while (1) {
-        uint8_t tried = 0;
-        hex[0] = 0x00;
-        tmpCmd[0] = 0x00;
+    int retval = PM3_SUCCESS;
+    size_t bytes = 0;
+    uint16_t i = 0;
+    while (bytes < datalen) {
 
-        size_t bytes_read = fread(buff, 1, blocksize, f);
-        if (bytes_read == 0) {
-            PrintAndLogEx(SUCCESS, "File reading done `%s`", filename);
-            fclose(f);
-            return PM3_SUCCESS;
-        } else if (bytes_read != blocksize) {
-            PrintAndLogEx(ERR, "File reading error (%s), %zu bytes read instead of %zu bytes.", filename, bytes_read, blocksize);
-            fclose(f);
-            return PM3_EFILE;
+        uint8_t tried = 0;
+        char hex[40] = {0x00};
+        char tmpCmd[200] = {0x00};
+
+        if (addressed_mode) {
+            char uidhex[17] = {0x00};
+            hex_to_buffer((uint8_t *)uidhex, uid, sizeof(uid), sizeof(uidhex) - 1, 0, false, true);
+            hex_to_buffer((uint8_t *)hex, data + i, blocksize, sizeof(hex) - 1, 0, false, true);
+            snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %u %s", newPrefix, uidhex, i, hex);
+        } else {
+            hex_to_buffer((uint8_t *)hex, data + i, blocksize, sizeof(hex) - 1, 0, false, true);
+            snprintf(tmpCmd, sizeof(tmpCmd), "%s u %u %s", newPrefix, i, hex);
         }
 
-        for (int j = 0; j < blocksize; j++)
-            snprintf(hex + j * 2, 3, "%02X", buff[j]);
-
-        for (int j = 0; j < ARRAYLEN(uid); j++)
-            snprintf(buff + j * 2, 3, "%02X", uid[j]);
-
-        //TODO: Addressed mode currently not work
-        //snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %d %s", newCmdPrefix, buff, i, hex);
-        snprintf(tmpCmd, sizeof(tmpCmd), "%s u %u %s", newCmdPrefix, i, hex);
-        PrintAndLogEx(DEBUG, "Command to be sent| %s", tmpCmd);
+        PrintAndLogEx(DEBUG, "hf 15 write %s", tmpCmd);
 
         for (tried = 0; tried < retries; tried++) {
             if (!(retval = CmdHF15Write(tmpCmd))) {
                 break;
             }
         }
+
         if (tried >= retries) {
-            fclose(f);
+            free(data);
             PrintAndLogEx(FAILED, "Restore failed. Too many retries.");
             return retval;
         }
-
+        bytes += blocksize;
         i++;
     }
-    fclose(f);
-    PrintAndLogEx(INFO, "Finish restore");
+    free(data);
+    PrintAndLogEx(INFO, "done");
+    PrintAndLogEx(HINT, "Try reading your card to verify with " _YELLOW_("`hf 15 dump`"));
     return PM3_SUCCESS;
 }
 
