@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix `hf mfdes` authentification issues, DES working (@bkerler)
  - Add Android cross-compilation to client cmake (@dxl, @doegox)
  - Fix `emv scan` - now saves in current folder and uses unique names (@iceman1001)
  - Fix pm3.sh - parse COM ports larger than one digit (@doegox)
