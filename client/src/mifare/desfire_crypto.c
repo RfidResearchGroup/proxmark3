@@ -28,6 +28,7 @@
 #include "desfire_crypto.h"
 #include <stdlib.h>
 #include <string.h>
+#include <util.h>
 #include "commonutil.h"
 #include "mbedtls/aes.h"
 #include "mbedtls/des.h"
@@ -406,6 +407,8 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 
         /* pass through */
         case MDCM_MACED:
+            communication_settings|=NO_CRC;
+
             switch (DESFIRE(tag)->authentication_scheme) {
                 case AS_LEGACY:
                     if (!(communication_settings & MAC_COMMAND))
@@ -508,6 +511,9 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes, int communication_settings) {
     void *res = data;
     void *edata = NULL;
+    tag->crypto_buffer_size=*nbytes*2;
+    tag->crypto_buffer=(uint8_t*)malloc(tag->crypto_buffer_size);
+
     uint8_t first_cmac_byte = 0x00;
 
     desfirekey_t key = DESFIRE(tag)->session_key;
@@ -527,6 +533,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
         /* pass through */
         case MDCM_MACED:
+            communication_settings|=NO_CRC;
             switch (DESFIRE(tag)->authentication_scheme) {
                 case AS_LEGACY:
                     if (communication_settings & MAC_VERIFY) {
@@ -540,18 +547,20 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                             break;
                         }
 
-                        size_t edl = enciphered_data_length(tag, *nbytes - 1, communication_settings);
+                        size_t edl = enciphered_data_length(tag, *nbytes, communication_settings);
                         edata = malloc(edl);
 
-                        memcpy(edata, data, *nbytes - 1);
-                        memset((uint8_t *)edata + *nbytes - 1, 0, edl - *nbytes + 1);
+                        memcpy(edata, data, *nbytes);
+                        memset((uint8_t *)edata + *nbytes , 0, edl - *nbytes);
 
                         mifare_cypher_blocks_chained(tag, NULL, NULL, edata, edl, MCD_SEND, MCO_ENCYPHER);
 
-                        if (0 != memcmp((uint8_t *)data + *nbytes - 1, (uint8_t *)edata + edl - 8, 4)) {
+                        if (0 != memcmp((uint8_t *)data + *nbytes, (uint8_t *)edata + edl - 8, 4)) {
+                            PrintAndLogEx(NORMAL, "Expected MAC %s", sprint_hex(data+*nbytes, key_macing_length(key)));
+                            PrintAndLogEx(NORMAL, "Actual MAC %s", sprint_hex(edata + edl - 8, key_macing_length(key)));
 #ifdef WITH_DEBUG
                             Dbprintf("MACing not verified");
-                            hexdump((uint8_t *)data + *nbytes - 1, key_macing_length(key), "Expect ", 0);
+                            hexdump((uint8_t *)data + *nbytes, key_macing_length(key), "Expect ", 0);
                             hexdump((uint8_t *)edata + edl - 8, key_macing_length(key), "Actual ", 0);
 #endif
                             DESFIRE(tag)->last_pcd_error = CRYPTO_ERROR;
@@ -644,17 +653,19 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                 case AS_NEW:
                     /* Move status between payload and CRC */
                     res = DESFIRE(tag)->crypto_buffer;
-                    memcpy(res, data, *nbytes);
+                    if (res!=NULL) {
+                        memcpy(res, data, *nbytes);
 
-                    crc_pos = (*nbytes) - 16 - 3;
-                    if (crc_pos < 0) {
-                        /* Single block */
-                        crc_pos = 0;
+                        crc_pos = (*nbytes) - 16 - 3;
+                        if (crc_pos < 0) {
+                            /* Single block */
+                            crc_pos = 0;
+                        }
+                        memcpy((uint8_t *) res + crc_pos + 1, (uint8_t *) res + crc_pos, *nbytes - crc_pos);
+                        ((uint8_t *) res)[crc_pos] = 0x00;
+                        crc_pos++;
+                        *nbytes += 1;
                     }
-                    memcpy((uint8_t *)res + crc_pos + 1, (uint8_t *)res + crc_pos, *nbytes - crc_pos);
-                    ((uint8_t *)res)[crc_pos] = 0x00;
-                    crc_pos++;
-                    *nbytes += 1;
                     break;
             }
 
@@ -725,6 +736,9 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
             break;
 
     }
+    free(tag->crypto_buffer);
+    tag->crypto_buffer_size=0;
+    tag->crypto_buffer=NULL;
     return res;
 }
 
@@ -853,4 +867,46 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
         mifare_cypher_single_block(key, data + offset, ivect, direction, operation, block_size);
         offset += block_size;
     }
+}
+
+#define CRC32_PRESET 0xFFFFFFFF
+
+static void
+desfire_crc32_byte(uint32_t *crc, const uint8_t value)
+{
+    /* x32 + x26 + x23 + x22 + x16 + x12 + x11 + x10 + x8 + x7 + x5 + x4 + x2 + x + 1 */
+    const uint32_t poly = 0xEDB88320;
+
+    *crc ^= value;
+    for (int current_bit = 7; current_bit >= 0; current_bit--) {
+        int bit_out = (*crc) & 0x00000001;
+        *crc >>= 1;
+        if (bit_out)
+            *crc ^= poly;
+    }
+}
+
+void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc)
+{
+    uint32_t desfire_crc = CRC32_PRESET;
+    for (size_t i = 0; i < len; i++) {
+        desfire_crc32_byte(&desfire_crc, data[i]);
+    }
+
+    *((uint32_t *)(crc)) = htole32(desfire_crc);
+}
+
+void desfire_crc32_append(uint8_t *data, const size_t len)
+{
+    desfire_crc32(data, len, data + len);
+}
+
+void iso14443a_crc_append(uint8_t* data, size_t len)
+{
+    return compute_crc(CRC_14443_A, data, len, data+len, data+len+1);
+}
+
+void iso14443a_crc(uint8_t* data, size_t len, uint8_t* pbtCrc)
+{
+    return compute_crc(CRC_14443_A, data, len, pbtCrc, pbtCrc+1);
 }
