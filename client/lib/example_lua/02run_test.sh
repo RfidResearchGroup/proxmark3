@@ -5,4 +5,4 @@
 # /usr/lib/lua/5.2/pm3.so
 # ./pm3.so
 
-lua test.lua
+./test.lua
