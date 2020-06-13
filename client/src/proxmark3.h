@@ -51,15 +51,11 @@ const char *get_my_executable_directory(void);
 const char *get_my_user_directory(void);
 void main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
 
-typedef struct pm3_context pm3_context;
-pm3_context *pm3_init(void);
-void pm3_exit(pm3_context *ctx);
-pm3_context *pm3_get_current_context(void);
 typedef struct pm3_device pm3_device;
-pm3_device *pm3_open(pm3_context *ctx, char *port);
-pm3_device *pm3_get_dev(pm3_context *ctx, int n);
-int pm3_console(pm3_device *dev, char *cmd);
-void pm3_close(pm3_device *dev);
+pm3_device* pm3_open(char *port);
+int pm3_console(pm3_device* dev, char *cmd);
+void pm3_close(pm3_device* dev);
+pm3_device* pm3_get_current_dev(void);
 
 #ifdef __cplusplus
 }

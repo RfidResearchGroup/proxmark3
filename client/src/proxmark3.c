@@ -710,26 +710,7 @@ static void init(void) {
 /* ======================================================= */
 /* user API */
 
-typedef struct pm3_context pm3_context;
-pm3_context *pm3_init(void){
-    pm3_context *ctx = (pm3_context *)&session;
-    return ctx;
-}
-void pm3_exit(pm3_context *ctx){
-    free(ctx);
-}
-pm3_context *pm3_get_current_context(void){
-    pm3_context *ctx = (pm3_context *)&session;
-    return ctx;
-}
-
-pm3_device *pm3_get_dev(pm3_context *ctx, int n) {
-    return ((session_arg_t *)ctx)->current_device;
-}
-
-pm3_device* pm3_open(pm3_context *ctx, char *port) {
-    // For now, there is no real session context:
-    (void) ctx;
+pm3_device* pm3_open(char *port) {
     init();
     OpenProxmark(session.current_device, port, false, 20, false, USART_BAUD_RATE);
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
@@ -764,6 +745,9 @@ int pm3_console(pm3_device* dev, char *Cmd) {
     return CommandReceived(Cmd);
 }
 
+pm3_device* pm3_get_current_dev(void) {
+    return session.current_device;
+}
 /* ======================================================= */
 
 #ifndef LIBPM3

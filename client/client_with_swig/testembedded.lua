@@ -1,4 +1,3 @@
 local pm3 = require("pm3")
-ctx=pm3.get_current_context()
-p=pm3.get_dev(ctx, 0)
+p=pm3.get_current_dev()
 pm3.console(p, "hw status")
