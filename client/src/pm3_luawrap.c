@@ -2668,7 +2668,7 @@ SWIG_Lua_dostring(lua_State *L, const char *str) {
 
 /* -------- TYPES TABLE (BEGIN) -------- */
 
-#define SWIGTYPE_p_pm3_device swig_types[0]
+#define SWIGTYPE_p_pm3 swig_types[0]
 static swig_type_info *swig_types[2];
 static swig_module_info swig_module = {swig_types, 1, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
@@ -2686,9 +2686,9 @@ static swig_module_info swig_module = {swig_types, 1, 0, 0, 0, 0};
 #include "pm3.h"
 #include "comms.h"
 
-SWIGINTERN pm3_device *new_pm3_device__SWIG_0(void){
-            printf("SWIG pm3_device constructor, get current pm3\n");
-            pm3_device * p = pm3_device_get_current_dev();
+SWIGINTERN pm3 *new_pm3__SWIG_0(void){
+            printf("SWIG pm3 constructor, get current pm3\n");
+            pm3_device * p = pm3_get_current_dev();
             p->script_embedded = 1;
             return p;
         }
@@ -2700,30 +2700,30 @@ SWIGINTERN int SWIG_lua_isnilstring(lua_State *L, int idx) {
   return ret;
 }
 
-SWIGINTERN pm3_device *new_pm3_device__SWIG_1(char *port){
-            printf("SWIG pm3_device constructor with port, open pm3\n");
+SWIGINTERN pm3 *new_pm3__SWIG_1(char *port){
+            printf("SWIG pm3 constructor with port, open pm3\n");
             pm3_device * p = pm3_open(port);
             p->script_embedded = 0;
             return p;
         }
-SWIGINTERN void delete_pm3_device(pm3_device *self){
+SWIGINTERN void delete_pm3(pm3 *self){
             if (self->script_embedded) {
-                printf("SWIG pm3_device destructor, nothing to do\n");
+                printf("SWIG pm3 destructor, nothing to do\n");
             } else {
-                printf("SWIG pm3_device destructor, close pm3\n");
-                pm3_device_close(self);
+                printf("SWIG pm3 destructor, close pm3\n");
+                pm3_close(self);
             }
         }
 #ifdef __cplusplus
 extern "C" {
 #endif
-static int _wrap_new_device__SWIG_0(lua_State* L) {
+static int _wrap_new_pm3__SWIG_0(lua_State* L) {
   int SWIG_arg = 0;
-  pm3_device *result = 0 ;
+  pm3 *result = 0 ;
   
-  SWIG_check_num_args("pm3_device::pm3_device",0,0)
-  result = (pm3_device *)new_pm3_device__SWIG_0();
-  SWIG_NewPointerObj(L,result,SWIGTYPE_p_pm3_device,1); SWIG_arg++; 
+  SWIG_check_num_args("pm3::pm3",0,0)
+  result = (pm3 *)new_pm3__SWIG_0();
+  SWIG_NewPointerObj(L,result,SWIGTYPE_p_pm3,1); SWIG_arg++; 
   return SWIG_arg;
   
   if(0) SWIG_fail;
@@ -2734,16 +2734,16 @@ fail:
 }
 
 
-static int _wrap_new_device__SWIG_1(lua_State* L) {
+static int _wrap_new_pm3__SWIG_1(lua_State* L) {
   int SWIG_arg = 0;
   char *arg1 = (char *) 0 ;
-  pm3_device *result = 0 ;
+  pm3 *result = 0 ;
   
-  SWIG_check_num_args("pm3_device::pm3_device",1,1)
-  if(!SWIG_lua_isnilstring(L,1)) SWIG_fail_arg("pm3_device::pm3_device",1,"char *");
+  SWIG_check_num_args("pm3::pm3",1,1)
+  if(!SWIG_lua_isnilstring(L,1)) SWIG_fail_arg("pm3::pm3",1,"char *");
   arg1 = (char *)lua_tostring(L, 1);
-  result = (pm3_device *)new_pm3_device__SWIG_1(arg1);
-  SWIG_NewPointerObj(L,result,SWIGTYPE_p_pm3_device,1); SWIG_arg++; 
+  result = (pm3 *)new_pm3__SWIG_1(arg1);
+  SWIG_NewPointerObj(L,result,SWIGTYPE_p_pm3,1); SWIG_arg++; 
   return SWIG_arg;
   
   if(0) SWIG_fail;
@@ -2754,7 +2754,7 @@ fail:
 }
 
 
-static int _wrap_new_device(lua_State* L) {
+static int _wrap_new_pm3(lua_State* L) {
   int argc;
   int argv[2]={
     1,2
@@ -2762,7 +2762,7 @@ static int _wrap_new_device(lua_State* L) {
   
   argc = lua_gettop(L);
   if (argc == 0) {
-    return _wrap_new_device__SWIG_0(L);
+    return _wrap_new_pm3__SWIG_0(L);
   }
   if (argc == 1) {
     int _v;
@@ -2770,34 +2770,34 @@ static int _wrap_new_device(lua_State* L) {
       _v = SWIG_lua_isnilstring(L,argv[0]);
     }
     if (_v) {
-      return _wrap_new_device__SWIG_1(L);
+      return _wrap_new_pm3__SWIG_1(L);
     }
   }
   
-  SWIG_Lua_pusherrstring(L,"Wrong arguments for overloaded function 'new_device'\n"
+  SWIG_Lua_pusherrstring(L,"Wrong arguments for overloaded function 'new_pm3'\n"
     "  Possible C/C++ prototypes are:\n"
-    "    pm3_device::pm3_device()\n"
-    "    pm3_device::pm3_device(char *)\n");
+    "    pm3::pm3()\n"
+    "    pm3::pm3(char *)\n");
   lua_error(L);return 0;
 }
 
 
-static int _wrap_device_console(lua_State* L) {
+static int _wrap_pm3_console(lua_State* L) {
   int SWIG_arg = 0;
-  pm3_device *arg1 = (pm3_device *) 0 ;
+  pm3 *arg1 = (pm3 *) 0 ;
   char *arg2 = (char *) 0 ;
   int result;
   
-  SWIG_check_num_args("pm3_device::console",2,2)
-  if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("pm3_device::console",1,"pm3_device *");
-  if(!SWIG_lua_isnilstring(L,2)) SWIG_fail_arg("pm3_device::console",2,"char *");
+  SWIG_check_num_args("pm3::console",2,2)
+  if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("pm3::console",1,"pm3 *");
+  if(!SWIG_lua_isnilstring(L,2)) SWIG_fail_arg("pm3::console",2,"char *");
   
-  if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_pm3_device,0))){
-    SWIG_fail_ptr("device_console",1,SWIGTYPE_p_pm3_device);
+  if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_pm3,0))){
+    SWIG_fail_ptr("pm3_console",1,SWIGTYPE_p_pm3);
   }
   
   arg2 = (char *)lua_tostring(L, 2);
-  result = (int)pm3_device_console(arg1,arg2);
+  result = (int)pm3_console(arg1,arg2);
   lua_pushnumber(L, (lua_Number) result); SWIG_arg++;
   return SWIG_arg;
   
@@ -2809,19 +2809,19 @@ fail:
 }
 
 
-static int _wrap_device_name_get(lua_State* L) {
+static int _wrap_pm3_name_get(lua_State* L) {
   int SWIG_arg = 0;
-  pm3_device *arg1 = (pm3_device *) 0 ;
+  pm3 *arg1 = (pm3 *) 0 ;
   char *result = 0 ;
   
-  SWIG_check_num_args("pm3_device::name",1,1)
-  if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("pm3_device::name",1,"pm3_device *");
+  SWIG_check_num_args("pm3::name",1,1)
+  if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("pm3::name",1,"pm3 *");
   
-  if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_pm3_device,0))){
-    SWIG_fail_ptr("device_name_get",1,SWIGTYPE_p_pm3_device);
+  if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_pm3,0))){
+    SWIG_fail_ptr("pm3_name_get",1,SWIGTYPE_p_pm3);
   }
   
-  result = (char *)pm3_device_name_get(arg1);
+  result = (char *)pm3_name_get(arg1);
   lua_pushstring(L,(const char *)result); SWIG_arg++;
   return SWIG_arg;
   
@@ -2833,54 +2833,54 @@ fail:
 }
 
 
-static void swig_delete_device(void *obj) {
-pm3_device *arg1 = (pm3_device *) obj;
-delete_pm3_device(arg1);
+static void swig_delete_pm3(void *obj) {
+pm3 *arg1 = (pm3 *) obj;
+delete_pm3(arg1);
 }
-static int _proxy__wrap_new_device(lua_State *L) {
+static int _proxy__wrap_new_pm3(lua_State *L) {
     assert(lua_istable(L,1));
-    lua_pushcfunction(L,_wrap_new_device);
+    lua_pushcfunction(L,_wrap_new_pm3);
     assert(!lua_isnil(L,-1));
     lua_replace(L,1); /* replace our table with real constructor */
     lua_call(L,lua_gettop(L)-1,1);
     return 1;
 }
-static swig_lua_attribute swig_device_attributes[] = {
-    { "name", _wrap_device_name_get, SWIG_Lua_set_immutable },
+static swig_lua_attribute swig_pm3_attributes[] = {
+    { "name", _wrap_pm3_name_get, SWIG_Lua_set_immutable },
     {0,0,0}
 };
-static swig_lua_method swig_device_methods[]= {
-    { "console", _wrap_device_console},
+static swig_lua_method swig_pm3_methods[]= {
+    { "console", _wrap_pm3_console},
     {0,0}
 };
-static swig_lua_method swig_device_meta[] = {
+static swig_lua_method swig_pm3_meta[] = {
     {0,0}
 };
 
-static swig_lua_attribute swig_device_Sf_SwigStatic_attributes[] = {
+static swig_lua_attribute swig_pm3_Sf_SwigStatic_attributes[] = {
     {0,0,0}
 };
-static swig_lua_const_info swig_device_Sf_SwigStatic_constants[]= {
+static swig_lua_const_info swig_pm3_Sf_SwigStatic_constants[]= {
     {0,0,0,0,0,0}
 };
-static swig_lua_method swig_device_Sf_SwigStatic_methods[]= {
+static swig_lua_method swig_pm3_Sf_SwigStatic_methods[]= {
     {0,0}
 };
-static swig_lua_class* swig_device_Sf_SwigStatic_classes[]= {
+static swig_lua_class* swig_pm3_Sf_SwigStatic_classes[]= {
     0
 };
 
-static swig_lua_namespace swig_device_Sf_SwigStatic = {
-    "device",
-    swig_device_Sf_SwigStatic_methods,
-    swig_device_Sf_SwigStatic_attributes,
-    swig_device_Sf_SwigStatic_constants,
-    swig_device_Sf_SwigStatic_classes,
+static swig_lua_namespace swig_pm3_Sf_SwigStatic = {
+    "pm3",
+    swig_pm3_Sf_SwigStatic_methods,
+    swig_pm3_Sf_SwigStatic_attributes,
+    swig_pm3_Sf_SwigStatic_constants,
+    swig_pm3_Sf_SwigStatic_classes,
     0
 };
-static swig_lua_class *swig_device_bases[] = {0};
-static const char *swig_device_base_names[] = {0};
-static swig_lua_class _wrap_class_device = { "device", "device", &SWIGTYPE_p_pm3_device,_proxy__wrap_new_device, swig_delete_device, swig_device_methods, swig_device_attributes, &swig_device_Sf_SwigStatic, swig_device_meta, swig_device_bases, swig_device_base_names };
+static swig_lua_class *swig_pm3_bases[] = {0};
+static const char *swig_pm3_base_names[] = {0};
+static swig_lua_class _wrap_class_pm3 = { "pm3", "pm3", &SWIGTYPE_p_pm3,_proxy__wrap_new_pm3, swig_delete_pm3, swig_pm3_methods, swig_pm3_attributes, &swig_pm3_Sf_SwigStatic, swig_pm3_meta, swig_pm3_bases, swig_pm3_base_names };
 
 static swig_lua_attribute swig_SwigModule_attributes[] = {
     {0,0,0}
@@ -2892,7 +2892,7 @@ static swig_lua_method swig_SwigModule_methods[]= {
     {0,0}
 };
 static swig_lua_class* swig_SwigModule_classes[]= {
-&_wrap_class_device,
+&_wrap_class_pm3,
     0
 };
 static swig_lua_namespace* swig_SwigModule_namespaces[] = {
@@ -2913,16 +2913,16 @@ static swig_lua_namespace swig_SwigModule = {
 
 /* -------- TYPE CONVERSION AND EQUIVALENCE RULES (BEGIN) -------- */
 
-static swig_type_info _swigt__p_pm3_device = {"_p_pm3_device", "pm3_device *", 0, 0, (void*)&_wrap_class_device, 0};
+static swig_type_info _swigt__p_pm3 = {"_p_pm3", "pm3 *", 0, 0, (void*)&_wrap_class_pm3, 0};
 
 static swig_type_info *swig_type_initial[] = {
-  &_swigt__p_pm3_device,
+  &_swigt__p_pm3,
 };
 
-static swig_cast_info _swigc__p_pm3_device[] = {  {&_swigt__p_pm3_device, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_pm3[] = {  {&_swigt__p_pm3, 0, 0, 0},{0, 0, 0, 0}};
 
 static swig_cast_info *swig_cast_initial[] = {
-  _swigc__p_pm3_device,
+  _swigc__p_pm3,
 };
 
 
