@@ -1,3 +1,4 @@
 local pm3 = require("pm3")
-p=pm3.get_current_dev()
-pm3.console(p, "hw status")
+p=pm3.device()
+--p.console("hw status") ??
+p.console(p, "hw status")

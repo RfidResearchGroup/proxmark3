@@ -370,11 +370,11 @@ static int enter_bootloader(char *serial_port_name) {
             PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
         msleep(100);
-        CloseProxmark();
+        CloseProxmark(session.current_device);
         // Let time to OS to make the port disappear
         msleep(1000);
 
-        if (OpenProxmark(session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+        if (OpenProxmark(&session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
             PrintAndLogEx(NORMAL, _GREEN_(" found"));
             return PM3_SUCCESS;
         } else {

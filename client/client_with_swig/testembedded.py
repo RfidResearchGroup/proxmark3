@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
 import pm3
-p=pm3.get_current_dev()
-pm3.console(p, "hw status")
+p=pm3.device()
+p.console("hw status")
+print("Device:", p.get_name())

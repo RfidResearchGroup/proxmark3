@@ -61,6 +61,23 @@ class _SwigNonDynamicMeta(type):
     __setattr__ = _swig_setattr_nondynamic_class_variable(type.__setattr__)
 
 
+class device(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        _pm3.device_swiginit(self, _pm3.new_device(*args))
+    __swig_destroy__ = _pm3.delete_device
+
+    def console(self, cmd):
+        return _pm3.device_console(self, cmd)
+
+    def get_name(self):
+        return _pm3.device_get_name(self)
+
+# Register device in _pm3:
+_pm3.device_swigregister(device)
+
 
 def open(port):
     return _pm3.open(port)
@@ -68,10 +85,14 @@ def open(port):
 def console(dev, cmd):
     return _pm3.console(dev, cmd)
 
+def get_name(dev):
+    return _pm3.get_name(dev)
+
 def close(dev):
     return _pm3.close(dev)
 
 def get_current_dev():
     return _pm3.get_current_dev()
 
+cvar = _pm3.cvar
 
