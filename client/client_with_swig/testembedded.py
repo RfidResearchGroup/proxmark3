@@ -3,4 +3,4 @@
 import pm3
 p=pm3.device()
 p.console("hw status")
-print("Device:", p.get_name())
+print("Device:", p.name)

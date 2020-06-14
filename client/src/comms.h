@@ -68,6 +68,7 @@ extern communication_arg_t conn;
 typedef struct pm3_device pm3_device;
 struct pm3_device {
     communication_arg_t *conn;
+    int script_embedded;
 };
 
 void *uart_receiver(void *targ);

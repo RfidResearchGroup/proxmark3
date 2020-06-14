@@ -727,7 +727,7 @@ pm3_device* pm3_open(char *port) {
     return session.current_device;
 }
 
-void pm3_close(pm3_device* dev) {
+void pm3_device_close(pm3_device* dev) {
     // For now, there is no real device context:
     (void) dev;
     // Clean up the port
@@ -739,17 +739,17 @@ void pm3_close(pm3_device* dev) {
     }
 }
 
-int pm3_console(pm3_device* dev, char *Cmd) {
+int pm3_device_console(pm3_device* dev, char *Cmd) {
     // For now, there is no real device context:
     (void) dev;
     return CommandReceived(Cmd);
 }
 
-char *pm3_get_name(pm3_device* dev) {
+const char *pm3_device_name_get(pm3_device* dev) {
     return dev->conn->serial_port_name;
 }
 
-pm3_device* pm3_get_current_dev(void) {
+pm3_device* pm3_device_get_current_dev(void) {
     return session.current_device;
 }
 /* ======================================================= */
