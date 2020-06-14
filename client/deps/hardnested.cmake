@@ -111,6 +111,7 @@ set_property(TARGET pm3rrg_rdv4_hardnested PROPERTY POSITION_INDEPENDENT_CODE ON
 target_include_directories(pm3rrg_rdv4_hardnested PRIVATE
         ../../common
         ../../include
+        ../include
         ../src
         jansson)
 target_include_directories(pm3rrg_rdv4_hardnested INTERFACE hardnested)
