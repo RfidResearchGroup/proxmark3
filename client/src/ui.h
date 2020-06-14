@@ -14,6 +14,8 @@
 #include <pthread.h>
 #include "common.h"
 #include "ansi.h"
+#define DEVICE_NAME_LENGTH  256
+#include "comms.h"      // pm3_device
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +29,6 @@ typedef enum clientdebugLevel {cdbOFF, cdbSIMPLE, cdbFULL} clientdebugLevel_t;
 // typedef enum devicedebugLevel {ddbOFF, ddbERROR, ddbINFO, ddbDEBUG, ddbEXTENDED} devicedebugLevel_t;
 //typedef enum savePaths {spDefault, spDump, spTrace, spItemCount} savePaths_t; // last item spItemCount used to auto map to number of files
 typedef struct {int x; int y; int h; int w;} qtWindow_t;
-typedef struct pm3_device pm3_device;
 
 typedef struct {
     bool preferences_loaded;

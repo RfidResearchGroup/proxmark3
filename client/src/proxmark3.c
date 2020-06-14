@@ -130,7 +130,7 @@ static int check_comm(void) {
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
         rl_set_prompt(prompt_filtered);
         rl_forced_update_display();
-        CloseProxmark();
+        CloseProxmark(session.current_device);
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
     }
     return 0;
@@ -582,7 +582,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), filepaths[i]);
     }
 
-    if (OpenProxmark(session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+    if (OpenProxmark(&session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_(" found"));
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
@@ -620,7 +620,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
 
 finish:
     ret = flash_stop_flashing();
-    CloseProxmark();
+    CloseProxmark(session.current_device);
 finish2:
     for (int i = 0 ; i < num_files; ++i) {
         if (filepaths[i] != NULL)
@@ -712,10 +712,10 @@ static void init(void) {
 
 pm3_device* pm3_open(char *port) {
     init();
-    OpenProxmark(session.current_device, port, false, 20, false, USART_BAUD_RATE);
-    if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+    OpenProxmark(&session.current_device, port, false, 20, false, USART_BAUD_RATE);
+    if (session.pm3_present && (TestProxmark(session.current_device) != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
-        CloseProxmark();
+        CloseProxmark(session.current_device);
     }
 
     if ((port != NULL) && (!session.pm3_present))
@@ -735,7 +735,7 @@ void pm3_close(pm3_device* dev) {
         clearCommandBuffer();
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
         msleep(100); // Make sure command is sent before killing client
-        CloseProxmark();
+        CloseProxmark(dev);
     }
 }
 
@@ -743,6 +743,10 @@ int pm3_console(pm3_device* dev, char *Cmd) {
     // For now, there is no real device context:
     (void) dev;
     return CommandReceived(Cmd);
+}
+
+char *pm3_get_name(pm3_device* dev) {
+    return dev->conn->serial_port_name;
 }
 
 pm3_device* pm3_get_current_dev(void) {
@@ -1038,12 +1042,12 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
-        OpenProxmark(session.current_device, port, waitCOMPort, 20, false, speed);
+        OpenProxmark(&session.current_device, port, waitCOMPort, 20, false, speed);
     }
 
-    if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+    if (session.pm3_present && (TestProxmark(session.current_device) != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
-        CloseProxmark();
+        CloseProxmark(session.current_device);
     }
 
     if ((port != NULL) && (!session.pm3_present))
@@ -1099,7 +1103,7 @@ int main(int argc, char *argv[]) {
 
     // Clean up the port
     if (session.pm3_present) {
-        CloseProxmark();
+        CloseProxmark(session.current_device);
     }
 
     if (session.window_changed) // Plot/Overlay moved or resized

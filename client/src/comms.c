@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "uart/uart.h"
 #include "ui.h"
@@ -536,7 +537,7 @@ bool IsCommunicationThreadDead(void) {
     return ret;
 }
 
-bool OpenProxmark(pm3_device *current_device, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
+bool OpenProxmark(pm3_device **dev, char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
     if (!wait_for_port) {
         PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);
@@ -583,15 +584,17 @@ bool OpenProxmark(pm3_device *current_device, char *port, bool wait_for_port, in
 
         pthread_create(&communication_thread, NULL, &uart_communication, &conn);
         __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
-        session.pm3_present = true;
+        session.pm3_present = true; // TODO support for multiple devices
 
         fflush(stdout);
+        *dev = malloc(sizeof(pm3_device));
+        (*dev)->conn = &conn; // TODO conn shouldn't be global
         return true;
     }
 }
 
 // check if we can communicate with Pm3
-int TestProxmark(void) {
+int TestProxmark(pm3_device *dev) {
 
     PacketResponseNG resp;
     uint16_t len = 32;
@@ -654,8 +657,8 @@ int TestProxmark(void) {
     return PM3_SUCCESS;
 }
 
-void CloseProxmark(void) {
-    conn.run = false;
+void CloseProxmark(pm3_device *dev) {
+    dev->conn->run = false;
 
 #ifdef __BIONIC__
     if (communication_thread != 0) {

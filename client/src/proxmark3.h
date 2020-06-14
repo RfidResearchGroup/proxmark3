@@ -54,6 +54,7 @@ void main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop)
 typedef struct pm3_device pm3_device;
 pm3_device* pm3_open(char *port);
 int pm3_console(pm3_device* dev, char *cmd);
+char *pm3_get_name(pm3_device* dev);
 void pm3_close(pm3_device* dev);
 pm3_device* pm3_get_current_dev(void);
 
