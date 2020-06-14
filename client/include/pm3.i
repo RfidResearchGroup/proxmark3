@@ -19,7 +19,7 @@ typedef struct {
         pm3_device(char *port) {
             printf("SWIG pm3_device constructor with port, open pm3\n");
             pm3_device * p = pm3_open(port);
-            p->script_embedded = 1;
+            p->script_embedded = 0;
             return p;
         }
         ~pm3_device() {
