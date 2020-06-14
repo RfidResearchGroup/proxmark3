@@ -512,6 +512,7 @@ SRCS =  aidsearch.c \
 		mifare/mifaredefault.c \
 		mifare/mifarehost.c \
 		mifare/ndef.c \
+		pm3.c \
 		pm3_binlib.c \
 		pm3_bitlib.c \
 		preferences.c \

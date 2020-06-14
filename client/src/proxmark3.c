@@ -690,7 +690,7 @@ static bool DetectWindowsAnsiSupport(void) {
 }
 #endif
 
-static void init(void) {
+void pm3_init(void) {
     srand(time(0));
 
     session.pm3_present = false;
@@ -706,57 +706,9 @@ static void init(void) {
 
 }
 
-
-/* ======================================================= */
-/* user API */
-
-pm3_device* pm3_open(char *port) {
-    init();
-    OpenProxmark(&session.current_device, port, false, 20, false, USART_BAUD_RATE);
-    if (session.pm3_present && (TestProxmark(session.current_device) != PM3_SUCCESS)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
-        CloseProxmark(session.current_device);
-    }
-
-    if ((port != NULL) && (!session.pm3_present))
-        exit(EXIT_FAILURE);
-
-    if (!session.pm3_present)
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode");
-    // For now, there is no real device context:
-    return session.current_device;
-}
-
-void pm3_close(pm3_device* dev) {
-    // For now, there is no real device context:
-    (void) dev;
-    // Clean up the port
-    if (session.pm3_present) {
-        clearCommandBuffer();
-        SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
-        msleep(100); // Make sure command is sent before killing client
-        CloseProxmark(dev);
-    }
-}
-
-int pm3_console(pm3_device* dev, char *Cmd) {
-    // For now, there is no real device context:
-    (void) dev;
-    return CommandReceived(Cmd);
-}
-
-const char *pm3_name_get(pm3_device* dev) {
-    return dev->conn->serial_port_name;
-}
-
-pm3_device* pm3_get_current_dev(void) {
-    return session.current_device;
-}
-/* ======================================================= */
-
 #ifndef LIBPM3
 int main(int argc, char *argv[]) {
-    init();
+    pm3_init();
     bool waitCOMPort = false;
     bool addLuaExec = false;
     bool stayInCommandLoop = false;
