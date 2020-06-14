@@ -361,9 +361,10 @@ static void SendStatus(void) {
 #endif
     printConnSpeed();
     DbpString(_CYAN_("Various"));
+    // pointer arithmetic is times 4. (two shifts to the left)
     for (uint32_t *p = &_stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
-            Dbprintf("  Max stack usage so far..%d", (&_stack_end - p)*4);
+            Dbprintf("  Max stack usage.........%d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
             break;
         }
     }
