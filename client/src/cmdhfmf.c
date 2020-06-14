@@ -3560,7 +3560,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         }
 
         mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
-        printMFUdumpEx(mfu_dump, mfu_dump->pages, 0);
+        printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
 
         // update expected blocks to match converted data.
         if (numBlocks != datalen / 4) {

@@ -1694,10 +1694,6 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     return 0;
 }
 
-void printMFUdump(mfu_dump_t *card) {
-    printMFUdumpEx(card, 255, 0);
-}
-
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
 
     PrintAndLogEx(INFO, _CYAN_("MFU dump file information"));
@@ -1708,12 +1704,10 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
     PrintAndLogEx(INFO, "    Signature | %s", sprint_hex(card->signature, sizeof(card->signature)));
     for (uint8_t i = 0; i < 3; i ++) {
         PrintAndLogEx(INFO, "    Counter %d | %s", i, sprint_hex(card->counter_tearing[i], 3));
-
-
         PrintAndLogEx(INFO, "    Tearing %d | %s", i, sprint_hex(card->counter_tearing[i] + 3, 1));
     }
 
-    PrintAndLogEx(INFO, "Max data page | " _YELLOW_("%d") " (" _YELLOW_("%d") " bytes)", card->pages, (card->pages + 1) * 4);
+    PrintAndLogEx(INFO, "Max data page | " _YELLOW_("%d") " (" _YELLOW_("%d") " bytes)", card->pages - 1, card->pages * 4);
     PrintAndLogEx(INFO, "  Header size | %d", MFU_DUMP_PREFIX_LENGTH);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, "block#   | data        |lck| ascii");
