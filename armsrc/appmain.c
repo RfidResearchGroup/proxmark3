@@ -29,6 +29,7 @@
 #include "felica.h"
 #include "hitag2.h"
 #include "hitagS.h"
+#include "em4x50.h"
 #include "iclass.h"
 #include "legicrfsim.h"
 #include "epa.h"
@@ -447,6 +448,11 @@ static void SendCapabilities(void) {
     capabilities.compiled_with_hitag = true;
 #else
     capabilities.compiled_with_hitag = false;
+#endif
+#ifdef WITH_EM4x50
+    capabilities.compiled_with_em4x50 = true;
+#else
+    capabilities.compiled_with_em4x50 = false;
 #endif
 #ifdef WITH_HFSNIFF
     capabilities.compiled_with_hfsniff = true;
@@ -979,6 +985,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else {
                 WriterHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2]);
             }
+            break;
+        }
+#endif
+
+#ifdef WITH_EM4x50
+        case CMD_LF_EM4X50_INFO: {
+            em4x50_info((em4x50_data_t *)packet->data.asBytes);
             break;
         }
 #endif
