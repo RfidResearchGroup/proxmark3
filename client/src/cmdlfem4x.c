@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfem4x.h"
+#include "cmdlfem4x50.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -1765,6 +1766,7 @@ static command_t CommandTable[] = {
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3Lf,         "dump EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3Lf,         "read word data from EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3Lf,         "write word data to EM4x50"},
+    {"4x50_info",   CmdEM4x50Info,        IfPm3Lf,         "read complete data from EM4x50"},
     {NULL, NULL, NULL, NULL}
 };
 
