@@ -15,10 +15,10 @@ At the moment both are maintained because they don't perfectly overlap yet.
 |-----|---|---|---|
 | verbose | V=1 | VERBOSE=1 |   |
 | warnings management | yes (1) | **no** | (1) cf Makefile.defs |
-| compilation | in place | in build dir (1) | |
+| compilation | in place | in build dir | |
 | user `CFLAGS`/`LDFLAGS` | honored (1) | **no/auto?** | (1) also `LDLIBS` and `INCLUDES_CLIENT` as envvars for more tuning |
 | `PKG_CONFIG_ENV` | yes | **no/auto?** | |
-| Mingw gnu printf | `_ISOC99_SOURCE` | `_ISOC99_SOURCE` | |
+| Mingw gnu printf | `_ISOC99_SOURCE` | `_ISOC99_SOURCE` | and in cbor.h: `__attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)))`|
 | C++ | c++11 | gnu++14 | |
 | dep amiibo | in_deps | in_deps |   |
 | dep atomic | sys, for RPiZ | sys, for RPiZ | `-Wl,--as-needed -latomic -Wl,--no-as-needed` unless OSX |
@@ -30,8 +30,8 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | bzip2 detection | **none** | **none**, Android:gitclone | |
 | dep cliparser | in_deps | in_deps |   |
 | dep hardnested | in_deps | in_deps |   |
-| arch autodetection | (1) | (2) | (1) uname -m == 86|amd64; gcc -E -mavx512f? +-AVX512 (2) CMAKE_SYSTEM_PROCESSOR == x86|x86_64|i686|AMD64 (always incl. AVX512) |
-| `cpu_arch` | yes | **no/auto?** | e.g. cpu_arch=generic for cross-compilation
+| hardn arch autodetect | (1) | (2) | (1) uname -m == 86 or amd64; gcc -E -mavx512f? +-AVX512 (2) CMAKE_SYSTEM_PROCESSOR == x86 or x86_64 or i686 or AMD64 (always incl. AVX512) |
+| `cpu_arch` | yes | **no/auto?** | e.g. `cpu_arch=generic` for cross-compilation
 | dep jansson | sys / in_deps | **in_deps only** |   |
 | jansson detection | pc | **none** |   |
 | `SKIPJANSSONSYSTEM` | yes | **no** |   |
@@ -40,7 +40,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | `SKIPLUASYSTEM` | yes | **no** |   |
 | lualibs/pm3_cmd.lua | yes | **add_custom_command used?** |
 | lualibs/mfc_default_keys.lua | yes | **add_custom_command used?** |
-| dep lz4 |  |  | (common) not yet used, future |
+| dep lz4 |  |  | (in_common) not yet used, future |
 | dep libm | sys | sys | |
 | libm detection | none | **none/auto?** | |
 | dep mbedtls | in_common | in_common | no sys lib: missing support for CMAC in def conf (btw no .pc available) |
