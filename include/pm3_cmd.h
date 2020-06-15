@@ -187,6 +187,7 @@ typedef struct {
     // lf
     bool compiled_with_lf              : 1;
     bool compiled_with_hitag           : 1;
+    bool compiled_with_em4x50          : 1;
     // hf
     bool compiled_with_hfsniff         : 1;
     bool compiled_with_hfplot          : 1;
@@ -401,6 +402,7 @@ typedef struct {
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
 #define CMD_LF_IO_DEMOD                                                   0x021A
 #define CMD_LF_EM410X_DEMOD                                               0x021C
+#define CMD_LF_EM4X50_INFO                                                0x0240
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
