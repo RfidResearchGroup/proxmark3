@@ -18,5 +18,7 @@ typedef struct {
 } em4x50_tag_t;
 
 void em4x50_info(em4x50_data_t *etd);
+void em4x50_write(em4x50_data_t *etd);
+void em4x50_write_password(em4x50_data_t *etd);
 
 #endif /* EM4X50_H */
