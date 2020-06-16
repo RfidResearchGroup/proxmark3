@@ -4,13 +4,6 @@
 #  On Proxspace 3.3 or less, you need to install cmake:
 #    pacman -S mingw-w64-x86_64-cmake
 #    /mingw64/bin/cmake -G"MSYS Makefiles" ..
-#
-# Android cross-compilation:
-# cmake \
-#    -DCMAKE_TOOLCHAIN_FILE=<path-to-your-android-ndk>/build/cmake/android.toolchain.cmake \
-#    -DANDROID_ABI=armeabi-v7a \
-#    -DANDROID_NATIVE_API_LEVEL=android-19 \
-#    -DSKIPBT=1 -DSKIPPYTHON=1 -DSKIPPTHREAD=1 ..
 
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
@@ -56,9 +49,39 @@ if (NOT SKIPPYTHON EQUAL 1)
     pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
+# Remove some cache before android cross build start.
+if(ANDROID)
+    execute_process(
+        # Delete main project cache.
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/CMakeCache.txt
+        # Delete deps project cache.
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/deps/libbz2.a
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/deps/libhistory.a
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/deps/libreadline.a
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
+        COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
+    )
+endif()
+
 # If build on android cross, we need to init source and build.
 if (ANDROID)
+    # The cflags of clang complier.
     set(CFLAGS_EXTERNAL_LIB CFLAGS=--target=${CMAKE_C_COMPILER_TARGET})
+    # The intsall action of readline(move *.a to deps)
+    set(READLINE_INSTALL
+        COMMAND mv ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_SOURCE_DIR}/deps/
+        COMMAND mv ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline/src/readline/libhistory.a ${CMAKE_CURRENT_SOURCE_DIR}/deps/
+    )
+    # The deps for readline, at linking or complie.
+    set(READLINE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline/src/)
+    set(READLINE_LIBRARIES 
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/libreadline.a 
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/libhistory.a 
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses/src/ncurses/lib/libncurses.a
+    )
+    # The impl of ExternalProject inculde
     include(ExternalProject)
 endif (ANDROID)
 
@@ -68,31 +91,35 @@ if (NOT SKIPREADLINE EQUAL 1)
       find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib NO_DEFAULT_PATH)
     endif (APPLE)
     if (ANDROID)
+	# Warrning !!!
+	# If you are run on non standard linux env, your need set a env arg to indicate the path of terminfo database.
+	# See: https://stackoverflow.com/questions/7158602/how-to-set-custom-search-paths-for-the-terminfo-database-when-building-ncurses-f/40269919#40269919
+	# Use TERMINFO (Runtime) or --datadir=XXX (At ncurses configuring) to set a path or TERMINFO_DIRS (Runtime) to set some paths.
+	# If no set, your terminal may be have some style and key problem exists. (e.g Backspace and up and down)
         ExternalProject_Add(ncurses
-            URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.0.tar.gz
-            PREFIX                deps/ncurses
-            DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
-            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm
+            URL                   ftp://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.2.tar.gz
+            DOWNLOAD_NAME         ncurses.zip
+            PREFIX                ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
+            CONFIGURE_COMMAND     ./configure --host=arm --prefix=${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses/install --datadir=/usr/share/ CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB}
             BUILD_IN_SOURCE       ON
             BUILD_COMMAND         make -j2 libs
-            INSTALL_COMMAND       ""
+            INSTALL_COMMAND       "" # make install
             LOG_DOWNLOAD          ON
         )
         ExternalProject_Add_StepTargets(ncurses configure build install)
 
         ExternalProject_Add(readline
-            URL                   ftp://ftp.gnu.org/gnu/readline/readline-7.0.tar.gz
-            PREFIX                deps/readline
-            DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
-            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --enable-static
+	    DEPENDS               ncurses # libreadline dep ncurses, so we init ncurses first.
+            URL                   ftp://ftp.gnu.org/gnu/readline/readline-8.0.tar.gz
+            DOWNLOAD_NAME         readline.zip
+            PREFIX                ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
+            CONFIGURE_COMMAND     ./configure --host=arm --enable-static --enable-multibyte CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB}
             BUILD_IN_SOURCE       ON
-            BUILD_COMMAND         make -j2
-            INSTALL_COMMAND       ""
+            BUILD_COMMAND         make -j2 static
+            INSTALL_COMMAND       ${READLINE_INSTALL}
             LOG_DOWNLOAD          ON
         )
         ExternalProject_Add_StepTargets(readline configure build install)
-        set(READLINE_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/)
-        set(READLINE_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_BINARY_DIR}/deps/ncurses/src/ncurses/lib/libncurses.a)
     else (ANDROID)
         find_path(READLINE_INCLUDE_DIRS readline/readline.h)
         find_library(READLINE_LIBRARIES readline)
@@ -103,21 +130,22 @@ if (NOT SKIPREADLINE EQUAL 1)
 endif (NOT SKIPREADLINE EQUAL 1)
 
 if(ANDROID)
-    set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     ExternalProject_Add(bzip2
+        # If you cannot access the Google's service, it is recommended to use an alternate GitHub address. (not guaranteed to be up to date)
+        # github: https://github.com/xianglin1998/bzip2
         GIT_REPOSITORY        https://android.googlesource.com/platform/external/bzip2
-        GIT_TAG               platform-tools-30.0.2
-        PREFIX                deps/bzip2
-        SOURCE_DIR            ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
-        CONFIGURE_COMMAND     mkdir -p ${BZIP2_BUILD_DIR} && git archive --format tar HEAD | tar -C ${BZIP2_BUILD_DIR} -x
+        GIT_TAG               master
+        PREFIX                ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
+        CONFIGURE_COMMAND     ""
+        UPDATE_COMMAND        ""
         BUILD_IN_SOURCE       ON
-        BUILD_COMMAND         make -C ${BZIP2_BUILD_DIR} -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} libbz2.a
-        INSTALL_COMMAND       ""
+        BUILD_COMMAND         make -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} libbz2.a
+        INSTALL_COMMAND       mv ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2/src/bzip2/libbz2.a ${CMAKE_CURRENT_SOURCE_DIR}/deps/
         LOG_DOWNLOAD          ON
     )
     ExternalProject_Add_StepTargets(bzip2 configure build install)
-    set(BZIP2_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
-    set(BZIP2_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2/libbz2.a)
+    set(BZIP2_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2/src/bzip2)
+    set(BZIP2_LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/deps/libbz2.a)
 else()
     set(BZIP2_LIBRARIES bz2)
 endif(ANDROID)
