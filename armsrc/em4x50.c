@@ -72,6 +72,8 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_TAG_THREE_QUARTER_PERIOD   48
 #define EM4X50_T_TAG_FULL_PERIOD            64
 #define EM4X50_T_WAITING_FOR_LIW            500
+#define EM4X50_T_TAG_TPP                    64
+#define EM4X50_T_TAG_TWA                    64
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -81,7 +83,9 @@ static em4x50_tag_t tag = {
 #define EM4X50_BIT_OTHER                    2
 
 #define EM4X50_COMMAND_LOGIN                0x01
+#define EM4X50_COMMAND_RESET                0x80
 #define EM4X50_COMMAND_WRITE                0x12
+#define EM4X50_COMMAND_WRITE_PASSWORD       0x11
 #define EM4X50_COMMAND_SELECTIVE_READ       0x0A
 
 #define FPGA_TIMER_0                        0
@@ -112,6 +116,35 @@ static uint8_t bits2byte(uint8_t bits[8], int length) {
     }
 
     return byte;
+}
+
+static uint8_t msb2lsb(uint8_t byte) {
+
+    // returns byte with bit positions in reverse order
+    
+    uint8_t tmp = 0;
+    
+    for (int i = 0; i < 8; i++)
+        tmp |= ((byte >> (7-i)) & 1) << i;
+    
+    return tmp;
+}
+
+static void msb2lsb_word(uint8_t *word) {
+    
+    // reorders given <word> according to EM4x50 datasheet (msb -> lsb)
+    
+    uint8_t buff[4];
+    
+    buff[0] = msb2lsb(word[3]);
+    buff[1] = msb2lsb(word[2]);
+    buff[2] = msb2lsb(word[1]);
+    buff[3] = msb2lsb(word[0]);
+
+    word[0] = buff[0];
+    word[1] = buff[1];
+    word[2] = buff[2];
+    word[3] = buff[3];
 }
 
 static void save_word(int pos, uint8_t bits[EM4X50_TAG_WORD]) {
@@ -242,7 +275,7 @@ static int get_next_bit(void) {
 
 static uint32_t get_pulse_length(void) {
     
-    //
+    // iterates pulse length (low -> high -> low)
     
     uint8_t sample = 0, high = 192, low = 64;
 
@@ -562,6 +595,9 @@ static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
 
 static bool login(uint8_t password[4]) {
 
+    // simple login to EM4x50,
+    // used in operations that require authentication
+    
     if (request_receive_mode ()) {
 
         // send login command
@@ -581,6 +617,27 @@ static bool login(uint8_t password[4]) {
     return false;
 }
 
+// reset function
+
+static bool reset(void) {
+
+    // resets EM4x50 tag (used by write function)
+    
+    if (request_receive_mode ()) {
+
+        // send login command
+        em4x50_send_byte_with_parity(EM4X50_COMMAND_RESET);
+ 
+        if (check_ack(false))
+            return true;
+
+    } else {
+        Dbprintf("error in command request");
+    }
+
+    return false;
+}
+
 // read functions
 
 static bool standard_read(int *now) {
@@ -588,6 +645,7 @@ static bool standard_read(int *now) {
     // reads data that tag transmits when exposed to reader field
     // (standard read mode); number of read words is saved in <now>
     
+    int fwr = *now;
     uint8_t bits[EM4X50_TAG_WORD] = {0};
 
     // start with the identification of two succsessive listening windows
@@ -597,6 +655,9 @@ static bool standard_read(int *now) {
         while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD)
             save_word((*now)++, bits);
 
+        // number of detected words
+        *now -= fwr;
+        
         return true;
 
     } else {
@@ -610,11 +671,11 @@ static bool selective_read(uint8_t addresses[4]) {
     
     // reads from "first word read" (fwr = addresses[3]) to "last word read"
     // (lwr = addresses[2])
-    // result is verified by "standard read mode" result
+    // result is verified by "standard read mode"
     
     int fwr = addresses[3];     // first word read
     int lwr = addresses[2];     // last word read
-    int now = 0;                // number of words
+    int now = fwr;              // number of words
 
     if (request_receive_mode()) {
 
@@ -627,11 +688,11 @@ static bool selective_read(uint8_t addresses[4]) {
         // look for ACK sequence
         if (check_ack(false))
             
-            // save and verifiy via standard read mode (compare number of words)
+            // save and verify via standard read mode (compare number of words)
             if (standard_read(&now))
                 if (now == (lwr - fwr + 1))
                     return true;
-
+        
     } else {
         Dbprintf("error in command request");
     }
@@ -669,4 +730,148 @@ void em4x50_info(em4x50_data_t *etd) {
     
     lf_finalize();
     reply_mix(CMD_ACK, bsuccess, blogin, 0, (uint8_t *)tag.sectors, 238);
+}
+
+// write functions
+
+static bool write(uint8_t word[4], uint8_t address) {
+
+    // writes <word> to specified <address>
+    
+    if (request_receive_mode()) {
+
+        // send selective read command
+        em4x50_send_byte_with_parity(EM4X50_COMMAND_WRITE);
+
+        // send address data
+        em4x50_send_byte_with_parity(address);
+
+        // send data
+        em4x50_send_word(word);
+
+        // wait for T0 * EM4X50_T_TAG_TWA (write access time)
+        wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
+
+        // look for ACK sequence
+        if (check_ack(false)) {
+
+            // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
+            // for saving data and should return with ACK
+            if (check_ack(false))
+                return true;
+
+        }
+
+    } else {
+        Dbprintf("error in command request");
+    }
+
+    return false;
+}
+
+static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
+
+    // changes password from <password> to <new_password>
+    
+    if (request_receive_mode()) {
+
+        // send selective read command
+        em4x50_send_byte_with_parity(EM4X50_COMMAND_WRITE_PASSWORD);
+
+        // send address data
+        em4x50_send_word(password);
+
+        // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
+        wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TPP);
+
+        // look for ACK sequence and send rm request
+        // during following listen window
+        if (check_ack(true)) {
+
+            // send new password
+            em4x50_send_word(new_password);
+
+            // wait for T0 * EM4X50_T_TAG_TWA (write access time)
+            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
+
+            if (check_ack(false))
+                if (check_ack(false))
+                    return true;
+
+        }
+
+    } else {
+        Dbprintf("error in command request");
+    }
+
+    return false;
+}
+
+void em4x50_write(em4x50_data_t *etd) {
+    
+    // write operation process for EM4x50 tag,
+    // single word is written to given address, verified by selective read operation
+    
+    bool bsuccess = true, blogin = false;
+    uint8_t word[4] = {0x00, 0x00, 0x00, 0x00};
+    uint8_t addresses[4] = {0x00, 0x00, 0x00, 0x00};
+    
+    init_tag();
+    em4x50_setup_read();
+    
+    // reorder word according to datasheet
+    msb2lsb_word(etd->word);
+    
+    // if password is given try to login first
+    if (etd->pwd_given)
+        blogin = login(etd->password);
+    
+    // write word to given address
+    if (write(etd->word, etd->address)) {
+
+        // to verify result reset EM4x50
+        if (reset()) {
+
+            // if password is given login
+            if (etd->pwd_given)
+                blogin &= login(etd->password);
+
+            // perform a selective read
+            addresses[2] = addresses[3] = etd->address;
+            if (selective_read(addresses)) {
+
+                // compare with given word
+                word[0] = tag.sectors[etd->address][0];
+                word[1] = tag.sectors[etd->address][1];
+                word[2] = tag.sectors[etd->address][2];
+                word[3] = tag.sectors[etd->address][3];
+                msb2lsb_word(word);
+                
+                for (int i = 0; i < 4; i++)
+                    bsuccess &= (word[i] == etd->word[i]) ? true : false;
+
+            }
+        }
+    }
+
+    lf_finalize();
+    reply_mix(CMD_ACK, bsuccess, blogin, 0, (uint8_t *)tag.sectors, 238);
+}
+
+void em4x50_write_password(em4x50_data_t *etd) {
+    
+    // sinmple change of password
+    
+    bool bsuccess = false;
+    
+    init_tag();
+    em4x50_setup_read();
+
+    // login and change password
+    if (login(etd->password)) {
+        bsuccess = write_password(etd->password, etd->new_password);
+    }
+
+    lf_finalize();
+    reply_mix(CMD_ACK, bsuccess, 0, 0, 0, 0);
 }
