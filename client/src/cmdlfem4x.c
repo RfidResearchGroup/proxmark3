@@ -1035,6 +1035,7 @@ static int CmdEM4x50Demod(const char *Cmd) {
 static int CmdEM4x50Read(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_read();
+    lf_read(false, 24000);
     return EM4x50Read(Cmd, true);
 }
 
