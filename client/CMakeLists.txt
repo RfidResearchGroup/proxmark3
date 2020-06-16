@@ -11,6 +11,11 @@
 #    -DANDROID_ABI=armeabi-v7a \
 #    -DANDROID_NATIVE_API_LEVEL=android-19 \
 #    -DSKIPBT=1 -DSKIPPYTHON=1 -DSKIPPTHREAD=1 ..
+#
+# If you are run on non standard linux env, your need set a env arg to indicate the path of terminfo database.
+# See: https://github.com/RfidResearchGroup/proxmark3/issues/782
+# Use TERMINFO (Runtime) or --datadir=XXX (At ncurses configuring) to set a path or TERMINFO_DIRS (Runtime) to set some paths.
+# If no set, your terminal may be have some style and key problem exists. (e.g Backspace and up and down)
 
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
@@ -72,7 +77,7 @@ if (NOT SKIPREADLINE EQUAL 1)
             URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.0.tar.gz
             PREFIX                deps/ncurses
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
-            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm
+            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --datadir=/usr/share/
             BUILD_IN_SOURCE       ON
             BUILD_COMMAND         make -j2 libs
             INSTALL_COMMAND       ""
@@ -81,6 +86,7 @@ if (NOT SKIPREADLINE EQUAL 1)
         ExternalProject_Add_StepTargets(ncurses configure build install)
 
         ExternalProject_Add(readline
+	    DEPENDS               ncurses
             URL                   ftp://ftp.gnu.org/gnu/readline/readline-7.0.tar.gz
             PREFIX                deps/readline
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
@@ -107,13 +113,19 @@ if(ANDROID)
     ExternalProject_Add(bzip2
         GIT_REPOSITORY        https://android.googlesource.com/platform/external/bzip2
         GIT_TAG               platform-tools-30.0.2
-        PREFIX                deps/bzip2
-        SOURCE_DIR            ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
+        PREFIX                deps/bzip2_temp
+        SOURCE_DIR            deps/bzip2
         CONFIGURE_COMMAND     mkdir -p ${BZIP2_BUILD_DIR} && git archive --format tar HEAD | tar -C ${BZIP2_BUILD_DIR} -x
         BUILD_IN_SOURCE       ON
         BUILD_COMMAND         make -C ${BZIP2_BUILD_DIR} -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} libbz2.a
         INSTALL_COMMAND       ""
         LOG_DOWNLOAD          ON
+    )
+    add_custom_command(
+        TARGET bzip2
+        COMMAND rm -rf deps/bzip2_temp
+        POST_BUILD
+        DEPENDS bzip2
     )
     ExternalProject_Add_StepTargets(bzip2 configure build install)
     set(BZIP2_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
@@ -463,6 +475,11 @@ install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries
 add_custom_command(OUTPUT lualibs/pm3_cmd.lua
         COMMAND "awk -f pm3_cmd_h2lua.awk ../include/pm3_cmd.h >  lualibs/pm3_cmd.lua"
         COMMENT "Creating lualibs/pm3_cmd.lua"
+        )
+
+add_custom_command(OUTPUT lualibs/mfc_default_keys.lua
+        COMMAND "awk -f default_keys_dic2lua.awk mfc_default_keys.dic >  lualibs/mfc_default_keys.lua"
+        COMMENT "Creating lualibs/mfc_default_keys.lua"
         )
 
 add_custom_command(OUTPUT lualibs/mfc_default_keys.lua
