@@ -1694,26 +1694,24 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     return 0;
 }
 
-void printMFUdump(mfu_dump_t *card) {
-    printMFUdumpEx(card, 255, 0);
-}
-
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
-    PrintAndLogEx(NORMAL, "\n*special* data\n");
-    PrintAndLogEx(NORMAL, "\nDataType  | Data                    | Ascii");
-    PrintAndLogEx(NORMAL, "----------+-------------------------+---------");
-    PrintAndLogEx(NORMAL, "Version   | %s| %s", sprint_hex(card->version, sizeof(card->version)), sprint_ascii(card->version, sizeof(card->version)));
-    PrintAndLogEx(NORMAL, "TBD       | %-24s| %s", sprint_hex(card->tbo, sizeof(card->tbo)), sprint_ascii(card->tbo, sizeof(card->tbo)));
-    PrintAndLogEx(NORMAL, "TBD       | %-24s| %s", sprint_hex(card->tbo1, sizeof(card->tbo1)), sprint_ascii(card->tbo1, sizeof(card->tbo1)));
-    PrintAndLogEx(NORMAL, "Signature1| %s| %s", sprint_hex(card->signature, 16), sprint_ascii(card->signature, 16));
-    PrintAndLogEx(NORMAL, "Signature2| %s| %s", sprint_hex(card->signature + 16, 16), sprint_ascii(card->signature + 16, 16));
+
+    PrintAndLogEx(INFO, _CYAN_("MFU dump file information"));
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "      Version | " _YELLOW_("%s"), sprint_hex(card->version, sizeof(card->version)));
+    PrintAndLogEx(INFO, "        TBD 0 | %s", sprint_hex(card->tbo, sizeof(card->tbo)));
+    PrintAndLogEx(INFO, "        TBD 1 | %s", sprint_hex(card->tbo1, sizeof(card->tbo1)));
+    PrintAndLogEx(INFO, "    Signature | %s", sprint_hex(card->signature, sizeof(card->signature)));
     for (uint8_t i = 0; i < 3; i ++) {
-        PrintAndLogEx(NORMAL, "Counter%d  | %-24s| %s", i, sprint_hex(card->counter_tearing[i],     3), sprint_ascii(card->counter_tearing[i],     3));
-        PrintAndLogEx(NORMAL, "Tearing%d  | %-24s| %s", i, sprint_hex(card->counter_tearing[i] + 3, 1), sprint_ascii(card->counter_tearing[i] + 3, 1));
+        PrintAndLogEx(INFO, "    Counter %d | %s", i, sprint_hex(card->counter_tearing[i], 3));
+        PrintAndLogEx(INFO, "    Tearing %d | %s", i, sprint_hex(card->counter_tearing[i] + 3, 1));
     }
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, "\nBlock#   | Data        |lck| Ascii");
-    PrintAndLogEx(NORMAL, "---------+-------------+---+------");
+
+    PrintAndLogEx(INFO, "Max data page | " _YELLOW_("%d") " (" _YELLOW_("%d") " bytes)", card->pages - 1, card->pages * 4);
+    PrintAndLogEx(INFO, "  Header size | %d", MFU_DUMP_PREFIX_LENGTH);
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "block#   | data        |lck| ascii");
+    PrintAndLogEx(INFO, "---------+-------------+---+------");
 
     uint8_t j = 0;
     bool lckbit = false;
@@ -1739,12 +1737,12 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
         for (j = 0; j < 16; j++) {
             bit_dyn[j] = lockbytes_dyn[j / 8] & (1 << (7 - j % 8));
         }
-        PrintAndLogEx(NORMAL, "DYNAMIC LOCK: %s\n", sprint_hex(lockbytes_dyn, 3));
+        PrintAndLogEx(INFO, "DYNAMIC LOCK: %s", sprint_hex(lockbytes_dyn, 3));
     }
 
     for (uint8_t i = 0; i < pages; ++i) {
         if (i < 3) {
-            PrintAndLogEx(NORMAL, "%3d/0x%02X | %s|   | %s", i + startpage, i + startpage, sprint_hex(data + i * 4, 4), sprint_ascii(data + i * 4, 4));
+            PrintAndLogEx(INFO, "%3d/0x%02X | %s|   | %s", i + startpage, i + startpage, sprint_hex(data + i * 4, 4), sprint_ascii(data + i * 4, 4));
             continue;
         }
         switch (i) {
@@ -1838,9 +1836,9 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
             default:
                 break;
         }
-        PrintAndLogEx(NORMAL, "%3d/0x%02X | %s| %d | %s", i + startpage, i + startpage, sprint_hex(data + i * 4, 4), lckbit, sprint_ascii(data + i * 4, 4));
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s", i + startpage, i + startpage, sprint_hex(data + i * 4, 4), (lckbit) ? _RED_("1") : "0", sprint_ascii(data + i * 4, 4));
     }
-    PrintAndLogEx(NORMAL, "---------------------------------");
+    PrintAndLogEx(INFO, "---------------------------------");
 }
 
 //

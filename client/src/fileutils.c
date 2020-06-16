@@ -228,17 +228,20 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
 char *newfilenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
-    uint16_t preferredNameLen = strlen(preferredName);
+
+    uint16_t p_namelen = strlen(preferredName);
     if (str_endswith(preferredName, suffix))
-        preferredNameLen -= strlen(suffix);
-    char *fileName = (char *) calloc(preferredNameLen + strlen(suffix) + 1 + 10, sizeof(uint8_t)); // 10: room for filenum to ensure new filename
+        p_namelen -= strlen(suffix);
+
+    char *fileName = (char *) calloc(p_namelen + strlen(suffix) + 1 + 10, sizeof(uint8_t)); // 10: room for filenum to ensure new filename
     if (fileName == NULL) {
         return NULL;
     }
+
     int num = 1;
-    sprintf(fileName, "%.*s%s", preferredNameLen, preferredName, suffix);
+    sprintf(fileName, "%.*s%s", p_namelen, preferredName, suffix);
     while (fileExists(fileName)) {
-        sprintf(fileName, "%.*s-%d%s", preferredNameLen, preferredName, num, suffix);
+        sprintf(fileName, "%.*s-%d%s", p_namelen, preferredName, num, suffix);
         num++;
     }
     return fileName;
@@ -475,7 +478,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
-        case jsfMfPlusKeys:
+        case jsfMfPlusKeys: {
             JsonSaveStr(root, "FileType", "mfp");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
             JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
@@ -503,7 +506,8 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
                 }
             }
             break;
-        case jsfMfDesfireKeys:
+        }
+        case jsfMfDesfireKeys: {
             JsonSaveStr(root, "FileType", "mfdes");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
             JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
@@ -541,9 +545,11 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
                 }
             }
             break;
-        case jsfCustom:
+        }
+        case jsfCustom: {
             (*callback)(root);
             break;
+        }
         default:
             break;
     }
@@ -1363,6 +1369,17 @@ static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose)
 }
 
 static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
+/*  For reference
+typedef struct {
+    uint8_t version[8];
+    uint8_t tbo[2];
+    uint8_t tearing[3];
+    uint8_t pack[2];
+    uint8_t tbo1[1];
+    uint8_t signature[32];
+    uint8_t data[1024];
+} PACKED old_mfu_dump_t;
+*/
 
     // convert old format
     old_mfu_dump_t *old_mfu_dump = (old_mfu_dump_t *)*dump;
@@ -1386,8 +1403,10 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
     }
 
     memcpy(mfu_dump->data, old_mfu_dump->data, sizeof(mfu_dump->data));
-
     mfu_dump->pages = old_data_len / 4 - 1;
+    
+    // Add PACK to last block of memory. 
+    memcpy(mfu_dump->data + (mfu_dump->pages * 4 + MFU_DUMP_PREFIX_LENGTH), old_mfu_dump->pack, 2);
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);

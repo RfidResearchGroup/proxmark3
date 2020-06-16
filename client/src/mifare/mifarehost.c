@@ -865,7 +865,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 
 int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
     uint8_t block0[16] = {0x01, 0x02, 0x03, 0x04, 0x04, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBE, 0xAF};
-    uint8_t blockD[16] = {0x00};
+    //uint8_t blockD[16] = {0x00};
     uint8_t blockK[16] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x08, 0x77, 0x8F, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t params = MAGIC_SINGLE;
 
@@ -891,8 +891,8 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
             } else {
                 if (mfIsSectorTrailer(blockNo))
                     res = mfCSetBlock(blockNo, blockK, NULL, params);
-                else
-                    res = mfCSetBlock(blockNo, blockD, NULL, params);
+//                else
+//                    res = mfCSetBlock(blockNo, blockD, NULL, params);
             }
 
             if (res == PM3_SUCCESS)

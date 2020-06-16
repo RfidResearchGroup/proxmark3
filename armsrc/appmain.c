@@ -71,6 +71,8 @@
 uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax = -1;
 
+extern uint32_t _stack_start, _stack_end;
+
 
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
@@ -318,7 +320,7 @@ static void TimingIntervalAcquisition(void) {
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 static void printConnSpeed(void) {
-    DbpString(_BLUE_("Transfer Speed"));
+    DbpString(_CYAN_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
 #define CONN_SPEED_TEST_MIN_TIME 500 // in milliseconds
@@ -358,7 +360,14 @@ static void SendStatus(void) {
     printT55xxConfig(); // LF T55XX Config
 #endif
     printConnSpeed();
-    DbpString(_BLUE_("Various"));
+    DbpString(_CYAN_("Various"));
+    // pointer arithmetic is times 4. (two shifts to the left)
+    for (uint32_t *p = &_stack_start; ; ++p) {
+        if (*p != 0xdeadbeef) {
+            Dbprintf("  Max stack usage.........%d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
+            break;
+        }
+    }
     Dbprintf("  DBGLEVEL................%d", DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
@@ -377,7 +386,7 @@ static void SendStatus(void) {
         Dbprintf(_YELLOW_("  Slow Clock actual speed seems closer to %d kHz"),
                  (16 * MAINCK / 1000) / mainf * delta_time / SLCK_CHECK_MS);
     }
-    DbpString(_BLUE_("Installed StandAlone Mode"));
+    DbpString(_CYAN_("Installed StandAlone Mode"));
     ModInfo();
 
 #ifdef WITH_FLASH
@@ -392,6 +401,7 @@ static void SendCapabilities(void) {
     capabilities.version = CAPABILITIES_VERSION;
     capabilities.via_fpc = g_reply_via_fpc;
     capabilities.via_usb = g_reply_via_usb;
+    capabilities.bigbuf_size = BigBuf_get_size();
     capabilities.baudrate = 0; // no real baudrate for USB-CDC
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)
@@ -1659,12 +1669,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             // offset should not be over buffer
-            if (payload->offset >= BIGBUF_SIZE) {
+            if (payload->offset >= BigBuf_get_size()) {
                 reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_EOVFLOW, NULL, 0);
                 break;
             }
             // ensure len bytes copied wont go past end of bigbuf
-            uint16_t len = MIN(BIGBUF_SIZE - payload->offset, sizeof(payload->data));
+            uint16_t len = MIN(BigBuf_get_size() - payload->offset, sizeof(payload->data));
 
             uint8_t *mem = BigBuf_get_addr();
 
@@ -2054,8 +2064,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 void  __attribute__((noreturn)) AppMain(void) {
 
     SpinDelay(100);
-    clear_trace();
+    BigBuf_initialize();
 
+    for (uint32_t * p = &_stack_start; p < (uint32_t *)((uintptr_t)&_stack_end - 0x200); ++p) {
+        *p = 0xdeadbeef;
+    }
+    
     if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
         /* Initialize common area */
         memset(&common_area, 0, sizeof(common_area));
@@ -2120,6 +2134,10 @@ void  __attribute__((noreturn)) AppMain(void) {
 
     for (;;) {
         WDT_HIT();
+
+        if (_stack_start != 0xdeadbeef) {
+            Dbprintf("Stack overflow detected! Please increase stack size.");
+        }
 
         // Check if there is a packet available
         PacketCommandNG rx;

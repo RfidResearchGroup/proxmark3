@@ -53,22 +53,23 @@ static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "    lto      - interpret data as LTO-CM communications");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        trace list 14a f");
-    PrintAndLogEx(NORMAL, "        trace list iclass");
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace list 14a f"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace list iclass"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace list 14a 1"));
     return PM3_SUCCESS;
 }
 static int usage_trace_load(void) {
-    PrintAndLogEx(NORMAL, "Load protocol data from file to trace buffer.");
+    PrintAndLogEx(NORMAL, "Load protocol data from binary file to trace buffer");
     PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        trace load mytracefile.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace load mytracefile.trace"));
     return PM3_SUCCESS;
 }
 static int usage_trace_save(void) {
-    PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to file.");
+    PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to binary file");
     PrintAndLogEx(NORMAL, "Usage:  trace save <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        trace save mytracefile.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace save mytracefile.trace"));
     return PM3_SUCCESS;
 }
 

@@ -32,9 +32,6 @@
 #include "flash.h"
 #include "preferences.h"
 
-// Used to enable/disable use of preferences json file
-#define USE_PREFERENCE_FILE
-
 #define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
 #define BANNERMSG2 "   https://github.com/rfidresearchgroup/proxmark3/"
 #define BANNERMSG3 " bleeding edge :coffee:"
@@ -632,8 +629,6 @@ finish2:
     return ret;
 }
 
-#ifndef USE_PREFERENCE_FILE
-
 // Check if windows AnsiColor Support is enabled in the registery
 // [HKEY_CURRENT_USER\Console]
 //     "VirtualTerminalLevel"=dword:00000001
@@ -641,9 +636,9 @@ finish2:
 // [HKEY_CURRENT_USER\Console]
 //     "ForceV2"=dword:00000001
 
+#if defined(_WIN32)
 static bool DetectWindowsAnsiSupport(void) {
     bool ret = false;
-#if defined(_WIN32)
     HKEY hKey = NULL;
     bool virtualTerminalLevelSet = false;
     bool forceV2Set = false;
@@ -685,10 +680,8 @@ static bool DetectWindowsAnsiSupport(void) {
     }
     // If both VirtualTerminalLevel and ForceV2 is set, AnsiColor should work
     ret = virtualTerminalLevelSet && forceV2Set;
-#endif
     return ret;
 }
-
 #endif
 
 int main(int argc, char *argv[]) {
@@ -733,6 +726,28 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
+    // color management:
+    // 1. default = no color
+    // 2. enable colors if OS seems to support colors and if stdin/stdout aren't redirected
+    // 3. load prefs if available, overwrite colors choice if needed
+    // 4. disable colors anyway if stdin/stdout are redirected
+    //
+    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
+    //   struct stat tmp_stat;
+    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+    session.stdinOnTTY = isatty(STDIN_FILENO);
+    session.stdoutOnTTY = isatty(STDOUT_FILENO);
+    session.supports_colors = false;
+    session.emoji_mode = ALTTEXT;
+    if (session.stdinOnTTY && session.stdoutOnTTY) {
+#if defined(__linux__) || defined(__APPLE__)
+        session.supports_colors = true;
+        session.emoji_mode = EMOJI;
+#elif defined(_WIN32)
+        session.supports_colors = DetectWindowsAnsiSupport();
+        session.emoji_mode = ALTTEXT;
+#endif
+    }
     for (int i = 1; i < argc; i++) {
 
         if (argv[i][0] != '-') {
@@ -912,7 +927,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-#ifdef USE_PREFERENCE_FILE
     // Load Settings and assign
     // This will allow the command line to override the settings.json values
     preferences_load();
@@ -921,44 +935,13 @@ int main(int argc, char *argv[]) {
         g_debugMode = session.client_debug_level;
     // settings_save ();
     // End Settings
-#endif
 
-#ifndef USE_PREFERENCE_FILE
-    // comment next 2 lines to use session values set from settings_load
-    session.supports_colors = DetectWindowsAnsiSupport();
-    session.emoji_mode = ALTTEXT;
-#endif
-
-    session.stdinOnTTY = isatty(STDIN_FILENO);
-    session.stdoutOnTTY = isatty(STDOUT_FILENO);
-#if defined(__linux__) || defined(__APPLE__)
-    // it's okay to use color if:
-    // * Linux or OSX
-    // * Not redirected to a file but printed to term
-    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
-    //   struct stat tmp_stat;
-    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-#ifdef USE_PREFERENCE_FILE
-    if (!session.preferences_loaded) {
-        if (session.stdinOnTTY && session.stdoutOnTTY) {
-            session.supports_colors = true;
-            session.emoji_mode = EMOJI;
-        }
-    } else {
-        // even if prefs, we disable colors if stdin or stdout is not a TTY
-        if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
-            session.supports_colors = false;
-            session.emoji_mode = ALTTEXT;
-        }
+    // even if prefs, we disable colors if stdin or stdout is not a TTY
+    if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
+        session.supports_colors = false;
+        session.emoji_mode = ALTTEXT;
     }
-#else
-    if (session.stdinOnTTY && session.stdoutOnTTY) {
-        session.supports_colors = true;
-        session.emoji_mode = EMOJI;
-    }
-#endif
 
-#endif
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
         speed = USART_BAUD_RATE;
@@ -1013,7 +996,6 @@ int main(int argc, char *argv[]) {
     if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
         showBanner();
 
-#ifdef USE_PREFERENCE_FILE
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
@@ -1034,7 +1016,6 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
     */
-#endif
 
 #ifdef HAVE_GUI
 
@@ -1061,9 +1042,7 @@ int main(int argc, char *argv[]) {
         CloseProxmark();
     }
 
-#ifdef USE_PREFERENCE_FILE
     if (session.window_changed) // Plot/Overlay moved or resized
         preferences_save();
-#endif
     exit(EXIT_SUCCESS);
 }

@@ -26,6 +26,7 @@
 #include "dol.h"
 #include "ui.h"
 #include "emv_tags.h"
+#include "fileutils.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -1383,8 +1384,6 @@ static int CmdEMVScan(const char *Cmd) {
     size_t ODAI_listlen = 0;
     uint16_t sw = 0;
     int res;
-    json_t *root;
-    json_error_t error;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv scan",
@@ -1426,15 +1425,19 @@ static int CmdEMVScan(const char *Cmd) {
 
     bool GenACGPO = arg_get_lit(ctx, 9);
     bool MergeJSON = arg_get_lit(ctx, 10);
+
     EMVCommandChannel channel = ECC_CONTACTLESS;
     if (arg_get_lit(ctx, 11))
         channel = ECC_CONTACT;
+
     PrintChannel(channel);
+
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
-    uint8_t relfname[250] = {0};
-    char *crelfname = (char *)relfname;
-    int relfnamelen = 0;
-    CLIGetStrWithReturn(ctx, 12, relfname, &relfnamelen);
+
+    uint8_t filename[FILE_PATH_SIZE] = {0};
+    int filenamelen = 0;
+    CLIGetStrWithReturn(ctx, 12, filename, &filenamelen);
+
     CLIParserFree(ctx);
 
     if (!IfPm3Smartcard()) {
@@ -1446,16 +1449,13 @@ static int CmdEMVScan(const char *Cmd) {
 
     SetAPDULogging(showAPDU);
 
+    json_t *root;
+    json_error_t error;
+
     // current path + file name
-    if (!strstr(crelfname, ".json"))
-        strcat(crelfname, ".json");
-
-    char fname[strlen(get_my_executable_directory()) + strlen(crelfname) + 1];
-    strcpy(fname, get_my_executable_directory());
-    strcat(fname, crelfname);
-
     if (MergeJSON) {
-        root = json_load_file(fname, 0, &error);
+
+        root = json_load_file( (char*)filename, 0, &error);
         if (!root) {
             PrintAndLogEx(ERR, "Json error on line %d: %s", error.line, error.text);
             return PM3_EFILE;
@@ -1589,6 +1589,7 @@ static int CmdEMVScan(const char *Cmd) {
         JsonSaveTLVTree(root, root, "$.Application.FCITemplate", fci);
     else
         JsonSaveTLVTreeElm(root, "$.Application.FCITemplate", fci, true, true, false);
+
     tlvdb_free(fci);
 
     // create transaction parameters
@@ -1746,12 +1747,24 @@ static int CmdEMVScan(const char *Cmd) {
 
     DropFieldEx(channel);
 
-    res = json_dump_file(root, fname, JSON_INDENT(2));
+
+    if (MergeJSON == false) {
+        // create unique new name
+        char *fname = newfilenamemcopy((char*)filename, ".json");
+        if (fname == NULL) {
+            return PM3_EMALLOC;
+        }
+        strcpy((char*)filename, fname);
+        free(fname);
+    }
+
+    res = json_dump_file(root, (char*)filename, JSON_INDENT(2));
     if (res) {
-        PrintAndLogEx(ERR, "Can't save the file: %s", fname);
+        PrintAndLogEx(ERR, "Can't save the file: %s", filename);
         return PM3_EFILE;
     }
-    PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", fname);
+
+    PrintAndLogEx(SUCCESS, "File " _YELLOW_("`%s`") " saved.", filename);
 
     // free json object
     json_decref(root);

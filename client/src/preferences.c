@@ -52,9 +52,7 @@ int preferences_load(void) {
     session.overlay.y = 60 + session.plot.y + session.plot.h;
     session.overlay.h = 200;
     session.overlay.w = session.plot.w;
-    session.emoji_mode = ALIAS;
     session.show_hints = false;
-    session.supports_colors = false;
 
 //    setDefaultPath (spDefault, "");
 //    setDefaultPath (spDump, "");

@@ -1035,6 +1035,7 @@ static int CmdEM4x50Demod(const char *Cmd) {
 static int CmdEM4x50Read(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_read();
+    lf_read(false, 24000);
     return EM4x50Read(Cmd, true);
 }
 
@@ -1745,6 +1746,7 @@ static int CmdEM4x05Info(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
+    {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 410x") " -----------------------"},
     //{"410x_demod",  CmdEMdemodASK,        IfPm3Lf,         "Extract ID from EM410x tag on antenna)"},
     {"410x_demod",  CmdEM410xDemod,       AlwaysAvailable, "demodulate a EM410x tag from the GraphBuffer"},
     {"410x_read",   CmdEM410xRead,        IfPm3Lf,         "attempt to read and extract tag data"},
@@ -1753,14 +1755,14 @@ static command_t CommandTable[] = {
     {"410x_watch",  CmdEM410xWatch,       IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
     {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
     {"410x_write",  CmdEM410xWrite,       IfPm3Lf,         "write EM410x UID to T5555(Q5) or T55x7 tag"},
-
+    {"----------",  CmdHelp,              AlwaysAvailable,         "-------------------- " _CYAN_("EM 4x05 / 4x69") " -------------------"},
     {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
     {"4x05_wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},
     {"4x05_info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
     {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
-
+    {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 4x50") " -----------------------"},
     {"4x50_demod",  CmdEM4x50Demod,       AlwaysAvailable, "demodulate a EM4x50 tag from the GraphBuffer"},
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3Lf,         "dump EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3Lf,         "read word data from EM4x50"},

@@ -523,7 +523,7 @@ void Flash_EraseChip(void) {
 */
 
 void Flashmem_print_status(void) {
-    DbpString(_BLUE_("Flash memory"));
+    DbpString(_CYAN_("Flash memory"));
     Dbprintf("  Baudrate................" _GREEN_("%d MHz"), FLASHMEM_SPIBAUDRATE / 1000000);
 
     if (!FlashInit()) {
@@ -562,7 +562,7 @@ void Flashmem_print_info(void) {
 
     if (!FlashInit()) return;
 
-    DbpString(_BLUE_("Flash memory dictionary loaded"));
+    DbpString(_CYAN_("Flash memory dictionary loaded"));
 
     // load dictionary offsets.
     uint8_t keysum[2];

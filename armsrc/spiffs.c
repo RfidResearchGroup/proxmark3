@@ -536,13 +536,13 @@ int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, R
 ////////////////////////////////////////////////////////////////////////////////
 
 ///////// MISC HIGH LEVEL FUNCTIONS ////////////////////////////////////////////
-#define SPIFFS_BANNER  DbpString(_BLUE_("Flash Memory FileSystem tree (SPIFFS)"));
+#define SPIFFS_BANNER  DbpString(_CYAN_("Flash Memory FileSystem tree (SPIFFS)"));
 
 void rdv40_spiffs_safe_print_fsinfo(void) {
     rdv40_spiffs_fsinfo fsinfo;
     rdv40_spiffs_getfsinfo(&fsinfo, RDV40_SPIFFS_SAFETY_SAFE);
 
-    DbpString(_BLUE_("Flash Memory FileSystem Info (SPIFFS)"));
+    DbpString(_CYAN_("Flash Memory FileSystem Info (SPIFFS)"));
 
 
     Dbprintf("  Logical Block Size........." _YELLOW_("%d")" bytes", fsinfo.blockSize);
@@ -570,7 +570,7 @@ void rdv40_spiffs_safe_print_fsinfo(void) {
 void rdv40_spiffs_safe_print_tree(uint8_t banner) {
 
     if (banner) {
-        DbpString(_BLUE_("Flash Memory FileSystem tree (SPIFFS)"));
+        DbpString(_CYAN_("Flash Memory FileSystem tree (SPIFFS)"));
         Dbprintf("-------------------------------------");
     }
 

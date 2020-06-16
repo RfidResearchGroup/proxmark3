@@ -198,7 +198,7 @@ void printT55xxConfig(void) {
 
 #define PRN_NA   sprintf(s  + strlen(s), _RED_("N/A") " | ");
 
-    DbpString(_BLUE_("LF T55XX config"));
+    DbpString(_CYAN_("LF T55XX config"));
     Dbprintf("           [r]               [a]   [b]   [c]   [d]   [e]   [f]   [g]");
     Dbprintf("           mode            |start|write|write|write| read|write|write");
     Dbprintf("                           | gap | gap |  0  |  1  | gap |  2  |  3");

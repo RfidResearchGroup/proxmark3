@@ -115,11 +115,11 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 
 static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool ng) {
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Sending %s", ng ? "NG" : "MIX");
+    PrintAndLogEx(INFO, "Sending %s", ng ? "NG" : "MIX");
 #endif
 
     if (!session.pm3_present) {
-        PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
+        PrintAndLogEx(INFO, "Sending bytes to proxmark failed - offline");
         return;
     }
     if (len > PM3_CMD_DATA_SIZE) {
@@ -289,7 +289,8 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
             }
 
             if (flag & FLAG_LOG) {
-                PrintAndLogEx(NORMAL, "#db# %s", s);
+                //PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%s", s);
+                PrintAndLogEx(NORMAL, "[" _BLUE_("#") "] %s", s);
             } else {
                 if (flag & FLAG_INPLACE)
                     printf("\r");
@@ -303,7 +304,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
             if (! packet->ng)
-                PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+                PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
         }
         // iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of

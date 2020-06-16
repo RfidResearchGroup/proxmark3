@@ -12,7 +12,7 @@
 #include <stdio.h> // for Mingw readline
 #include <ctype.h> // tolower
 
-#ifndef ANDROID
+#ifdef HAVE_READLINE
 #include <readline/readline.h>
 #endif
 
