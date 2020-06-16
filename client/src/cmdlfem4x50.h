@@ -12,7 +12,11 @@
 #define CMDLFEM4X50_H__
 
 int usage_lf_em4x50_info(void);
+int usage_lf_em4x50_write(void);
+int usage_lf_em4x50_write_password(void);
 
 int CmdEM4x50Info(const char *Cmd);
+int CmdEM4x50Write(const char *Cmd);
+int CmdEM4x50WritePassword(const char *Cmd);
 
 #endif
