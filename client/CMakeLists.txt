@@ -482,11 +482,6 @@ add_custom_command(OUTPUT lualibs/mfc_default_keys.lua
         COMMENT "Creating lualibs/mfc_default_keys.lua"
         )
 
-add_custom_command(OUTPUT lualibs/mfc_default_keys.lua
-        COMMAND "awk -f default_keys_dic2lua.awk mfc_default_keys.dic >  lualibs/mfc_default_keys.lua"
-        COMMENT "Creating lualibs/mfc_default_keys.lua"
-        )
-
 #"make package" will trigger this
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Iceman")
