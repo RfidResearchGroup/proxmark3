@@ -1,5 +1,5 @@
 version: 3.0.1.{build}
-image: Visual Studio 2017
+image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3
 init:
 - ps: >-
@@ -26,6 +26,8 @@ init:
 clone_script:
 - ps: >-
     Write-Host "Removing ProxSpace..." -NoNewLine
+    
+    $CloneTime=[System.Environment]::TickCount
 
     cd \
 
@@ -150,13 +152,15 @@ clone_script:
  
     ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
     
+    Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$CloneTime) / 1000) sec" -Category Information
+    
     Write-Host "Update " -NoNewLine
     
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
 build_script:
 - ps: >-
-    "C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;$env:Path"
+    $env:Path="C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;c:\Python38;c:\Python38\Scripts;$env:Path"
 
     $env:MINGW_HOME="C:\ProxSpace\msys2\mingw32"
 
@@ -172,9 +176,13 @@ build_script:
 
     cd C:\ProxSpace\pm3
 
+    Write-Host "---------- make ----------" -ForegroundColor Yellow
+    
+    $TestTime=[System.Environment]::TickCount
+
     #make
 
-    bash -c -i 'pwd;make clean;make V=1'
+    bash -c -i 'echo $PATH;pwd;make clean;make V=1'
 
 
     #some checks
@@ -185,17 +193,80 @@ build_script:
 
     }
 
-    Write-Host "Builded..." -ForegroundColor Yellow
-test_script:
-- ps: >-
-    $env:Path = "C:\ProxSpace\msys\bin;$env:Path"
+    cd c:\ProxSpace\pm3
+
+    bash -c -i 'make check'
+
+    $testspass = ($LASTEXITCODE -eq 0)
+    
+    $global:TestsPassed=$testspass
+
+    if ($testspass) {
+      Add-AppveyorTest -Name "make Tests" -Framework NUnit -Filename "make check" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
+      Write-Host "make Tests [ OK ]" -ForegroundColor Green
+    } else {
+      Add-AppveyorTest -Name "make Tests" -Framework NUnit -Filename "make check" -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
+      Write-Host "make Tests [ ERROR ]" -ForegroundColor Red
+      throw "Tests error."
+    }
+    
+    Write-Host "---------- btaddon ----------" -ForegroundColor Yellow
+    
+    $TestTime=[System.Environment]::TickCount
+
+    bash -c -i 'pwd;make clean;make PLATFORM_EXTRAS=BTADDON'
 
     cd c:\ProxSpace\pm3
 
     bash -c -i 'make check'
 
-    $global:TestsPassed=$true
+    $testspass = ($LASTEXITCODE -eq 0)
 
+    $global:TestsPassed=(($global:TestsPassed) -and ($testspass))
+    
+    if ($testspass) {
+      Add-AppveyorTest -Name "BTaddon Tests" -Framework NUnit -Filename "make check" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
+      Write-Host "BTaddon Tests [ OK ]" -ForegroundColor Green
+    } else {
+      Add-AppveyorTest -Name "BTaddon Tests" -Framework NUnit -Filename "make check" -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
+      Write-Host "BTaddon Tests [ ERROR ]" -ForegroundColor Red
+    }
+    
+    Write-Host "---------- make clean ----------" -ForegroundColor Yellow
+    
+    bash -c -i 'make clean'
+    
+    #Write-Host "---------- cmake ----------" -ForegroundColor Yellow
+    
+    #$TestTime=[System.Environment]::TickCount
+
+    #$script='C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start -c "mkdir -p client/build; cd client/build; pwd; cmake -G`"MSYS Makefiles`" ..; ls; make VERBOSE=1;"'
+    
+    #$script="$script"
+
+    #$scriptblk=[scriptblock]::Create("$script")
+
+    #$res=&$scriptblk
+
+    
+    #Write-Host "---------- make ok ----------" -ForegroundColor Yellow
+
+    #bash -c -i 'make check CHECKARGS="--clientbin ./client/build/proxmark3"'
+    
+    #$testspass = ($LASTEXITCODE -eq 0)
+
+    #$global:TestsPassed=(($global:TestsPassed) -and ($testspass))
+    
+    if ($testspass) {
+      Add-AppveyorTest -Name "cmake Tests" -Framework NUnit -Filename "make client/check" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
+      Write-Host "cmake Tests [ OK ]" -ForegroundColor Green
+    } else {
+      Add-AppveyorTest -Name "cmake Tests" -Framework NUnit -Filename "make client/check" -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
+      Write-Host "cmake Tests [ ERROR ]" -ForegroundColor Red
+    }
+    
+test_script:
+- ps: >-
     if ($global:TestsPassed) {
       Write-Host "Tests [ OK ]" -ForegroundColor Green
     } else {
@@ -207,4 +278,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: # $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
