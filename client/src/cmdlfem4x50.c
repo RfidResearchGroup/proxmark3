@@ -32,6 +32,31 @@ int usage_lf_em4x50_info(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x50_info v p fa225de1\n");
     return PM3_SUCCESS;
 }
+int usage_lf_em4x50_write(void) {
+    PrintAndLogEx(NORMAL, "Write EM4x50 word. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write [h] a <address> w <data>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       a <addr>  - memory address to write to (dec)");
+    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf em 4x50_write a 3 w deadc0de");
+    return PM3_SUCCESS;
+}
+int usage_lf_em4x50_write_password(void) {
+    PrintAndLogEx(NORMAL, "Write EM4x50 password. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write_password [h] p <pwd> n <pwd>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
+    PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf em 4x50_write_password p 11223344 n 01020304");
+    return PM3_SUCCESS;
+}
 
 static uint8_t msb2lsb(uint8_t byte) {
 
@@ -216,7 +241,7 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
 
 static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool bverbose) {
 
-    // displays all information info result in structured format
+    // display all information info result in structured format
     
     bool bpwd_given = etd->pwd_given;
     bool bsuccess = (bool)resp->oldarg[0];
@@ -319,10 +344,10 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     PrintAndLogEx(NORMAL,"%s", string);
     string[0] = '\0';
 
-    PrintAndLogEx(NORMAL, "\n  Zero values may indicate read protection!");
+    PrintAndLogEx(NORMAL, "\n  zero values may indicate read protection!");
     
     // status line
-    sprintf(pstring, "\n  reading ");
+    sprintf(pstring, "  reading ");
     strcat(string, pstring);
 
     if (!bsuccess) {
@@ -346,7 +371,7 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
             
             } else {
 
-                sprintf(pstring, "(login with default password)");
+                sprintf(pstring, "(login with default password 0x00000000)");
                 strcat(string, pstring);
 
             }
@@ -373,7 +398,7 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
 
 int CmdEM4x50Info(const char *Cmd) {
 
-    // envokes reading of a EM4x50 tag which has to be on the antenna because
+    // envoke reading of a EM4x50 tag which has to be on the antenna because
     // decoding is done by the device (not on client side)
 
     bool errors = false, verbose = false;
@@ -382,6 +407,9 @@ int CmdEM4x50Info(const char *Cmd) {
     em4x50_data_t etd;
     PacketResponseNG resp;
 
+    // init
+    etd.pwd_given = false;
+    
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
 
@@ -437,5 +465,256 @@ int CmdEM4x50Info(const char *Cmd) {
     // prepare result
     print_info_result(&resp, &etd, verbose);
 
+    return ((bool)resp.oldarg[0]) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
+    
+    // display result of writing operation in structured format
+
+    bool pwd_given = etd->pwd_given;
+    bool success = (bool)resp->oldarg[0];
+    bool login = (bool)resp->oldarg[1];
+    uint8_t *data = resp->data.asBytes;
+    char string[400] = {0};
+    char pstring[100] = {0};
+    em4x50_word_t word[1];
+
+    if (!success) {
+        
+        sprintf(pstring, "\n  writing " _RED_("failed"));
+        strcat(string, pstring);
+
+    } else {
+            
+        prepare_result(data, etd->address, etd->address, &word[0]);
+        print_result(word, etd->address, etd->address);
+
+        sprintf(pstring, "\n  writing " _GREEN_("successful "));
+        strcat(string, pstring);
+
+        if (pwd_given) {
+
+            if (login) {
+                sprintf(pstring, "(login with 0x%02x%02x%02x%02x)",
+                                    etd->password[0], etd->password[1],
+                                    etd->password[2], etd->password[3]);
+                strcat(string, pstring);
+            } else {
+                sprintf(pstring, "(login failed)");
+                strcat(string, pstring);
+            }
+
+        } else {
+            sprintf(pstring, "(no login)");
+            strcat(string, pstring);
+        }
+    }
+
+    PrintAndLogEx(NORMAL,"%s\n", string);
+}
+
+int CmdEM4x50Write(const char *Cmd) {
+
+    // envoke writing a single word (32 bit) to a EM4x50 tag
+
+    bool errors = false, baddress = false, bword = false;
+    char password[20] = {0x00}, word[20] = {0x00}, tmpbuff[3];
+    int address = 0;
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+
+    // init
+    etd.pwd_given = false;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_write();
+
+            case 'p':
+                param_getstr(Cmd, cmdp + 1, password, sizeof(password));
+              
+                // validation
+                if (strlen(password) != 8) {
+                    PrintAndLogEx(WARNING, "\n  error, password has to be 4 bytes\n");
+                    errors = true;
+                    break;
+                }
+              
+                // prepare given password
+                etd.pwd_given = true;
+                for (int i = 0; i < 4; i++)
+                    sscanf(strncpy(tmpbuff, password+2*i, 2), "%2hhx", &etd.password[i]);
+                  
+                cmdp += 2;
+                break;
+
+            case 'w':
+                param_getstr(Cmd, cmdp + 1, word, sizeof(word));
+              
+                // validation
+                if (strlen(word) != 8) {
+                    PrintAndLogEx(WARNING, "\n  error, word has to be 4 bytes\n");
+                    errors = true;
+                    break;
+                } else {
+                    bword = true;
+                }
+              
+                // prepare given word
+                for (int i = 0; i < 4; i++)
+                    sscanf(strncpy(tmpbuff, word+2*i, 2), "%2hhx", &etd.word[i]);
+                  
+                cmdp += 2;
+                break;
+
+            case 'a':
+                param_getstr(Cmd, cmdp + 1, tmpbuff, sizeof(address));
+                address = atoi(tmpbuff);
+                
+                // validation
+                if (address < 1 || address > 31) {
+                    PrintAndLogEx(WARNING, "\n  error, address has to be in range [1-31]\n");
+                    errors = true;
+                    break;
+                } else {
+                    baddress = true;
+                }
+
+                etd.address = address;
+
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || !baddress || !bword)
+         return usage_lf_em4x50_write();
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_LF_EM4X50_WRITE, 0, 0, 0, &etd, sizeof(etd));
+
+    if (!WaitForResponse(CMD_ACK, &resp)) {
+        PrintAndLogEx(WARNING, "\n  timeout while waiting for reply.\n");
+        return PM3_ESOFT;
+    }
+    
+    // get, prepare and print response
+    print_write_result(&resp, &etd);
+    
+    return ((bool)resp.oldarg[0]) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static void print_write_password_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
+    
+    // display result of password changing operation
+
+    bool success = (bool)resp->oldarg[0];
+    char string[400] = {0};
+    char pstring[100] = {0};
+
+    if (!success) {
+        
+        sprintf(pstring, "\n  writing new password " _RED_("failed"));
+        strcat(string, pstring);
+
+    } else {
+        
+        sprintf(pstring, "\n  writing new password " _GREEN_("successful"));
+        strcat(string, pstring);
+    }
+
+    PrintAndLogEx(NORMAL,"%s\n", string);
+}
+
+int CmdEM4x50WritePassword(const char *Cmd) {
+
+    // envokes changing the password of EM4x50 tag
+
+    bool errors = false, bpwd = false, bnewpwd = false;
+    char password[20] = {0x00}, new_password[20] = {0x00}, tmpbuff[3];
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+
+    // init
+    etd.pwd_given = false;
+    etd.newpwd_given = false;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_write_password();
+
+            case 'p':
+                param_getstr(Cmd, cmdp + 1, password, sizeof(password));
+              
+                // validation
+                if (strlen(password) != 8) {
+                    PrintAndLogEx(WARNING, "\n  error, passwords has to be 4 bytes\n");
+                    errors = true;
+                    break;
+                } else {
+                    bpwd = true;
+                }
+              
+                // prepare given password
+                etd.pwd_given = true;
+                for (int i = 0; i < 4; i++)
+                    sscanf(strncpy(tmpbuff, password+2*i, 2), "%2hhx", &etd.password[i]);
+                  
+                cmdp += 2;
+                break;
+
+            case 'n':
+                param_getstr(Cmd, cmdp + 1, new_password, sizeof(new_password));
+              
+                // validation
+                if (strlen(new_password) != 8) {
+                    PrintAndLogEx(WARNING, "\n  error, passwords have to be 4 bytes\n");
+                    errors = true;
+                    break;
+                } else {
+                    bnewpwd = true;
+                }
+              
+                // prepare given password
+                etd.newpwd_given = true;
+                for (int i = 0; i < 4; i++)
+                    sscanf(strncpy(tmpbuff, new_password+2*i, 2), "%2hhx", &etd.new_password[i]);
+                  
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || !bpwd || !bnewpwd)
+         return usage_lf_em4x50_write_password();
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_LF_EM4X50_WRITE_PASSWORD, 0, 0, 0, &etd, sizeof(etd));
+
+    if (!WaitForResponse(CMD_ACK, &resp)) {
+        PrintAndLogEx(WARNING, "\n  timeout while waiting for reply.\n");
+        return PM3_ESOFT;
+    }
+    
+    // get, prepare and print response
+    print_write_password_result(&resp, &etd);
+    
     return ((bool)resp.oldarg[0]) ? PM3_SUCCESS : PM3_ESOFT;
 }
