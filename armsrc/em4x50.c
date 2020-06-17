@@ -220,7 +220,7 @@ static void em4x50_setup_read(void) {
     //   TIMER_CLOCK0, used to measure exact timing before answering
     //   TIMER_CLOCK1, used to capture edges of the tag frames
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME; // wofür ist das?
+    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
