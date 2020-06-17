@@ -192,7 +192,7 @@ static void print_bit_table(const em4x50_word_t word) {
     strcat(string, pstring);
     
     // parities passed/failed
-    sprintf(pstring, (word.parity) ? _GREEN_("passed") : _RED_("failed"));
+    sprintf(pstring, (word.parity) ? _GREEN_("ok") : _RED_("failed"));
     strcat(string, pstring);
 
     PrintAndLogEx(NORMAL,string);
