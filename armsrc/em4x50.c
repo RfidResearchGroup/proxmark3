@@ -12,6 +12,7 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "lfadc.h"
+#include "commonutil.h"
 #include "em4x50.h"
 
 // 4 data bytes
@@ -118,28 +119,16 @@ static uint8_t bits2byte(uint8_t bits[8], int length) {
     return byte;
 }
 
-static uint8_t msb2lsb(uint8_t byte) {
-
-    // returns byte with bit positions in reverse order
-    
-    uint8_t tmp = 0;
-    
-    for (int i = 0; i < 8; i++)
-        tmp |= ((byte >> (7-i)) & 1) << i;
-    
-    return tmp;
-}
-
 static void msb2lsb_word(uint8_t *word) {
     
     // reorders given <word> according to EM4x50 datasheet (msb -> lsb)
     
     uint8_t buff[4];
     
-    buff[0] = msb2lsb(word[3]);
-    buff[1] = msb2lsb(word[2]);
-    buff[2] = msb2lsb(word[1]);
-    buff[3] = msb2lsb(word[0]);
+    buff[0] = reflect8(word[3]);
+    buff[1] = reflect8(word[2]);
+    buff[2] = reflect8(word[1]);
+    buff[3] = reflect8(word[0]);
 
     word[0] = buff[0];
     word[1] = buff[1];
