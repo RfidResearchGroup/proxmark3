@@ -123,6 +123,14 @@ else()
     find_package (BZip2 REQUIRED)
 endif(ANDROID)
 
+if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
+    find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
+    find_library(WHEREAMI_LIBRARIES whereami)
+    if (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
+        set(WHEREAMI_FOUND ON)
+    endif (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
+endif (NOT SKIPWHEREAMISYSTEM EQUAL 1)
+
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
@@ -327,12 +335,16 @@ if (NOT SKIPREADLINE EQUAL 1)
         set(ADDITIONAL_LNK ${READLINE_LIBRARIES} ${ADDITIONAL_LNK})
     endif (READLINE_FOUND)
 endif(NOT SKIPREADLINE EQUAL 1)
+
 if (BZIP2_FOUND)
     set(ADDITIONAL_DIRS ${BZIP2_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
-else (BZIP2_FOUND)
-    message(FATAL_ERROR "Bzip2 not found")
 endif (BZIP2_FOUND)
+
+if (WHEREAMI_FOUND)
+    set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
+endif (WHEREAMI_FOUND)
 
 message("===================================================================")
 if (SKIPQT EQUAL 1)
@@ -376,6 +388,16 @@ else (SKIPREADLINE EQUAL 1)
         message("Readline library:  Readline not found, disabled")
     endif (READLINE_FOUND)
 endif(SKIPREADLINE EQUAL 1)
+
+if (SKIPWHEREAMISYSTEM EQUAL 1)
+    message("Whereami library:  local library forced")
+else (SKIPWHEREAMISYSTEM EQUAL 1)
+    if (WHEREAMI_FOUND)
+        message("Whereami library:  system library found")
+    else (WHEREAMI_FOUND)
+        message("Whereami library:  system library not found, using local library")
+    endif (WHEREAMI_FOUND)
+endif (SKIPWHEREAMISYSTEM EQUAL 1)
 message("===================================================================")
 
 add_executable(proxmark3
@@ -425,7 +447,11 @@ find_library(pm3rrg_rdv4_lua REQUIRED)
 find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
-find_library(pm3rrg_rdv4_whereami REQUIRED)
+
+if (NOT WHEREAMI_FOUND)
+    find_library(pm3rrg_rdv4_whereami REQUIRED)
+    set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
+endif (NOT WHEREAMI_FOUND)
 
 target_link_libraries(proxmark3 PRIVATE
         m
@@ -437,7 +463,6 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_hardnested
-        pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)

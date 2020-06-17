@@ -58,9 +58,9 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | dep reveng | in_deps | in_deps | |
 | `SKIPREVENGTEST` | yes(1) | **no**(2) | (1) e.g. if cross-compilation (2) tests aren't compiled/ran with cmake |
 | dep tinycbor | in_deps | in_deps |   |
-| dep whereami | sys / in_deps | **in_deps only** |   |
-| whereami detection | **search /usr/include/whereami.h** | **none** | no .pc available |
-| `SKIPWHEREAMISYSTEM` | yes | **no** |   |
+| dep whereami | sys / in_deps | sys / in_deps |   |
+| whereami detection | **search /usr/include/whereami.h** | find* | no .pc available |
+| `SKIPWHEREAMISYSTEM` | yes | yes |   |
 | version | mkversion | mkversion | |
 | install | yes (1) | **no** | (1) supports `DESTDIR`, `PREFIX`, `UDEV_PREFIX`. Installs resources as well, `INSTALL*RELPATH` |
 | deb | no | partial? | |
