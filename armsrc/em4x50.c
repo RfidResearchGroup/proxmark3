@@ -341,39 +341,23 @@ static void em4x50_send_byte(uint8_t byte) {
 
     // send byte (without parity)
     
-    int mask = 0x80;
+    for (int i = 0; i < 8; i++)
+        em4x50_send_bit((byte >> (7-i)) & 1);
 
-    for (int i = 0; i < 8; i++) {
-
-        if ((byte & mask) == 0)
-            em4x50_send_bit(0);
-        else
-            em4x50_send_bit(1);
-        
-        mask >>= 1;
-    }
 }
 
 static void em4x50_send_byte_with_parity(uint8_t byte) {
 
     // send byte followed by its (equal) parity bit
     
-    int parity = 0;
-    int mask = 0x80;
-
-    for (int i = 0; i < 8; i++) {
-        
-        if ((byte & mask) == 0) {
-            em4x50_send_bit(0);
-            parity ^= 0;
-        } else {
-            em4x50_send_bit(1);
-            parity ^= 1;
-        }
-        
-        mask >>= 1;
-    }
+    int parity = 0, bit = 0;
     
+    for (int i = 0; i < 8; i++) {
+        bit = (byte >> (7-i)) & 1;
+        em4x50_send_bit(bit);
+        parity ^= bit;
+    }
+
     em4x50_send_bit(parity);
 }
 
