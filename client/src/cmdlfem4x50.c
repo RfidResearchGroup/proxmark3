@@ -459,7 +459,7 @@ int CmdEM4x50Info(const char *Cmd) {
     // get result
     if (!WaitForResponse(CMD_ACK, &resp)) {
         PrintAndLogEx(WARNING, "  timeout while waiting for reply.");
-        return PM3_ESOFT;
+        return PM3_ETIMEOUT;
     }
     
     // prepare result
@@ -604,7 +604,7 @@ int CmdEM4x50Write(const char *Cmd) {
 
     if (!WaitForResponse(CMD_ACK, &resp)) {
         PrintAndLogEx(WARNING, "\n  timeout while waiting for reply.\n");
-        return PM3_ESOFT;
+        return PM3_ETIMEOUT;
     }
     
     // get, prepare and print response
@@ -710,7 +710,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 
     if (!WaitForResponse(CMD_ACK, &resp)) {
         PrintAndLogEx(WARNING, "\n  timeout while waiting for reply.\n");
-        return PM3_ESOFT;
+        return PM3_ETIMEOUT;
     }
     
     // get, prepare and print response
