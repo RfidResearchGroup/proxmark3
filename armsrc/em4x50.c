@@ -584,7 +584,8 @@ static bool login(uint8_t password[4]) {
             return true;
     
     } else {
-        Dbprintf("error in command request");
+         if (DBGLEVEL >= DBG_ERROR)
+             Dbprintf("error in command request");
     }
     
     return false;
@@ -605,7 +606,8 @@ static bool reset(void) {
             return true;
 
     } else {
-        Dbprintf("error in command request");
+         if (DBGLEVEL >= DBG_ERROR)
+             Dbprintf("error in command request");
     }
 
     return false;
@@ -634,7 +636,8 @@ static bool standard_read(int *now) {
         return true;
 
     } else {
-        Dbprintf("didn't find a listen window");
+         if (DBGLEVEL >= DBG_ERROR)
+             Dbprintf("didn't find a listen window");
     }
 
     return false;
@@ -667,7 +670,8 @@ static bool selective_read(uint8_t addresses[4]) {
                     return true;
         
     } else {
-        Dbprintf("error in command request");
+         if (DBGLEVEL >= DBG_ERROR)
+             Dbprintf("error in command request");
     }
 
     return false;
@@ -736,7 +740,8 @@ static bool write(uint8_t word[4], uint8_t address) {
         }
 
     } else {
-        Dbprintf("error in command request");
+         if (DBGLEVEL >= DBG_ERROR)
+             Dbprintf("error in command request");
     }
 
     return false;
@@ -774,7 +779,8 @@ static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
         }
 
     } else {
-        Dbprintf("error in command request");
+         if (DBGLEVEL >= DBG_ERROR)
+             Dbprintf("error in command request");
     }
 
     return false;
