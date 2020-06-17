@@ -217,19 +217,19 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
         print_bit_table(words[i]);
          
         // final result
-        sprintf(pstring, "\n  word[%i] msb: " _BLUE_("0x"), i);
+        sprintf(pstring, "\n  word[%i] msb: " _GREEN_("0x"), i);
         strcat(string, pstring);
 
         for (int j = 0; j < 4; j++) {
-            sprintf(pstring, _BLUE_("%02x"), words[i].byte[j]);
+            sprintf(pstring, _GREEN_("%02x"), words[i].byte[j]);
             strcat(string, pstring);
         }
         
-        sprintf(pstring, "\n  word[%i] lsb: " _BLUE_("0x"), i);
+        sprintf(pstring, "\n  word[%i] lsb: " _GREEN_("0x"), i);
         strcat(string, pstring);
 
         for (int j = 0; j < 4; j++) {
-            sprintf(pstring, _BLUE_("%02x"), msb2lsb(words[i].byte[3-j]));
+            sprintf(pstring, _GREEN_("%02x"), msb2lsb(words[i].byte[3-j]));
             strcat(string, pstring);
         }
         
@@ -287,19 +287,19 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
             
             switch(i) {
                 case 0:
-                    sprintf(pstring, _BLUE_("  password, write only"));
+                    sprintf(pstring, _YELLOW_("  password, write only"));
                     break;
                 case 1:
-                    sprintf(pstring, _BLUE_("  protection word, write inhibited"));
+                    sprintf(pstring, _YELLOW_("  protection word, write inhibited"));
                     break;
                 case 2:
-                    sprintf(pstring, _BLUE_("  control word, write inhibited"));
+                    sprintf(pstring, _YELLOW_("  control word, write inhibited"));
                     break;
                 case 32:
-                    sprintf(pstring, _BLUE_("  device serial number, read only"));
+                    sprintf(pstring, _YELLOW_("  device serial number, read only"));
                     break;
                 case 33:
-                    sprintf(pstring, _BLUE_("  device identification, read only"));
+                    sprintf(pstring, _YELLOW_("  device identification, read only"));
                     break;
                 default:
                     sprintf(pstring, "  user data");
