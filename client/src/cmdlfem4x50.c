@@ -456,7 +456,8 @@ int CmdEM4x50Info(const char *Cmd) {
 
     // call info command
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_EM4X50_INFO, 0, 0, 0, &etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
+
 
     // get result
     if (!WaitForResponse(CMD_ACK, &resp)) {
@@ -602,7 +603,8 @@ int CmdEM4x50Write(const char *Cmd) {
          return usage_lf_em4x50_write();
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_EM4X50_WRITE, 0, 0, 0, &etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
+
 
     if (!WaitForResponse(CMD_ACK, &resp)) {
         PrintAndLogEx(WARNING, "\n  timeout while waiting for reply.\n");
@@ -708,7 +710,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
          return usage_lf_em4x50_write_password();
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_EM4X50_WRITE_PASSWORD, 0, 0, 0, &etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X50_WRITE_PASSWORD, (uint8_t *)&etd, sizeof(etd));
 
     if (!WaitForResponse(CMD_ACK, &resp)) {
         PrintAndLogEx(WARNING, "\n  timeout while waiting for reply.\n");
