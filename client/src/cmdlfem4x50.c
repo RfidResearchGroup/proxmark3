@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include "fileutils.h"
 #include "comms.h"
+#include "commonutil.h"
 #include "em4x50.h"
 
 #define EM4x50_FCT_STDREAD  0
@@ -58,6 +59,7 @@ int usage_lf_em4x50_write_password(void) {
     return PM3_SUCCESS;
 }
 
+/*
 static uint8_t msb2lsb(uint8_t byte) {
 
     // convert given byte (msb) into lsb format
@@ -69,7 +71,7 @@ static uint8_t msb2lsb(uint8_t byte) {
     
     return tmp;
 }
-
+*/
 static bool check_bit_in_byte(uint8_t pos, uint8_t byte) {
     
     // return true if bit at position <pos> is "1"
@@ -163,9 +165,9 @@ static void print_bit_table(const em4x50_word_t word) {
         strcat(string, pstring);
         
         if (j == 0)
-            sprintf(pstring, "  msb: 0x%02x  lsb: 0x%02x", word.byte[j], msb2lsb(word.byte[j]));
+            sprintf(pstring, "  msb: 0x%02x  lsb: 0x%02x", word.byte[j], reflect8(word.byte[j]));
         else
-            sprintf(pstring, "       0x%02x       0x%02x", word.byte[j], msb2lsb(word.byte[j]));
+            sprintf(pstring, "       0x%02x       0x%02x", word.byte[j], reflect8(word.byte[j]));
         
         strcat(string, pstring);
         PrintAndLogEx(NORMAL,string);
@@ -229,7 +231,7 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
         strcat(string, pstring);
 
         for (int j = 0; j < 4; j++) {
-            sprintf(pstring, _GREEN_("%02x"), msb2lsb(words[i].byte[3-j]));
+            sprintf(pstring, _GREEN_("%02x"), reflect8(words[i].byte[3-j]));
             strcat(string, pstring);
         }
         
@@ -257,12 +259,12 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
 
     bpwc = check_bit_in_byte(7, words[2].byte[2]);   // password check
     braw = check_bit_in_byte(6, words[2].byte[2]);   // read after write
-    fwr = msb2lsb(words[2].byte[0]);    // first word read
-    lwr = msb2lsb(words[2].byte[1]);    // last word read
-    fwrp = msb2lsb(words[1].byte[0]);   // first word read protected
-    lwrp = msb2lsb(words[1].byte[1]);   // last word read protected
-    fwwi = msb2lsb(words[1].byte[2]);   // first word write inhibited
-    lwwi = msb2lsb(words[1].byte[3]);   // last word write inhibited
+    fwr = reflect8(words[2].byte[0]);    // first word read
+    lwr = reflect8(words[2].byte[1]);    // last word read
+    fwrp = reflect8(words[1].byte[0]);   // first word read protected
+    lwrp = reflect8(words[1].byte[1]);   // last word read protected
+    fwwi = reflect8(words[1].byte[2]);   // first word write inhibited
+    lwwi = reflect8(words[1].byte[3]);   // last word write inhibited
     
     // data section
     PrintAndLogEx(NORMAL, _YELLOW_("\n  em4x50 data:"));
