@@ -16,8 +16,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | verbose | V=1 | VERBOSE=1 |   |
 | warnings management | yes (1) | **no** | (1) cf Makefile.defs |
 | compilation | in place | in build dir | |
-| user `CFLAGS`/`LDFLAGS` | honored (1) | **no/auto?** | (1) also `LDLIBS` and `INCLUDES_CLIENT` as envvars for more tuning |
-| `PKG_CONFIG_ENV` | yes | **no/auto?** | |
+| user `CFLAGS`/`LDFLAGS` | envvars honored (1) | envvars honored (2) | (1) also `LDLIBS` and `INCLUDES_CLIENT` for more tuning (2) only at first cmake call |
 | Mingw gnu printf | `_ISOC99_SOURCE` | `_ISOC99_SOURCE` | and in cbor.h: `__attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)))`|
 | C++ | c++11 | gnu++14 | |
 | dep amiibo | in_deps | in_deps |   |
@@ -27,28 +26,28 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | bluez detection | pc | pkg_search_module |   |
 | `SKIPBT` | yes | yes |   |
 | dep bzip2 | sys | sys |   |
-| bzip2 detection | **none** | **none**, Android:gitclone | |
+| bzip2 detection | **none** | find_package, Android:gitclone | |
 | dep cliparser | in_deps | in_deps |   |
 | dep hardnested | in_deps | in_deps |   |
-| hardn arch autodetect | (1) | (2) | (1) uname -m == 86 or amd64; gcc -E -mavx512f? +-AVX512 (2) CMAKE_SYSTEM_PROCESSOR == x86 or x86_64 or i686 or AMD64 (always incl. AVX512) |
+| hardn arch autodetect | `uname -m` =? 86 or amd64; `$(CC) -E -mavx512f`? +AVX512` |  `CMAKE_SYSTEM_PROCESSOR` =? x86 or x86_64 or i686 or AMD64 (1) | (1) currently it always includes AVX512 on Intel arch |
 | `cpu_arch` | yes | **no/auto?** | e.g. `cpu_arch=generic` for cross-compilation
-| dep jansson | sys / in_deps | **in_deps only** |   |
-| jansson detection | pc | **none** |   |
-| `SKIPJANSSONSYSTEM` | yes | **no** |   |
+| dep jansson | sys / in_deps | sys / in_deps |   |
+| jansson detection | pc | pc/find* |   |
+| `SKIPJANSSONSYSTEM` | yes | yes |   |
 | dep lua | sys / in_deps(1) | **in_deps only**(2) | (1) manual def of `LUAPLATFORM` for mingw/macosx/linux (2) manual, different?, for Android too |
 | lua detection | pc | **none** |   |
 | `SKIPLUASYSTEM` | yes | **no** |   |
-| lualibs/pm3_cmd.lua | yes | **add_custom_command used?** |
-| lualibs/mfc_default_keys.lua | yes | **add_custom_command used?** |
-| dep lz4 |  |  | (in_common) not yet used, future |
+| lualibs/pm3_cmd.lua | yes | add_custom_command **but unused** | |
+| lualibs/mfc_default_keys.lua | yes | add_custom_command **but unused** | |
+| dep lz4 |  |  | (in_common) not yet used, future. See `get_lz4.sh` for upstream fetch & patch |
 | dep libm | sys | sys | |
-| libm detection | none | **none/auto?** | |
+| libm detection | **none** | **none** (1) | (1) cf https://cmake.org/pipermail/cmake/2019-March/069168.html ? |
 | dep mbedtls | in_common | in_common | no sys lib: missing support for CMAC in def conf (btw no .pc available) |
 | dep python3 | opt, sys, <3.8 & 3.8 | opt, sys, <3.8 & 3.8 |   |
 | python3 detection | pc | pkg_search_module | |
 | `SKIPPYTHON`  | yes | yes |   |
 | dep pthread | sys | sys |  |
-| pthread detection | **none** | **none** |   |
+| pthread detection | **none** | **none** (1) | (1) cf https://stackoverflow.com/questions/1620918/cmake-and-libpthread ? |
 | `SKIPPTHREAD` | yes | yes | e.g. for termux |
 | dep Qt | opt, sys, Qt5 & Qt4 | opt, sys, Qt5 |  |
 | Qt detection | pc(qt5)/pc(qt4)/`QTDIR`(1) (2) | find_package(qt5) (3) | (1) if `QTDIR`: hardcode path (2) OSX: pkg-config hook for Brew (3) OSX: add search path|
@@ -59,9 +58,9 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | dep reveng | in_deps | in_deps | |
 | `SKIPREVENGTEST` | yes(1) | **no**(2) | (1) e.g. if cross-compilation (2) tests aren't compiled/ran with cmake |
 | dep tinycbor | in_deps | in_deps |   |
-| dep whereami | sys / in_deps | **in_deps only** |   |
-| whereami detection | **search /usr/include/whereami.h** | **none** | no .pc available |
-| `SKIPWHEREAMISYSTEM` | yes | **no** |   |
+| dep whereami | sys / in_deps | sys / in_deps |   |
+| whereami detection | **search /usr/include/whereami.h** | find* | no .pc available |
+| `SKIPWHEREAMISYSTEM` | yes | yes |   |
 | version | mkversion | mkversion | |
 | install | yes (1) | **no** | (1) supports `DESTDIR`, `PREFIX`, `UDEV_PREFIX`. Installs resources as well, `INSTALL*RELPATH` |
 | deb | no | partial? | |

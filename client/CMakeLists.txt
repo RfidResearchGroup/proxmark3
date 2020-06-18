@@ -20,6 +20,8 @@ if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
 
+find_package(PkgConfig)
+
 if (NOT SKIPQT EQUAL 1)
     if(APPLE AND EXISTS /usr/local/opt/qt5)
         # Homebrew installs Qt5 (up to at least 5.11.0) in
@@ -46,7 +48,6 @@ if (NOT SKIPQT EQUAL 1)
     endforeach()
 endif (NOT SKIPQT EQUAL 1)
 
-find_package(PkgConfig)
 if (NOT SKIPBT EQUAL 1)
     pkg_search_module(BLUEZ QUIET bluez)
 endif (NOT SKIPBT EQUAL 1)
@@ -102,6 +103,19 @@ if (NOT SKIPREADLINE EQUAL 1)
     endif (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
 endif (NOT SKIPREADLINE EQUAL 1)
 
+if (NOT SKIPJANSSONSYSTEM EQUAL 1)
+    pkg_check_modules(PC_JANSSON QUIET jansson)
+    find_path(JANSSON_INCLUDE_DIRS
+            NAMES jansson.h
+            HINTS ${PC_JANSSON_INCLUDEDIR} ${PC_JANSSON_INCLUDE_DIRS})
+    find_library(JANSSON_LIBRARIES
+            NAMES jansson libjansson
+            HINTS ${PC_JANSSON_LIBDIR} ${PC_JANSSON_LIBRARY_DIRS})
+    if (JANSSON_INCLUDE_DIRS AND JANSSON_LIBRARIES)
+        set(JANSSON_FOUND ON)
+    endif (JANSSON_INCLUDE_DIRS AND JANSSON_LIBRARIES)
+endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
+
 if(ANDROID)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     ExternalProject_Add(bzip2
@@ -118,12 +132,18 @@ if(ANDROID)
     ExternalProject_Add_StepTargets(bzip2 configure build install)
     set(BZIP2_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     set(BZIP2_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2/libbz2.a)
-else()
-    set(BZIP2_LIBRARIES bz2)
-endif(ANDROID)
-if (BZIP2_LIBRARIES)
     set(BZIP2_FOUND ON)
-endif (BZIP2_LIBRARIES)
+else()
+    find_package (BZip2 REQUIRED)
+endif(ANDROID)
+
+if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
+    find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
+    find_library(WHEREAMI_LIBRARIES whereami)
+    if (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
+        set(WHEREAMI_FOUND ON)
+    endif (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
+endif (NOT SKIPWHEREAMISYSTEM EQUAL 1)
 
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
@@ -308,6 +328,11 @@ if (NOT SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(NOT SKIPBT EQUAL 1)
 
+if (JANSSON_FOUND)
+    set(ADDITIONAL_DIRS ${JANSSON_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${JANSSON_LIBRARIES} ${ADDITIONAL_LNK})
+endif (JANSSON_FOUND)
+
 if (NOT SKIPPYTHON EQUAL 1)
     if (PYTHON3EMBED_FOUND)
         add_definitions(-DHAVE_PYTHON)
@@ -329,12 +354,16 @@ if (NOT SKIPREADLINE EQUAL 1)
         set(ADDITIONAL_LNK ${READLINE_LIBRARIES} ${ADDITIONAL_LNK})
     endif (READLINE_FOUND)
 endif(NOT SKIPREADLINE EQUAL 1)
+
 if (BZIP2_FOUND)
     set(ADDITIONAL_DIRS ${BZIP2_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
-else (BZIP2_FOUND)
-    message(FATAL_ERROR "Bzip2 not found")
 endif (BZIP2_FOUND)
+
+if (WHEREAMI_FOUND)
+    set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
+endif (WHEREAMI_FOUND)
 
 message("===================================================================")
 if (SKIPQT EQUAL 1)
@@ -357,6 +386,16 @@ else (SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(SKIPBT EQUAL 1)
 
+if (SKIPJANSSONSYSTEM EQUAL 1)
+    message("Jansson library:   local library forced")
+else (SKIPJANSSONSYSTEM EQUAL 1)
+    if (JANSSON_FOUND)
+        message("Jansson library:   system library found")
+    else (JANSSON_FOUND)
+        message("Jansson library:   system library not found, using local library")
+    endif (JANSSON_FOUND)
+endif (SKIPJANSSONSYSTEM EQUAL 1)
+
 if (SKIPPYTHON EQUAL 1)
     message("Python3 library:   skipped")
 else (SKIPPYTHON EQUAL 1)
@@ -378,6 +417,16 @@ else (SKIPREADLINE EQUAL 1)
         message("Readline library:  Readline not found, disabled")
     endif (READLINE_FOUND)
 endif(SKIPREADLINE EQUAL 1)
+
+if (SKIPWHEREAMISYSTEM EQUAL 1)
+    message("Whereami library:  local library forced")
+else (SKIPWHEREAMISYSTEM EQUAL 1)
+    if (WHEREAMI_FOUND)
+        message("Whereami library:  system library found")
+    else (WHEREAMI_FOUND)
+        message("Whereami library:  system library not found, using local library")
+    endif (WHEREAMI_FOUND)
+endif (SKIPWHEREAMISYSTEM EQUAL 1)
 message("===================================================================")
 
 add_executable(proxmark3
@@ -421,25 +470,30 @@ endif (NOT APPLE)
 
 
 find_library(pm3rrg_rdv4_cliparser REQUIRED)
-find_library(pm3rrg_rdv4_jansson REQUIRED)
 find_library(pm3rrg_rdv4_tinycbor REQUIRED)
 find_library(pm3rrg_rdv4_lua REQUIRED)
 find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
-find_library(pm3rrg_rdv4_whereami REQUIRED)
+
+if (NOT JANSSON_FOUND)
+    find_library(pm3rrg_rdv4_jansson REQUIRED)
+    set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
+endif (NOT JANSSON_FOUND)
+if (NOT WHEREAMI_FOUND)
+    find_library(pm3rrg_rdv4_whereami REQUIRED)
+    set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
+endif (NOT WHEREAMI_FOUND)
 
 target_link_libraries(proxmark3 PRIVATE
         m
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
-        pm3rrg_rdv4_jansson
         pm3rrg_rdv4_lua
         pm3rrg_rdv4_tinycbor
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_hardnested
-        pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)
