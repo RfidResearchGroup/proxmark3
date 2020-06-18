@@ -45,6 +45,11 @@ JANSSONLIBPATH = ./deps/jansson
 JANSSONLIBINC = -I$(JANSSONLIBPATH)
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 
+## Linenoise-ng
+LINENOISELIBPATH = ./deps/linenoise-ng
+LINENOISELIBINC = -I$(LINENOISELIBPATH)
+LINENOISELIB = $(LINENOISELIBPATH)/liblinenoise.a
+
 ## Lua
 LUALIBPATH = ./deps/liblua
 LUALIBINC = -I$(LUALIBPATH)
@@ -116,6 +121,9 @@ ifneq ($(SKIPJANSSONSYSTEM),1)
 endif
 LDLIBS += $(JANSSONLIB)
 INCLUDES += $(JANSSONLIBINC)
+
+## Linenoise-ng
+# wait to see if Readline is available
 
 ## Lua
 ifneq ($(SKIPLUASYSTEM),1)
@@ -263,6 +271,12 @@ ifneq ($(SKIPREADLINE),1)
     endif
     LDLIBS += -lreadline
     READLINE_FOUND = 1
+else
+## Linenoise
+    ifneq ($(SKIPLINENOISE),1)
+        LDLIBS += $(LINENOISELIB)
+        INCLUDES += $(LINENOISELIBINC)
+    endif
 endif
 
 #######################################################################################################
@@ -285,6 +299,8 @@ endif
 
 ifeq ($(READLINE_FOUND),1)
     PM3CFLAGS += -DHAVE_READLINE
+else ifneq ($(SKIPLINENOISE),1)
+    PM3CFLAGS += -DHAVE_LINENOISE
 endif
 
 ifeq ($(BT_FOUND),1)
@@ -380,6 +396,14 @@ else
         $(info Readline library:  enabled)
     else
         $(info Readline library:  Readline not found, disabled)
+    endif
+endif
+
+ifneq ($(READLINE_FOUND),1)
+    ifneq ($(SKIPLINENOISE),1)
+        $(info Linenoise library: enabled)
+    else
+        $(info Linenoise library: skipped)
     endif
 endif
 
@@ -577,7 +601,7 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: $(OBJS) amiibo cliparser jansson hardnested lua mbedtls reveng tinycbor whereami lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: $(OBJS) amiibo cliparser jansson hardnested linenoise lua mbedtls reveng tinycbor whereami lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
@@ -606,6 +630,7 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(LINENOISELIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) clean
@@ -661,6 +686,14 @@ ifneq ($(JANSSON_FOUND),1)
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
 endif
 
+linenoise:
+ifneq ($(READLINE_FOUND),1)
+    ifneq ($(SKIPLINENOISE),1)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(LINENOISELIBPATH) all
+    endif
+endif
+
 lua:
 ifneq ($(LUA_FOUND),1)
 	$(info [*] MAKE $@ for $(LUAPLATFORM))
@@ -689,7 +722,7 @@ endif
 # misc #
 ########
 
-.PHONY: all clean install uninstall tarbin amiibo cliparser hardnested jansson lua mbedtls reveng tinycbor whereami
+.PHONY: all clean install uninstall tarbin amiibo cliparser hardnested jansson linenoise lua mbedtls reveng tinycbor whereami
 
 # version.c should be remade on every compilation
 src/version.c: default_version.c
