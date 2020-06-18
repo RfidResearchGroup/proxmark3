@@ -1593,6 +1593,16 @@ static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
 }
 
 int getSamples(uint32_t n, bool verbose) {
+    return getSamplesEx(0, n, verbose);
+}
+
+int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
+
+    if (end < start) {
+        PrintAndLogEx(WARNING, "error, end (%u) is smaller than start (%u)", end, start);
+        return PM3_EINVARG;
+    }
+
     //If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
@@ -1600,13 +1610,16 @@ int getSamples(uint32_t n, bool verbose) {
     uint8_t got[pm3_capabilities.bigbuf_size - 1];
     memset(got, 0x00, sizeof(got));
 
-    if (n == 0 || n > pm3_capabilities.bigbuf_size - 1)
+    uint32_t n = end - start;
+
+    if (n <= 0 || n > pm3_capabilities.bigbuf_size - 1)
         n = pm3_capabilities.bigbuf_size - 1;
 
-    if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
+    if (verbose)
+        PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 
     PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, n, 0, NULL, 0, &response, 10000, true)) {
+    if (!GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &response, 10000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -2305,7 +2318,7 @@ static int CmdDataNDEF(const char *Cmd) {
         arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
