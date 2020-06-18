@@ -59,7 +59,7 @@ endif (NOT SKIPPYTHON EQUAL 1)
 
 # If build on android cross, we need to init source and build.
 if (ANDROID)
-    set(CFLAGS_EXTERNAL_LIB CFLAGS=--target=${CMAKE_C_COMPILER_TARGET})
+    set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
     include(ExternalProject)
 endif (ANDROID)
 
