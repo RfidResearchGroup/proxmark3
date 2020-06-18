@@ -1,3 +1,9 @@
+# Usage:
+#  mkdir build
+#  cd build
+#  cmake ..     (see below for options)
+#  make         (VERBOSE=1 if needed)
+#
 # MINGW:
 #  On ProxSpace 3.4:
 #    cmake -G"MSYS Makefiles" ..
