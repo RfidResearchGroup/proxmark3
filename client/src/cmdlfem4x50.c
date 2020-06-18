@@ -391,7 +391,6 @@ int CmdEM4x50Info(const char *Cmd) {
     // decoding is done by the device (not on client side)
 
     bool errors = false, verbose = false;
-    char password[20] = {0x00}, tmpbuff[3];
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     PacketResponseNG resp;
@@ -406,21 +405,11 @@ int CmdEM4x50Info(const char *Cmd) {
                 return usage_lf_em4x50_info();
 
             case 'p':
-                param_getstr(Cmd, cmdp + 1, password, sizeof(password));
-                
-                // validation
-                if (strlen(password) != 8) {
-    
-                    PrintAndLogEx(WARNING, "\n  error, password has to be 4 bytes\n");
-                    errors = true;
-                    break;
-                }
-                
-                // prepare given password
+                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
+                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
+                 }
                 etd.pwd_given = true;
-                for (int i = 0; i < 4; i++)
-                    sscanf(strncpy(tmpbuff, password+2*i, 2), "%2hhx", &etd.password[i]);
-                    
                 cmdp += 2;
                 break;
 
@@ -437,9 +426,8 @@ int CmdEM4x50Info(const char *Cmd) {
     }
 
     // validation
-     if (errors) {
+     if (errors)
          return usage_lf_em4x50_info();
-    }
 
     // call info command
     clearCommandBuffer();
@@ -508,9 +496,7 @@ int CmdEM4x50Write(const char *Cmd) {
 
     // envoke writing a single word (32 bit) to a EM4x50 tag
 
-    bool errors = false, baddress = false, bword = false;
-    char password[20] = {0x00}, word[20] = {0x00}, tmpbuff[3];
-    int address = 0;
+    bool errors = false, bword = false, baddr = false;
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     PacketResponseNG resp;
@@ -525,57 +511,32 @@ int CmdEM4x50Write(const char *Cmd) {
                 return usage_lf_em4x50_write();
 
             case 'p':
-                param_getstr(Cmd, cmdp + 1, password, sizeof(password));
-              
-                // validation
-                if (strlen(password) != 8) {
-                    PrintAndLogEx(WARNING, "\n  error, password has to be 4 bytes\n");
-                    errors = true;
-                    break;
-                }
-              
-                // prepare given password
+                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
+                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
+                 }
                 etd.pwd_given = true;
-                for (int i = 0; i < 4; i++)
-                    sscanf(strncpy(tmpbuff, password+2*i, 2), "%2hhx", &etd.password[i]);
-                  
                 cmdp += 2;
                 break;
 
             case 'w':
-                param_getstr(Cmd, cmdp + 1, word, sizeof(word));
-              
-                // validation
-                if (strlen(word) != 8) {
-                    PrintAndLogEx(WARNING, "\n  error, word has to be 4 bytes\n");
-                    errors = true;
-                    break;
-                } else {
-                    bword = true;
+                if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
+                     PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
                 }
-              
-                // prepare given word
-                for (int i = 0; i < 4; i++)
-                    sscanf(strncpy(tmpbuff, word+2*i, 2), "%2hhx", &etd.word[i]);
-                  
+                bword = true;
                 cmdp += 2;
                 break;
 
             case 'a':
-                param_getstr(Cmd, cmdp + 1, tmpbuff, sizeof(address));
-                address = atoi(tmpbuff);
-                
+                param_getdec(Cmd, cmdp + 1, &etd.address);
+
                 // validation
-                if (address < 1 || address > 31) {
-                    PrintAndLogEx(WARNING, "\n  error, address has to be in range [1-31]\n");
-                    errors = true;
-                    break;
-                } else {
-                    baddress = true;
+                if (etd.address < 1 || etd.address > 31) {
+                    PrintAndLogEx(FAILED, "\n  error, address has to be in range [1-31]\n");
+                    return PM3_EINVARG;
                 }
-
-                etd.address = address;
-
+                baddr = true;
                 cmdp += 2;
                 break;
 
@@ -586,7 +547,7 @@ int CmdEM4x50Write(const char *Cmd) {
         }
     }
 
-    if (errors || !baddress || !bword)
+    if (errors || !bword || !baddr)
          return usage_lf_em4x50_write();
 
     clearCommandBuffer();
@@ -630,8 +591,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 
     // envokes changing the password of EM4x50 tag
 
-    bool errors = false, bpwd = false, bnewpwd = false;
-    char password[20] = {0x00}, new_password[20] = {0x00}, tmpbuff[3];
+    bool errors = false, bpwd = false, bnpwd = false;
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     PacketResponseNG resp;
@@ -647,42 +607,22 @@ int CmdEM4x50WritePassword(const char *Cmd) {
                 return usage_lf_em4x50_write_password();
 
             case 'p':
-                param_getstr(Cmd, cmdp + 1, password, sizeof(password));
-              
-                // validation
-                if (strlen(password) != 8) {
-                    PrintAndLogEx(WARNING, "\n  error, passwords has to be 4 bytes\n");
-                    errors = true;
-                    break;
-                } else {
-                    bpwd = true;
+                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
+                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
                 }
-              
-                // prepare given password
+                bpwd = true;
                 etd.pwd_given = true;
-                for (int i = 0; i < 4; i++)
-                    sscanf(strncpy(tmpbuff, password+2*i, 2), "%2hhx", &etd.password[i]);
-                  
                 cmdp += 2;
                 break;
 
             case 'n':
-                param_getstr(Cmd, cmdp + 1, new_password, sizeof(new_password));
-              
-                // validation
-                if (strlen(new_password) != 8) {
-                    PrintAndLogEx(WARNING, "\n  error, passwords have to be 4 bytes\n");
-                    errors = true;
-                    break;
-                } else {
-                    bnewpwd = true;
-                }
-              
-                // prepare given password
+                if (param_gethex(Cmd, cmdp + 1, etd.new_password, 8)) {
+                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
+                 }
+                bnpwd = true;
                 etd.newpwd_given = true;
-                for (int i = 0; i < 4; i++)
-                    sscanf(strncpy(tmpbuff, new_password+2*i, 2), "%2hhx", &etd.new_password[i]);
-                  
                 cmdp += 2;
                 break;
 
@@ -693,7 +633,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
         }
     }
 
-    if (errors || !bpwd || !bnewpwd)
+    if (errors || !bpwd || !bnpwd)
          return usage_lf_em4x50_write_password();
 
     clearCommandBuffer();
