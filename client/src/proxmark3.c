@@ -477,7 +477,6 @@ static void set_my_user_directory(void) {
                 free(cwd_buffer);
                 return;
             }
-            PrintAndLogEx(NORMAL, "Len... %d", pathLen);
         }
 
         if (!error) {
