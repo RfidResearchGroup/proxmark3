@@ -102,7 +102,7 @@ static void init_tag(void) {
             tag.sectors[i][j] = 0x00;
 }
 
-static uint8_t bits2byte(uint8_t bits[8], int length) {
+static uint8_t bits2byte(uint8_t *bits, int length) {
 
     // converts <length> separate bits into a single "byte"
     
