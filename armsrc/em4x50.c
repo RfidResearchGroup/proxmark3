@@ -717,7 +717,7 @@ static bool write(uint8_t word[4], uint8_t address) {
     
     if (request_receive_mode()) {
 
-        // send selective read command
+        // send write command
         em4x50_send_byte_with_parity(EM4X50_COMMAND_WRITE);
 
         // send address data
@@ -753,7 +753,7 @@ static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
     
     if (request_receive_mode()) {
 
-        // send selective read command
+        // send write password command
         em4x50_send_byte_with_parity(EM4X50_COMMAND_WRITE_PASSWORD);
 
         // send address data
