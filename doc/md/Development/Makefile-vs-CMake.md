@@ -31,9 +31,9 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | dep hardnested | in_deps | in_deps |   |
 | hardn arch autodetect | `uname -m` =? 86 or amd64; `$(CC) -E -mavx512f`? +AVX512` |  `CMAKE_SYSTEM_PROCESSOR` =? x86 or x86_64 or i686 or AMD64 (1) | (1) currently it always includes AVX512 on Intel arch |
 | `cpu_arch` | yes | **no/auto?** | e.g. `cpu_arch=generic` for cross-compilation
-| dep jansson | sys / in_deps | **in_deps only** |   |
-| jansson detection | pc | **none** |   |
-| `SKIPJANSSONSYSTEM` | yes | **no** |   |
+| dep jansson | sys / in_deps | sys / in_deps |   |
+| jansson detection | pc | pc/find* |   |
+| `SKIPJANSSONSYSTEM` | yes | yes |   |
 | dep lua | sys / in_deps(1) | **in_deps only**(2) | (1) manual def of `LUAPLATFORM` for mingw/macosx/linux (2) manual, different?, for Android too |
 | lua detection | pc | **none** |   |
 | `SKIPLUASYSTEM` | yes | **no** |   |

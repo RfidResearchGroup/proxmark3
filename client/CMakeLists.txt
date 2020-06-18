@@ -20,6 +20,8 @@ if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
 
+find_package(PkgConfig)
+
 if (NOT SKIPQT EQUAL 1)
     if(APPLE AND EXISTS /usr/local/opt/qt5)
         # Homebrew installs Qt5 (up to at least 5.11.0) in
@@ -46,7 +48,6 @@ if (NOT SKIPQT EQUAL 1)
     endforeach()
 endif (NOT SKIPQT EQUAL 1)
 
-find_package(PkgConfig)
 if (NOT SKIPBT EQUAL 1)
     pkg_search_module(BLUEZ QUIET bluez)
 endif (NOT SKIPBT EQUAL 1)
@@ -101,6 +102,19 @@ if (NOT SKIPREADLINE EQUAL 1)
         set(READLINE_FOUND ON)
     endif (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
 endif (NOT SKIPREADLINE EQUAL 1)
+
+if (NOT SKIPJANSSONSYSTEM EQUAL 1)
+    pkg_check_modules(PC_JANSSON QUIET jansson)
+    find_path(JANSSON_INCLUDE_DIRS
+            NAMES jansson.h
+            HINTS ${PC_JANSSON_INCLUDEDIR} ${PC_JANSSON_INCLUDE_DIRS})
+    find_library(JANSSON_LIBRARIES
+            NAMES jansson libjansson
+            HINTS ${PC_JANSSON_LIBDIR} ${PC_JANSSON_LIBRARY_DIRS})
+    if (JANSSON_INCLUDE_DIRS AND JANSSON_LIBRARIES)
+        set(JANSSON_FOUND ON)
+    endif (JANSSON_INCLUDE_DIRS AND JANSSON_LIBRARIES)
+endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
 
 if(ANDROID)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
@@ -314,6 +328,11 @@ if (NOT SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(NOT SKIPBT EQUAL 1)
 
+if (JANSSON_FOUND)
+    set(ADDITIONAL_DIRS ${JANSSON_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${JANSSON_LIBRARIES} ${ADDITIONAL_LNK})
+endif (JANSSON_FOUND)
+
 if (NOT SKIPPYTHON EQUAL 1)
     if (PYTHON3EMBED_FOUND)
         add_definitions(-DHAVE_PYTHON)
@@ -366,6 +385,16 @@ else (SKIPBT EQUAL 1)
         message("native BT support: Bluez not found, disabled")
     endif (BLUEZ_FOUND)
 endif(SKIPBT EQUAL 1)
+
+if (SKIPJANSSONSYSTEM EQUAL 1)
+    message("Jansson library:   local library forced")
+else (SKIPJANSSONSYSTEM EQUAL 1)
+    if (JANSSON_FOUND)
+        message("Jansson library:   system library found")
+    else (JANSSON_FOUND)
+        message("Jansson library:   system library not found, using local library")
+    endif (JANSSON_FOUND)
+endif (SKIPJANSSONSYSTEM EQUAL 1)
 
 if (SKIPPYTHON EQUAL 1)
     message("Python3 library:   skipped")
@@ -441,13 +470,16 @@ endif (NOT APPLE)
 
 
 find_library(pm3rrg_rdv4_cliparser REQUIRED)
-find_library(pm3rrg_rdv4_jansson REQUIRED)
 find_library(pm3rrg_rdv4_tinycbor REQUIRED)
 find_library(pm3rrg_rdv4_lua REQUIRED)
 find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 
+if (NOT JANSSON_FOUND)
+    find_library(pm3rrg_rdv4_jansson REQUIRED)
+    set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
+endif (NOT JANSSON_FOUND)
 if (NOT WHEREAMI_FOUND)
     find_library(pm3rrg_rdv4_whereami REQUIRED)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
@@ -457,7 +489,6 @@ target_link_libraries(proxmark3 PRIVATE
         m
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
-        pm3rrg_rdv4_jansson
         pm3rrg_rdv4_lua
         pm3rrg_rdv4_tinycbor
         pm3rrg_rdv4_amiibo
