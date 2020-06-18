@@ -107,6 +107,7 @@ add_library(pm3rrg_rdv4_hardnested STATIC
         hardnested/hardnested_bruteforce.c
         $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_nosimd>
         ${SIMD_TARGETS})
+target_compile_options(pm3rrg_rdv4_hardnested PRIVATE -Wall -Werror -O3)
 set_property(TARGET pm3rrg_rdv4_hardnested PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(pm3rrg_rdv4_hardnested PRIVATE
         ../../common
