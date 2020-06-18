@@ -5,7 +5,7 @@
 #    pacman -S mingw-w64-x86_64-cmake
 #    /mingw64/bin/cmake -G"MSYS Makefiles" ..
 #
-# Android cross-compilation:
+# Android cross-compilation: (ANDROID_ABI=arm64-v8a for a 64b version)
 # cmake \
 #    -DCMAKE_TOOLCHAIN_FILE=<path-to-your-android-ndk>/build/cmake/android.toolchain.cmake \
 #    -DANDROID_ABI=armeabi-v7a \
