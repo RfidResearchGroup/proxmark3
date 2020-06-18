@@ -242,6 +242,16 @@ static uint32_t MeasureAntennaTuningLfData(void) {
     return (MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14;
 }
 
+void print_stack_usage(void) {
+    // pointer arithmetic is times 4. (two shifts to the left)
+    for (uint32_t *p = &_stack_start; ; ++p) {
+        if (*p != 0xdeadbeef) {
+            Dbprintf("  Max stack usage.........%d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
+            break;
+        }
+    }
+}
+
 void ReadMem(int addr) {
     const uint8_t *data = ((uint8_t *)addr);
 
@@ -361,13 +371,9 @@ static void SendStatus(void) {
 #endif
     printConnSpeed();
     DbpString(_CYAN_("Various"));
-    // pointer arithmetic is times 4. (two shifts to the left)
-    for (uint32_t *p = &_stack_start; ; ++p) {
-        if (*p != 0xdeadbeef) {
-            Dbprintf("  Max stack usage.........%d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
-            break;
-        }
-    }
+
+    print_stack_usage();
+
     Dbprintf("  DBGLEVEL................%d", DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
@@ -1410,7 +1416,15 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HFSNIFF
         case CMD_HF_SNIFF: {
-            HfSniff(packet->oldarg[0], packet->oldarg[1]);
+            struct p {
+                uint32_t samplesToSkip;
+                uint32_t triggersToSkip;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+
+            uint16_t len = 0;
+            int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len);
+            reply_ng(CMD_HF_SNIFF, res, (uint8_t *)&len, sizeof(len));
             break;
         }
 #endif

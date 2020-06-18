@@ -39,5 +39,6 @@ void ToSendReset(void);
 void ListenReaderField(uint8_t limit);
 void StandAloneMode(void);
 void printStandAloneModes(void);
+void print_stack_usage(void);
 
 #endif
