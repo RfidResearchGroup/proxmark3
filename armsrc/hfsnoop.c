@@ -18,29 +18,21 @@
 #include "appmain.h"
 #include "cmd.h"
 
-static void RAMFUNC optimizedSniff(void) {
-    int n = BigBuf_max_traceLen() / sizeof(uint16_t); // take all memory
-
-    uint16_t *dest = (uint16_t *)BigBuf_get_addr();
-    uint16_t *destend = dest + n - 1;
-
-    // Reading data loop
-    while (dest <= destend) {
+static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
+    for (;dsize > 0; dsize -= sizeof(dsize)) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             *dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             dest++;
         }
     }
-    //setting tracelen - important!  it was set by buffer overflow before
-    set_tracelen(BigBuf_max_traceLen());
+    Dbprintf("collected %u samples",  dsize);
 }
 
-void HfSniff(int samplesToSkip, int triggersToSkip) {
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     BigBuf_free();
-    BigBuf_Clear();
+    BigBuf_Clear_ext(false); 
 
-    Dbprintf("Skipping first %d sample pairs, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
-    int trigger_cnt = 0;
+    Dbprintf("Skipping first %d sample pairs, Skipping %d triggers", samplesToSkip, triggersToSkip);
 
     LED_D_ON();
 
@@ -57,37 +49,63 @@ void HfSniff(int samplesToSkip, int triggersToSkip) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
     SpinDelay(100);
 
-    uint16_t r = 0;
-    while (!BUTTON_PRESS() && !data_available()) {
+    *len = (BigBuf_max_traceLen() & 0xFFFE);
+    uint8_t *mem = BigBuf_malloc(*len);
+
+    int trigger_cnt = 0;    
+    uint16_t r = 0, interval = 0;
+    
+    
+    bool pressed = false;
+    while (pressed == false) {
         WDT_HIT();
 
+        // cancel w usb command.
+        if (interval == 1000) {
+            if (data_available())
+                break;
+            interval = 0;
+        } else {
+            interval++;
+        }
+
+        // check if trigger is reached
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             r = (uint16_t)AT91C_BASE_SSC->SSC_RHR;
-            r = MAX(r & 0xff, r >> 8);
-            if (r >= 180) {  // 0xB4 ??
+
+            r = MAX(r & 0xFF, r >> 8);
+
+            // 180 (0xB4) arbitary value to see if a strong RF field is near.
+            if (r > 180) {
                 if (++trigger_cnt > triggersToSkip)
                     break;
             }
         }
+
+        pressed = BUTTON_PRESS();
     }
 
-    if (!BUTTON_PRESS()) {
-        int waitcount = samplesToSkip; // lets wait 40000 ticks of pck0
+    if (pressed == false) {
+
+        // skip samples loop
+        int waitcount = samplesToSkip;
         while (waitcount != 0) {
 
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
                 waitcount--;
         }
-        optimizedSniff();
-        Dbprintf("Trigger kicked! Value: %d, Dumping Samples Hispeed now.", r);
+
+        optimizedSniff((uint16_t*)mem, (*len) >> 2);
+
+        Dbprintf("Trigger kicked in (%d >= 180)", r);
     }
 
     //Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-
-    DbpString("HF Sniffing end");
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_D_OFF();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    BigBuf_free();
+    return (pressed) ? PM3_EOPABORTED : PM3_SUCCESS;
 }
 
 void HfPlotDownload(void) {
