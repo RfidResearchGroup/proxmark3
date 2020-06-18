@@ -791,7 +791,7 @@ void em4x50_write(em4x50_data_t *etd) {
     // write operation process for EM4x50 tag,
     // single word is written to given address, verified by selective read operation
     
-    bool bsuccess = true, blogin = false;
+    bool bsuccess = false, blogin = false;
     uint8_t word[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t addresses[4] = {0x00, 0x00, 0x00, 0x00};
     
@@ -826,6 +826,7 @@ void em4x50_write(em4x50_data_t *etd) {
                 word[3] = tag.sectors[etd->address][3];
                 msb2lsb_word(word);
                 
+                bsuccess = true;
                 for (int i = 0; i < 4; i++)
                     bsuccess &= (word[i] == etd->word[i]) ? true : false;
 
