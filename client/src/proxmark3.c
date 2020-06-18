@@ -117,23 +117,23 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
     snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptctx);
 }
 
-#ifdef HAVE_READLINE
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
+#ifdef HAVE_READLINE
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
         prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
         rl_set_prompt(prompt_filtered);
         rl_forced_update_display();
+#endif
         CloseProxmark();
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
     }
     return 0;
 }
-#endif
 
 // first slot is always NULL, indicating absence of script when idx=0
 static FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
@@ -293,13 +293,17 @@ check_script:
                         printprompt = true;
 
                 } else {
+#ifdef HAVE_READLINE
+                    rl_event_hook = check_comm;
+#else
+                    check_comm();
+#endif
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
 #ifdef HAVE_READLINE
-                    rl_event_hook = check_comm;
                     cmd = readline(prompt_filtered);
 #else
                     printf("%s", prompt_filtered);
