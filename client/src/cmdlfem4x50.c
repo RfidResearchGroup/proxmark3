@@ -59,19 +59,6 @@ int usage_lf_em4x50_write_password(void) {
     return PM3_SUCCESS;
 }
 
-/*
-static uint8_t msb2lsb(uint8_t byte) {
-
-    // convert given byte (msb) into lsb format
-    
-    uint8_t tmp = 0;
-    
-    for (int i = 0; i < 8; i++)
-        tmp |= ((byte >> (7-i)) & 1) << i;
-    
-    return tmp;
-}
-*/
 static bool check_bit_in_byte(uint8_t pos, uint8_t byte) {
     
     // return true if bit at position <pos> is "1"
