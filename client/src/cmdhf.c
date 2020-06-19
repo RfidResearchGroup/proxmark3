@@ -241,7 +241,7 @@ int CmdHFTune(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// Collects pars of u8,  
+// Collects pars of u8,
 // uses 16bit transfers from FPGA for speed
 // Takes all available bigbuff memory
 // data sample to download?   Not sure what we can do with the data.
@@ -258,7 +258,7 @@ int CmdHFSniff(const char *Cmd) {
     params.triggersToSkip = param_get32ex(Cmd, 1, 0, 10);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SNIFF, (uint8_t*)&params, sizeof(params));
+    SendCommandNG(CMD_HF_SNIFF, (uint8_t *)&params, sizeof(params));
 
     for (;;) {
 
@@ -279,10 +279,10 @@ int CmdHFSniff(const char *Cmd) {
                 PrintAndLogEx(INFO, "HF sniff len %u bytes", len);
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data plot") "` to view");
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data save") "` to save");
-                
-                // download bigbuf_malloced.. 
-                // it reservs mem from the higher range.  ie we can't start from beginning idx 0.                
-                // but from 
+
+                // download bigbuf_malloced..
+                // it reservs mem from the higher range.  ie we can't start from beginning idx 0.
+                // but from
                 uint32_t start = pm3_capabilities.bigbuf_size - len;
                 int res = getSamplesEx(start, start + len, false);
                 if (res != PM3_SUCCESS) {

@@ -1014,7 +1014,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             PrintAndLogEx(INFO, "%03d | %08x", block, Code[block]);
         }
         PrintAndLogEx(INFO, "----+--------------");
-        PrintAndLogEx( (AllPTest) ? SUCCESS : WARNING, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
+        PrintAndLogEx((AllPTest) ? SUCCESS : WARNING, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
 
         if (AllPTest == false) {
             PrintAndLogEx(HINT, "Try cleaning the read samples with " _YELLOW_("'data askedge'"));

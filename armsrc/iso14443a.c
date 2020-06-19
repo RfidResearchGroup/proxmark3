@@ -988,7 +988,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
                 counters[i] = le24toh(mfu_header->counter_tearing[i]);
 
                 if (mfu_header->counter_tearing[i][3] != 0x00) {
-                    tearings[i] = mfu_header->counter_tearing[i][3]; 
+                    tearings[i] = mfu_header->counter_tearing[i][3];
                 }
             }
 

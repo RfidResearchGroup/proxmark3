@@ -19,7 +19,7 @@
 #include "cmd.h"
 
 static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
-    for (;dsize > 0; dsize -= sizeof(dsize)) {
+    for (; dsize > 0; dsize -= sizeof(dsize)) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             *dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             dest++;
@@ -30,7 +30,7 @@ static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
 
 int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     BigBuf_free();
-    BigBuf_Clear_ext(false); 
+    BigBuf_Clear_ext(false);
 
     Dbprintf("Skipping first %d sample pairs, Skipping %d triggers", samplesToSkip, triggersToSkip);
 
@@ -52,10 +52,10 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     *len = (BigBuf_max_traceLen() & 0xFFFE);
     uint8_t *mem = BigBuf_malloc(*len);
 
-    int trigger_cnt = 0;    
+    int trigger_cnt = 0;
     uint16_t r = 0, interval = 0;
-    
-    
+
+
     bool pressed = false;
     while (pressed == false) {
         WDT_HIT();
@@ -95,7 +95,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
                 waitcount--;
         }
 
-        optimizedSniff((uint16_t*)mem, (*len) >> 2);
+        optimizedSniff((uint16_t *)mem, (*len) >> 2);
 
         Dbprintf("Trigger kicked in (%d >= 180)", r);
     }
