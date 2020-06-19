@@ -236,26 +236,26 @@ build_script:
     
     bash -c -i 'make clean'
     
-    #Write-Host "---------- cmake ----------" -ForegroundColor Yellow
+    Write-Host "---------- cmake ----------" -ForegroundColor Yellow
     
-    #$TestTime=[System.Environment]::TickCount
+    $TestTime=[System.Environment]::TickCount
 
-    #$script='C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start -c "mkdir -p client/build; cd client/build; pwd; cmake -G`"MSYS Makefiles`" ..; ls; make VERBOSE=1;"'
+    $script='C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start -c "mkdir -p client/build; cd client/build; pwd; cmake -G`"MSYS Makefiles`" ..; ls; make VERBOSE=1;"'
     
-    #$script="$script"
+    $script="$script"
 
-    #$scriptblk=[scriptblock]::Create("$script")
+    $scriptblk=[scriptblock]::Create("$script")
 
-    #$res=&$scriptblk
+    $res=&$scriptblk
 
     
-    #Write-Host "---------- make ok ----------" -ForegroundColor Yellow
+    Write-Host "---------- make ok ----------" -ForegroundColor Yellow
 
-    #bash -c -i 'make check CHECKARGS="--clientbin ./client/build/proxmark3"'
+    bash -c -i 'make check CHECKARGS="--clientbin ./client/build/proxmark3"'
     
-    #$testspass = ($LASTEXITCODE -eq 0)
+    $testspass = ($LASTEXITCODE -eq 0)
 
-    #$global:TestsPassed=(($global:TestsPassed) -and ($testspass))
+    $global:TestsPassed=(($global:TestsPassed) -and ($testspass))
     
     if ($testspass) {
       Add-AppveyorTest -Name "cmake Tests" -Framework NUnit -Filename "make client/check" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
