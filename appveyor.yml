@@ -242,9 +242,11 @@ build_script:
 
     cmd.exe /c 'C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start -c "mkdir -p client/build; cd client/build; cmake -G""MSYS Makefiles"" ..; make VERBOSE=1;"'
     
-    Write-Host "---------- make ok ----------" -ForegroundColor Yellow
+    Write-Host "---------- cmake tests ----------" -ForegroundColor Yellow
 
-    bash -c -i 'make check CHECKARGS="--clientbin ./client/build/proxmark3"'
+    cd c:\ProxSpace\pm3
+
+    cmd.exe /c './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
     
     $testspass = ($LASTEXITCODE -eq 0)
 
