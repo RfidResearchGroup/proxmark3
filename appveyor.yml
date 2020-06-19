@@ -246,7 +246,7 @@ build_script:
 
     cd c:\ProxSpace\pm3
 
-    cmd.exe /c './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
+    bash -c -i './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
     
     $testspass = ($LASTEXITCODE -eq 0)
 
