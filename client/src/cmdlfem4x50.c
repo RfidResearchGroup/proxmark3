@@ -233,8 +233,8 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     // display all information info result in structured format
     
     bool bpwd_given = etd->pwd_given;
-    bool bsuccess = (bool)resp->oldarg[0];
-    bool blogin = (bool)resp->oldarg[1];
+    bool bsuccess = (bool)(resp->status & 0x2);
+    bool blogin = (bool)(resp->status & 0x1);
     bool bpwc, braw;
     int fwr, lwr, fwrp, lwrp, fwwi, lwwi;
     uint8_t *data = resp->data.asBytes;
@@ -390,7 +390,7 @@ int CmdEM4x50Info(const char *Cmd) {
     // envoke reading of a EM4x50 tag which has to be on the antenna because
     // decoding is done by the device (not on client side)
 
-    bool errors = false, verbose = false;
+    bool errors = false, verbose = false, success = false;
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     PacketResponseNG resp;
@@ -440,10 +440,11 @@ int CmdEM4x50Info(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     
-    // prepare result
+    // print result
     print_info_result(&resp, &etd, verbose);
-
-    return ((bool)resp.oldarg[0]) ? PM3_SUCCESS : PM3_ESOFT;
+    
+    success = resp.status & 0x2;
+    return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
 static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
@@ -451,8 +452,8 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
     // display result of writing operation in structured format
 
     bool pwd_given = etd->pwd_given;
-    bool success = (bool)resp->oldarg[0];
-    bool login = (bool)resp->oldarg[1];
+    bool success = (bool)(resp->status & 0x2);
+    bool login = (bool)(resp->status & 0x1);
     uint8_t *data = resp->data.asBytes;
     char string[400] = {0};
     char pstring[100] = {0};
@@ -496,7 +497,7 @@ int CmdEM4x50Write(const char *Cmd) {
 
     // envoke writing a single word (32 bit) to a EM4x50 tag
 
-    bool errors = false, bword = false, baddr = false;
+    bool errors = false, bword = false, baddr = false, success = false;
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     PacketResponseNG resp;
@@ -562,14 +563,15 @@ int CmdEM4x50Write(const char *Cmd) {
     // get, prepare and print response
     print_write_result(&resp, &etd);
     
-    return ((bool)resp.oldarg[0]) ? PM3_SUCCESS : PM3_ESOFT;
+    success = (bool)(resp.status & 0x2);
+    return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
 static void print_write_password_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
     
     // display result of password changing operation
 
-    bool success = (bool)resp->oldarg[0];
+    bool success = (bool)resp->status;
     char string[400] = {0};
     char pstring[100] = {0};
 
@@ -647,5 +649,5 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     // get, prepare and print response
     print_write_password_result(&resp, &etd);
     
-    return ((bool)resp.oldarg[0]) ? PM3_SUCCESS : PM3_ESOFT;
+    return ((bool)resp.status) ? PM3_SUCCESS : PM3_ESOFT;
 }
