@@ -91,6 +91,9 @@ static em4x50_tag_t tag = {
 
 #define FPGA_TIMER_0                        0
 
+int gHigh = 0;
+int gLow = 0;
+
 // auxiliary functions
 
 static void init_tag(void) {
@@ -234,6 +237,45 @@ static void em4x50_setup_read(void) {
 
 // functions for "reader" use case
 
+static void get_signalproperties(void) {
+    
+    // calculate signal properties (mean amplitudes) from measured data:
+    // 32 amplitudes (maximum values) -> mean amplitude value -> gHigh -> gLow
+    
+    int no_periods = 32, pct = 75, noise = 140;
+    uint8_t sample = 0, sample_ref = 127;
+    uint8_t sample_max_mean = 0;
+    uint8_t sample_max[no_periods];
+    uint32_t sample_max_sum = 0;
+    
+    // wait until signal/noise > 1
+    while (AT91C_BASE_SSC->SSC_RHR < noise);
+
+    // calculate mean maximum value of 32 periods, each period has a length of
+    // 3 single "full periods" to eliminate the influence of a listen window
+    for (int i = 0; i < no_periods; i++) {
+
+        AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+        while (AT91C_BASE_TC0->TC_CV < T0 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
+            
+            sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+            
+            if (sample > sample_max[i])
+                sample_max[i] = sample;
+            
+        }
+        
+        sample_max_sum += sample_max[i];
+    }
+    
+    sample_max_mean = sample_max_sum / no_periods;
+    
+    // set global envelope variables
+    gHigh = sample_ref + pct * (sample_max_mean - sample_ref) / 100;
+    gLow = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
+    
+}
+
 static int get_next_bit(void) {
     
     // returns bit value (or EM4X50_BIT_OTHER -> no bit pattern) by evaluating
@@ -242,8 +284,6 @@ static int get_next_bit(void) {
     // a listen window (return value = EM4X50_BIT_OTHER) in functions
     // "find_double_listen_window" and "check_ack"
   
-    int dhigh = 230;    // 90% of maximum sample value (255)
-    int dlow = 25;      // 10% of maximum sample value (255)
     uint8_t sample;
 
     // get sample at 3/4 of bit period
@@ -254,9 +294,9 @@ static int get_next_bit(void) {
     wait_timer(0, T0 * EM4X50_T_TAG_QUARTER_PERIOD);
 
     // decide wether "0" or "1"
-    if (sample > dhigh)
+    if (sample > gHigh)
         return EM4X50_BIT_0;
-    else if (sample < dlow)
+    else if (sample < gLow)
         return EM4X50_BIT_1;
     
     return EM4X50_BIT_OTHER;
@@ -266,19 +306,19 @@ static uint32_t get_pulse_length(void) {
     
     // iterates pulse length (low -> high -> low)
     
-    uint8_t sample = 0, high = 192, low = 64;
+    uint8_t sample = 0;
 
     sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     
-    while (sample > low)
+    while (sample > gLow)
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
 
-    while (sample < high)
+    while (sample < gHigh)
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    while (sample > low)
+    while (sample > gLow)
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     return (uint32_t)AT91C_BASE_TC1->TC_CV;
@@ -690,8 +730,10 @@ void em4x50_info(em4x50_data_t *etd) {
 
     init_tag();
     em4x50_setup_read();
-
     
+    // set gHigh and gLow
+    get_signalproperties();
+     
     if (etd->pwd_given) {
 
         // try to login with given password
@@ -802,6 +844,9 @@ void em4x50_write(em4x50_data_t *etd) {
     init_tag();
     em4x50_setup_read();
     
+    // set gHigh and gLow
+    get_signalproperties();
+    
     // reorder word according to datasheet
     msb2lsb_word(etd->word);
     
@@ -852,6 +897,9 @@ void em4x50_write_password(em4x50_data_t *etd) {
     
     init_tag();
     em4x50_setup_read();
+    
+    // set gHigh and gLow
+    get_signalproperties();
 
     // login and change password
     if (login(etd->password)) {
