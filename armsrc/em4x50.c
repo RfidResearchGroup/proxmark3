@@ -684,6 +684,7 @@ void em4x50_info(em4x50_data_t *etd) {
     // otherwise continue without login
     
     bool bsuccess = false, blogin = false;
+    uint8_t status = 0;
     uint8_t addresses[] = {0x00, 0x00, 0x21, 0x00}; // fwr = 0, lwr = 33
     uint8_t password[] = {0x00, 0x00, 0x00, 0x00};  // default password
 
@@ -705,8 +706,10 @@ void em4x50_info(em4x50_data_t *etd) {
     
     bsuccess = selective_read(addresses);
     
+    status = (bsuccess << 1) + blogin;
+    
     lf_finalize();
-    reply_mix(CMD_ACK, bsuccess, blogin, 0, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
 }
 
 // write functions
@@ -792,6 +795,7 @@ void em4x50_write(em4x50_data_t *etd) {
     // single word is written to given address, verified by selective read operation
     
     bool bsuccess = false, blogin = false;
+    uint8_t status = 0;
     uint8_t word[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t addresses[4] = {0x00, 0x00, 0x00, 0x00};
     
@@ -834,8 +838,10 @@ void em4x50_write(em4x50_data_t *etd) {
         }
     }
 
+    status = (bsuccess << 1) + blogin;
+    
     lf_finalize();
-    reply_mix(CMD_ACK, bsuccess, blogin, 0, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
 }
 
 void em4x50_write_password(em4x50_data_t *etd) {
@@ -853,5 +859,5 @@ void em4x50_write_password(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_mix(CMD_ACK, bsuccess, 0, 0, 0, 0);
+    reply_ng(CMD_ACK, bsuccess, 0, 0);
 }
