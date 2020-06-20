@@ -214,11 +214,11 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
             strcat(string, pstring);
         }
         
-        sprintf(pstring, "\n  word[%i] lsb: " _GREEN_("0x"), i);
+        sprintf(pstring, "\n  word[%i] lsb: 0x", i);
         strcat(string, pstring);
 
         for (int j = 0; j < 4; j++) {
-            sprintf(pstring, _GREEN_("%02x"), reflect8(words[i].byte[3-j]));
+            sprintf(pstring, "%02x", reflect8(words[i].byte[3-j]));
             strcat(string, pstring);
         }
         
@@ -346,14 +346,14 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
 
     } else {
             
-        sprintf(pstring, _GREEN_("successful "));
+        sprintf(pstring, _GREEN_("ok "));
         strcat(string, pstring);
 
         if (blogin) {
 
             if (bpwd_given) {
 
-                sprintf(pstring, "(login with 0x%02x%02x%02x%02x)",
+                sprintf(pstring, "(login with password 0x%02x%02x%02x%02x)",
                                     etd->password[0], etd->password[1],
                                     etd->password[2], etd->password[3]);
                 strcat(string, pstring);
@@ -469,13 +469,13 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
         prepare_result(data, etd->address, etd->address, &word[0]);
         print_result(word, etd->address, etd->address);
 
-        sprintf(pstring, "\n  writing " _GREEN_("successful "));
+        sprintf(pstring, "\n  writing " _GREEN_("ok "));
         strcat(string, pstring);
 
         if (pwd_given) {
 
             if (login) {
-                sprintf(pstring, "(login with 0x%02x%02x%02x%02x)",
+                sprintf(pstring, "(login with password 0x%02x%02x%02x%02x)",
                                     etd->password[0], etd->password[1],
                                     etd->password[2], etd->password[3]);
                 strcat(string, pstring);
@@ -582,7 +582,7 @@ static void print_write_password_result(PacketResponseNG *resp, const em4x50_dat
 
     } else {
         
-        sprintf(pstring, "\n  writing new password " _GREEN_("successful"));
+        sprintf(pstring, "\n  writing new password " _GREEN_("ok"));
         strcat(string, pstring);
     }
 
