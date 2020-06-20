@@ -59,13 +59,6 @@ int usage_lf_em4x50_write_password(void) {
     return PM3_SUCCESS;
 }
 
-static bool check_bit_in_byte(uint8_t pos, uint8_t byte) {
-    
-    // return true if bit at position <pos> is "1"
-    
-    return (((byte >> pos) & 1) == 1) ? true : false;
-}
-
 static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t *words) {
 
     // restructure received result in "em4x50_word_t" structure and check all
@@ -244,14 +237,14 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
 
     prepare_result(data, 0, 33, words);
 
-    bpwc = check_bit_in_byte(7, words[2].byte[2]);   // password check
-    braw = check_bit_in_byte(6, words[2].byte[2]);   // read after write
-    fwr = reflect8(words[2].byte[0]);    // first word read
-    lwr = reflect8(words[2].byte[1]);    // last word read
-    fwrp = reflect8(words[1].byte[0]);   // first word read protected
-    lwrp = reflect8(words[1].byte[1]);   // last word read protected
-    fwwi = reflect8(words[1].byte[2]);   // first word write inhibited
-    lwwi = reflect8(words[1].byte[3]);   // last word write inhibited
+    bpwc = (bool)(words[2].byte[2] & 128);  // password check (bit 7)
+    braw = (bool)(words[2].byte[2] & 64);   // read after write (bit 6)
+    fwr = reflect8(words[2].byte[0]);       // first word read
+    lwr = reflect8(words[2].byte[1]);       // last word read
+    fwrp = reflect8(words[1].byte[0]);      // first word read protected
+    lwrp = reflect8(words[1].byte[1]);      // last word read protected
+    fwwi = reflect8(words[1].byte[2]);      // first word write inhibited
+    lwwi = reflect8(words[1].byte[3]);      // last word write inhibited
     
     // data section
     PrintAndLogEx(NORMAL, _YELLOW_("\n  em4x50 data:"));
