@@ -46,7 +46,8 @@ static int CmdHelp(const char *Cmd);
 
 static int usage_hf_search(void) {
     PrintAndLogEx(NORMAL, "Usage: hf search");
-    PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag. Stops when found.");
+    PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag.");
+    PrintAndLogEx(NORMAL, "Continues to search for all different HF protocols");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h               - This help");
     PrintAndLogEx(NORMAL, "");
@@ -64,18 +65,21 @@ static int usage_hf_sniff(void) {
     PrintAndLogEx(NORMAL, "       <skip triggers> - skip number of triggers");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf sniff");
-    PrintAndLogEx(NORMAL, "           hf sniff 1000 0");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf sniff"));
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf sniff 1000 0"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
 static int usage_hf_tune(void) {
     PrintAndLogEx(NORMAL, "Continuously measure HF antenna tuning.");
-    PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
+    PrintAndLogEx(NORMAL, "Press button or `enter` to interrupt.");
     PrintAndLogEx(NORMAL, "Usage: hf tune [h] [<iter>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - This help");
     PrintAndLogEx(NORMAL, "       <iter>        - number of iterations (default: 0=infinite)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf tune 1"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -195,7 +199,7 @@ int CmdHFSearch(const char *Cmd) {
 int CmdHFTune(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_tune();
-    int iter =  param_get32ex(Cmd, 0, 0, 10);
+    int iter = param_get32ex(Cmd, 0, 0, 10);
 
     PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
     PacketResponseNG resp;
@@ -263,28 +267,37 @@ int CmdHFSniff(const char *Cmd) {
     for (;;) {
 
         if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             PrintAndLogEx(INFO, "User aborted");
             break;
         }
 
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_HF_SNIFF, &resp, 4000)) {
+        if (WaitForResponseTimeout(CMD_HF_SNIFF, &resp, 1000)) {
 
             if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(INFO, "Button pressed, user aborted");
                 break;
             }
             if (resp.status == PM3_SUCCESS) {
 
-                uint16_t len = resp.data.asDwords[0] & 0xFFFF;
-                PrintAndLogEx(INFO, "HF sniff len %u bytes", len);
+                struct r {
+                    uint16_t len;
+                } PACKED;
+                struct r *retval = (struct r *)resp.data.asBytes;
+            
+                PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
+
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("data hpf") "` to remove offset");
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data plot") "` to view");
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data save") "` to save");
 
-                // download bigbuf_malloced..
-                // it reservs mem from the higher range.  ie we can't start from beginning idx 0.
-                // but from
-                uint32_t start = pm3_capabilities.bigbuf_size - len;
-                int res = getSamplesEx(start, start + len, false);
+                // download bigbuf_malloc:d.  
+                // it reserve memory from the higher end.
+                // At the moment, sniff takes all free memory in bigbuff. If this changes, 
+                // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
+                uint32_t start = pm3_capabilities.bigbuf_size - retval->len;
+                int res = getSamplesEx(start, start, false);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(WARNING, "failed to download samples to client");
                     return res;

@@ -1424,7 +1424,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint16_t len = 0;
             int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len);
-            reply_ng(CMD_HF_SNIFF, res, (uint8_t *)&len, sizeof(len));
+
+            struct {
+                uint16_t len;
+            } PACKED retval;
+            retval.len = len;
+            reply_ng(CMD_HF_SNIFF, res, (uint8_t *)&retval, sizeof(retval));
             break;
         }
 #endif

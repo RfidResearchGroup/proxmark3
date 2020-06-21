@@ -19,13 +19,13 @@
 #include "cmd.h"
 
 static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
-    for (; dsize > 0; dsize -= sizeof(dsize)) {
+    while (dsize > 0) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             *dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             dest++;
+            dsize -= sizeof(dsize);
         }
     }
-    Dbprintf("collected %u samples",  dsize);
 }
 
 int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
@@ -52,18 +52,18 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     *len = (BigBuf_max_traceLen() & 0xFFFE);
     uint8_t *mem = BigBuf_malloc(*len);
 
-    int trigger_cnt = 0;
+    uint32_t trigger_cnt = 0;    
     uint16_t r = 0, interval = 0;
-
 
     bool pressed = false;
     while (pressed == false) {
         WDT_HIT();
 
         // cancel w usb command.
-        if (interval == 1000) {
+        if (interval == 2000) {
             if (data_available())
                 break;
+
             interval = 0;
         } else {
             interval++;
@@ -77,8 +77,10 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
 
             // 180 (0xB4) arbitary value to see if a strong RF field is near.
             if (r > 180) {
-                if (++trigger_cnt > triggersToSkip)
+               
+                if (++trigger_cnt > triggersToSkip) {
                     break;
+                }
             }
         }
 
@@ -88,16 +90,19 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     if (pressed == false) {
 
         // skip samples loop
-        int waitcount = samplesToSkip;
-        while (waitcount != 0) {
+        while (samplesToSkip != 0) {
 
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
-                waitcount--;
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                samplesToSkip--;
+            }
         }
 
-        optimizedSniff((uint16_t *)mem, (*len) >> 2);
+        optimizedSniff((uint16_t*)mem, *len);
 
-        Dbprintf("Trigger kicked in (%d >= 180)", r);
+        if (DBGLEVEL >= DBG_INFO)   {
+            Dbprintf("Trigger kicked in (%d >= 180)", r);
+            Dbprintf("Collected %u samples", *len);
+        }
     }
 
     //Resetting Frame mode (First set in fpgaloader.c)
