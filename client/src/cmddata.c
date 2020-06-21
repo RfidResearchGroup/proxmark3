@@ -2316,6 +2316,7 @@ static int CmdDataNDEF(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
+        arg_lit0("vV",  "verbose", "verbose mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2323,12 +2324,18 @@ static int CmdDataNDEF(const char *Cmd) {
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    bool verbose = arg_get_lit(ctx, 2);
+
     CLIParserFree(ctx);
     if (datalen == 0)
         return PM3_EINVARG;
 
-    PrintAndLogEx(INFO, "Parsed NDEF Records");
-    return NDEFRecordsDecodeAndPrint(data, datalen);
+    int res = NDEFDecodeAndPrint(data, datalen, verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
+        res = NDEFRecordsDecodeAndPrint(data, datalen);
+    }
+    return res;
 }
 
 static command_t CommandTable[] = {
