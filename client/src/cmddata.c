@@ -2310,8 +2310,11 @@ static int CmdDataNDEF(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data ndef",
-                  "Prints NFC Data Exchange Format (NDEF)",
-                  "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
+                  "Decode and print NFC Data Exchange Format (NDEF)",
+                  "Samples:\n"
+                  _YELLOW_("\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n")
+                  _YELLOW_("\tdata ndef -d 0103d020240203e02c040300fe\n")
+                  );
 
     void *argtable[] = {
         arg_param_begin,
