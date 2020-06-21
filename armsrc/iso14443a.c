@@ -889,7 +889,7 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
 
     // Make sure we do not exceed the free buffer space
     if (ToSendMax > max_buffer_size) {
-        Dbprintf("Out of memory, when modulating bits for tag answer:");
+        Dbprintf("ToSend buffer, Out-of-bound, when modulating bits for tag answer:");
         Dbhexdump(response_info->response_n, response_info->response, false);
         return false;
     }
@@ -2027,13 +2027,6 @@ int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
                LastTimeProxToAirStart * 16 + DELAY_ARM2AIR_AS_TAG,
                (LastTimeProxToAirStart + p_response->ProxToAirDuration) * 16 + DELAY_ARM2AIR_AS_TAG,
                par);
-
-    if (DBGLEVEL >= DBG_EXTENDED) {
-        Dbprintf("response_info->response %02X", p_response->response);
-        Dbprintf("response_info->response_n %02X", p_response->response_n);
-        Dbprintf("response_info->par %02X", &(p_response->par));
-    }
-
     return ret;
 }
 
