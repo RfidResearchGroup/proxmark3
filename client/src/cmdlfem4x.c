@@ -45,13 +45,24 @@ static int usage_lf_em410x_demod(void) {
     PrintAndLogEx(NORMAL, "     maxerror            - set maximum allowed errors, default = 100.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           lf em 410x_demod        = demod an EM410x Tag ID from GraphBuffer");
-    PrintAndLogEx(NORMAL, "           lf em 410x_demod 32     = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "           lf em 410x_demod 32 1   = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "           lf em 410x_demod 1      = demod an EM410x Tag ID from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "           lf em 410x_demod 64 1 0 = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, _YELLOW_("           lf em 410x_demod") "        = demod an EM410x Tag ID from GraphBuffer");
+    PrintAndLogEx(NORMAL, _YELLOW_("           lf em 410x_demod 32") "     = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, _YELLOW_("           lf em 410x_demod 32 1") "   = demod an EM410x Tag ID from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, _YELLOW_("           lf em 410x_demod 1") "      = demod an EM410x Tag ID from GraphBuffer while inverting data");
+    PrintAndLogEx(NORMAL, _YELLOW_("           lf em 410x_demod 64 1 0") " = demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors");
     return PM3_SUCCESS;
 }
+static int usage_lf_em410x_watch(void) {
+    PrintAndLogEx(NORMAL, "Enables IOProx compatible reader mode printing details of scanned tags.");
+    PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 410x_watch");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf em 410x_watch"));
+    return PM3_SUCCESS;
+}
+
 static int usage_lf_em410x_write(void) {
     PrintAndLogEx(NORMAL, "Writes EM410x ID to a T55x7 / T5555 (Q5) tag");
     PrintAndLogEx(NORMAL, "");
@@ -62,7 +73,7 @@ static int usage_lf_em410x_write(void) {
     PrintAndLogEx(NORMAL, "       <card>    - 0|1 T5555 (Q5) / T55x7");
     PrintAndLogEx(NORMAL, "       <clock>   - 16|32|40|64, optional, set R/F clock rate, defaults to 64");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 410x_write 0F0368568B 1       = write ID to t55x7 card");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_write 0F0368568B 1") "       = write ID to t55x7 card");
     return PM3_SUCCESS;
 }
 static int usage_lf_em410x_ws(void) {
@@ -72,7 +83,7 @@ static int usage_lf_em410x_ws(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 410x_spoof");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_spoof"));
     return PM3_SUCCESS;
 }
 static int usage_lf_em410x_sim(void) {
@@ -84,8 +95,8 @@ static int usage_lf_em410x_sim(void) {
     PrintAndLogEx(NORMAL, "       uid       - uid (10 HEX symbols)");
     PrintAndLogEx(NORMAL, "       clock     - clock (32|64) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 410x_sim 0F0368568B");
-    PrintAndLogEx(NORMAL, "      lf em 410x_sim 0F0368568B 32");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_sim 0F0368568B"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_sim 0F0368568B 32"));
     return PM3_SUCCESS;
 }
 static int usage_lf_em410x_brute(void) {
@@ -98,10 +109,10 @@ static int usage_lf_em410x_brute(void) {
     PrintAndLogEx(NORMAL, "       d (2000)      - pause delay in milliseconds between UIDs simulation, default 1000 ms (optional)");
     PrintAndLogEx(NORMAL, "       c (32)        - clock (32|64), default 64 (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 410x_brute ids.txt");
-    PrintAndLogEx(NORMAL, "      lf em 410x_brute ids.txt c 32");
-    PrintAndLogEx(NORMAL, "      lf em 410x_brute ids.txt d 3000");
-    PrintAndLogEx(NORMAL, "      lf em 410x_brute ids.txt d 3000 c 32");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_brute ids.txt"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_brute ids.txt c 32"));
+    PrintAndLogEx(NORMAL, _YELLOW_( "      lf em 410x_brute ids.txt d 3000"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_brute ids.txt d 3000 c 32"));
     return PM3_SUCCESS;
 }
 
@@ -426,16 +437,23 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
         return PM3_ESOFT;
     return AskEm410xDecode(verbose, hi, lo);
 }
-/*
+
 // this read loops on device side.
 // uses the demod in lfops.c
-static int CmdEM410xRead_device(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    uint8_t findone = (cmdp == '1') ? 1 : 0;
-    SendCommandMIX(CMD_LF_EM410X_DEMOD, findone, 0, 0, NULL, 0);
-    return PM3_SUCCESS;
+static int CmdEM410xWatch(const char *Cmd) {
+    uint8_t c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') return usage_lf_em410x_watch();
+    
+    PrintAndLogEx(SUCCESS, "Watching for EM410x cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM410X_WATCH, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_EM410X_WATCH, &resp);
+    PrintAndLogEx(INFO, "Done");
+    return resp.status;
 }
-*/
+
 //by marshmellow
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask while decoding manchester
@@ -595,30 +613,6 @@ static int CmdEM410xBrute(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-/* Function is equivalent of lf read + data samples + em410xread
- * looped until an EM410x tag is detected
- *
- * Why is CmdSamples("16000")?
- *  TBD: Auto-grow sample size based on detected sample rate.  IE: If the
- *       rate gets lower, then grow the number of samples
- *  Changed by martin, 4000 x 4 = 16000,
- *  see http://www.proxmark.org/forum/viewtopic.php?pid=7235#p7235
- *
- *  EDIT -- capture enough to get 2 complete preambles at the slowest data rate known to be used (rf/64) (64*64*2+9 = 8201) marshmellow
-*/
-static int CmdEM410xWatch(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    do {
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
-            break;
-        }
-        lf_read(false, 12288);
-
-    } while (CmdEM410xRead("") != PM3_SUCCESS);
-    return PM3_SUCCESS;
-}
-
 //currently only supports manchester modulations
 static int CmdEM410xWatchnSpoof(const char *Cmd) {
 
@@ -636,29 +630,26 @@ static int CmdEM410xWrite(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 0x00 || cmdp == 'h') return usage_lf_em410x_write();
 
-    uint64_t id = 0xFFFFFFFFFFFFFFFF; // invalid id value
-    int card = 0xFF; // invalid card value
-    uint32_t clock1 = 0; // invalid clock value
-
-    sscanf(Cmd, "%" SCNx64 " %d %d", &id, &card, &clock1);
+    uint64_t id = param_get64ex(Cmd, 0, -1, 16);
+    uint8_t card = param_get8ex(Cmd, 1, 0xFF, 10);
+    uint8_t clock1 = param_get8ex(Cmd, 2, 0, 10);
 
     // Check ID
     if (id == 0xFFFFFFFFFFFFFFFF) {
-        PrintAndLogEx(ERR, "Error! ID is required.\n");
+        PrintAndLogEx(ERR, "error, ID is required\n");
+        usage_lf_em410x_write();
         return PM3_EINVARG;
     }
     if (id >= 0x10000000000) {
-        PrintAndLogEx(ERR, "Error! Given EM410x ID is longer than 40 bits.\n");
+        PrintAndLogEx(ERR, "error, given EM410x ID is longer than 40 bits\n");
+        usage_lf_em410x_write();
         return PM3_EINVARG;
     }
 
     // Check Card
-    if (card == 0xFF) {
-        PrintAndLogEx(ERR, "Error! Card type required.\n");
-        return PM3_EINVARG;
-    }
-    if (card < 0) {
-        PrintAndLogEx(ERR, "Error! Bad card type selected.\n");
+    if (card > 1) {
+        PrintAndLogEx(FAILED, "error, bad card type selected\n");
+        usage_lf_em410x_write();
         return PM3_EINVARG;
     }
 
@@ -668,29 +659,51 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     // Allowed clock rates: 16, 32, 40 and 64
     if ((clock1 != 16) && (clock1 != 32) && (clock1 != 64) && (clock1 != 40)) {
-        PrintAndLogEx(ERR, "Error! Clock rate" _YELLOW_("%d")" not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock1);
+        PrintAndLogEx(ERR, "error, clock rate" _RED_("%d")" not valid");
+        PrintAndLogEx(INFO, "supported clock rates: " _YELLOW_("16, 32, 40, 60") "\n", clock1);
+        usage_lf_em410x_write();
         return PM3_EINVARG;
     }
 
     if (card == 1) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock1);
+        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", _GREEN_("T55x7"), id, clock1);
         // NOTE: We really should pass the clock in as a separate argument, but to
         //   provide for backwards-compatibility for older firmware, and to avoid
         //   having to add another argument to CMD_LF_EM410X_WRITE, we just store
         //   the clock rate in bits 8-15 of the card value
-        card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else if (card == 0) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 "(clock rate: %d)", "T5555", id, clock1);
-        card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
-    } else {
-        PrintAndLogEx(FAILED, "Error! Bad card type selected.\n");
-        return PM3_ESOFT;
+        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 "(clock rate: %d)", _GREEN_("T5555"), id, clock1);
     }
+    
+    struct {
+        uint8_t card;
+        uint8_t clock;
+        uint32_t high;
+        uint32_t low;
+    } PACKED params;
 
-    SendCommandMIX(CMD_LF_EM410X_WRITE, card, (uint32_t)(id >> 32), (uint32_t)id, NULL, 0);
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x_read`") " to verify");
-    return PM3_SUCCESS;
+    params.card = card;
+    params.clock = clock1;
+    params.high = (uint32_t)(id >> 32);
+    params.low = (uint32_t)id;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM410X_WRITE, (uint8_t *)&params, sizeof(params));
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_EM410X_WRITE, &resp);
+    switch(resp.status) {
+        case PM3_SUCCESS: {
+            PrintAndLogEx(SUCCESS, "Done");
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x_read`") " to verify");
+            break;
+        }
+        default: {
+            PrintAndLogEx(WARNING, "Something went wrong");
+            break;
+        }
+    }
+    return resp.status;
 }
 
 //**************** Start of EM4x50 Code ************************
@@ -1001,7 +1014,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             PrintAndLogEx(INFO, "%03d | %08x", block, Code[block]);
         }
         PrintAndLogEx(INFO, "----+--------------");
-        PrintAndLogEx( (AllPTest) ? SUCCESS : WARNING, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
+        PrintAndLogEx((AllPTest) ? SUCCESS : WARNING, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
 
         if (AllPTest == false) {
             PrintAndLogEx(HINT, "Try cleaning the read samples with " _YELLOW_("'data askedge'"));

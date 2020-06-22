@@ -386,7 +386,7 @@ typedef struct {
 #define CMD_DOWNLOADED_BIGBUF                                             0x0208
 #define CMD_LF_UPLOAD_SIM_SAMPLES                                         0x0209
 #define CMD_LF_SIMULATE                                                   0x020A
-#define CMD_LF_HID_DEMOD                                                  0x020B
+#define CMD_LF_HID_WATCH                                                  0x020B
 #define CMD_LF_HID_SIMULATE                                               0x020C
 #define CMD_LF_SET_DIVISOR                                                0x020D
 #define CMD_LF_SIMULATE_BIDIR                                             0x020E
@@ -400,8 +400,8 @@ typedef struct {
 #define CMD_LF_PCF7931_WRITE                                              0x0223
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
-#define CMD_LF_IO_DEMOD                                                   0x021A
-#define CMD_LF_EM410X_DEMOD                                               0x021C
+#define CMD_LF_IO_WATCH                                                   0x021A
+#define CMD_LF_EM410X_WATCH                                               0x021C
 #define CMD_LF_EM4X50_INFO                                                0x0240
 #define CMD_LF_EM4X50_WRITE                                               0x0241
 #define CMD_LF_EM4X50_WRITE_PASSWORD                                      0x0242
@@ -411,7 +411,7 @@ typedef struct {
 #define CMD_LF_ASK_SIMULATE                                               0x021F
 #define CMD_LF_PSK_SIMULATE                                               0x0220
 #define CMD_LF_NRZ_SIMULATE                                               0x0232
-#define CMD_LF_AWID_DEMOD                                                 0x0221
+#define CMD_LF_AWID_WATCH                                                 0x0221
 #define CMD_LF_VIKING_CLONE                                               0x0222
 #define CMD_LF_T55XX_WAKEUP                                               0x0224
 #define CMD_LF_COTAG_READ                                                 0x0225

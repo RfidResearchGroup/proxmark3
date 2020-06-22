@@ -173,7 +173,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     if (sector0 == NULL)
         return PM3_EINVARG;
 
-    uint8_t GPB = sector0[3 * 16 + 9];   
+    uint8_t GPB = sector0[3 * 16 + 9];
     if (verbose)
         PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x"), "GPB", GPB);
 
@@ -304,7 +304,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------- " _CYAN_("Listing") " ----------------");
-            
+
     PrintAndLogEx(INFO, " 00 MAD v1");
     uint32_t prev_aid = 0xFFFFFFFF;
     for (int i = 1; i < 16; i++) {
@@ -326,10 +326,10 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
 
 int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     open_mad_file(&mad_known_aids, verbose);
-    
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 details") " -------------");
-    
+
     int res = madCRCCheck(sector, true, 2);
     if (verbose) {
         if (res == PM3_SUCCESS)
@@ -347,7 +347,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------- " _CYAN_("Listing") " ----------------");
-            
+
     PrintAndLogEx(INFO, " 16 MAD v2");
 
     uint32_t prev_aid = 0xFFFFFFFF;

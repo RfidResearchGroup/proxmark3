@@ -882,7 +882,7 @@ void mifare_cypher_blocks_chained(desfiretag_t tag, desfirekey_t key, uint8_t *i
 }
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc) {
-    crc32_ex(data,len,crc);
+    crc32_ex(data, len, crc);
 }
 
 void desfire_crc32_append(uint8_t *data, const size_t len) {

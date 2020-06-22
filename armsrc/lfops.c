@@ -171,7 +171,7 @@ t55xx_configurations_t T55xx_Timing  = {
 #define T55XX_LONGLEADINGREFERENCE 4 // Value to tell Write Bit to send long reference
 
 // ATA55xx shared presets & routines
-static uint32_t GetT55xxClockBit(uint32_t clock) {
+static uint32_t GetT55xxClockBit(uint8_t clock) {
     switch (clock) {
         case 128:
             return T55x7_BITRATE_RF_128;
@@ -1224,32 +1224,52 @@ void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
-void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
-    uint8_t *dest = BigBuf_get_addr();
+int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
+
     size_t size;
     uint32_t hi2 = 0, hi = 0, lo = 0;
     int dummyIdx = 0;
     // Configure to go in 125kHz listen mode
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
+    uint8_t *dest = BigBuf_get_addr();
+    BigBuf_Clear_keep_EM();
+    clear_trace();
+    set_tracing(false);
+
     //clear read buffer
     BigBuf_Clear_keep_EM();
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    int res = PM3_SUCCESS;
+    uint16_t interval = 0;
+    while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-        if (ledcontrol) LED_A_ON();
+                 
+        // cancel w usb command.
+        if (interval == 4000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            interval = 0;
+        } else {
+            interval++;
+        }
 
         DoAcquisition_default(-1, false);
+
         // FSK demodulator
-        size = 50 * 128 * 2; //big enough to catch 2 sequences of largest format
+        // 50 * 128 * 2 - big enough to catch 2 sequences of largest format
+        size = MIN(12800, BigBuf_max_traceLen());
+        
         int idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
         if (idx < 0) continue;
 
         if (idx > 0 && lo > 0 && (size == 96 || size == 192)) {
             // go over previously decoded manchester data and decode into usable tag ID
             if (hi2 != 0) { //extra large HID tags  88/192 bits
-                Dbprintf("TAG ID: %x%08x%08x (%d)",
+                Dbprintf("TAG ID: " _GREEN_("%x%08x%08x") " (%d)",
                          hi2,
                          hi,
                          lo,
@@ -1311,25 +1331,40 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
         hi2 = hi = lo = idx = 0;
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("HID fsk demod stopped");
-    if (ledcontrol) LED_A_OFF();
+    BigBuf_free();
+    LEDsoff();
+    return res;
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
-void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
+int lf_awid_watch(int findone, uint32_t *high, uint32_t *low) {
 
-    uint8_t *dest = BigBuf_get_addr();
     size_t size;
     int dummyIdx = 0;
 
+    uint8_t *dest = BigBuf_get_addr();
     BigBuf_Clear_keep_EM();
+    clear_trace();
+    set_tracing(false);
 
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    int res = PM3_SUCCESS;
+    uint16_t interval = 0;
+    while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-        if (ledcontrol) LED_A_ON();
+         
+        // cancel w usb command.
+        if (interval == 4000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            interval = 0;
+        } else {
+            interval++;
+        }
 
         DoAcquisition_default(-1, false);
         // FSK demodulator
@@ -1380,20 +1415,19 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
             uint32_t fac = bytebits_to_byte(dest + 9, 8);
             uint32_t cardnum = bytebits_to_byte(dest + 17, 16);
             uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
-            Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fac, cardnum, code1, rawHi2, rawHi, rawLo);
+            Dbprintf("AWID Found - Bit length: " _GREEN_("%d") ", FC: " _GREEN_("%d") ", Card: " _GREEN_("%d") " - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fac, cardnum, code1, rawHi2, rawHi, rawLo);
         } else {
             uint32_t cardnum = bytebits_to_byte(dest + 8 + (fmtLen - 17), 16);
             if (fmtLen > 32) {
                 uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen - 32);
                 uint32_t code2 = bytebits_to_byte(dest + 8 + (fmtLen - 32), 32);
-                Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+                Dbprintf("AWID Found - Bit length: " _GREEN_("%d") " -unknown bit length- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             } else {
                 uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
-                Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+                Dbprintf("AWID Found - Bit length: " _GREEN_("%d") " -unknown bit length- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
             }
         }
         if (findone) {
-            if (ledcontrol) LED_A_OFF();
             *high = rawHi;
             *low = rawLo;
             break;
@@ -1401,26 +1435,40 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("AWID fsk demod stopped");
-    if (ledcontrol) LED_A_OFF();
+    BigBuf_free();
+    LEDsoff();
+    return res;
 }
 
-void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) {
-    uint8_t *dest = BigBuf_get_addr();
+int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low) {
 
     size_t size, idx = 0;
     int clk = 0, invert = 0, maxErr = 20;
     uint32_t hi = 0;
     uint64_t lo = 0;
 
+    uint8_t *dest = BigBuf_get_addr();
+    clear_trace();
+    set_tracing(false);
     BigBuf_Clear_keep_EM();
 
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
-    while (!BUTTON_PRESS() && !data_available()) {
-
+    int res = PM3_SUCCESS;
+    uint16_t interval = 0;
+    while (BUTTON_PRESS() == false) {
         WDT_HIT();
-        if (ledcontrol) LED_A_ON();
+
+        // cancel w usb command.
+        if (interval == 4000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            interval = 0;
+        } else {
+            interval++;
+        }
 
         DoAcquisition_default(-1, false);
 
@@ -1428,14 +1476,14 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 
         //askdemod and manchester decode
         int errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
-        WDT_HIT();
-
         if (errCnt > 50) continue;
+
+        WDT_HIT();
 
         errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
         if (errCnt == 1) {
             if (size == 128) {
-                Dbprintf("EM XL TAG ID: %06x%08x%08x - (%05d_%03d_%08d)",
+                Dbprintf("EM XL TAG ID: " _GREEN_("%06x%08x%08x") " - ( %05d_%03d_%08d )",
                          hi,
                          (uint32_t)(lo >> 32),
                          (uint32_t)lo,
@@ -1443,7 +1491,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
                          (uint32_t)((lo >> 16LL) & 0xFF),
                          (uint32_t)(lo & 0xFFFFFF));
             } else {
-                Dbprintf("EM TAG ID: %02x%08x - (%05d_%03d_%08d)",
+                Dbprintf("EM TAG ID: " _GREEN_("%02x%08x") " - ( %05d_%03d_%08d )",
                          (uint32_t)(lo >> 32),
                          (uint32_t)lo,
                          (uint32_t)(lo & 0xFFFF),
@@ -1452,7 +1500,6 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
             }
 
             if (findone) {
-                if (ledcontrol) LED_A_OFF();
                 *high = hi;
                 *low = lo;
                 break;
@@ -1463,33 +1510,46 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("EM man/ask demod stopped");
-    if (ledcontrol) LED_A_OFF();
+    BigBuf_free();
+    LEDsoff();
+    return res;
 }
 
-void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
-
-    uint8_t *dest = BigBuf_get_addr();
+int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
 
     int dummyIdx = 0;
     uint32_t code = 0, code2 = 0;
-    uint8_t version = 0, facilitycode = 0, crc = 0;
-    uint16_t number = 0, calccrc = 0;
+    uint8_t version = 0, facilitycode = 0;
+    uint16_t number = 0;
 
-    size_t size = BigBuf_max_traceLen();
-
+    uint8_t *dest = BigBuf_get_addr();
     BigBuf_Clear_keep_EM();
+    clear_trace();
+    set_tracing(false);
 
     // Configure to go in 125kHz listen mode
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    int res = PM3_SUCCESS;
+    uint16_t interval = 0;
+    while (BUTTON_PRESS() == false) {
+
         WDT_HIT();
-        if (ledcontrol) LED_A_ON();
+         
+        // cancel w usb command.
+        if (interval == 4000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            interval = 0;
+        } else {
+            interval++;
+        }
 
         DoAcquisition_default(-1, false);
 
-        size = MIN(12000, BigBuf_max_traceLen());
+        size_t size = MIN(12000, BigBuf_max_traceLen());
 
         //fskdemod and get start index
         int idx = detectIOProx(dest, &size, &dummyIdx);
@@ -1529,18 +1589,9 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         facilitycode = bytebits_to_byte(dest + idx + 18, 8);
         number = (bytebits_to_byte(dest + idx + 36, 8) << 8) | (bytebits_to_byte(dest + idx + 45, 8)); //36,9
 
-        crc = bytebits_to_byte(dest + idx + 54, 8);
-        for (uint8_t i = 1; i < 6; ++i)
-            calccrc += bytebits_to_byte(dest + idx + 9 * i, 8);
-        calccrc &= 0xff;
-        calccrc = 0xff - calccrc;
+        Dbprintf("IO Prox " _GREEN_("XSF(%02d)%02x:%05d") " (%08x%08x) (%s)", version, facilitycode, number, code, code2);
 
-        const char *crcStr = (crc == calccrc) ? "ok" : "!crc";
-
-        Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]", version, facilitycode, number, code, code2, crc, crcStr);
-        // if we're only looking for one tag
         if (findone) {
-            if (ledcontrol) LED_A_OFF();
             *high = code;
             *low = code2;
             break;
@@ -1548,12 +1599,11 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         code = code2 = 0;
         version = facilitycode = 0;
         number = 0;
-        calccrc = 0;
     }
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("IOProx fsk demod stopped");
-    if (ledcontrol) LED_A_OFF();
+    BigBuf_free();
+    LEDsoff();
+    return res;
 }
 
 /*------------------------------
@@ -2006,12 +2056,12 @@ void T55xx_ChkPwds(uint8_t flags) {
 
     DbpString("[+] T55XX Check pwds using flashmemory starting");
 
-    uint8_t ret = 0;
     // First get baseline and setup LF mode.
     // tends to mess up BigBuf
-    uint8_t  *buf           = BigBuf_get_addr();
-    uint32_t b1, baseline   = 0;
-    uint8_t  downlink_mode  = (flags >> 3) & 0x03;
+    uint8_t *buf = BigBuf_get_addr();
+    uint8_t ret = 0;
+    uint8_t downlink_mode = (flags >> 3) & 0x03;
+    uint32_t b1, baseline = 0;
 
     // collect baseline for failed attempt
     uint8_t x = 32;
@@ -2190,17 +2240,26 @@ void CopyVikingtoT55xx(uint8_t *blocks, uint8_t Q5) {
     reply_ng(CMD_LF_VIKING_CLONE, PM3_SUCCESS, NULL, 0);
 }
 
+int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo) {
+
 // Define 9bit header for EM410x tags
 #define EM410X_HEADER    0x1FF
 #define EM410X_ID_LENGTH 40
 
-void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
+    uint32_t clockbits = 0;
+    if (card == 1) { //t55x7
+        clockbits = GetT55xxClockBit(clock);
+        if (clockbits == 0) {
+            Dbprintf("Invalid clock rate: %d", clock);
+            return PM3_EINVARG;
+        }
+    }
+
     int i;
     uint64_t id = EM410X_HEADER;
     uint64_t rev_id = 0; // reversed ID
     int c_parity[4];     // column parity
     int r_parity = 0;    // row parity
-    uint32_t clock = 0;
 
     // Reverse ID bits given as parameter (for simpler operations)
     for (i = 0; i < EM410X_ID_LENGTH; ++i) {
@@ -2250,33 +2309,29 @@ void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo) {
     // Add stop bit
     id <<= 1;
 
-    Dbprintf("Started writing %s tag ...", card ? "T55x7" : "T5555");
     LED_D_ON();
 
     // Write EM410x ID
     uint32_t data[] = {0, (uint32_t)(id >> 32), (uint32_t)(id & 0xFFFFFFFF)};
 
-    clock = (card & 0xFF00) >> 8;
+    // default to 64
     clock = (clock == 0) ? 64 : clock;
     Dbprintf("Clock rate: %d", clock);
-    if (card & 0xFF) { //t55x7
-        clock = GetT55xxClockBit(clock);
-        if (clock == 0) {
-            Dbprintf("Invalid clock rate: %d", clock);
-            return;
-        }
-        data[0] = clock | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
-    } else { //t5555 (Q5)
+
+    if (card == 1) { // T55x7
+        data[0] = clockbits | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
+    } else { // T5555 (Q5)
         data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
     }
 
     WriteT55xx(data, 0, 3);
 
-    LED_D_OFF();
+    LEDsoff();
     Dbprintf("Tag %s written with 0x%08x%08x\n",
              card ? "T55x7" : "T5555",
              (uint32_t)(id >> 32),
              (uint32_t)id);
+    return PM3_SUCCESS;
 }
 
 //-----------------------------------

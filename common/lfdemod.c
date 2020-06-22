@@ -1541,7 +1541,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
     if ((pos > cl_2 - cl_4 - 1) && (pos <= clk + cl_4 + 1)) {
         bits[bitCnt++] = invert ^ 1;
     }
-    
+
     // sample counts,   like clock = 32.. it tries to find  32/4 = 8,  32/2 = 16
     for (size_t i = pos; i < *size; i++) {
         if (bits[i] >= high && waveHigh) {

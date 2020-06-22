@@ -243,6 +243,16 @@ static uint32_t MeasureAntennaTuningLfData(void) {
     return (MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14;
 }
 
+void print_stack_usage(void) {
+    // pointer arithmetic is times 4. (two shifts to the left)
+    for (uint32_t *p = &_stack_start; ; ++p) {
+        if (*p != 0xdeadbeef) {
+            Dbprintf("  Max stack usage.........%d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
+            break;
+        }
+    }
+}
+
 void ReadMem(int addr) {
     const uint8_t *data = ((uint8_t *)addr);
 
@@ -362,13 +372,9 @@ static void SendStatus(void) {
 #endif
     printConnSpeed();
     DbpString(_CYAN_("Various"));
-    // pointer arithmetic is times 4. (two shifts to the left)
-    for (uint32_t *p = &_stack_start; ; ++p) {
-        if (*p != 0xdeadbeef) {
-            Dbprintf("  Max stack usage.........%d / %d bytes", (&_stack_end - p) << 2, (&_stack_end - &_stack_start) << 2);
-            break;
-        }
-    }
+
+    print_stack_usage();
+
     Dbprintf("  DBGLEVEL................%d", DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
@@ -784,9 +790,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_mix(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
-        case CMD_LF_HID_DEMOD: {
+        case CMD_LF_HID_WATCH: {
             uint32_t high, low;
-            CmdHIDdemodFSK(0, &high, &low, 1);
+            int res = lf_hid_watch(0, &high, &low);
+            reply_ng(CMD_LF_HID_WATCH, res, NULL, 0);            
             break;
         }
         case CMD_LF_HID_SIMULATE: {
@@ -818,19 +825,29 @@ static void PacketReceived(PacketCommandNG *packet) {
             CopyHIDtoT55x7(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes[0]);
             break;
         }
-        case CMD_LF_IO_DEMOD: {
+        case CMD_LF_IO_WATCH: {
             uint32_t high, low;
-            CmdIOdemodFSK(0, &high, &low, 1);
+            int res = lf_io_watch(0, &high, &low);
+            reply_ng(CMD_LF_IO_WATCH, res, NULL, 0);
             break;
         }
-        case CMD_LF_EM410X_DEMOD: {
+        case CMD_LF_EM410X_WATCH: {
             uint32_t high;
             uint64_t low;
-            CmdEM410xdemod(packet->oldarg[0], &high, &low, 1);
+            int res = lf_em410x_watch(0, &high, &low);
+            reply_ng(CMD_LF_EM410X_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_EM410X_WRITE: {
-            WriteEM410x(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            struct p {
+                uint8_t card;
+                uint8_t clock;
+                uint32_t high;
+                uint32_t low;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            int res = copy_em410x_to_t55xx(payload->card, payload->clock, payload->high, payload->low);
+            reply_ng(CMD_LF_EM410X_WRITE, res, NULL, 0);
             break;
         }
         case CMD_LF_TI_READ: {
@@ -932,10 +949,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd);
             break;
         }
-        case CMD_LF_AWID_DEMOD:  {
+        case CMD_LF_AWID_WATCH:  {
             uint32_t high, low;
-            // Set realtime AWID demodulation
-            CmdAWIDdemodFSK(0, &high, &low, 1);
+            int res = lf_awid_watch(0, &high, &low);
+            reply_ng(CMD_LF_AWID_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_VIKING_CLONE: {
@@ -1431,7 +1448,20 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HFSNIFF
         case CMD_HF_SNIFF: {
-            HfSniff(packet->oldarg[0], packet->oldarg[1]);
+            struct p {
+                uint32_t samplesToSkip;
+                uint32_t triggersToSkip;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+
+            uint16_t len = 0;
+            int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len);
+
+            struct {
+                uint16_t len;
+            } PACKED retval;
+            retval.len = len;
+            reply_ng(CMD_HF_SNIFF, res, (uint8_t *)&retval, sizeof(retval));
             break;
         }
 #endif
@@ -2087,10 +2117,10 @@ void  __attribute__((noreturn)) AppMain(void) {
     SpinDelay(100);
     BigBuf_initialize();
 
-    for (uint32_t * p = &_stack_start; p < (uint32_t *)((uintptr_t)&_stack_end - 0x200); ++p) {
+    for (uint32_t *p = &_stack_start; p < (uint32_t *)((uintptr_t)&_stack_end - 0x200); ++p) {
         *p = 0xdeadbeef;
     }
-    
+
     if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
         /* Initialize common area */
         memset(&common_area, 0, sizeof(common_area));
@@ -2157,7 +2187,9 @@ void  __attribute__((noreturn)) AppMain(void) {
         WDT_HIT();
 
         if (_stack_start != 0xdeadbeef) {
-            Dbprintf("Stack overflow detected! Please increase stack size.");
+            Dbprintf("Stack overflow detected! Please increase stack size, currently %d bytes", (&_stack_end - &_stack_start) << 2);
+            Dbprintf("Unplug your device now.");
+            while (1);
         }
 
         // Check if there is a packet available

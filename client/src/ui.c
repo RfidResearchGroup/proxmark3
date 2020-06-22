@@ -22,10 +22,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#ifdef HAVE_READLINE
-#include <readline/readline.h>
-#endif
-
 #include <complex.h>
 #include "util.h"
 #include "proxmark3.h"  // PROXLOG

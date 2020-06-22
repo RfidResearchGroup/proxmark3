@@ -504,19 +504,19 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
     bool isok = emv_pk_verify(pk);
 
     PrintAndLogEx(INFO, "Verifying CA PK for %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx %zu bits.  ( %s )",
-           pk->rid[0],
-           pk->rid[1],
-           pk->rid[2],
-           pk->rid[3],
-           pk->rid[4],
-           pk->index,
-           pk->mlen * 8,
-           (isok) ? _GREEN_("ok") : _RED_("failed")
-           );
+                  pk->rid[0],
+                  pk->rid[1],
+                  pk->rid[2],
+                  pk->rid[3],
+                  pk->rid[4],
+                  pk->index,
+                  pk->mlen * 8,
+                  (isok) ? _GREEN_("ok") : _RED_("failed")
+                 );
 
     if (isok) {
         return pk;
-    } 
+    }
 
     emv_pk_free(pk);
     return NULL;

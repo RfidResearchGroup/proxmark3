@@ -256,7 +256,7 @@ static int ExecuteMode(int mode, int slot) {
         //default first mode is simulate
         case LF_RWSB_MODE_READ:
             Dbprintf("[=] >>  Read mode started  <<");
-            CmdEM410xdemod(1, &high[slot], &low[slot], 0);
+            CmdEM410xdemod(1, &high[slot], &low[slot]);
             LED_Update(mode, slot);
             Dbprintf("[=] >>  Tag found. Saving. <<");
             FlashLEDs(100, 5);

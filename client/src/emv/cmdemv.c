@@ -1455,7 +1455,7 @@ static int CmdEMVScan(const char *Cmd) {
     // current path + file name
     if (MergeJSON) {
 
-        root = json_load_file( (char*)filename, 0, &error);
+        root = json_load_file((char *)filename, 0, &error);
         if (!root) {
             PrintAndLogEx(ERR, "Json error on line %d: %s", error.line, error.text);
             return PM3_EFILE;
@@ -1750,15 +1750,15 @@ static int CmdEMVScan(const char *Cmd) {
 
     if (MergeJSON == false) {
         // create unique new name
-        char *fname = newfilenamemcopy((char*)filename, ".json");
+        char *fname = newfilenamemcopy((char *)filename, ".json");
         if (fname == NULL) {
             return PM3_EMALLOC;
         }
-        strcpy((char*)filename, fname);
+        strcpy((char *)filename, fname);
         free(fname);
     }
 
-    res = json_dump_file(root, (char*)filename, JSON_INDENT(2));
+    res = json_dump_file(root, (char *)filename, JSON_INDENT(2));
     if (res) {
         PrintAndLogEx(ERR, "Can't save the file: %s", filename);
         return PM3_EFILE;

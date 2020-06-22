@@ -248,8 +248,9 @@ static int CmdPref(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use '<command> help' for details of a particular command."},
-    {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
+
+    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("sub") " -----------------------"},
+
     {"analyse", CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
     {"data",    CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
     {"emv",     CmdEMV,       AlwaysAvailable,         "{ EMV ISO-14443 / ISO-7816... }"},
@@ -258,15 +259,17 @@ static command_t CommandTable[] = {
     {"lf",      CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
     {"mem",     CmdFlashMem,  IfPm3Flash,              "{ Flash Memory manipulation... }"},
     {"reveng",  CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software }"},
-    {"sc",      CmdSmartcard, AlwaysAvailable,          "{ Smart card ISO-7816 commands... }"},
+    {"smart",   CmdSmartcard, AlwaysAvailable,         "{ Smart card ISO-7816 commands... }"},
     {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
     {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
-    {"",        CmdHelp,      AlwaysAvailable,         ""},
+    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("sub") " -----------------------"},
+    {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
+    {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use " _YELLOW_("'<command> help'") " for details of a particular command."},
     {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
-    {"pref",    CmdPref,      AlwaysAvailable,         "Edit preferences"},
     {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
+    {"pref",    CmdPref,      AlwaysAvailable,         "Edit preferences"},
     {"rem",     CmdRem,       AlwaysAvailable,         "Add a text line in log file"},
     {"quit",    CmdQuit,      AlwaysAvailable,         ""},
     {"exit",    CmdQuit,      AlwaysAvailable,         "Exit program"},
