@@ -2166,7 +2166,9 @@ void  __attribute__((noreturn)) AppMain(void) {
         WDT_HIT();
 
         if (_stack_start != 0xdeadbeef) {
-            Dbprintf("Stack overflow detected! Please increase stack size.");
+            Dbprintf("Stack overflow detected! Please increase stack size, currently %d bytes", (&_stack_end - &_stack_start) << 2);
+            Dbprintf("Unplug your device now.");
+            while (1);
         }
 
         // Check if there is a packet available
