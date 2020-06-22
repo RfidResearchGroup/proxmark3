@@ -36,7 +36,7 @@ static int usage_lf_io_watch(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        lf io watch");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf io watch"));
     return PM3_SUCCESS;
 }
 
@@ -52,7 +52,7 @@ static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (decimal)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf io sim 26 101 1337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf io sim 26 101 1337"));
     return PM3_SUCCESS;
 }
 
@@ -69,15 +69,18 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf io clone 26 101 1337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf io clone 26 101 1337"));
     return PM3_SUCCESS;
 }
 
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdIOProxWatch(const char *Cmd) {
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_io_watch();
+    uint8_t c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') return usage_lf_io_watch();
+
+    PrintAndLogEx(SUCCESS, "Watching for IO Prox cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_IO_WATCH, NULL, 0);
     PacketResponseNG resp;

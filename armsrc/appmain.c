@@ -784,9 +784,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_mix(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
-        case CMD_LF_HID_DEMOD: {
+        case CMD_LF_HID_WATCH: {
             uint32_t high, low;
-            CmdHIDdemodFSK(0, &high, &low, 1);
+            int res = lf_hid_watch(0, &high, &low);
+            reply_ng(CMD_LF_HID_WATCH, res, NULL, 0);            
             break;
         }
         case CMD_LF_HID_SIMULATE: {
@@ -832,7 +833,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_EM410X_WRITE: {
-            WriteEM410x(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            struct p {
+                uint8_t card;
+                uint8_t clock;
+                uint32_t high;
+                uint32_t low;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            int res = copy_em410x_to_t55xx(payload->card, payload->clock, payload->high, payload->low);
+            reply_ng(CMD_LF_EM410X_WRITE, res, NULL, 0);
             break;
         }
         case CMD_LF_TI_READ: {
@@ -934,10 +943,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd);
             break;
         }
-        case CMD_LF_AWID_DEMOD:  {
+        case CMD_LF_AWID_WATCH:  {
             uint32_t high, low;
-            // Set realtime AWID demodulation
-            CmdAWIDdemodFSK(0, &high, &low, 1);
+            int res = lf_awid_watch(0, &high, &low);
+            reply_ng(CMD_LF_AWID_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_VIKING_CLONE: {
