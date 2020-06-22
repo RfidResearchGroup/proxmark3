@@ -41,7 +41,7 @@ static int usage_lf_visa2k_clone(void) {
     PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf visa2000 clone 112233");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf visa2000 clone 112233"));
     return PM3_SUCCESS;
 }
 
@@ -55,7 +55,7 @@ static int usage_lf_visa2k_sim(void) {
     PrintAndLogEx(NORMAL, "      <card ID>  : Visa2k card ID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        lf visa2000 sim 112233");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf visa2000 sim 112233"));
     return PM3_SUCCESS;
 }
 
@@ -86,6 +86,10 @@ static uint8_t visa_parity(uint32_t id) {
     return par;
 }
 
+static int CmdVisa2kDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodVisa2k();
+}
 /**
 *
 * 56495332 00096ebd 00000077 —> tag id 618173
@@ -98,9 +102,7 @@ static uint8_t visa_parity(uint32_t id) {
 *
 **/
 //see ASKDemod for what args are accepted
-static int CmdVisa2kDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
+int demodVisa2k(void) {
     save_restoreGB(GRAPH_SAVE);
 
     //CmdAskEdgeDetect("");
@@ -153,7 +155,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
         save_restoreGB(GRAPH_RESTORE);
         return PM3_ESOFT;
     }
-    PrintAndLogEx(SUCCESS, "Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);
+    PrintAndLogEx(SUCCESS, "Visa2000 Tag Found: Card ID " _GREEN_("%u") " Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);
     return PM3_SUCCESS;
 }
 
@@ -260,7 +262,4 @@ int detectVisa2k(uint8_t *dest, size_t *size) {
     return (int)startIdx;
 }
 
-int demodVisa2k(void) {
-    return CmdVisa2kDemod("");
-}
 
