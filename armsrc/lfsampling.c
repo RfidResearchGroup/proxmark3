@@ -132,6 +132,8 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
     } else {
         if (*sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
+        } else {
+            *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
         }
         data.buffer = BigBuf_get_addr();
     }
@@ -256,11 +258,11 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     uint32_t cancel_counter = 0;
     int16_t checked = 0;
 
-    while (!BUTTON_PRESS()) {
+    while (BUTTON_PRESS() == false) {
 
         // only every 1000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if ((checked == 1000) && (trigger_threshold > 0)) {
+        if ((checked == 2000) && (trigger_threshold > 0)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -273,7 +275,6 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-//			AT91C_BASE_SSC->SSC_THR = 0x43;
             LED_D_ON();
         }
 

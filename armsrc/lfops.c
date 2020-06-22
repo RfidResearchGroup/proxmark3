@@ -1467,29 +1467,41 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
     if (ledcontrol) LED_A_OFF();
 }
 
-void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
-
-    uint8_t *dest = BigBuf_get_addr();
+int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
 
     int dummyIdx = 0;
     uint32_t code = 0, code2 = 0;
     uint8_t version = 0, facilitycode = 0, crc = 0;
     uint16_t number = 0, calccrc = 0;
 
-    size_t size = BigBuf_max_traceLen();
+    size_t size = 12000;
+    uint8_t *dest = BigBuf_malloc(size);
 
     BigBuf_Clear_keep_EM();
 
     // Configure to go in 125kHz listen mode
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
-    while (!BUTTON_PRESS() && !data_available()) {
+    int res = PM3_SUCCESS;
+    uint16_t interval = 0;
+    while (BUTTON_PRESS() == false) {
+
         WDT_HIT();
-        if (ledcontrol) LED_A_ON();
+         
+        // cancel w usb command.
+        if (interval == 2000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            interval = 0;
+        } else {
+            interval++;
+        }
 
         DoAcquisition_default(-1, false);
 
-        size = MIN(12000, BigBuf_max_traceLen());
+        size = 12000;
 
         //fskdemod and get start index
         int idx = detectIOProx(dest, &size, &dummyIdx);
@@ -1530,17 +1542,17 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         number = (bytebits_to_byte(dest + idx + 36, 8) << 8) | (bytebits_to_byte(dest + idx + 45, 8)); //36,9
 
         crc = bytebits_to_byte(dest + idx + 54, 8);
-        for (uint8_t i = 1; i < 6; ++i)
+        for (uint8_t i = 1; i < 6; ++i) {
             calccrc += bytebits_to_byte(dest + idx + 9 * i, 8);
+        }
         calccrc &= 0xff;
         calccrc = 0xff - calccrc;
 
-        const char *crcStr = (crc == calccrc) ? "ok" : "!crc";
+        const char *crcStr = (crc == calccrc) ? _GREEN_("ok") : _RED_("fail");
 
-        Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x)  [%02x %s]", version, facilitycode, number, code, code2, crc, crcStr);
+        Dbprintf("IO Prox XSF(%02d)%02x:%05d (%08x%08x) (%s)", version, facilitycode, number, code, code2, crcStr);
         // if we're only looking for one tag
         if (findone) {
-            if (ledcontrol) LED_A_OFF();
             *high = code;
             *low = code2;
             break;
@@ -1550,10 +1562,8 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         number = 0;
         calccrc = 0;
     }
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("IOProx fsk demod stopped");
-    if (ledcontrol) LED_A_OFF();
+    return res;
 }
 
 /*------------------------------
@@ -2006,12 +2016,12 @@ void T55xx_ChkPwds(uint8_t flags) {
 
     DbpString("[+] T55XX Check pwds using flashmemory starting");
 
-    uint8_t ret = 0;
     // First get baseline and setup LF mode.
     // tends to mess up BigBuf
-    uint8_t  *buf           = BigBuf_get_addr();
-    uint32_t b1, baseline   = 0;
-    uint8_t  downlink_mode  = (flags >> 3) & 0x03;
+    uint8_t *buf = BigBuf_get_addr();
+    uint8_t ret = 0;
+    uint8_t downlink_mode = (flags >> 3) & 0x03;
+    uint32_t b1, baseline = 0;
 
     // collect baseline for failed attempt
     uint8_t x = 32;

@@ -79,8 +79,11 @@ static int CmdIOProxWatch(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_io_watch();
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_IO_DEMOD, NULL, 0);
-    return PM3_SUCCESS;
+    SendCommandNG(CMD_LF_IO_WATCH, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_IO_WATCH, &resp);
+    PrintAndLogEx(INFO, "Done");
+    return resp.status;
 }
 
 //by marshmellow

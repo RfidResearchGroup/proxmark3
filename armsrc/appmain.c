@@ -818,9 +818,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             CopyHIDtoT55x7(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes[0]);
             break;
         }
-        case CMD_LF_IO_DEMOD: {
+        case CMD_LF_IO_WATCH: {
             uint32_t high, low;
-            CmdIOdemodFSK(0, &high, &low, 1);
+            int res = lf_io_watch(0, &high, &low);
+            reply_ng(CMD_LF_IO_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_EM410X_DEMOD: {
