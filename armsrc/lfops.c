@@ -1405,22 +1405,35 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
     if (ledcontrol) LED_A_OFF();
 }
 
-void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) {
-    uint8_t *dest = BigBuf_get_addr();
+int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low) {
 
     size_t size, idx = 0;
     int clk = 0, invert = 0, maxErr = 20;
     uint32_t hi = 0;
     uint64_t lo = 0;
 
+    uint8_t *dest = BigBuf_get_addr();
+    clear_trace();
+    set_tracing(false);
     BigBuf_Clear_keep_EM();
 
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
-    while (!BUTTON_PRESS() && !data_available()) {
-
+    int res = PM3_SUCCESS;
+    uint16_t interval = 0;
+    while (BUTTON_PRESS() == false) {
         WDT_HIT();
-        if (ledcontrol) LED_A_ON();
+
+        // cancel w usb command.
+        if (interval == 2000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            interval = 0;
+        } else {
+            interval++;
+        }
 
         DoAcquisition_default(-1, false);
 
@@ -1428,9 +1441,9 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 
         //askdemod and manchester decode
         int errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
-        WDT_HIT();
-
         if (errCnt > 50) continue;
+
+        WDT_HIT();
 
         errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
         if (errCnt == 1) {
@@ -1452,7 +1465,6 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
             }
 
             if (findone) {
-                if (ledcontrol) LED_A_OFF();
                 *high = hi;
                 *low = lo;
                 break;
@@ -1463,8 +1475,9 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("EM man/ask demod stopped");
-    if (ledcontrol) LED_A_OFF();
+    BigBuf_free();
+    LEDsoff();
+    return res;
 }
 
 int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
@@ -1474,10 +1487,10 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
     uint8_t version = 0, facilitycode = 0, crc = 0;
     uint16_t number = 0, calccrc = 0;
 
-    size_t size = 12000;
-    uint8_t *dest = BigBuf_malloc(size);
-
+    uint8_t *dest = BigBuf_get_addr();
     BigBuf_Clear_keep_EM();
+    clear_trace();
+    set_tracing(false);
 
     // Configure to go in 125kHz listen mode
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
@@ -1501,7 +1514,7 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
 
         DoAcquisition_default(-1, false);
 
-        size = 12000;
+        size_t size = MIN(12000, BigBuf_max_traceLen());
 
         //fskdemod and get start index
         int idx = detectIOProx(dest, &size, &dummyIdx);
@@ -1563,6 +1576,8 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
         calccrc = 0;
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    BigBuf_free();
+    LEDsoff();
     return res;
 }
 

@@ -824,10 +824,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_LF_IO_WATCH, res, NULL, 0);
             break;
         }
-        case CMD_LF_EM410X_DEMOD: {
+        case CMD_LF_EM410X_WATCH: {
             uint32_t high;
             uint64_t low;
-            CmdEM410xdemod(packet->oldarg[0], &high, &low, 1);
+            int res = lf_em410x_watch(0, &high, &low);
+            reply_ng(CMD_LF_EM410X_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_EM410X_WRITE: {

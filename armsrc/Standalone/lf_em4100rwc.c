@@ -161,7 +161,7 @@ void RunMod(void) {
                     state = 3;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - exit to select mode
-                    CmdEM410xdemod(1, &high[selected], &low[selected], 0);
+                    CmdEM410xdemod(1, &high[selected], &low[selected]);
                     FlashLEDs(100, 5);
 #ifdef WITH_FLASH
                     SaveIDtoFlash(selected, low[selected]);

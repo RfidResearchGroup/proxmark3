@@ -37,7 +37,7 @@ void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
 
 void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol);
 void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol); // Realtime demodulation mode for AWID26
-void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol);
+int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low);
 int lf_io_watch(int findone, uint32_t *high, uint32_t *low);
 
 void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT); // Clone an HID card to T5557/T5567
