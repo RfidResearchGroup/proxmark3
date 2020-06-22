@@ -15,9 +15,32 @@
 #include "commonutil.h"
 #include "em4x50.h"
 
-#define EM4x50_FCT_STDREAD  0
-#define EM4x50_FCT_LOGIN    1
-#define EM4x50_FCT_WRITE    2
+#define EM4X50_NO_WORDS             34
+
+// special words
+#define EM4X50_DEVICE_PASSWORD      0
+#define EM4X50_PROTECTION           1
+#define EM4X50_CONTROL        2
+#define EM4X50_DEVICE_SERIAL        32
+#define EM4X50_DEVICE_ID            33
+
+// control word (word = 4 bytes)
+#define FIRST_WORD_READ             0       // first byte
+#define LAST_WORD_READ              1       // second byte
+#define CONFIG_BLOCK                2       // third byte
+#define PASSWORD_CHECK              0x80    // first bit in third byte
+#define READ_AFTER_WRITE            0x40    // second bit in third byte
+
+// protection word
+#define FIRST_WORD_READ_PROTECTED   0       // first byte
+#define LAST_WORD_READ_PROTECTED    1       // second byte
+#define FIRST_WORD_WRITE_INHIBITED  2       // third byte
+#define LAST_WORD_WRITE_INHIBITED   3       // fourth byte
+
+// misc
+#define STATUS_SUCCESS              0x2
+#define STATUS_LOGIN                0x1
+#define NO_CHARS_MAX                400
 
 int usage_lf_em4x50_info(void) {
     PrintAndLogEx(NORMAL, "Read all information of EM4x50. Tag nust be on antenna.");
@@ -124,8 +147,7 @@ static void print_bit_table(const em4x50_word_t word) {
     // individual parity errors will be highlighted in red
         
     int bit = 0;
-    char string[400] = {0};
-    char pstring[100] = {0};
+    char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
 
     // print binary data
     for (int j = 0; j < 4; j++) {
@@ -187,8 +209,7 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
     // print available information for given word from fwr to lwr, i.e.
     // bit table + summary lines with hex notation of word (msb + lsb)
     
-    char string[400] = {0};
-    char pstring[100] = {0};
+    char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
 
     for (int i = fwr; i <= lwr; i++) {
 
@@ -223,28 +244,26 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
 
 static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool bverbose) {
 
-    // display all information info result in structured format
-    
-    bool bpwd_given = etd->pwd_given;
-    bool bsuccess = (bool)(resp->status & 0x2);
-    bool blogin = (bool)(resp->status & 0x1);
-    bool bpwc, braw;
-    int fwr, lwr, fwrp, lwrp, fwwi, lwwi;
+    // display all information of info result in structured format
+
     uint8_t *data = resp->data.asBytes;
-    em4x50_word_t words[34];
-    char pstring[100] = {0};
-    char string[200] = {0};
+    em4x50_word_t words[EM4X50_NO_WORDS];
+    char pstring[NO_CHARS_MAX] = {0}, string[NO_CHARS_MAX] = {0};
 
-    prepare_result(data, 0, 33, words);
+    bool bpwd_given = etd->pwd_given;
+    bool bsuccess = resp->status & STATUS_SUCCESS;
+    bool blogin = resp->status & STATUS_LOGIN;
 
-    bpwc = (bool)(words[2].byte[2] & 128);  // password check (bit 7)
-    braw = (bool)(words[2].byte[2] & 64);   // read after write (bit 6)
-    fwr = reflect8(words[2].byte[0]);       // first word read
-    lwr = reflect8(words[2].byte[1]);       // last word read
-    fwrp = reflect8(words[1].byte[0]);      // first word read protected
-    lwrp = reflect8(words[1].byte[1]);      // last word read protected
-    fwwi = reflect8(words[1].byte[2]);      // first word write inhibited
-    lwwi = reflect8(words[1].byte[3]);      // last word write inhibited
+    prepare_result(data, 0, EM4X50_NO_WORDS - 1, words);
+
+    bool bpwc = words[EM4X50_CONTROL].byte[CONFIG_BLOCK] & PASSWORD_CHECK;
+    bool braw = words[EM4X50_CONTROL].byte[CONFIG_BLOCK] & READ_AFTER_WRITE;
+    int fwr = reflect8(words[EM4X50_CONTROL].byte[FIRST_WORD_READ]);
+    int lwr = reflect8(words[EM4X50_CONTROL].byte[LAST_WORD_READ]);
+    int fwrp = reflect8(words[EM4X50_PROTECTION].byte[FIRST_WORD_READ_PROTECTED]);
+    int lwrp = reflect8(words[EM4X50_PROTECTION].byte[LAST_WORD_READ_PROTECTED]);
+    int fwwi = reflect8(words[EM4X50_PROTECTION].byte[FIRST_WORD_WRITE_INHIBITED]);
+    int lwwi = reflect8(words[EM4X50_PROTECTION].byte[LAST_WORD_WRITE_INHIBITED]);
     
     // data section
     PrintAndLogEx(NORMAL, _YELLOW_("\n  em4x50 data:"));
@@ -252,12 +271,12 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     if (bverbose) {
 
         // detailed data section
-        print_result(words, 0, 33);
+        print_result(words, 0, EM4X50_NO_WORDS - 1);
         
     } else {
 
         // condensed data section
-        for (int i = 0; i <= 33; i++) {
+        for (int i = 0; i < EM4X50_NO_WORDS; i++) {
      
             sprintf(pstring, "  word[%2i]:  ", i);
             strcat(string, pstring);
@@ -268,19 +287,19 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
             }
             
             switch(i) {
-                case 0:
+                case EM4X50_DEVICE_PASSWORD:
                     sprintf(pstring, _YELLOW_("  password, write only"));
                     break;
-                case 1:
+                case EM4X50_PROTECTION:
                     sprintf(pstring, _YELLOW_("  protection word, write inhibited"));
                     break;
-                case 2:
+                case EM4X50_CONTROL:
                     sprintf(pstring, _YELLOW_("  control word, write inhibited"));
                     break;
-                case 32:
+                case EM4X50_DEVICE_SERIAL:
                     sprintf(pstring, _YELLOW_("  device serial number, read only"));
                     break;
-                case 33:
+                case EM4X50_DEVICE_ID:
                     sprintf(pstring, _YELLOW_("  device identification, read only"));
                     break;
                 default:
@@ -436,7 +455,7 @@ int CmdEM4x50Info(const char *Cmd) {
     // print result
     print_info_result(&resp, &etd, verbose);
     
-    success = resp.status & 0x2;
+    success = resp.status & STATUS_SUCCESS;
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
@@ -445,12 +464,11 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
     // display result of writing operation in structured format
 
     bool pwd_given = etd->pwd_given;
-    bool success = (bool)(resp->status & 0x2);
-    bool login = (bool)(resp->status & 0x1);
+    bool success = resp->status & STATUS_SUCCESS;
+    bool login = resp->status & STATUS_LOGIN;
     uint8_t *data = resp->data.asBytes;
-    char string[400] = {0};
-    char pstring[100] = {0};
-    em4x50_word_t word[1];
+    char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
+    em4x50_word_t word;
 
     if (!success) {
         
@@ -459,8 +477,8 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
 
     } else {
             
-        prepare_result(data, etd->address, etd->address, &word[0]);
-        print_result(word, etd->address, etd->address);
+        prepare_result(data, etd->address, etd->address, &word);
+        print_result(&word, etd->address, etd->address);
 
         sprintf(pstring, "\n  writing " _GREEN_("ok "));
         strcat(string, pstring);
@@ -556,7 +574,7 @@ int CmdEM4x50Write(const char *Cmd) {
     // get, prepare and print response
     print_write_result(&resp, &etd);
     
-    success = (bool)(resp.status & 0x2);
+    success = resp.status & STATUS_SUCCESS;
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
@@ -564,9 +582,8 @@ static void print_write_password_result(PacketResponseNG *resp, const em4x50_dat
     
     // display result of password changing operation
 
-    bool success = (bool)resp->status;
-    char string[400] = {0};
-    char pstring[100] = {0};
+    bool success = resp->status;
+    char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
 
     if (!success) {
         
