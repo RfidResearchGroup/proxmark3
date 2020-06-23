@@ -35,7 +35,7 @@ static uint32_t felica_lasttime_prox2air_start;
 static void iso18092_setup(uint8_t fpga_minor_mode);
 static uint8_t felica_select_card(felica_card_select_t *card);
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed);
-bool WaitForFelicaReply(uint16_t maxbytes);
+static bool WaitForFelicaReply(uint16_t maxbytes);
 
 static void iso18092_set_timeout(uint32_t timeout) {
     felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) + 2;

@@ -145,6 +145,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlfpcf7931.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdusart.c
+        ${PM3_ROOT}/client/src/jansson_path.c
         # android resources
         jni_tools.c
         pm3_main.c
@@ -164,12 +165,11 @@ find_library(pm3rrg_rdv4_tinycbor REQUIRED)
 find_library(pm3rrg_rdv4_lua REQUIRED)
 find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
-find_library(pm3rrg_rdv4_z REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
 find_library(pm3rrg_rdv4_whereami REQUIRED)
 
-target_link_libraries(
-        pm3rrg_rdv4
+target_link_libraries(pm3rrg_rdv4
+        bz2
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
@@ -179,6 +179,5 @@ target_link_libraries(
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_whereami
-        pm3rrg_rdv4_z
         android
         log)

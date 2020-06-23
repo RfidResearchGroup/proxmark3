@@ -34,12 +34,12 @@ OBJDIR = obj
 
 INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
 
-# Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
-VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/zlib ../fpga ../armsrc/Standalone
+# Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the lz4 directory
+VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/lz4 ../fpga ../armsrc/Standalone
 
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 
-ARMCFLAGS = -mthumb-interwork
+ARMCFLAGS = -mthumb-interwork -fno-builtin
 DEFCFLAGS = -Wall -Werror -Os -pedantic -fstrict-aliasing -pipe
 
 # Some more warnings we want as errors:
@@ -61,6 +61,7 @@ EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
 EXTRACFLAGS += -Wswitch-enum -Wno-error=switch-enum
 EXTRACFLAGS += -Wsign-compare -Wno-error=sign-compare
 EXTRACFLAGS += -Wold-style-definition -Wno-error=old-style-definition
+EXTRACFLAGS += -Wconversion -Wno-error=conversion -Wno-error=sign-conversion -Wno-error=float-conversion
 
 # unknown to clang or old gcc:
 # First we activate Wextra then we explicitly list those we know about
@@ -88,10 +89,10 @@ ifeq ($(NOERROR),1)
   DEFCFLAGS += -Wno-error
 endif
 
-CFLAGS ?= $(DEFCFLAGS)
-CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
+CROSS_CFLAGS ?= $(DEFCFLAGS)
+CROSS_CFLAGS += $(ARMCFLAGS) -c $(INCLUDE) -std=c99 -DON_DEVICE $(APP_CFLAGS)
 
-LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -Wl,--build-id=none -n
+CROSS_LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -Wl,--build-id=none -n
 LIBS = -lgcc
 
 # Flags to generate temporary dependency files
@@ -106,21 +107,21 @@ VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb -o $@ $< 
+	$(Q)$(CC) $(CROSS_CFLAGS) $(DEPFLAGS) -mthumb -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 $(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -o $@ $< 
+	$(Q)$(CC) $(CROSS_CFLAGS) $(DEPFLAGS) -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 $(ASMOBJ): $(OBJDIR)/%.o: %.s
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) -o $@ $<
+	$(Q)$(CC) $(CROSS_CFLAGS) -o $@ $<
 
 $(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) -mthumb -o $@ $< 
+	$(Q)$(CC) $(CROSS_CFLAGS) -mthumb -o $@ $<
 
 # This objcopy call translates physical flash addresses to logical addresses
 # without touching start address or RAM addresses (.bss and .data sections)
@@ -134,7 +135,7 @@ $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	$(Q)$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
 
 # easy printing of MAKE VARIABLES
-print-%: ; @echo $* = $($*) 
+print-%: ; @echo $* = $($*)
 
 # Automatic dependency generation
 DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \

@@ -130,8 +130,9 @@ static void pacCardIdToRaw(uint8_t *outRawBytes, const char *cardId) {
             pattern = reflect8(idbytes[i - 2]);
             pattern |= oddparity8(pattern);
             if (i > 3) checksum ^= idbytes[i - 2];
-        } else
-            pattern = (reflect8(checksum) & 0xFE) | oddparity8(checksum);
+        } else {
+            pattern = (reflect8(checksum) & 0xFE) | (oddparity8(checksum));
+        }
         pattern <<= shift;
 
         outRawBytes[index] |= pattern >> 8 & 0xFF;

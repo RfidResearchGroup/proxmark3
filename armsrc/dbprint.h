@@ -15,31 +15,31 @@
 #include "ansi.h"
 
 #define Dbprintf_usb(...) {\
-        bool tmpfpc = reply_via_fpc;\
-        bool tmpusb = reply_via_usb;\
-        reply_via_fpc = false;\
-        reply_via_usb = true;\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = false;\
+        g_reply_via_usb = true;\
         Dbprintf(__VA_ARGS__);\
-        reply_via_fpc = tmpfpc;\
-        reply_via_usb = tmpusb;}
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
 
 #define Dbprintf_fpc(...) {\
-        bool tmpfpc = reply_via_fpc;\
-        bool tmpusb = reply_via_usb;\
-        reply_via_fpc = true;\
-        reply_via_usb = false;\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = true;\
+        g_reply_via_usb = false;\
         Dbprintf(__VA_ARGS__);\
-        reply_via_fpc = tmpfpc;\
-        reply_via_usb = tmpusb;}
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
 
 #define Dbprintf_all(...) {\
-        bool tmpfpc = reply_via_fpc;\
-        bool tmpusb = reply_via_usb;\
-        reply_via_fpc = true;\
-        reply_via_usb = true;\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = true;\
+        g_reply_via_usb = true;\
         Dbprintf(__VA_ARGS__);\
-        reply_via_fpc = tmpfpc;\
-        reply_via_usb = tmpusb;}
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
 
 
 void DbpString(const char *str);

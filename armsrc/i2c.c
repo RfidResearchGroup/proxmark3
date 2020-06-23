@@ -27,12 +27,12 @@
 #define SDA_H    HIGH(GPIO_SDA)
 #define SDA_L    LOW(GPIO_SDA)
 
-#define SCL_read (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SCL)
-#define SDA_read (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SDA)
+#define SCL_read ((AT91C_BASE_PIOA->PIO_PDSR & GPIO_SCL) == GPIO_SCL)
+#define SDA_read ((AT91C_BASE_PIOA->PIO_PDSR & GPIO_SDA) == GPIO_SDA)
 
 #define I2C_ERROR  "I2C_WaitAck Error"
 
-volatile unsigned long c;
+static volatile uint32_t c;
 
 // Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps
@@ -46,6 +46,12 @@ static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_1CLK    I2CSpinDelayClk(1)
 #define I2C_DELAY_2CLK    I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
+
+#define I2C_DELAY_100us   I2CSpinDelayClk( 100 / 3)
+#define I2C_DELAY_600us   I2CSpinDelayClk( 600 / 3)
+#define I2C_DELAY_10ms    I2CSpinDelayClk( 10 * 1000 / 3 )
+#define I2C_DELAY_30ms    I2CSpinDelayClk( 30 * 1000 / 3 )
+#define I2C_DELAY_100ms   I2CSpinDelayClk( 100 * 1000 / 3)
 
 #define  ISO7618_MAX_FRAME 255
 
@@ -69,6 +75,7 @@ void I2C_recovery(void) {
     //a STOP signal (SDA from low to high while CLK is high)
     SDA_L;
     WaitUS(5);
+
     SCL_H;
     WaitUS(2);
     SDA_H;
@@ -127,11 +134,11 @@ void I2C_Reset_EnterMainProgram(void) {
     StartTicks();
     I2C_init();
     I2C_SetResetStatus(0, 0, 0);
-    WaitMS(30);
+    I2C_DELAY_30ms;
     I2C_SetResetStatus(1, 0, 0);
-    WaitMS(30);
+    I2C_DELAY_30ms;
     I2C_SetResetStatus(1, 1, 1);
-    WaitMS(10);
+    I2C_DELAY_10ms;
 }
 
 // Reset the SIM_Adapter, then enter the bootloader program
@@ -140,9 +147,9 @@ void I2C_Reset_EnterBootloader(void) {
     StartTicks();
     I2C_init();
     I2C_SetResetStatus(0, 1, 1);
-    WaitMS(100);
+    I2C_DELAY_100ms;
     I2C_SetResetStatus(1, 1, 1);
-    WaitMS(10);
+    I2C_DELAY_10ms;
 }
 
 // Wait for the clock to go High.
@@ -180,13 +187,13 @@ static bool WaitSCL_L(void) {
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint16_t delay = 1800;
+    volatile uint32_t delay = 18000;
     while (delay--) {
         // exit on SCL LOW
         if (!SCL_read)
             return true;
 
-        WaitMS(1);
+        I2C_DELAY_100us;
     }
     return (delay == 0);
 }
@@ -218,7 +225,7 @@ static bool I2C_WaitForSim(void) {
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
     // 1byte transfer == 1ms  with max frame being 256bytes
-    if (!WaitSCL_H_delay(10 * 1000 * 50))
+    if (!WaitSCL_H_delay(20 * 1000 * 50))
         return false;
 
     return true;
@@ -433,7 +440,9 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
     // extra wait  500us (514us measured)
     // 200us  (xx measured)
-    WaitUS(600);
+//    WaitUS(600);
+    I2C_DELAY_600us;
+
     bool bBreak = true;
     uint16_t readcount = 0;
 
@@ -474,7 +483,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
         *data = (uint8_t)tmp & 0xFF;
 
         len--;
-        // 读取的第一个字节为后续长度
+
         // The first byte in response is the message length
         if (!readcount && (len > *data)) {
             len = *data;
@@ -601,7 +610,7 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 }
 
 void I2C_print_status(void) {
-    DbpString(_BLUE_("Smart card module (ISO 7816)"));
+    DbpString(_CYAN_("Smart card module (ISO 7816)"));
     uint8_t maj, min;
     if (I2C_get_version(&maj, &min) == PM3_SUCCESS)
         Dbprintf("  version................." _YELLOW_("v%x.%02d"), maj, min);
@@ -617,9 +626,8 @@ int I2C_get_version(uint8_t *maj, uint8_t *min) {
         *maj = resp[0];
         *min = resp[1];
         return PM3_SUCCESS;
-    } else {
-        return PM3_EDEVNOTSUPP;
     }
+    return PM3_EDEVNOTSUPP;
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.
@@ -799,7 +807,8 @@ void SmartCardUpgrade(uint64_t arg0) {
         }
 
         // writing takes time.
-        WaitMS(50);
+//        WaitMS(50);
+        I2C_DELAY_100ms;
 
         // read
         res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);

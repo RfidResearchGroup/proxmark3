@@ -85,7 +85,6 @@ static int CmdTIDemod(const char *Cmd) {
     int lowLen = ARRAYLEN(LowTone);
     int highLen = ARRAYLEN(HighTone);
     int convLen = (highLen > lowLen) ? highLen : lowLen;
-    uint16_t crc;
     int i, j, TagType;
     int lowSum = 0, highSum = 0;
     int lowTot = 0, highTot = 0;
@@ -241,25 +240,23 @@ static int CmdTIDemod(const char *Cmd) {
         // i'm 99% sure the crc algorithm is correct, but it may need to eat the
         // bytes in reverse or something
         // calculate CRC
-        crc = 0;
-        crc = update_crc16(crc, (shift0 >>  0) & 0xFF);
-        crc = update_crc16(crc, (shift0 >>  8) & 0xFF);
-        crc = update_crc16(crc, (shift0 >> 16) & 0xFF);
-        crc = update_crc16(crc, (shift0 >> 24) & 0xFF);
+        uint8_t raw[8] = {
+            (shift0 >>  0) & 0xFF,
+            (shift0 >>  8) & 0xFF,
+            (shift0 >> 16) & 0xFF,
+            (shift0 >> 24) & 0xFF,
+            (shift1 >>  0) & 0xFF,
+            (shift1 >>  8) & 0xFF,
+            (shift1 >> 16) & 0xFF,
+            (shift1 >> 24) & 0xFF
+        };
+        init_table(CRC_KERMIT);
+        uint16_t calccrc = crc16_kermit(raw, sizeof(raw));
+        const char *crc_str = (calccrc == (shift2 & 0xFFFF)) ? _GREEN_("ok") : _RED_("fail");
+        PrintAndLogEx(INFO, "Tag data = %08X%08X  [%04X] (%s)", shift1, shift0, calccrc, crc_str);
 
-        crc = update_crc16(crc, (shift1 >>  0) & 0xFF);
-        crc = update_crc16(crc, (shift1 >>  8) & 0xFF);
-        crc = update_crc16(crc, (shift1 >> 16) & 0xFF);
-        crc = update_crc16(crc, (shift1 >> 24) & 0xFF);
-
-        //crc =  crc16_ccitt(message, sizeof(message);
-
-        const char *crcStr = (crc == (shift2 & 0xFFFF)) ? _GREEN_("Passed") : _RED_("Fail");
-
-        PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr);
-
-        if (crc != (shift2 & 0xFFFF))
-            PrintAndLogEx(WARNING, "Warning: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
+        if (calccrc != (shift2 & 0xFFFF))
+            PrintAndLogEx(WARNING, "Warning: CRC mismatch, calculated %04X, got %04X", calccrc, shift2 & 0xFFFF);
 
         retval = PM3_SUCCESS;
         goto out;

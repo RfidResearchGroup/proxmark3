@@ -45,7 +45,7 @@
 #include "ikeys.h"
 #include "elite_crack.h"
 #include "fileutils.h"
-#include "mbedtls/des.h"
+#include "des.h"
 #include "util_posix.h"
 
 /**
@@ -293,7 +293,7 @@ static int _readFromDump(uint8_t dump[], dumpdata *item, uint8_t i) {
  * @return
  */
 int bruteforceItem(dumpdata item, uint16_t keytable[]) {
-    int errors = 0;
+
     int found = false;
     uint8_t key_sel_p[8] = {0};
     uint8_t div_key[8] = {0};
@@ -334,7 +334,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
             keytable[bytes_to_recover[0]]  &= ~BEING_CRACKED;
             keytable[bytes_to_recover[1]]  &= ~BEING_CRACKED;
             keytable[bytes_to_recover[2]]  &= ~BEING_CRACKED;
-            return 1;
+            return PM3_ESOFT;
         }
     }
 
@@ -400,11 +400,13 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
         }
     }
 
+    int errors = PM3_SUCCESS;
+
     if (!found) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(WARNING, "Failed to recover %d bytes using the following CSN", numbytes_to_recover);
         PrintAndLogEx(INFO, "CSN  %s", sprint_hex(item.csn, 8));
-        errors++;
+        errors = PM3_ESOFT;
 
         //Before we exit, reset the 'BEING_CRACKED' to zero
         for (i = 0; i < numbytes_to_recover; i++) {
@@ -475,14 +477,14 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
     if (master_key != NULL)
         memcpy(master_key, key64, 8);
 
+    PrintAndLogEx(NORMAL, "\n");
     if (memcmp(z_0, result, 4) != 0) {
         PrintAndLogEx(WARNING, _RED_("Failed to verify") " calculated master key (k_cus)! Something is wrong.");
-        return 1;
-    } else {
-        PrintAndLogEx(NORMAL, "\n");
-        PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!"));
+        return PM3_ESOFT;
     }
-    return 0;
+
+    PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!"));
+    return PM3_SUCCESS;
 }
 /**
  * @brief Same as bruteforcefile, but uses a an array of dumpdata instead
@@ -493,27 +495,29 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
  */
 int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     uint8_t i;
-    int errors = 0;
     size_t itemsize = sizeof(dumpdata);
-
     uint64_t t1 = msclock();
 
     dumpdata *attack = (dumpdata *) calloc(itemsize, sizeof(uint8_t));
+    if (attack == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
+    int res = 0;
     for (i = 0 ; i * itemsize < dumpsize ; i++) {
         memcpy(attack, dump + i * itemsize, itemsize);
-        errors += bruteforceItem(*attack, keytable);
-        if (errors)
+        res += bruteforceItem(*attack, keytable);
+        if (res != PM3_SUCCESS)
             break;
     }
     free(attack);
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds", t1 / 1000);
 
-
-    if (errors) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") " again and collect new data");
-        return 1;
+        return PM3_ESOFT;
     }
 
     // Pick out the first 16 bytes of the keytable.
@@ -527,11 +531,10 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 
         if (!(keytable[i] & CRACKED)) {
             PrintAndLogEx(WARNING, "Warning: we are missing byte %d, custom key calculation will fail...", i);
-            return 1;
+            return PM3_ESOFT;
         }
     }
-    errors += calculateMasterKey(first16bytes, NULL);
-    return errors;
+    return calculateMasterKey(first16bytes, NULL);
 }
 /**
  * Perform a bruteforce against a file which has been saved by pm3
@@ -589,12 +592,11 @@ static int _testBruteforce(void) {
         **** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
     **/
     uint16_t keytable[128] = {0};
-    int errors = bruteforceFile("iclass_dump.bin", keytable);
-    if (errors) {
+    int res = bruteforceFile("iclass_dump.bin", keytable);
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error: The file " _YELLOW_("iclass_dump.bin") "was not found!");
     }
-
-    return errors;
+    return res;
 }
 
 static int _test_iclass_key_permutation(void) {
@@ -609,18 +611,18 @@ static int _test_iclass_key_permutation(void) {
         PrintAndLogEx(ERR, "Error with iclass key permute!");
         printarr("testcase_output", testcase_output, 8);
         printarr("testcase_output_correct", testcase_output_correct, 8);
-        return 1;
+        return PM3_ESOFT;
 
     }
     if (memcmp(testcase, testcase_output_rev, 8) != 0) {
         PrintAndLogEx(ERR, "Error with reverse iclass key permute");
         printarr("testcase", testcase, 8);
         printarr("testcase_output_rev", testcase_output_rev, 8);
-        return 1;
+        return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Iclass key permutation OK!");
-    return 0;
+    PrintAndLogEx(SUCCESS, "Iclass key permutation (%s)", _GREEN_("OK"));
+    return PM3_SUCCESS;
 }
 
 static int _testHash1(void) {
@@ -633,9 +635,9 @@ static int _testHash1(void) {
         PrintAndLogEx(ERR, "Error with hash1!");
         printarr("calculated", k, 8);
         printarr("expected", expected, 8);
-        return 1;
+        return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int testElite(bool slowtests) {
@@ -662,15 +664,21 @@ int testElite(bool slowtests) {
     hash2(k_cus, keytable);
     printarr_human_readable("Hash2", keytable, 128);
     if (keytable[3] == 0xA1 && keytable[0x30] == 0xA3 && keytable[0x6F] == 0x95) {
-        PrintAndLogEx(SUCCESS, "Hash2 looks fine...");
+        PrintAndLogEx(SUCCESS, "    Hash2 (%s)", _GREEN_("ok"));
     }
 
-    int errors = 0 ;
+    int res = PM3_SUCCESS;
     PrintAndLogEx(INFO, "Testing hash1...");
-    errors += _testHash1();
-    PrintAndLogEx(INFO, "Testing key diversification ...");
-    errors += _test_iclass_key_permutation();
+    res += _testHash1();
+    PrintAndLogEx(INFO, "    hash1 (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
+
+    PrintAndLogEx(INFO, "Testing key diversification...");
+    res += _test_iclass_key_permutation();
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(INFO, "    key diversification (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
+
     if (slowtests)
-        errors += _testBruteforce();
-    return errors;
+        res += _testBruteforce();
+
+    return res;
 }

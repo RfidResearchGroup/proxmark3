@@ -10,50 +10,53 @@
 
 #include "cliparser.h"
 #include <string.h>
+#include <stdlib.h>
+#ifndef ARRAYLEN
+# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
+#endif
 
-void **argtable = NULL;
-size_t argtableLen = 0;
-const char *programName = NULL;
-const char *programHint = NULL;
-const char *programHelp = NULL;
-char buf[500] = {0};
-
-int CLIParserInit(const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
-    argtable = NULL;
-    argtableLen = 0;
-    programName = vprogramName;
-    programHint = vprogramHint;
-    programHelp = vprogramHelp;
-    memset(buf, 0x00, 500);
+int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
+    *ctx = malloc(sizeof(CLIParserContext));
+    if (!*ctx) {
+        printf("ERROR: Insufficient memory\n");
+        fflush(stdout);
+        return 2;
+    }
+    (*ctx)->argtable = NULL;
+    (*ctx)->argtableLen = 0;
+    (*ctx)->programName = vprogramName;
+    (*ctx)->programHint = vprogramHint;
+    (*ctx)->programHelp = vprogramHelp;
+    memset((*ctx)->buf, 0x00, sizeof((*ctx)->buf));
     return 0;
 }
 
-int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec) {
+int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargtable[], size_t vargtableLen, bool allowEmptyExec) {
     int nerrors;
 
-    argtable = vargtable;
-    argtableLen = vargtableLen;
+    ctx->argtable = vargtable;
+    ctx->argtableLen = vargtableLen;
 
     /* verify the argtable[] entries were allocated sucessfully */
-    if (arg_nullcheck(argtable) != 0) {
+    if (arg_nullcheck(ctx->argtable) != 0) {
         /* NULL entries were detected, some allocations must have failed */
         printf("ERROR: Insufficient memory\n");
         fflush(stdout);
         return 2;
     }
     /* Parse the command line as defined by argtable[] */
-    nerrors = arg_parse(argc, argv, argtable);
+    nerrors = arg_parse(argc, argv, ctx->argtable);
 
     /* special case: '--help' takes precedence over error reporting */
-    if ((argc < 2 && !allowEmptyExec) || ((struct arg_lit *)argtable[0])->count > 0) { // help must be the first record
-        printf("Usage: %s", programName);
-        arg_print_syntaxv(stdout, argtable, "\n");
-        if (programHint)
-            printf("%s\n\n", programHint);
-        arg_print_glossary(stdout, argtable, "    %-20s %s\n");
+    if ((argc < 2 && !allowEmptyExec) || ((struct arg_lit *)(ctx->argtable)[0])->count > 0) { // help must be the first record
+        printf("Usage: %s", ctx->programName);
+        arg_print_syntaxv(stdout, ctx->argtable, "\n");
+        if (ctx->programHint)
+            printf("%s\n\n", ctx->programHint);
+        arg_print_glossary(stdout, ctx->argtable, "    %-20s %s\n");
         printf("\n");
-        if (programHelp)
-            printf("%s \n", programHelp);
+        if (ctx->programHelp)
+            printf("%s \n", ctx->programHelp);
 
         fflush(stdout);
         return 1;
@@ -62,8 +65,8 @@ int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtable
     /* If the parser returned any errors then display them and exit */
     if (nerrors > 0) {
         /* Display the error details contained in the arg_end struct.*/
-        arg_print_errors(stdout, ((struct arg_end *)argtable[vargtableLen - 1]), programName);
-        printf("Try '%s --help' for more information.\n", programName);
+        arg_print_errors(stdout, ((struct arg_end *)(ctx->argtable)[vargtableLen - 1]), ctx->programName);
+        printf("Try '%s --help' for more information.\n", ctx->programName);
         fflush(stdout);
         return 3;
     }
@@ -79,23 +82,24 @@ enum ParserState {
 
 #define isSpace(c)(c == ' ' || c == '\t')
 
-int CLIParserParseString(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec) {
-    return CLIParserParseStringEx(str, vargtable, vargtableLen, allowEmptyExec, false);
+int CLIParserParseString(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec) {
+    return CLIParserParseStringEx(ctx, str, vargtable, vargtableLen, allowEmptyExec, false);
 }
 
-int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData) {
+int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData) {
     int argc = 0;
     char *argv[200] = {NULL};
 
     int len = strlen(str);
-    char *bufptr = buf;
+    memset(ctx->buf, 0x00, ARRAYLEN(ctx->buf));
+    char *bufptr = ctx->buf;
     char *spaceptr = NULL;
     enum ParserState state = PS_FIRST;
 
     argv[argc++] = bufptr;
     // param0 = program name
-    memcpy(buf, programName, strlen(programName) + 1); // with 0x00
-    bufptr += strlen(programName) + 1;
+    memcpy(ctx->buf, ctx->programName, strlen(ctx->programName) + 1); // with 0x00
+    bufptr += strlen(ctx->programName) + 1;
     if (len)
         argv[argc++] = bufptr;
 
@@ -140,14 +144,7 @@ int CLIParserParseStringEx(const char *str, void *vargtable[], size_t vargtableL
         }
     }
 
-    return CLIParserParseArg(argc, argv, vargtable, vargtableLen, allowEmptyExec);
-}
-
-void CLIParserFree(void) {
-    arg_freetable(argtable, argtableLen);
-    argtable = NULL;
-
-    return;
+    return CLIParserParseArg(ctx, argc, argv, vargtable, vargtableLen, allowEmptyExec);
 }
 
 // convertors

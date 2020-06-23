@@ -18,12 +18,13 @@
 #include "comms.h"              // for sending cmds to device. GetFromBigBuf
 #include "fileutils.h"          // for saveFile
 #include "cmdlfhitag.h"         // annotate hitag
+#include "pm3_cmd.h"            // tracelog_hdr_t
 
 static int CmdHelp(const char *Cmd);
 
 // trace pointer
 static uint8_t *g_trace;
-long g_traceLen = 0;
+static long g_traceLen = 0;
 
 static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
@@ -32,7 +33,7 @@ static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "    c      - mark CRC bytes");
     PrintAndLogEx(NORMAL, "    x      - show hexdump to convert to pcap(ng) or to import into Wireshark using encapsulation type \"ISO 14443\"");
     PrintAndLogEx(NORMAL, "             syntax to use: `text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`");
-    PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try reading data from tag.");
+    PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try to collect a trace from Proxmark3 device.");
     PrintAndLogEx(NORMAL, "Supported <protocol> values:");
     PrintAndLogEx(NORMAL, "    raw      - just show raw data without annotations");
     PrintAndLogEx(NORMAL, "    14a      - interpret data as iso14443a communications");
@@ -52,32 +53,33 @@ static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "    lto      - interpret data as LTO-CM communications");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        trace list 14a f");
-    PrintAndLogEx(NORMAL, "        trace list iclass");
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace list 14a f"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace list iclass"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace list 14a 1"));
     return PM3_SUCCESS;
 }
 static int usage_trace_load(void) {
-    PrintAndLogEx(NORMAL, "Load protocol data from file to trace buffer.");
+    PrintAndLogEx(NORMAL, "Load protocol data from binary file to trace buffer");
     PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        trace load mytracefile.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace load mytracefile.trace"));
     return PM3_SUCCESS;
 }
 static int usage_trace_save(void) {
-    PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to file.");
+    PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to binary file");
     PrintAndLogEx(NORMAL, "Usage:  trace save <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        trace save mytracefile.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("        trace save mytracefile.trace"));
     return PM3_SUCCESS;
 }
 
-static bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen) {
-    return (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) >= traceLen);
+static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
+    return ((tracepos + TRACELOG_HDR_LEN) >= traceLen);
 }
 
 static bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
-    uint16_t next_records_datalen = *((uint16_t *)(trace + tracepos + sizeof(uint32_t) + sizeof(uint16_t)));
-    return ((next_records_datalen & 0x8000) == 0x8000);
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
+    return (hdr->isResponse);
 }
 
 static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t *tracepos, uint16_t traceLen,
@@ -91,26 +93,22 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
     memcpy(topaz_reader_command, frame, *data_len);
 
-    while (!is_last_record(*tracepos, trace, traceLen) && !next_record_is_response(*tracepos, trace)) {
-        uint32_t next_timestamp = *((uint32_t *)(trace + *tracepos));
-        *tracepos += sizeof(uint32_t);
-        uint16_t next_duration = *((uint16_t *)(trace + *tracepos));
-        *tracepos += sizeof(uint16_t);
-        uint16_t next_data_len = *((uint16_t *)(trace + *tracepos)) & 0x7FFF;
-        *tracepos += sizeof(uint16_t);
-        uint8_t *next_frame = (trace + *tracepos);
-        *tracepos += next_data_len;
-        if ((next_data_len == 1) && (*data_len + next_data_len <= MAX_TOPAZ_READER_CMD_LEN)) {
-            memcpy(topaz_reader_command + *data_len, next_frame, next_data_len);
-            *data_len += next_data_len;
-            last_timestamp = next_timestamp + next_duration;
+    while (!is_last_record(*tracepos, traceLen) && !next_record_is_response(*tracepos, trace)) {
+
+        tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + *tracepos);
+
+        *tracepos += TRACELOG_HDR_LEN + hdr->data_len;
+
+        if ((hdr->data_len == 1) && (*data_len + hdr->data_len <= MAX_TOPAZ_READER_CMD_LEN)) {
+            memcpy(topaz_reader_command + *data_len, hdr->frame, hdr->data_len);
+            *data_len += hdr->data_len;
+            last_timestamp = hdr->timestamp + hdr->duration;
         } else {
             // rewind and exit
-            *tracepos = *tracepos - next_data_len - sizeof(uint16_t) - sizeof(uint16_t) - sizeof(uint32_t);
+            *tracepos = *tracepos - hdr->data_len - TRACELOG_HDR_LEN;
             break;
         }
-        uint16_t next_parity_len = (next_data_len - 1) / 8 + 1;
-        *tracepos += next_parity_len;
+        *tracepos += TRACELOG_PARITY_LEN(hdr);
     }
 
     *duration = last_timestamp - timestamp;
@@ -120,39 +118,18 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
 static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol) {
     // sanity check
-    if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+    if (is_last_record(tracepos, traceLen)) return traceLen;
 
-    bool isResponse;
-    uint16_t data_len, parity_len;
-    uint32_t timestamp;
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-    timestamp = *((uint32_t *)(trace + tracepos));
-    tracepos += 4;
-
-
-    // currently we don't use duration, so we skip it
-    tracepos += 2;
-
-    data_len = *((uint16_t *)(trace + tracepos));
-    tracepos += 2;
-
-    if (data_len & 0x8000) {
-        data_len &= 0x7fff;
-        isResponse = true;
-    } else {
-        isResponse = false;
-    }
-    parity_len = (data_len - 1) / 8 + 1;
-
-    if (tracepos + data_len + parity_len > traceLen) {
+    if (TRACELOG_HDR_LEN + hdr->data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
         return traceLen;
     }
-    uint8_t *frame = trace + tracepos;
-    tracepos += data_len;
-    //currently we don't use parity bytes, so we skip it
-    tracepos += parity_len;
 
-    if (data_len == 0) {
+    //set trace position
+    tracepos += TRACELOG_HDR_LEN + hdr->data_len + TRACELOG_PARITY_LEN(hdr);
+
+    if (hdr->data_len == 0) {
         PrintAndLogEx(NORMAL, "<empty trace - possible error>");
         return tracepos;
     }
@@ -167,27 +144,26 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
              * we use format timestamp, newline, offset (0x000000), pseudo header, data
              * `text2pcap -t "%S." -l 264 -n <input-text-file> <output-pcapng-file>`
              */
-            char line[(data_len * 3) + 1];
+            char line[(hdr->data_len * 3) + 1];
             char *ptr = &line[0];
 
-            for (int j = 0; j < data_len ; j++) {
-                ptr += sprintf(ptr, "%02x", frame[j]);
-                ptr += sprintf(ptr, " ");
+            for (int i = 0; i < hdr->data_len ; i++) {
+                ptr += sprintf(ptr, "%02x ", hdr->frame[i]);
             }
 
             char data_len_str[5];
             char temp_str1[3] = {0};
             char temp_str2[3] = {0};
 
-            sprintf(data_len_str, "%04x", data_len);
+            sprintf(data_len_str, "%04x", hdr->data_len);
             strncat(temp_str1, data_len_str, 2);
             temp_str1[2] = '\0';
             strncat(temp_str2, data_len_str + 2, 2);
             temp_str2[2] = '\0';
 
-            PrintAndLogEx(NORMAL, "0.%010u", timestamp);
+            PrintAndLogEx(NORMAL, "0.%010u", hdr->timestamp);
             PrintAndLogEx(NORMAL, "000000 00 %s %s %s %s",
-                          (isResponse ? "ff" : "fe"),
+                          (hdr->isResponse ? "ff" : "fe"),
                           temp_str1,
                           temp_str2,
                           line);
@@ -205,47 +181,34 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
 
 static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes) {
     // sanity check
-    if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+    if (is_last_record(tracepos, traceLen)) return traceLen;
 
-    bool isResponse;
-    uint16_t data_len, parity_len;
-    uint32_t duration, timestamp, first_timestamp, EndOfTransmissionTimestamp;
+    uint32_t duration;
+    uint16_t data_len;
+    uint32_t EndOfTransmissionTimestamp;
     uint8_t topaz_reader_command[9];
     char explanation[40] = {0};
     uint8_t mfData[32] = {0};
     size_t mfDataLen = 0;
+    tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
+    duration = hdr->duration;
+    data_len = hdr->data_len;
 
-    first_timestamp = *((uint32_t *)(trace));
-    timestamp = *((uint32_t *)(trace + tracepos));
-    tracepos += 4;
-
-    duration = *((uint16_t *)(trace + tracepos));
-    tracepos += 2;
-
-    data_len = *((uint16_t *)(trace + tracepos));
-    tracepos += 2;
-
-    if (data_len & 0x8000) {
-        data_len &= 0x7fff;
-        isResponse = true;
-    } else {
-        isResponse = false;
-    }
-    parity_len = (data_len - 1) / 8 + 1;
-
-    if (tracepos + data_len + parity_len > traceLen) {
+    if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
         return traceLen;
     }
-    uint8_t *frame = trace + tracepos;
-    tracepos += data_len;
-    uint8_t *parityBytes = trace + tracepos;
-    tracepos += parity_len;
 
-    if (protocol == TOPAZ && !isResponse) {
+    uint8_t *frame = hdr->frame;
+    uint8_t *parityBytes = hdr->frame + data_len;
+
+    tracepos += TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr);
+
+    if (protocol == TOPAZ && !hdr->isResponse) {
         // topaz reader commands come in 1 or 9 separate frames with 7 or 8 Bits each.
         // merge them:
-        if (merge_topaz_reader_frames(timestamp, &duration, &tracepos, traceLen, trace, frame, topaz_reader_command, &data_len)) {
+        if (merge_topaz_reader_frames(hdr->timestamp, &duration, &tracepos, traceLen, trace, frame, topaz_reader_command, &data_len)) {
             frame = topaz_reader_command;
         }
     }
@@ -256,7 +219,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (data_len > 2) {
         switch (protocol) {
             case ICLASS:
-                crcStatus = iclass_CRC_check(isResponse, frame, data_len);
+                crcStatus = iclass_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_14443B:
             case TOPAZ:
@@ -264,12 +227,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = !felica_CRC_check(frame + 2, data_len - 4);
                 break;
             case PROTO_MIFARE:
-                crcStatus = mifare_CRC_check(isResponse, frame, data_len);
+                crcStatus = mifare_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_14443A:
             case MFDES:
             case LTO:
-                crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
+                crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case THINFILM:
                 frame[data_len - 1] ^= frame[data_len - 2];
@@ -298,6 +261,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //--- Draw the data column
     char line[18][120] = {{0}};
 
+    if (data_len == 0) {
+        sprintf(line[0], "<empty trace - possible error>");
+        return tracepos;
+    }
+
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
 
         uint8_t parityBits = parityBytes[j >> 3];
@@ -312,11 +280,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != THINFILM
                 && protocol != FELICA
                 && protocol != LTO
-                && (isResponse || protocol == ISO_14443A)
+                && (hdr->isResponse || protocol == ISO_14443A)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
-        } else if (protocol == ICLASS  && isResponse == false) {
+        } else if (protocol == ICLASS  && hdr->isResponse == false) {
             uint8_t parity = 0;
             for (int i = 0; i < 6; i++) {
                 parity ^= ((frame[0] >> i) & 1);
@@ -343,27 +311,22 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
-    if (data_len == 0) {
-        sprintf(line[0], "<empty trace - possible error>");
-        return tracepos;
-    }
-
     // Draw the CRC column
     const char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
-    EndOfTransmissionTimestamp = timestamp + duration;
+    EndOfTransmissionTimestamp = hdr->timestamp + duration;
 
     // Always annotate LEGIC read/tag
     if (protocol == LEGIC)
         annotateLegic(explanation, sizeof(explanation), frame, data_len);
 
     if (protocol == PROTO_MIFARE)
-        annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, parity_len, isResponse);
+        annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, TRACELOG_PARITY_LEN(hdr), hdr->isResponse);
 
     if (protocol == FELICA)
         annotateFelica(explanation, sizeof(explanation), frame, data_len);
 
-    if (!isResponse) {
+    if (!hdr->isResponse) {
         switch (protocol) {
             case ICLASS:
                 annotateIclass(explanation, sizeof(explanation), frame, data_len);
@@ -410,9 +373,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     for (int j = 0; j < num_lines ; j++) {
         if (j == 0) {
             PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-72s | %s| %s",
-                          (timestamp - first_timestamp),
-                          (EndOfTransmissionTimestamp - first_timestamp),
-                          (isResponse ? "Tag" : "Rdr"),
+                          (hdr->timestamp - first_hdr->timestamp),
+                          (EndOfTransmissionTimestamp - first_hdr->timestamp),
+                          (hdr->isResponse ? "Tag" : "Rdr"),
                           line[j],
                           (j == num_lines - 1) ? crc : "    ",
                           (j == num_lines - 1) ? explanation : "");
@@ -424,30 +387,82 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
-    if (DecodeMifareData(frame, data_len, parityBytes, isResponse, mfData, &mfDataLen)) {
+    if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen)) {
         memset(explanation, 0x00, sizeof(explanation));
-        if (!isResponse) {
+        if (!hdr->isResponse) {
             annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
         }
-        uint8_t crcc = iso14443A_CRC_check(isResponse, mfData, mfDataLen);
+        uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
         PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
                       sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
                       (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
                       explanation);
     }
 
-    if (is_last_record(tracepos, trace, traceLen)) return traceLen;
+    if (is_last_record(tracepos, traceLen)) return traceLen;
 
-    if (showWaitCycles && !isResponse && next_record_is_response(tracepos, trace)) {
-        uint32_t next_timestamp = *((uint32_t *)(trace + tracepos));
+    if (showWaitCycles && !hdr->isResponse && next_record_is_response(tracepos, trace)) {
+
+        tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
+
         PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
-                      (EndOfTransmissionTimestamp - first_timestamp),
-                      (next_timestamp - first_timestamp),
+                      (EndOfTransmissionTimestamp - first_hdr->timestamp),
+                      (next_hdr->timestamp - first_hdr->timestamp),
                       "   ",
-                      (next_timestamp - EndOfTransmissionTimestamp));
+                      (next_hdr->timestamp - EndOfTransmissionTimestamp));
     }
 
     return tracepos;
+}
+
+static int download_trace(void) {
+
+    if (!IfPm3Present()) {
+        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
+        return PM3_EINVARG;
+    }
+
+    // reserve some space.
+    if (g_trace)
+        free(g_trace);
+
+    g_traceLen = 0;
+
+    g_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
+    if (g_trace == NULL) {
+        PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+        return PM3_EMALLOC;
+    }
+
+    PrintAndLogEx(INFO, "downloading tracelog from device");
+
+    // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
+    PacketResponseNG response;
+    if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        free(g_trace);
+        return PM3_ETIMEOUT;
+    }
+
+    g_traceLen = response.oldarg[2];
+
+    // if tracelog buffer was larger and we need to download more.
+    if (g_traceLen > PM3_CMD_DATA_SIZE) {
+
+        free(g_trace);
+        g_trace = calloc(g_traceLen, sizeof(uint8_t));
+        if (g_trace == NULL) {
+            PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+            return PM3_EMALLOC;
+        }
+
+        if (!GetFromDevice(BIG_BUF, g_trace, g_traceLen, 0, NULL, 0, NULL, 2500, false)) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(g_trace);
+            return PM3_ETIMEOUT;
+        }
+    }
+    return PM3_SUCCESS;
 }
 
 // sanity check. Don't use proxmark if it is offline and you didn't specify useTraceBuffer
@@ -463,53 +478,32 @@ static int SanityOfflineCheck( bool useTraceBuffer ){
 
 static int CmdTraceLoad(const char *Cmd) {
 
-    FILE *f = NULL;
     char filename[FILE_PATH_SIZE];
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_load();
+    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_load();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
-
-    if ((f = fopen(filename, "rb")) == NULL) {
-        PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
-        return PM3_EIO;
-    }
-
-    // get filesize in order to malloc memory
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize < 0) {
-        PrintAndLogEx(FAILED, "error, when getting filesize");
-        fclose(f);
-        return PM3_EIO;
-    }
-    if (fsize < 4) {
-        PrintAndLogEx(FAILED, "error, file is too small");
-        fclose(f);
-        return PM3_ESOFT;
-    }
 
     if (g_trace)
         free(g_trace);
 
-    g_traceLen = 0;
-    g_trace = calloc(fsize, sizeof(uint8_t));
-    if (g_trace == NULL) {
-        PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-        fclose(f);
-        return PM3_EMALLOC;
+    size_t len = 0;
+    if (loadFile_safe(filename, ".trace", (void **)&g_trace, &len) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
+        return PM3_EIO;
     }
 
-    size_t bytes_read = fread(g_trace, 1, fsize, f);
-    g_traceLen = bytes_read;
-    fclose(f);
+    g_traceLen = (long)len;
+
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%lu") " bytes) loaded from " _YELLOW_("%s"), g_traceLen, filename);
     return PM3_SUCCESS;
 }
 
 static int CmdTraceSave(const char *Cmd) {
+
+    if (g_traceLen == 0) {
+        download_trace();
+    }
 
     if (g_traceLen == 0) {
         PrintAndLogEx(WARNING, "trace is empty, nothing to save");
@@ -518,30 +512,11 @@ static int CmdTraceSave(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE];
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_trace_save();
+    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_save();
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
-    saveFile(filename, ".bin", g_trace, g_traceLen);
+    saveFile(filename, ".trace", g_trace, g_traceLen);
     return PM3_SUCCESS;
-}
-
-static command_t CommandTable[] = {
-    {"help",    CmdHelp,          AlwaysAvailable, "This help"},
-    {"list",    CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
-    {"load",    CmdTraceLoad,     AlwaysAvailable, "Load trace from file"},
-    {"save",    CmdTraceSave,     AlwaysAvailable, "Save trace buffer to file"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return PM3_SUCCESS;
-}
-
-int CmdTrace(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(CommandTable, Cmd);
 }
 
 int CmdTraceList(const char *Cmd) {
@@ -628,47 +603,7 @@ int CmdTraceList(const char *Cmd) {
     if (errors) return usage_trace_list();
 
     if (isOnline) {
-
-        // reserve some space.
-        if (g_trace)
-            free(g_trace);
-
-        g_traceLen = 0;
-
-        g_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-        if (g_trace == NULL) {
-            PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-            return PM3_EMALLOC;
-        }
-
-        PrintAndLogEx(INFO, "downloading tracelog from device");
-
-        // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
-        PacketResponseNG response;
-        if (!GetFromDevice(BIG_BUF, g_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            free(g_trace);
-            return PM3_ETIMEOUT;
-        }
-
-        g_traceLen = response.oldarg[2];
-
-        // if tracelog buffer was larger and we need to download more.
-        if (g_traceLen > PM3_CMD_DATA_SIZE) {
-
-            free(g_trace);
-            g_trace = calloc(g_traceLen, sizeof(uint8_t));
-            if (g_trace == NULL) {
-                PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
-                return PM3_EMALLOC;
-            }
-
-            if (!GetFromDevice(BIG_BUF, g_trace, g_traceLen, 0, NULL, 0, NULL, 2500, false)) {
-                PrintAndLogEx(WARNING, "command execution time out");
-                free(g_trace);
-                return PM3_ETIMEOUT;
-            }
-        }
+        download_trace();
     }
 
     PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", g_traceLen);
@@ -724,3 +659,21 @@ int CmdTraceList(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static command_t CommandTable[] = {
+    {"help",    CmdHelp,          AlwaysAvailable, "This help"},
+    {"list",    CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
+    {"load",    CmdTraceLoad,     AlwaysAvailable, "Load trace from file"},
+    {"save",    CmdTraceSave,     AlwaysAvailable, "Save trace buffer to file"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdTrace(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
+}

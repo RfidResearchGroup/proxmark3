@@ -32,8 +32,7 @@
 #include "fileutils.h"
 #include "pm3_cmd.h"
 
-#define BCD(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
-                -1)
+#define BCD(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : -1)
 
 #define HEX(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
                 ((c) >= 'A' && (c) <= 'F') ? ((c) - 'A' + 10) : \
@@ -93,7 +92,6 @@ static ssize_t emv_pk_read_ymv(char *buf, size_t buflen, unsigned *ymv) {
     if (buf == NULL)
         return 0;
 
-    int i;
     unsigned char temp[3];
     char *p = buf;
 
@@ -102,7 +100,7 @@ static ssize_t emv_pk_read_ymv(char *buf, size_t buflen, unsigned *ymv) {
     while ((*p == ' ') && (p < (buf + buflen - 1)))
         p++;
 
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
         int c1, c2;
         c1 = BCD(*p);
         if (c1 == -1)
@@ -163,7 +161,6 @@ static ssize_t emv_pk_read_string(char *buf, size_t buflen, char *str, size_t si
 
     return (p - buf);
 }
-
 
 struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen) {
     struct emv_pk *r = calloc(1, sizeof(*r));
@@ -264,22 +261,22 @@ static size_t emv_pk_write_str(char *out, size_t outlen, const char *str) {
 }
 
 char *emv_pk_dump_pk(const struct emv_pk *pk) {
+    size_t outpos = 0;
     size_t outsize = 1024; /* should be enough */
     char *out = malloc(outsize); /* should be enough */
-    size_t outpos = 0;
-    size_t rc;
-
     if (!out)
         return NULL;
 
-    rc = emv_pk_write_bin(out + outpos, outsize - outpos, pk->rid, 5);
+    size_t rc = emv_pk_write_bin(out + outpos, outsize - outpos, pk->rid, 5);
     if (rc == 0)
         goto err;
+
     outpos += rc;
 
     rc = emv_pk_write_bin(out + outpos, outsize - outpos, &pk->index, 1);
     if (rc == 0)
         goto err;
+
     outpos += rc;
 
     if (outpos + 7 > outsize)
@@ -504,21 +501,23 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
     if (!pk)
         return NULL;
 
-    printf("Verifying CA PK for %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx %zu bits...",
-           pk->rid[0],
-           pk->rid[1],
-           pk->rid[2],
-           pk->rid[3],
-           pk->rid[4],
-           pk->index,
-           pk->mlen * 8);
+    bool isok = emv_pk_verify(pk);
 
-    if (emv_pk_verify(pk)) {
-        printf("OK\n");
+    PrintAndLogEx(INFO, "Verifying CA PK for %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx %zu bits.  ( %s )",
+                  pk->rid[0],
+                  pk->rid[1],
+                  pk->rid[2],
+                  pk->rid[3],
+                  pk->rid[4],
+                  pk->index,
+                  pk->mlen * 8,
+                  (isok) ? _GREEN_("ok") : _RED_("failed")
+                 );
+
+    if (isok) {
         return pk;
     }
 
-    printf("Failed!\n");
     emv_pk_free(pk);
     return NULL;
 }

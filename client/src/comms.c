@@ -24,8 +24,6 @@
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
 
-uint8_t gui_serial_port_name[FILE_PATH_SIZE];
-
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 
@@ -38,7 +36,7 @@ static bool comm_thread_dead = false;
 // Transmit buffer.
 static PacketCommandOLD txBuffer;
 static PacketCommandNGRaw txBufferNG;
-size_t txBufferNGLen;
+static size_t txBufferNGLen;
 static bool txBuffer_pending = false;
 static pthread_mutex_t txBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t txBufferSig = PTHREAD_COND_INITIALIZER;
@@ -117,11 +115,11 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 
 static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool ng) {
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Sending %s", ng ? "NG" : "MIX");
+    PrintAndLogEx(INFO, "Sending %s", ng ? "NG" : "MIX");
 #endif
 
     if (!session.pm3_present) {
-        PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
+        PrintAndLogEx(INFO, "Sending bytes to proxmark failed - offline");
         return;
     }
     if (len > PM3_CMD_DATA_SIZE) {
@@ -291,7 +289,8 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
             }
 
             if (flag & FLAG_LOG) {
-                PrintAndLogEx(NORMAL, "#db# %s", s);
+                //PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%s", s);
+                PrintAndLogEx(NORMAL, "[" _BLUE_("#") "] %s", s);
             } else {
                 if (flag & FLAG_INPLACE)
                     printf("\r");
@@ -305,7 +304,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
             if (! packet->ng)
-                PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+                PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
         }
         // iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of
@@ -350,7 +349,7 @@ __attribute__((force_align_arg_pointer))
         // main thread will kill and restart this thread.
         if (commfailed) {
             if (conn.last_command != CMD_HARDWARE_RESET) {
-                PrintAndLogEx(WARNING, "Communicating with Proxmark3 device " _RED_("failed"));
+                PrintAndLogEx(WARNING, "\nCommunicating with Proxmark3 device " _RED_("failed"));
             }
             __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);
             break;
@@ -537,19 +536,18 @@ bool IsCommunicationThreadDead(void) {
     return ret;
 }
 
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
+bool OpenProxmark(char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
-    char *portname = (char *)port;
     if (!wait_for_port) {
-        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), portname);
-        sp = uart_open(portname, speed);
+        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);
+        sp = uart_open(port, speed);
     } else {
-        PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), portname);
+        PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), port);
         fflush(stdout);
         int openCount = 0;
         PrintAndLogEx(INPLACE, "% 3i", timeout);
         do {
-            sp = uart_open(portname, speed);
+            sp = uart_open(port, speed);
             msleep(500);
             PrintAndLogEx(INPLACE, "% 3i", timeout - openCount - 1);
 
@@ -558,22 +556,22 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), port);
+        PrintAndLogEx(HINT, "Try the shell script " _YELLOW_("`./pm3 --list`") " to get a list of possible serial ports");
         sp = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", port);
+        PrintAndLogEx(HINT, "Try the shell script " _YELLOW_("`./pm3 --list`") " to get a list of possible serial ports");
+
         sp = NULL;
         return false;
     } else {
         // start the communication thread
-        if (portname != (char *)conn.serial_port_name) {
-            uint16_t len = MIN(strlen(portname), FILE_PATH_SIZE - 1);
+        if (port != conn.serial_port_name) {
+            uint16_t len = MIN(strlen(port), FILE_PATH_SIZE - 1);
             memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
-            memcpy(conn.serial_port_name, portname, len);
-
-            memset(gui_serial_port_name, 0, FILE_PATH_SIZE);
-            memcpy(gui_serial_port_name, portname, len);
+            memcpy(conn.serial_port_name, port, len);
         }
         conn.run = true;
         conn.block_after_ACK = flash_mode;
@@ -605,24 +603,25 @@ int TestProxmark(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_PING, data, len);
 
-    uint32_t timeout = 1000;
+    uint32_t timeout;
 
 #ifdef USART_SLOW_LINK
     // 10s timeout for slow FPC, e.g. over BT
     // as this is the very first command sent to the pm3
     // that initiates the BT connection
     timeout = 10000;
+#else
+    timeout = 1000;
 #endif
 
     if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == 0) {
         return PM3_ETIMEOUT;
     }
 
-    bool error = false;
-    error = memcmp(data, resp.data.asBytes, len) != 0;
-
-    if (error)
+    bool error = memcmp(data, resp.data.asBytes, len) != 0;
+    if (error) {
         return PM3_EIO;
+    }
 
     SendCommandNG(CMD_CAPABILITIES, NULL, 0);
     if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == 0) {

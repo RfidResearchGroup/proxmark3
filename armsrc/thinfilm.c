@@ -49,7 +49,7 @@ void ReadThinFilm(void) {
 #define SEC_D 0xf0
 #define SEC_E 0x0f
 #define SEC_F 0x00
-uint16_t FpgaSendQueueDelay;
+static uint16_t FpgaSendQueueDelay;
 
 static uint16_t ReadReaderField(void) {
 #if defined RDV4

@@ -24,6 +24,9 @@ CROSS  ?= arm-none-eabi-
 CC = gcc
 CXX = g++
 LD = g++
+SH = sh
+BASH = bash
+PERL = perl
 
 PATHSEP=/
 PREFIX ?=              /usr/local
@@ -63,6 +66,7 @@ endif
 EXTRACFLAGS =
 EXTRACFLAGS += -Wunused-parameter -Wno-error=unused-parameter
 EXTRACFLAGS += -Wsign-compare -Wno-error=sign-compare
+EXTRACFLAGS += -Wconversion -Wno-error=conversion -Wno-error=sign-conversion -Wno-error=float-conversion
 
 # unknown to clang or old gcc:
 # First we activate Wextra then we explicitly list those we know about

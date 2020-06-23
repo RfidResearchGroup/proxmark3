@@ -54,7 +54,7 @@ t55xx_conf_block_t config = {
     .downlink_mode = refFixedBit
 };
 
-t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
+static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
 
 t55xx_conf_block_t Get_t55xx_Config(void) {
     return config;
@@ -2319,7 +2319,7 @@ static int CmdT55xxDump(const char *Cmd) {
         for (int i = 0; i < T55x7_BLOCK_COUNT; i++)
             data[i] = BSWAP_32(cardmem[i].blockdata);
 
-        saveFileJSON(preferredName, jsfT55x7, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t));
+        saveFileJSON(preferredName, jsfT55x7, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), NULL);
         saveFileEML(preferredName, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(preferredName, ".bin", data, sizeof(data));
     }
@@ -2837,7 +2837,7 @@ static int CmdResetRead(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
 
-        uint16_t gotsize = BIGBUF_SIZE - 1;
+        uint16_t gotsize = pm3_capabilities.bigbuf_size - 1;
         uint8_t *got = calloc(gotsize, sizeof(uint8_t));
         if (got == NULL) {
             PrintAndLogEx(WARNING, "failed to allocate memory");
@@ -3045,7 +3045,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
 
     if (use_pwd_file) {
-        uint16_t keycount = 0;
+        uint32_t keycount = 0;
 
         int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
         if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
@@ -3056,7 +3056,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        for (uint16_t c = 0; c < keycount; ++c) {
+        for (uint32_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {
                 PrintAndLogEx(WARNING, "Device offline\n");
@@ -3618,7 +3618,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
+    SendCommandMIX(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
     return PM3_SUCCESS;
 }
 

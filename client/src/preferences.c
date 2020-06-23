@@ -29,19 +29,10 @@
 static int CmdHelp(const char *Cmd);
 static int setCmdHelp(const char *Cmd);
 
-// Load all settings into memory (struct)
-#ifdef _WIN32
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
-
 static char *prefGetFilename(void) {
     char *path;
 
-    if (searchHomeFilePath(&path, preferencesFilename, false) == PM3_SUCCESS)
+    if (searchHomeFilePath(&path, NULL, preferencesFilename, false) == PM3_SUCCESS)
         return path;
     else
         return strdup(preferencesFilename);
@@ -61,9 +52,7 @@ int preferences_load(void) {
     session.overlay.y = 60 + session.plot.y + session.plot.h;
     session.overlay.h = 200;
     session.overlay.w = session.plot.w;
-    session.emoji_mode = ALIAS;
     session.show_hints = false;
-    session.supports_colors = false;
 
 //    setDefaultPath (spDefault, "");
 //    setDefaultPath (spDump, "");
@@ -97,8 +86,8 @@ int preferences_load(void) {
     // to better control json cant find file error msg.
     char *fn = prefGetFilename();
     if (fileExists(fn)) {
-        PrintAndLogEx(INFO, "Loading Preferences...");
-        if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Loading preferences...");
+        if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL, &preferences_load_callback) == PM3_SUCCESS) {
             session.preferences_loaded = true;
         }
     }
@@ -113,7 +102,7 @@ int preferences_load(void) {
 int preferences_save(void) {
     // Note sure if backup has value ?
 
-    PrintAndLogEx(INFO, "Saving Preferences...");
+    PrintAndLogEx(INFO, "Saving preferences...");
 
     char *fn = prefGetFilename();
     int fnLen = strlen(fn) + 5; // .bak\0
@@ -148,7 +137,7 @@ int preferences_save(void) {
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
 
-    if (saveFileJSON(fn, jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
+    if (saveFileJSON(fn, jsfCustom, &dummyData, dummyDL, &preferences_save_callback) != PM3_SUCCESS)
         PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", fn);
 
     free(fn);
@@ -917,18 +906,16 @@ static int CmdPrefSet(const char *Cmd) {
 
 static int CmdPrefShow(const char *Cmd) {
 
-    char *fn = prefGetFilename();
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, _CYAN_("Preferences loaded from %s"), fn);
-
-    free(fn);
-
-    if (!session.preferences_loaded) {
+    if (session.preferences_loaded) {
+        char *fn = prefGetFilename();
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, _CYAN_("Preferences loaded from " _YELLOW_("%s")), fn);
+        free(fn);
+    } else {
         PrintAndLogEx(ERR, "Preferences not loaded");
         return PM3_ESOFT;
     }
 
-    // PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), fn);
     showEmojiState(prefShowNone);
     showHintsState(prefShowNone);
     showColorState(prefShowNone);
@@ -940,7 +927,6 @@ static int CmdPrefShow(const char *Cmd) {
 
     showClientDebugState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 /*

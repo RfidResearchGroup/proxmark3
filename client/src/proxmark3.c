@@ -15,8 +15,11 @@
 #include <stdio.h>         // for Mingw readline
 #include <limits.h>
 #include <unistd.h>
+#ifdef HAVE_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
+#include <ctype.h>
 #include "usart_defs.h"
 #include "util_posix.h"
 #include "proxgui.h"
@@ -29,20 +32,9 @@
 #include "flash.h"
 #include "preferences.h"
 
-#ifdef _WIN32
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
-
-// Used to enable/disable use of preferences json file
-#define USE_PREFERENCE_FILE
-
-#define BANNERMSG1 "    :snowflake:  iceman@icesql.net :coffee:"
+#define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
 #define BANNERMSG2 "   https://github.com/rfidresearchgroup/proxmark3/"
-#define BANNERMSG3 "pre-release v4.0"
+#define BANNERMSG3 " bleeding edge :coffee:"
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
 
@@ -128,35 +120,40 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
+#ifdef HAVE_READLINE
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
         prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
         rl_set_prompt(prompt_filtered);
         rl_forced_update_display();
+#endif
         CloseProxmark();
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
     }
     return 0;
 }
 
 // first slot is always NULL, indicating absence of script when idx=0
-FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
-uint8_t cmdscriptfile_idx = 0;
-bool cmdscriptfile_stayafter = false;
+static FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
+static uint8_t cmdscriptfile_idx = 0;
+static bool cmdscriptfile_stayafter = false;
 
 int push_cmdscriptfile(char *path, bool stayafter) {
     if (cmdscriptfile_idx == MAX_NESTED_CMDSCRIPT) {
         PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", path);
         return PM3_EMALLOC;
     }
-    FILE *tmp = fopen(path, "r");
-    if (tmp == NULL)
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL)
         return PM3_EFILE;
+
     if (cmdscriptfile_idx == 0)
         cmdscriptfile_stayafter = stayafter;
-    cmdscriptfile[++cmdscriptfile_idx] = tmp;
+
+    cmdscriptfile[++cmdscriptfile_idx] = f;
     return PM3_SUCCESS;
 }
 
@@ -213,13 +210,15 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         }
     }
 
+#ifdef HAVE_READLINE
     char *my_history_path = NULL;
-    if (searchHomeFilePath(&my_history_path, PROXHISTORY, true) != PM3_SUCCESS) {
+    if (searchHomeFilePath(&my_history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No history will be recorded");
         my_history_path = NULL;
     } else {
         read_history(my_history_path);
     }
+#endif
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
@@ -243,6 +242,7 @@ check_script:
             if (fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile()) == NULL) {
                 if (!pop_cmdscriptfile())
                     break;
+
                 goto check_script;
             } else {
                 prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
@@ -293,13 +293,30 @@ check_script:
                         printprompt = true;
 
                 } else {
-                    prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
+#ifdef HAVE_READLINE
                     rl_event_hook = check_comm;
+#else
+                    check_comm();
+#endif
+                    prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+#ifdef HAVE_READLINE
                     cmd = readline(prompt_filtered);
+#else
+                    printf("%s", prompt_filtered);
+                    cmd = NULL;
+                    size_t len = 0;
+                    int ret;
+                    if ((ret = getline(&cmd, &len, stdin)) < 0) {
+                        // TODO this happens also when kbd_enter_pressed() is used, with a key pressed or not
+                        printf("GETLINE ERR %i", ret);
+                        free(cmd);
+                        cmd = NULL;
+                    }
+#endif
                     fflush(NULL);
                 }
             }
@@ -337,6 +354,7 @@ check_script:
                 PrintAndLogEx(NORMAL, "%s%s", prompt_filtered, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
+#ifdef HAVE_READLINE
                 // add to history if not from a script
                 if (!current_cmdscriptfile()) {
                     HIST_ENTRY *entry = history_get(history_length);
@@ -345,6 +363,7 @@ check_script:
                         add_history(cmd);
                     }
                 }
+#endif
                 // process cmd
                 int ret = CommandReceived(cmd);
                 // exit or quit
@@ -371,11 +390,12 @@ check_script:
     while (current_cmdscriptfile())
         pop_cmdscriptfile();
 
+#ifdef HAVE_READLINE
     if (my_history_path) {
         write_history(my_history_path);
         free(my_history_path);
     }
-
+#endif
     if (cmd) {
         free(cmd);
         cmd = NULL;
@@ -443,30 +463,35 @@ static void set_my_user_directory(void) {
     // if not found, default to current directory
     if (my_user_directory == NULL) {
 
-        char *cwd_Buffer = NULL;
         uint16_t pathLen = FILENAME_MAX; // should be a good starting point
         bool error = false;
+        char *cwd_buffer = (char *)calloc(pathLen, sizeof(uint8_t));
 
-        cwd_Buffer = (char *)calloc(pathLen, sizeof(uint8_t));
-
-        while (!error && (GetCurrentDir(cwd_Buffer, pathLen) == NULL)) {
+        while (!error && (GetCurrentDir(cwd_buffer, pathLen) == NULL)) {
             if (errno == ERANGE) {  // Need bigger buffer
                 pathLen += 10;      // if buffer was too small add 10 characters and try again
-                cwd_Buffer = realloc(cwd_Buffer, pathLen);
+                char *tmp = realloc(cwd_buffer, pathLen);
+                if (tmp == NULL) {
+                    PrintAndLogEx(WARNING, "failed to allocate memory");
+                    free(cwd_buffer);
+                    return;
+                }
+                cwd_buffer = tmp;
             } else {
-                error = true;
-                free(cwd_Buffer);
-                cwd_Buffer = NULL;
+                free(cwd_buffer);
+                return;
             }
-            printf("Len... %d\n", pathLen);
         }
 
         if (!error) {
 
-            for (int i = 0; i < strlen(cwd_Buffer); i++)
-                if (cwd_Buffer[i] == '\\') cwd_Buffer[i] = '/';
+            for (int i = 0; i < strlen(cwd_buffer); i++) {
+                if (cwd_buffer[i] == '\\') {
+                    cwd_buffer[i] = '/';
+                }
+            }
 
-            my_user_directory = cwd_Buffer;
+            my_user_directory = cwd_buffer;
         }
     }
 }
@@ -607,8 +632,6 @@ finish2:
     return ret;
 }
 
-#ifndef USE_PREFERENCE_FILE
-
 // Check if windows AnsiColor Support is enabled in the registery
 // [HKEY_CURRENT_USER\Console]
 //     "VirtualTerminalLevel"=dword:00000001
@@ -616,9 +639,9 @@ finish2:
 // [HKEY_CURRENT_USER\Console]
 //     "ForceV2"=dword:00000001
 
+#if defined(_WIN32)
 static bool DetectWindowsAnsiSupport(void) {
     bool ret = false;
-#if defined(_WIN32)
     HKEY hKey = NULL;
     bool virtualTerminalLevelSet = false;
     bool forceV2Set = false;
@@ -660,10 +683,8 @@ static bool DetectWindowsAnsiSupport(void) {
     }
     // If both VirtualTerminalLevel and ForceV2 is set, AnsiColor should work
     ret = virtualTerminalLevelSet && forceV2Set;
-#endif
     return ret;
 }
-
 #endif
 
 int main(int argc, char *argv[]) {
@@ -679,12 +700,14 @@ int main(int argc, char *argv[]) {
     char *port = NULL;
     uint32_t speed = 0;
 
+#ifdef HAVE_READLINE
     /* initialize history */
     using_history();
 
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
-#endif
+#endif // RL_STATE_READCMD
+#endif // HAVE_READLINE
 
     char *exec_name = argv[0];
 #if defined(_WIN32)
@@ -698,6 +721,7 @@ int main(int argc, char *argv[]) {
 
     bool flash_mode = false;
     bool flash_can_write_bl = false;
+    bool debug_mode_forced = false;
     int flash_num_files = 0;
     char *flash_filenames[FLASH_MAX_FILES];
 
@@ -705,16 +729,28 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
-#ifdef USE_PREFERENCE_FILE
-    // Load Settings and assign
-    // This will allow the command line to override the settings.json values
-    preferences_load();
-    // quick patch for debug level
-    g_debugMode = session.client_debug_level;
-    // settings_save ();
-    // End Settings
+    // color management:
+    // 1. default = no color
+    // 2. enable colors if OS seems to support colors and if stdin/stdout aren't redirected
+    // 3. load prefs if available, overwrite colors choice if needed
+    // 4. disable colors anyway if stdin/stdout are redirected
+    //
+    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
+    //   struct stat tmp_stat;
+    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+    session.stdinOnTTY = isatty(STDIN_FILENO);
+    session.stdoutOnTTY = isatty(STDOUT_FILENO);
+    session.supports_colors = false;
+    session.emoji_mode = ALTTEXT;
+    if (session.stdinOnTTY && session.stdoutOnTTY) {
+#if defined(__linux__) || defined(__APPLE__)
+        session.supports_colors = true;
+        session.emoji_mode = EMOJI;
+#elif defined(_WIN32)
+        session.supports_colors = DetectWindowsAnsiSupport();
+        session.emoji_mode = ALTTEXT;
 #endif
-
+    }
     for (int i = 1; i < argc; i++) {
 
         if (argv[i][0] != '-') {
@@ -786,6 +822,7 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             g_debugMode = demod;
+            debug_mode_forced = true;
             i++;
             continue;
         }
@@ -893,42 +930,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-#ifndef USE_PREFERENCE_FILE
-    // comment next 2 lines to use session values set from settings_load
-    session.supports_colors = DetectWindowsAnsiSupport();
-    session.emoji_mode = ALTTEXT;
-#endif
+    // Load Settings and assign
+    // This will allow the command line to override the settings.json values
+    preferences_load();
+    // quick patch for debug level
+    if (! debug_mode_forced)
+        g_debugMode = session.client_debug_level;
+    // settings_save ();
+    // End Settings
 
-    session.stdinOnTTY = isatty(STDIN_FILENO);
-    session.stdoutOnTTY = isatty(STDOUT_FILENO);
-#if defined(__linux__) || defined(__APPLE__)
-    // it's okay to use color if:
-    // * Linux or OSX
-    // * Not redirected to a file but printed to term
-    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
-    //   struct stat tmp_stat;
-    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-#ifdef USE_PREFERENCE_FILE
-    if (!session.preferences_loaded) {
-        if (session.stdinOnTTY && session.stdoutOnTTY) {
-            session.supports_colors = true;
-            session.emoji_mode = EMOJI;
-        }
-    } else {
-        // even if prefs, we disable colors if stdin or stdout is not a TTY
-        if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
-            session.supports_colors = false;
-            session.emoji_mode = ALTTEXT;
-        }
+    // even if prefs, we disable colors if stdin or stdout is not a TTY
+    if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
+        session.supports_colors = false;
+        session.emoji_mode = ALTTEXT;
     }
-#else
-    if (session.stdinOnTTY && session.stdoutOnTTY) {
-        session.supports_colors = true;
-        session.emoji_mode = EMOJI;
-    }
-#endif
 
-#endif
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
         speed = USART_BAUD_RATE;
@@ -983,7 +999,6 @@ int main(int argc, char *argv[]) {
     if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
         showBanner();
 
-#ifdef USE_PREFERENCE_FILE
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
@@ -1004,7 +1019,6 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
     */
-#endif
 
 #ifdef HAVE_GUI
 
@@ -1031,9 +1045,7 @@ int main(int argc, char *argv[]) {
         CloseProxmark();
     }
 
-#ifdef USE_PREFERENCE_FILE
     if (session.window_changed) // Plot/Overlay moved or resized
         preferences_save();
-#endif
     exit(EXIT_SUCCESS);
 }

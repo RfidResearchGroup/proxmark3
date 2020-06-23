@@ -8,7 +8,7 @@ os:
   - linux
   - osx
 
-dist: xenial
+dist: bionic
 
 osx_image: xcode11
 
@@ -28,6 +28,8 @@ addons:
       - gcc-arm-none-eabi
       - libnewlib-dev
       - libbluetooth-dev
+      - python3-dev
+      - libbz2-dev
   homebrew:
     packages:
       - readline
@@ -54,9 +56,9 @@ install:
 script:
   - if [ "$TO_TEST" = "MAKEFILE" ]; then
       make clean && make V=1 "$MAKE_PARAMS";
-      ./pm3test.sh;
+      make check;
     fi
   - if [ "$TO_TEST" = "CMAKE" ]; then
       mkdir -p client/build && ( cd client/build && cmake .. && make VERBOSE=1 );
-      PM3BIN=./client/build/proxmark3 ./pm3test.sh client;
+      make client/check CHECKARGS="--clientbin ./client/build/proxmark3";
     fi

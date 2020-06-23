@@ -1392,7 +1392,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
         // limit size of availlable for keys in bigbuff
         // a key is 6bytes
-        uint16_t key_mem_available = MIN(BIGBUF_SIZE, keyCount * 6);
+        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * 6);
 
         keyCount = key_mem_available / 6;
 
@@ -1940,7 +1940,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     clear_trace();
     set_tracing(true);
 
-    int retval;
+    int retval = PM3_SUCCESS;
 
     if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
         retval = PM3_ESOFT;
@@ -1952,8 +1952,9 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         uint64_t ui64Key = emlGetKey(sectorNo, keytype);
         if (sectorNo == 0) {
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_FIRST)) {
+                retval = PM3_ESOFT;
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth error", sectorNo);
-                break;
+                goto out;
             }
         } else {
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_NESTED)) {
@@ -1979,10 +1980,8 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         }
     }
 
-    if (mifare_classic_halt(pcs, cuid)) {
-        if (DBGLEVEL > DBG_ERROR)
-            Dbprintf("Halt error");
-    }
+    int res = mifare_classic_halt(pcs, cuid);
+    (void)res;
 
     if (DBGLEVEL >= DBG_INFO) DbpString("Emulator fill sectors finished");
 
@@ -2008,9 +2007,9 @@ out:
 // bit 6 - wipe tag.
 //-----------------------------------------------------------------------------
 // magic uid card generation 1 commands
-uint8_t wupC1[] = { MIFARE_MAGICWUPC1 };
-uint8_t wupC2[] = { MIFARE_MAGICWUPC2 };
-uint8_t wipeC[] = { MIFARE_MAGICWIPEC };
+static uint8_t wupC1[] = { MIFARE_MAGICWUPC1 };
+static uint8_t wupC2[] = { MIFARE_MAGICWUPC2 };
+static uint8_t wipeC[] = { MIFARE_MAGICWIPEC };
 
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 

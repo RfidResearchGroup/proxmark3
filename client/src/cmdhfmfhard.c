@@ -23,6 +23,7 @@
 #include <locale.h>
 #include <math.h>
 #include <time.h> // MingW
+#include <bzlib.h>
 
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"
@@ -35,7 +36,6 @@
 #include "hardnested_bruteforce.h"
 #include "hardnested_bf_core.h"
 #include "hardnested_bitarray_core.h"
-#include "zlib/zlib.h"
 #include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
@@ -44,7 +44,7 @@
 #define IGNORE_BITFLIP_THRESHOLD        0.99 // ignore bitflip arrays which have nearly only valid states
 
 #define STATE_FILES_DIRECTORY           "hardnested_tables/"
-#define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.z"
+#define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.bz2"
 
 #define DEBUG_KEY_ELIMINATION
 // #define DEBUG_REDUCTION
@@ -207,32 +207,23 @@ static int compare_count_bitflip_bitarrays(const void *b1, const void *b2) {
 }
 
 
-static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size) {
-    return calloc(items * size, sizeof(uint8_t));
-}
-
-
-static void inflate_free(voidpf opaque, voidpf address) {
-    free(address);
-}
-
 #define OUTPUT_BUFFER_LEN 80
 #define INPUT_BUFFER_LEN 80
 
 //----------------------------------------------------------------------------
-// Initialize decompression of the respective (HF or LF) FPGA stream
+// Initialize decompression of the respective bitflip_bitarray stream
 //----------------------------------------------------------------------------
-static void init_inflate(z_streamp compressed_stream, uint8_t *input_buffer, uint32_t insize, uint8_t *output_buffer, uint32_t outsize) {
+static void init_bunzip2(bz_stream *compressed_stream, char *input_buffer, uint32_t insize, char *output_buffer, uint32_t outsize) {
 
-    // initialize z_stream structure for inflate:
+    // initialize bz_stream structure for bunzip2:
     compressed_stream->next_in = input_buffer;
     compressed_stream->avail_in = insize;
     compressed_stream->next_out = output_buffer;
     compressed_stream->avail_out = outsize;
-    compressed_stream->zalloc = &inflate_malloc;
-    compressed_stream->zfree = &inflate_free;
+    compressed_stream->bzalloc = NULL;
+    compressed_stream->bzfree = NULL;
 
-    inflateInit2(compressed_stream, 0);
+    BZ2_bzDecompressInit(compressed_stream, 0, 0);
 
 }
 
@@ -242,7 +233,7 @@ static void init_bitflip_bitarrays(void) {
     uint8_t line = 0;
 #endif
 
-    z_stream compressed_stream;
+    bz_stream compressed_stream;
 
     char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + strlen(STATE_FILE_TEMPLATE) + 1];
     char state_file_name[strlen(STATE_FILE_TEMPLATE) + 1];
@@ -276,36 +267,36 @@ static void init_bitflip_bitarrays(void) {
                 }
                 uint32_t filesize = (uint32_t)fsize;
                 rewind(statesfile);
-                uint8_t input_buffer[filesize];
+                char input_buffer[filesize];
                 size_t bytesread = fread(input_buffer, 1, filesize, statesfile);
                 if (bytesread != filesize) {
                     PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                     fclose(statesfile);
-                    //inflateEnd(&compressed_stream);
+                    //BZ2_bzDecompressEnd(&compressed_stream);
                     exit(5);
                 }
                 fclose(statesfile);
                 uint32_t count = 0;
-                init_inflate(&compressed_stream, input_buffer, filesize, (uint8_t *)&count, sizeof(count));
-                int res = inflate(&compressed_stream, Z_SYNC_FLUSH);
-                if (res != Z_OK) {
-                    PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
-                    inflateEnd(&compressed_stream);
+                init_bunzip2(&compressed_stream, input_buffer, filesize, (char *)&count, sizeof(count));
+                int res = BZ2_bzDecompress(&compressed_stream);
+                if (res != BZ_OK) {
+                    PrintAndLogEx(ERR, "Bunzip2 error. Aborting...\n");
+                    BZ2_bzDecompressEnd(&compressed_stream);
                     exit(4);
                 }
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
                     if (bitset == NULL) {
                         PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
-                        inflateEnd(&compressed_stream);
+                        BZ2_bzDecompressEnd(&compressed_stream);
                         exit(4);
                     }
-                    compressed_stream.next_out = (uint8_t *)bitset;
+                    compressed_stream.next_out = (char *)bitset;
                     compressed_stream.avail_out = sizeof(uint32_t) * (1 << 19);
-                    res = inflate(&compressed_stream, Z_SYNC_FLUSH);
-                    if (res != Z_OK && res != Z_STREAM_END) {
-                        PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
-                        inflateEnd(&compressed_stream);
+                    res = BZ2_bzDecompress(&compressed_stream);
+                    if (res != BZ_OK && res != BZ_STREAM_END) {
+                        PrintAndLogEx(ERR, "Bunzip2 error. Aborting...\n");
+                        BZ2_bzDecompressEnd(&compressed_stream);
                         exit(4);
                     }
                     effective_bitflip[odd_even][num_effective_bitflips[odd_even]++] = bitflip;
@@ -320,7 +311,7 @@ static void init_bitflip_bitarrays(void) {
                     }
 #endif
                 }
-                inflateEnd(&compressed_stream);
+                BZ2_bzDecompressEnd(&compressed_stream);
             }
         }
         effective_bitflip[odd_even][num_effective_bitflips[odd_even]] = 0x400; // EndOfList marker
@@ -499,7 +490,7 @@ static void free_sum_bitarrays(void) {
 
 
 #ifdef DEBUG_KEY_ELIMINATION
-char failstr[250] = "";
+static char failstr[250] = "";
 #endif
 
 static const float p_K0[NUM_SUMS] = { // the probability that a random nonce has a Sum Property K

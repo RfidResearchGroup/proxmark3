@@ -12,6 +12,7 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
+#include <unistd.h>
 #include "common.h"
 
 #define PROXPROMPT_MAX_SIZE 255
@@ -34,6 +35,14 @@
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+// Load all settings into memory (struct)
+#ifdef _WIN32
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#define GetCurrentDir getcwd
 #endif
 
 int push_cmdscriptfile(char *path, bool stayafter);

@@ -38,12 +38,8 @@ static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, 
         }
     }
 
-    int result = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
-
-    result = usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
-
-    return result;
+    return usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 }
 
 #if DEBUG
@@ -80,7 +76,7 @@ static void Fatal(void) {
 }
 
 static void UsbPacketReceived(uint8_t *packet) {
-    int i, dont_ack = 0;
+    int dont_ack = 0;
     PacketCommandOLD *c = (PacketCommandOLD *)packet;
 
     //if ( len != sizeof(PacketCommandOLD`)) Fatal();
@@ -128,7 +124,7 @@ static void UsbPacketReceived(uint8_t *packet) {
                     // We need to offset the writes or it will not fill the correct bank write buffer.
                     offset = (AT91C_IFLASH_NB_OF_PAGES / 2) * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t);
                 }
-                for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
+                for (int i = 0 + (64 * j); i < 64 + (64 * j); i++) {
                     _flash_start[offset + i] = c->d.asDwords[i];
                 }
 

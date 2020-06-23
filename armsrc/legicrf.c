@@ -64,8 +64,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 //-----------------------------------------------------------------------------
 // I/O interface abstraction (FPGA -> ARM)
 //-----------------------------------------------------------------------------
-
-static inline uint8_t rx_byte_from_fpga(void) {
+static uint8_t rx_byte_from_fpga(void) {
     for (;;) {
         WDT_HIT();
 
@@ -93,11 +92,7 @@ static inline uint8_t rx_byte_from_fpga(void) {
 // Note: The SSC receiver is never synchronized the calculation may be performed
 // on a i/q pair from two subsequent correlations, but does not matter.
 // Note: inlining this function would fail with -Os
-#ifdef __OPTIMIZE_SIZE__
 static int32_t sample_power(void) {
-#else
-static inline int32_t sample_power(void) {
-#endif
     int32_t q = (int8_t)rx_byte_from_fpga();
     q = ABS(q);
     int32_t i = (int8_t)rx_byte_from_fpga();
@@ -113,7 +108,9 @@ static inline int32_t sample_power(void) {
 //
 // Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame
 // has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
-static inline bool rx_bit(void) {
+
+// Note: inlining this function would fail with -Os
+static bool rx_bit(void) {
     int32_t power;
 
     for (size_t i = 0; i < 5; ++i) {
@@ -132,7 +129,7 @@ static inline bool rx_bit(void) {
 // be circumvented, but the adventage over bitbang would be little.
 //-----------------------------------------------------------------------------
 
-static inline void tx_bit(bool bit) {
+static void tx_bit(bool bit) {
     // insert pause
     LOW(GPIO_SSC_DOUT);
     last_frame_end += RWD_TIME_PAUSE;

@@ -12,33 +12,48 @@
 
 #include "string.h"
 #include "dbprint.h"
+#include "pm3_cmd.h"
+
+extern uint8_t _stack_start, __bss_end__;
 
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
 // Also used to hold various smaller buffers and the Mifare Emulator Memory.
-// declare it as uint32_t to achieve alignment to 4 Byte boundary
-static uint32_t BigBuf[BIGBUF_SIZE / sizeof(uint32_t)];
+// We know that bss is aligned to 4 bytes.
+static uint8_t *BigBuf = &__bss_end__;
 
 /* BigBuf memory layout:
 Pointer to highest available memory: BigBuf_hi
-
-    high BIGBUF_SIZE
+    high BigBuf_size
     reserved = BigBuf_malloc()  subtracts amount from BigBuf_hi,
     low  0x00
 */
 
+static uint32_t BigBuf_size = 0;
+
 // High memory mark
-static uint16_t BigBuf_hi = BIGBUF_SIZE;
+static uint32_t BigBuf_hi = 0;
 
 // pointer to the emulator memory.
 static uint8_t *emulator_memory = NULL;
 
 // trace related variables
 static uint32_t traceLen = 0;
-static bool tracing = true; //todo static?
+static bool tracing = true;
+
+// compute the available size for BigBuf
+void BigBuf_initialize(void) {
+    BigBuf_size = (uint32_t)&_stack_start - (uint32_t)&__bss_end__;
+    BigBuf_hi = BigBuf_size;
+    traceLen = 0;
+}
 
 // get the address of BigBuf
 uint8_t *BigBuf_get_addr(void) {
     return (uint8_t *)BigBuf;
+}
+
+uint32_t BigBuf_get_size(void) {
+    return BigBuf_size;
 }
 
 // get the address of the emulator memory. Allocate part of Bigbuf for it, if not yet done
@@ -57,9 +72,9 @@ void BigBuf_Clear(void) {
 
 // clear ALL of BigBuf
 void BigBuf_Clear_ext(bool verbose) {
-    memset(BigBuf, 0, BIGBUF_SIZE);
+    memset(BigBuf, 0, BigBuf_size);
     if (verbose)
-        Dbprintf("Buffer cleared (%i bytes)", BIGBUF_SIZE);
+        Dbprintf("Buffer cleared (%i bytes)", BigBuf_size);
 }
 
 void BigBuf_Clear_EM(void) {
@@ -73,7 +88,7 @@ void BigBuf_Clear_keep_EM(void) {
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
 uint8_t *BigBuf_malloc(uint16_t chunksize) {
-    if (BigBuf_hi - chunksize < 0)
+    if (BigBuf_hi < chunksize)
         return NULL; // no memory left
 
     chunksize = (chunksize + 3) & 0xfffc; // round to next multiple of 4
@@ -83,7 +98,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 
 // free ALL allocated chunks. The whole BigBuf is available for traces or samples again.
 void BigBuf_free(void) {
-    BigBuf_hi = BIGBUF_SIZE;
+    BigBuf_hi = BigBuf_size;
     emulator_memory = NULL;
     // shouldn't this empty BigBuf also?
 }
@@ -93,16 +108,16 @@ void BigBuf_free_keep_EM(void) {
     if (emulator_memory != NULL)
         BigBuf_hi = emulator_memory - (uint8_t *)BigBuf;
     else
-        BigBuf_hi = BIGBUF_SIZE;
+        BigBuf_hi = BigBuf_size;
 
     // shouldn't this empty BigBuf also?
 }
 
 void BigBuf_print_status(void) {
-    DbpString(_BLUE_("Memory"));
-    Dbprintf("  BIGBUF_SIZE.............%d", BIGBUF_SIZE);
+    DbpString(_CYAN_("Memory"));
+    Dbprintf("  BigBuf_size.............%d", BigBuf_size);
     Dbprintf("  Available memory........%d", BigBuf_hi);
-    DbpString(_BLUE_("Tracing"));
+    DbpString(_CYAN_("Tracing"));
     Dbprintf("  tracing ................%d", tracing);
     Dbprintf("  traceLen ...............%d", traceLen);
 }
@@ -146,40 +161,36 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     if (!tracing) return false;
 
     uint8_t *trace = BigBuf_get_addr();
+    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + traceLen);
 
     uint32_t num_paritybytes = (iLen - 1) / 8 + 1; // number of valid paritybytes in *parity
-    uint32_t duration = timestamp_end - timestamp_start;
 
     // Return when trace is full
-    if (traceLen + sizeof(iLen) + sizeof(timestamp_start) + sizeof(duration) + num_paritybytes + iLen >= BigBuf_max_traceLen()) {
+    if (TRACELOG_HDR_LEN + iLen + num_paritybytes >= BigBuf_max_traceLen() - traceLen) {
         tracing = false; // don't trace any more
         return false;
     }
-    // Traceformat:
-    // 32 bits timestamp (little endian)
-    // 16 bits duration (little endian)
-    // 16 bits data length (little endian, Highest Bit used as readerToTag flag)
-    // y Bytes data
-    // x Bytes parity (one byte per 8 bytes data)
 
-    // timestamp (start)
-    trace[traceLen++] = ((timestamp_start >> 0) & 0xff);
-    trace[traceLen++] = ((timestamp_start >> 8) & 0xff);
-    trace[traceLen++] = ((timestamp_start >> 16) & 0xff);
-    trace[traceLen++] = ((timestamp_start >> 24) & 0xff);
-
-    // duration
-    trace[traceLen++] = ((duration >> 0) & 0xff);
-    trace[traceLen++] = ((duration >> 8) & 0xff);
-
-    // data length
-    trace[traceLen++] = ((iLen >> 0) & 0xff);
-    trace[traceLen++] = ((iLen >> 8) & 0xff);
-
-    // readerToTag flag
-    if (!readerToTag) {
-        trace[traceLen - 1] |= 0x80;
+    uint32_t duration;
+    if (timestamp_end > timestamp_start) {
+        duration = timestamp_end - timestamp_start;
+    } else {
+        duration = (UINT32_MAX - timestamp_start) + timestamp_end;
     }
+
+    if (duration > 0x7FFF) {
+        if (DBGLEVEL >= DBG_DEBUG) {
+            Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x start:0x%08x end:0x%08x", duration, timestamp_start, timestamp_end);
+            Dbprintf("Forcing duration = 0");
+        }
+        duration = 0;
+    }
+
+    hdr->timestamp = timestamp_start;
+    hdr->duration = duration;
+    hdr->data_len = iLen;
+    hdr->isResponse = !readerToTag;
+    traceLen += TRACELOG_HDR_LEN;
 
     // data bytes
     if (btBytes != NULL && iLen != 0) {

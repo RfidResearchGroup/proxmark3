@@ -9,7 +9,6 @@ add_library(pm3rrg_rdv4_jansson STATIC
         jansson/strbuffer.c
         jansson/strconv.c
         jansson/utf.c
-        jansson/path.c
         jansson/value.c
 )
 

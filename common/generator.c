@@ -424,14 +424,14 @@ int generator_selftest(void) {
     PrintAndLogEx(INFO, "PWD / KEY generator selftest");
     PrintAndLogEx(INFO, "----------------------------");
 
-    bool success = false;
     uint8_t testresult = 0;
 
     uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
     uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
-    success = (pwd1 == 0x8432EB17);
+    bool success = (pwd1 == 0x8432EB17);
     if (success)
         testresult++;
+
     PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid1, 7), pwd1, success ? "OK" : "->8432EB17<-");
 
     uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};

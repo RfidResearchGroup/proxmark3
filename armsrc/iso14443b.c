@@ -641,9 +641,9 @@ void SimulateIso14443bTag(uint32_t pupi) {
         if (cardSTATE == SIM_NOFIELD) {
 
 #if defined RDV4
-            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
 #else
-            vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
 #endif
             if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;
@@ -1150,9 +1150,9 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len) {
 
     TransmitFor14443b_AsReader();
 
-    if (trigger) LED_A_ON();
+    if (g_trigger) LED_A_ON();
 
-    LogTrace(cmd, len, time_start, GetCountSspClk() - time_start, NULL, true);
+    LogTrace(cmd, len, time_start, GetCountSspClk(), NULL, true);
 }
 
 /* Sends an APDU to the tag
@@ -1578,7 +1578,7 @@ void RAMFUNC SniffIso14443b(void) {
 }
 
 static void iso14b_set_trigger(bool enable) {
-    trigger = enable;
+    g_trigger = enable;
 }
 
 /*

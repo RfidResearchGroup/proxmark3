@@ -23,7 +23,7 @@ static int datacmp(const void *p1, const void *p2) {
     return memcmp(d1, d2, DATASIZE - 6);
 }
 
-int loadrngdata(struct rngdata *r, char *file) {
+static int loadrngdata(struct rngdata *r, char *file) {
     int fd;
     int i, j;
     int nibble;
@@ -90,7 +90,7 @@ int loadrngdata(struct rngdata *r, char *file) {
     return 1;
 }
 
-int makecand(unsigned char *c, struct rngdata *r, int bitoffset) {
+static int makecand(unsigned char *c, struct rngdata *r, int bitoffset) {
     int bytenum;
     int bitnum;
     int i;
@@ -116,7 +116,7 @@ int makecand(unsigned char *c, struct rngdata *r, int bitoffset) {
 
 
 // test the candidate against the next or previous rng data
-int testcand(unsigned char *f, unsigned char *rt, int fwd) {
+static int testcand(unsigned char *f, unsigned char *rt, int fwd) {
     Hitag_State hstate;
     int i;
     uint32_t ks1;
@@ -154,7 +154,7 @@ int testcand(unsigned char *f, unsigned char *rt, int fwd) {
     }
 }
 
-int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, unsigned char *s) {
+static int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, unsigned char *s) {
     int fd;
     struct stat filestat;
     char file[64];
@@ -222,7 +222,7 @@ int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, u
 
 }
 
-int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *outstate, int *bitoffset) {
+static int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *outstate, int *bitoffset) {
     int i;
     int bitlen;
     unsigned char cand[6];
@@ -276,7 +276,7 @@ int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *outstat
 
 
 
-void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset) {
+static void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset) {
     int i;
 
     if (!s) {
@@ -305,7 +305,7 @@ void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset) {
 
 }
 
-uint64_t recoverkey(Hitag_State *hstate, char *uidstr, char *nRstr) {
+static uint64_t recoverkey(Hitag_State *hstate, char *uidstr, char *nRstr) {
     uint64_t key;
     uint64_t keyupper;
     uint32_t uid;
@@ -368,7 +368,7 @@ int main(int argc, char *argv[]) {
     int i;
 
     if (argc < 4) {
-        printf("ht2crack2search rngdatafile UID nR\n");
+        printf("%s rngdatafile UID nR\n", argv[0]);
         exit(1);
     }
 

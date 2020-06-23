@@ -23,7 +23,7 @@ VERSIONSRC = version.c
 # THUMBSRC :=
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS = -I. -fno-strict-aliasing -ffunction-sections -fdata-sections
+APP_CFLAGS = -I. -ffunction-sections -fdata-sections
 
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
 APP_CFLAGS += -fno-stack-protector -fno-pie
@@ -39,7 +39,7 @@ OBJS = $(OBJDIR)/bootrom.s19
 # version.c should be remade on every compilation
 version.c: default_version.c
 	$(info [=] GEN $@)
-	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
+	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 
 all: showinfo $(OBJS)
 
@@ -52,7 +52,7 @@ tarbin: $(OBJS)
 
 $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o

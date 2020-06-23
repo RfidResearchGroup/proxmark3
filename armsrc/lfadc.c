@@ -26,12 +26,17 @@
 //#define HITAG_T0 3
 
 //////////////////////////////////////////////////////////////////////////////
+// Exported global variables
+//////////////////////////////////////////////////////////////////////////////
+
+bool g_logging = true;
+
+//////////////////////////////////////////////////////////////////////////////
 // Global variables
 //////////////////////////////////////////////////////////////////////////////
 
-bool rising_edge = false;
-bool logging = true;
-bool reader_mode = false;
+static bool rising_edge = false;
+static bool reader_mode = false;
 
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
@@ -46,8 +51,8 @@ bool lf_test_periods(size_t expected, size_t count) {
 //////////////////////////////////////////////////////////////////////////////
 // Low frequency (LF) adc passthrough functionality
 //////////////////////////////////////////////////////////////////////////////
-uint8_t previous_adc_val = 0;
-uint8_t adc_avg = 0;
+static uint8_t previous_adc_val = 0;
+static uint8_t adc_avg = 0;
 
 void lf_sample_mean(void) {
     uint8_t periods = 0;
@@ -90,7 +95,7 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             adc_val = AT91C_BASE_SSC->SSC_RHR;
             periods++;
 
-            if (logging) logSampleSimple(adc_val);
+            if (g_logging) logSampleSimple(adc_val);
 
             // Only test field changes if state of adc values matter
             if (wait == false) {
@@ -120,7 +125,7 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             if (periods >= max) return 0;
         }
     }
-    if (logging) logSampleSimple(0xFF);
+    if (g_logging) logSampleSimple(0xFF);
     return 0;
 }
 
@@ -223,7 +228,7 @@ void lf_init(bool reader, bool simulate) {
     uint32_t bufsize = 10000;
 
     // use malloc
-    if (logging) initSampleBufferEx(&bufsize, true);
+    if (g_logging) initSampleBufferEx(&bufsize, true);
 
     lf_sample_mean();
 }
@@ -269,7 +274,7 @@ size_t lf_detect_field_drop(size_t max) {
             periods++;
             volatile uint8_t adc_val = AT91C_BASE_SSC->SSC_RHR;
 
-            if (logging) logSampleSimple(adc_val);
+            if (g_logging) logSampleSimple(adc_val);
 
             if (adc_val == 0) {
                 rising_edge = false;

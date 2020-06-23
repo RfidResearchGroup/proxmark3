@@ -22,10 +22,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#ifndef ANDROID
-#include <readline/readline.h>
-#endif
-
 #include <complex.h>
 #include "util.h"
 #include "proxmark3.h"  // PROXLOG
@@ -44,7 +40,8 @@ session_arg_t session;
 double CursorScaleFactor = 1;
 int PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
 uint32_t CursorCPos = 0, CursorDPos = 0;
-bool flushAfterWrite = 0;
+double GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
+static bool flushAfterWrite = 0;
 int GridOffset = 0;
 bool GridLocked = false;
 bool showDemod = true;
@@ -54,17 +51,21 @@ pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 
 // needed by flasher, so let's put it here instead of fileutils.c
-int searchHomeFilePath(char **foundpath, const char *filename, bool create_home) {
+int searchHomeFilePath(char **foundpath, const char *subdir, const char *filename, bool create_home) {
     if (foundpath == NULL)
         return PM3_EINVARG;
+
     const char *user_path = get_my_user_directory();
     if (user_path == NULL) {
         fprintf(stderr, "Could not retrieve $HOME from the environment\n");
         return PM3_EFILE;
     }
-    char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1, sizeof(char));
+
+    size_t pathlen = strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1;
+    char *path = calloc(pathlen, sizeof(char));
     if (path == NULL)
         return PM3_EMALLOC;
+
     strcpy(path, user_path);
     strcat(path, PM3_USER_DIRECTORY);
 
@@ -96,11 +97,54 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
             return PM3_EFILE;
         }
     }
+    if (subdir != NULL) {
+        pathlen += strlen(subdir);
+        char *tmp = realloc(path, pathlen * sizeof(char));
+        if (tmp == NULL) {
+            free(path);
+            return PM3_EMALLOC;
+        }
+        path = tmp;
+        strcat(path, subdir);
+
+#ifdef _WIN32
+        // Mingw _stat fails if path ends with /, so let's use a stripped path
+        if (path[strlen(path) - 1] == '/') {
+            path[strlen(path) - 1] = '\0';
+            result = _stat(path, &st);
+            path[strlen(path)] = '/';
+        } else {
+            result = _stat(path, &st);
+        }
+#else
+        result = stat(path, &st);
+#endif
+        if ((result != 0) && create_home) {
+
+#ifdef _WIN32
+            if (_mkdir(path))
+#else
+            if (mkdir(path, 0700))
+#endif
+            {
+                fprintf(stderr, "Could not create user directory %s\n", path);
+                free(path);
+                return PM3_EFILE;
+            }
+        }
+    }
+
     if (filename == NULL) {
         *foundpath = path;
         return PM3_SUCCESS;
     }
-    path = realloc(path, (strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(filename) + 1) * sizeof(char));
+    pathlen += strlen(filename);
+    char *tmp = realloc(path, pathlen * sizeof(char));
+    if (tmp == NULL) {
+        free(path);
+        return PM3_EMALLOC;
+    }
+    path = tmp;
     strcat(path, filename);
     *foundpath = path;
     return PM3_SUCCESS;
@@ -129,7 +173,7 @@ void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     PrintAndLogEx(NORMAL, "%s", buff);
 }
 
-uint8_t PrintAndLogEx_spinidx = 0;
+static uint8_t PrintAndLogEx_spinidx = 0;
 
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
@@ -154,32 +198,34 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     switch (level) {
         case ERR:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix,  _RED_("[!!]") " :rotating_light: ", sizeof(prefix) - 1);
+                strncpy(prefix,  "[" _RED_("!!") "] :rotating_light: ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _RED_("[!!] "), sizeof(prefix) - 1);
+                strncpy(prefix, "[" _RED_("!!") "] ", sizeof(prefix) - 1);
             stream = stderr;
             break;
         case FAILED:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix, _RED_("[-]") " :no_entry: ", sizeof(prefix) - 1);
+                strncpy(prefix, "[" _RED_("-") "] :no_entry: ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _RED_("[-] "), sizeof(prefix) - 1);
+                strncpy(prefix, "[" _RED_("-") "] ", sizeof(prefix) - 1);
             break;
         case DEBUG:
-            strncpy(prefix, _BLUE_("[#] "), sizeof(prefix) - 1);
+            strncpy(prefix, "[" _BLUE_("#") "] ", sizeof(prefix) - 1);
             break;
         case HINT:
+            strncpy(prefix, "[" _YELLOW_("?") "] ", sizeof(prefix) - 1);
+            break;
         case SUCCESS:
-            strncpy(prefix, _GREEN_("[+] "), sizeof(prefix) - 1);
+            strncpy(prefix, "[" _GREEN_("+") "] ", sizeof(prefix) - 1);
             break;
         case WARNING:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix, _CYAN_("[!]") " :warning:  ", sizeof(prefix) - 1);
+                strncpy(prefix, "[" _CYAN_("!") "] :warning:  ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _CYAN_("[!] "), sizeof(prefix) - 1);
+                strncpy(prefix, "[" _CYAN_("!") "] ", sizeof(prefix) - 1);
             break;
         case INFO:
-            strncpy(prefix, _YELLOW_("[=] "), sizeof(prefix) - 1);
+            strncpy(prefix, "[" _YELLOW_("=") "] ", sizeof(prefix) - 1);
             break;
         case INPLACE:
             if (session.emoji_mode == EMOJI) {
@@ -248,8 +294,6 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 }
 
 static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
-    char *saved_line;
-    int saved_point;
     va_list argptr;
     static FILE *logfile = NULL;
     static int logging = 1;
@@ -266,19 +310,19 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         time_t now = time(NULL);
         timenow = gmtime(&now);
         strftime(filename, sizeof(filename), PROXLOG, timenow);
-        if (searchHomeFilePath(&my_logfile_path, filename, true) != PM3_SUCCESS) {
-            fprintf(stderr, "[-] Logging disabled!\n\n");
+        if (searchHomeFilePath(&my_logfile_path, LOGS_SUBDIR, filename, true) != PM3_SUCCESS) {
+            printf(_YELLOW_("[-]") " Logging disabled!\n");
             my_logfile_path = NULL;
             logging = 0;
         } else {
             logfile = fopen(my_logfile_path, "a");
             if (logfile == NULL) {
-                fprintf(stderr, "[-] Can't open logfile %s, logging disabled!\n", my_logfile_path);
+                printf(_YELLOW_("[-]") " Can't open logfile %s, logging disabled!\n", my_logfile_path);
                 logging = 0;
             } else {
 
                 if (session.supports_colors) {
-                    printf(_YELLOW_("[=] ") "Session log " _YELLOW_("%s") "\n", my_logfile_path);
+                    printf("["_YELLOW_("=")"] Session log " _YELLOW_("%s") "\n", my_logfile_path);
                 } else {
                     printf("[=] Session log %s\n", my_logfile_path);
                 }
@@ -295,6 +339,8 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #ifdef RL_STATE_READCMD
     // We are using GNU readline. libedit (OSX) doesn't support this flag.
     int need_hack = (rl_readline_state & RL_STATE_READCMD) > 0;
+    char *saved_line;
+    int saved_point;
 
     if (need_hack) {
         saved_point = rl_point;
@@ -314,7 +360,6 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     if (g_printAndLog & PRINTANDLOG_PRINT) {
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), session.emoji_mode);
         fprintf(stream, "%s", buffer3);
-//        fprintf(stream, "          "); // cleaning prompt
         fprintf(stream, "\n");
     }
 
@@ -496,7 +541,6 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
             }
         }
         memcpy(rdest + si, current_token, current_token_length);
-        si += current_token_length;
     }
 }
 

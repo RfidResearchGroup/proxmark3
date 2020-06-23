@@ -39,10 +39,10 @@
 // low & high - array for storage IDs. Its length must be equal.
 // Predefined IDs must be stored in low[].
 // In high[] must be nulls
-uint64_t low[] = {0x565AF781C7, 0x540053E4E2, 0x1234567890, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint32_t high[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint8_t *bba, slots_count;
-int buflen;
+static uint64_t low[] = {0x565AF781C7, 0x540053E4E2, 0x1234567890, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint32_t high[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint8_t *bba, slots_count;
+static int buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 read/write/clone mode");
@@ -161,7 +161,7 @@ void RunMod(void) {
                     state = 3;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - exit to select mode
-                    CmdEM410xdemod(1, &high[selected], &low[selected], 0);
+                    CmdEM410xdemod(1, &high[selected], &low[selected]);
                     FlashLEDs(100, 5);
 #ifdef WITH_FLASH
                     SaveIDtoFlash(selected, low[selected]);

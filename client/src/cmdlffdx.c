@@ -62,6 +62,7 @@ static int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233");
+    PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233 16a");
     return PM3_SUCCESS;
 }
 
@@ -78,19 +79,34 @@ static int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233");
+    PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233 16a");
     return PM3_SUCCESS;
 }
 
 // clearing the topbit needed for the preambl detection.
-static void verify_values(uint64_t *animalid, uint32_t *countryid) {
+static void verify_values(uint64_t *animalid, uint32_t *countryid, uint32_t *extended) {
     if ((*animalid & 0x3FFFFFFFFF) != *animalid) {
         *animalid &= 0x3FFFFFFFFF;
-        PrintAndLogEx(INFO, "Animal ID Truncated to 38bits: %"PRIx64, *animalid);
+        PrintAndLogEx(INFO, "Animal ID truncated to 38bits: " _YELLOW_("%"PRIx64), *animalid);
     }
     if ((*countryid & 0x3ff) != *countryid) {
         *countryid &= 0x3ff;
-        PrintAndLogEx(INFO, "Country ID Truncated to 10bits: %03d", *countryid);
+        PrintAndLogEx(INFO, "Country ID truncated to 10bits:" _YELLOW_("%03d"), *countryid);
     }
+    if ((*extended & 0xfff) != *extended) {
+        *extended &= 0xfff;
+        PrintAndLogEx(INFO, "Extended truncated to 24bits: " _YELLOW_("0x%03X"), *extended);
+    }
+}
+
+static inline uint32_t bitcount(uint32_t a) {
+#if defined __GNUC__
+    return __builtin_popcountl(a);
+#else
+    a = a - ((a >> 1) & 0x55555555);
+    a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+    return (((a + (a >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
+#endif
 }
 
 // FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
@@ -187,9 +203,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
 
 //see ASKDemod for what args are accepted
 //almost the same demod as cmddata.c/CmdFDXBdemodBI
-static int CmdFdxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
+int demodFDX(void) {
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
     if (ASKbiphaseDemod("0 32 1 100", false) != PM3_SUCCESS) {
@@ -234,8 +248,8 @@ static int CmdFdxDemod(const char *Cmd) {
     num_to_bytes(rawid, 8, raw);
 
     PrintAndLogEx(SUCCESS, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
-    PrintAndLogEx(SUCCESS, "Animal ID          %04u-%012" PRIu64, countryCode, NationalCode);
-    PrintAndLogEx(SUCCESS, "National Code      %012" PRIu64 " (0x%" PRIx64 ")", NationalCode, NationalCode);
+    PrintAndLogEx(SUCCESS, "Animal ID          " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
+    PrintAndLogEx(SUCCESS, "National Code      " _GREEN_("%012" PRIu64) " (0x%" PRIx64 ")", NationalCode, NationalCode);
     PrintAndLogEx(SUCCESS, "Country Code       %04u", countryCode);
     PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
     PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? _YELLOW_("True") : "False");
@@ -243,7 +257,7 @@ static int CmdFdxDemod(const char *Cmd) {
 
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
-    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  [%s] ", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("OK") : _RED_("Fail"));
+    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  (%s) ", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
@@ -251,10 +265,28 @@ static int CmdFdxDemod(const char *Cmd) {
         PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
     }
 
+    uint8_t bt_par = (extended & 0x100) >> 8;
+    uint8_t bt_temperature = extended & 0xff;
+    uint8_t bt_calc_parity = (bitcount(bt_temperature) & 0x1) ? 0 : 1;
+    uint8_t is_bt_temperature = (bt_calc_parity == bt_par) && !(extended & 0xe00) ;
+
+    if (is_bt_temperature) {
+        float bt_F = 74 + bt_temperature * 0.2;
+        float bt_C = (bt_F - 32) / 1.8;
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "Bio-Thermo detected");
+        PrintAndLogEx(INFO, "   temperature     " _GREEN_("%.1f")" F / " _GREEN_("%.1f") " C", bt_F, bt_C);
+    }
+
     // set block 0 for later
     //g_DemodConfig = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
 
     return PM3_SUCCESS;
+}
+
+static int CmdFdxDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodFDX();
 }
 
 static int CmdFdxRead(const char *Cmd) {
@@ -272,9 +304,9 @@ static int CmdFdxClone(const char *Cmd) {
 
     countryid = param_get32ex(Cmd, 0, 0, 10);
     animalid = param_get64ex(Cmd, 1, 0, 10);
-    extended = param_get32ex(Cmd, 2, 0, 10);
+    extended = param_get32ex(Cmd, 2, 0, 16);
 
-    verify_values(&animalid, &countryid);
+    verify_values(&animalid, &countryid, &extended);
 
     uint8_t *bits = calloc(128, sizeof(uint8_t));
 
@@ -298,7 +330,7 @@ static int CmdFdxClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
+    PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: " _GREEN_("%04u-%"PRIu64)" (extended 0x%X)", countryid, animalid, extended);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -316,11 +348,11 @@ static int CmdFdxSim(const char *Cmd) {
 
     countryid = param_get32ex(Cmd, 0, 0, 10);
     animalid = param_get64ex(Cmd, 1, 0, 10);
-    extended = param_get32ex(Cmd, 2, 0, 10);
+    extended = param_get32ex(Cmd, 2, 0, 16);
 
-    verify_values(&animalid, &countryid);
+    verify_values(&animalid, &countryid, &extended);
 
-    PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: %04u-%"PRIu64, countryid, animalid);
+    PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _GREEN_("%04u-%"PRIu64)" (extended 0x%X)", countryid, animalid, extended);
 
     //getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
     uint8_t *bits = calloc(128, sizeof(uint8_t));
@@ -387,10 +419,6 @@ int detectFDXB(uint8_t *dest, size_t *size) {
     if (*size != 128) return -3; //wrong demoded size
     //return start position
     return (int)startIdx;
-}
-
-int demodFDX(void) {
-    return CmdFdxDemod("");
 }
 
 int getFDXBits(uint64_t national_id, uint16_t country, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits) {

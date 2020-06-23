@@ -151,10 +151,10 @@ void RunMod(void) {
             SpinDelay(500);
             // Begin clone function here:
             /* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-                    SendCommandOLD(CMD_HF_MIFARE_CSETBL, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
+                    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
 
                 Block read is similar:
-                    SendCommandOLD(CMD_HF_MIFARE_CGETBL, params, blockNo, 0,...};
+                    SendCommandMIX(CMD_HF_MIFARE_CGETBL, params, blockNo, 0,...};
                 We need to imitate that call with blockNo 0 to set a uid.
 
                 The get and set commands are handled in this file:

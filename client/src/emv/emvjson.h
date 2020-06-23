@@ -13,6 +13,7 @@
 #include "common.h"
 
 #include "jansson.h"
+#include "jansson_path.h"
 #include "tlv.h"
 
 typedef struct {

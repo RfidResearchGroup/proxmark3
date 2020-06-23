@@ -16,8 +16,8 @@
 /// Calculates the value of the CSR DLYBCT field given the desired delay (in ns)
 #define SPI_DLYBCT(delay, masterClock) ((uint32_t) ((((masterClock) / 1000000) * (delay)) / 32000) << 24)
 
-
-uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
+static uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
+#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
@@ -523,7 +523,7 @@ void Flash_EraseChip(void) {
 */
 
 void Flashmem_print_status(void) {
-    DbpString(_BLUE_("Flash memory"));
+    DbpString(_CYAN_("Flash memory"));
     Dbprintf("  Baudrate................" _GREEN_("%d MHz"), FLASHMEM_SPIBAUDRATE / 1000000);
 
     if (!FlashInit()) {
@@ -562,7 +562,7 @@ void Flashmem_print_info(void) {
 
     if (!FlashInit()) return;
 
-    DbpString(_BLUE_("Flash memory dictionary loaded"));
+    DbpString(_CYAN_("Flash memory dictionary loaded"));
 
     // load dictionary offsets.
     uint8_t keysum[2];

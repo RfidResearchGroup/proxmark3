@@ -567,7 +567,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
-    if (!maxLen) maxLen = BIGBUF_SIZE;
+    if (!maxLen) maxLen = pm3_capabilities.bigbuf_size;
 
     if (invert != 0 && invert != 1) {
         PrintAndLogEx(WARNING, "Invalid argument: %s", Cmd);
@@ -1517,16 +1517,18 @@ static int CmdHexsamples(const char *Cmd) {
     uint32_t offset = 0;
     char string_buf[25];
     char *string_ptr = string_buf;
-    uint8_t got[BIGBUF_SIZE];
+    uint8_t got[pm3_capabilities.bigbuf_size];
 
     sscanf(Cmd, "%u %u", &requested, &offset);
 
     /* if no args send something */
     if (requested == 0)
         requested = 8;
+    if (requested > pm3_capabilities.bigbuf_size)
+        requested = pm3_capabilities.bigbuf_size;
 
     if (offset + requested > sizeof(got)) {
-        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes> + <offset> > %d", BIGBUF_SIZE);
+        PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes> + <offset> > %d", pm3_capabilities.bigbuf_size);
         return PM3_EINVARG;
     }
 
@@ -1591,19 +1593,33 @@ static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
 }
 
 int getSamples(uint32_t n, bool verbose) {
+    return getSamplesEx(0, n, verbose);
+}
+
+int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
+
+    if (end < start) {
+        PrintAndLogEx(WARNING, "error, end (%u) is smaller than start (%u)", end, start);
+        return PM3_EINVARG;
+    }
+
     //If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
     // does not line up on byte boundaries
-    uint8_t got[BIGBUF_SIZE - 1] = { 0 };
+    uint8_t got[pm3_capabilities.bigbuf_size - 1];
+    memset(got, 0x00, sizeof(got));
 
-    if (n == 0 || n > sizeof(got))
-        n = sizeof(got);
+    uint32_t n = end - start;
 
-    if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
+    if (n <= 0 || n > pm3_capabilities.bigbuf_size - 1)
+        n = pm3_capabilities.bigbuf_size - 1;
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 
     PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, n, 0, NULL, 0, &response, 10000, true)) {
+    if (!GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &response, 10000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -1624,7 +1640,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
-        int j = 0;
+        uint32_t j = 0;
         for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             GraphBuffer[j] = ((int) sample) - 127;
@@ -1634,7 +1650,7 @@ int getSamples(uint32_t n, bool verbose) {
         if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
 
     } else {
-        for (int j = 0; j < n; j++) {
+        for (uint32_t j = 0; j < n; j++) {
             GraphBuffer[j] = ((int)got[j]) - 127;
         }
         GraphTraceLen = n;
@@ -2292,26 +2308,37 @@ static int CmdDataNDEF(const char *Cmd) {
 #define MAX_NDEF_LEN  2048
 #endif
 
-    CLIParserInit("data ndef",
-                  "Prints NFC Data Exchange Format (NDEF)",
-                  "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data ndef",
+                  "Decode and print NFC Data Exchange Format (NDEF)",
+                  "Samples:\n"
+                  _YELLOW_("\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n")
+                  _YELLOW_("\tdata ndef -d 0103d020240203e02c040300fe\n")
+                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
+        arg_lit0("vV",  "verbose", "verbose mode"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
-    CLIGetHexWithReturn(1, data, &datalen);
-    CLIParserFree();
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    CLIParserFree(ctx);
     if (datalen == 0)
         return PM3_EINVARG;
 
-    PrintAndLogEx(INFO, "Parsed NDEF Records");
-    return NDEFRecordsDecodeAndPrint(data, datalen);
+    int res = NDEFDecodeAndPrint(data, datalen, verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
+        res = NDEFRecordsDecodeAndPrint(data, datalen);
+    }
+    return res;
 }
 
 static command_t CommandTable[] = {

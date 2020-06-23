@@ -17,17 +17,17 @@
 #include <config.h>
 #endif
 
-#include "dda_test.h"
+#include <string.h>     // memcpy
+#include <stdlib.h>     // malloc
 
+#include "dda_test.h"
 #include "../emv_pk.h"
 #include "../crypto.h"
 #include "../dump.h"
 #include "../tlv.h"
 #include "../emv_pki.h"
+#include "ui.h"         // printandlog
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
 struct emv_pk mchip_05 = {
     .rid = { 0xa0, 0x00, 0x00, 0x00, 0x04, },
@@ -123,6 +123,7 @@ const unsigned char d_ssd1[] = {
     0x03, 0x8d, 0x0c, 0x91, 0x0a, 0x8a, 0x02, 0x95, 0x05, 0x9f, 0x37, 0x04, 0x9f, 0x4c, 0x08,
     0x39, 0x00,
 };
+
 static const struct tlv ssd1_tlv = {
     .len = sizeof(d_ssd1),
     .value = d_ssd1,
@@ -135,6 +136,7 @@ const unsigned char d_pan[] = {
 const unsigned char d_dd1[] = {
     0x00, 0x00, 0x00, 0x00,
 };
+
 static const struct tlv dd1_tlv = {
     .len = sizeof(d_dd1),
     .value = d_dd1,
@@ -158,7 +160,7 @@ static int dda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("issuer cert:\n");
+        PrintAndLogEx(INFO, "issuer cert:");
         dump_buffer(ipk_data, ipk_data_len, stdout, 0);
     }
 
@@ -188,7 +190,7 @@ static int dda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash:\n");
+        PrintAndLogEx(INFO, "crypto hash:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -217,7 +219,7 @@ static int dda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("icc cert:\n");
+        PrintAndLogEx(INFO, "icc cert:");
         dump_buffer(iccpk_data, iccpk_data_len, stdout, 0);
     }
 
@@ -246,7 +248,7 @@ static int dda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash1.1:\n");
+        PrintAndLogEx(INFO, "crypto hash1.1:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -273,7 +275,7 @@ static int dda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("sdad:\n");
+        PrintAndLogEx(INFO, "sdad:");
         dump_buffer(sdad, sdad_len, stdout, 0);
     }
 
@@ -294,14 +296,12 @@ static int dda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash2:\n");
+        PrintAndLogEx(INFO, "crypto hash2:");
         dump_buffer(h2, 20, stdout, 0);
     }
 
     crypto_hash_close(ch);
-
     free(sdad);
-
     return 0;
 }
 
@@ -316,7 +316,7 @@ static int dda_test_pk(bool verbose) {
 
     struct emv_pk *ipk = emv_pki_recover_issuer_cert(pk, db);
     if (!ipk) {
-        fprintf(stderr, "Could not recover Issuer certificate!\n");
+        PrintAndLogEx(WARNING, "Could not recover Issuer certificate!");
         tlvdb_free(db);
         return 2;
     }
@@ -327,7 +327,7 @@ static int dda_test_pk(bool verbose) {
 
     struct emv_pk *iccpk = emv_pki_recover_icc_cert(ipk, db, &ssd1_tlv);
     if (!iccpk) {
-        fprintf(stderr, "Could not recover ICC certificate!\n");
+        PrintAndLogEx(WARNING, "Could not recover ICC certificate!");
         emv_pk_free(ipk);
         tlvdb_free(db);
         return 2;
@@ -337,7 +337,7 @@ static int dda_test_pk(bool verbose) {
 
     struct tlvdb *idndb = emv_pki_recover_idn(iccpk, db, &dd1_tlv);
     if (!idndb) {
-        fprintf(stderr, "Could not recover IDN!\n");
+        PrintAndLogEx(WARNING, "Could not recover IDN!");
         emv_pk_free(iccpk);
         emv_pk_free(ipk);
         tlvdb_free(db);
@@ -346,7 +346,7 @@ static int dda_test_pk(bool verbose) {
 
     const struct tlv *idn = tlvdb_get(idndb, 0x9f4c, NULL);
     if (!idn) {
-        fprintf(stderr, "IDN not found!\n");
+        PrintAndLogEx(WARNING, "IDN not found!");
         tlvdb_free(idndb);
         emv_pk_free(iccpk);
         emv_pk_free(ipk);
@@ -355,7 +355,7 @@ static int dda_test_pk(bool verbose) {
     }
 
     if (verbose) {
-        printf("IDN:\n");
+        PrintAndLogEx(INFO, "IDN:");
         dump_buffer(idn->value, idn->len, stdout, 0);
     }
 
@@ -363,27 +363,22 @@ static int dda_test_pk(bool verbose) {
     emv_pk_free(iccpk);
     emv_pk_free(ipk);
     tlvdb_free(db);
-
     return 0;
 }
 
 int exec_dda_test(bool verbose) {
-    int ret;
-    fprintf(stdout, "\n");
-
-    ret = dda_test_raw(verbose);
+    int ret = dda_test_raw(verbose);
     if (ret) {
-        fprintf(stderr, "DDA raw test: failed\n");
+        PrintAndLogEx(WARNING, "DDA raw test: %s", _RED_("failed"));
         return ret;
     }
-    fprintf(stdout, "DDA raw test: passed\n");
+    PrintAndLogEx(SUCCESS, "DDA raw test: %s", _GREEN_("passed"));
 
     ret = dda_test_pk(verbose);
     if (ret) {
-        fprintf(stderr, "DDA test pk: failed\n");
+        PrintAndLogEx(WARNING, "DDA test pk: %s", _RED_("failed"));
         return ret;
     }
-    fprintf(stdout, "DDA test pk: passed\n");
-
+    PrintAndLogEx(SUCCESS, "DDA test pk: %s", _GREEN_("passed"));
     return 0;
 }

@@ -15,7 +15,7 @@
 #include "util.h"
 #include "string.h"
 
-extern bool logging;
+extern bool g_logging;
 
 void lf_sample_mean(void);
 bool lf_test_periods(size_t expected, size_t count);

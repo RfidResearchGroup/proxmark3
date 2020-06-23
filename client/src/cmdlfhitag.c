@@ -330,7 +330,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'j':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileJSON(filename, data, maxdatalen, &datalen);
+                res = loadFileJSON(filename, data, maxdatalen, &datalen, NULL);
                 if (res > 0) {
                     errors = true;
                     break;
@@ -363,7 +363,7 @@ static int CmdLFHitagSim(const char *Cmd) {
 
     clearCommandBuffer();
     if (tag_mem_supplied) {
-        SendCommandOLD(cmd, 1, 0, 0, data, datalen);
+        SendCommandMIX(cmd, 1, 0, 0, data, datalen);
     } else {
         SendCommandMIX(cmd, 0, 0, 0, NULL, 0);
     }
@@ -693,7 +693,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LF_HITAGS_WRITE, htf, 0, arg2, &htd, sizeof(htd));
+    SendCommandMIX(CMD_LF_HITAGS_WRITE, htf, 0, arg2, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -725,7 +725,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     saveFile(filename, ".bin", data, 48);
     saveFileEML(filename, data, 48, 4);
-    saveFileJSON(filename, jsfHitag, data, 48);
+    saveFileJSON(filename, jsfHitag, data, 48, NULL);
 
     return PM3_SUCCESS;
 }

@@ -121,6 +121,20 @@ typedef struct {
     int32_t samples_to_skip;
     bool verbose;
 } PACKED sample_config;
+
+typedef struct {
+    uint32_t timestamp;
+    uint16_t duration;
+    uint16_t data_len : 15;
+    bool isResponse : 1;
+    uint8_t frame[];
+    // data_len         bytes of data
+    // ceil(data_len/8) bytes of parity
+} PACKED tracelog_hdr_t;
+
+#define TRACELOG_HDR_LEN        sizeof(tracelog_hdr_t)
+#define TRACELOG_PARITY_LEN(x)  (((x)->data_len - 1) / 8 + 1)
+
 /*
 typedef struct {
     uint16_t start_gap;
@@ -161,6 +175,7 @@ typedef struct {
 typedef struct {
     uint8_t version;
     uint32_t baudrate;
+    uint32_t bigbuf_size;
     bool via_fpc                       : 1;
     bool via_usb                       : 1;
     // rdv4
@@ -172,6 +187,7 @@ typedef struct {
     // lf
     bool compiled_with_lf              : 1;
     bool compiled_with_hitag           : 1;
+    bool compiled_with_em4x50          : 1;
     // hf
     bool compiled_with_hfsniff         : 1;
     bool compiled_with_hfplot          : 1;
@@ -189,7 +205,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 4
+#define CAPABILITIES_VERSION 5
 extern capabilities_t pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
@@ -370,7 +386,7 @@ typedef struct {
 #define CMD_DOWNLOADED_BIGBUF                                             0x0208
 #define CMD_LF_UPLOAD_SIM_SAMPLES                                         0x0209
 #define CMD_LF_SIMULATE                                                   0x020A
-#define CMD_LF_HID_DEMOD                                                  0x020B
+#define CMD_LF_HID_WATCH                                                  0x020B
 #define CMD_LF_HID_SIMULATE                                               0x020C
 #define CMD_LF_SET_DIVISOR                                                0x020D
 #define CMD_LF_SIMULATE_BIDIR                                             0x020E
@@ -384,15 +400,18 @@ typedef struct {
 #define CMD_LF_PCF7931_WRITE                                              0x0223
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
-#define CMD_LF_IO_DEMOD                                                   0x021A
-#define CMD_LF_EM410X_DEMOD                                               0x021C
+#define CMD_LF_IO_WATCH                                                   0x021A
+#define CMD_LF_EM410X_WATCH                                               0x021C
+#define CMD_LF_EM4X50_INFO                                                0x0240
+#define CMD_LF_EM4X50_WRITE                                               0x0241
+#define CMD_LF_EM4X50_WRITE_PASSWORD                                      0x0242
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
 #define CMD_LF_ASK_SIMULATE                                               0x021F
 #define CMD_LF_PSK_SIMULATE                                               0x0220
 #define CMD_LF_NRZ_SIMULATE                                               0x0232
-#define CMD_LF_AWID_DEMOD                                                 0x0221
+#define CMD_LF_AWID_WATCH                                                 0x0221
 #define CMD_LF_VIKING_CLONE                                               0x0222
 #define CMD_LF_T55XX_WAKEUP                                               0x0224
 #define CMD_LF_COTAG_READ                                                 0x0225

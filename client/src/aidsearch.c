@@ -43,7 +43,6 @@ out:
 }
 
 static int closeAIDFile(json_t *root) {
-
     json_decref(root);
     return PM3_SUCCESS;
 }
@@ -67,7 +66,6 @@ json_t *AIDSearchGetElm(json_t *root, int elmindx) {
 }
 
 int AIDSearchFree(json_t *root) {
-
     return closeAIDFile(root);
 }
 
@@ -122,8 +120,8 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
         goto out;
 
     json_t *elm = NULL;
-    int maxaidlen = 0;
-    for (int elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+    uint32_t maxaidlen = 0;
+    for (uint32_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
         json_t *data = AIDSearchGetElm(root, elmindx);
         if (data == NULL)
             continue;

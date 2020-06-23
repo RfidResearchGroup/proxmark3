@@ -25,11 +25,9 @@
 
 // low & high - array for storage IDs. Its length must be equal.
 // Predefined IDs must be stored in low[].
-// In high[] must be nulls
-uint64_t low[] = {0x565A1140BE, 0x365A398149, 0x5555555555, 0xFFFFFFFFFF};
-uint32_t high[] = {0, 0, 0, 0};
-uint8_t *bba, slots_count;
-int buflen;
+static uint64_t low[] = {0x565A1140BE, 0x365A398149, 0x5555555555, 0xFFFFFFFFFF};
+static uint8_t *bba, slots_count;
+static int buflen;
 
 void ModInfo(void) {
     DbpString("  LF EM4100 simulator standalone mode");

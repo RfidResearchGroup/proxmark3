@@ -27,12 +27,12 @@ Default LF config is set to:
     samples_to_skip = 0
     verbose = YES
     */
-sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
+static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
 
 void printConfig(void) {
     uint32_t d = config.divisor;
-    DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
+    DbpString(_CYAN_("LF Sampling config"));
+    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")" )", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
     Dbprintf("  [b] bits per sample.....%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
@@ -100,10 +100,10 @@ static void pushBit(BitstreamOut *stream, uint8_t bit) {
 }
 
 // Holds bit packed struct of samples.
-BitstreamOut data = {0, 0, 0};
+static BitstreamOut data = {0, 0, 0};
 
 // internal struct to keep track of samples gathered
-sampling_t samples = {0, 0, 0, 0};
+static sampling_t samples = {0, 0, 0, 0};
 
 void initSampleBuffer(uint32_t *sample_size) {
     initSampleBufferEx(sample_size, false);
@@ -132,6 +132,8 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
     } else {
         if (*sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
+        } else {
+            *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
         }
         data.buffer = BigBuf_get_addr();
     }
@@ -256,11 +258,11 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     uint32_t cancel_counter = 0;
     int16_t checked = 0;
 
-    while (!BUTTON_PRESS()) {
+    while (BUTTON_PRESS() == false) {
 
         // only every 1000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if ((checked == 1000) && (trigger_threshold > 0)) {
+        if ((checked == 2000) && (trigger_threshold > 0)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -273,7 +275,6 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-//			AT91C_BASE_SSC->SSC_THR = 0x43;
             LED_D_ON();
         }
 
