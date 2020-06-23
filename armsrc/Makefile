@@ -63,6 +63,12 @@ else
     SRC_HITAG =
 endif
 
+ifneq (,$(findstring WITH_EM4x50,$(APP_CFLAGS)))
+	SRC_EM4x50 = em4x50.c
+else
+	SRC_EM4x50 =
+endif
+
 ifneq (,$(findstring WITH_LCD,$(APP_CFLAGS)))
     SRC_LCD = fonts.c LCD.c
 else
@@ -99,6 +105,7 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_HITAG) \
+	$(SRC_EM4x50) \
     $(SRC_SPIFFS) \
     $(SRC_ISO14443a) \
     $(SRC_ISO14443b) \
