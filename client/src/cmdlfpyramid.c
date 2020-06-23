@@ -1,5 +1,7 @@
 //-----------------------------------------------------------------------------
 //
+// by marshmellow
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -62,11 +64,14 @@ static int usage_lf_pyramid_sim(void) {
     return PM3_SUCCESS;
 }
 
-//by marshmellow
-//Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
-//print full Farpointe Data/Pyramid Prox ID and some bit format details if found
 static int CmdPyramidDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
+    return demodPyramid();
+}
+
+//Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
+//print full Farpointe Data/Pyramid Prox ID and some bit format details if found
+int demodPyramid(void) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -350,11 +355,6 @@ int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
     return PM3_SUCCESS;
 }
 
-int demodPyramid(void) {
-    return CmdPyramidDemod("");
-}
-
-// by marshmellow
 // FSK Demod then try to locate a Farpointe Data (pyramid) ID
 int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
     //make sure buffer has data

@@ -36,8 +36,7 @@
 // Partly ripped from PyRun_SimpleFileExFlags
 // but does not terminate client on sys.exit
 // and print exit code only if != 0
-static int Pm3PyRun_SimpleFileNoExit(FILE *fp, const char *filename)
-{
+static int Pm3PyRun_SimpleFileNoExit(FILE *fp, const char *filename) {
     PyObject *m, *d, *v;
     int set_file_name = 0, ret = -1;
     m = PyImport_AddModule("__main__");
@@ -86,7 +85,7 @@ static int Pm3PyRun_SimpleFileNoExit(FILE *fp, const char *filename)
     }
     Py_DECREF(v);
     ret = 0;
-  done:
+done:
     if (set_file_name && PyDict_DelItemString(d, "__file__"))
         PyErr_Clear();
     Py_XDECREF(m);

@@ -1400,7 +1400,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
             for (int i = 0; i < madlen; i++) {
                 if (aaid == mad[i]) {
-           
+
                     uint8_t vsector[16 * 4] = {0};
                     if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
@@ -1472,7 +1472,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
 
     if (verbose)
         PrintAndLogEx(INFO, "reading MAD v1 sector");
-    
+
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(ERR, "error, read sector 0. card don't have MAD or don't have MAD on default keys");
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndef -k `") " with your custom key");
@@ -1487,7 +1487,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     }
 
     if (haveMAD2) {
-        
+
         if (verbose)
             PrintAndLogEx(INFO, "reading MAD v2 sector");
 

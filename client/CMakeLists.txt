@@ -1,3 +1,9 @@
+# Usage:
+#  mkdir build
+#  cd build
+#  cmake ..     (see below for options)
+#  make         (VERBOSE=1 if needed)
+#
 # MINGW:
 #  On ProxSpace 3.4:
 #    cmake -G"MSYS Makefiles" ..
@@ -5,7 +11,7 @@
 #    pacman -S mingw-w64-x86_64-cmake
 #    /mingw64/bin/cmake -G"MSYS Makefiles" ..
 #
-# Android cross-compilation:
+# Android cross-compilation: (ANDROID_ABI=arm64-v8a for a 64b version)
 # cmake \
 #    -DCMAKE_TOOLCHAIN_FILE=<path-to-your-android-ndk>/build/cmake/android.toolchain.cmake \
 #    -DANDROID_ABI=armeabi-v7a \
@@ -59,7 +65,7 @@ endif (NOT SKIPPYTHON EQUAL 1)
 
 # If build on android cross, we need to init source and build.
 if (ANDROID)
-    set(CFLAGS_EXTERNAL_LIB CFLAGS=--target=${CMAKE_C_COMPILER_TARGET})
+    set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
     include(ExternalProject)
 endif (ANDROID)
 
@@ -73,9 +79,9 @@ if (NOT SKIPREADLINE EQUAL 1)
             URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.0.tar.gz
             PREFIX                deps/ncurses
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
-            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm
+            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --disable-database  --with-fallbacks=ansi-generic,ansi-mini,color_xterm,dtterm,dumb,Eterm,Eterm-256color,Eterm-88color,eterm-color,gnome,gnome-256color,guru,hurd,iTerm.app,konsole,konsole-16color,konsole-256color,konsole-base,konsole-linux,konsole-solaris,konsole-vt100,kterm,kterm-color,linux,linux-16color,linux-basic,mac,mlterm,mlterm-256color,mrxvt,mrxvt-256color,mterm,mterm-ansi,mvterm,nsterm,nsterm-16color,nsterm-256color,pty,putty,putty-256color,putty-vt100,rxvt,rxvt-16color,rxvt-256color,rxvt-88color,rxvt-basic,rxvt-color,screen,screen-16color,screen-256color,simpleterm,st-16color,st-256color,st52,st52-color,stv52,tt,tt52,unknown,vt100,vt102,vte,vte-256color,xterm,xterm-16color,xterm-256color,xterm-88color,xterm-basic,xterm-bold,xterm-color,xterm-utf8,xterm-vt220,xterm-vt52,xterm1,xtermc,xtermm   --enable-termcap --without-ada --without-debug --without-dlsym --without-gpm --without-develop --without-tests --without-cxx-binding --with-termlib
             BUILD_IN_SOURCE       ON
-            BUILD_COMMAND         make -j2 libs
+            BUILD_COMMAND         make libs
             INSTALL_COMMAND       ""
             LOG_DOWNLOAD          ON
         )
@@ -87,13 +93,13 @@ if (NOT SKIPREADLINE EQUAL 1)
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
             CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --enable-static
             BUILD_IN_SOURCE       ON
-            BUILD_COMMAND         make -j2
+            BUILD_COMMAND         make
             INSTALL_COMMAND       ""
             LOG_DOWNLOAD          ON
         )
         ExternalProject_Add_StepTargets(readline configure build install)
         set(READLINE_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/)
-        set(READLINE_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_BINARY_DIR}/deps/ncurses/src/ncurses/lib/libncurses.a)
+        set(READLINE_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_BINARY_DIR}/deps/ncurses/src/ncurses/lib/libtinfo.a)
     else (ANDROID)
         find_path(READLINE_INCLUDE_DIRS readline/readline.h)
         find_library(READLINE_LIBRARIES readline)

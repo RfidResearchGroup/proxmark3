@@ -47,7 +47,7 @@ static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_2CLK    I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
 
-#define I2C_DELAY_100us   I2CSpinDelayClk( 100 / 3) 
+#define I2C_DELAY_100us   I2CSpinDelayClk( 100 / 3)
 #define I2C_DELAY_600us   I2CSpinDelayClk( 600 / 3)
 #define I2C_DELAY_10ms    I2CSpinDelayClk( 10 * 1000 / 3 )
 #define I2C_DELAY_30ms    I2CSpinDelayClk( 30 * 1000 / 3 )
@@ -440,7 +440,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
     // extra wait  500us (514us measured)
     // 200us  (xx measured)
-//    WaitUS(600);    
+//    WaitUS(600);
     I2C_DELAY_600us;
 
     bool bBreak = true;
