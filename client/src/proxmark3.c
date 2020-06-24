@@ -641,7 +641,6 @@ finish2:
 
 #if defined(_WIN32)
 static bool DetectWindowsAnsiSupport(void) {
-    bool ret = false;
     HKEY hKey = NULL;
     bool virtualTerminalLevelSet = false;
     bool forceV2Set = false;
@@ -681,9 +680,15 @@ static bool DetectWindowsAnsiSupport(void) {
         }
         RegCloseKey(hKey);
     }
+
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+
     // If both VirtualTerminalLevel and ForceV2 is set, AnsiColor should work
-    ret = virtualTerminalLevelSet && forceV2Set;
-    return ret;
+    return virtualTerminalLevelSet && forceV2Set;
 }
 #endif
 
