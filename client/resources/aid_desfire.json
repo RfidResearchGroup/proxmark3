@@ -12,7 +12,7 @@
         "Vendor": "HID",
         "Country": "US",
         "Name": "SIO DESFire Ev1",
-        "Description": "Genuine HID",
+        "Description": "Field Encoder",
         "Type": "pacs"
     },
     {
@@ -22,7 +22,7 @@
         "Name": "Access control",
         "Description": "Genuine HID",
         "Type": "pacs"
-    }   
+    },   
     {
         "AID": "4F5931",
         "Vendor": "Transport of London",
