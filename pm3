@@ -354,12 +354,6 @@ else
   echo >&2 "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
 fi
-
-HOSTOS=$(uname | awk '{print toupper($0)}')
-if [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
-    $(powershell.exe -command "Out-Null")
-fi
-
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     HELP
     exit 0
@@ -395,6 +389,7 @@ if [ "$1" == "-n" ]; then
     fi
 fi
 
+HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
     if uname -a|grep -q Microsoft; then
         # Test presence of wmic
