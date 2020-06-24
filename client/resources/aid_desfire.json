@@ -10,11 +10,19 @@
     {
         "AID": "D3494F",
         "Vendor": "HID",
-        "Country": "United States",
+        "Country": "US",
         "Name": "SIO DESFire Ev1",
-        "Description": "",
+        "Description": "Genuine HID",
         "Type": "pacs"
     },
+    {
+        "AID": "D9494F",
+        "Vendor": "HID",
+        "Country": "US",
+        "Name": "Access control",
+        "Description": "Genuine HID",
+        "Type": "pacs"
+    }   
     {
         "AID": "4F5931",
         "Vendor": "Transport of London",
@@ -321,4 +329,5 @@ FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Ca
         "Description": "CAR2GO - Member Card",
         "Type": "carsharing"
     }
+   
 ]
