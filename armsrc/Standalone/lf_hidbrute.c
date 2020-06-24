@@ -75,7 +75,7 @@ void RunMod(void) {
             // record
             DbpString("[=] starting recording");
 
-            CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
+            lf_hid_watch(1, &high[selected], &low[selected]);
             Dbprintf("[=] recorded %x %x %08x", selected, high[selected], low[selected]);
 
             LEDsoff();

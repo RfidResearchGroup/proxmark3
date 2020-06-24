@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfem4x.h"
+#include "cmdlfem4x50.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -147,20 +148,6 @@ static int usage_lf_em4x50_read(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf em 4x50_read 1");
     PrintAndLogEx(NORMAL, "      lf em 4x50_read 1 11223344");
-    return PM3_SUCCESS;
-}
-static int usage_lf_em4x50_write(void) {
-    PrintAndLogEx(NORMAL, "Write EM 4x50/4x69.  Tag must be on antenna. ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write [h] <address> <data> <pwd>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       address   - memory address to write to. (0-15)");
-    PrintAndLogEx(NORMAL, "       data      - data to write (hex)");
-    PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 4x50_write 1 deadc0de");
-    PrintAndLogEx(NORMAL, "      lf em 4x50_write 1 deadc0de 11223344");
     return PM3_SUCCESS;
 }
 
@@ -1052,16 +1039,6 @@ static int CmdEM4x50Read(const char *Cmd) {
     return EM4x50Read(Cmd, true);
 }
 
-static int CmdEM4x50Write(const char *Cmd) {
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_em4x50_write();
-    PrintAndLogEx(NORMAL, "no implemented yet");
-//
-//    PrintAndLogEx(SUCCESS, "Done");
-//    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50_read`") " to verify");
-    return PM3_SUCCESS;
-}
-
 static int CmdEM4x50Dump(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_dump();
@@ -1779,7 +1756,9 @@ static command_t CommandTable[] = {
     {"4x50_demod",  CmdEM4x50Demod,       AlwaysAvailable, "demodulate a EM4x50 tag from the GraphBuffer"},
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3Lf,         "dump EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3Lf,         "read word data from EM4x50"},
+    {"4x50_info",   CmdEM4x50Info,        IfPm3Lf,         "read complete data from EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3Lf,         "write word data to EM4x50"},
+    {"4x50_write_password", CmdEM4x50WritePassword, IfPm3Lf, "change passwword of EM4x50 tag"},
     {NULL, NULL, NULL, NULL}
 };
 

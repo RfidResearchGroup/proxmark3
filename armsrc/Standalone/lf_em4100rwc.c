@@ -48,7 +48,7 @@ void ModInfo(void) {
     DbpString("  LF EM4100 read/write/clone mode");
 }
 
-static uint64_t ReversQuads(uint64_t bits) {
+static uint64_t rev_quads(uint64_t bits) {
     uint64_t result = 0;
     for (int i = 0; i < 16; i++) {
         result += ((bits >> (60 - 4 * i)) & 0xf) << (4 * i);
@@ -56,35 +56,41 @@ static uint64_t ReversQuads(uint64_t bits) {
     return result >> 24;
 }
 
-static void FillBuff(uint8_t bit) {
+static void fillbuff(uint8_t bit) {
     memset(bba + buflen, bit, CLOCK / 2);
     buflen += (CLOCK / 2);
     memset(bba + buflen, bit ^ 1, CLOCK / 2);
     buflen += (CLOCK / 2);
 }
 
-static void ConstructEM410xEmulBuf(uint64_t id) {
+static void construct_EM410x_emul(uint64_t id) {
 
-    int i, j, binary[4], parity[4];
+    int binary[4] = {0};
+    int parity[4] = {0};
     buflen = 0;
-    for (i = 0; i < 9; i++)
-        FillBuff(1);
-    parity[0] = parity[1] = parity[2] = parity[3] = 0;
-    for (i = 0; i < 10; i++) {
-        for (j = 3; j >= 0; j--, id /= 2)
+    
+    for (uint8_t i = 0; i < 9; i++)
+        fillbuff(1);
+
+    for (uint8_t i = 0; i < 10; i++) {
+        for (uint8_t j = 3; j > 0; j--, id /= 2)
             binary[j] = id % 2;
-        for (j = 0; j < 4; j++)
-            FillBuff(binary[j]);
-        FillBuff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
-        for (j = 0; j < 4; j++)
+
+        for (uint8_t j = 0; j < 4; j++)
+            fillbuff(binary[j]);
+
+        fillbuff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+        for (uint8_t j = 0; j < 4; j++)
             parity[j] ^= binary[j];
     }
-    for (j = 0; j < 4; j++)
-        FillBuff(parity[j]);
-    FillBuff(0);
+
+    for (uint8_t j = 0; j < 4; j++)
+        fillbuff(parity[j]);
+
+    fillbuff(0);
 }
 
-static void LED_Slot(int i) {
+static void led_slot(int i) {
     LEDsoff();
     if (slots_count > 4) {
         LED(i % MAX_IND, 0); //binary indication, usefully for slots_count > 4
@@ -93,8 +99,8 @@ static void LED_Slot(int i) {
     }
 }
 
-static void FlashLEDs(uint32_t speed, uint8_t times) {
-    for (int i = 0; i < times * 2; i++) {
+static void flash_leds(uint32_t speed, uint8_t times) {
+    for (uint16_t i = 0; i < times * 2; i++) {
         LED_A_INV();
         LED_B_INV();
         LED_C_INV();
@@ -132,24 +138,28 @@ void RunMod(void) {
     uint8_t state = 0;
     slots_count = ARRAYLEN(low);
     bba = BigBuf_get_addr();
-    LED_Slot(selected);
+    led_slot(selected);
     for (;;) {
+
         WDT_HIT();
+
         if (data_available()) break;
+
         int button_pressed = BUTTON_HELD(1000);
         SpinDelay(300);
+
         switch (state) {
             case 0:
                 // Select mode
                 if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to simulate mode
                     SpinUp(100);
-                    LED_Slot(selected);
+                    led_slot(selected);
                     state = 2;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - switch to next slot
                     selected = (selected + 1) % slots_count;
-                    LED_Slot(selected);
+                    led_slot(selected);
                 }
                 break;
             case 1:
@@ -157,12 +167,12 @@ void RunMod(void) {
                 if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to read mode
                     SpinUp(100);
-                    LED_Slot(selected);
+                    led_slot(selected);
                     state = 3;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - exit to select mode
-                    CmdEM410xdemod(1, &high[selected], &low[selected]);
-                    FlashLEDs(100, 5);
+                    lf_em410x_watch(1, &high[selected], &low[selected]);
+                    flash_leds(100, 5);
 #ifdef WITH_FLASH
                     SaveIDtoFlash(selected, low[selected]);
 #endif
@@ -174,15 +184,17 @@ void RunMod(void) {
                 if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to read mode
                     SpinDown(100);
-                    LED_Slot(selected);
+                    led_slot(selected);
                     state = 1;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - start simulating. Click again to exit from simulate mode
-                    LED_Slot(selected);
-                    ConstructEM410xEmulBuf(ReversQuads(low[selected]));
-                    FlashLEDs(100, 5);
+                    led_slot(selected);
+
+                    construct_EM410x_emul(rev_quads(low[selected]));
+                    flash_leds(100, 5);
+
                     SimulateTagLowFrequency(buflen, 0, 1);
-                    LED_Slot(selected);
+                    led_slot(selected);
                     state = 0; // Switch to select mode
                 }
                 break;
@@ -191,12 +203,12 @@ void RunMod(void) {
                 if (button_pressed == BUTTON_HOLD) {
                     // Long press - switch to select mode
                     SpinDown(100);
-                    LED_Slot(selected);
+                    led_slot(selected);
                     state = 0;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - write ID to tag
-                    WriteEM410x(0, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff));
-                    LED_Slot(selected);
+                    copy_em410x_to_t55xx(0, CLOCK, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff));
+                    led_slot(selected);
                     state = 0; // Switch to select mode
                 }
                 break;

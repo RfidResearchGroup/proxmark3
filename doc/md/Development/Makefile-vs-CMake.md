@@ -26,7 +26,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | bluez detection | pc | pkg_search_module |   |
 | `SKIPBT` | yes | yes |   |
 | dep bzip2 | sys | sys |   |
-| bzip2 detection | **none** | find_package, Android:gitclone | |
+| bzip2 detection | **none** | find_package, Cross:gitclone | |
 | dep cliparser | in_deps | in_deps |   |
 | dep hardnested | in_deps | in_deps |   |
 | hardn arch autodetect | `uname -m` =? 86 or amd64; `$(CC) -E -mavx512f`? +AVX512` |  `CMAKE_SYSTEM_PROCESSOR` =? x86 or x86_64 or i686 or AMD64 (1) | (1) currently it always includes AVX512 on Intel arch |
@@ -53,7 +53,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | Qt detection | pc(qt5)/pc(qt4)/`QTDIR`(1) (2) | find_package(qt5) (3) | (1) if `QTDIR`: hardcode path (2) OSX: pkg-config hook for Brew (3) OSX: add search path|
 | `SKIPQT` | yes | yes | |
 | dep readline | sys  | sys |  |
-| readline detection | **none** (1) | find*(2), Android:getzip | (1) OSX: hardcoded path (2) additional paths for OSX |
+| readline detection | **none** (1) | find*(2), Cross:getzip | (1) OSX: hardcoded path (2) additional paths for OSX |
 | `SKIPREADLINE` | yes | yes | CLI not fully functional without Readline |
 | dep reveng | in_deps | in_deps | |
 | `SKIPREVENGTEST` | yes(1) | **no**(2) | (1) e.g. if cross-compilation (2) tests aren't compiled/ran with cmake |

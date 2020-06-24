@@ -63,18 +63,23 @@ if (NOT SKIPPYTHON EQUAL 1)
     pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
-# If build on android cross, we need to init source and build.
-if (ANDROID)
+# If cross-compiled, we need to init source and build.
+if (CMAKE_TOOLCHAIN_FILE)
     set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
+    set(EMBED_READLINE ON)
+    set(EMBED_BZIP2 ON)
+endif (CMAKE_TOOLCHAIN_FILE)
+
+if (EMBED_READLINE OR EMBED_BZIP2)
     include(ExternalProject)
-endif (ANDROID)
+endif (EMBED_READLINE OR EMBED_BZIP2)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
       find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include NO_DEFAULT_PATH)
       find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib NO_DEFAULT_PATH)
     endif (APPLE)
-    if (ANDROID)
+    if (EMBED_READLINE)
         ExternalProject_Add(ncurses
             URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.0.tar.gz
             PREFIX                deps/ncurses
@@ -100,10 +105,10 @@ if (NOT SKIPREADLINE EQUAL 1)
         ExternalProject_Add_StepTargets(readline configure build install)
         set(READLINE_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/)
         set(READLINE_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_BINARY_DIR}/deps/ncurses/src/ncurses/lib/libtinfo.a)
-    else (ANDROID)
+    else (EMBED_READLINE)
         find_path(READLINE_INCLUDE_DIRS readline/readline.h)
         find_library(READLINE_LIBRARIES readline)
-    endif (ANDROID)
+    endif (EMBED_READLINE)
     if (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
         set(READLINE_FOUND ON)
     endif (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
@@ -122,7 +127,7 @@ if (NOT SKIPJANSSONSYSTEM EQUAL 1)
     endif (JANSSON_INCLUDE_DIRS AND JANSSON_LIBRARIES)
 endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
 
-if(ANDROID)
+if(EMBED_BZIP2)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     ExternalProject_Add(bzip2
         GIT_REPOSITORY        https://android.googlesource.com/platform/external/bzip2
@@ -139,9 +144,9 @@ if(ANDROID)
     set(BZIP2_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     set(BZIP2_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2/libbz2.a)
     set(BZIP2_FOUND ON)
-else()
+else(EMBED_BZIP2)
     find_package (BZip2 REQUIRED)
-endif(ANDROID)
+endif(EMBED_BZIP2)
 
 if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
@@ -240,6 +245,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfawid.c
         ${PM3_ROOT}/client/src/cmdlfcotag.c
         ${PM3_ROOT}/client/src/cmdlfem4x.c
+        ${PM3_ROOT}/client/src/cmdlfem4x50.c
         ${PM3_ROOT}/client/src/cmdlffdx.c
         ${PM3_ROOT}/client/src/cmdlfgallagher.c
         ${PM3_ROOT}/client/src/cmdlfguard.c
@@ -392,6 +398,12 @@ else (SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(SKIPBT EQUAL 1)
 
+if (EMBED_BZIP2)
+    message("Bzip2 library:     embedded")
+else (EMBED_BZIP2)
+    message("Bzip2 library:     system library found")
+endif (EMBED_BZIP2)
+
 if (SKIPJANSSONSYSTEM EQUAL 1)
     message("Jansson library:   local library forced")
 else (SKIPJANSSONSYSTEM EQUAL 1)
@@ -418,7 +430,11 @@ if (SKIPREADLINE EQUAL 1)
     message("Readline library:  skipped")
 else (SKIPREADLINE EQUAL 1)
     if (READLINE_FOUND)
-        message("Readline library:  enabled")
+        if (EMBED_READLINE)
+            message("Readline library:  embedded")
+        else (EMBED_READLINE)
+            message("Readline library:  system library found")
+        endif (EMBED_READLINE)
     else (READLINE_FOUND)
         message("Readline library:  Readline not found, disabled")
     endif (READLINE_FOUND)
@@ -442,12 +458,14 @@ add_executable(proxmark3
 )
 
 target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
-if (ANDROID)
+if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(proxmark3 ncurses readline)
     endif (NOT SKIPREADLINE EQUAL 1)
+endif (EMBED_READLINE)
+if (EMBED_BZIP2)
     add_dependencies(proxmark3 bzip2)
-endif (ANDROID)
+endif (EMBED_BZIP2)
 
 if (MINGW)
     # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
