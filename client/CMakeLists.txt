@@ -1,3 +1,9 @@
+# Usage:
+#  mkdir build
+#  cd build
+#  cmake ..     (see below for options)
+#  make         (VERBOSE=1 if needed)
+#
 # MINGW:
 #  On ProxSpace 3.4:
 #    cmake -G"MSYS Makefiles" ..
@@ -5,7 +11,7 @@
 #    pacman -S mingw-w64-x86_64-cmake
 #    /mingw64/bin/cmake -G"MSYS Makefiles" ..
 #
-# Android cross-compilation:
+# Android cross-compilation: (ANDROID_ABI=arm64-v8a for a 64b version)
 # cmake \
 #    -DCMAKE_TOOLCHAIN_FILE=<path-to-your-android-ndk>/build/cmake/android.toolchain.cmake \
 #    -DANDROID_ABI=armeabi-v7a \
@@ -19,6 +25,8 @@ SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
+
+find_package(PkgConfig)
 
 if (NOT SKIPQT EQUAL 1)
     if(APPLE AND EXISTS /usr/local/opt/qt5)
@@ -46,7 +54,6 @@ if (NOT SKIPQT EQUAL 1)
     endforeach()
 endif (NOT SKIPQT EQUAL 1)
 
-find_package(PkgConfig)
 if (NOT SKIPBT EQUAL 1)
     pkg_search_module(BLUEZ QUIET bluez)
 endif (NOT SKIPBT EQUAL 1)
@@ -56,25 +63,30 @@ if (NOT SKIPPYTHON EQUAL 1)
     pkg_search_module(PYTHON3EMBED QUIET python3-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
-# If build on android cross, we need to init source and build.
-if (ANDROID)
-    set(CFLAGS_EXTERNAL_LIB CFLAGS=--target=${CMAKE_C_COMPILER_TARGET})
+# If cross-compiled, we need to init source and build.
+if (CMAKE_TOOLCHAIN_FILE)
+    set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
+    set(EMBED_READLINE ON)
+    set(EMBED_BZIP2 ON)
+endif (CMAKE_TOOLCHAIN_FILE)
+
+if (EMBED_READLINE OR EMBED_BZIP2)
     include(ExternalProject)
-endif (ANDROID)
+endif (EMBED_READLINE OR EMBED_BZIP2)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
       find_path(READLINE_INCLUDE_DIRS readline/readline.h /usr/local/opt/readline/include /opt/local/include /opt/include /usr/local/include /usr/include NO_DEFAULT_PATH)
       find_library(READLINE_LIBRARIES readline /usr/local/opt/readline/lib /opt/local/lib /opt/lib /usr/local/lib /usr/lib NO_DEFAULT_PATH)
     endif (APPLE)
-    if (ANDROID)
+    if (EMBED_READLINE)
         ExternalProject_Add(ncurses
             URL                   http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.0.tar.gz
             PREFIX                deps/ncurses
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/ncurses
-            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm
+            CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --disable-database  --with-fallbacks=ansi-generic,ansi-mini,color_xterm,dtterm,dumb,Eterm,Eterm-256color,Eterm-88color,eterm-color,gnome,gnome-256color,guru,hurd,iTerm.app,konsole,konsole-16color,konsole-256color,konsole-base,konsole-linux,konsole-solaris,konsole-vt100,kterm,kterm-color,linux,linux-16color,linux-basic,mac,mlterm,mlterm-256color,mrxvt,mrxvt-256color,mterm,mterm-ansi,mvterm,nsterm,nsterm-16color,nsterm-256color,pty,putty,putty-256color,putty-vt100,rxvt,rxvt-16color,rxvt-256color,rxvt-88color,rxvt-basic,rxvt-color,screen,screen-16color,screen-256color,simpleterm,st-16color,st-256color,st52,st52-color,stv52,tt,tt52,unknown,vt100,vt102,vte,vte-256color,xterm,xterm-16color,xterm-256color,xterm-88color,xterm-basic,xterm-bold,xterm-color,xterm-utf8,xterm-vt220,xterm-vt52,xterm1,xtermc,xtermm   --enable-termcap --without-ada --without-debug --without-dlsym --without-gpm --without-develop --without-tests --without-cxx-binding --with-termlib
             BUILD_IN_SOURCE       ON
-            BUILD_COMMAND         make -j2 libs
+            BUILD_COMMAND         make libs
             INSTALL_COMMAND       ""
             LOG_DOWNLOAD          ON
         )
@@ -86,23 +98,36 @@ if (NOT SKIPREADLINE EQUAL 1)
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
             CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --enable-static
             BUILD_IN_SOURCE       ON
-            BUILD_COMMAND         make -j2
+            BUILD_COMMAND         make
             INSTALL_COMMAND       ""
             LOG_DOWNLOAD          ON
         )
         ExternalProject_Add_StepTargets(readline configure build install)
         set(READLINE_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/)
-        set(READLINE_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_BINARY_DIR}/deps/ncurses/src/ncurses/lib/libncurses.a)
-    else (ANDROID)
+        set(READLINE_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/readline/src/readline/libreadline.a ${CMAKE_CURRENT_BINARY_DIR}/deps/ncurses/src/ncurses/lib/libtinfo.a)
+    else (EMBED_READLINE)
         find_path(READLINE_INCLUDE_DIRS readline/readline.h)
         find_library(READLINE_LIBRARIES readline)
-    endif (ANDROID)
+    endif (EMBED_READLINE)
     if (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
         set(READLINE_FOUND ON)
     endif (READLINE_INCLUDE_DIRS AND READLINE_LIBRARIES)
 endif (NOT SKIPREADLINE EQUAL 1)
 
-if(ANDROID)
+if (NOT SKIPJANSSONSYSTEM EQUAL 1)
+    pkg_check_modules(PC_JANSSON QUIET jansson)
+    find_path(JANSSON_INCLUDE_DIRS
+            NAMES jansson.h
+            HINTS ${PC_JANSSON_INCLUDEDIR} ${PC_JANSSON_INCLUDE_DIRS})
+    find_library(JANSSON_LIBRARIES
+            NAMES jansson libjansson
+            HINTS ${PC_JANSSON_LIBDIR} ${PC_JANSSON_LIBRARY_DIRS})
+    if (JANSSON_INCLUDE_DIRS AND JANSSON_LIBRARIES)
+        set(JANSSON_FOUND ON)
+    endif (JANSSON_INCLUDE_DIRS AND JANSSON_LIBRARIES)
+endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
+
+if(EMBED_BZIP2)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     ExternalProject_Add(bzip2
         GIT_REPOSITORY        https://android.googlesource.com/platform/external/bzip2
@@ -118,12 +143,18 @@ if(ANDROID)
     ExternalProject_Add_StepTargets(bzip2 configure build install)
     set(BZIP2_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     set(BZIP2_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2/libbz2.a)
-else()
-    set(BZIP2_LIBRARIES bz2)
-endif(ANDROID)
-if (BZIP2_LIBRARIES)
     set(BZIP2_FOUND ON)
-endif (BZIP2_LIBRARIES)
+else(EMBED_BZIP2)
+    find_package (BZip2 REQUIRED)
+endif(EMBED_BZIP2)
+
+if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
+    find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
+    find_library(WHEREAMI_LIBRARIES whereami)
+    if (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
+        set(WHEREAMI_FOUND ON)
+    endif (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
+endif (NOT SKIPWHEREAMISYSTEM EQUAL 1)
 
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
@@ -214,6 +245,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfawid.c
         ${PM3_ROOT}/client/src/cmdlfcotag.c
         ${PM3_ROOT}/client/src/cmdlfem4x.c
+        ${PM3_ROOT}/client/src/cmdlfem4x50.c
         ${PM3_ROOT}/client/src/cmdlffdx.c
         ${PM3_ROOT}/client/src/cmdlfgallagher.c
         ${PM3_ROOT}/client/src/cmdlfguard.c
@@ -308,6 +340,11 @@ if (NOT SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(NOT SKIPBT EQUAL 1)
 
+if (JANSSON_FOUND)
+    set(ADDITIONAL_DIRS ${JANSSON_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${JANSSON_LIBRARIES} ${ADDITIONAL_LNK})
+endif (JANSSON_FOUND)
+
 if (NOT SKIPPYTHON EQUAL 1)
     if (PYTHON3EMBED_FOUND)
         add_definitions(-DHAVE_PYTHON)
@@ -329,12 +366,16 @@ if (NOT SKIPREADLINE EQUAL 1)
         set(ADDITIONAL_LNK ${READLINE_LIBRARIES} ${ADDITIONAL_LNK})
     endif (READLINE_FOUND)
 endif(NOT SKIPREADLINE EQUAL 1)
+
 if (BZIP2_FOUND)
     set(ADDITIONAL_DIRS ${BZIP2_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
-else (BZIP2_FOUND)
-    message(FATAL_ERROR "Bzip2 not found")
 endif (BZIP2_FOUND)
+
+if (WHEREAMI_FOUND)
+    set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
+endif (WHEREAMI_FOUND)
 
 message("===================================================================")
 if (SKIPQT EQUAL 1)
@@ -357,6 +398,22 @@ else (SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(SKIPBT EQUAL 1)
 
+if (EMBED_BZIP2)
+    message("Bzip2 library:     embedded")
+else (EMBED_BZIP2)
+    message("Bzip2 library:     system library found")
+endif (EMBED_BZIP2)
+
+if (SKIPJANSSONSYSTEM EQUAL 1)
+    message("Jansson library:   local library forced")
+else (SKIPJANSSONSYSTEM EQUAL 1)
+    if (JANSSON_FOUND)
+        message("Jansson library:   system library found")
+    else (JANSSON_FOUND)
+        message("Jansson library:   system library not found, using local library")
+    endif (JANSSON_FOUND)
+endif (SKIPJANSSONSYSTEM EQUAL 1)
+
 if (SKIPPYTHON EQUAL 1)
     message("Python3 library:   skipped")
 else (SKIPPYTHON EQUAL 1)
@@ -373,11 +430,25 @@ if (SKIPREADLINE EQUAL 1)
     message("Readline library:  skipped")
 else (SKIPREADLINE EQUAL 1)
     if (READLINE_FOUND)
-        message("Readline library:  enabled")
+        if (EMBED_READLINE)
+            message("Readline library:  embedded")
+        else (EMBED_READLINE)
+            message("Readline library:  system library found")
+        endif (EMBED_READLINE)
     else (READLINE_FOUND)
         message("Readline library:  Readline not found, disabled")
     endif (READLINE_FOUND)
 endif(SKIPREADLINE EQUAL 1)
+
+if (SKIPWHEREAMISYSTEM EQUAL 1)
+    message("Whereami library:  local library forced")
+else (SKIPWHEREAMISYSTEM EQUAL 1)
+    if (WHEREAMI_FOUND)
+        message("Whereami library:  system library found")
+    else (WHEREAMI_FOUND)
+        message("Whereami library:  system library not found, using local library")
+    endif (WHEREAMI_FOUND)
+endif (SKIPWHEREAMISYSTEM EQUAL 1)
 message("===================================================================")
 
 add_executable(proxmark3
@@ -387,12 +458,14 @@ add_executable(proxmark3
 )
 
 target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
-if (ANDROID)
+if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(proxmark3 ncurses readline)
     endif (NOT SKIPREADLINE EQUAL 1)
+endif (EMBED_READLINE)
+if (EMBED_BZIP2)
     add_dependencies(proxmark3 bzip2)
-endif (ANDROID)
+endif (EMBED_BZIP2)
 
 if (MINGW)
     # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
@@ -421,25 +494,30 @@ endif (NOT APPLE)
 
 
 find_library(pm3rrg_rdv4_cliparser REQUIRED)
-find_library(pm3rrg_rdv4_jansson REQUIRED)
 find_library(pm3rrg_rdv4_tinycbor REQUIRED)
 find_library(pm3rrg_rdv4_lua REQUIRED)
 find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 find_library(pm3rrg_rdv4_reveng REQUIRED)
 find_library(pm3rrg_rdv4_hardnested REQUIRED)
-find_library(pm3rrg_rdv4_whereami REQUIRED)
+
+if (NOT JANSSON_FOUND)
+    find_library(pm3rrg_rdv4_jansson REQUIRED)
+    set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
+endif (NOT JANSSON_FOUND)
+if (NOT WHEREAMI_FOUND)
+    find_library(pm3rrg_rdv4_whereami REQUIRED)
+    set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
+endif (NOT WHEREAMI_FOUND)
 
 target_link_libraries(proxmark3 PRIVATE
         m
         pm3rrg_rdv4_mbedtls
         pm3rrg_rdv4_cliparser
-        pm3rrg_rdv4_jansson
         pm3rrg_rdv4_lua
         pm3rrg_rdv4_tinycbor
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_hardnested
-        pm3rrg_rdv4_whereami
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)

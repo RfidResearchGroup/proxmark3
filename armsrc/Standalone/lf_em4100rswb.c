@@ -39,7 +39,6 @@
 #include "proxmark3_arm.h"
 #include "appmain.h"
 #include "fpgaloader.h"
-#include "lfops.h"
 #include "util.h"
 #include "dbprint.h"
 #include "ticks.h"
@@ -48,6 +47,7 @@
 #include "spiffs.h"
 #include "inttypes.h"
 #include "parity.h"
+#include "lfops.h"
 
 #ifdef WITH_FLASH
 #include "flashmem.h"
@@ -205,7 +205,7 @@ static void PrintFcAndCardNum(uint64_t lowData) {
     Dbprintf("[=] READ TAG ID: %"PRIx64" - FC: %u - Card: %u", lowData, fc, cardnum);
 }
 
-static int ButeEMTag(uint64_t originalCard, int slot) {
+static int BruteEMTag(uint64_t originalCard, int slot) {
     int speed_count = 4;
 
     int direction = 1;
@@ -256,7 +256,7 @@ static int ExecuteMode(int mode, int slot) {
         //default first mode is simulate
         case LF_RWSB_MODE_READ:
             Dbprintf("[=] >>  Read mode started  <<");
-            CmdEM410xdemod(1, &high[slot], &low[slot], 0);
+            lf_em410x_watch(1, &high[slot], &low[slot]);
             LED_Update(mode, slot);
             Dbprintf("[=] >>  Tag found. Saving. <<");
             FlashLEDs(100, 5);
@@ -272,11 +272,11 @@ static int ExecuteMode(int mode, int slot) {
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_WRITE:
             Dbprintf("[!!] >>  Write mode started  <<");
-            WriteEM410x(LF_RWSB_T55XX_TYPE, (uint32_t)(low[slot] >> 32), (uint32_t)(low[slot] & 0xffffffff));
+            copy_em410x_to_t55xx(LF_RWSB_T55XX_TYPE, LF_CLOCK, (uint32_t)(low[slot] >> 32), (uint32_t)(low[slot] & 0xffffffff));
             return LF_RWSB_UNKNOWN_RESULT;
         case LF_RWSB_MODE_BRUTE:
             Dbprintf("[=] >>  Bruteforce mode started  <<");
-            return ButeEMTag(low[slot], slot);
+            return BruteEMTag(low[slot], slot);
     }
     return LF_RWSB_UNKNOWN_RESULT;
 }

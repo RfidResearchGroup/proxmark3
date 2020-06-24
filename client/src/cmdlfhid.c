@@ -264,13 +264,17 @@ static int CmdHIDRead(const char *Cmd) {
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdHIDWatch(const char *Cmd) {
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_hid_watch();
+    uint8_t c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') return usage_lf_hid_watch();
+
+    PrintAndLogEx(SUCCESS, "Watching for HID Prox cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_HID_DEMOD, NULL, 0);
-    PrintAndLogEx(SUCCESS, "Watching for new HID cards - place tag on antenna");
-    PrintAndLogEx(INFO, "Press pm3-button to stop reading new cards");
-    return PM3_SUCCESS;
+    SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);    
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_HID_WATCH, &resp);
+    PrintAndLogEx(INFO, "Done");
+    return resp.status;
 }
 
 static int CmdHIDSim(const char *Cmd) {

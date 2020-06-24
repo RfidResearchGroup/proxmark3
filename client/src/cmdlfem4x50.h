@@ -1,19 +1,22 @@
 //-----------------------------------------------------------------------------
-// Jonathan Westhues, Aug 2005
-// Gerhard de Koning Gans, April 2008, May 2011
-// Piwi, Feb 2019
+// Copyright (C) 2020 tharexde
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Definitions internal to the app source.
+// Low frequency EM4x50 commands
 //-----------------------------------------------------------------------------
-#ifndef __HFSNOOP_H
-#define __HFSNOOP_H
 
-#include "proxmark3_arm.h"
+#ifndef CMDLFEM4X50_H__
+#define CMDLFEM4X50_H__
 
-int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len);
-void HfPlotDownload(void);
+int usage_lf_em4x50_info(void);
+int usage_lf_em4x50_write(void);
+int usage_lf_em4x50_write_password(void);
+
+int CmdEM4x50Info(const char *Cmd);
+int CmdEM4x50Write(const char *Cmd);
+int CmdEM4x50WritePassword(const char *Cmd);
+
 #endif

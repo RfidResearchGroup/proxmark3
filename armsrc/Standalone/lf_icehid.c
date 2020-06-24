@@ -231,7 +231,8 @@ static uint32_t IceHIDDemod(void) {
     uint32_t hi2 = 0, hi = 0, lo = 0;
 
     // large enough to catch 2 sequences of largest format
-    size_t size = 50 * 128 * 2;  // 12800 bytes
+//    size_t size = 50 * 128 * 2;  // 12800 bytes
+    size_t size = MIN(12800, BigBuf_max_traceLen());
     //uint8_t *dest = BigBuf_malloc(size);
     uint8_t *dest = BigBuf_get_addr();
 
@@ -350,30 +351,32 @@ void RunMod(void) {
 
         uint32_t res;
 
-        // since we steal  12800 from bigbuffer, no need to sample it.
-        DoAcquisition_config(false, 28000);
+        // since we steal 12800 from bigbuffer, no need to sample it.
+        size_t size = MIN(28000, BigBuf_max_traceLen());
+        DoAcquisition_config(false, size);
         res = IceHIDDemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, 28000);
+        DoAcquisition_config(false, size);
         res = IceAWIDdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, 20000);
-        res = IceEM410xdemod();
+        DoAcquisition_config(false, size);
+        res = IceIOdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, 28000);
-        res = IceIOdemod();
+        size = MIN(20000, BigBuf_max_traceLen());
+        DoAcquisition_config(false, size);
+        res = IceEM410xdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;

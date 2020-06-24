@@ -34,13 +34,17 @@ static int usage_lf_securakey_clone(void) {
     PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf securakey clone 7FCB400001ADEA5344300000");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf securakey clone b 7FCB400001ADEA5344300000"));
     return PM3_SUCCESS;
 }
 
-//see ASKDemod for what args are accepted
 static int CmdSecurakeyDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
+    return demodSecurakey();
+}
+
+//see ASKDemod for what args are accepted
+int demodSecurakey(void) {
 
     //ASK / Manchester
     bool st = false;
@@ -210,9 +214,5 @@ int detectSecurakey(uint8_t *dest, size_t *size) {
     if (*size != 96) return -3; //wrong demoded size
     //return start position
     return (int)startIdx;
-}
-
-int demodSecurakey(void) {
-    return CmdSecurakeyDemod("");
 }
 

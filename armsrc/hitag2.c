@@ -36,7 +36,7 @@
 #include "lfsampling.h"
 #include "lfdemod.h"
 #include "commonutil.h"
-
+#include "appmain.h"
 
 #define test_bit(data, i)  (*(data + (i/8)) >> (7-(i % 8))) & 1
 #define set_bit(data, i)   *(data + (i/8)) |= (1 << (7-(i % 8)))
@@ -1002,15 +1002,20 @@ void SniffHitag2(void) {
     size_t periods = 0;
     uint8_t periods_bytes[4];
 
-    int16_t checked = 0;
+ //   int16_t checked = 0;
 
     /*bool waiting_for_first_edge = true;*/
     LED_C_ON();
 
+    uint32_t signal_size = 10000;
     while (!BUTTON_PRESS()) {
+
+        // use malloc
+        initSampleBufferEx(&signal_size, false);
 
         WDT_HIT();
 
+/*
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
             if (data_available()) {
@@ -1021,13 +1026,14 @@ void SniffHitag2(void) {
             }
         }
         ++checked;
+        */
 
 
         // Receive frame, watch for at most T0*EOF periods
 //        lf_reset_counter();
 
         // Wait "infinite" for reader modulation
-        periods = lf_detect_gap(20000);
+        periods = lf_detect_gap(10000);
 
         // Test if we detected the first reader modulation edge
         if (periods != 0) {
@@ -1042,7 +1048,6 @@ void SniffHitag2(void) {
             num_to_bytes(periods, 4, periods_bytes);
             LogTrace(periods_bytes, 4, 0, 0, NULL, true);
         }
-
     }
 
     lf_finalize();
@@ -1064,7 +1069,7 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
     int response = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
-    uint8_t tx[HITAG_FRAME_LEN];
+    uint8_t tx[HITAG_FRAME_LEN] = {0};
     size_t txlen = 0;
 
     auth_table_len = 0;
@@ -1108,8 +1113,11 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
     //  int16_t checked = 0;
 
 // SIMULATE
+    uint32_t signal_size = 10000;
+    while (BUTTON_PRESS() == false) {
 
-    while (!BUTTON_PRESS()) {
+        // use malloc
+        initSampleBufferEx(&signal_size, true);
 
         LED_D_ON();
 
@@ -1283,9 +1291,9 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     uint32_t command_start = 0, command_duration = 0;
     uint32_t response_start = 0, response_duration = 0;
 
-    uint8_t rx[HITAG_FRAME_LEN];
+    uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
-    uint8_t txbuf[HITAG_FRAME_LEN];
+    uint8_t txbuf[HITAG_FRAME_LEN] = {0};
     uint8_t *tx = txbuf;
     size_t txlen = 0;
 
@@ -1430,12 +1438,17 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     size_t nrzs = 0;
     int16_t checked = 0;
 
-    while (!bStop && !BUTTON_PRESS()) {
+    uint32_t signal_size = 10000;
+
+    while (bStop == false && BUTTON_PRESS() == false) {
+
+        // use malloc
+        initSampleBufferEx(&signal_size, true);
 
         WDT_HIT();
 
         // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
+        if (checked == 4000) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -1615,13 +1628,13 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         }
 
         // Pack the response into a byte array
-        for (size_t i = 5; i < nrzs; i++) {
+        for (size_t i = 5; i < nrzs && rxlen < (sizeof(rx) << 3); i++) {
             uint8_t bit = nrz_samples[i];
             if (bit > 1) { // When Manchester detects impossible symbol it writes "7"
                 DBG Dbprintf("Error in Manchester decoding, abort");
                 break;
             }
-            rx[rxlen / 8] |= bit << (7 - (rxlen % 8));
+            rx[rxlen >> 3] |= bit << (7 - (rxlen % 8));
             rxlen++;
         }
 
@@ -1756,10 +1769,14 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     size_t nrzs = 0;
 
     int16_t checked = 0;
-    while (!bStop && !BUTTON_PRESS()) {
+    uint32_t signal_size = 10000;
+    while (bStop == false && BUTTON_PRESS() == false) {
 
-        // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
+        // use malloc
+        initSampleBufferEx(&signal_size, true);
+
+        // only every 4000th times, in order to save time when collecting samples.
+        if (checked == 4000) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -1920,12 +1937,13 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         }
 
         // Pack the response into a byte array
-        for (size_t i = 5; i < nrzs; i++) {
+        for (size_t i = 5; i < nrzs && rxlen < (sizeof(rx) << 3); i++) {
             uint8_t bit = nrz_samples[i];
             if (bit > 1) { // When Manchester detects impossible symbol it writes "7"
                 break;
             }
-            rx[rxlen / 8] |= bit << (7 - (rxlen % 8));
+            // >> 3 instead of div by 8
+            rx[rxlen >> 3] |= bit << (7 - (rxlen % 8));
             rxlen++;
         }
 

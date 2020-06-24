@@ -889,7 +889,7 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
 
     // Make sure we do not exceed the free buffer space
     if (ToSendMax > max_buffer_size) {
-        Dbprintf("Out of memory, when modulating bits for tag answer:");
+        Dbprintf("ToSend buffer, Out-of-bound, when modulating bits for tag answer:");
         Dbhexdump(response_info->response_n, response_info->response, false);
         return false;
     }
@@ -980,14 +980,26 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
             // some first pages of UL/NTAG dump is special data
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 19);
+
             // counters and tearing flags
-            for (int i = 0; i < 3; i++) {
+            // for old dumps with all zero headers, we need to set default values.
+            for (uint8_t i = 0; i < 3; i++) {
+
                 counters[i] = le24toh(mfu_header->counter_tearing[i]);
-                tearings[i] = mfu_header->counter_tearing[i][3];
+
+                if (mfu_header->counter_tearing[i][3] != 0x00) {
+                    tearings[i] = mfu_header->counter_tearing[i][3];
+                }
             }
+
             // GET_VERSION
-            memcpy(rVERSION, mfu_header->version, 8);
+            if (memcmp(mfu_header->version, "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
+                memcpy(rVERSION, "\x00\x04\x04\x02\x01\x00\x11\x03", 8);
+            } else {
+                memcpy(rVERSION, mfu_header->version, 8);
+            }
             AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
+
             // READ_SIG
             memcpy(rSIGN, mfu_header->signature, 32);
             AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
@@ -2015,13 +2027,6 @@ int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
                LastTimeProxToAirStart * 16 + DELAY_ARM2AIR_AS_TAG,
                (LastTimeProxToAirStart + p_response->ProxToAirDuration) * 16 + DELAY_ARM2AIR_AS_TAG,
                par);
-
-    if (DBGLEVEL >= DBG_EXTENDED) {
-        Dbprintf("response_info->response %02X", p_response->response);
-        Dbprintf("response_info->response_n %02X", p_response->response_n);
-        Dbprintf("response_info->par %02X", &(p_response->par));
-    }
-
     return ret;
 }
 

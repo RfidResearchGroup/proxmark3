@@ -1369,6 +1369,17 @@ static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose)
 }
 
 static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
+    /*  For reference
+    typedef struct {
+        uint8_t version[8];
+        uint8_t tbo[2];
+        uint8_t tearing[3];
+        uint8_t pack[2];
+        uint8_t tbo1[1];
+        uint8_t signature[32];
+        uint8_t data[1024];
+    } PACKED old_mfu_dump_t;
+    */
 
     // convert old format
     old_mfu_dump_t *old_mfu_dump = (old_mfu_dump_t *)*dump;
@@ -1392,8 +1403,10 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
     }
 
     memcpy(mfu_dump->data, old_mfu_dump->data, sizeof(mfu_dump->data));
-
     mfu_dump->pages = old_data_len / 4 - 1;
+
+    // Add PACK to last block of memory.
+    memcpy(mfu_dump->data + (mfu_dump->pages * 4 + MFU_DUMP_PREFIX_LENGTH), old_mfu_dump->pack, 2);
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);

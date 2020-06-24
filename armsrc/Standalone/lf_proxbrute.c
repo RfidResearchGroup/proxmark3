@@ -56,9 +56,8 @@ void RunMod(void) {
 
             DbpString("[=] starting recording");
 
-
-            // findone, high, low, no ledcontrol (A)
-            CmdHIDdemodFSK(1, &high, &low, 0);
+            // findone, high, low
+            lf_hid_watch(1, &high, &low);
 
             Dbprintf("[=]   recorded | %x%08x", high, low);
 
