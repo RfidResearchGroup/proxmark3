@@ -572,6 +572,7 @@ static int CmdLFHitagReader(const char *Cmd) {
             // No additional parameters needed
             break;
         }
+        default:
         case RHT1F_PLAIN:
         case RHT1F_AUTHENTICATE:
         case WHTSF_CHALLENGE:
@@ -680,6 +681,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
             break;
         }
+        default:
         case RHT1F_PLAIN:
         case RHT1F_AUTHENTICATE:
         case RHTSF_CHALLENGE:
