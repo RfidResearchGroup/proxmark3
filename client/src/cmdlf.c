@@ -286,7 +286,7 @@ static int CmdLFTune(const char *Cmd) {
         }
 
         uint32_t volt = resp.data.asDwords[0];
-        PrintAndLogEx(INPLACE, "%u mV / %3u V", volt, (uint32_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, " %u mV / %3u V", volt, (uint32_t)(volt / 1000));
     }
 
     params[0] = 3;

@@ -231,7 +231,7 @@ int CmdHFTune(const char *Cmd) {
         }
 
         uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
-        PrintAndLogEx(INPLACE, "%u mV / %2u V", volt, (uint16_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, " %u mV / %2u V", volt, (uint16_t)(volt / 1000));
     }
     mode[0] = 3;
 
