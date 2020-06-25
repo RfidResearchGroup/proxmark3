@@ -47,12 +47,12 @@ static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io sim [h] <version> <facility-code> <card-number>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version (decimal)");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (hex)");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (decimal)");
+    PrintAndLogEx(NORMAL, "        <version> :  8bit version (" _YELLOW_("decimal") ")");
+    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (" _YELLOW_("hex") ")");
+    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (" _YELLOW_("decimal") ")");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf io sim 26 101 1337"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf io sim 01 101 1337"));
     return PM3_SUCCESS;
 }
 
@@ -63,13 +63,13 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io clone [h] <version> <facility-code> <card-number> [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version (decimal)");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (hex)");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (decimal)");
+    PrintAndLogEx(NORMAL, "        <version> :  8bit version (" _YELLOW_("decimal") ")");
+    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (" _YELLOW_("hex") ")");
+    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (" _YELLOW_("decimal") ")");
     PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf io clone 26 101 1337"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf io clone 01 101 1337"));
     return PM3_SUCCESS;
 }
 
