@@ -1419,7 +1419,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // print the dump
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
@@ -2055,7 +2055,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
 
     uint8_t *csn = dump;
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(csn, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
