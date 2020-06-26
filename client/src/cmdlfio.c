@@ -166,22 +166,21 @@ static int CmdIOProxDemod(const char *Cmd) {
     calccrc &= 0xff;
     calccrc = 0xff - calccrc;
 
-    char crcStr[30];
-    memset(crcStr, 0x00, sizeof(crcStr));
+    char crc_str[30] = {0};
 
     if (crc == calccrc) {
-        snprintf(crcStr, 3, "ok");
-
+        snprintf(crc_str, sizeof(crc_str), "(" _GREEN_("ok") ")" );
     } else {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
-
-        snprintf(crcStr, sizeof(crcStr), "failed 0x%02X != 0x%02X", crc, calccrc);
+        snprintf(crc_str, sizeof(crc_str), "(" _RED_("fail") ") 0x%02X != 0x%02X", crc, calccrc);
         retval = PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
+    PrintAndLogEx(SUCCESS, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) %s", version, facilitycode, number, code, code2, crc_str);
 
     if (g_debugMode) {
+        if (crc != calccrc)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
+
         PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %zu, Printing demod buffer:", idx, size);
         printDemodBuff();
     }

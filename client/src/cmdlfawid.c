@@ -290,21 +290,21 @@ static int CmdAWIDDemod(const char *Cmd) {
             fc = bytebits_to_byte(bits + 9, 8);
             cardnum = bytebits_to_byte(bits + 17, 16);
             code1 = bytebits_to_byte(bits + 8, fmtLen);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID Found - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
             break;
         case 34:
             fc = bytebits_to_byte(bits + 9, 8);
             cardnum = bytebits_to_byte(bits + 17, 24);
             code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
             code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID Found - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             break;
         case 37:
             fc = bytebits_to_byte(bits + 9, 13);
             cardnum = bytebits_to_byte(bits + 22, 18);
             code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
             code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID Found - len: " _GREEN_("%d")" FC: " _GREEN_("%d")" Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             break;
         // case 40:
         // break;
@@ -313,18 +313,18 @@ static int CmdAWIDDemod(const char *Cmd) {
             cardnum = bytebits_to_byte(bits + 25, 32);
             code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
             code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID Found - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             break;
         default:
             if (fmtLen > 32) {
                 cardnum = bytebits_to_byte(bits + 8 + (fmtLen - 17), 16);
                 code1 = bytebits_to_byte(bits + 8, fmtLen - 32);
                 code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-                PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+                PrintAndLogEx(SUCCESS, "AWID Found - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             } else {
                 cardnum = bytebits_to_byte(bits + 8 + (fmtLen - 17), 16);
                 code1 = bytebits_to_byte(bits + 8, fmtLen);
-                PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+                PrintAndLogEx(SUCCESS, "AWID Found - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
             }
             break;
     }

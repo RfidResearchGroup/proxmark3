@@ -118,9 +118,9 @@ int demodSecurakey(void) {
     // test parities - evenparity32 looks to add an even parity returns 0 if already even...
     bool parity = !evenparity32(lWiegand) && !oddparity32(rWiegand);
 
-    PrintAndLogEx(SUCCESS, "Securakey Tag Found--BitLen: %u, Card ID: %u, FC: 0x%X, Raw: %08X%08X%08X", bitLen, cardid, fc, raw1, raw2, raw3);
+    PrintAndLogEx(SUCCESS, "Securakey Tag Found--BitLen: " _GREEN_("%u") ", Card ID: " _GREEN_("%u") ", FC: " _GREEN_("0x%X")" Raw: %08X%08X%08X", bitLen, cardid, fc, raw1, raw2, raw3);
     if (bitLen <= 32)
-        PrintAndLogEx(SUCCESS, "Wiegand: %08X, Parity: %s", (lWiegand << (bitLen / 2)) | rWiegand, parity ? "Passed" : "Failed");
+        PrintAndLogEx(SUCCESS, "Wiegand: " _GREEN_("%08X") ", Parity: %s", (lWiegand << (bitLen / 2)) | rWiegand, parity ? _GREEN_("ok") : _RED_("fail"));
 
     PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
     PrintAndLogEx(INFO, "How the checksum is calculated is unknown");

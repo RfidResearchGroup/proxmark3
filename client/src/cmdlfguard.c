@@ -38,7 +38,7 @@ static int usage_lf_guard_clone(void) {
     PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf gprox clone 26 123 11223");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf gprox clone 26 123 11223"));
     return PM3_SUCCESS;
 }
 
@@ -55,7 +55,7 @@ static int usage_lf_guard_sim(void) {
     PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf gprox sim 26 123 11223");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf gprox sim 26 123 11223"));
     return PM3_SUCCESS;
 }
 
@@ -139,9 +139,9 @@ static int CmdGuardDemod(const char *Cmd) {
             break;
     }
     if (!unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II Found: Format Len: %ubit - FC: %u - Card: %u, Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+        PrintAndLogEx(SUCCESS, "G-Prox-II found - Fmt: " _GREEN_("%u")"bit FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
     else
-        PrintAndLogEx(SUCCESS, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+        PrintAndLogEx(SUCCESS, "Unknown G-Prox-II found - Fmt: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
 
     return PM3_SUCCESS;
 }
