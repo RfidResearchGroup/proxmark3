@@ -206,6 +206,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
         print_bit_table(words[i]);
          
         // final result
+        string[0] = '\0';
         sprintf(pstring, "\n  word[%i] msb: " _GREEN_("0x"), i);
         strcat(string, pstring);
 
@@ -223,8 +224,6 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
         }
         
         PrintAndLogEx(NORMAL,string);
-
-        string[0] = '\0';
     }
 }
 
@@ -677,6 +676,7 @@ static void print_sread_result(PacketResponseNG *resp, const em4x50_data_t *etd)
             prepare_result(data, etd->address, etd->address, &word);
             print_result(&word, etd->address, etd->address);
             
+            string[0] = '\0';
             sprintf(pstring, "\n  reading " _GREEN_("ok "));
             strcat(string, pstring);
             
@@ -702,6 +702,7 @@ static void print_sread_result(PacketResponseNG *resp, const em4x50_data_t *etd)
             prepare_result(data, 0, now - 1, &word);
             print_result(&word, 0, now - 1);
 
+            string[0] = '\0';
             sprintf(pstring, "\n  reading " _GREEN_("ok "));
             strcat(string, pstring);
 
