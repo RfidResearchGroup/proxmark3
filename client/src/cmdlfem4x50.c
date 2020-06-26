@@ -723,8 +723,8 @@ int CmdEM4x50SRead(const char *Cmd) {
 
     // envoke reading
     // - without option -> standard read mode
-    // - with given address (option a) and optional password if address is
-    //   read protected -> selective read mode
+    // - with given address (option a) (and optional password if address is
+    //   read protected) -> selective read mode
 
     bool errors = false, success = false;
     uint8_t cmdp = 0;
