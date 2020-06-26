@@ -39,6 +39,7 @@ static int usage_lf_jablotron_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron clone 112233"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -53,6 +54,7 @@ static int usage_lf_jablotron_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron sim 112233"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -79,7 +81,10 @@ static uint64_t getJablontronCardId(uint64_t rawcode) {
 //see ASKDemod for what args are accepted
 static int CmdJablotronDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
+    return demodJablotron();
+}
 
+int demodJablotron(void) {
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
     if (ASKbiphaseDemod("0 64 1 0", false) != PM3_SUCCESS) {
@@ -133,8 +138,8 @@ static int CmdJablotronDemod(const char *Cmd) {
 }
 
 static int CmdJablotronRead(const char *Cmd) {
-    lf_read(true, 10000);
-    return CmdJablotronDemod(Cmd);
+    lf_read(false, 16000);
+    return demodJablotron();
 }
 
 static int CmdJablotronClone(const char *Cmd) {
@@ -276,6 +281,3 @@ int detectJablotron(uint8_t *bits, size_t *size) {
     return (int)startIdx;
 }
 
-int demodJablotron(void) {
-    return CmdJablotronDemod("");
-}
