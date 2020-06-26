@@ -754,6 +754,49 @@ void em4x50_info(em4x50_data_t *etd) {
     reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
 }
 
+void em4x50_sread(em4x50_data_t *etd) {
+    
+    // reads single word in two alternative ways:
+    // - using "selective read mode" -> bidirectional communication
+    // - using "standard read mode" -> unidirectional communication (read
+    //   data that tag transmits "voluntarily")
+    
+    bool bsuccess = false, blogin = false;
+    int now = 0;
+    uint8_t status = 0;
+    uint8_t addresses[] = {0x00, 0x00, 0x00, 0x00}; // fwr = 0, lwr = 33
+
+    init_tag();
+    em4x50_setup_read();
+    
+    // set gHigh and gLow
+    get_signalproperties();
+     
+    if (etd->addr_given) {
+
+        // selective read mode
+        
+        // try to login with given password
+        if (etd->pwd_given)
+            blogin = login(etd->password);
+        
+        // only one word has to be read -> first word read = last word read
+        addresses[2] = addresses[3] = etd->address;
+        bsuccess = selective_read(addresses);
+        
+    } else {
+        
+        // standard read mode
+        bsuccess = standard_read(&now);
+        
+    }
+    status = (now << 2) + (bsuccess << 1) + blogin;
+    
+    lf_finalize();
+    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
+}
+
+
 // write functions
 
 static bool write(uint8_t word[4], uint8_t address) {
@@ -864,7 +907,7 @@ void em4x50_write(em4x50_data_t *etd) {
             if (etd->pwd_given)
                 blogin &= login(etd->password);
 
-            // perform a selective read
+            // call a selective read
             addresses[2] = addresses[3] = etd->address;
             if (selective_read(addresses)) {
 
