@@ -1759,6 +1759,7 @@ static command_t CommandTable[] = {
     {"4x50_info",   CmdEM4x50Info,        IfPm3Lf,         "read complete data from EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3Lf,         "write word data to EM4x50"},
     {"4x50_write_password", CmdEM4x50WritePassword, IfPm3Lf, "change passwword of EM4x50 tag"},
+    {"4x50_sread",  CmdEM4x50SRead,       IfPm3Lf,         "read word data from EM4x50 on device"},
     {NULL, NULL, NULL, NULL}
 };
 
