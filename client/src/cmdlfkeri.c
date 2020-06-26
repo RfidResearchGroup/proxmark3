@@ -44,7 +44,7 @@ static int usage_lf_keri_clone(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone 112233"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone type ms fc 6 cn 12345"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone t m f 6 c 12345"));
-
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -59,6 +59,7 @@ static int usage_lf_keri_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf keri sim 112233"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
