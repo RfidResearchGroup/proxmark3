@@ -1090,6 +1090,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 NT2H1001G0DUx 0004040202000B03
                 Micron UL 0034210101000E03
                 */
+
                 if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0B", 7) == 0)      { tagtype = UL_EV1_48; break; }
                 else if (memcmp(version, "\x00\x04\x03\x01\x02\x00\x0B", 7) == 0) { tagtype = UL_NANO_40; break; }
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0B", 7) == 0) { tagtype = UL_EV1_48; break; }
