@@ -405,6 +405,7 @@ typedef struct {
 #define CMD_LF_EM4X50_INFO                                                0x0240
 #define CMD_LF_EM4X50_WRITE                                               0x0241
 #define CMD_LF_EM4X50_WRITE_PASSWORD                                      0x0242
+#define CMD_LF_EM4X50_SREAD                                               0x0243
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
