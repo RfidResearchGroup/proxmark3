@@ -51,6 +51,7 @@ static int usage_lf_hid_watch(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        lf hid watch"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_sim(void) {
@@ -63,6 +64,7 @@ static int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "       ID  - HID id");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf hid sim 2006ec0c86"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_clone(void) {
@@ -76,6 +78,7 @@ static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone 2006ec0c86"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone l 2006ec0c86"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_brute(void) {
@@ -100,6 +103,7 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 224"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 21 d 2000"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute v w H10301 f 21 c 200 d 2000"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 

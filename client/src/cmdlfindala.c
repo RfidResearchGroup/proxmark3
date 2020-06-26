@@ -52,8 +52,9 @@ static int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod"));
     PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 32") "       = demod a Indala tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 32 1") "       = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 32 1") "     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");
     PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 64 1 0") "   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, ""); 
     return PM3_SUCCESS;
 }
 
@@ -69,6 +70,7 @@ static int usage_lf_indala_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf indala sim deadc0de"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -260,7 +262,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         uint32_t uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
         PrintAndLogEx(
             SUCCESS
-            , "Indala - len %zu, Raw: 0x%x%08x%08x%08x%08x%08x%08x"
+            , "Indala - len %zu, Raw: %x%08x%08x%08x%08x%08x%08x"
             , DemodBufferLen
             , uid1
             , uid2

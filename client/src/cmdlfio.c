@@ -37,6 +37,7 @@ static int usage_lf_io_watch(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        lf io watch"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -53,6 +54,7 @@ static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf io sim 01 101 1337"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -70,6 +72,7 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf io clone 01 101 1337"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
