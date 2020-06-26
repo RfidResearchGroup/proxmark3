@@ -34,7 +34,7 @@ static int usage_lf_viking_clone(void) {
     PrintAndLogEx(NORMAL, "  <Q5>           : specify write to Q5 (t5555 instead of t55x7)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf viking clone 1A337 Q5");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337 Q5"));
     return PM3_SUCCESS;
 }
 
@@ -48,7 +48,7 @@ static int usage_lf_viking_sim(void) {
     PrintAndLogEx(NORMAL, "  <Card Number>   : 8 digit hex viking card number");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf viking sim 1A337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking sim 1A337"));
     return PM3_SUCCESS;
 }
 
@@ -76,8 +76,8 @@ int demodViking(void) {
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + ans + 32, 32);
     uint32_t cardid = bytebits_to_byte(DemodBuffer + ans + 24, 32);
     uint8_t  checksum = bytebits_to_byte(DemodBuffer + ans + 32 + 24, 8);
-    PrintAndLogEx(SUCCESS, "Viking Tag Found: Card ID " _YELLOW_("%08X")" checksum "_YELLOW_("%02X"), cardid, checksum);
-    PrintAndLogEx(SUCCESS, "Raw hex: %08X%08X", raw1, raw2);
+    PrintAndLogEx(SUCCESS, "Viking - Card " _GREEN_("%08X") ", Raw: %08X%08X", cardid, raw1, raw2);
+    PrintAndLogEx(DEBUG, "Checksum: %02X", checksum);
     setDemodBuff(DemodBuffer, 64, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
     return PM3_SUCCESS;
@@ -139,7 +139,7 @@ static int CmdVikingSim(const char *Cmd) {
 
     rawID = getVikingBits(id);
 
-    PrintAndLogEx(SUCCESS, "Simulating Viking - ID " _YELLOW_("%08X")" raw "_YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
+    PrintAndLogEx(SUCCESS, "Simulating Viking - ID " _YELLOW_("%08X") " raw " _YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
     uint8_t bs[64];
     num_to_bytebits(rawID, sizeof(bs), bs);

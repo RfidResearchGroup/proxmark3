@@ -38,7 +38,7 @@ static int usage_lf_jablotron_clone(void) {
     PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf jablotron clone 112233");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron clone 112233"));
     return PM3_SUCCESS;
 }
 
@@ -52,7 +52,7 @@ static int usage_lf_jablotron_sim(void) {
     PrintAndLogEx(NORMAL, "      <card ID>  : jablotron card ID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf jablotron sim 112233");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron sim 112233"));
     return PM3_SUCCESS;
 }
 
@@ -115,20 +115,16 @@ static int CmdJablotronDemod(const char *Cmd) {
     uint64_t rawid = ((uint64_t)(bytebits_to_byte(DemodBuffer + 16, 8) & 0xff) << 32) | bytebits_to_byte(DemodBuffer + 24, 32);
     uint64_t id = getJablontronCardId(rawid);
 
-    PrintAndLogEx(SUCCESS, "Jablotron Tag Found: Card ID: %"PRIx64" :: Raw: %08X%08X", id, raw1, raw2);
+    PrintAndLogEx(SUCCESS, "Jablotron - Card: " _GREEN_("%"PRIx64) ",  Raw: %08X%08X", id, raw1, raw2);
 
     uint8_t chksum = raw2 & 0xFF;
     bool isok = (chksum == jablontron_chksum(DemodBuffer));
 
-    PrintAndLogEx(isok ? SUCCESS : INFO,
-                  "Checksum: %02X [%s]",
-                  chksum,
-                  isok ? _GREEN_("OK") : _RED_("Fail")
-                 );
+    PrintAndLogEx(DEBUG, "Checksum: %02X (%s)", chksum, isok ? _GREEN_("ok") : _RED_("Fail"));
 
     id = DEC2BCD(id);
     // Printed format: 1410-nn-nnnn-nnnn
-    PrintAndLogEx(SUCCESS, "Printed: 1410-%02X-%04X-%04X",
+    PrintAndLogEx(SUCCESS, "Printed: " _GREEN_("1410-%02X-%04X-%04X"),
                   (uint8_t)(id >> 32) & 0xFF,
                   (uint16_t)(id >> 16) & 0xFFFF,
                   (uint16_t)id & 0xFFFF

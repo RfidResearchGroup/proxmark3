@@ -113,10 +113,9 @@ static int CmdMotorolaDemod(const char *Cmd) {
     checksum |= DemodBuffer[62] << 1; // b2
     checksum |= DemodBuffer[63] << 0; // b1
 
-    PrintAndLogEx(SUCCESS, "Motorola Tag Found -- Raw: %08X%08X", raw1, raw2);
-    PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01);
-    PrintAndLogEx(NORMAL, "");
-
+    
+    PrintAndLogEx(SUCCESS, "Motorola - len: " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08X%08X", fc, csn, raw1, raw2);
+    PrintAndLogEx(DEBUG, "checksum: " _GREEN_("%1d%1d"), fc, csn, checksum >> 1 & 0x01, checksum & 0x01);
     return PM3_SUCCESS;
 }
 
@@ -156,7 +155,7 @@ static int CmdMotorolaClone(const char *Cmd) {
                   "defaults to 64.\n",
                   "\n"
                   "Samples:\n"
-                  "\tlf motorola clone a0000000a0002021\n"
+                  _YELLOW_("\tlf motorola clone a0000000a0002021") "\n"
                  );
 
     void *argtable[] = {

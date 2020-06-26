@@ -195,7 +195,7 @@ static int CmdHIDDemod(const char *Cmd) {
     }
 
     if (hi2 != 0) { //extra large HID tags
-        PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x%08x (%u)"), hi2, hi, lo, (lo >> 1) & 0xFFFF);
+        PrintAndLogEx(SUCCESS, "HID Prox - " _GREEN_("%x%08x%08x (%u)"), hi2, hi, lo, (lo >> 1) & 0xFFFF);
     } else {  //standard HID tags <38 bits
         uint8_t fmtLen = 0;
         uint32_t cc = 0;
@@ -241,9 +241,11 @@ static int CmdHIDDemod(const char *Cmd) {
             fc = ((hi & 0xF) << 12) | (lo >> 20);
         }
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
-            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: " _GREEN_("%x%08x (%u)")" - Format Len: 32bit - CC: %u - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+            PrintAndLogEx(SUCCESS,
+                "HID Prox (Kastle format) - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("32") " bit CC: " _GREEN_("%u") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u"), hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
-            PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x (%u)")" - Format Len: " _GREEN_("%u bit")" - OEM: %03u - FC: " _GREEN_("%u")" - Card: " _GREEN_("%u"),
+            PrintAndLogEx(SUCCESS, 
+                "HID Prox - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("%u") " bit - OEM: " _GREEN_("%03u") " FC: " _GREEN_("%u")" Card: " _GREEN_("%u"),
                           hi, lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }

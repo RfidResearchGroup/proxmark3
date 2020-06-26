@@ -46,9 +46,9 @@ static int usage_lf_nexwatch_clone(void) {
     PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nexwatch clone r 5600000000213C9F8F150C");
-    PrintAndLogEx(NORMAL, "       lf nexwatch clone c 521512301 m 1 n       -- Nexkey credential");
-    PrintAndLogEx(NORMAL, "       lf nexwatch clone c 521512301 m 1 q       -- Quadrakey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone r 5600000000213C9F8F150C"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone c 521512301 m 1 n") "     -- Nexkey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone c 521512301 m 1 q") "     -- Quadrakey credential");
     return PM3_SUCCESS;
 }
 
@@ -68,9 +68,9 @@ static int usage_lf_nexwatch_sim(void) {
     PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C");
-    PrintAndLogEx(NORMAL, "       lf nexwatch sim c 521512301 m 1 n       -- Nexkey credential");
-    PrintAndLogEx(NORMAL, "       lf nexwatch sim c 521512301 m 1 q       -- Quadrakey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim r 5600000000213C9F8F150C"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim c 521512301 m 1 n") "      -- Nexkey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim c 521512301 m 1 q") "      -- Quadrakey credential");
     return PM3_SUCCESS;
 }
 

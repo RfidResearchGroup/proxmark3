@@ -127,7 +127,7 @@ static int CmdGallagherDemod(const char *Cmd) {
     // 4bit issue level
     uint8_t il = arr[7] & 0x0F;
 
-    PrintAndLogEx(SUCCESS, "GALLAGHER Tag Found -- Region: " _GREEN_("%u") " FC: " _GREEN_("%u") " CN: " _GREEN_("%u") " Issue Level: " _GREEN_("%u"), rc, fc, cn, il);
+    PrintAndLogEx(SUCCESS, "GALLAGHER - Region: " _GREEN_("%u") " FC: " _GREEN_("%u") " CN: " _GREEN_("%u") " Issue Level: " _GREEN_("%u"), rc, fc, cn, il);
     PrintAndLogEx(SUCCESS, "   Printed: " _GREEN_("%C%u"), rc + 0x40, fc);
     PrintAndLogEx(SUCCESS, "   Raw: %08X%08X%08X", raw1, raw2, raw3);
     PrintAndLogEx(SUCCESS, "   CRC: %02X - %02X (%s)", crc, calc_crc, (crc == calc_crc) ? "ok" : "fail");

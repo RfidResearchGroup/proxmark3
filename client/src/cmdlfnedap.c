@@ -41,7 +41,7 @@ static int usage_lf_nedap_gen(void) {
     PrintAndLogEx(NORMAL, "      l               : optional - long (128), default to short (64)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nedap generate s 1 c 123 i 12345");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap generate s 1 c 123 i 12345"));
     return PM3_SUCCESS;
 }
 
@@ -58,7 +58,7 @@ static int usage_lf_nedap_clone(void) {
 //  PrintAndLogEx(NORMAL, "      Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nedap clone s 1 c 123 i 12345");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap clone s 1 c 123 i 12345"));
     return PM3_SUCCESS;
 }
 
@@ -76,7 +76,7 @@ static int usage_lf_nedap_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
 // TODO proper example?
-    PrintAndLogEx(NORMAL, "       lf nedap sim s 1 c 7 i 1337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap sim s 1 c 7 i 1337"));
     return PM3_SUCCESS;
 }
 
@@ -172,7 +172,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
     customerCode = ((data[1] & 0x01) << 11) | (data[2] << 3) | ((data[3] & 0xe0) >> 5);
 
     if (isValid == false) {
-        PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("failed"), checksum, checksum2);
+        PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("fail"), checksum, checksum2);
         ret = PM3_ESOFT;
     }
 
@@ -192,8 +192,8 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
         badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
 
-        PrintAndLogEx(SUCCESS, "NEDAP Tag Found: Card ID "_YELLOW_("%05u")" subtype: "_YELLOW_("%1u")" customer code: "_YELLOW_("%03x"), badgeId, subtype, customerCode);
-        PrintAndLogEx(SUCCESS, "Checksum is %s (0x%04X)",  _GREEN_("OK"), checksum);
+        PrintAndLogEx(SUCCESS, "NEDAP - Card: " _YELLOW_("%05u") " subtype: " _YELLOW_("%1u")" customer code: " _YELLOW_("%03x"), badgeId, subtype, customerCode);
+        PrintAndLogEx(SUCCESS, "Checksum (%s) 0x%04X",  _GREEN_("ok"), checksum);
         PrintAndLogEx(SUCCESS, "Raw: %s", sprint_hex(data, size / 8));
     } else {
         PrintAndLogEx(ERR, "Invalid idx (1:%02x - 2:%02x - 3:%02x - 4:%02x - 5:%02x)", idxC1, idxC2, idxC3, idxC4, idxC5);
@@ -239,7 +239,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
         if (!r0 && (r1 < 10) && (r2 < 10) && (r3 < 10) && (r4 < 10) && (r5 < 10)) {
 
             badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
-            PrintAndLogEx(SUCCESS, "Second Card Id " _YELLOW_("%05u"), badgeId);
+            PrintAndLogEx(SUCCESS, "Second Card: " _YELLOW_("%05u"), badgeId);
 
             if ((fixed0 == FIXED_71) && (fixed1 == FIXED_40))
                 PrintAndLogEx(DEBUG, "Fixed part {0 = 0x%02x, 1 = 0x%02x}", fixed0, fixed1);

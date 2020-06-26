@@ -33,7 +33,7 @@ static int usage_lf_verichip_clone(void) {
     PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf verichip clone b FF2049906D8511C593155B56D5B2649F ");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf verichip clone b FF2049906D8511C593155B56D5B2649F "));
     return PM3_SUCCESS;
 }
 
@@ -72,7 +72,7 @@ static int CmdVerichipDemod(const char *Cmd) {
     // 11111111001000000 10 01001100 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 00001101 10 10001100 10 100000001
     // unknown checksum 9 bits at the end
 
-    PrintAndLogEx(SUCCESS, "VERICHIP Tag Found -- Raw: %08X%08X%08X%08X", raw1, raw2, raw3, raw4);
+    PrintAndLogEx(SUCCESS, "VERICHIP - Raw: %08X%08X%08X%08X", raw1, raw2, raw3, raw4);
     PrintAndLogEx(INFO, "How the Raw ID is translated by the reader is unknown. Share your trace file on forum");
     return PM3_SUCCESS;
 }

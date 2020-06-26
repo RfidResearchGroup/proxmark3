@@ -175,7 +175,7 @@ static int CmdIOProxDemod(const char *Cmd) {
         retval = PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) %s", version, facilitycode, number, code, code2, crc_str);
+    PrintAndLogEx(SUCCESS, "IO Prox - " _GREEN_("XSF(%02d)%02x:%05d") ", Raw: %08x%08x %s", version, facilitycode, number, code, code2, crc_str);
 
     if (g_debugMode) {
         if (crc != calccrc)

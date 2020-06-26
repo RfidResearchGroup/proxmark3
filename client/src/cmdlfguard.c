@@ -139,9 +139,9 @@ static int CmdGuardDemod(const char *Cmd) {
             break;
     }
     if (!unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II found - Fmt: " _GREEN_("%u")"bit FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+        PrintAndLogEx(SUCCESS, "G-Prox-II - len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
     else
-        PrintAndLogEx(SUCCESS, "Unknown G-Prox-II found - Fmt: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
 
     return PM3_SUCCESS;
 }

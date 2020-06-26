@@ -181,12 +181,12 @@ int demodPyramid(void) {
         uint32_t fc = bytebits_to_byte(bits + 73, 8);
         uint32_t cardnum = bytebits_to_byte(bits + 81, 16);
         uint32_t code1 = bytebits_to_byte(bits + 72, fmtLen);
-        PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d, FC: " _GREEN_("%d") " Card: " _GREEN_("%d") " - Wiegand: " _GREEN_("%x")", Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
+        PrintAndLogEx(SUCCESS, "Pyramid - len: " _GREEN_("%d") ", FC: " _GREEN_("%d") " Card: " _GREEN_("%d") " - Wiegand: " _GREEN_("%x")", Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
     } else if (fmtLen == 45) {
         fmtLen = 42; //end = 10 bits not 7 like 26 bit fmt
         uint32_t fc = bytebits_to_byte(bits + 53, 10);
         uint32_t cardnum = bytebits_to_byte(bits + 63, 32);
-        PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d, FC: " _GREEN_("%d") " Card: " _GREEN_("%d") " - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+        PrintAndLogEx(SUCCESS, "Pyramid - len: " _GREEN_("%d") ", FC: " _GREEN_("%d") " Card: " _GREEN_("%d") ", Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
         /*
             } else if (fmtLen > 32) {
                 uint32_t cardnum = bytebits_to_byte(bits + 81, 16);
@@ -197,7 +197,7 @@ int demodPyramid(void) {
     } else {
         uint32_t cardnum = bytebits_to_byte(bits + 81, 16);
         //uint32_t code1 = bytebits_to_byte(bits+(size-fmtLen),fmtLen);
-        PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d -unknown BitLength- Card: " _GREEN_("%d") ", Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+        PrintAndLogEx(SUCCESS, "Pyramid - len: " _GREEN_("%d") " -unknown- Card: " _GREEN_("%d") ", Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     }
 
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: checksum : 0x%02X - %02X - %s"

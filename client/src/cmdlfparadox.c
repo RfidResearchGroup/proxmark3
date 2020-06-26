@@ -184,7 +184,7 @@ int demodParadox(void) {
     uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
     uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 
-    PrintAndLogEx(INFO, "Paradox TAG ID: " _GREEN_("%x%08x") " - FC: " _GREEN_("%d") ", CN: " _GREEN_("%d") " - Checksum: %02x - RAW: %08x%08x%08x",
+    PrintAndLogEx(INFO, "Paradox - ID: " _GREEN_("%x%08x") " FC: " _GREEN_("%d") " Card: " _GREEN_("%d") ", Checksum: %02x, Raw: %08x%08x%08x",
                   hi >> 10,
                   (hi & 0x3) << 26 | (lo >> 10),
                   fc,

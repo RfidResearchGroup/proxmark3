@@ -143,7 +143,7 @@ int demodVisa2k(void) {
 
     // test checksums
     if (chk != calc) {
-        PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
+        PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum (%s) %x - %x\n", _RED_("fail"), chk, calc);
         save_restoreGB(GRAPH_RESTORE);
         return PM3_ESOFT;
     }
@@ -151,11 +151,11 @@ int demodVisa2k(void) {
     uint8_t calc_par = visa_parity(raw2);
     uint8_t chk_par = (raw3 & 0xFF0) >> 4;
     if (calc_par != chk_par) {
-        PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
+        PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity (%s) %x - %x\n", _RED_("fail"), chk_par, calc_par);
         save_restoreGB(GRAPH_RESTORE);
         return PM3_ESOFT;
     }
-    PrintAndLogEx(SUCCESS, "Visa2000 Tag Found: Card ID " _GREEN_("%u") " Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);
+    PrintAndLogEx(SUCCESS, "Visa2000 - Card " _GREEN_("%u") ", Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);
     return PM3_SUCCESS;
 }
 

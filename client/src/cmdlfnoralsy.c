@@ -35,7 +35,7 @@ static int usage_lf_noralsy_clone(void) {
     PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf noralsy clone 112233");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf noralsy clone 112233"));
     return PM3_SUCCESS;
 }
 
@@ -50,7 +50,7 @@ static int usage_lf_noralsy_sim(void) {
     PrintAndLogEx(NORMAL, "      <year>     : Tag allocation year");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf noralsy sim 112233");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf noralsy sim 112233"));
     return PM3_SUCCESS;
 }
 
@@ -124,7 +124,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1, raw2, raw3);
+    PrintAndLogEx(SUCCESS, "Noralsy - Card: " _GREEN_("%u")", Year: " _GREEN_("%u") ", Raw: %08X%08X%08X", cardid, year, raw1, raw2, raw3);
     if (raw1 != 0xBB0214FF) {
         PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
         PrintAndLogEx(WARNING, "Please post this output in forum to further research on this format");

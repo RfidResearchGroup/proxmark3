@@ -61,8 +61,8 @@ static int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "      <Q5>        : Specify write to Q5 (t5555 instead of t55x7)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233");
-    PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233 16a");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx clone 999 112233"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx clone 999 112233 16a"));
     return PM3_SUCCESS;
 }
 
@@ -78,8 +78,8 @@ static int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "      <extended>   : Extended data");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233");
-    PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233 16a");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx sim 999 112233"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx sim 999 112233 16a"));
     return PM3_SUCCESS;
 }
 
