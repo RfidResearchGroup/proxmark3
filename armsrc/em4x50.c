@@ -604,7 +604,9 @@ static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
     }
 }
 
+//==============================================================================
 // login function
+//==============================================================================
 
 static bool login(uint8_t password[4]) {
 
@@ -631,7 +633,9 @@ static bool login(uint8_t password[4]) {
     return false;
 }
 
+//==============================================================================
 // reset function
+//==============================================================================
 
 static bool reset(void) {
 
@@ -653,7 +657,9 @@ static bool reset(void) {
     return false;
 }
 
+//==============================================================================
 // read functions
+//==============================================================================
 
 static bool standard_read(int *now) {
     
@@ -756,7 +762,7 @@ void em4x50_info(em4x50_data_t *etd) {
 
 void em4x50_sread(em4x50_data_t *etd) {
     
-    // reads single word in two alternative ways:
+    // reads in two different ways:
     // - using "selective read mode" -> bidirectional communication
     // - using "standard read mode" -> unidirectional communication (read
     //   data that tag transmits "voluntarily")
@@ -764,7 +770,7 @@ void em4x50_sread(em4x50_data_t *etd) {
     bool bsuccess = false, blogin = false;
     int now = 0;
     uint8_t status = 0;
-    uint8_t addresses[] = {0x00, 0x00, 0x00, 0x00}; // fwr = 0, lwr = 33
+    uint8_t addresses[] = {0x00, 0x00, 0x00, 0x00};
 
     init_tag();
     em4x50_setup_read();
@@ -790,14 +796,16 @@ void em4x50_sread(em4x50_data_t *etd) {
         bsuccess = standard_read(&now);
         
     }
+    
     status = (now << 2) + (bsuccess << 1) + blogin;
     
     lf_finalize();
     reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
 }
 
-
+//==============================================================================
 // write functions
+//==============================================================================
 
 static bool write(uint8_t word[4], uint8_t address) {
 
