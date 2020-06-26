@@ -1835,6 +1835,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
+    {"-----------", CmdHF15Help,        AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHF15Help,        AlwaysAvailable, "This help"},
     {"list",        CmdHF15List,        AlwaysAvailable, "List ISO15693 history"},
     {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO15693 from tag"},
@@ -1850,11 +1851,11 @@ static command_t CommandTable[] = {
     {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
     {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},
     {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
-    {"-----------", CmdHF15Help,        IfPm3Iso15693,  ""},
+    {"-----------", CmdHF15Help,        IfPm3Iso15693,  "----------------------- " _CYAN_("afi") " -----------------------"},
     {"findafi",     CmdHF15FindAfi,     IfPm3Iso15693,   "Brute force AFI of an ISO15693 tag"},
     {"writeafi",    CmdHF15WriteAfi,    IfPm3Iso15693,   "Writes the AFI on an ISO15693 tag"},
     {"writedsfid",  CmdHF15WriteDsfid,  IfPm3Iso15693,   "Writes the DSFID on an ISO15693 tag"},
-    {"-----------",  CmdHF15Help,       IfPm3Iso15693,  ""},
+    {"-----------", CmdHF15Help,        IfPm3Iso15693,  "----------------------- " _CYAN_("magic") " -----------------------"},
     {"csetuid",     CmdHF15CSetUID,     IfPm3Iso15693,   "Set UID for magic Chinese card"},
     {NULL, NULL, NULL, NULL}
 };

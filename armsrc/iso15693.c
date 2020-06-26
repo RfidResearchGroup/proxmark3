@@ -387,9 +387,10 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
 // returns:
 //  number of decoded bytes
 // logging enabled
+#define SIGNAL_BUFF_SIZE 20000
+
 static int GetIso15693AnswerFromTag(uint8_t *received, int *elapsed) {
 
-#define SIGNAL_BUFF_SIZE 15000
     // get current clock
     uint32_t time_0 = GetCountSspClk();
     uint32_t time_stop = 0;
@@ -446,7 +447,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
     bool getNext = false;
     int counter = 0, ci, cq = 0;
     uint32_t time_0 = 0, time_stop = 0;
-    uint8_t *buf = BigBuf_get_addr();
+    uint8_t *buf = BigBuf_malloc(SIGNAL_BUFF_SIZE);
 
     // get current clock
     time_0 = GetCountSspClk();
@@ -481,6 +482,7 @@ static int GetIso15693AnswerFromSniff(uint8_t *received, int *samples, int *elap
     time_stop = GetCountSspClk();
     int k = DemodAnswer(received, buf, counter);
     LogTrace(received, k, time_0 << 4, time_stop << 4, NULL, false);
+    BigBuf_free();
     return k;
 }
 
@@ -520,7 +522,6 @@ void AcquireRawAdcSamplesIso15693(void) {
             }
         }
     }
-
 
     LogTrace(cmd, CMD_ID_RESP, time_start << 4, GetCountSspClk() << 4, NULL, true);
 

@@ -77,7 +77,7 @@ void RunMod(void) {
 
             // findone, high, low, no ledcontrol (A)
             uint32_t hi = 0, lo = 0;
-            CmdHIDdemodFSK(1, &hi, &lo, 0);
+            lf_hid_watch(1, &hi, &lo);
             high[selected] = hi;
             low[selected] = lo;
 

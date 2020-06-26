@@ -1240,15 +1240,14 @@ static int handler_desfire_signature(uint8_t *signature, size_t *signature_len) 
 }
 
 // --- KEY SETTING
-static int desfire_print_keysetting(uint8_t key_settings, mifare_des_authalgo_t algo) {
-
+static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
     PrintAndLogEx(SUCCESS, "  AID Key settings           : 0x%02x", key_settings);
     // 2 MSB denotes
     const char *str =                 "  Max key number and type    : %d, " _YELLOW_("%s");
 
-    if (algo == MFDES_ALGO_DES) PrintAndLogEx(SUCCESS, str, "(3)DES");
-    else if (algo == MFDES_ALGO_AES) PrintAndLogEx(SUCCESS, str, "AES");
-    else if (algo == MFDES_ALGO_3K3DES) PrintAndLogEx(SUCCESS, str, "3K3DES");
+    if (algo == MFDES_ALGO_DES) PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "(3)DES");
+    else if (algo == MFDES_ALGO_AES) PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "AES");
+    else if (algo == MFDES_ALGO_3K3DES) PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "3K3DES");
 
     //PrintAndLogEx(SUCCESS, "  Max number of keys in AID  : %d", num_keys & 0x3F);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
@@ -1449,14 +1448,14 @@ static int handler_desfire_select_application(uint8_t *aid) {
     return PM3_SUCCESS;
 }
 
-static int key_setting_to_algo(uint8_t aid[3], uint8_t *key_setting, mifare_des_authalgo_t *algo) {
+static int key_setting_to_algo(uint8_t aid[3], uint8_t *key_setting, mifare_des_authalgo_t *algo, uint8_t *num_keys) {
     int res = handler_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
 
-    uint8_t num_keys = 0;
-    res = handler_desfire_getkeysettings(key_setting, &num_keys);
+    *num_keys = 0;
+    res = handler_desfire_getkeysettings(key_setting, num_keys);
     if (res == PM3_SUCCESS) {
-        switch (num_keys >> 6) {
+        switch (*num_keys >> 6) {
             case 0:
                 *algo = MFDES_ALGO_DES;
                 break;
@@ -1863,8 +1862,8 @@ static int getKeySettings(uint8_t *aid) {
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        mifare_des_authalgo_t algo;
-        res = key_setting_to_algo(aid, &key_setting, &algo);
+        mifare_des_authalgo_t algo=MFDES_ALGO_DES;
+        res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
 
         if (res == PM3_SUCCESS) {
             // number of Master keys (0x01)
@@ -1915,10 +1914,10 @@ static int getKeySettings(uint8_t *aid) {
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        mifare_des_authalgo_t algo;
-        res = key_setting_to_algo(aid, &key_setting, &algo);
+        mifare_des_authalgo_t algo=MFDES_ALGO_DES;
+        res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
         if (res == PM3_SUCCESS) {
-            desfire_print_keysetting(key_setting, algo);
+            desfire_print_keysetting(key_setting, num_keys, algo);
         } else {
             PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
         }

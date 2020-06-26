@@ -1848,7 +1848,8 @@ int readFelicaUid(bool verbose) {
 }
 
 static command_t CommandTable[] = {
-    {"----------- General -----------", CmdHelp,              AlwaysAvailable,  ""},
+
+    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",            CmdHelp,                          AlwaysAvailable, "This help"},
     {"list",            CmdHFFelicaList,                  AlwaysAvailable,     "List ISO 18092/FeliCa history"},
     {"reader",          CmdHFFelicaReader,                IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
@@ -1856,7 +1857,7 @@ static command_t CommandTable[] = {
     {"raw",             CmdHFFelicaCmdRaw,                IfPm3Felica,     "Send raw hex data to tag"},
     {"rdunencrypted",   CmdHFFelicaReadWithoutEncryption, IfPm3Felica,     "read Block Data from authentication-not-required Service."},
     {"wrunencrypted",   CmdHFFelicaWriteWithoutEncryption, IfPm3Felica,     "write Block Data to an authentication-not-required Service."},
-    {"----------- FeliCa Standard -----------", CmdHelp,      AlwaysAvailable,  ""},
+    {"-----------",     CmdHelp,               AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     //{"dump",          CmdHFFelicaDump,                    IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",      CmdHFFelicaRequestResponse,       IfPm3Felica,     "verify the existence of a card and its Mode."},
@@ -1875,7 +1876,7 @@ static command_t CommandTable[] = {
     //{"readv2",        CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "read Block Data from authentication-required Service."},
     //{"writev2",       CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "write Block Data to authentication-required Service."},
     //{"uprandomid",    CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "update Random ID (IDr)."},
-    {"----------- FeliCa Light -----------", CmdHelp,                AlwaysAvailable,  ""},
+    {"-----------",     CmdHelp,               AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Light") " -----------------------"},
     {"litesim",         CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
     {"litedump",        CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
     //    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}

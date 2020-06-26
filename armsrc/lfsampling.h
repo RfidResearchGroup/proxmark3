@@ -100,5 +100,6 @@ void setSamplingConfig(sample_config *sc);
 sample_config *getSamplingConfig(void);
 
 void printConfig(void);
+void printSamples(void);
 
 #endif // __LFSAMPLING_H

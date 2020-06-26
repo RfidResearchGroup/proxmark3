@@ -199,7 +199,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
         return traceLen;
     }
-
+    
     uint8_t *frame = hdr->frame;
     uint8_t *parityBytes = hdr->frame + data_len;
 
@@ -495,7 +495,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     g_traceLen = (long)len;
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%lu") " bytes) loaded from " _YELLOW_("%s"), g_traceLen, filename);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%lu") " bytes)", g_traceLen);
     return PM3_SUCCESS;
 }
 

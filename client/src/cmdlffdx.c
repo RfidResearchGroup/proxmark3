@@ -61,8 +61,8 @@ static int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "      <Q5>        : Specify write to Q5 (t5555 instead of t55x7)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233");
-    PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233 16a");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx clone 999 112233"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx clone 999 112233 16a"));
     return PM3_SUCCESS;
 }
 
@@ -78,8 +78,8 @@ static int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "      <extended>   : Extended data");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233");
-    PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233 16a");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx sim 999 112233"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx sim 999 112233 16a"));
     return PM3_SUCCESS;
 }
 
@@ -247,7 +247,7 @@ int demodFDX(void) {
     uint8_t raw[8];
     num_to_bytes(rawid, 8, raw);
 
-    PrintAndLogEx(SUCCESS, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
+    PrintAndLogEx(SUCCESS, "FDX-B / ISO 11784/5 Animal");
     PrintAndLogEx(SUCCESS, "Animal ID          " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
     PrintAndLogEx(SUCCESS, "National Code      " _GREEN_("%012" PRIu64) " (0x%" PRIx64 ")", NationalCode, NationalCode);
     PrintAndLogEx(SUCCESS, "Country Code       %04u", countryCode);
@@ -258,6 +258,8 @@ int demodFDX(void) {
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
     PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  (%s) ", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
+
+    PrintAndLogEx(SUCCESS, "Raw                " _GREEN_("%s"), sprint_hex(raw, 8));
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);

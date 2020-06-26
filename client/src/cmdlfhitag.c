@@ -572,6 +572,7 @@ static int CmdLFHitagReader(const char *Cmd) {
             // No additional parameters needed
             break;
         }
+        default:
         case RHT1F_PLAIN:
         case RHT1F_AUTHENTICATE:
         case WHTSF_CHALLENGE:
@@ -584,7 +585,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -680,6 +681,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
             break;
         }
+        default:
         case RHT1F_PLAIN:
         case RHT1F_AUTHENTICATE:
         case RHTSF_CHALLENGE:

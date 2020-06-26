@@ -465,13 +465,14 @@ static void mem_app_config(const picopass_hdr *hdr) {
     if (applimit < 6) applimit = 26;
     if (kb == 2 && (applimit > 0x1f)) applimit = 26;
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("Memory") "------");
-    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
-    PrintAndLogEx(INFO, "    AA1  blocks 06-%02X", applimit);
-    PrintAndLogEx(INFO, "    AA2  blocks %02X-%02X", applimit + 1, max_blk);
-    PrintAndLogEx(INFO, "    OTP  0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
+    PrintAndLogEx(INFO, "------ " _CYAN_("Memory") " ------");
+    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u bytes), max blocks 0x%02X (%02d)", kb, app_areas, max_blk * 8, mem, mem);
+    PrintAndLogEx(INFO, "    AA1 blocks 0x06 - 0x%02X (06 - %02d)", applimit, applimit);
+    PrintAndLogEx(INFO, "    AA2 blocks 0x%02X - 0x%02X (%02d - %02d)", applimit + 1, max_blk, applimit + 1, max_blk);
+    PrintAndLogEx(INFO, "    OTP 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") "------");
+    PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") " ------");
+    PrintAndLogEx(INFO, " Kd = Debit key (AA1),  Kc = Credit key (AA2)");
     uint8_t book = isset(mem, 0x20);
     if (book) {
         PrintAndLogEx(INFO, "     Read A - Kd");
@@ -1419,7 +1420,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // print the dump
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
@@ -2055,7 +2056,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
 
     uint8_t *csn = dump;
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(csn, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
@@ -2941,9 +2942,12 @@ int readIclass(bool loop, bool verbose) {
                 DropField();
                 return PM3_EOPABORTED;
             }
+               
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --------------------------");
+            PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
             if (readStatus & FLAG_ICLASS_READER_CSN) {
-                PrintAndLogEx(NORMAL, "\n");
                 PrintAndLogEx(SUCCESS, "   CSN: " _YELLOW_("%s"), sprint_hex(data, 8));
                 tagFound = true;
             }
@@ -2964,7 +2968,9 @@ int readIclass(bool loop, bool verbose) {
 
                 bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
+                PrintAndLogEx(INFO, "--------- " _CYAN_("AIA") " ---------");
                 PrintAndLogEx(SUCCESS, " App IA: %s", sprint_hex(data + 8 * 5, 8));
+                
                 PrintAndLogEx(INFO, "------ " _CYAN_("fingerprint") " ------");
 
                 if (isHidRange) {
@@ -2982,6 +2988,7 @@ int readIclass(bool loop, bool verbose) {
             }
 
             if (tagFound && !loop) {
+                PrintAndLogEx(NORMAL, "");
                 DropField();
                 return PM3_SUCCESS;
             }
@@ -2991,6 +2998,7 @@ int readIclass(bool loop, bool verbose) {
         }
         if (!loop) break;
     }
+    PrintAndLogEx(NORMAL, "");
     DropField();
     return res;
 }
