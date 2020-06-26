@@ -50,7 +50,7 @@ static int usage_hints(void) {
     PrintAndLogEx(NORMAL, "       <0|1>      off or on");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hints 1");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hints 1"));
     return PM3_SUCCESS;
 }
 
@@ -63,7 +63,7 @@ static int usage_msleep(void) {
     PrintAndLogEx(NORMAL, "       <ms>       time in milliseconds");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       msleep 100");
+    PrintAndLogEx(NORMAL, _YELLOW_("       msleep 100"));
     return PM3_SUCCESS;
 }
 
@@ -75,7 +75,7 @@ static int usage_auto(void) {
     PrintAndLogEx(NORMAL, "       h          This help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       auto");
+    PrintAndLogEx(NORMAL, _YELLOW_("       auto"));
     return PM3_SUCCESS;
 }
 
@@ -249,7 +249,7 @@ static int CmdPref(const char *Cmd) {
 
 static command_t CommandTable[] = {
 
-    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("sub") " -----------------------"},
+    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
 
     {"analyse", CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
     {"data",    CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
@@ -264,7 +264,7 @@ static command_t CommandTable[] = {
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
     {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
-    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("sub") " -----------------------"},
+    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("General") " -----------------------"},
     {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
     {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use " _YELLOW_("'<command> help'") " for details of a particular command."},
     {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
