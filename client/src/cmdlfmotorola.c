@@ -30,7 +30,12 @@ static int CmdHelp(const char *Cmd);
 
 //see PSKDemod for what args are accepted
 static int CmdMotorolaDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodMotorola();
+}
 
+int demodMotorola(void) {
+    
     //PSK1
     if (PSKDemod("32 1", true) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
@@ -140,7 +145,7 @@ static int CmdMotorolaRead(const char *Cmd) {
     sc.divisor = LF_DIVISOR_125;
     sc.samples_to_skip = 0;
     lf_config(&sc);
-    return CmdMotorolaDemod(Cmd);
+    return demodMotorola();
 }
 
 static int CmdMotorolaClone(const char *Cmd) {
@@ -250,10 +255,6 @@ int detectMotorola(uint8_t *dest, size_t *size) {
     }
 
     return (int)start_idx;
-}
-
-int demodMotorola(void) {
-    return CmdMotorolaDemod("");
 }
 
 int readMotorolaUid(void) {

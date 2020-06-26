@@ -42,6 +42,7 @@ static int usage_lf_nedap_gen(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap generate s 1 c 123 i 12345"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -59,6 +60,7 @@ static int usage_lf_nedap_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap clone s 1 c 123 i 12345"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -77,6 +79,7 @@ static int usage_lf_nedap_sim(void) {
     PrintAndLogEx(NORMAL, "Examples:");
 // TODO proper example?
     PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap sim s 1 c 7 i 1337"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -192,9 +195,9 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
         badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
 
-        PrintAndLogEx(SUCCESS, "NEDAP - Card: " _YELLOW_("%05u") " subtype: " _YELLOW_("%1u")" customer code: " _YELLOW_("%03x"), badgeId, subtype, customerCode);
-        PrintAndLogEx(SUCCESS, "Checksum (%s) 0x%04X",  _GREEN_("ok"), checksum);
-        PrintAndLogEx(SUCCESS, "Raw: %s", sprint_hex(data, size / 8));
+        PrintAndLogEx(SUCCESS, "NEDAP - Card: " _YELLOW_("%05u") " subtype: " _YELLOW_("%1u")" customer code: " _YELLOW_("%03x") ", Raw: %s", badgeId, subtype, customerCode, sprint_hex(data, size / 8));
+        PrintAndLogEx(DEBUG, "Checksum (%s) 0x%04X",  _GREEN_("ok"), checksum);
+
     } else {
         PrintAndLogEx(ERR, "Invalid idx (1:%02x - 2:%02x - 3:%02x - 4:%02x - 5:%02x)", idxC1, idxC2, idxC3, idxC4, idxC5);
         ret = PM3_ESOFT;

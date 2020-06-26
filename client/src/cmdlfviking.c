@@ -34,6 +34,7 @@ static int usage_lf_viking_clone(void) {
     PrintAndLogEx(NORMAL, "  <Q5>           : specify write to Q5 (t5555 instead of t55x7)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337 Q5"));
     return PM3_SUCCESS;
 }
