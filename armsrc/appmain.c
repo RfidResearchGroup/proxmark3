@@ -1019,6 +1019,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_write_password((em4x50_data_t *)packet->data.asBytes);
             break;
         }
+        case CMD_LF_EM4X50_SREAD: {
+            em4x50_sread((em4x50_data_t *)packet->data.asBytes);
+            break;
+        }
+            
 #endif
 
 #ifdef WITH_ISO15693
