@@ -14,5 +14,5 @@
 int CmdLFParadox(const char *Cmd);
 
 int demodParadox(void);
-int detectParadox(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
+int detectParadox(uint8_t *dest, size_t *size, int *wave_start_idx);
 #endif

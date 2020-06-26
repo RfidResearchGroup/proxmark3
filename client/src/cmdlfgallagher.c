@@ -36,7 +36,7 @@ static int usage_lf_gallagher_clone(void) {
     PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf gallagher clone b 0FFD5461A9DA1346B2D1AC32 ");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf gallagher clone b 0FFD5461A9DA1346B2D1AC32"));
     return PM3_SUCCESS;
 }
 
@@ -127,10 +127,10 @@ static int CmdGallagherDemod(const char *Cmd) {
     // 4bit issue level
     uint8_t il = arr[7] & 0x0F;
 
-    PrintAndLogEx(SUCCESS, "GALLAGHER Tag Found -- Region: %u  FC: %u  CN: %u  Issue Level: %u", rc, fc, cn, il);
-    PrintAndLogEx(SUCCESS, "   Printed: %C%u", rc + 0x40, fc);
+    PrintAndLogEx(SUCCESS, "GALLAGHER Tag Found -- Region: " _GREEN_("%u") " FC: " _GREEN_("%u") " CN: " _GREEN_("%u") " Issue Level: " _GREEN_("%u"), rc, fc, cn, il);
+    PrintAndLogEx(SUCCESS, "   Printed: " _GREEN_("%C%u"), rc + 0x40, fc);
     PrintAndLogEx(SUCCESS, "   Raw: %08X%08X%08X", raw1, raw2, raw3);
-    PrintAndLogEx(SUCCESS, "   CRC: %02X - %02X (%s)", crc, calc_crc, (crc == calc_crc) ? "OK" : "Failed");
+    PrintAndLogEx(SUCCESS, "   CRC: %02X - %02X (%s)", crc, calc_crc, (crc == calc_crc) ? "ok" : "fail");
     return PM3_SUCCESS;
 }
 
