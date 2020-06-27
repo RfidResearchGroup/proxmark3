@@ -20,9 +20,17 @@
         "Vendor": "HID",
         "Country": "US",
         "Name": "Access control",
-        "Description": "Genuine HID",
+        "Description": "Field Encoder",
         "Type": "pacs"
-    },   
+    },
+    {
+        "AID": "53494F",
+        "Vendor": "HID",
+        "Country": "US",
+        "Name": "Access control",
+        "Description": "HID Factory",
+        "Type": "pacs"
+    },
     {
         "AID": "4F5931",
         "Vendor": "Transport of London",
@@ -54,7 +62,7 @@
         "Name": "Legic",
         "Description": "(FID 02: EF-CONF)",
         "Type": ""
-    },   
+    },
     {
         "AID": "578000",
         "Vendor": "NORTIC",
@@ -329,5 +337,4 @@ FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Ca
         "Description": "CAR2GO - Member Card",
         "Type": "carsharing"
     }
-   
 ]
