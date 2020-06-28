@@ -72,10 +72,9 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_TAG_HALF_PERIOD            32
 #define EM4X50_T_TAG_THREE_QUARTER_PERIOD   48
 #define EM4X50_T_TAG_FULL_PERIOD            64
-#define EM4X50_T_WAITING_FOR_LIW            500
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
-#define EM4X50_T_TAG_INIT                   2112
+#define EM4X50_T_WAITING_FOR_LIW            8       // determined empiracally
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -425,10 +424,13 @@ static bool find_double_listen_window(bool bcommand) {
     
     // find two successive listen windows that indicate the beginning of
     // data transmission
+    // listen windows should be detected within T0 * EM4X50_T_WAITING_FOR_LIW
+    // pulses (empirically determined)
     
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_WAITING_FOR_LIW) {
-
+    int cnt_pulses = 0;
+    
+    while (cnt_pulses < T0 * EM4X50_T_WAITING_FOR_LIW) {
+    
         // identification of listen window is done via evaluation of
         // pulse lengths
         if (check_pulse_length(get_pulse_length(), 3 * EM4X50_T_TAG_FULL_PERIOD)) {
@@ -471,6 +473,8 @@ static bool find_double_listen_window(bool bcommand) {
                     return true;
                 }
             }
+        } else {
+            cnt_pulses++;
         }
     }
     
@@ -643,7 +647,7 @@ static bool login(uint8_t password[4]) {
             return true;
     
     } else {
-         if (DBGLEVEL >= DBG_ERROR)
+         if (DBGLEVEL >= DBG_DEBUG)
              Dbprintf("error in command request");
     }
     
@@ -667,7 +671,7 @@ static bool reset(void) {
             return true;
 
     } else {
-         if (DBGLEVEL >= DBG_ERROR)
+         if (DBGLEVEL >= DBG_DEBUG)
              Dbprintf("error in command request");
     }
 
@@ -699,7 +703,7 @@ static bool standard_read(int *now) {
         return true;
 
     } else {
-         if (DBGLEVEL >= DBG_ERROR)
+         if (DBGLEVEL >= DBG_DEBUG)
              Dbprintf("didn't find a listen window");
     }
 
@@ -733,7 +737,7 @@ static bool selective_read(uint8_t addresses[4]) {
                     return true;
         
     } else {
-         if (DBGLEVEL >= DBG_ERROR)
+         if (DBGLEVEL >= DBG_DEBUG)
              Dbprintf("error in command request");
     }
 
@@ -855,7 +859,7 @@ static bool write(uint8_t word[4], uint8_t address) {
         }
 
     } else {
-         if (DBGLEVEL >= DBG_ERROR)
+         if (DBGLEVEL >= DBG_DEBUG)
              Dbprintf("error in command request");
     }
 
@@ -894,7 +898,7 @@ static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
         }
 
     } else {
-         if (DBGLEVEL >= DBG_ERROR)
+         if (DBGLEVEL >= DBG_DEBUG)
              Dbprintf("error in command request");
     }
 
