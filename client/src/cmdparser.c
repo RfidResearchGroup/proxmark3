@@ -89,6 +89,12 @@ bool IfPm3Hitag(void) {
     return pm3_capabilities.compiled_with_hitag;
 }
 
+bool IfPm3EM4x50(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_em4x50;
+}
+
 bool IfPm3Hfsniff(void) {
     if (!IfPm3Present())
         return false;
