@@ -1328,6 +1328,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
 
     if ((sak & 0x20) == 0x20) {
         if (atqa == 0x0344) {
+            printTag("MIFARE DESFire MF3ICD40");
             printTag("MIFARE DESFire EV1 2K/4K/8K / DESFire EV1 CL2 2K/4K/8K");
             printTag("MIFARE NTAG424DNA");
             type |= MTDESFIRE;
@@ -1431,6 +1432,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(SUCCESS, "------ " _CYAN_("ISO14443-a Information") "------------------");
         PrintAndLogEx(SUCCESS, "-------------------------------------------------------------");
     }
+
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
