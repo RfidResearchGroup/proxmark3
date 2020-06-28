@@ -38,6 +38,7 @@
 #define STATUS_SUCCESS              0x2
 #define STATUS_LOGIN                0x1
 #define NO_CHARS_MAX                400
+#define TIMEOUT                     2000
 
 typedef struct {
     bool addr_given;
