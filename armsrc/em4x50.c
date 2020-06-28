@@ -74,7 +74,7 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_TAG_FULL_PERIOD            64
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
-#define EM4X50_T_WAITING_FOR_LIW            8       // determined empiracally
+#define EM4X50_T_WAITING_FOR_DBLLIW         1600
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -424,12 +424,13 @@ static bool find_double_listen_window(bool bcommand) {
     
     // find two successive listen windows that indicate the beginning of
     // data transmission
-    // listen windows should be detected within T0 * EM4X50_T_WAITING_FOR_LIW
-    // pulses (empirically determined)
+    // double listen window to be detected within 1600 pulses -> worst case
+    // reason: first detectable double listen window after 34 words
+    // -> 34 words + 34 single listen windows -> about 1600 pulses
     
     int cnt_pulses = 0;
     
-    while (cnt_pulses < T0 * EM4X50_T_WAITING_FOR_LIW) {
+    while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
     
         // identification of listen window is done via evaluation of
         // pulse lengths
