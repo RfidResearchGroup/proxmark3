@@ -75,6 +75,7 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_WAITING_FOR_LIW            500
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
+#define EM4X50_T_TAG_INIT                   2112
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -237,19 +238,34 @@ static void em4x50_setup_read(void) {
 
 // functions for "reader" use case
 
-static void get_signalproperties(void) {
+static bool get_signalproperties(void) {
     
     // calculate signal properties (mean amplitudes) from measured data:
     // 32 amplitudes (maximum values) -> mean amplitude value -> gHigh -> gLow
     
+    bool signal_found = false;
     int no_periods = 32, pct = 75, noise = 140;
     uint8_t sample = 0, sample_ref = 127;
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
     uint32_t sample_max_sum = 0;
+
     
-    // wait until signal/noise > 1
-    while (AT91C_BASE_SSC->SSC_RHR < noise);
+    // wait until signal/noise > 1 (max. 32 periods)
+    for (int i = 0; i < T0 * no_periods; i++) {
+        
+        // about 2 samples per bit period
+        wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+
+        if (AT91C_BASE_SSC->SSC_RHR > noise) {
+            signal_found = true;
+            break;
+        }
+    
+    }
+    
+    if (!signal_found)
+        return false;
 
     // calculate mean maximum value of 32 periods, each period has a length of
     // 3 single "full periods" to eliminate the influence of a listen window
@@ -274,6 +290,7 @@ static void get_signalproperties(void) {
     gHigh = sample_ref + pct * (sample_max_mean - sample_ref) / 100;
     gLow = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
     
+    return true;
 }
 
 static int get_next_bit(void) {
@@ -736,31 +753,32 @@ void em4x50_info(em4x50_data_t *etd) {
 
     init_tag();
     em4x50_setup_read();
-    
+
     // set gHigh and gLow
-    get_signalproperties();
-     
-    if (etd->pwd_given) {
+    if (get_signalproperties()) {
 
-        // try to login with given password
-        blogin = login(etd->password);
+        if (etd->pwd_given) {
 
-    } else {
-    
-        // if no password is given, try to login with "0x00000000"
-        blogin = login(password);
+            // try to login with given password
+            blogin = login(etd->password);
 
+        } else {
+        
+            // if no password is given, try to login with "0x00000000"
+            blogin = login(password);
+
+        }
+        
+        bsuccess = selective_read(addresses);
     }
-    
-    bsuccess = selective_read(addresses);
-    
+
     status = (bsuccess << 1) + blogin;
     
     lf_finalize();
     reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
 }
 
-void em4x50_sread(em4x50_data_t *etd) {
+void em4x50_read(em4x50_data_t *etd) {
     
     // reads in two different ways:
     // - using "selective read mode" -> bidirectional communication
@@ -776,25 +794,26 @@ void em4x50_sread(em4x50_data_t *etd) {
     em4x50_setup_read();
     
     // set gHigh and gLow
-    get_signalproperties();
+    if (get_signalproperties()) {
      
-    if (etd->addr_given) {
+        if (etd->addr_given) {
 
-        // selective read mode
-        
-        // try to login with given password
-        if (etd->pwd_given)
-            blogin = login(etd->password);
-        
-        // only one word has to be read -> first word read = last word read
-        addresses[2] = addresses[3] = etd->address;
-        bsuccess = selective_read(addresses);
-        
-    } else {
-        
-        // standard read mode
-        bsuccess = standard_read(&now);
-        
+            // selective read mode
+            
+            // try to login with given password
+            if (etd->pwd_given)
+                blogin = login(etd->password);
+            
+            // only one word has to be read -> first word read = last word read
+            addresses[2] = addresses[3] = etd->address;
+            bsuccess = selective_read(addresses);
+            
+        } else {
+            
+            // standard read mode
+            bsuccess = standard_read(&now);
+            
+        }
     }
     
     status = (now << 2) + (bsuccess << 1) + blogin;
@@ -896,40 +915,41 @@ void em4x50_write(em4x50_data_t *etd) {
     em4x50_setup_read();
     
     // set gHigh and gLow
-    get_signalproperties();
+    if (get_signalproperties()) {
     
-    // reorder word according to datasheet
-    msb2lsb_word(etd->word);
-    
-    // if password is given try to login first
-    if (etd->pwd_given)
-        blogin = login(etd->password);
-    
-    // write word to given address
-    if (write(etd->word, etd->address)) {
+        // reorder word according to datasheet
+        msb2lsb_word(etd->word);
+        
+        // if password is given try to login first
+        if (etd->pwd_given)
+            blogin = login(etd->password);
+        
+        // write word to given address
+        if (write(etd->word, etd->address)) {
 
-        // to verify result reset EM4x50
-        if (reset()) {
+            // to verify result reset EM4x50
+            if (reset()) {
 
-            // if password is given login
-            if (etd->pwd_given)
-                blogin &= login(etd->password);
+                // if password is given login
+                if (etd->pwd_given)
+                    blogin &= login(etd->password);
 
-            // call a selective read
-            addresses[2] = addresses[3] = etd->address;
-            if (selective_read(addresses)) {
+                // call a selective read
+                addresses[2] = addresses[3] = etd->address;
+                if (selective_read(addresses)) {
 
-                // compare with given word
-                word[0] = tag.sectors[etd->address][0];
-                word[1] = tag.sectors[etd->address][1];
-                word[2] = tag.sectors[etd->address][2];
-                word[3] = tag.sectors[etd->address][3];
-                msb2lsb_word(word);
-                
-                bsuccess = true;
-                for (int i = 0; i < 4; i++)
-                    bsuccess &= (word[i] == etd->word[i]) ? true : false;
+                    // compare with given word
+                    word[0] = tag.sectors[etd->address][0];
+                    word[1] = tag.sectors[etd->address][1];
+                    word[2] = tag.sectors[etd->address][2];
+                    word[3] = tag.sectors[etd->address][3];
+                    msb2lsb_word(word);
+                    
+                    bsuccess = true;
+                    for (int i = 0; i < 4; i++)
+                        bsuccess &= (word[i] == etd->word[i]) ? true : false;
 
+                }
             }
         }
     }
@@ -950,11 +970,12 @@ void em4x50_write_password(em4x50_data_t *etd) {
     em4x50_setup_read();
     
     // set gHigh and gLow
-    get_signalproperties();
+    if (get_signalproperties()) {
 
-    // login and change password
-    if (login(etd->password)) {
-        bsuccess = write_password(etd->password, etd->new_password);
+        // login and change password
+        if (login(etd->password)) {
+            bsuccess = write_password(etd->password, etd->new_password);
+        }
     }
 
     lf_finalize();
