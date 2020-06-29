@@ -227,7 +227,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
     }
 }
 
-static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool bverbose) {
+static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool verbose) {
 
     // display all information of info result in structured format
 
@@ -235,9 +235,9 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     em4x50_word_t words[EM4X50_NO_WORDS];
     char pstring[NO_CHARS_MAX] = {0}, string[NO_CHARS_MAX] = {0};
 
-    bool bpwd_given = etd->pwd_given;
-    bool bsuccess = (resp->status & STATUS_SUCCESS) >> 1;
-    bool blogin = resp->status & STATUS_LOGIN;
+    bool pwd_given = etd->pwd_given;
+    bool success = (resp->status & STATUS_SUCCESS) >> 1;
+    bool login = resp->status & STATUS_LOGIN;
 
     prepare_result(data, 0, EM4X50_NO_WORDS - 1, words);
 
@@ -253,7 +253,7 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     // data section
     PrintAndLogEx(NORMAL, _YELLOW_("\n  em4x50 data:"));
 
-    if (bverbose) {
+    if (verbose) {
 
         // detailed data section
         print_result(words, 0, EM4X50_NO_WORDS - 1);
@@ -336,47 +336,34 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     sprintf(pstring, "  reading ");
     strcat(string, pstring);
 
-    if (!bsuccess) {
-        
+    if (success == false) {       
         sprintf(pstring, _RED_("failed"));
         strcat(string, pstring);
-
     } else {
             
         sprintf(pstring, _GREEN_("ok "));
         strcat(string, pstring);
 
-        if (blogin) {
-
-            if (bpwd_given) {
-
+        if (login) {
+            if (pwd_given) {
                 sprintf(pstring, "(login with password 0x%02x%02x%02x%02x)",
                                     etd->password[0], etd->password[1],
                                     etd->password[2], etd->password[3]);
                 strcat(string, pstring);
-            
             } else {
-
                 sprintf(pstring, "(login with default password 0x00000000)");
                 strcat(string, pstring);
-
             }
 
         } else {
-
-            if (bpwd_given) {
-
+            if (pwd_given) {
                 sprintf(pstring, "(login failed)");
                 strcat(string, pstring);
-            
             } else {
-
                 sprintf(pstring, "(no login)");
                 strcat(string, pstring);
-
             }
         }
-
     }
 
     PrintAndLogEx(NORMAL,"%s\n", string);
@@ -453,17 +440,15 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
     bool login = resp->status & STATUS_LOGIN;
     uint8_t *data = resp->data.asBytes;
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
-    em4x50_word_t word;
+    em4x50_word_t words[EM4X50_NO_WORDS];
 
-    if (!success) {
-        
+    if (success == false) {
         sprintf(pstring, "\n  writing " _RED_("failed"));
         strcat(string, pstring);
-
     } else {
             
-        prepare_result(data, etd->address, etd->address, &word);
-        print_result(&word, etd->address, etd->address);
+        prepare_result(data, etd->address, etd->address, words);
+        print_result(words, etd->address, etd->address);
 
         sprintf(pstring, "\n  writing " _GREEN_("ok "));
         strcat(string, pstring);
@@ -658,13 +643,12 @@ static void print_sread_result(PacketResponseNG *resp, const em4x50_data_t *etd)
     int now = (resp->status & STATUS_NO_WORDS) >> 2;
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
     uint8_t *data = resp->data.asBytes;
-    em4x50_word_t word;
+    em4x50_word_t words[EM4X50_NO_WORDS];
 
-    if (!success) {
+    if (success == false) {
         
         sprintf(pstring, "\n  reading " _RED_("failed"));
         strcat(string, pstring);
-
         PrintAndLogEx(NORMAL,"%s\n", string);
 
     } else {
@@ -673,8 +657,8 @@ static void print_sread_result(PacketResponseNG *resp, const em4x50_data_t *etd)
             
             // selective read mode
 
-            prepare_result(data, etd->address, etd->address, &word);
-            print_result(&word, etd->address, etd->address);
+            prepare_result(data, etd->address, etd->address, words);
+            print_result(words, etd->address, etd->address);
             
             string[0] = '\0';
             sprintf(pstring, "\n  reading " _GREEN_("ok "));
@@ -699,8 +683,8 @@ static void print_sread_result(PacketResponseNG *resp, const em4x50_data_t *etd)
             
             //standard read mode
 
-            prepare_result(data, 0, now - 1, &word);
-            print_result(&word, 0, now - 1);
+            prepare_result(data, 0, now - 1, words);
+            print_result(words, 0, now - 1);
 
             string[0] = '\0';
             sprintf(pstring, "\n  reading " _GREEN_("ok "));
