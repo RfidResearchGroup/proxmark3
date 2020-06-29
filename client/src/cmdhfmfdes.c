@@ -2442,7 +2442,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIParamHexToBuf(arg_get_str(ctx, 2), fid, 2, &fidlength);
+    int res_flen = CLIParamHexToBuf(arg_get_str(ctx, 2), fid, 2, &fidlength);
 
     uint8_t comset = arg_get_int(ctx, 3);
     int arlength = 0;
@@ -2487,7 +2487,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fidlength != 2) {
+    if (res_flen || fidlength != 2) {
         PrintAndLogEx(ERR, "ISO File id must have 2 hex bytes length.");
         return PM3_EINVARG;
     }
@@ -2633,11 +2633,11 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
-    CLIParamHexToBuf(arg_get_str(ctx, 2), offset, 3, &offsetlength);
+    int res_offset = CLIParamHexToBuf(arg_get_str(ctx, 2), offset, 3, &offsetlength);
 
     int flength = 0;
     uint8_t filesize[3] = {0};
-    CLIParamHexToBuf(arg_get_str(ctx, 3), filesize, 3, &flength);
+    int res_flen = CLIParamHexToBuf(arg_get_str(ctx, 3), filesize, 3, &flength);
 
     int type = arg_get_int(ctx, 4);
 
@@ -2652,7 +2652,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (offsetlength != 3 && offsetlength != 0) {
+    if (res_offset || (offsetlength != 3 && offsetlength != 0)) {
         PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
         return PM3_EINVARG;
     }
@@ -2665,6 +2665,11 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     if (_fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         return PM3_EINVARG;
+    }
+
+    if (res_flen) {
+        PrintAndLogEx(ERR, "File size input error");
+        return PM3_EINVARG;        
     }
 
     swap24(filesize);
@@ -2750,7 +2755,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     value.fileno = _fileno[0];
 
     int vlength = 0x0;
-    CLIParamHexToBuf(arg_get_str(ctx, 2), value.value, 4, &vlength);
+    int res_val = CLIParamHexToBuf(arg_get_str(ctx, 2), value.value, 4, &vlength);
 
     int mode = arg_get_int(ctx, 3);
     int aidlength = 3;
@@ -2765,7 +2770,7 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (vlength != 4) {
+    if (res_val || vlength != 4) {
         PrintAndLogEx(ERR, "Value needs 4 hex bytes.");
         return PM3_EINVARG;
     }
@@ -2848,14 +2853,14 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
-    CLIParamHexToBuf(arg_get_str(ctx, 2), offset, 3, &offsetlength);
+    int res_offset = CLIParamHexToBuf(arg_get_str(ctx, 2), offset, 3, &offsetlength);
 
     // iceman:  we only have a 1024 byte commandline input array. So this is pointlessly large.
     // with 2char hex, 512bytes could be input.
     // Instead large binary inputs should be BINARY files and written to card.
     int dlength = 512;
     uint8_t data[512] = {0}; 
-    CLIParamHexToBuf(arg_get_str(ctx, 3), data, 512, &dlength);
+    int res_data = CLIParamHexToBuf(arg_get_str(ctx, 3), data, 512, &dlength);
 
     int type = arg_get_int(ctx, 4);
     int aidlength = 3;
@@ -2872,12 +2877,12 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (dlength == 0) {
+    if (res_data || dlength == 0) {
         PrintAndLogEx(ERR, "Data needs some hex bytes to write");
         return PM3_EINVARG;
     }
 
-    if (offsetlength != 3 && offsetlength != 0) {
+    if (res_offset || (offsetlength != 3 && offsetlength != 0)) {
         PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
         return PM3_EINVARG;
     }
@@ -2956,7 +2961,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
 
     int fidlength = 0;
     uint8_t fid[2] = {0};
-    CLIParamHexToBuf(arg_get_str(ctx, 2), fid, 2, &fidlength);
+    int res_flen = CLIParamHexToBuf(arg_get_str(ctx, 2), fid, 2, &fidlength);
 
     uint8_t comset = arg_get_int(ctx, 3);
     int arlength = 0;
@@ -3017,7 +3022,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fidlength != 2) {
+    if (res_flen || fidlength != 2) {
         PrintAndLogEx(ERR, "ISO File id must have 2 hex bytes length.");
         return PM3_EINVARG;
     }
@@ -3761,11 +3766,13 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     uint8_t cmdAuthAlgo = arg_get_int_def(ctx, 2, 0);
     uint8_t key[24] = {0};
     int keylen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 3), key, 24, &keylen);
+    int res_klen = CLIParamHexToBuf(arg_get_str(ctx, 3), key, 24, &keylen);
+    
     uint8_t newcmdAuthAlgo = arg_get_int_def(ctx, 4, 0);
     uint8_t newkey[24] = {0};
     int newkeylen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 5), newkey, 24, &newkeylen);
+    int res_newklen = CLIParamHexToBuf(arg_get_str(ctx, 5), newkey, 24, &newkeylen);
+    
     uint8_t aesversion = arg_get_int_def(ctx, 6, 0);
     CLIParserFree(ctx);
 
@@ -3789,12 +3796,12 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         newkeylength = 24;
     }
 
-    if ((keylen < 8) || (keylen > 24)) {
+    if (res_klen || (keylen < 8) || (keylen > 24)) {
         PrintAndLogEx(ERR, "Specified key must have %d bytes length.", keylen);
         return PM3_EINVARG;
     }
 
-    if ((newkeylen < 8) || (newkeylen > 24)) {
+    if (res_newklen || (newkeylen < 8) || (newkeylen > 24)) {
         PrintAndLogEx(ERR, "Specified key must have %d bytes length.", newkeylen);
         return PM3_EINVARG;
     }
