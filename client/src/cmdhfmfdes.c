@@ -30,6 +30,8 @@
 #include "mifare/desfire_crypto.h"
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
+#include "mifare/mifaredefault.h"  // default keys
+#include "mifare/ndef.h"           // NDEF
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -4470,6 +4472,107 @@ static int CmdHF14ADesList(const char *Cmd) {
     return CmdTraceList("des");
 }
 
+/*
+static int CmdHF14aDesNDEF(const char *Cmd) {
+    DropField();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes ndef",
+                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Usage:\n"
+                  _YELLOW_("\thf mfdes ndef") "                                             -> shows NDEF data\n"
+                  _YELLOW_("\thf mfdes ndef -vv") "                                         -> shows NDEF parsed and raw data\n"
+                  _YELLOW_("\thf mfdes ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7") " -> shows NDEF data with custom AID and key\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_litn("vV",  "verbose",  0, 2, "show technical data"),
+        arg_str0("",    "aid",      "<aid>", "replace default aid for NDEF"),
+        arg_str0("kK",  "key",      "<key>", "replace default key for NDEF"),
+        arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool verbose = arg_get_lit(ctx, 1);
+    bool verbose2 = arg_get_lit(ctx, 1) > 1;
+    uint8_t aid[2] = {0};
+    int aidlen;
+    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
+    uint8_t key[16] = {0};
+    int keylen;
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    bool keyB = arg_get_lit(ctx, 4);
+
+    uint16_t ndefAID = 0xe103;
+    if (aidlen == 2)
+        ndefAID = (aid[0] << 8) + aid[1];
+
+    uint8_t ndefkey[16] = {0};
+    memcpy(ndefkey, g_mifarep_ndef_key, 16);
+    if (keylen == 16) {
+        memcpy(ndefkey, key, 16);
+    }
+
+    uint8_t data[4096] = {0};
+    int datalen = 0;
+
+    for (int j = (int)file_ids_len - 1; j >= 0; j--) {
+        PrintAndLogEx(SUCCESS, "\n\n   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
+
+        uint8_t filesettings[20] = {0};
+        uint32_t fileset_len = 0;
+
+        res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
+        if (res != PM3_SUCCESS) continue;
+
+        int maclen = 0; // To be implemented
+
+        if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
+            int filesize = (filesettings[6] << 16) + (filesettings[5] << 8) + filesettings[4];
+            mfdes_data_t fdata;
+            fdata.fileno = file_ids[j];
+            memset(fdata.offset, 0, 3);
+            memset(fdata.length, 0, 3);
+
+            uint8_t *data = (uint8_t *)calloc(filesize, sizeof(uint8_t));
+            if (data == NULL) {
+                DropField();
+                return PM3_EMALLOC;
+            }
+
+        fdata.data = data;
+        int res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE, filesettings[1]);
+        if (res == PM3_SUCCESS) {
+            uint32_t len = le24toh(fdata.length);
+            NDEFDecodeAndPrint(data, datalen, verbose);
+            
+        } else {
+            PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
+            res = handler_desfire_select_application(aid);
+            if (res != PM3_SUCCESS) continue;
+        }
+
+        free(data);
+    }
+
+//    PrintAndLogEx(INFO, "reading data from tag");
+
+    if (!datalen) {
+        PrintAndLogEx(ERR, "no NDEF data");
+        return PM3_SUCCESS;
+    }
+
+    if (verbose2) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("DESfire NDEF raw") " ----------------");
+        dump_buffer(data, datalen, stdout, 1);
+    }
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndef -vv`") " for more details");
+    return PM3_SUCCESS;
+}
+*/
+
 /*static int CmdTest(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     uint8_t IV[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -4495,29 +4598,29 @@ static int CmdHF14ADesList(const char *Cmd) {
 */
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,                     AlwaysAvailable, "This help"},
-    //{"test",    CmdTest,                     AlwaysAvailable, "Test"},
-    {"info",    CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
-    {"list",    CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
-    {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
-    {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
-    {"getuid",    CmdHF14ADesGetUID,        IfPm3Iso14443a,  "Get random uid"},
-    {"selectaid",    CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
-    {"createaid",    CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
-    {"deleteaid",    CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
-    {"createfile",    CmdHF14ADesCreateFile,        IfPm3Iso14443a,  "Create Standard/Backup File"},
-    {"createvaluefile",    CmdHF14ADesCreateValueFile,        IfPm3Iso14443a,  "Create Value File"},
-    {"createrecordfile",    CmdHF14ADesCreateRecordFile,        IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
-    {"deletefile",    CmdHF14ADesDeleteFile,        IfPm3Iso14443a,  "Create Delete File"},
-    {"clearfile",    CmdHF14ADesClearRecordFile,        IfPm3Iso14443a,  "Clear record File"},
-    {"readdata",    CmdHF14ADesReadData,        IfPm3Iso14443a,  "Read data from standard/backup/record file"},
-    {"writedata",    CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
-    {"getvalue",    CmdHF14ADesGetValueData,        IfPm3Iso14443a,  "Get value of file"},
-    {"changevalue",    CmdHF14ADesChangeValue,        IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
-    {"changekey",    CmdHF14ADesChangeKey,       IfPm3Iso14443a,  "Change Key"},
-    {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
-    {"dump",    CmdHF14ADesDump,        IfPm3Iso14443a,  "Dump all files"},
-    {"chk",    CmdHF14aDesChk,       IfPm3Iso14443a,  "Check keys"},
+    {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
+    {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
+    {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
+    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
+    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
+    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
+    {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
+    {"deleteaid",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
+    {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
+    {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
+    {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
+    {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "Create Delete File"},
+    {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
+    {"readdata",         CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record file"},
+    {"writedata",        CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
+    {"getvalue",         CmdHF14ADesGetValueData,     IfPm3Iso14443a,  "Get value of file"},
+    {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
+    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
+    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
+    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
+    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
+//    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };
 
