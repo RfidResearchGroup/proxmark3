@@ -461,8 +461,8 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
     em4x50_word_t words[EM4X50_NO_WORDS];
 
-    prepare_result(data, etd->address, etd->address, &word);
-    print_result(&word, etd->address, etd->address, true);
+    prepare_result(data, etd->address, etd->address, words);
+    print_result(words, etd->address, etd->address, true);
 
     sprintf(pstring, "\n  writing " _GREEN_("ok "));
     strcat(string, pstring);
@@ -660,8 +660,8 @@ static void print_read_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
         
         // selective read mode
 
-        prepare_result(data, etd->address, etd->address, &word);
-        print_result(&word, etd->address, etd->address, true);
+        prepare_result(data, etd->address, etd->address, words);
+        print_result(words, etd->address, etd->address, true);
         
         string[0] = '\0';
         sprintf(pstring, "\n  reading " _GREEN_("ok "));
@@ -688,8 +688,8 @@ static void print_read_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
         
         //standard read mode
 
-        prepare_result(data, 0, now - 1, &word);
-        print_result(&word, 0, now - 1, verbose);
+        prepare_result(data, 0, now - 1, words);
+        print_result(words, 0, now - 1, verbose);
 
         if (verbose) {
 
