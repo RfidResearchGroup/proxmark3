@@ -659,7 +659,7 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     // Allowed clock rates: 16, 32, 40 and 64
     if ((clock1 != 16) && (clock1 != 32) && (clock1 != 64) && (clock1 != 40)) {
-        PrintAndLogEx(ERR, "error, clock rate" _RED_("%d")" not valid");
+        PrintAndLogEx(FAILED, "error, clock rate" _RED_("%d")" not valid", clock1);
         PrintAndLogEx(INFO, "supported clock rates: " _YELLOW_("16, 32, 40, 60") "\n", clock1);
         usage_lf_em410x_write();
         return PM3_EINVARG;
