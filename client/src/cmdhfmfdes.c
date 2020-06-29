@@ -2292,7 +2292,6 @@ static int selectfile(uint8_t *aid, uint32_t fileno, uint8_t *cs) {
     return res;
 }
 
-
 static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes clearrecord",
@@ -2822,7 +2821,6 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     return res;
 }
 
-
 static int CmdHF14ADesWriteData(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -2853,14 +2851,12 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     uint8_t offset[3] = {0};
     CLIParamHexToBuf(arg_get_str(ctx, 2), offset, 3, &offsetlength);
 
-    int dlength = 0xFFFF;
-    uint8_t *data = (uint8_t *)calloc(dlength, sizeof(uint8_t));
-    if (data == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
-        CLIParserFree(ctx);
-        return PM3_EMALLOC;
-    }
-    CLIParamHexToBuf(arg_get_str(ctx, 3), data, 0xFFFF, &dlength);
+    // iceman:  we only have a 1024 byte commandline input array. So this is pointlessly large.
+    // with 2char hex, 512bytes could be input.
+    // Instead large binary inputs should be BINARY files and written to card.
+    int dlength = 512;
+    uint8_t data[512] = {0}; 
+    CLIParamHexToBuf(arg_get_str(ctx, 3), data, 512, &dlength);
 
     int type = arg_get_int(ctx, 4);
     int aidlength = 3;
@@ -2874,31 +2870,26 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     if (type < 0 || type > 1) {
         PrintAndLogEx(ERR, "Unknown type (0=Standard/Backup, 1=Record)");
-        if (data) free(data);
         return PM3_EINVARG;
     }
 
     if (dlength == 0) {
         PrintAndLogEx(ERR, "Data needs some hex bytes to write");
-        if (data) free(data);
         return PM3_EINVARG;
     }
 
     if (offsetlength != 3 && offsetlength != 0) {
         PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
-        if (data) free(data);
         return PM3_EINVARG;
     }
 
     if (filenolen != 1) {
         PrintAndLogEx(ERR, "File number is missing");
-        if (data) free(data);
         return PM3_EINVARG;
     }
 
     if (_fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
-        if (data) free(data);
         return PM3_EINVARG;
     }
 
@@ -2921,24 +2912,21 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     uint8_t cs = 0;
     if (selectfile(aid, _fileno[0], &cs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("   Error on selecting file."));
+        DropField();
         return PM3_ESOFT;
     }
 
     int res = PM3_ESOFT;
-    if (data != NULL) {
-        ft.data = data;
-        res = handler_desfire_writedata(&ft, type, cs);
-        if (res == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Successfully wrote data");
-        } else {
-            PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
-        }
-        free(data);
+    ft.data = data;
+    res = handler_desfire_writedata(&ft, type, cs);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Successfully wrote data");
+    } else {
+        PrintAndLogEx(ERR, "Couldn't read data. Error %d", res);
     }
     DropField();
     return res;
 }
-
 
 static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
