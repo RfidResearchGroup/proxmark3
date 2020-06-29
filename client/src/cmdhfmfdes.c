@@ -36,6 +36,8 @@
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
 
+#define status(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
+
 struct desfire_key default_key = {0};
 
 uint8_t desdefaultkeys[3][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Official
@@ -114,8 +116,6 @@ typedef enum {
     MFDES_RECORD_FILE,
     MFDES_VALUE_FILE
 } MFDES_FILE_TYPE_T;
-
-#define status(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
 
 // NXP Appnote AN10787 - Application Directory (MAD)
 typedef enum {
@@ -390,7 +390,6 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
         sprintf(retStr, "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
 }
-
 
 static int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
 
@@ -958,7 +957,6 @@ static void AuthToError(int error) {
     }
 }
 
-
 // -- test if card supports 0x0A
 static int test_desfire_authenticate(void) {
     uint8_t data[] = {0x00};
@@ -1013,7 +1011,8 @@ static int desfire_print_freemem(uint32_t free_mem) {
 static int handler_desfire_freemem(uint32_t *free_mem) {
     if (free_mem == NULL) return PM3_EINVARG;
 
-    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NULL}; // 0x6E
+    uint8_t data[] = {0x00};
+    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, data}; // 0x6E
     *free_mem = 0;
     uint32_t recv_len = 0;
     uint16_t sw = 0;
@@ -1073,7 +1072,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
             break;
     }
 
-    uint32_t cmdcnt = 0;
+    size_t cmdcnt = 0;
     memcpy(data + cmdcnt + 1, new_key, new_key_length);
 
     if ((tag->authenticated_key_no & 0x0f) != (key_no & 0x0f)) {
@@ -1407,16 +1406,16 @@ static int handler_desfire_appids(uint8_t *dest, uint32_t *app_ids_len) {
 
 // --- GET DF NAMES
 static int handler_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
-    *dfname_count = 0;
+
     if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (dfname_count == NULL) PrintAndLogEx(ERR, "DFNAME_COUNT=NULL");
+        if (dest == NULL) PrintAndLogEx(ERR, "DEST = NULL");
+        if (dfname_count == NULL) PrintAndLogEx(ERR, "DFNAME_COUNT = NULL");
     }
 
-    if (dest == NULL || dfname_count == NULL) return PM3_EINVARG;
+    if (dest == NULL || dfname_count == NULL)
+        return PM3_EINVARG;
 
     *dfname_count = 0;
-
     sAPDU apdu = {0x90, MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00, NULL}; //0x6d
     uint32_t recv_len = 0;
     uint16_t sw = 0;
@@ -1650,9 +1649,11 @@ static int handler_desfire_readdata(mfdes_data_t *data, MFDES_FILE_TYPE_T type, 
     return res;
 }
 
-
 static int handler_desfire_getvalue(mfdes_value_t *value, uint32_t *resplen, uint8_t cs) {
-    if (value->fileno > 0x1F) return PM3_EINVARG;
+
+    if (value->fileno > 0x1F)
+        return PM3_EINVARG;
+
     sAPDU apdu = {0x90, MFDES_GET_VALUE, 0x00, 0x00, 0x01, &value->fileno}; // 0xBD
     uint16_t sw = 0;
     *resplen = 0;
@@ -1736,7 +1737,6 @@ static int handler_desfire_writedata(mfdes_data_t *data, MFDES_FILE_TYPE_T type,
     }
     return res;
 }
-
 
 static int handler_desfire_deletefile(uint8_t fileno) {
     if (fileno > 0x1F) return PM3_EINVARG;
@@ -2097,7 +2097,6 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Successfully selected aid.");
     return res;
 }
-
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIParserContext *ctx;
