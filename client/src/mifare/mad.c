@@ -121,9 +121,13 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
     const char *company = mad_json_get_str(elm, "company");
     const char *provider = mad_json_get_str(elm, "service_provider");
     const char *integrator = mad_json_get_str(elm, "system_integrator");
-    char result[4 + strlen(application) + strlen(company)];
-    sprintf(result, " %s [%s]", application, company);
-    PrintAndLogEx(INFO, fmt, result);
+
+    if (application && company) {
+        char result[4 + strlen(application) + strlen(company)];
+        sprintf(result, " %s [%s]", application, company);
+        PrintAndLogEx(INFO, fmt, result);
+    }
+
     if (verbose) {
         PrintAndLogEx(SUCCESS, "    MAD:               %s", vmad);
         if (application)
