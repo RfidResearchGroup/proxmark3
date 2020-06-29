@@ -3216,23 +3216,19 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
                   "\n\thf mfdes formatpicc\n"
                   "Make sure to authenticate picc before running this command.\n"
                  );
-
+    CLIParserFree(ctx);
     sAPDU apdu = {0x90, MFDES_FORMAT_PICC, 0x00, 0x00, 0, NULL}; // 0xDF
     uint16_t sw = 0;
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't format picc -> %s"), GetErrorString(res, &sw));
-        DropField();
-        return res;
     } else {
         PrintAndLogEx(INFO, "Card successfully reset");
-        return PM3_SUCCESS;
     }
     DropField();
-    return PM3_SUCCESS;
+    return res;
 }
-
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -3371,7 +3367,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     DropField();
     return PM3_SUCCESS;
 }
-
 
 static void DecodeFileType(uint8_t filetype) {
     switch (filetype) {
