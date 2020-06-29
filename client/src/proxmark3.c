@@ -146,12 +146,26 @@ static void flush_history(void) {
 }
 
 #ifdef HAVE_READLINE
+
+#  if defined(_WIN32)
+/*
+static bool WINAPI terminate_handler(DWORD t) {
+    if (t == CTRL_C_EVENT) {
+        flush_history();
+        return true;
+    }
+    return false;
+}
+*/
+#  else
 struct sigaction old_action;
 static void terminate_handler(int signum) {
     sigaction(SIGINT, &old_action, NULL);
     flush_history();
     kill(0, SIGINT);
 }
+#endif
+
 #endif
 
 // first slot is always NULL, indicating absence of script when idx=0
@@ -236,11 +250,14 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         session.history_path = NULL;
     } else {
 
+#  if defined(_WIN32)
+//        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
+#  else
         struct sigaction action;
         memset(&action, 0, sizeof(action));
         action.sa_handler = &terminate_handler;
         sigaction(SIGINT, &action, &old_action);
-
+#  endif
         rl_catch_signals = 1;
         rl_set_signals();
         read_history(session.history_path);
@@ -1054,7 +1071,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_GUI
 
-#  ifdef _WIN32
+#  if defined(_WIN32)
     InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
     MainGraphics();
 #  else
