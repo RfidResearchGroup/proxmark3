@@ -43,6 +43,7 @@ typedef struct {
 //    char *defaultPaths[spItemCount]; // Array should allow loop searching for files
     clientdebugLevel_t client_debug_level;
 //    uint8_t device_debug_level;
+    char *history_path;
 } session_arg_t;
 
 extern session_arg_t session;

@@ -240,7 +240,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr, bool verb
     }
 }
 
-static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool bverbose) {
+static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool verbose) {
 
     // display all information of info result in structured format
 
@@ -265,7 +265,7 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     // data section
     PrintAndLogEx(NORMAL, _YELLOW_("\n  em4x50 data:"));
 
-    if (bverbose) {
+    if (verbose) {
 
         // detailed data section
         print_result(words, 0, EM4X50_NO_WORDS - 1, true);
@@ -459,7 +459,7 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
     bool login = resp->status & STATUS_LOGIN;
     uint8_t *data = resp->data.asBytes;
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
-    em4x50_word_t word;
+    em4x50_word_t words[EM4X50_NO_WORDS];
 
     prepare_result(data, etd->address, etd->address, &word);
     print_result(&word, etd->address, etd->address, true);
@@ -654,7 +654,7 @@ static void print_read_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     int now = (resp->status & STATUS_NO_WORDS) >> 2;
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
     uint8_t *data = resp->data.asBytes;
-    em4x50_word_t word;
+    em4x50_word_t words[EM4X50_NO_WORDS];
 
     if (addr_given) {
         
@@ -666,7 +666,7 @@ static void print_read_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
         string[0] = '\0';
         sprintf(pstring, "\n  reading " _GREEN_("ok "));
         strcat(string, pstring);
-        
+
         if (pwd_given) {
             if (login) {
                 sprintf(pstring, "(login with password 0x%02x%02x%02x%02x)",

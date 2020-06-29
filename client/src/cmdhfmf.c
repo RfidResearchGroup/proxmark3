@@ -1693,7 +1693,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
     uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
     uint8_t cmdp = 0;
-    char filename[FILE_PATH_SIZE] = {0}, *fptr;
+    char filename[FILE_PATH_SIZE] = {0};
     char szTemp[FILE_PATH_SIZE - 20];
     char ctmp;
 
@@ -1706,19 +1706,21 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     switch (tolower(param_getchar(Cmd, cmdp))) {
         case 'h':
             return usage_hf14_hardnested();
-        case 'r':
-            fptr = GenerateFilename("hf-mf-", "-nonces.bin");
+        case 'r': {
+            char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
             if (fptr == NULL)
                 strncpy(filename, "nonces.bin", FILE_PATH_SIZE - 1);
             else
                 strncpy(filename, fptr, FILE_PATH_SIZE - 1);
 
+            free(fptr);
             nonce_file_read = true;
             if (!param_gethex(Cmd, cmdp + 1, trgkey, 12)) {
                 know_target_key = true;
             }
             cmdp++;
             break;
+        }            
         case 't':
             tests = param_get32ex(Cmd, cmdp + 1, 100, 10);
             if (!param_gethex(Cmd, cmdp + 2, trgkey, 12)) {
@@ -1729,9 +1731,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         default:
             if (param_getchar(Cmd, cmdp) == 0x00) {
                 PrintAndLogEx(WARNING, "Block number is missing");
-                return 1;
-
+                return usage_hf14_hardnested();
             }
+
             blockNo = param_get8(Cmd, cmdp);
             ctmp = tolower(param_getchar(Cmd, cmdp + 1));
             if (ctmp != 'a' && ctmp != 'b') {
@@ -1775,13 +1777,15 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             case 's':
                 slow = true;
                 break;
-            case 'w':
+            case 'w': {
                 nonce_file_write = true;
-                fptr = GenerateFilename("hf-mf-", "-nonces.bin");
+                char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
                 if (fptr == NULL)
                     return 1;
                 strncpy(filename, fptr, FILE_PATH_SIZE - 1);
+                free(fptr);
                 break;
+            }
             case 'u':
                 param_getstr(Cmd, cmdp + 1, szTemp, FILE_PATH_SIZE - 20);
                 snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", szTemp);
@@ -1837,7 +1841,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         // check if tag doesn't have static nonce
         if (detect_classic_static_nonce() == 1) {
             PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
-            PrintAndLogEx(INFO, "\t Try use `" _YELLOW_("hf mf staticnested") "`");
+            PrintAndLogEx(HINT, "\tTry use `" _YELLOW_("hf mf staticnested") "`");
             return PM3_EOPABORTED;
         }
 
@@ -1849,11 +1853,13 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(NORMAL, "--target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s, file action: %s, Slow: %s, Tests: %d ",
+    PrintAndLogEx(INFO, "Target block no:%3d, target key type:%c, known target key: 0x%02x%02x%02x%02x%02x%02x%s",
                   trgBlockNo,
                   trgKeyType ? 'B' : 'A',
                   trgkey[0], trgkey[1], trgkey[2], trgkey[3], trgkey[4], trgkey[5],
-                  know_target_key ? "" : " (not set)",
+                  know_target_key ? "" : " (not set)"
+                  );
+    PrintAndLogEx(INFO , "File action: %s, Slow: %s, Tests: %d ",
                   nonce_file_write ? "write" : nonce_file_read ? "read" : "none",
                   slow ? "Yes" : "No",
                   tests);
@@ -1861,7 +1867,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint64_t foundkey = 0;
     int16_t isOK = mfnestedhard(blockNo, keyType, key, trgBlockNo, trgKeyType, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
-    if (tests == 0) DropField();
+    if (tests == 0) 
+        DropField();
+
     if (isOK) {
         switch (isOK) {
             case 1 :
