@@ -74,7 +74,7 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_TAG_FULL_PERIOD            64
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
-#define EM4X50_T_WAITING_FOR_DBLLIW         1600
+#define EM4X50_T_WAITING_FOR_DBLLIW         1550
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -535,6 +535,10 @@ static bool check_ack(bool bliw) {
                         return true;
                     }
                 }
+            } else {
+                
+                // It's NAK -> stop searching
+                break;
             }
         }
     }
