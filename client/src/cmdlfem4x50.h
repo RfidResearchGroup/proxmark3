@@ -14,9 +14,11 @@
 int usage_lf_em4x50_info(void);
 int usage_lf_em4x50_write(void);
 int usage_lf_em4x50_write_password(void);
+int usage_lf_em4x50_sread(void);
 
 int CmdEM4x50Info(const char *Cmd);
 int CmdEM4x50Write(const char *Cmd);
 int CmdEM4x50WritePassword(const char *Cmd);
+int CmdEM4x50SRead(const char *Cmd);
 
 #endif
