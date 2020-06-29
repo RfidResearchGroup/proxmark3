@@ -389,7 +389,7 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
         return data;
 
     switch (communication_settings & MDCM_MASK) {
-        case MDCM_PLAIN:
+        case MDCM_PLAIN: {
             if (AS_LEGACY == DESFIRE(tag)->authentication_scheme)
                 break;
 
@@ -404,9 +404,9 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
              */
 
             append_mac = false;
-
+        }
         /* pass through */
-        case MDCM_MACED:
+        case MDCM_MACED: {
             communication_settings |= NO_CRC;
 
             switch (DESFIRE(tag)->authentication_scheme) {
@@ -455,7 +455,8 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
             }
 
             break;
-        case MDCM_ENCIPHERED:
+        }
+        case MDCM_ENCIPHERED: {
             /*  |<-------------- data -------------->|
              *  |<--- offset -->|                    |
              *  +---------------+--------------------+-----+---------+
@@ -473,21 +474,25 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 
             if (!(communication_settings & ENC_COMMAND))
                 break;
+
             edl = enciphered_data_length(tag, *nbytes - offset, communication_settings) + offset;
 
             // Fill in the crypto buffer with data ...
             memcpy(res, data, *nbytes);
+
             if (!(communication_settings & NO_CRC)) {
                 // ... CRC ...
                 switch (DESFIRE(tag)->authentication_scheme) {
-                    case AS_LEGACY:
+                    case AS_LEGACY: {
                         AddCrc14A(res + offset, *nbytes - offset);
                         *nbytes += 2;
                         break;
-                    case AS_NEW:
+                    }
+                    case AS_NEW: {
                         crc32_append(res, *nbytes);
                         *nbytes += 4;
                         break;
+                    }
                 }
             }
             // ... and padding
@@ -497,11 +502,12 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 
             mifare_cypher_blocks_chained(tag, NULL, NULL, res + offset, *nbytes - offset, MCD_SEND, (AS_NEW == DESFIRE(tag)->authentication_scheme) ? MCO_ENCYPHER : MCO_DECYPHER);
             break;
-        default:
-
+        }
+        default: {
             *nbytes = -1;
             res = NULL;
             break;
+        }
     }
 
     return res;

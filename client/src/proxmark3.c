@@ -18,8 +18,10 @@
 #ifdef HAVE_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <signal.h>
 #endif
 #include <ctype.h>
+
 #include "usart_defs.h"
 #include "util_posix.h"
 #include "proxgui.h"
@@ -134,6 +136,37 @@ static int check_comm(void) {
     }
     return 0;
 }
+static void flush_history(void) {
+#ifdef HAVE_READLINE
+    if (session.history_path) {
+        write_history(session.history_path);
+        free(session.history_path);
+    }
+#endif
+}
+
+#ifdef HAVE_READLINE
+
+#  if defined(_WIN32)
+/*
+static bool WINAPI terminate_handler(DWORD t) {
+    if (t == CTRL_C_EVENT) {
+        flush_history();
+        return true;
+    }
+    return false;
+}
+*/
+#  else
+struct sigaction old_action;
+static void terminate_handler(int signum) {
+    sigaction(SIGINT, &old_action, NULL);
+    flush_history();
+    kill(0, SIGINT);
+}
+#endif
+
+#endif
 
 // first slot is always NULL, indicating absence of script when idx=0
 static FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
@@ -211,16 +244,29 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     }
 
 #ifdef HAVE_READLINE
-    char *my_history_path = NULL;
-    if (searchHomeFilePath(&my_history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
+    session.history_path = NULL;
+    if (searchHomeFilePath(&session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No history will be recorded");
-        my_history_path = NULL;
+        session.history_path = NULL;
     } else {
-        read_history(my_history_path);
+
+#  if defined(_WIN32)
+//        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
+#  else
+        struct sigaction action;
+        memset(&action, 0, sizeof(action));
+        action.sa_handler = &terminate_handler;
+        sigaction(SIGINT, &action, &old_action);
+#  endif
+        rl_catch_signals = 1;
+        rl_set_signals();
+        read_history(session.history_path);
     }
 #endif
+
     // loops every time enter is pressed...
     while (1) {
+
         bool printprompt = false;
         if (session.pm3_present) {
             if (conn.send_via_fpc_usart == false)
@@ -391,11 +437,9 @@ check_script:
         pop_cmdscriptfile();
 
 #ifdef HAVE_READLINE
-    if (my_history_path) {
-        write_history(my_history_path);
-        free(my_history_path);
-    }
+    flush_history();
 #endif
+
     if (cmd) {
         free(cmd);
         cmd = NULL;
@@ -1027,7 +1071,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_GUI
 
-#  ifdef _WIN32
+#  if defined(_WIN32)
     InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
     MainGraphics();
 #  else

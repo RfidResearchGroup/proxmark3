@@ -15,33 +15,6 @@
 #include "commonutil.h"
 #include "em4x50.h"
 
-#define EM4X50_NO_WORDS             34
-
-// special words
-#define EM4X50_DEVICE_PASSWORD      0
-#define EM4X50_PROTECTION           1
-#define EM4X50_CONTROL        2
-#define EM4X50_DEVICE_SERIAL        32
-#define EM4X50_DEVICE_ID            33
-
-// control word (word = 4 bytes)
-#define FIRST_WORD_READ             0       // first byte
-#define LAST_WORD_READ              1       // second byte
-#define CONFIG_BLOCK                2       // third byte
-#define PASSWORD_CHECK              0x80    // first bit in third byte
-#define READ_AFTER_WRITE            0x40    // second bit in third byte
-
-// protection word
-#define FIRST_WORD_READ_PROTECTED   0       // first byte
-#define LAST_WORD_READ_PROTECTED    1       // second byte
-#define FIRST_WORD_WRITE_INHIBITED  2       // third byte
-#define LAST_WORD_WRITE_INHIBITED   3       // fourth byte
-
-// misc
-#define STATUS_SUCCESS              0x2
-#define STATUS_LOGIN                0x1
-#define NO_CHARS_MAX                400
-
 int usage_lf_em4x50_info(void) {
     PrintAndLogEx(NORMAL, "Read all information of EM4x50. Tag nust be on antenna.");
     PrintAndLogEx(NORMAL, "");
@@ -79,6 +52,19 @@ int usage_lf_em4x50_write_password(void) {
     PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf em 4x50_write_password p 11223344 n 01020304");
+    return PM3_SUCCESS;
+}
+int usage_lf_em4x50_sread(void) {
+    PrintAndLogEx(NORMAL, "Read EM4x50 word(s). Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sread [h] a <address> p <pwd>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       a <addr>  - memory address to read (dec) (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf em 4x50_sread");
+    PrintAndLogEx(NORMAL, "      lf em 4x50_sread a 2 p 00000000");
     return PM3_SUCCESS;
 }
 
@@ -121,13 +107,13 @@ static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t 
         }
         
         // check column parities
-        words[i].col_parity = byte[i*7+5] ;
+        words[i].col_parity = byte[i*7+5];
         
         for (int j = 0; j < 8; j++) {
             words[i].cparity[j] = (((words[i].col_parity >> (7-j)) & 1) == c[j]) ? true : false;
 
             if (!words[i].cparity[j])
-                words[i].parity = false;
+               words[i].parity = false;
         }
 
         // check stop bit
@@ -204,7 +190,7 @@ static void print_bit_table(const em4x50_word_t word) {
     string[0] = '\0';
 }
 
-static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
+static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
     
     // print available information for given word from fwr to lwr, i.e.
     // bit table + summary lines with hex notation of word (msb + lsb)
@@ -220,6 +206,7 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
         print_bit_table(words[i]);
          
         // final result
+        string[0] = '\0';
         sprintf(pstring, "\n  word[%i] msb: " _GREEN_("0x"), i);
         strcat(string, pstring);
 
@@ -237,12 +224,10 @@ static void print_result(const em4x50_word_t *words,  int fwr,  int lwr) {
         }
         
         PrintAndLogEx(NORMAL,string);
-
-        string[0] = '\0';
     }
 }
 
-static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool bverbose) {
+static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, bool verbose) {
 
     // display all information of info result in structured format
 
@@ -250,9 +235,9 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     em4x50_word_t words[EM4X50_NO_WORDS];
     char pstring[NO_CHARS_MAX] = {0}, string[NO_CHARS_MAX] = {0};
 
-    bool bpwd_given = etd->pwd_given;
-    bool bsuccess = resp->status & STATUS_SUCCESS;
-    bool blogin = resp->status & STATUS_LOGIN;
+    bool pwd_given = etd->pwd_given;
+    bool success = (resp->status & STATUS_SUCCESS) >> 1;
+    bool login = resp->status & STATUS_LOGIN;
 
     prepare_result(data, 0, EM4X50_NO_WORDS - 1, words);
 
@@ -268,7 +253,7 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     // data section
     PrintAndLogEx(NORMAL, _YELLOW_("\n  em4x50 data:"));
 
-    if (bverbose) {
+    if (verbose) {
 
         // detailed data section
         print_result(words, 0, EM4X50_NO_WORDS - 1);
@@ -351,47 +336,34 @@ static void print_info_result(PacketResponseNG *resp, const em4x50_data_t *etd, 
     sprintf(pstring, "  reading ");
     strcat(string, pstring);
 
-    if (!bsuccess) {
-        
+    if (success == false) {       
         sprintf(pstring, _RED_("failed"));
         strcat(string, pstring);
-
     } else {
             
         sprintf(pstring, _GREEN_("ok "));
         strcat(string, pstring);
 
-        if (blogin) {
-
-            if (bpwd_given) {
-
+        if (login) {
+            if (pwd_given) {
                 sprintf(pstring, "(login with password 0x%02x%02x%02x%02x)",
                                     etd->password[0], etd->password[1],
                                     etd->password[2], etd->password[3]);
                 strcat(string, pstring);
-            
             } else {
-
                 sprintf(pstring, "(login with default password 0x00000000)");
                 strcat(string, pstring);
-
             }
 
         } else {
-
-            if (bpwd_given) {
-
+            if (pwd_given) {
                 sprintf(pstring, "(login failed)");
                 strcat(string, pstring);
-            
             } else {
-
                 sprintf(pstring, "(no login)");
                 strcat(string, pstring);
-
             }
         }
-
     }
 
     PrintAndLogEx(NORMAL,"%s\n", string);
@@ -455,7 +427,7 @@ int CmdEM4x50Info(const char *Cmd) {
     // print result
     print_info_result(&resp, &etd, verbose);
     
-    success = resp.status & STATUS_SUCCESS;
+    success = (resp.status & STATUS_SUCCESS) >> 1;
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
@@ -464,21 +436,19 @@ static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd)
     // display result of writing operation in structured format
 
     bool pwd_given = etd->pwd_given;
-    bool success = resp->status & STATUS_SUCCESS;
+    bool success = (resp->status & STATUS_SUCCESS) >> 1;
     bool login = resp->status & STATUS_LOGIN;
     uint8_t *data = resp->data.asBytes;
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
-    em4x50_word_t word;
+    em4x50_word_t words[EM4X50_NO_WORDS];
 
-    if (!success) {
-        
+    if (success == false) {
         sprintf(pstring, "\n  writing " _RED_("failed"));
         strcat(string, pstring);
-
     } else {
             
-        prepare_result(data, etd->address, etd->address, &word);
-        print_result(&word, etd->address, etd->address);
+        prepare_result(data, etd->address, etd->address, words);
+        print_result(words, etd->address, etd->address);
 
         sprintf(pstring, "\n  writing " _GREEN_("ok "));
         strcat(string, pstring);
@@ -574,7 +544,7 @@ int CmdEM4x50Write(const char *Cmd) {
     // get, prepare and print response
     print_write_result(&resp, &etd);
     
-    success = resp.status & STATUS_SUCCESS;
+    success = (resp.status & STATUS_SUCCESS) >> 1;
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
@@ -660,4 +630,144 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     print_write_password_result(&resp, &etd);
     
     return ((bool)resp.status) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static void print_sread_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
+    
+    // display result of writing operation in structured format
+
+    bool addr_given = etd->addr_given;
+    bool pwd_given = etd->pwd_given;
+    bool login = resp->status & STATUS_LOGIN;
+    bool success = (resp->status & STATUS_SUCCESS) >> 1;
+    int now = (resp->status & STATUS_NO_WORDS) >> 2;
+    char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
+    uint8_t *data = resp->data.asBytes;
+    em4x50_word_t words[EM4X50_NO_WORDS];
+
+    if (success == false) {
+        
+        sprintf(pstring, "\n  reading " _RED_("failed"));
+        strcat(string, pstring);
+        PrintAndLogEx(NORMAL,"%s\n", string);
+
+    } else {
+
+        if (addr_given) {
+            
+            // selective read mode
+
+            prepare_result(data, etd->address, etd->address, words);
+            print_result(words, etd->address, etd->address);
+            
+            string[0] = '\0';
+            sprintf(pstring, "\n  reading " _GREEN_("ok "));
+            strcat(string, pstring);
+            
+            if (pwd_given) {
+                if (login) {
+                    sprintf(pstring, "(login with password 0x%02x%02x%02x%02x)",
+                            etd->password[0], etd->password[1],
+                            etd->password[2], etd->password[3]);
+                    strcat(string, pstring);
+                } else {
+                    sprintf(pstring, "(login failed)");
+                    strcat(string, pstring);
+                }
+            } else {
+                sprintf(pstring, "(no login)");
+                strcat(string, pstring);
+            }
+
+        } else {
+            
+            //standard read mode
+
+            prepare_result(data, 0, now - 1, words);
+            print_result(words, 0, now - 1);
+
+            string[0] = '\0';
+            sprintf(pstring, "\n  reading " _GREEN_("ok "));
+            strcat(string, pstring);
+
+            if (pwd_given) {
+                sprintf(pstring, "(standard read mode, password ignored)");
+                strcat(string, pstring);
+            } else {
+                sprintf(pstring, "(standard read mode)");
+                strcat(string, pstring);
+            }
+        }
+
+        PrintAndLogEx(NORMAL,"%s\n", string);
+    }
+}
+
+int CmdEM4x50SRead(const char *Cmd) {
+
+    // envoke reading
+    // - without option -> standard read mode
+    // - with given address (option a) (and optional password if address is
+    //   read protected) -> selective read mode
+
+    bool errors = false, success = false;
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+
+    // init
+    etd.pwd_given = false;
+    etd.addr_given = false;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_sread();
+
+            case 'p':
+                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
+                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
+                 }
+                etd.pwd_given = true;
+                cmdp += 2;
+                break;
+
+            case 'a':
+                param_getdec(Cmd, cmdp + 1, &etd.address);
+
+                // validation
+                if (etd.address <= 0 || etd.address >= EM4X50_NO_WORDS) {
+                    PrintAndLogEx(FAILED, "\n  error, address has to be in range [1-33]\n");
+                    return PM3_EINVARG;
+                }
+                etd.addr_given = true;
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors)
+         return usage_lf_em4x50_sread();
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_SREAD, (uint8_t *)&etd, sizeof(etd));
+
+
+    if (!WaitForResponse(CMD_ACK, &resp)) {
+        PrintAndLogEx(WARNING, "\n  timeout while waiting for reply.\n");
+        return PM3_ETIMEOUT;
+    }
+    
+    // get, prepare and print response
+    print_sread_result(&resp, &etd);
+    
+    success = (resp.status & STATUS_SUCCESS) >> 1;
+    return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }

@@ -659,8 +659,8 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     // Allowed clock rates: 16, 32, 40 and 64
     if ((clock1 != 16) && (clock1 != 32) && (clock1 != 64) && (clock1 != 40)) {
-        PrintAndLogEx(ERR, "error, clock rate" _RED_("%d")" not valid");
-        PrintAndLogEx(INFO, "supported clock rates: " _YELLOW_("16, 32, 40, 60") "\n", clock1);
+        PrintAndLogEx(FAILED, "error, clock rate" _RED_("%d")" not valid", clock1);
+        PrintAndLogEx(INFO, "supported clock rates: " _YELLOW_("16, 32, 40, 60") "\n");
         usage_lf_em410x_write();
         return PM3_EINVARG;
     }
@@ -1759,6 +1759,7 @@ static command_t CommandTable[] = {
     {"4x50_info",   CmdEM4x50Info,        IfPm3Lf,         "read complete data from EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3Lf,         "write word data to EM4x50"},
     {"4x50_write_password", CmdEM4x50WritePassword, IfPm3Lf, "change passwword of EM4x50 tag"},
+    {"4x50_sread",  CmdEM4x50SRead,       IfPm3Lf,         "read word data from EM4x50 on device"},
     {NULL, NULL, NULL, NULL}
 };
 
