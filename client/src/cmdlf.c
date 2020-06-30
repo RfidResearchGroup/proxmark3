@@ -1206,6 +1206,14 @@ static bool CheckChipType(bool getDeviceData) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf t55xx`") " commands");
         retval = true;
     }
+    
+    // check for em4x50 chips
+    if (detect_4x50_block()) {
+        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50`") " commands");
+        retval = true;
+        goto out;
+    }
 
 out:
     save_restoreGB(GRAPH_RESTORE);
@@ -1252,7 +1260,7 @@ int CmdLFfind(const char *Cmd) {
         }
 
         if (IfPm3EM4x50()) {
-            if (EM4x50Read("", false) == PM3_SUCCESS) {
+            if (read_em4x50_uid() == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!");
                 return PM3_SUCCESS;
             }
