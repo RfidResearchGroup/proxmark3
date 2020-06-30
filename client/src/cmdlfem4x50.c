@@ -76,43 +76,43 @@ static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t 
 
     // restructure received result in "em4x50_word_t" structure and check all
     // parities including stop bit; result of each check is stored in structure
-    
+
     int p = 0, c[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    
+
     for (int i = fwr; i <= lwr; i++) {
-    
+
         words[i].stopparity = true;
         words[i].parity = true;
- 
+
         for (int j = 0; j < 8; j++)
             c[j] = 0;
 
         for (int j = 0; j < 4; j++) {
             words[i].byte[j] = byte[i*7+j];
             words[i].row_parity[j] = (byte[i*7+4] >> (3-j)) & 1;
-            
+
             // collect parities
             p = 0;
 
             for (int k = 0; k < 8; k++) {
-               
+
                 // row parity
                 p ^= (words[i].byte[j] >> k) & 1;
-                
+
                 // column parity
                 c[k] ^= (words[i].byte[j] >> (7-k)) & 1;
             }
-            
+
             // check row parities
             words[i].rparity[j] = (words[i].row_parity[j] == p) ? true : false;
 
             if (!words[i].rparity[j])
                 words[i].parity = false;
         }
-        
+
         // check column parities
         words[i].col_parity = byte[i*7+5];
-        
+
         for (int j = 0; j < 8; j++) {
             words[i].cparity[j] = (((words[i].col_parity >> (7-j)) & 1) == c[j]) ? true : false;
 
@@ -122,23 +122,23 @@ static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t 
 
         // check stop bit
         words[i].stopbit = byte[i*7+6] & 1;
-        
+
         if (words[i].stopbit == 1)
             words[i].stopparity = false;
     }
 }
 
 static void print_result(const em4x50_word_t *words, int fwr, int lwr, bool verbose) {
-    
+
     // print available information for given word from fwr to lwr, i.e.
     // bit table + summary lines with hex notation of word (msb + lsb)
-    
+
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
 
     for (int i = fwr; i <= lwr; i++) {
 
         if (verbose) {
-            
+
             // final result
             string[0] = '\0';
             sprintf(pstring, "\n  word[%i] msb: " _GREEN_("0x"), i);
@@ -148,7 +148,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr, bool verb
                 sprintf(pstring, _GREEN_("%02x"), words[i].byte[j]);
                 strcat(string, pstring);
             }
-            
+
             sprintf(pstring, "\n  word[%i] lsb: 0x", i);
             strcat(string, pstring);
 
@@ -157,7 +157,6 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr, bool verb
                 strcat(string, pstring);
             }
         } else {
-            
             string[0] = '\0';
             sprintf(pstring, "[" _GREEN_("+") "]  word[%i]: " _YELLOW_("0x"), i);
             strcat(string, pstring);
@@ -167,7 +166,6 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr, bool verb
                 strcat(string, pstring);
             }
         }
-        
         PrintAndLogEx(INFO, string);
     }
 }
@@ -187,21 +185,17 @@ static void print_info_result(uint8_t *data, bool verbose) {
     int lwrp = reflect8(words[EM4X50_PROTECTION].byte[LAST_WORD_READ_PROTECTED]);
     int fwwi = reflect8(words[EM4X50_PROTECTION].byte[FIRST_WORD_WRITE_INHIBITED]);
     int lwwi = reflect8(words[EM4X50_PROTECTION].byte[LAST_WORD_WRITE_INHIBITED]);
-    
-    
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    
+
     // data section
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("EM4x50 data:"));
 
     if (verbose) {
-
-        // detailed data section
         print_result(words, 0, EM4X50_NO_WORDS - 1, true);
-        
     } else {
 
         PrintAndLogEx(NORMAL, "");
@@ -210,7 +204,6 @@ static void print_info_result(uint8_t *data, bool verbose) {
 
         // condensed data section
         for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-          
             char s[50] = {0};
             switch(i) {
                 case EM4X50_DEVICE_PASSWORD:
@@ -236,8 +229,7 @@ static void print_info_result(uint8_t *data, bool verbose) {
         }
     }
     PrintAndLogEx(INFO, "----+-------------+----------------------------------");
-        
-    
+
     // configuration section
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---- " _CYAN_("Configuration") " ----");
@@ -264,7 +256,7 @@ bool detect_4x50_block(void) {
         .addr_given = true,
         .address = EM4X50_DEVICE_ID,
     };
-    em4x50_word_t words[EM4X50_NO_WORDS] = {0};
+    em4x50_word_t words[EM4X50_NO_WORDS];
     return (em4x50_read(&etd, words, false) == PM3_SUCCESS);
 }
 
@@ -274,7 +266,7 @@ int read_em4x50_uid(void) {
         .addr_given = true,
         .address = EM4X50_DEVICE_SERIAL,
     };
-    em4x50_word_t words[EM4X50_NO_WORDS] = {0};
+    em4x50_word_t words[EM4X50_NO_WORDS];
     int res = em4x50_read(&etd, words, false);
     if (res == PM3_SUCCESS)
         PrintAndLogEx(INFO, " Serial: " _GREEN_("%s"), sprint_hex(words[EM4X50_DEVICE_SERIAL].byte, 4));
@@ -290,7 +282,7 @@ int CmdEM4x50Info(const char *Cmd) {
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     etd.pwd_given = false;
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
 
@@ -310,7 +302,7 @@ int CmdEM4x50Info(const char *Cmd) {
                 verbose = true;
                 cmdp += 1;
                 break;
-                
+
             default:
                 PrintAndLogEx(WARNING, "  Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -330,7 +322,7 @@ int CmdEM4x50Info(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-    
+
     bool success = (resp.status & STATUS_SUCCESS) >> 1;
     if (success) {
         print_info_result(resp.data.asBytes, verbose);
@@ -340,13 +332,13 @@ int CmdEM4x50Info(const char *Cmd) {
     PrintAndLogEx(FAILED, "reading tag " _RED_("failed"));
     return PM3_ESOFT;
 }
-    
+
 int CmdEM4x50Write(const char *Cmd) {
 
     // envoke writing a single word (32 bit) to a EM4x50 tag
 
     em4x50_data_t etd = { .pwd_given = false };
-    
+
     bool errors = false, bword = false, baddr = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -409,7 +401,7 @@ int CmdEM4x50Write(const char *Cmd) {
         PrintAndLogEx(FAILED, "writing " _RED_("failed"));
         return PM3_ESOFT;
     }
-   
+
     if (etd.pwd_given) {
         bool login = resp.status & STATUS_LOGIN;
         if (login == false) {
@@ -431,7 +423,7 @@ int CmdEM4x50Write(const char *Cmd) {
 }
 
 static void print_write_password_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
-    
+
     // display result of password changing operation
 
     char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
@@ -499,7 +491,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     success = (bool)resp.status;
-    
+
     // get, prepare and print response
     if (success)
         print_write_password_result(&resp, &etd);
@@ -510,14 +502,14 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 }
 
 int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
-    
+
     // envoke reading
     // - without option -> standard read mode
     // - with given address (option a) (and optional password if address is
     //   read protected) -> selective read mode
 
     em4x50_data_t edata = { .pwd_given = false, .addr_given = false };
-    
+
     if (etd != NULL) {
         edata = *etd;
     }
@@ -530,15 +522,15 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-    
+
     bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
     if (isOK == false) {
         if (verbose)
             PrintAndLogEx(FAILED, "reading " _RED_("failed"));
-            
+
         return PM3_ESOFT;
     }
-    
+
     if (edata.pwd_given) {
         bool login = resp.status & STATUS_LOGIN;
         if (login == false) {
@@ -547,11 +539,11 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
         }
         PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%s"), sprint_hex_inrow(etd->password, 4));
     }
-    
+
     uint8_t *data = resp.data.asBytes;
     em4x50_word_t words[EM4X50_NO_WORDS];
     if (edata.addr_given) {
-        prepare_result(data, etd->address, etd->address, words);           
+        prepare_result(data, etd->address, etd->address, words);
     } else {
         int now = (resp.status & STATUS_NO_WORDS) >> 2;
         prepare_result(data, 0, now - 1, words);
@@ -560,7 +552,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     if (out != NULL) {
         memcpy(out, &words, sizeof(em4x50_word_t) * EM4X50_NO_WORDS);
     }
-            
+
     if (verbose) {
         print_result(words, etd->address, etd->address, true);
     }
@@ -574,7 +566,7 @@ int CmdEM4x50Read(const char *Cmd) {
     etd.addr_given = false;
 
     bool errors = false;
-    uint8_t cmdp = 0;    
+    uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
