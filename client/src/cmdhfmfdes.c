@@ -382,8 +382,8 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
         sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
         sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
-//    else if (major == 0x13 && minor == 0x00)
-//        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
+    else if (major == 0x13 && minor == 0x00)
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
         sprintf(retStr, "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
     else
@@ -3305,8 +3305,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1 MF3ICD21/41/81, EAL4+");
     if (major == 2 && minor == 0)
         PrintAndLogEx(INFO, "\t2.0 - DESFire Ev2, Originality check, proximity check, EAL5");
-//    if (major == 3 && minor == 0)
-//        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL5");
+    if (major == 3 && minor == 0)
+        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6 ?");
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
