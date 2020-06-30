@@ -507,19 +507,23 @@ static int CmdStatus(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_STATUS, NULL, 0);
-    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false)
-        PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "Status command timeout. Communication speed test timed out");
+        return PM3_ETIMEOUT;
+    }
     return PM3_SUCCESS;
 }
 
 static int CmdTia(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
     PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition (TIA)...");
-    PacketResponseNG resp;
+    clearCommandBuffer();
     SendCommandNG(CMD_TIA, NULL, 0);
-    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false)
-        PrintAndLogEx(WARNING, "TIA command failed. You probably need to unplug the Proxmark3.");
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "TIA command timeout. You probably need to unplug the Proxmark3.");
+        return PM3_ETIMEOUT;
+    }
     PrintAndLogEx(INFO, "TIA done.");
     return PM3_SUCCESS;
 }
