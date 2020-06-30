@@ -30,6 +30,7 @@
 #include "cmddata.h"        // for `lf search`
 #include "cmdlfawid.h"      // for awid menu
 #include "cmdlfem4x.h"      // for em4x menu
+#include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfio.h"        // for ioprox menu
@@ -1250,6 +1251,13 @@ int CmdLFfind(const char *Cmd) {
             }
         }
 
+        if (IfPm3EM4x50()) {
+            if (EM4x50Read("", false) == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!");
+                return PM3_SUCCESS;
+            }
+        }
+
         // only run if graphbuffer is just noise as it should be for hitag
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
@@ -1269,8 +1277,6 @@ int CmdLFfind(const char *Cmd) {
             return PM3_ESOFT;
         }
     }
-
-    if (EM4x50Read("", false) == PM3_SUCCESS)  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!"); return PM3_SUCCESS;}
 
     if (demodHID() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
     if (demodAWID() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
