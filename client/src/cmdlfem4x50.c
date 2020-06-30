@@ -268,7 +268,6 @@ bool detect_4x50_block(void) {
     return (em4x50_read(&etd, words, false) == PM3_SUCCESS);
 }
 
-
 int read_em4x50_uid(void) {
     em4x50_data_t etd = {
         .pwd_given = false,
@@ -341,62 +340,22 @@ int CmdEM4x50Info(const char *Cmd) {
     PrintAndLogEx(FAILED, "reading tag " _RED_("failed"));
     return PM3_ESOFT;
 }
-
-static void print_write_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
     
-    // display result of writing operation in structured format
-
-    bool pwd_given = etd->pwd_given;
-    bool login = resp->status & STATUS_LOGIN;
-    uint8_t *data = resp->data.asBytes;
-    char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
-    em4x50_word_t words[EM4X50_NO_WORDS];
-
-    prepare_result(data, etd->address, etd->address, words);
-    print_result(words, etd->address, etd->address, true);
-
-    sprintf(pstring, "\n  writing " _GREEN_("ok "));
-    strcat(string, pstring);
-
-    if (pwd_given) {
-
-        if (login) {
-            sprintf(pstring, "(login with password 0x%02x%02x%02x%02x)",
-                                etd->password[0], etd->password[1],
-                                etd->password[2], etd->password[3]);
-            strcat(string, pstring);
-        } else {
-            sprintf(pstring, "(login failed)");
-            strcat(string, pstring);
-        }
-
-    } else {
-        sprintf(pstring, "(no login)");
-        strcat(string, pstring);
-    }
-
-    PrintAndLogEx(NORMAL,"%s\n", string);
-}
-
 int CmdEM4x50Write(const char *Cmd) {
 
     // envoke writing a single word (32 bit) to a EM4x50 tag
 
-    bool errors = false, bword = false, baddr = false, success = false;
+    em4x50_data_t etd = { .pwd_given = false };
+    
+    bool errors = false, bword = false, baddr = false;
     uint8_t cmdp = 0;
-    em4x50_data_t etd;
-    PacketResponseNG resp;
-
-    // init
-    etd.pwd_given = false;
-
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
+            case 'h': {
                 return usage_lf_em4x50_write();
-
-            case 'p':
+            }
+            case 'p': {
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
                      PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
                      return PM3_EINVARG;
@@ -404,8 +363,8 @@ int CmdEM4x50Write(const char *Cmd) {
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
-
-            case 'w':
+            }
+            case 'w': {
                 if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
                      PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
                      return PM3_EINVARG;
@@ -413,8 +372,8 @@ int CmdEM4x50Write(const char *Cmd) {
                 bword = true;
                 cmdp += 2;
                 break;
-
-            case 'a':
+            }
+            case 'a': {
                 param_getdec(Cmd, cmdp + 1, &etd.address);
 
                 // validation
@@ -425,11 +384,12 @@ int CmdEM4x50Write(const char *Cmd) {
                 baddr = true;
                 cmdp += 2;
                 break;
-
-            default:
+            }
+            default: {
                 PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
+            }
         }
     }
 
@@ -438,22 +398,36 @@ int CmdEM4x50Write(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
-
-
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-    
-    success = (resp.status & STATUS_SUCCESS) >> 1;
 
-    // get, prepare and print response
-    if (success)
-        print_write_result(&resp, &etd);
-    else
-        PrintAndLogEx(NORMAL,"\nwriting " _RED_("failed") "\n");
-    
-    return (success) ? PM3_SUCCESS : PM3_ESOFT;
+    bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
+    if (isOK == false) {
+        PrintAndLogEx(FAILED, "writing " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+   
+    if (etd.pwd_given) {
+        bool login = resp.status & STATUS_LOGIN;
+        if (login == false) {
+            PrintAndLogEx(FAILED, "login failed");
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%s"), sprint_hex_inrow(etd.password, 4));
+    }
+
+    // display result of writing operation in structured format
+    uint8_t *data = resp.data.asBytes;
+    em4x50_word_t words[EM4X50_NO_WORDS];
+
+    prepare_result(data, etd.address, etd.address, words);
+    print_result(words, etd.address, etd.address, true);
+    PrintAndLogEx(SUCCESS, "Successfully wrote to tag");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("lf em 4x50_read a %u") "` - to read your data", etd.address);
+    return PM3_SUCCESS;
 }
 
 static void print_write_password_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
@@ -542,9 +516,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     // - with given address (option a) (and optional password if address is
     //   read protected) -> selective read mode
 
-    em4x50_data_t edata;
-    edata.pwd_given = false;
-    edata.addr_given = false;
+    em4x50_data_t edata = { .pwd_given = false, .addr_given = false };
     
     if (etd != NULL) {
         edata = *etd;
@@ -606,10 +578,10 @@ int CmdEM4x50Read(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
+            case 'h': {
                 return usage_lf_em4x50_read();
-
-            case 'p':
+            }
+            case 'p': {
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
                      PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
                      return PM3_EINVARG;
@@ -617,8 +589,8 @@ int CmdEM4x50Read(const char *Cmd) {
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
-
-            case 'a':
+            }
+            case 'a': {
                 param_getdec(Cmd, cmdp + 1, &etd.address);
 
                 // validation
@@ -629,10 +601,12 @@ int CmdEM4x50Read(const char *Cmd) {
                 etd.addr_given = true;
                 cmdp += 2;
                 break;
-            default:
+            }
+            default: {
                 PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
+            }
         }
     }
 
