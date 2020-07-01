@@ -74,6 +74,7 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_TAG_FULL_PERIOD            64
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
+#define EM4X50_T_WAITING_FOR_SNGLLIW        50
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 
 #define EM4X50_TAG_TOLERANCE                8
@@ -420,6 +421,34 @@ static void em4x50_send_word(const uint8_t bytes[4]) {
     em4x50_send_bit(0);
 }
 
+static bool find_single_listen_window(void) {
+    
+    // find single listen window
+    
+    int cnt_pulses = 0;
+    
+    while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW) {
+    
+        // identification of listen window is done via evaluation of
+        // pulse lengths
+        if (check_pulse_length(get_pulse_length(), 3 * EM4X50_T_TAG_FULL_PERIOD)) {
+            
+            if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
+                
+                // listen window found
+                return true;
+                
+            }
+        } else {
+            
+            cnt_pulses++;
+        
+        }
+    }
+    
+    return false;
+}
+
 static bool find_double_listen_window(bool bcommand) {
     
     // find two successive listen windows that indicate the beginning of
@@ -480,6 +509,15 @@ static bool find_double_listen_window(bool bcommand) {
     }
     
     return false;
+}
+
+static bool find_em4x50_tag(void) {
+    
+    // function is used to check wether a tag on the proxmark is an
+    // EM4x50 tag or not -> speed up "lf search" process
+    
+    return (find_single_listen_window());
+        
 }
 
 static bool request_receive_mode(void) {
@@ -764,7 +802,7 @@ void em4x50_info(em4x50_data_t *etd) {
     em4x50_setup_read();
 
     // set gHigh and gLow
-    if (get_signalproperties()) {
+    if (get_signalproperties() && find_em4x50_tag()) {
 
         if (etd->pwd_given) {
 
@@ -803,7 +841,7 @@ void em4x50_read(em4x50_data_t *etd) {
     em4x50_setup_read();
     
     // set gHigh and gLow
-    if (get_signalproperties()) {
+    if (get_signalproperties() && find_em4x50_tag()) {
      
         if (etd->addr_given) {
 
@@ -924,7 +962,7 @@ void em4x50_write(em4x50_data_t *etd) {
     em4x50_setup_read();
     
     // set gHigh and gLow
-    if (get_signalproperties()) {
+    if (get_signalproperties() && find_em4x50_tag()) {
     
         // reorder word according to datasheet
         msb2lsb_word(etd->word);
@@ -979,7 +1017,7 @@ void em4x50_write_password(em4x50_data_t *etd) {
     em4x50_setup_read();
     
     // set gHigh and gLow
-    if (get_signalproperties()) {
+    if (get_signalproperties() && find_em4x50_tag()) {
 
         // login and change password
         if (login(etd->password)) {
