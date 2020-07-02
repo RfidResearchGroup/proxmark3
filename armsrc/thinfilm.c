@@ -122,7 +122,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);

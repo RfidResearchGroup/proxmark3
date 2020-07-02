@@ -192,7 +192,7 @@ static void em4x50_setup_read(void) {
     // 50ms for the resonant antenna to settle.
     SpinDelay(50);
     // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
     // start a 1.5ticks is 1us
     StartTicks();
  
