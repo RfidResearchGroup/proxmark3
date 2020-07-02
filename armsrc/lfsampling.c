@@ -51,11 +51,11 @@ void printConfig(void) {
 }
 
 void printSamples(void) {
-    DbpString(_CYAN_("LF Sampling memory"));
-    Dbprintf("  decimation counter.....%d ", samples.dec_counter);
-    Dbprintf("  sum.....%u ", samples.sum);
-    Dbprintf("  counter.....%u ", samples.counter);
-    Dbprintf("  total saved.....%u ", samples.total_saved);
+    DbpString(_CYAN_("LF Sampling memory usage"));
+//    Dbprintf("  decimation counter...%d", samples.dec_counter);
+//    Dbprintf("  sum..................%u", samples.sum);
+    Dbprintf("  counter.............." _YELLOW_("%u"), samples.counter);
+    Dbprintf("  total saved.........." _YELLOW_("%u"), samples.total_saved);
     print_stack_usage();
 }
 
@@ -241,7 +241,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
         SpinDelay(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
 
     // start a 1.5ticks is 1us
     StartTicks();
@@ -480,19 +480,19 @@ void doT55x7Acquisition(size_t sample_size) {
 
 #define COTAG_T1 384
 #define COTAG_T2 (COTAG_T1>>1)
-#define COTAG_ONE_THRESHOLD 128+10
-#define COTAG_ZERO_THRESHOLD 128-10
+#define COTAG_ONE_THRESHOLD 128+5
+#define COTAG_ZERO_THRESHOLD 128-5
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif
-void doCotagAcquisition(size_t sample_size) {
+void doCotagAcquisition() {
 
     uint8_t *dest = BigBuf_get_addr();
-    uint16_t bufsize = MIN(sample_size, BigBuf_max_traceLen());
+    uint16_t bufsize = BigBuf_max_traceLen();
 
     dest[0] = 0;
     uint8_t firsthigh = 0, firstlow = 0;
-    uint16_t i = 0, noise_counter = 0, checker = 0;
+    uint16_t i = 0, noise_counter = 0;
     
     if (DBGLEVEL >= DBG_DEBUG) {
         Dbprintf("doCotagAcquisition - after init");
@@ -504,20 +504,7 @@ void doCotagAcquisition(size_t sample_size) {
         if (BUTTON_PRESS())
             break;
         
-        if (checker == 4000) {
-            if (data_available())
-                break;
-            else
-                checker = 0;
-        } else {
-            ++checker;
-        }
-
         WDT_HIT();
-
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            LED_D_ON();
-        }
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -551,9 +538,13 @@ void doCotagAcquisition(size_t sample_size) {
         }
     }
 
+    Dbprintf("doCotagAcquisition - %u high %u == 1   low %u == 1", i, firsthigh, firstlow);
+
     // Ensure that DC offset removal and noise check is performed for any device-side processing
     removeSignalOffset(dest, bufsize);
+    printSamples();
     computeSignalProperties(dest, bufsize);
+    printSamples();
 }
 
 uint32_t doCotagAcquisitionManchester(void) {
@@ -565,7 +556,7 @@ uint32_t doCotagAcquisitionManchester(void) {
     uint8_t firsthigh = 0, firstlow = 0;
     uint8_t curr = 0, prev = 0;
     uint16_t sample_counter = 0, period = 0;
-    uint16_t noise_counter = 0, checker = 0;
+    uint16_t noise_counter = 0;
     
     if (DBGLEVEL >= DBG_DEBUG) {
         Dbprintf("doCotagAcquisitionManchester - after init");
@@ -576,15 +567,6 @@ uint32_t doCotagAcquisitionManchester(void) {
         
         if (BUTTON_PRESS()) 
             break;
-        
-        if (checker == 4000) {
-            if ( data_available())
-                break;
-            else
-                checker = 0;
-        } else {
-            ++checker;
-        }
 
         WDT_HIT();
 
