@@ -86,7 +86,6 @@ int preferences_load(void) {
     // to better control json cant find file error msg.
     char *fn = prefGetFilename();
     if (fileExists(fn)) {
-        PrintAndLogEx(INFO, "Loading preferences...");
         if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL, &preferences_load_callback) == PM3_SUCCESS) {
             session.preferences_loaded = true;
         }
@@ -384,75 +383,75 @@ static const char *prefShowMsg(prefShowOpt_t Opt) {
     return "";
 }
 
-static void showEmojiState(prefShowOpt_t Opt) {
+static void showEmojiState(prefShowOpt_t opt) {
 
     switch (session.emoji_mode) {
         case ALIAS:
-            PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("alias"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("alias"), prefShowMsg(opt));
             break;
         case EMOJI:
-            PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("emoji"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("emoji"), prefShowMsg(opt));
             break;
         case ALTTEXT:
-            PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("alttext"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("alttext"), prefShowMsg(opt));
             break;
         case ERASE:
-            PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("erase"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("erase"), prefShowMsg(opt));
             break;
         default:
-            PrintAndLogEx(NORMAL, "   %s emoji.................. "_RED_("unknown"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s emoji.................. "_RED_("unknown"), prefShowMsg(opt));
     }
 }
 
-static void showColorState(prefShowOpt_t Opt) {
+static void showColorState(prefShowOpt_t opt) {
 
     if (session.supports_colors)
-        PrintAndLogEx(NORMAL, "   %s color.................. "_GREEN_("ansi"), prefShowMsg(Opt));
+        PrintAndLogEx(INFO, "   %s color.................. "_GREEN_("ansi"), prefShowMsg(opt));
     else
-        PrintAndLogEx(NORMAL, "   %s color.................. "_WHITE_("off"), prefShowMsg(Opt));
+        PrintAndLogEx(INFO, "   %s color.................. "_WHITE_("off"), prefShowMsg(opt));
 }
 
-static void showClientDebugState(prefShowOpt_t Opt) {
+static void showClientDebugState(prefShowOpt_t opt) {
 
     switch (session.client_debug_level) {
         case cdbOFF:
-            PrintAndLogEx(NORMAL, "   %s client debug........... "_WHITE_("off"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s client debug........... "_WHITE_("off"), prefShowMsg(opt));
             break;
         case cdbSIMPLE:
-            PrintAndLogEx(NORMAL, "   %s client debug........... "_GREEN_("simple"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s client debug........... "_GREEN_("simple"), prefShowMsg(opt));
             break;
         case cdbFULL:
-            PrintAndLogEx(NORMAL, "   %s client debug........... "_GREEN_("full"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s client debug........... "_GREEN_("full"), prefShowMsg(opt));
             break;
         default:
-            PrintAndLogEx(NORMAL, "   %s client debug........... "_RED_("unknown"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s client debug........... "_RED_("unknown"), prefShowMsg(opt));
     }
 }
 /*
-static void showDeviceDebugState(prefShowOpt_t Opt) {
+static void showDeviceDebugState(prefShowOpt_t opt) {
     switch (session.device_debug_level) {
         case ddbOFF:
-            PrintAndLogEx(NORMAL, "   %s device debug........... "_WHITE_("off"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s device debug........... "_WHITE_("off"), prefShowMsg(opt));
             break;
         case ddbERROR:
-            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("error"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s device debug........... "_GREEN_("error"), prefShowMsg(opt));
             break;
         case ddbINFO:
-            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("info"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s device debug........... "_GREEN_("info"), prefShowMsg(opt));
             break;
         case ddbDEBUG:
-            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("debug"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s device debug........... "_GREEN_("debug"), prefShowMsg(opt));
             break;
         case ddbEXTENDED:
-            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("extended"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s device debug........... "_GREEN_("extended"), prefShowMsg(opt));
             break;
         default:
-            PrintAndLogEx(NORMAL, "   %s device debug........... "_RED_("unknown"), prefShowMsg(Opt));
+            PrintAndLogEx(INFO, "   %s device debug........... "_RED_("unknown"), prefShowMsg(opt));
     }
 }
 */
 /*
-static void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
+static void showSavePathState(savePaths_t pathIndex, prefShowOpt_t opt) {
 
     char tempStr[50];
 
@@ -470,28 +469,29 @@ static void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
             strcpy (tempStr,_RED_("unknown")" save path......");
     }
     if ((session.defaultPaths[pathIndex] == NULL) || (strcmp(session.defaultPaths[pathIndex],"") == 0))
-        PrintAndLogEx(NORMAL, "   %s %s "_WHITE_("not set"), prefShowMsg(Opt),tempStr);
+        PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"), prefShowMsg(opt),tempStr);
     else
-        PrintAndLogEx(NORMAL, "   %s %s "_GREEN_("%s"), prefShowMsg(Opt), tempStr, session.defaultPaths[pathIndex]);
+        PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"), prefShowMsg(opt), tempStr, session.defaultPaths[pathIndex]);
 }
 
 static void showPlotPosState(void) {
-    PrintAndLogEx(NORMAL, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
+    PrintAndLogEx(INFO, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.plot.x, session.plot.y, session.plot.h, session.plot.w);
 }
 
 static void showOverlayPosState(void) {
-    PrintAndLogEx(NORMAL, "    Slider/Overlay window.. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
+    PrintAndLogEx(INFO, "    Slider/Overlay window.. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.overlay.x, session.overlay.y, session.overlay.h, session.overlay.w);
 }
 */
 
-static void showHintsState(prefShowOpt_t Opt) {
+static void showHintsState(prefShowOpt_t opt) {
     if (session.show_hints)
-        PrintAndLogEx(NORMAL, "   %s hints.................. "_GREEN_("on"), prefShowMsg(Opt));
+        PrintAndLogEx(INFO, "   %s hints.................. "_GREEN_("on"), prefShowMsg(opt));
     else
-        PrintAndLogEx(NORMAL, "   %s hints.................. "_WHITE_("off"), prefShowMsg(Opt));
+        PrintAndLogEx(INFO, "   %s hints.................. "_WHITE_("off"), prefShowMsg(opt));
 }
+
 
 static int setCmdEmoji(const char *Cmd) {
     uint8_t cmdp = 0;
@@ -909,13 +909,14 @@ static int CmdPrefShow(const char *Cmd) {
     if (session.preferences_loaded) {
         char *fn = prefGetFilename();
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, _CYAN_("Preferences loaded from " _YELLOW_("%s")), fn);
+    PrintAndLogEx(INFO, "Using "_YELLOW_("%s"), fn);
         free(fn);
     } else {
         PrintAndLogEx(ERR, "Preferences not loaded");
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(INFO, "Current settings");
     showEmojiState(prefShowNone);
     showHintsState(prefShowNone);
     showColorState(prefShowNone);
@@ -927,6 +928,7 @@ static int CmdPrefShow(const char *Cmd) {
 
     showClientDebugState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 /*

@@ -10,9 +10,25 @@
     {
         "AID": "D3494F",
         "Vendor": "HID",
-        "Country": "United States",
+        "Country": "US",
         "Name": "SIO DESFire Ev1",
-        "Description": "",
+        "Description": "Field Encoder",
+        "Type": "pacs"
+    },
+    {
+        "AID": "D9494F",
+        "Vendor": "HID",
+        "Country": "US",
+        "Name": "Access control",
+        "Description": "Field Encoder",
+        "Type": "pacs"
+    },
+    {
+        "AID": "53494F",
+        "Vendor": "HID",
+        "Country": "US",
+        "Name": "Access control",
+        "Description": "HID Factory",
         "Type": "pacs"
     },
     {
@@ -46,7 +62,7 @@
         "Name": "Legic",
         "Description": "(FID 02: EF-CONF)",
         "Type": ""
-    },   
+    },
     {
         "AID": "578000",
         "Vendor": "NORTIC",

@@ -46,9 +46,9 @@ static int usage_lf_nexwatch_clone(void) {
     PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nexwatch clone r 5600000000213C9F8F150C");
-    PrintAndLogEx(NORMAL, "       lf nexwatch clone c 521512301 m 1 n       -- Nexkey credential");
-    PrintAndLogEx(NORMAL, "       lf nexwatch clone c 521512301 m 1 q       -- Quadrakey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone r 5600000000213C9F8F150C"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone c 521512301 m 1 n") "     -- Nexkey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone c 521512301 m 1 q") "     -- Quadrakey credential");
     return PM3_SUCCESS;
 }
 
@@ -68,9 +68,9 @@ static int usage_lf_nexwatch_sim(void) {
     PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C");
-    PrintAndLogEx(NORMAL, "       lf nexwatch sim c 521512301 m 1 n       -- Nexkey credential");
-    PrintAndLogEx(NORMAL, "       lf nexwatch sim c 521512301 m 1 q       -- Quadrakey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim r 5600000000213C9F8F150C"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim c 521512301 m 1 n") "      -- Nexkey credential");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim c 521512301 m 1 q") "      -- Quadrakey credential");
     return PM3_SUCCESS;
 }
 
@@ -244,18 +244,16 @@ int demodNexWatch(void) {
     }
     PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%"PRIx32)")", cn, cn);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);
-    if (parity == calc_parity) {
-        PrintAndLogEx(SUCCESS, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
-    } else {
-        PrintAndLogEx(WARNING, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);
-    }
-    if (m_idx < ARRAYLEN(items)) {
-        PrintAndLogEx(SUCCESS, "        checksum : %s (0x%02X)", _GREEN_("ok"), chk);
-    } else {
-        PrintAndLogEx(WARNING, "        checksum : %s (0x%02X)", _RED_("fail"), chk);
-    }
 
-    PrintAndLogEx(INFO, " raw : " _YELLOW_("%"PRIX32"%"PRIX32"%"PRIX32), raw1, raw2, raw3);
+    if (parity == calc_parity) {
+        PrintAndLogEx(DEBUG, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
+    } else {
+        PrintAndLogEx(DEBUG, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);
+    }
+    
+    PrintAndLogEx(DEBUG, "        checksum : %s (0x%02X)", (m_idx < ARRAYLEN(items)) ? _GREEN_("ok") : _RED_("fail"), chk);
+
+    PrintAndLogEx(INFO, " Raw : " _YELLOW_("%"PRIX32"%"PRIX32"%"PRIX32), raw1, raw2, raw3);
     return PM3_SUCCESS;
 }
 

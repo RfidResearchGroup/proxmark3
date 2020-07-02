@@ -37,8 +37,8 @@ static int usage_lf_pac_clone(void) {
     PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 16 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf pac clone c CD4F5552 ");
-    PrintAndLogEx(NORMAL, "       lf pac clone b FF2049906D8511C593155B56D5B2649F ");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac clone c CD4F5552 "));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac clone b FF2049906D8511C593155B56D5B2649F "));
     return PM3_SUCCESS;
 }
 static int usage_lf_pac_sim(void) {
@@ -51,7 +51,7 @@ static int usage_lf_pac_sim(void) {
     PrintAndLogEx(NORMAL, "  <Card ID>       : 8 byte PAC/Stanley card id");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf pac sim 12345678");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac sim 12345678"));
     return PM3_SUCCESS;
 }
 // by danshuk
@@ -176,7 +176,7 @@ static int CmdPacDemod(const char *Cmd) {
     int retval = demodbuf_to_pacid(DemodBuffer, DemodBufferLen, cardid, sizeof(cardid));
 
     if (retval == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "PAC/Stanley Tag Found -- Card ID: %s, Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
+        PrintAndLogEx(SUCCESS, "PAC/Stanley - Card: " _GREEN_("%s") ", Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
 
     return retval;
 }

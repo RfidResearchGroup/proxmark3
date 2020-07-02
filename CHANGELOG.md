@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added lf em function: 4x50_sread (@tharexde)
  - Added lf em functions: 4x50_info, 4x50_write, 4x50_write_password (@tharexde)
  - Fix em4x50 demodulation error (@tharexde)  
  - Fix `hf mfdes` authentification issues, DES working (@bkerler)

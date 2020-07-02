@@ -79,7 +79,7 @@
 import subprocess
 
 # EML data var te get keys of
-EML_FILE_DATA = """PLACE RAW hf-mf-CARD_UID-data.eml FILE CONTENT OF CURRENTLY LOADED CARD HERE"""
+EML_FILE_DATA = """PLACE RAW hf-mf-CARD_UID-dump.eml FILE CONTENT OF CURRENTLY LOADED CARD HERE"""
 # Change your device name here if it differs from the default Proxmark3 RDV4.0
 PROXMARK_BIN_EXEC_STRING = 'proxmark3 -c "%s" /dev/tty.usbmodemiceman1'
 # Constants

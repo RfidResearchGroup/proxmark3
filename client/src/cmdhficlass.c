@@ -388,9 +388,9 @@ static void fuse_config(const picopass_hdr *hdr) {
     uint8_t fuses = hdr->conf.fuses;
 
     if (isset(fuses, FUSE_FPERS))
-        PrintAndLogEx(SUCCESS, "  Mode: " _GREEN_("Personalization [programmable]"));
+        PrintAndLogEx(SUCCESS, "  Mode: " _GREEN_("Personalization (programmable)"));
     else
-        PrintAndLogEx(SUCCESS, "  Mode: " _YELLOW_("Application [locked]"));
+        PrintAndLogEx(SUCCESS, "  Mode: " _YELLOW_("Application (locked)"));
 
     if (isset(fuses, FUSE_CODING1)) {
         PrintAndLogEx(SUCCESS, "Coding: RFU");
@@ -414,9 +414,20 @@ static void fuse_config(const picopass_hdr *hdr) {
     else
         PrintAndLogEx(INFO, "    RA: Read access not enabled");
 
-    PrintAndLogEx(INFO, "    Block write lock 0x%02X", hdr->conf.block_writelock);
-    PrintAndLogEx(INFO, "                 EAS 0x%02X", hdr->conf.eas);
-
+    PrintAndLogEx(INFO,
+       "App limit " _YELLOW_("0x%02X") ", OTP " _YELLOW_("0x%02X%02X") ", Block write lock " _YELLOW_("0x%02X")
+        , hdr->conf.app_limit
+        , hdr->conf.otp[1]
+        , hdr->conf.otp[0]
+        , hdr->conf.block_writelock
+    );
+    PrintAndLogEx(INFO,
+       "     Chip " _YELLOW_("0x%02X") ", Mem " _YELLOW_("0x%02X") ", EAS " _YELLOW_("0x%02X") ", Fuses " _YELLOW_("0x%02X")
+        , hdr->conf.chip_config
+        , hdr->conf.mem_config
+        , hdr->conf.eas
+        , hdr->conf.fuses
+    );
 }
 
 static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
@@ -465,13 +476,13 @@ static void mem_app_config(const picopass_hdr *hdr) {
     if (applimit < 6) applimit = 26;
     if (kb == 2 && (applimit > 0x1f)) applimit = 26;
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("Memory") "------");
-    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
-    PrintAndLogEx(INFO, "    AA1  blocks 06-%02X", applimit);
-    PrintAndLogEx(INFO, "    AA2  blocks %02X-%02X", applimit + 1, max_blk);
-    PrintAndLogEx(INFO, "    OTP  0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
+    PrintAndLogEx(INFO, "------ " _CYAN_("Memory") " ------");
+    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u bytes), max blocks 0x%02X (%02d)", kb, app_areas, max_blk * 8, mem, mem);
+    PrintAndLogEx(INFO, "    AA1 blocks %u { 0x06 - 0x%02X (06 - %02d) }", applimit - 5 , applimit, applimit);
+    PrintAndLogEx(INFO, "    AA2 blocks %u { 0x%02X - 0x%02X (%02d - %02d) }", max_blk - applimit, applimit + 1, max_blk, applimit + 1, max_blk);
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") "------");
+    PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") " ------");
+    PrintAndLogEx(INFO, " Kd = Debit key (AA1),  Kc = Credit key (AA2)");
     uint8_t book = isset(mem, 0x20);
     if (book) {
         PrintAndLogEx(INFO, "     Read A - Kd");
@@ -491,6 +502,7 @@ static void mem_app_config(const picopass_hdr *hdr) {
 }
 
 static void print_picopass_info(const picopass_hdr *hdr) {
+    PrintAndLogEx(INFO, "------ " _CYAN_("card configuration") " ------");
     fuse_config(hdr);
     mem_app_config(hdr);
 }
@@ -1419,7 +1431,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // print the dump
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
@@ -2055,7 +2067,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
 
     uint8_t *csn = dump;
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(csn, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
@@ -2922,7 +2934,7 @@ int readIclass(bool loop, bool verbose) {
 
     uint32_t res = PM3_ETIMEOUT;
     // loop in client not device - else on windows have a communication error
-    while (!kbd_enter_pressed()) {
+    while (kbd_enter_pressed() == false) {
 
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
@@ -2931,31 +2943,49 @@ int readIclass(bool loop, bool verbose) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
 
             uint8_t readStatus = resp.oldarg[0] & 0xff;
-            uint8_t *data = resp.data.asBytes;
-
-//            if (verbose) PrintAndLogEx(INFO, "Readstatus:%02x", readStatus);
 
             // no tag found or button pressed
             if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
-                // abort
                 DropField();
                 return PM3_EOPABORTED;
             }
 
+            uint8_t *data = resp.data.asBytes;
+            picopass_hdr *hdr = (picopass_hdr *)data;
+            uint16_t length = resp.length;
+               
+            if ( length != sizeof(picopass_hdr))
+                continue;
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --------------------------");
+            PrintAndLogEx(INFO, "-------------------------------------------------------------");
+
             if (readStatus & FLAG_ICLASS_READER_CSN) {
-                PrintAndLogEx(NORMAL, "\n");
-                PrintAndLogEx(SUCCESS, "   CSN: " _YELLOW_("%s"), sprint_hex(data, 8));
+                PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") "  (uid)", sprint_hex(hdr->csn, sizeof(hdr->csn)));
                 tagFound = true;
             }
 
-            if (readStatus & FLAG_ICLASS_READER_CC) {
-                PrintAndLogEx(SUCCESS, "    CC: %s", sprint_hex(data + 16, 8));
+            if (readStatus & FLAG_ICLASS_READER_CONF) {
+                PrintAndLogEx(SUCCESS, " Config: %s  (Card configuration)", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
             }
 
+            if (readStatus & FLAG_ICLASS_READER_CC) {
+                PrintAndLogEx(SUCCESS, "E-purse: %s  (Card challenge, CC)", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
+            }
+            
+            PrintAndLogEx(SUCCESS, "     Kd: %s  (Debit key, hidden)", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+            PrintAndLogEx(SUCCESS, "     Kc: %s  (Credit key, hidden)", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+
+            if (readStatus & FLAG_ICLASS_READER_AIA) {
+//                PrintAndLogEx(INFO, "--------- " _CYAN_("AIA") " ---------");
+                PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
+            }
+            
             if (readStatus & FLAG_ICLASS_READER_CONF) {
                 printIclassDumpInfo(data);
             }
-
+                
             // if CSN ends with FF12E0, it's inside HID CSN range.
             bool isHidRange = (memcmp((uint8_t *)(data + 5), "\xFF\x12\xE0", 3) == 0);
 
@@ -2963,18 +2993,15 @@ int readIclass(bool loop, bool verbose) {
                 bool legacy = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
 
                 bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
-
-                PrintAndLogEx(SUCCESS, " App IA: %s", sprint_hex(data + 8 * 5, 8));
-                PrintAndLogEx(INFO, "------ " _CYAN_("fingerprint") " ------");
+                
+                PrintAndLogEx(INFO, "------ " _CYAN_("Fingerprint") " ------");
 
                 if (isHidRange) {
-                    PrintAndLogEx(SUCCESS, _YELLOW_("iClass")" (CSN is in HID range)");
-
                     if (legacy)
-                        PrintAndLogEx(SUCCESS, "   possible "_YELLOW_("iClass legacy")" credential");
+                        PrintAndLogEx(SUCCESS, _GREEN_("iCLASS legacy")" credential");
 
                     if (se_enabled)
-                        PrintAndLogEx(SUCCESS, "   possible "_YELLOW_("iClass SE")" credential");
+                        PrintAndLogEx(SUCCESS, _GREEN_("iCLASS SE")" credential");
 
                 } else {
                     PrintAndLogEx(SUCCESS, _YELLOW_("PicoPass")" (CSN is not in HID range)");
@@ -2982,6 +3009,7 @@ int readIclass(bool loop, bool verbose) {
             }
 
             if (tagFound && !loop) {
+                PrintAndLogEx(NORMAL, "");
                 DropField();
                 return PM3_SUCCESS;
             }
@@ -2991,6 +3019,7 @@ int readIclass(bool loop, bool verbose) {
         }
         if (!loop) break;
     }
+    PrintAndLogEx(NORMAL, "");
     DropField();
     return res;
 }

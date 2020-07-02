@@ -1276,8 +1276,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
     return PM3_SUCCESS;
 }
 
-static int CmdIdteckDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodIdteck(void) {
 
     if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
@@ -1337,10 +1336,12 @@ static int CmdIdteckDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int demodIdteck(void) {
-    return CmdIdteckDemod("");
+/*
+static int CmdIdteckDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodIdteck();
 }
-
+*/
 
 // by marshmellow
 // takes 3 arguments - clock, invert, maxErr as integers
@@ -1710,6 +1711,7 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------- " _CYAN_("LF Antenna") " ----------");
     // in mVolt
     struct p {
         uint32_t v_lf134;
@@ -1746,8 +1748,9 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s \n", judgement);
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s", judgement);
 
+    PrintAndLogEx(INFO, "---------- " _CYAN_("HF Antenna") " ----------");
     // HF evaluation
     if (package->v_hf > NON_VOLTAGE)
         PrintAndLogEx(SUCCESS, "HF antenna: %5.2f V - 13.56 MHz", (package->v_hf * ANTENNA_ERROR) / 1000.0);
@@ -1761,7 +1764,7 @@ int CmdTuneSamples(const char *Cmd) {
     else
         sprintf(judgement, _GREEN_("OK"));
 
-    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s \n", judgement);
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s", judgement);
 
     // graph LF measurements
     // even here, these values has 3% error.

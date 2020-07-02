@@ -94,7 +94,7 @@ int CmdHFSearch(const char *Cmd) {
     int res = PM3_ESOFT;
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
+    PrintAndLogEx(INPLACE, " Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
@@ -103,7 +103,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for LTO-CM tag...");
+    PrintAndLogEx(INPLACE, " Searching for LTO-CM tag...");
     if (IfPm3Iso14443a()) {
         if (infoLTO(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") " found\n");
@@ -112,7 +112,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
+    PrintAndLogEx(INPLACE, " Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
@@ -121,7 +121,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
+    PrintAndLogEx(INPLACE, " Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false)) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
@@ -130,7 +130,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
+    PrintAndLogEx(INPLACE, " Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") " found\n");
@@ -139,7 +139,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
+    PrintAndLogEx(INPLACE, " Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
@@ -148,7 +148,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
+    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
     if (IfPm3Felica()) {
         if (readFelicaUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
@@ -158,7 +158,7 @@ int CmdHFSearch(const char *Cmd) {
     /*
         // 14b and iclass is the longest test (put last)
         PROMPT_CLEARLINE;
-        PrintAndLogEx(INPLACE, "Searching for CryptoRF tag...");
+        PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
         if (IfPm3Iso14443b()) {
             if (readHFCryptoRF(false) == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
@@ -169,7 +169,7 @@ int CmdHFSearch(const char *Cmd) {
 
     // 14b and iclass is the longest test (put last)
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
+    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
     if (IfPm3Iso14443b()) {
         if (readHF14B(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
@@ -178,7 +178,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for iClass / PicoPass tag...");
+    PrintAndLogEx(INPLACE, " Searching for iClass / PicoPass tag...");
     if (IfPm3Iclass()) {
         if (readIclass(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
@@ -231,7 +231,7 @@ int CmdHFTune(const char *Cmd) {
         }
 
         uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
-        PrintAndLogEx(INPLACE, "%u mV / %2u V", volt, (uint16_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, " %u mV / %2u V", volt, (uint16_t)(volt / 1000));
     }
     mode[0] = 3;
 

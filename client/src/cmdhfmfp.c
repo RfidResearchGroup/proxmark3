@@ -1429,9 +1429,9 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n"
-                  "\thf mfp ndef                                             -> shows NDEF data\n"
-                  "\thf mfp ndef -vv                                         -> shows NDEF parsed and raw data\n"
-                  "\thf mfp ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key\n");
+                  _YELLOW_("\thf mfp ndef") "                                             -> shows NDEF data\n"
+                  _YELLOW_("\thf mfp ndef -vv") "                                         -> shows NDEF parsed and raw data\n"
+                  _YELLOW_("\thf mfp ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7") " -> shows NDEF data with custom AID and key\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1530,12 +1530,12 @@ static int CmdHFMFPNDEF(const char *Cmd) {
 
     if (verbose2) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("MFC NDEF raw") " ----------------");
+        PrintAndLogEx(INFO, "--- " _CYAN_("MF Plus NDEF raw") " ----------------");
         dump_buffer(data, datalen, stdout, 1);
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndef -vv`") " for more details");
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndef -vv`") " for more details");
     return PM3_SUCCESS;
 }
 
