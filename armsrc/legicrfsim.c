@@ -303,12 +303,11 @@ static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
 static void init_tag(void) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR
-                      | FPGA_HF_SIMULATOR_MODULATE_212K);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // configure SSC with defaults
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
     // first pull output to low to prevent glitches then re-claim GPIO_SSC_DOUT
     LOW(GPIO_SSC_DOUT);
