@@ -21,7 +21,7 @@ typedef struct {
 * acquisition of Cotag LF signal. Similar to other LF,  since the Cotag has such long datarate RF/384
 * and is Manchester?,  we directly gather the manchester data into bigbuff
 **/
-void doCotagAcquisition(size_t sample_size);
+void doCotagAcquisition(void);
 uint32_t doCotagAcquisitionManchester(void);
 
 /**
