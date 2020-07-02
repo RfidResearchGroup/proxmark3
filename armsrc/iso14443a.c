@@ -2527,7 +2527,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
