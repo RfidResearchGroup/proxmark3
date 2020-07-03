@@ -65,7 +65,7 @@ thres|                          x x x x x x x x
 #define FPGA_MAJOR_MODE_HF_READER                   (0<<6) // D
 #define FPGA_MAJOR_MODE_HF_SIMULATOR                (1<<6) // D
 #define FPGA_MAJOR_MODE_HF_ISO14443A                (2<<6) // D
-#define FPGA_MAJOR_MODE_HF_SNOOP                    (3<<6) // D
+#define FPGA_MAJOR_MODE_HF_SNIFF                    (3<<6) // D
 #define FPGA_MAJOR_MODE_HF_ISO18092                 (4<<6) // D
 #define FPGA_MAJOR_MODE_HF_GET_TRACE                (5<<6) // D
 
@@ -87,9 +87,9 @@ thres|                          x x x x x x x x
 #define FPGA_HF_READER_MODE_RECEIVE_PHASE           (2<<0)
 #define FPGA_HF_READER_MODE_SEND_FULL_MOD           (3<<0)
 #define FPGA_HF_READER_MODE_SEND_SHALLOW_MOD        (4<<0)
-#define FPGA_HF_READER_MODE_SNOOP_IQ                (5<<0)
-#define FPGA_HF_READER_MODE_SNOOP_AMPLITUDE         (6<<0)
-#define FPGA_HF_READER_MODE_SNOOP_PHASE             (7<<0)
+#define FPGA_HF_READER_MODE_SNIFF_IQ                (5<<0)
+#define FPGA_HF_READER_MODE_SNIFF_AMPLITUDE         (6<<0)
+#define FPGA_HF_READER_MODE_SNIFF_PHASE             (7<<0)
 #define FPGA_HF_READER_MODE_SEND_JAM                (8<<0)
 
 #define FPGA_HF_READER_SUBCARRIER_848_KHZ           (0<<4)

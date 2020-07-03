@@ -529,21 +529,19 @@ static int CmdHFiClassSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_iclass_sim();
 
-    uint8_t simType = 0;
     uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t sim_type = param_get8ex(Cmd, 0, 0, 10);
 
-    simType = param_get8ex(Cmd, 0, 0, 10);
-
-    if (simType == 0) {
+    if (sim_type == 0) {
         if (param_gethex(Cmd, 1, CSN, 16)) {
             PrintAndLogEx(ERR, "A CSN should consist of 16 HEX symbols");
             return usage_hf_iclass_sim();
         }
-        PrintAndLogEx(INFO, " simtype: %02x CSN: %s", simType, sprint_hex(CSN, 8));
+        PrintAndLogEx(INFO, " simtype: %02x CSN: %s", sim_type, sprint_hex(CSN, 8));
     }
 
-    if (simType > 4) {
-        PrintAndLogEx(ERR, "Undefined simptype %d", simType);
+    if (sim_type > 4) {
+        PrintAndLogEx(ERR, "Undefined simtype %d", sim_type);
         return usage_hf_iclass_sim();
     }
 
@@ -575,14 +573,14 @@ static int CmdHFiClassSim(const char *Cmd) {
      **/
     uint8_t tries = 0;
 
-    switch (simType) {
+    switch (sim_type) {
 
-        case 2: {
+        case ICLASS_SIM_MODE_READER_ATTACK: {
             PrintAndLogEx(INFO, "Starting iCLASS sim 2 attack (elite mode)");
-            PrintAndLogEx(INFO, "press Enter to cancel");
+            PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -625,13 +623,13 @@ static int CmdHFiClassSim(const char *Cmd) {
             free(dump);
             break;
         }
-        case 4: {
+        case ICLASS_SIM_MODE_READER_ATTACK_KEYROLL: {
             // reader in key roll mode,  when it has two keys it alternates when trying to verify.
             PrintAndLogEx(INFO, "Starting iCLASS sim 4 attack (elite mode, reader in key roll mode)");
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -689,12 +687,13 @@ static int CmdHFiClassSim(const char *Cmd) {
             free(dump);
             break;
         }
-        case 1:
-        case 3:
+        case ICLASS_SIM_MODE_CSN:
+        case ICLASS_SIM_MODE_CSN_DEFAULT:
+        case ICLASS_SIM_MODE_FULL:
         default: {
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, numberOfCSNs, 0, CSN, 8);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 0, CSN, 8);
             break;
         }
     }

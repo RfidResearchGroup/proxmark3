@@ -13,7 +13,7 @@
 
 #include "common.h"
 
-void RAMFUNC SniffIClass(void);
+void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void ReaderIClass(uint8_t arg0);
 void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac);
@@ -21,7 +21,6 @@ void iClass_Authentication(uint8_t *mac);
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain);
 void iClass_WriteBlock(uint8_t blockno, uint8_t *data);
 void iClass_ReadBlk(uint8_t blockno);
-bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len);
 void iClass_Dump(uint8_t blockno, uint8_t numblks);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
 void iClass_ReadCheck(uint8_t blockno, uint8_t keytype);

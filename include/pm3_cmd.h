@@ -588,6 +588,18 @@ typedef struct {
 #define FLAG_ICLASS_READER_ONE_TRY     0x20
 #define FLAG_ICLASS_READER_CEDITKEY    0x40
 
+// iCLASS simulation modes
+#define ICLASS_SIM_MODE_CSN                   0
+#define ICLASS_SIM_MODE_CSN_DEFAULT           1
+#define ICLASS_SIM_MODE_READER_ATTACK         2
+#define ICLASS_SIM_MODE_FULL                  3
+#define ICLASS_SIM_MODE_READER_ATTACK_KEYROLL 4
+#define ICLASS_SIM_MODE_EXIT_AFTER_MAC        5  // note: device internal only
+
+#define MODE_SIM_CSN        0
+#define MODE_EXIT_AFTER_MAC 1
+#define MODE_FULLSIM        2
+
 // Dbprintf flags
 #define FLAG_RAWPRINT    0x00
 #define FLAG_LOG         0x01

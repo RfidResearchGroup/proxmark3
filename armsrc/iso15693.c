@@ -76,7 +76,7 @@
 #define DELAY_ARM_TO_TAG                 16
 #define DELAY_TAG_TO_ARM                 32
 
-//SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when snooping. All values should be multiples of 16
+//SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when sniffing. All values should be multiples of 16
 #define DELAY_TAG_TO_ARM_SNIFF           32
 #define DELAY_READER_TO_ARM_SNIFF        32
 
@@ -122,7 +122,7 @@ static void BuildInventoryResponse(uint8_t *uid);
 // resulting data rate is 26.48 kbit/s (fc/512)
 // cmd ... data
 // n ... length of data
-static void CodeIso15693AsReader(uint8_t *cmd, int n) {
+void CodeIso15693AsReader(uint8_t *cmd, int n) {
 
  	ToSendReset();
 
@@ -195,7 +195,7 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 
 static const uint8_t encode_4bits[16] = { 0xaa, 0x6a, 0x9a, 0x5a, 0xa6, 0x66, 0x96, 0x56, 0xa9, 0x69, 0x99, 0x59, 0xa5, 0x65, 0x95, 0x55 };
 
-static void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
+void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
 	/*
 	 * SOF comprises 3 parts;
 	 * * An unmodulated time of 56.64 us
@@ -241,7 +241,7 @@ static void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
 }
 
 // Transmit the command (to the tag) that was placed in cmd[].
-static void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time) {
+void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time) {
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_FULL_MOD);
 
@@ -279,7 +279,7 @@ static void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time
 //-----------------------------------------------------------------------------
 // Transmit the command (to the reader) that was placed in cmd[].
 //-----------------------------------------------------------------------------
-static void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time, uint32_t slot_time, bool slow) {
+void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time, uint32_t slot_time, bool slow) {
 
 	// don't use the FPGA_HF_SIMULATOR_MODULATE_424K_8BIT minor mode. It would spoil GetCountSspClk()
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
@@ -617,7 +617,7 @@ static void DecodeTagReset(DecodeTag_t *DecodeTag) {
 /*
  *  Receive and decode the tag response, also log to tracebuffer
  */
-static int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
+int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
 
 	int samples = 0;
 	int ret = 0;
@@ -966,7 +966,7 @@ static RAMFUNC int Handle15693SampleFromReader(bool bit, DecodeReader_t *DecodeR
 			DecodeReader->posCount++;
 			if (DecodeReader->Coding == CODING_1_OUT_OF_4) {
 				if (DecodeReader->posCount == 7*16) { // 7 bits jammed
-					FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNOOP_AMPLITUDE); // stop jamming
+					FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE); // stop jamming
 					// FpgaDisableTracing();
 					LED_D_OFF();
 				} else if (DecodeReader->posCount == 8*16) {
@@ -976,7 +976,7 @@ static RAMFUNC int Handle15693SampleFromReader(bool bit, DecodeReader_t *DecodeR
 				}
 			} else {
 				if (DecodeReader->posCount == 7*256) { // 7 bits jammend
-					FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNOOP_AMPLITUDE); // stop jamming
+					FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE); // stop jamming
 					LED_D_OFF();
 				} else if (DecodeReader->posCount == 8*256) {
 					DecodeReader->posCount = 0;
@@ -1005,7 +1005,7 @@ static RAMFUNC int Handle15693SampleFromReader(bool bit, DecodeReader_t *DecodeR
 // correctly.
 //-----------------------------------------------------------------------------
 
-static int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time) {
+int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time) {
 	int samples = 0;
 	bool gotFrame = false;
 	uint8_t b;
@@ -1167,7 +1167,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
 	Dbprintf("Sniff started. Press PM3 Button to stop.");
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNOOP_AMPLITUDE);
+	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
 	LED_D_OFF();
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
@@ -1197,7 +1197,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 			dma_start_time = GetCountSspClk() & 0xfffffff0;
 		}
 
-		uint16_t snoopdata = *upTo++;
+		uint16_t sniffdata = *upTo++;
 
 		if (upTo >= dmaBuf + ISO15693_DMA_BUFFER_SIZE) {                   // we have read all of the DMA buffer content.
 			upTo = dmaBuf;                                                 // start reading the circular buffer from the beginning
@@ -1218,7 +1218,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 		}
 
 		if (!TagIsActive) {                                                // no need to try decoding reader data if the tag is sending
-			if (Handle15693SampleFromReader(snoopdata & 0x02, &DecodeReader)) {
+			if (Handle15693SampleFromReader(sniffdata & 0x02, &DecodeReader)) {
 
 				uint32_t eof_time = dma_start_time + samples*16 + 8 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
 				if (DecodeReader.byteCount > 0) {
@@ -1236,7 +1236,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 				ReaderIsActive = false;
 				ExpectTagAnswer = true;
 
-			} else if (Handle15693SampleFromReader(snoopdata & 0x01, &DecodeReader)) {
+			} else if (Handle15693SampleFromReader(sniffdata & 0x01, &DecodeReader)) {
 
 				uint32_t eof_time = dma_start_time + samples*16 + 16 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
 				if (DecodeReader.byteCount > 0) {
@@ -1261,7 +1261,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 		}
 
 		if (!ReaderIsActive && ExpectTagAnswer) {                       // no need to try decoding tag data if the reader is currently sending or no answer expected yet
-			if (Handle15693SamplesFromTag(snoopdata >> 2, &DecodeTag)) {
+			if (Handle15693SamplesFromTag(sniffdata >> 2, &DecodeTag)) {
 
 				uint32_t eof_time = dma_start_time + samples*16 - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
 				if (DecodeTag.lastBit == SOF_PART2) {
@@ -1550,7 +1550,7 @@ void ReaderIso15693(uint32_t parameter) {
 }
 
 // When SIM: initialize the Proxmark3 as ISO15693 tag
-static void Iso15693InitTag(void) {
+void Iso15693InitTag(void) {
 	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 	SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
