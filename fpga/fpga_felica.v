@@ -26,7 +26,7 @@
 `define FPGA_MAJOR_MODE_HF_READER                   0
 `define FPGA_MAJOR_MODE_HF_SIMULATOR                1
 `define FPGA_MAJOR_MODE_HF_ISO14443A                2
-`define FPGA_MAJOR_MODE_HF_SNOOP                    3
+`define FPGA_MAJOR_MODE_HF_SNIFF                    3
 `define FPGA_MAJOR_MODE_HF_ISO18092                 4
 `define FPGA_MAJOR_MODE_HF_GET_TRACE                5
 `define FPGA_MAJOR_MODE_OFF                         7
