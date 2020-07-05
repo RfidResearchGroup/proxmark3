@@ -28,26 +28,18 @@
 #include "jni_tools.h"
 
 //iceman, todo:  proxify socker server name.  Maybe set in preferences?
+// DXL reply, todo:
+// Is a good idea, we can move this def to preferences, but not now.
+// Because libpm3rrg_rdv4.so cant load preferences.
+// I will impl a function to load preferences at future.
 #define PM3_LOCAL_SOCKET_SERVER "DXL.COM.ASL"
 
-void ShowGraphWindow(void) {
-}
-
-void HideGraphWindow(void) {
-}
-
-void RepaintGraphWindow(void) {
-}
-
-int push_cmdscriptfile(char *path, bool stayafter) {
-    return PM3_SUCCESS;
-}
-
 static char *g_android_executable_directory = NULL;
-static const char *g_android_user_directory = NULL;
+static char *g_android_user_directory = NULL;
 
-const char *get_executable_directory(void) {
+char version_information[] = {"ANDROID_LIBRARY 1.4.6 build by DXL"};
 
+const char *get_my_executable_directory(void) {
     if (g_android_executable_directory == NULL) {
         char buf[FILE_PATH_SIZE] = {0};
         getcwd(buf, sizeof(buf));
@@ -57,14 +49,20 @@ const char *get_executable_directory(void) {
     return g_android_executable_directory;
 }
 
-const char *get_user_directory(void) {
+const char *get_my_user_directory(void) {
     return g_android_user_directory;
 }
 
+void ShowGraphWindow(void) {}
+
+void HideGraphWindow(void) {}
+
+void RepaintGraphWindow(void) {}
+
+int push_cmdscriptfile(char *path, bool stayafter) { return PM3_SUCCESS; }
+
 static bool OpenPm3(void) {
-    if (conn.run) {
-        return true;
-    }
+    if (conn.run) { return true; }
     // Open with LocalSocket. Not a tcp connection!
     bool ret = OpenProxmark("socket:"PM3_LOCAL_SOCKET_SERVER, false, 1000, false, 115200);
     return ret;
@@ -88,7 +86,7 @@ jint Console(JNIEnv *env, jobject instance, jstring cmd_) {
 
     PrintAndLogEx(NORMAL, "");
 
-    char *cmd = (char *)((*env)->GetStringUTFChars(env, cmd_, 0));
+    char *cmd = (char *) ((*env)->GetStringUTFChars(env, cmd_, 0));
     int ret = CommandReceived(cmd);
     if (ret == 99) {
         // exit / quit
@@ -104,11 +102,11 @@ jint Console(JNIEnv *env, jobject instance, jstring cmd_) {
  * Is client running!
  * */
 jboolean IsClientRunning(JNIEnv *env, jobject instance) {
-    return (jboolean)((jboolean) conn.run);
+    return (jboolean) ((jboolean) conn.run);
 }
 
 /*
- * test hw and hw and client.
+ * test hw and fw and client.
  * */
 jboolean TestPm3(JNIEnv *env, jobject instance) {
     if (open() == false) {
@@ -116,7 +114,7 @@ jboolean TestPm3(JNIEnv *env, jobject instance) {
         return false;
     }
     bool ret = (TestProxmark() == PM3_SUCCESS);
-    return (jboolean)(ret);
+    return (jboolean) (ret);
 }
 
 /*
@@ -143,21 +141,23 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     jclass clz_test = (*jniEnv)->FindClass(jniEnv, "cn/rrg/devices/Proxmark3RRGRdv4");
     JNINativeMethod methods[] = {
-        {"startExecute", "(Ljava/lang/String;)I", (void *) Console},
-        {"stopExecute",  "()V", (void *) ClosePm3},
-        {"isExecuting",  "()Z", (void *) IsClientRunning}
+            {"startExecute", "(Ljava/lang/String;)I", (void *) Console},
+            {"stopExecute",  "()V",                   (void *) ClosePm3},
+            {"isExecuting",  "()Z",                   (void *) IsClientRunning}
     };
 
     JNINativeMethod methods1[] = {
-        {"testPm3",  "()Z", (void *) TestPm3},
-        {"closePm3", "()V", ClosePm3}
+            {"testPm3",  "()Z", (void *) TestPm3},
+            {"closePm3", "()V", ClosePm3}
     };
 
-    if ((*jniEnv)->RegisterNatives(jniEnv, clazz, methods, sizeof(methods) / sizeof(methods[0])) != JNI_OK) {
+    if ((*jniEnv)->RegisterNatives(jniEnv, clazz, methods, sizeof(methods) / sizeof(methods[0])) !=
+        JNI_OK) {
         return -1;
     }
 
-    if ((*jniEnv)->RegisterNatives(jniEnv, clz_test, methods1, sizeof(methods1) / sizeof(methods1[0])) != JNI_OK) {
+    if ((*jniEnv)->RegisterNatives(jniEnv, clz_test, methods1,
+                                   sizeof(methods1) / sizeof(methods1[0])) != JNI_OK) {
         return -1;
     }
 
