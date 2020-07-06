@@ -922,7 +922,6 @@ void ReaderIClass(uint8_t flags) {
     if (flag_read_aia) {
         //Read App Issuer Area block CRC(0x05) => 0xde  0x64
         uint8_t read_aa[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
-
         if (sendCmdGetResponseWithRetries(read_aa, sizeof(read_aa), resp, sizeof(resp), 10, 10, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
             result_status |= FLAG_ICLASS_AIA;
             memcpy(card_data + (8 * 5), resp, 8);
@@ -993,7 +992,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         //for now replay captured auth (as cc not updated)
         memcpy(check + 5, mac, 4);
 
-        if (!sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 5)) {
+        if (sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
             DbpString("Error: Authentication Fail!");
             continue;
         }
@@ -1002,7 +1001,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         read[1] = 1;
         AddCrc(read + 1, 1);
 
-        if (!sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 5)) {
+        if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
             DbpString("Dump config (block 1) failed");
             continue;
         }
@@ -1028,7 +1027,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
             read[1] = block;
             AddCrc(read + 1, 1);
 
-            if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, 10, 5)) {
+            if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
                 Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
                          block, resp[0], resp[1], resp[2],
                          resp[3], resp[4], resp[5],
@@ -1038,6 +1037,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
                 //Fill up the buffer
                 memcpy(card_data + stored_data_length, resp, 8);
                 stored_data_length += 8;
+
                 if (stored_data_length + 8 > PM3_CMD_DATA_SIZE) {
                     //Time to send this off and start afresh
                     reply_old(CMD_ACK,
@@ -1086,7 +1086,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
 // turn off afterwards
 void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
     uint8_t readcheck[] = { keytype, blockno };
-    uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t resp[8] = {0};
+   	uint32_t eof_time;
    	bool isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 8, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
@@ -1104,9 +1105,8 @@ void iClass_Authentication(uint8_t *mac) {
     check[7] = mac[2];
     check[8] = mac[3];
     //memcpy(check+5, mac, 4);
-
-    // 6 retries
-    uint8_t isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
+    uint32_t eof_time;
+    bool isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
 }
 
@@ -1187,7 +1187,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         check[8] = keys[i].mac[3];
 
         // expect 4bytes, 3 retries times..
-        isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 3);
+        isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
         if (isOK)
             goto out;
 
