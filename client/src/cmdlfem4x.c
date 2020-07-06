@@ -128,7 +128,7 @@ static int usage_lf_em4x05_dump(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump");
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump 11223344");
-    PrintAndLogEx(NORMAL, "      lf em 4x50_dump f card1 11223344");
+    PrintAndLogEx(NORMAL, "      lf em 4x05_dump f card1 11223344");
     return PM3_SUCCESS;
 }
 static int usage_lf_em4x05_wipe(void) {
@@ -1395,7 +1395,8 @@ static command_t CommandTable[] = {
     {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 4x50") " -----------------------"},
-    {"4x50_info",   CmdEM4x50Info,        IfPm3EM4x50,     "read complete data from EM4x50"},
+    {"4x50_dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
+    {"4x50_info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
     {"4x50_write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change passwword of EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
