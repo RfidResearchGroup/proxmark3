@@ -971,6 +971,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
     uint8_t read[]  = { 0x0c, 0x00, 0x00, 0x00 };
     uint8_t card_data[PM3_CMD_DATA_SIZE] = {0};
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+    uint32_t eof_time = 0;
 
     static struct memory_t {
         int k16;
@@ -979,8 +980,6 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         int lockauth;
         int keyaccess;
     } memory;
-
-    setupIclassReader();
 
     while (!BUTTON_PRESS()) {
 
@@ -993,7 +992,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         memcpy(check + 5, mac, 4);
 
         if (sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
-            DbpString("Error: Authentication Fail!");
+            if (DBGLEVEL >= DBG_EXTENDED) DbpString("Error: Authentication Fail!");
             continue;
         }
 
@@ -1002,22 +1001,24 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         AddCrc(read + 1, 1);
 
         if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
-            DbpString("Dump config (block 1) failed");
+            if (DBGLEVEL >= DBG_EXTENDED) DbpString("Dump config (block 1) failed");
             continue;
         }
 
         mem = resp[5];
-        memory.k16 = (mem & 0x80);
-        memory.book = (mem & 0x20);
-        memory.k2 = (mem & 0x8);
-        memory.lockauth = (mem & 0x2);
-        memory.keyaccess = (mem & 0x1);
+        memory.k16 = ((mem & 0x80) == 0x80);
+        memory.book = ((mem & 0x20) == 0x20);
+        memory.k2 = ((mem & 0x08) == 0x08);
+        memory.lockauth = ((mem & 0x02) == 0x02);
+        memory.keyaccess = ((mem & 0x01) == 0x01);
 
         cardsize = memory.k16 ? 255 : 32;
 
         WDT_HIT();
-        //Set card_data to all zeroes, we'll fill it with data
-        memset(card_data, 0x0, PM3_CMD_DATA_SIZE);
+
+        // set card_data to 0xFF...
+        memset(card_data, 0xFF, PM3_CMD_DATA_SIZE);
+
         uint8_t failedRead = 0;
         uint32_t stored_data_length = 0;
 
@@ -1028,11 +1029,13 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
             AddCrc(read + 1, 1);
 
             if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
-                Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
-                         block, resp[0], resp[1], resp[2],
-                         resp[3], resp[4], resp[5],
-                         resp[6], resp[7]
-                        );
+                if (DBGLEVEL >= DBG_EXTENDED) {
+                    Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
+                         block,
+                         resp[0], resp[1], resp[2], resp[3],
+                         resp[4], resp[5], resp[6], resp[7]
+                    );
+                }
 
                 //Fill up the buffer
                 memcpy(card_data + stored_data_length, resp, 8);
@@ -1054,7 +1057,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
             } else {
                 failedRead = 1;
                 stored_data_length += 8;//Otherwise, data becomes misaligned
-                Dbprintf("Failed to dump block %d", block);
+                if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Failed to dump block %d", block);
             }
         }
 
@@ -1087,7 +1090,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
 void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
     uint8_t readcheck[] = { keytype, blockno };
     uint8_t resp[8] = {0};
-   	uint32_t eof_time;
+   	uint32_t eof_time = 0;
    	bool isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 8, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
@@ -1122,9 +1125,12 @@ typedef struct iclass_premac {
 *   to cover debit and credit key. (AA1/AA2)
 */
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
+
     uint8_t i = 0, isOK = 0;
+
     uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
     bool use_credit_key = ((arg0 >> 16) & 0xFF);
+
     uint8_t keyCount = arg1 & 0xFF;
     uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t resp[ICLASS_BUFFER_SIZE];
@@ -1143,11 +1149,10 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     switch_off();
     SpinDelay(20);
 
-    setupIclassReader();
-
     uint16_t checked = 0;
     int read_status = 0;
     uint8_t startup_limit = 10;
+    uint32_t eof_time = 0;
     while (read_status != 2) {
 
         if (checked == 1000) {
