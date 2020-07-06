@@ -1101,7 +1101,7 @@ static void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_
 
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool verbose) {
     PacketResponseNG resp;
-    uint8_t flags = FLAG_ICLASS_READER_ONLY_ONCE | FLAG_ICLASS_READER_CC | FLAG_ICLASS_READER_ONE_TRY;
+    uint8_t flags = FLAG_ICLASS_READER_ONLY_ONCE;
 
     if (use_credit_key)
         flags |= FLAG_ICLASS_READER_CEDITKEY;
@@ -1279,9 +1279,12 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // if no debit key given try credit key on AA1 (not for iclass but for some picopass this will work)
     if (!have_debit_key && have_credit_key) use_credit_key = true;
 
-    uint32_t flags = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC |
-                     FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
-                     FLAG_ICLASS_READER_ONE_TRY;
+    uint32_t flags = (
+        FLAG_ICLASS_READER_INIT |
+        FLAG_ICLASS_READER_CLEARTRACE |
+        FLAG_ICLASS_READER_ONLY_ONCE        
+     );
+                     
 
     //get config and first 3 blocks
     PacketResponseNG resp;
@@ -1305,7 +1308,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (readStatus & (FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_CC)) {
+    if (readStatus & (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF | FLAG_ICLASS_CC)) {
         memcpy(tag_data, data, 8 * 3);
         blockno += 2; // 2 to force re-read of block 2 later. (seems to respond differently..)
         numblks = data[8];
@@ -2927,9 +2930,12 @@ int CmdHFiClass(const char *Cmd) {
 int readIclass(bool loop, bool verbose) {
     bool tagFound = false;
 
-    uint32_t flags = FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CC |  FLAG_ICLASS_READER_AIA |
-                     FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
-                     FLAG_ICLASS_READER_ONE_TRY;
+    uint32_t flags = (
+        FLAG_ICLASS_READER_INIT | 
+        FLAG_ICLASS_READER_CLEARTRACE |
+        FLAG_ICLASS_READER_ONLY_ONCE |
+        FLAG_ICLASS_READER_AIA
+        );
 
     uint32_t res = PM3_ETIMEOUT;
     // loop in client not device - else on windows have a communication error
@@ -2960,35 +2966,35 @@ int readIclass(bool loop, bool verbose) {
             PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --------------------------");
             PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
-            if (readStatus & FLAG_ICLASS_READER_CSN) {
+            if (readStatus & FLAG_ICLASS_CSN) {
                 PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") "  (uid)", sprint_hex(hdr->csn, sizeof(hdr->csn)));
                 tagFound = true;
             }
 
-            if (readStatus & FLAG_ICLASS_READER_CONF) {
+            if (readStatus & FLAG_ICLASS_CONF) {
                 PrintAndLogEx(SUCCESS, " Config: %s  (Card configuration)", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
             }
 
-            if (readStatus & FLAG_ICLASS_READER_CC) {
+            if (readStatus & FLAG_ICLASS_CC) {
                 PrintAndLogEx(SUCCESS, "E-purse: %s  (Card challenge, CC)", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
             }
             
             PrintAndLogEx(SUCCESS, "     Kd: %s  (Debit key, hidden)", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
             PrintAndLogEx(SUCCESS, "     Kc: %s  (Credit key, hidden)", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
 
-            if (readStatus & FLAG_ICLASS_READER_AIA) {
+            if (readStatus & FLAG_ICLASS_AIA) {
 //                PrintAndLogEx(INFO, "--------- " _CYAN_("AIA") " ---------");
                 PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
             }
             
-            if (readStatus & FLAG_ICLASS_READER_CONF) {
+            if (readStatus & FLAG_ICLASS_CONF) {
                 printIclassDumpInfo(data);
             }
                 
             // if CSN ends with FF12E0, it's inside HID CSN range.
             bool isHidRange = (memcmp((uint8_t *)(data + 5), "\xFF\x12\xE0", 3) == 0);
 
-            if (readStatus & FLAG_ICLASS_READER_AIA) {
+            if (readStatus & FLAG_ICLASS_AIA) {
                 bool legacy = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
 
                 bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);

@@ -41,12 +41,12 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SNIFF);
 
     // Setting Frame Mode For better performance on high speed data transfer.
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNIFF);
     SpinDelay(100);
 
     *len = (BigBuf_max_traceLen() & 0xFFFE);

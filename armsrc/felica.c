@@ -336,7 +336,7 @@ static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
 }
 
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
-    uint8_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
+    uint16_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
     if (power)
         flags |= FPGA_HF_ISO18092_FLAG_READER;
     if (highspeed)

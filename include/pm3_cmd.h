@@ -579,14 +579,18 @@ typedef struct {
 #define FLAG_FORCED_ATQA        0x800
 #define FLAG_FORCED_SAK         0x1000
 
-//Iclass reader flags
-#define FLAG_ICLASS_READER_ONLY_ONCE   0x01
-#define FLAG_ICLASS_READER_CC          0x02
-#define FLAG_ICLASS_READER_CSN         0x04
-#define FLAG_ICLASS_READER_CONF        0x08
+// iCLASS reader flags
+#define FLAG_ICLASS_READER_INIT        0x01
+#define FLAG_ICLASS_READER_CLEARTRACE  0x02
+#define FLAG_ICLASS_READER_ONLY_ONCE   0x04
+#define FLAG_ICLASS_READER_CEDITKEY    0x08
 #define FLAG_ICLASS_READER_AIA         0x10
-#define FLAG_ICLASS_READER_ONE_TRY     0x20
-#define FLAG_ICLASS_READER_CEDITKEY    0x40
+
+// iCLASS reader status flags
+#define FLAG_ICLASS_CSN         0x01
+#define FLAG_ICLASS_CC          0x02
+#define FLAG_ICLASS_CONF        0x04
+#define FLAG_ICLASS_AIA         0x08
 
 // iCLASS simulation modes
 #define ICLASS_SIM_MODE_CSN                   0
