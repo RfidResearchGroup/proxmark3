@@ -41,6 +41,7 @@ Makefile.platform
 # cmake
 client/build/
 client/android/build/
+client/deps/bzip2/
 
 # Coverity
 cov-int/
@@ -77,17 +78,16 @@ fpga/*
 !fpga/xst_hf.scr
 !fpga/go.bat
 !fpga/sim.tcl
+
 # offcial dumps folder
 dumps/*
+traces/*
 
 #client/*
-# my own traces folder
 client/traces/*
-# my own dumps folder
 client/dumps/*
 *.ice
 *.new
-armsrc/TEMP EMV/*
 tools/mf_nonce_brute/mf_nonce_brute
 tools/andrew/*
 tools/jtag_openocd/openocd_configuration
