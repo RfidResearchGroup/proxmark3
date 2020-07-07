@@ -954,12 +954,13 @@ void ReaderIClass(uint8_t flags) {
         LED_B_OFF();
     }
 
-    if (userCancelled) {
-        reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
-        switch_off();
-    } else {
+//    if (userCancelled) {
+//        reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
+//        switch_off();
+//    } else {
         reply_mix(CMD_ACK, 0, 0, 0, card_data, 0);
-    }
+//    }
+    switch_off();
 }
 
 // turn off afterwards
@@ -971,6 +972,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
     uint8_t read[]  = { 0x0c, 0x00, 0x00, 0x00 };
     uint8_t card_data[PM3_CMD_DATA_SIZE] = {0};
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+
+    uint32_t start_time = 0;
     uint32_t eof_time = 0;
 
     static struct memory_t {
@@ -1108,7 +1111,7 @@ void iClass_Authentication(uint8_t *mac) {
     check[7] = mac[2];
     check[8] = mac[3];
     //memcpy(check+5, mac, 4);
-    uint32_t eof_time;
+    uint32_t eof_time = 0;
     bool isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
 }
@@ -1220,10 +1223,10 @@ out:
 // retries 10times.
 static bool iClass_ReadBlock(uint8_t blockno, uint8_t *data) {
     uint8_t resp[10];
-    uint8_t cmd[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
-    AddCrc(cmd + 1, 1);
-    uint32_t eof_time;
-	bool isOK = sendCmdGetResponseWithRetries(readcmd, sizeof(readcmd), resp, sizeof(resp), 10, 10, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
+    AddCrc(c + 1, 1);
+    uint32_t eof_time = 0;
+	bool isOK = sendCmdGetResponseWithRetries(c, sizeof(c), resp, sizeof(resp), 10, 10, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     memcpy(data, resp, 8);
     return isOK;
 }
@@ -1241,44 +1244,49 @@ void iClass_ReadBlk(uint8_t blockno) {
     switch_off();
     reply_ng(CMD_HF_ICLASS_READBL, PM3_SUCCESS, (uint8_t *)&result, sizeof(result));
 }
+							  
+// Dump command seems to dump a block related portion of card memory.
+// I suppose it will need to do an authentatication to AA1,  read its blocks by calling this.
+// then authenticate AA2, and read those blocks by calling this.
+// By the looks at it only 2K cards is supported,  or first page dumps on larger cards.
+// turn off afterwards		  
+void iClass_Dump(uint8_t start_blockno, uint8_t numblks) {
 
-// turn off afterwards
-void iClass_Dump(uint8_t blockno, uint8_t numblks) {
-    BigBuf_free();
-    uint8_t *dataout = BigBuf_malloc(0xFF * 8);
+	BigBuf_free();
+
+	uint8_t *dataout = BigBuf_malloc(0xFF * 8);
     if (dataout == NULL) {
-        DbpString("[!] fail to allocate memory");
+        DbpString("fail to allocate memory");
         OnError(1);
         return;
     }
     memset(dataout, 0xFF, 0xFF * 8);
 
-    uint8_t blockdata[8] = {0};
-    uint8_t blkCnt = 0;
     bool isOK;
-    for (; blkCnt < numblks; blkCnt++) {
-        isOK = iClass_ReadBlock(blockno + blkCnt, blockdata);
+    uint8_t blkcnt = 0;
+    for (; blkcnt < numblks; blkcnt++) {
+        isOK = iClass_ReadBlock(start_blockno + blkcnt, dataout + (8 * blkcnt));
 
-        // 0xBB is the internal debug separator byte..
-        if (!isOK || (blockdata[0] == 0xBB || blockdata[7] == 0xBB || blockdata[2] == 0xBB)) { //try again
-            isOK = iClass_ReadBlock(blockno + blkCnt, blockdata);
+        if (!isOK) {
+            isOK = iClass_ReadBlock(start_blockno + blkcnt, dataout + (8 * blkcnt));
             if (!isOK) {
-                Dbprintf("[!] block %02X failed to read", blkCnt + blockno);
+                Dbprintf("failed to read block %02X", start_blockno + blkcnt);
                 break;
             }
         }
-        memcpy(dataout + (blkCnt * 8), blockdata, 8);
     }
 
     switch_off();
-    //return pointer to dump memory in arg3
-    reply_mix(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
+
+	// return pointer to dump memory in arg3
+	// iceman:  why not return | dataout - getbigbuf ?  Should give exact location.
+    reply_mix(CMD_ACK, isOK, blkcnt, BigBuf_max_traceLen(), 0, 0);
     BigBuf_free();
 }
 
 static bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
 
-    uint8_t write[] = { 0x80 | ICLASS_CMD_UPDATE, blockno, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t write[16] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
     memcpy(write + 2, data, 12); // data + mac
     AddCrc(write + 1, 13);
 
@@ -1292,7 +1300,7 @@ static bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
    	uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	if (blockno == 2) {
         // check response. e-purse update swaps first and second half
-		if (memcmp(data+4, resp, 4) || memcmp(data, resp+4, 4)) { 
+		if (memcmp(data + 4, resp, 4) || memcmp(data, resp + 4, 4)) { 
 			return false;
 		}
 	} else if (blockno == 3 || blockno == 4) {
