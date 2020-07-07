@@ -56,9 +56,6 @@
 #include "ticks.h"
 #include "iso15693.h"
 
-static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay);
-int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
-
 // The length of a received command will in most cases be no more than 18 bytes.
 // we expect max 34 bytes as tag answer (response to READ4)
 #ifndef ICLASS_BUFFER_SIZE
@@ -808,7 +805,7 @@ static bool sendCmdGetResponseWithRetries(uint8_t* command, size_t cmdsize, uint
  * @return false = fail
  *         true = Got all.
  */
-static bool selectIclassTag(uint8_t *card_data, bool use_credit_key, uint32_t *eof_time) {
+static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t *eof_time) {
 
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
@@ -909,7 +906,7 @@ void ReaderIClass(uint8_t flags) {
 
 	uint32_t start_time = 0;
 	uint32_t eof_time = 0;
-    int read_status = selectIclassTag(card_data, use_credit_key, &eof_time);
+    int read_status = select_iclass_tag(card_data, use_credit_key, &eof_time);
     if (read_status == 0) {
         reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
         switch_off();
@@ -973,8 +970,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
     uint8_t card_data[PM3_CMD_DATA_SIZE] = {0};
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
-    uint32_t start_time = 0;
-    uint32_t eof_time = 0;
+    bool use_credit_key = false;
 
     static struct memory_t {
         int k16;
@@ -984,12 +980,14 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         int keyaccess;
     } memory;
 
-    while (!BUTTON_PRESS()) {
+	uint32_t start_time = 0;
+	uint32_t eof_time = 0;
+    while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
 
-        uint8_t read_status = handshakeIclassTag(card_data);
-        if (read_status < 2) continue;
+        bool read_status = select_iclass_tag(card_data, use_credit_key, &eof_time);
+        if (read_status == false) continue;
 
         //for now replay captured auth (as cc not updated)
         memcpy(check + 5, mac, 4);
@@ -1130,7 +1128,6 @@ typedef struct iclass_premac {
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
     uint8_t i = 0, isOK = 0;
-
     uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
     bool use_credit_key = ((arg0 >> 16) & 0xFF);
 
@@ -1152,28 +1149,21 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     switch_off();
     SpinDelay(20);
 
-    uint16_t checked = 0;
-    int read_status = 0;
-    uint8_t startup_limit = 10;
+
+    bool read_status = false;
+    uint32_t start_time = 0;
     uint32_t eof_time = 0;
-    while (read_status != 2) {
+    uint8_t tries = 10;
+    while (tries-- > 0 || read_status == false) {
+        read_status = select_iclass_tag(card_data, use_credit_key, &eof_time);
+    }
 
-        if (checked == 1000) {
-            if (BUTTON_PRESS() || !data_available()) goto out;
-            checked = 0;
-        }
-        ++checked;
+    // failed to select card 10 times.  return fail to client
+    if (read_status == false)
+        goto out;
 
-        read_status = handshakeIclassTag_ext(card_data, use_credit_key);
-        if (startup_limit-- == 0) {
-            Dbprintf("[-] Handshake status | %d (fail 10)", read_status);
-            isOK = 99;
-            goto out;
-        }
-    };
-    // since handshakeIclassTag_ext call sends s readcheck,  we start with sending first response.
-
-    checked = 0;
+    // since select_iclass_tag call sends s readcheck,  we start with sending first response.
+    uint16_t checked = 0;
 
     // Keychunk loop
     for (i = 0; i < keyCount; i++) {
@@ -1199,9 +1189,10 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         if (isOK)
             goto out;
 
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         // Auth Sequence MUST begin with reading e-purse. (block2)
         // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-        ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
+        ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc), &start_time);
 
         LED_B_OFF();
     }

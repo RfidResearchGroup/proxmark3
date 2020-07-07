@@ -25,4 +25,6 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
 void iClass_ReadCheck(uint8_t blockno, uint8_t keytype);
 
+
+int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf);
 #endif

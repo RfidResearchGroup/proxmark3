@@ -464,7 +464,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO18092);
 
     // LSB transfer.  Remember to set it back to MSB with
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);

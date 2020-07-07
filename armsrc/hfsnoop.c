@@ -119,7 +119,7 @@ void HfPlotDownload(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_GET_TRACE);
 
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;   // Disable DMA Transfer
     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) this_buf; // start transfer to this memory address

@@ -1048,7 +1048,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_SIMULATE: {
-            SimTagIso15693(packet->oldarg[0], packet->data.asBytes);
+            struct p {
+                uint8_t uid[10];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            SimTagIso15693(payload->uid);
             break;
         }
 #endif
@@ -1376,7 +1380,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_ICLASS
         // Makes use of ISO14443a FPGA Firmware
         case CMD_HF_ICLASS_SNIFF: {
-            SniffIClass();
+            struct p {
+                uint8_t jam_search_len;
+                uint8_t jam_search_string[];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            SniffIClass(payload->jam_search_len, payload->jam_search_string);
             break;
         }
         case CMD_HF_ICLASS_SIMULATE: {
