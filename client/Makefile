@@ -461,7 +461,6 @@ SRCS =  aidsearch.c \
 		cmdlfsecurakey.c \
 		cmdlft55xx.c \
 		cmdlfti.c \
-                cmdlfverichip.c \
 		cmdlfviking.c \
 		cmdlfvisa2000.c \
 		cmdmain.c \
