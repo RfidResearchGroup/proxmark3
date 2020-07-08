@@ -2,6 +2,7 @@
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 // Copyright (C) 2011 Gerhard de Koning Gans
 // Copyright (C) 2014 Midnitesnake & Andy Davies & Martin Holst Swende
+// Copyright (C) 2019 piwi
 // Copyright (C) 2020 Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -13,6 +14,7 @@
 
 #include "cmdhficlass.h"
 #include <ctype.h>
+#include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "cmdtrace.h"
@@ -272,15 +274,7 @@ static int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_sniff(void) {
-    PrintAndLogEx(NORMAL, "Sniff the communication between reader and tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass sniff [h]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h       Show this help");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sniff"));
-    return PM3_SUCCESS;
-}
+
 static int usage_hf_iclass_loclass(void) {
     PrintAndLogEx(NORMAL, "Execute the offline part of loclass attack");
     PrintAndLogEx(NORMAL, "  An iclass dumpfile is assumed to consist of an arbitrary number of");
@@ -518,9 +512,35 @@ static int CmdHFiClassList(const char *Cmd) {
 }
 
 static int CmdHFiClassSniff(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_iclass_sniff();
-    SendCommandNG(CMD_HF_ICLASS_SNIFF, NULL, 0);
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass sniff",
+                  "Sniff the communication reader and tag",
+                  "Usage:\n"
+                  _YELLOW_("\thf iclass sniff") "\n"
+                  _YELLOW_("\thf iclass sniff -j") " -> jam e-purse updates\n"
+                  );
+    
+    void* argtable[] = {
+        arg_param_begin,
+        arg_lit0("j",  "jam",    "Jam (prevent) e-purse updates"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    bool jam_epurse_update = arg_get_lit(ctx, 1);
+    const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
+
+    struct {
+        uint8_t jam_search_len;
+        uint8_t jam_search_string[2];
+    } PACKED payload;
+
+    if (jam_epurse_update) {    
+        payload.jam_search_len = sizeof(update_epurse_sequence);
+        memcpy(payload.jam_search_string, update_epurse_sequence, sizeof(payload.jam_search_string));
+    }
+    SendCommandNG(CMD_HF_ICLASS_SNIFF, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
 }
 
@@ -2245,9 +2265,9 @@ static int printKeys(void) {
     PrintAndLogEx(NORMAL, "");
     for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
         if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0)
-            PrintAndLogEx(NORMAL, "%u: %s", i, sprint_hex(iClass_Key_Table[i], 8));
+            PrintAndLogEx(INFO, "%u: %s", i, sprint_hex(iClass_Key_Table[i], 8));
         else
-            PrintAndLogEx(NORMAL, "%u: "_YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], 8));
+            PrintAndLogEx(INFO, "%u: "_YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], 8));
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -2866,12 +2886,14 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     bool isReverse = false;
     int len = 0;
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_hf_iclass_permutekey();
+    if (strlen(Cmd) == 0 || cmdp == 'h')
+        return usage_hf_iclass_permutekey();
 
     isReverse = (cmdp == 'r');
 
     param_gethex_ex(Cmd, 1, data, &len);
-    if (len % 2) return usage_hf_iclass_permutekey();
+    if (len % 2)
+        return usage_hf_iclass_permutekey();
 
     len >>= 1;
 
@@ -2881,12 +2903,12 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
         generate_rev(data, len);
         uint8_t key_std_format[8] = {0};
         permutekey_rev(key, key_std_format);
-        PrintAndLogEx(SUCCESS, "holiman iclass key | %s \n", sprint_hex(key_std_format, 8));
+        PrintAndLogEx(SUCCESS, "Standard NIST format key " _YELLOW_("%s") " \n", sprint_hex(key_std_format, 8));
     } else {
         generate(data, len);
         uint8_t key_iclass_format[8] = {0};
         permutekey(key, key_iclass_format);
-        PrintAndLogEx(SUCCESS, "holiman std key | %s \n", sprint_hex(key_iclass_format, 8));
+        PrintAndLogEx(SUCCESS, "HID permuted iCLASS format: %s \n", sprint_hex(key_iclass_format, 8));
     }
     return PM3_SUCCESS;
 }
@@ -2959,7 +2981,7 @@ int readIclass(bool loop, bool verbose) {
             picopass_hdr *hdr = (picopass_hdr *)data;
             uint16_t length = resp.length;
                
-            if ( length != sizeof(picopass_hdr))
+            if (length != sizeof(picopass_hdr))
                 continue;
 
             PrintAndLogEx(NORMAL, "");
