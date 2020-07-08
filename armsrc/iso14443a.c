@@ -1499,10 +1499,13 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
             uint8_t pwd[4];
             emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
             if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
-                uint8_t cmd[4];
-                emlGetMemBt(cmd, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
-                AddCrc14A(cmd, sizeof(cmd) - 2);
-                EmSendCmd(cmd, sizeof(cmd));
+                uint8_t pack[4];
+                emlGetMemBt(pack, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
+                if (memcmp(pack, "\x00\x00\x00\x00", 4) == 0) {
+                    memcpy(pack, "\x80\x80\x00\x00", 4);
+                }
+                AddCrc14A(pack, sizeof(pack) - 2);
+                EmSendCmd(pack, sizeof(pack));
             } else {
                 EmSend4bit(CARD_NACK_NA);
                 if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Auth attempt: %08x", bytes_to_num(receivedCmd + 1, 4));
