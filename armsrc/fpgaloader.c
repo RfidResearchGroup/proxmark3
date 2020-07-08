@@ -351,8 +351,10 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp co
  * length.
  */
 static int bitparse_find_section(int bitstream_version, char section_name, uint32_t *section_length, lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
-    int result = 0;
+
 #define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
+
+    int result = 0;
     uint16_t numbytes = 0;
     while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
         char current_name = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);

@@ -20,6 +20,7 @@
 // definitions for multiple FPGA config files support
 #define FPGA_BITSTREAM_LF 1
 #define FPGA_BITSTREAM_HF 2
+#define FPGA_BITSTREAM_HF_FELICA 3
 
 /*
   Communication between ARM / FPGA is done inside armsrc/fpgaloader.c (function FpgaSendCommand)
