@@ -137,11 +137,16 @@ static int CmdKeriMSScramble(KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID
 
 static int CmdKeriDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
+    return demodKeri();
+}
+
+int demodKeri(void) {
 
     if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: PSK1 Demod failed");
         return PM3_ESOFT;
     }
+
     bool invert = false;
     size_t size = DemodBufferLen;
     int idx = detectKeri(DemodBuffer, &size, &invert);
@@ -206,6 +211,8 @@ static int CmdKeriDemod(const char *Cmd) {
     }
     return PM3_SUCCESS;
 }
+
+
 
 static int CmdKeriRead(const char *Cmd) {
     lf_read(false, 10000);
@@ -380,9 +387,5 @@ int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
     if (*size < 64) return -3; //wrong demoded size
 
     return (int)startIdx;
-}
-
-int demodKeri(void) {
-    return CmdKeriDemod("");
 }
 
