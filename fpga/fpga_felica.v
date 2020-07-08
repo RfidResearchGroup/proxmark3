@@ -181,7 +181,6 @@ hi_sniffer he(
 );
 
 // 100 - HF ISO18092 FeliCa
-/*
 hi_flite hfl(
     ck_1356megb,
     hfl_pwr_lo, hfl_pwr_hi, hfl_pwr_oe1, hfl_pwr_oe2, hfl_pwr_oe3, hfl_pwr_oe4,
@@ -190,7 +189,6 @@ hi_flite hfl(
     hfl_dbg,
     minor_mode
 );
-*/
 
 // 101 - HF get trace
 hi_get_trace gt(
