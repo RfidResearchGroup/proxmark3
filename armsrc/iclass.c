@@ -884,13 +884,13 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 void ReaderIClass(uint8_t flags) {
 
     uint8_t card_data[6 * 8] = {0xFF};
-    uint8_t last_csn[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+//    uint8_t last_csn[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t resp[ICLASS_BUFFER_SIZE];
 
 //    memset(card_data, 0xFF, sizeof(card_data));
     memset(resp, 0xFF, sizeof(resp));
 
-    bool flag_readonce = flags & FLAG_ICLASS_READER_ONLY_ONCE;     // flag to read until one tag is found successfully
+//    bool flag_readonce = flags & FLAG_ICLASS_READER_ONLY_ONCE;     // flag to read until one tag is found successfully
     bool use_credit_key = flags & FLAG_ICLASS_READER_CEDITKEY;     // flag to use credit key
     bool flag_read_aia = flags & FLAG_ICLASS_READER_AIA;             // flag to read block5, application issuer area
 
@@ -938,9 +938,11 @@ void ReaderIClass(uint8_t flags) {
     // with 0xFF:s in block 3 and 4.
 
     LED_B_ON();
-
+    reply_mix(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
+      
     //Send back to client, but don't bother if we already sent this -
     //  only useful if looping in arm (not try_once && not abort_after_read)
+    /*
     if (memcmp(last_csn, card_data, 8) != 0) {
             
         reply_mix(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
@@ -950,12 +952,13 @@ void ReaderIClass(uint8_t flags) {
         }
         LED_B_OFF();
     }
+    */
 
 //    if (userCancelled) {
 //        reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
 //        switch_off();
 //    } else {
-        reply_mix(CMD_ACK, 0, 0, 0, card_data, 0);
+//        reply_mix(CMD_ACK, result_status, 0, 0, card_data, 0);
 //    }
     switch_off();
 }
