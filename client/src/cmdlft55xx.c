@@ -1345,17 +1345,25 @@ bool testKnownConfigBlock(uint32_t block0) {
         case T55X7_RAW_CONFIG_BLOCK:
         case T55X7_EM_UNIQUE_CONFIG_BLOCK:
         case T55X7_FDXB_CONFIG_BLOCK:
+        case T55X7_FDXB_2_CONFIG_BLOCK:
         case T55X7_HID_26_CONFIG_BLOCK:
         case T55X7_PYRAMID_CONFIG_BLOCK:
         case T55X7_INDALA_64_CONFIG_BLOCK:
         case T55X7_INDALA_224_CONFIG_BLOCK:
         case T55X7_GUARDPROXII_CONFIG_BLOCK:
         case T55X7_VIKING_CONFIG_BLOCK:
-        case T55X7_NORALYS_CONFIG_BLOCK:
+        case T55X7_NORALSY_CONFIG_BLOCK:
         case T55X7_IOPROX_CONFIG_BLOCK:
         case T55X7_PRESCO_CONFIG_BLOCK:
         case T55X7_NEDAP_64_CONFIG_BLOCK:
         case T55X7_NEDAP_128_CONFIG_BLOCK:
+        case T55X7_VISA2000_CONFIG_BLOCK:
+        case T55X7_SECURAKEY_CONFIG_BLOCK:
+        case T55X7_PAC_CONFIG_BLOCK:  
+        case T55X7_VERICHIP_CONFIG_BLOCK:  
+        case T55X7_KERI_CONFIG_BLOCK:
+        case T55X7_NEXWATCH_CONFIG_BLOCK:
+        case T55X7_JABLOTRON_CONFIG_BLOCK:
             return true;
     }
     return false;
