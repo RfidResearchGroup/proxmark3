@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix missing define on proxspace (@mwalker33)
  - Added `lf em 4x50_dump` (@iceman1001)
  - Added `lf em 4x50_read` (@tharexde)
  - Added `lf em 4x50_info` (@tharexde)
