@@ -445,7 +445,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Start iso18092_setup");
 
     LEDsoff();
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_FELICA);
 
     // allocate command receive buffer
     BigBuf_free();
