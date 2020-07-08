@@ -1028,3 +1028,61 @@ void em4x50_write_password(em4x50_data_t *etd) {
     lf_finalize();
     reply_ng(CMD_ACK, bsuccess, 0, 0);
 }
+
+void em4x50_wipe(em4x50_data_t *etd) {
+    
+    // set all data of EM4x50 tag to 0x0 including password
+    
+    bool bsuccess = false;
+    uint8_t zero[4] = {0, 0, 0, 0};
+    uint8_t addresses[4] = {0, 0, EM4X50_NO_WORDS - 3, 1};
+    
+    init_tag();
+    em4x50_setup_read();
+    
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag()) {
+            
+        // login first
+        if (login(etd->password)) {
+
+            // write 0x0 to each address but ignore addresses
+            // 0 -> password, 32 -> serial, 33 -> uid
+            // writing 34 words takes about 3.6 seconds -> high timeout needed
+            for (int i = 1; i <= EM4X50_NO_WORDS - 3; i++)
+                write(zero, i);
+
+            // to verify result reset EM4x50
+            if (reset()) {
+
+                // login not necessary because protectd word has been set to 0
+                // -> no read protected words
+                // -> selective read can be called immediately
+                if (selective_read(addresses)) {
+
+                    // check if everything is zero
+                    bsuccess = true;
+                    for (int i = 1; i <= EM4X50_NO_WORDS - 3; i++)
+                        for (int j = 0; j < 4; j++)
+                            bsuccess &= (tag.sectors[i][j] == 0) ? true : false;
+
+                }
+                
+                if (bsuccess) {
+                
+                    // so far everything is fine
+                    // last task: reset password
+                    if (login(etd->password))
+                        bsuccess = write_password(etd->password, zero);
+
+                    // verify by login with new password
+                    if (bsuccess)
+                        bsuccess = login(zero);
+                }
+            }
+        }
+    }
+
+    lf_finalize();
+    reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
+}
