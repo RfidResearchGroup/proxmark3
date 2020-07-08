@@ -2044,11 +2044,12 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         case T55X7_EM_UNIQUE_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "EM unique, Paxton ");
             break;
+        case T55X7_FDXB_2_CONFIG_BLOCK:
         case T55X7_FDXB_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "FDXB ");
             break;
         case T55X7_HID_26_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b (ProxCard) ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b (ProxCard), Paradox ");
             break;
         case T55X7_PYRAMID_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyramid ");
@@ -2080,6 +2081,15 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         case T55X7_NEDAP_128_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Nedap 128 ");
             break;
+        case T55X7_PAC_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "PAC ");
+            break;
+        case T55X7_VERICHIP_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Verichip ");
+            break;
+        case T55X7_VISA2000_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "VISA2000 ");
+            break;            
         default:
             break;
     }
@@ -2224,11 +2234,11 @@ static int CmdT55xxInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, " POR-Delay                 : %s", (por) ? _GREEN_("Yes") : "No");
     }
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, " Raw Data - Page 0");
+    PrintAndLogEx(NORMAL, " Raw Data - Page 0,  block 0");
     if (gotdata)
-        PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X", block0);
+        PrintAndLogEx(NORMAL, "    0x" _GREEN_("%08X"), block0);
     else
-        PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X  %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
+        PrintAndLogEx(NORMAL, "    0x" _GREEN_("%08X") " %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
 
     if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5)))
         printT5x7KnownBlock0(block0);
