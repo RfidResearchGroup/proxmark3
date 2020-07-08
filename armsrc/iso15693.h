@@ -33,7 +33,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time);
 int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time);
 
-void RecordRawAdcSamplesIso15693(void);
+//void RecordRawAdcSamplesIso15693(void);
 void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(uint32_t parameter); // Simulate an ISO15693 reader - greg
 void SimTagIso15693(uint8_t *uid); // simulate an ISO15693 tag - greg

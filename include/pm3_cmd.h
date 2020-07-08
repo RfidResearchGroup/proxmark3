@@ -431,7 +431,7 @@ typedef struct {
 #define CMD_HF_ISO14443B_COMMAND                                          0x0305
 #define CMD_HF_ISO15693_READER                                            0x0310
 #define CMD_HF_ISO15693_SIMULATE                                          0x0311
-#define CMD_HF_ISO15693_RAWADC                                            0x0312
+#define CMD_HF_ISO15693_SNIFF                                             0x0312
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0317

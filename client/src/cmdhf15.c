@@ -973,12 +973,12 @@ static int CmdHF15Info(const char *Cmd) {
 
 // Record Activity without enabling carrier
 //helptext
-static int CmdHF15Record(const char *Cmd) {
+static int CmdHF15Sniff(const char *Cmd) {
     char cmdp =  tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_record();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_RAWADC, NULL, 0);
+    SendCommandNG(CMD_HF_ISO15693_SNIFF, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -1841,9 +1841,8 @@ static command_t CommandTable[] = {
     {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO15693 from tag"},
     {"dump",        CmdHF15Dump,        IfPm3Iso15693,   "Read all memory pages of an ISO15693 tag, save to file"},
     {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
-//    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
+    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
     {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
-    {"record",      CmdHF15Record,      IfPm3Iso15693,   "Record Samples (ISO15693)"},
     {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
     {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
     {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
