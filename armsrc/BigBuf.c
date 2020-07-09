@@ -158,7 +158,10 @@ uint32_t BigBuf_get_traceLen(void) {
   annotation of commands/responses.
 **/
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag) {
-    if (!tracing) return false;
+    if (tracing == false) {
+        if (DBGLEVEL >= DBG_DEBUG) { Dbprintf("trace is turned off"); }
+        return false;
+    }
 
     uint8_t *trace = BigBuf_get_addr();
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + traceLen);
@@ -168,6 +171,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     // Return when trace is full
     if (TRACELOG_HDR_LEN + iLen + num_paritybytes >= BigBuf_max_traceLen() - traceLen) {
         tracing = false; // don't trace any more
+        if (DBGLEVEL >= DBG_DEBUG) { Dbprintf("trace is full"); }
         return false;
     }
 
