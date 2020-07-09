@@ -181,7 +181,10 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
 
 static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes) {
     // sanity check
-    if (is_last_record(tracepos, traceLen)) return traceLen;
+    if (is_last_record(tracepos, traceLen)) {
+        PrintAndLogEx(DEBUG, "last record triggered.  t-pos: %u  t-len %u", tracepos, traceLen);
+        return traceLen;
+    }
 
     uint32_t duration;
     uint16_t data_len;
