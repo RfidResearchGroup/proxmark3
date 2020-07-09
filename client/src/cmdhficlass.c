@@ -1121,36 +1121,38 @@ static void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_
 
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool verbose) {
     PacketResponseNG resp;
-    uint8_t flags = FLAG_ICLASS_READER_ONLY_ONCE;
+    uint8_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
 
     if (use_credit_key)
         flags |= FLAG_ICLASS_READER_CEDITKEY;
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return false;
     }
 
     uint8_t isOK = resp.oldarg[0] & 0xff;
-    uint8_t *data = resp.data.asBytes;
 
-    memcpy(CSN, data, 8);
-
-    if (CCNR != NULL)
-        memcpy(CCNR, data + 16, 8);
-
-    if (isOK > 0 && verbose) {
-        PrintAndLogEx(SUCCESS, "CSN  | %s", sprint_hex(CSN, 8));
-        PrintAndLogEx(SUCCESS, "CCNR | %s", sprint_hex(CCNR, 8));
+    if (isOK == 0xFF) {
+        if (verbose) {
+            PrintAndLogEx(FAILED, "failed tag-select, aborting...  (%d)", isOK);
+        }
+        return false;
     }
 
-    if (isOK <= 1) {
-        if (verbose)
-            PrintAndLogEx(FAILED, "failed to obtain CC! Tag-select is aborting...  (%d)", isOK);
+    picopass_hdr *hdr = (picopass_hdr *)resp.data.asBytes;
 
-        return false;
+    if (CSN != NULL)
+        memcpy(CSN, hdr->csn, 8);
+
+    if (CCNR != NULL)
+        memcpy(CCNR, hdr->epurse, 8);
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "CSN     %s", sprint_hex(CSN, 8));
+        PrintAndLogEx(SUCCESS, "epurse  %s", sprint_hex(CCNR, 8));
     }
     return true;
 }
@@ -1159,12 +1161,12 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    if (!select_only(CSN, CCNR, use_credit_key, verbose)) {
+    if (select_only(CSN, CCNR, use_credit_key, verbose) == false) {
         if (verbose) PrintAndLogEx(FAILED, "selecting tag failed");
-
 //        DropField();
         return false;
     }
+
     //get div_key
     if (rawkey)
         memcpy(div_key, KEY, 8);
@@ -1177,7 +1179,6 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 
     PacketResponseNG resp;
     clearCommandBuffer();
-
     SendCommandNG(CMD_HF_ICLASS_AUTH, MAC, 4);
     if (WaitForResponseTimeout(CMD_HF_ICLASS_AUTH, &resp, 2000) == 0) {
         if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
@@ -2967,9 +2968,11 @@ int readIclass(bool loop, bool verbose) {
         SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
             uint8_t readStatus = resp.oldarg[0] & 0xff;
+
+            PrintAndLogEx(NORMAL, "ICE: %x", readStatus);
 
             // no tag found or button pressed
             if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
