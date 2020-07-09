@@ -775,8 +775,9 @@ send:
 }
 
 
-/// THE READER CODE
-static void ReaderTransmitIClass(uint8_t *frame, int len, uint32_t *start_time) {
+// THE READER CODE
+// logs.
+static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time) {
 
 	CodeIso15693AsReader(frame, len);
 	TransmitTo15693Tag(ToSend, ToSendMax, start_time);
@@ -785,12 +786,16 @@ static void ReaderTransmitIClass(uint8_t *frame, int len, uint32_t *start_time) 
     LogTrace(frame, len,  *start_time * 4, end_time * 4, NULL, true);
 }
 
-static bool sendCmdGetResponseWithRetries(uint8_t* command, size_t cmdsize, uint8_t* resp, size_t max_resp_size,
+static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* resp, size_t max_resp_size,
 										  uint8_t expected_size, uint8_t tries, uint32_t start_time,
                                           uint32_t timeout, uint32_t *eof_time) {
     while (tries-- > 0) {
 
-        ReaderTransmitIClass(command, cmdsize, &start_time);
+        iclass_send_as_reader(cmd, cmdsize, &start_time);
+        
+        if (resp == NULL)
+            return true;
+
 		if (expected_size == GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time)) {
             return true;
         }
@@ -812,30 +817,31 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
     static uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
     static uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
+    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
-    // Bit 4: K.If this bit equals to one, the READCHECK will use the Credit Key (Kc); if equals to zero, Debit Key (Kd) willbe used
+    // Bit 4: K.If this bit equals to one, the READCHECK will use the Credit Key (Kc); if equals to zero, Debit Key (Kd) will be used
     // bit 7: parity.
 
     if (use_credit_key)
         read_check_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
-
-    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     
     uint32_t start_time = GetCountSspClk();
-
-    ReaderTransmitIClass(act_all, 1, &start_time);
+    iclass_send_as_reader(act_all, sizeof(act_all), &start_time);
 
 	// card present?
-	if (GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time) < 0)
+	int len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time);
+    if (len < 0) {
+        Dbprintf("Fail act all (%d)", len);
         return false;
+    }
 
     // send Identify
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-	ReaderTransmitIClass(identify, 1, &start_time);
+	iclass_send_as_reader(identify, 1, &start_time);
 
     // expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
-    uint8_t len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
-    if (len != 10)
+    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+    if (len != 10) 
         return false;
 
     // copy the Anti-collision CSN to our select-packet
@@ -843,11 +849,11 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     // select the card
 	start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-	ReaderTransmitIClass(select, sizeof(select), &start_time);
+	iclass_send_as_reader(select, sizeof(select), &start_time);
 
     // expect a 10-byte response here, 8 byte CSN and 2 byte CRC
 	len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
-	if (len != 10) 
+	if (len != 10)
         return false;
 
     //Save CSN in response data
@@ -855,23 +861,23 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     // card selected, now read config (block1) (only 8 bytes no CRC)
 	start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-	ReaderTransmitIClass(read_conf, sizeof(read_conf), &start_time);
+	iclass_send_as_reader(read_conf, sizeof(read_conf), &start_time);
    
     // expect a 8-byte response here
 	len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
-	if (len != 8) 
+	if (len != 10)
         return false;
 
-    //Save CC (e-purse) in response data
+    //Save CONF in response data
     memcpy(card_data + 8, resp, 8);
 
     // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
 	start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-	ReaderTransmitIClass(read_check_cc, sizeof(read_check_cc), &start_time);
+	iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time);
    
     // expect a 8-byte response here
 	len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
-	if (len != 8) 
+	if (len != 8)
         return false;
 
     //Save CC (e-purse) in response data
@@ -895,31 +901,32 @@ void ReaderIClass(uint8_t flags) {
     bool flag_read_aia = flags & FLAG_ICLASS_READER_AIA;             // flag to read block5, application issuer area
 
 	if ((flags & FLAG_ICLASS_READER_INIT) == FLAG_ICLASS_READER_INIT) {
+        switch_off();
 		Iso15693InitReader();
-	}
-
-	if ((flags & FLAG_ICLASS_READER_CLEARTRACE) == FLAG_ICLASS_READER_CLEARTRACE) {
-		set_tracing(true);
-		clear_trace();
 		StartCountSspClk();
 	}
+        
+	if ((flags & FLAG_ICLASS_READER_CLEARTRACE) == FLAG_ICLASS_READER_CLEARTRACE) {
+		clear_trace();
+	}
 
-	uint32_t start_time = 0;
 	uint32_t eof_time = 0;
-    int read_status = select_iclass_tag(card_data, use_credit_key, &eof_time);
-    if (read_status == 0) {
+    bool status = select_iclass_tag(card_data, use_credit_key, &eof_time);
+    if (status == false) {
         reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
         switch_off();
         return;
     }
-    
-    uint8_t result_status = FLAG_ICLASS_CSN | FLAG_ICLASS_CONF | FLAG_ICLASS_CC;
+
+    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    uint8_t result_status = (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF | FLAG_ICLASS_CC);
 
     //Read block 5, AIA
     if (flag_read_aia) {
         //Read App Issuer Area block CRC(0x05) => 0xde  0x64
         uint8_t read_aa[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
-        if (sendCmdGetResponseWithRetries(read_aa, sizeof(read_aa), resp, sizeof(resp), 10, 10, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
+        status = iclass_send_cmd_with_retries(read_aa, sizeof(read_aa), resp, sizeof(resp), 10, 10, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+        if (status) {
             result_status |= FLAG_ICLASS_AIA;
             memcpy(card_data + (8 * 5), resp, 8);
         } else {
@@ -994,8 +1001,9 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
 
         //for now replay captured auth (as cc not updated)
         memcpy(check + 5, mac, 4);
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
-        if (sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
+        if (iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
             if (DBGLEVEL >= DBG_EXTENDED) DbpString("Error: Authentication Fail!");
             continue;
         }
@@ -1004,7 +1012,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         read[1] = 1;
         AddCrc(read + 1, 1);
 
-        if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;        
+        if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
             if (DBGLEVEL >= DBG_EXTENDED) DbpString("Dump config (block 1) failed");
             continue;
         }
@@ -1032,7 +1041,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
             read[1] = block;
             AddCrc(read + 1, 1);
 
-            if (sendCmdGetResponseWithRetries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
                 if (DBGLEVEL >= DBG_EXTENDED) {
                     Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
                          block,
@@ -1095,7 +1105,7 @@ void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
     uint8_t readcheck[] = { keytype, blockno };
     uint8_t resp[8] = {0};
    	uint32_t eof_time = 0;
-   	bool isOK = sendCmdGetResponseWithRetries(readcheck, sizeof(readcheck), resp, sizeof(resp), 8, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+   	bool isOK = iclass_send_cmd_with_retries(readcheck, sizeof(readcheck), resp, sizeof(resp), 8, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
     switch_off();
 }
@@ -1103,17 +1113,33 @@ void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
 // used with function select_and_auth (cmdhficlass.c)
 // which needs to authenticate before doing more things like read/write
 void iClass_Authentication(uint8_t *mac) {
-    uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t resp[ICLASS_BUFFER_SIZE];
+
+	Iso15693InitReader();
+    StartCountSspClk();
+        
+    uint8_t card_data[3 * 8] = {0xFF};
+    bool use_credit_key = false;
+    uint32_t eof_time = 0;
+
+    bool isOK = select_iclass_tag(card_data, use_credit_key, &eof_time);
+    if (isOK == false) {
+        reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
+        return;
+    }
+    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    
+    uint8_t check[9] = { ICLASS_CMD_CHECK };
+//    uint8_t mac[4];
+//    opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, mac )
 
     // copy MAC to check command (readersignature)
     check[5] = mac[0];
     check[6] = mac[1];
     check[7] = mac[2];
     check[8] = mac[3];
-    //memcpy(check+5, mac, 4);
-    uint32_t eof_time = 0;
-    bool isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+
+    uint8_t resp[ICLASS_BUFFER_SIZE];
+    isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
 }
 
@@ -1133,9 +1159,9 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t i = 0, isOK = 0;
     uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
     bool use_credit_key = ((arg0 >> 16) & 0xFF);
-
     uint8_t keyCount = arg1 & 0xFF;
-    uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+    uint8_t check[9] = { ICLASS_CMD_CHECK };
     uint8_t resp[ICLASS_BUFFER_SIZE];
     uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
@@ -1188,14 +1214,14 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         check[8] = keys[i].mac[3];
 
         // expect 4bytes, 3 retries times..
-        isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+        isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
         if (isOK)
             goto out;
 
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         // Auth Sequence MUST begin with reading e-purse. (block2)
         // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-        ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc), &start_time);
+        iclass_send_as_reader(readcheck_cc, sizeof(readcheck_cc), &start_time);
 
         LED_B_OFF();
     }
@@ -1220,7 +1246,7 @@ static bool iClass_ReadBlock(uint8_t blockno, uint8_t *data) {
     uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(c + 1, 1);
     uint32_t eof_time = 0;
-	bool isOK = sendCmdGetResponseWithRetries(c, sizeof(c), resp, sizeof(resp), 10, 10, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+	bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 10, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     memcpy(data, resp, 8);
     return isOK;
 }
@@ -1286,7 +1312,7 @@ static bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
 
     uint8_t resp[10] = {0};    
     uint32_t eof_time = 0;
-	bool isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 10, 3, 0, ICLASS_READER_TIMEOUT_UPDATE, &eof_time);
+	bool isOK = iclass_send_cmd_with_retries(write, sizeof(write), resp, sizeof(resp), 10, 3, 0, ICLASS_READER_TIMEOUT_UPDATE, &eof_time);
 	if (isOK == false) {
 		return false;
 	}
