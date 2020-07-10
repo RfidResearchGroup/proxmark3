@@ -781,9 +781,10 @@ static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time)
 
 	CodeIso15693AsReader(frame, len);
 	TransmitTo15693Tag(ToSend, ToSendMax, start_time);
-	uint32_t end_time = *start_time + 32 * (8 * ToSendMax - 4); // substract the 4 padding bits after EOF
+	uint32_t end_time = *start_time + (32 * ((8 * ToSendMax) - 4)); // substract the 4 padding bits after EOF
 
-    LogTrace(frame, len,  *start_time * 4, end_time * 4, NULL, true);
+    if (LogTrace(frame, len, (*start_time * 4), (end_time * 4), NULL, true) == false) 
+        DbpString("send_as_reader: failed logtrace");
 }
 
 static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* resp, size_t max_resp_size,
@@ -1112,35 +1113,57 @@ void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
 
 // used with function select_and_auth (cmdhficlass.c)
 // which needs to authenticate before doing more things like read/write
-void iClass_Authentication(uint8_t *mac) {
+// selects and authenticate to a card,  sends back div_key and mac to client.
+void iClass_Authentication(uint8_t *bytes) {
+
+    struct p {
+        uint8_t key[8];
+        bool use_raw;
+        bool use_elite;
+        bool use_credit_key;
+    } PACKED;
+    struct p *payload = (struct p *)bytes;
+
+    // device response message
+    struct {
+        bool isOK;
+        uint8_t div_key[8];
+        uint8_t mac[4];
+    } PACKED packet;
 
 	Iso15693InitReader();
     StartCountSspClk();
         
     uint8_t card_data[3 * 8] = {0xFF};
-    bool use_credit_key = false;
     uint32_t eof_time = 0;
 
-    bool isOK = select_iclass_tag(card_data, use_credit_key, &eof_time);
-    if (isOK == false) {
-        reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
+    packet.isOK = select_iclass_tag(card_data, payload->use_credit_key, &eof_time);
+    if (packet.isOK == false) {
+        reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&packet, sizeof(packet));
         return;
     }
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     
     uint8_t check[9] = { ICLASS_CMD_CHECK };
-//    uint8_t mac[4];
-//    opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, mac )
+    uint8_t ccnr[12] = {0};
+    memcpy(ccnr, card_data + 16, 8);
+
+    if (payload->use_raw)
+        memcpy(packet.div_key, payload->key, 8);
+    else
+        iclass_calc_div_key(card_data, payload->key, packet.div_key, payload->use_elite);
+
+    opt_doReaderMAC(ccnr, packet.div_key, packet.mac);
 
     // copy MAC to check command (readersignature)
-    check[5] = mac[0];
-    check[6] = mac[1];
-    check[7] = mac[2];
-    check[8] = mac[3];
+    check[5] = packet.mac[0];
+    check[6] = packet.mac[1];
+    check[7] = packet.mac[2];
+    check[8] = packet.mac[3];
 
     uint8_t resp[ICLASS_BUFFER_SIZE];
-    isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
-    reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
+    packet.isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&packet, sizeof(packet));
 }
 
 typedef struct iclass_premac {
@@ -1300,6 +1323,8 @@ void iClass_Dump(uint8_t start_blockno, uint8_t numblks) {
 
 	// return pointer to dump memory in arg3
 	// iceman:  why not return | dataout - getbigbuf ?  Should give exact location.
+    Dbprintf("ICE::  dataout, %u  max trace %u,  bb start %u,   data-bb %u ",  dataout, BigBuf_max_traceLen(),  BigBuf_get_addr(),  dataout - BigBuf_get_addr()  );
+    Dbprintf("ICE:: bb size %u,  malloced %u  (255*8)",  BigBuf_get_size(),  BigBuf_get_size() - (dataout - BigBuf_get_addr()) );
     reply_mix(CMD_ACK, isOK, blkcnt, BigBuf_max_traceLen(), 0, 0);
     BigBuf_free();
 }

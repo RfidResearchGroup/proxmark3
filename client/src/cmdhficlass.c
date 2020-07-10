@@ -1158,28 +1158,22 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 }
 
 static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
-    uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    if (select_only(CSN, CCNR, use_credit_key, verbose) == false) {
-        if (verbose) PrintAndLogEx(FAILED, "selecting tag failed");
-//        DropField();
-        return false;
-    }
-
-    //get div_key
-    if (rawkey)
-        memcpy(div_key, KEY, 8);
-    else
-        HFiClassCalcDivKey(CSN, KEY, div_key, elite);
-
-    if (verbose) PrintAndLogEx(SUCCESS, "authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8));
-
-    doMAC(CCNR, div_key, MAC);
-
+  
+    struct {
+        uint8_t key[8];
+        bool use_raw;
+        bool use_elite;
+        bool use_credit_key;
+    } PACKED payload;
+    
+    memcpy(payload.key, KEY, 8);
+    payload.use_raw = rawkey;
+    payload.use_elite = elite;
+    payload.use_credit_key = use_credit_key;
+    
+    SendCommandNG(CMD_HF_ICLASS_AUTH, (uint8_t*)&payload, sizeof(payload));
     PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ICLASS_AUTH, MAC, 4);
+    clearCommandBuffer();   
     if (WaitForResponseTimeout(CMD_HF_ICLASS_AUTH, &resp, 2000) == 0) {
         if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
         return false;
@@ -1190,12 +1184,25 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
         return false;
     }
 
-    uint8_t isOK = resp.data.asBytes[0];
-    if (isOK == 0) {
+    struct p {
+        bool isOK;
+        uint8_t div_key[8];
+        uint8_t mac[4];
+    } PACKED;
+    struct p *packet = (struct p *)resp.data.asBytes;
+    
+    if (packet->isOK == 0) {
         if (verbose) PrintAndLogEx(FAILED, "authentication error");
         return false;
     }
-
+    
+    if (div_key)
+        memcpy(div_key, packet->div_key, sizeof(packet->div_key));
+    
+    if (MAC)
+        memcpy(MAC, packet->mac, sizeof(packet->mac));
+    
+    if (verbose) PrintAndLogEx(SUCCESS, "authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8));
     return true;
 }
 
@@ -2972,7 +2979,7 @@ int readIclass(bool loop, bool verbose) {
 
             uint8_t readStatus = resp.oldarg[0] & 0xff;
 
-            PrintAndLogEx(NORMAL, "ICE: %x", readStatus);
+//            PrintAndLogEx(NORMAL, "ICE: %x", readStatus);
 
             // no tag found or button pressed
             if ((readStatus == 0 && !loop) || readStatus == 0xFF) {

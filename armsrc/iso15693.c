@@ -688,9 +688,9 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
     FpgaDisableSscDma();
 
     uint32_t sof_time = *eof_time
-                        - DecodeTag.len * 8 * 8 * 16 // time for byte transfers
-                        - 32 * 16  // time for SOF transfer
-                        - (DecodeTag.lastBit != SOF_PART2?32*16:0); // time for EOF transfer
+                        - (DecodeTag.len * 8 * 8 * 16) // time for byte transfers
+                        - (32 * 16)  // time for SOF transfer
+                        - (DecodeTag.lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
 
     if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf("samples = %d, ret = %d, Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, posCount = %d",
@@ -705,7 +705,8 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
         Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
     }
 
-    LogTrace(DecodeTag.output, DecodeTag.len, (sof_time * 4), (*eof_time * 4), NULL, false);
+    if (LogTrace(DecodeTag.output, DecodeTag.len, (sof_time * 4), (*eof_time * 4), NULL, false) == false)
+        DbpString("GetIso15693AnswerFromTag: failed logtrace");
 
     if (ret < 0) {
         return ret;
@@ -1090,7 +1091,8 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
                         - DecodeReader.byteCount * (DecodeReader.Coding==CODING_1_OUT_OF_4?128:2048) // time for byte transfers
                         - 32  // time for SOF transfer
                         - 16; // time for EOF transfer
-        LogTrace(DecodeReader.output, DecodeReader.byteCount, sof_time*32, *eof_time*32, NULL, true);
+        if (LogTrace(DecodeReader.output, DecodeReader.byteCount, sof_time*32, *eof_time*32, NULL, true) == false)
+            DbpString("GetIso15693CommandFromReader: failed logtrace");
     }
 
     return DecodeReader.byteCount;
@@ -1223,16 +1225,18 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
             }
         }
 
-        if (!TagIsActive) {                                                // no need to try decoding reader data if the tag is sending
+        // no need to try decoding reader data if the tag is sending
+        if (TagIsActive == false) {
+
             if (Handle15693SampleFromReader(sniffdata & 0x02, &DecodeReader)) {
 
-                uint32_t eof_time = dma_start_time + samples*16 + 8 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
+                uint32_t eof_time = dma_start_time + (samples * 16) + 8 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
                 if (DecodeReader.byteCount > 0) {
                     uint32_t sof_time = eof_time
-                                    - DecodeReader.byteCount * (DecodeReader.Coding==CODING_1_OUT_OF_4?128*16:2048*16) // time for byte transfers
-                                    - 32*16  // time for SOF transfer
-                                    - 16*16; // time for EOF transfer
-                    LogTrace(DecodeReader.output, DecodeReader.byteCount, sof_time*4, eof_time*4, NULL, true);
+                                    - DecodeReader.byteCount * (DecodeReader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
+                                    - 32 * 16  // time for SOF transfer
+                                    - 16 * 16; // time for EOF transfer
+                    LogTrace(DecodeReader.output, DecodeReader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
                 }
                 // And ready to receive another command.
                 DecodeReaderReset(&DecodeReader);
@@ -1244,13 +1248,13 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
             } else if (Handle15693SampleFromReader(sniffdata & 0x01, &DecodeReader)) {
 
-                uint32_t eof_time = dma_start_time + samples*16 + 16 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
+                uint32_t eof_time = dma_start_time + (samples * 16) + 16 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
                 if (DecodeReader.byteCount > 0) {
                     uint32_t sof_time = eof_time
-                                    - DecodeReader.byteCount * (DecodeReader.Coding==CODING_1_OUT_OF_4?128*16:2048*16) // time for byte transfers
-                                    - 32*16  // time for SOF transfer
-                                    - 16*16; // time for EOF transfer
-                    LogTrace(DecodeReader.output, DecodeReader.byteCount, sof_time*4, eof_time*4, NULL, true);
+                                    - DecodeReader.byteCount * (DecodeReader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
+                                    - 32 * 16  // time for SOF transfer
+                                    - 16 * 16; // time for EOF transfer
+                    LogTrace(DecodeReader.output, DecodeReader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
                 }
                 // And ready to receive another command
                 DecodeReaderReset(&DecodeReader);
@@ -1269,15 +1273,16 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         if (!ReaderIsActive && ExpectTagAnswer) {                       // no need to try decoding tag data if the reader is currently sending or no answer expected yet
             if (Handle15693SamplesFromTag(sniffdata >> 2, &DecodeTag)) {
 
-                uint32_t eof_time = dma_start_time + samples*16 - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
+                uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
                 if (DecodeTag.lastBit == SOF_PART2) {
-                    eof_time -= 8*16; // needed 8 additional samples to confirm single SOF (iCLASS)
+                    eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                 }
                 uint32_t sof_time = eof_time
                                     - DecodeTag.len * 8 * 8 * 16 // time for byte transfers
-                                    - 32 * 16  // time for SOF transfer
-                                    - (DecodeTag.lastBit != SOF_PART2?32*16:0); // time for EOF transfer
-                LogTrace(DecodeTag.output, DecodeTag.len, sof_time*4, eof_time*4, NULL, false);
+                                    - (32 * 16)  // time for SOF transfer
+                                    - (DecodeTag.lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
+
+                LogTrace(DecodeTag.output, DecodeTag.len, (sof_time * 4), (eof_time * 4), NULL, false);
                 // And ready to receive another response.
                 DecodeTagReset(&DecodeTag);
                 DecodeReaderReset(&DecodeReader);

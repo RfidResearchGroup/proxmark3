@@ -77,7 +77,15 @@
   -- piwi 2019
 **/
 
+/**
+  add the possibility to do iCLASS on device only
+  -- iceman 2020
+**/
+
 #include "optimized_cipher.h"
+#include "optimized_elite.h"
+#include "optimized_ikeys.h"
+#include "optimized_cipherutils.h"
 
 static const uint8_t opt_select_LUT[256] = {
     00, 03, 02, 01, 02, 03, 00, 01, 04, 07, 07, 04, 06, 07, 05, 04,
@@ -289,4 +297,24 @@ State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p) {
 void opt_doTagMAC_2(State _init,  uint8_t *nr, uint8_t mac[4], const uint8_t *div_key_p) {
     opt_suc(div_key_p, &_init, nr, 4, true);
     opt_output(div_key_p, &_init, mac);
+}
+
+
+void iclass_calc_div_key(uint8_t *csn, uint8_t *key, uint8_t *div_key, bool elite) {
+    if (elite) {
+        uint8_t keytable[128] = {0};
+        uint8_t key_index[8] = {0};
+        uint8_t key_sel[8] = { 0 };
+        uint8_t key_sel_p[8] = { 0 };
+        hash2(key, keytable);
+        hash1(csn, key_index);
+        for (uint8_t i = 0; i < 8 ; i++)
+            key_sel[i] = keytable[key_index[i]];
+
+        //Permute from iclass format to standard format
+        permutekey_rev(key_sel, key_sel_p);
+        diversifyKey(csn, key_sel_p, div_key);
+    } else {
+        diversifyKey(csn, key, div_key);
+    }
 }
