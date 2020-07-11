@@ -128,7 +128,7 @@ int demodParadox(void) {
     uint8_t error = 0;
 
     // Remove manchester encoding from FSK bits, skip pre
-    for (uint8_t i = idx + PARADOX_PREAMBLE_LEN; i < (idx + 96 - PARADOX_PREAMBLE_LEN ); i += 2) {
+    for (uint8_t i = idx + PARADOX_PREAMBLE_LEN; i < (idx + 96); i += 2) {
 
         // not manchester data
         if (bits[i] == bits[i + 1]) {
