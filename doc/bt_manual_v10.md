@@ -182,8 +182,9 @@ Instead of `aa:bb:cc:dd:ee:ff`, you'll see your MAC address.
 If you don't have `hcitool`, you can use `bluetoothctl` and `scan on` as shown in next section.
 
 2. Use Proxmark client with Bluetooth MAC address as bt:<mac>
+
 ```sh
-./proxmark3 bt:aa:bb:cc:dd:ee:ff
+./proxmark3 -p bt:aa:bb:cc:dd:ee:ff
 ```
 The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
@@ -225,7 +226,7 @@ turn on solid.
 
   4. a serial port `/dev/ttyUSB0` will be created, use Proxmark3 client on it
 ```sh
-./proxmark3 /dev/ttyUSB0
+./proxmark3 -p /dev/ttyUSB0
 ```
 
 #### 5.2.3 (deprecated) Connecting rdv4.0 with Bluetooth on Linux computer via rfcomm
@@ -257,7 +258,7 @@ connection is successful.
 
 4. Use Proxmark client on BT-serial port
 ```sh
-./proxmark3 /dev/rfcomm0
+./proxmark3 -p /dev/rfcomm0
 ```
 
 See instructions above (method 1) for initial pairing.
@@ -283,7 +284,7 @@ After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
   8. A serial port like `/dev/tty.PM3_RDV40-DevB` will be created, use Proxmark3 client on it
 
 ```sh
-./proxmark3 /dev/tty.PM3_RDV40-DevB
+./proxmark3 -p /dev/tty.PM3_RDV40-DevB
 ```
 ### 5.4 Android
 ^[Top](#top)
@@ -294,7 +295,7 @@ After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
   1. Make sure you already followed this tutorial https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/termux_notes.md#setup and have Termux with an running Proxmark3 client ready. You need additional the `cp210x` serial usb driver enabled and working, like the `USB_ACM` driver to communicate wireless. 
   2. Insert the Bluetooth adapter with an fitting USB-C/Micro-USB converter into your Android USB port and a serial port `/dev/ttyUSB0` will be created. To see if it's working, run `tsudo ls /dev/ttyU*` and it should list `/dev/ttyUSB0`. 
   3. The adapter will search automatically and establish the connection to BlueShark. The adapter will remember the device that was first connected and after that the same device will be connected. After the connection is established, the blue state LED on add-on will turn on solid.
-  4. If you see this, congratulations, you can run your Proxmark3 client in Termux with `tsudo proxmark3/client/proxmark3 /dev/ttyUSB0`
+  4. If you see this, congratulations, you can run your Proxmark3 client in Termux with `tsudo proxmark3/client/proxmark3 -p /dev/ttyUSB0`
 
 ## 6. OTHER NOTES
 ^[Top](#top)

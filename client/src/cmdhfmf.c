@@ -307,13 +307,13 @@ static int usage_hf14_decryptbytes(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf decrypt [h] <nt> <ar_enc> <at_enc> <data>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h            this help");
-    PrintAndLogEx(NORMAL, "      <nt>         reader nonce");
+    PrintAndLogEx(NORMAL, "      <nt>         tag nonce");
     PrintAndLogEx(NORMAL, "      <ar_enc>     encrypted reader response");
     PrintAndLogEx(NORMAL, "      <at_enc>     encrypted tag response");
     PrintAndLogEx(NORMAL, "      <data>       encrypted data, taken directly after at_enc and forward");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("         hf mf decrypt b830049b 9248314a 9280e203 41e586f9"));
-    PrintAndLogEx(NORMAL, "\n  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  auth block 3 [crc]");
+    PrintAndLogEx(NORMAL, "\n  this sample decrypts 41e586f9 -> 3003999a  Annotated: 30 03 [99 9a]  read block 3 [crc]");
     return PM3_SUCCESS;
 }
 

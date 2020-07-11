@@ -791,15 +791,6 @@ uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits) {
     return tmp;
 }
 
-/*
-uint8_t pw_rev_A(uint8_t b) {
-    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-    return b;
-}
-*/
-
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
     uint64_t remaind = 0, quotient = 0, result = 0;
     remaind = num % divider;

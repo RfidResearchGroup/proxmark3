@@ -267,7 +267,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfsecurakey.c
         ${PM3_ROOT}/client/src/cmdlft55xx.c
         ${PM3_ROOT}/client/src/cmdlfti.c
-        ${PM3_ROOT}/client/src/cmdlfverichip.c
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdmain.c

@@ -54,9 +54,12 @@ void print_blocks(uint32_t *data, size_t len);
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
+
+// Swap endian on arrays up to 64bytes.
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
 
+// parameter helper functions
 int param_getlength(const char *line, int paramnum);
 char param_getchar(const char *line, int paramnum);
 char param_getchar_indx(const char *line, int indx, int paramnum);

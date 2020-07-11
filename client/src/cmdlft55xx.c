@@ -1345,17 +1345,25 @@ bool testKnownConfigBlock(uint32_t block0) {
         case T55X7_RAW_CONFIG_BLOCK:
         case T55X7_EM_UNIQUE_CONFIG_BLOCK:
         case T55X7_FDXB_CONFIG_BLOCK:
+        case T55X7_FDXB_2_CONFIG_BLOCK:
         case T55X7_HID_26_CONFIG_BLOCK:
         case T55X7_PYRAMID_CONFIG_BLOCK:
         case T55X7_INDALA_64_CONFIG_BLOCK:
         case T55X7_INDALA_224_CONFIG_BLOCK:
         case T55X7_GUARDPROXII_CONFIG_BLOCK:
         case T55X7_VIKING_CONFIG_BLOCK:
-        case T55X7_NORALYS_CONFIG_BLOCK:
+        case T55X7_NORALSY_CONFIG_BLOCK:
         case T55X7_IOPROX_CONFIG_BLOCK:
         case T55X7_PRESCO_CONFIG_BLOCK:
         case T55X7_NEDAP_64_CONFIG_BLOCK:
         case T55X7_NEDAP_128_CONFIG_BLOCK:
+        case T55X7_VISA2000_CONFIG_BLOCK:
+        case T55X7_SECURAKEY_CONFIG_BLOCK:
+        case T55X7_PAC_CONFIG_BLOCK:  
+        case T55X7_VERICHIP_CONFIG_BLOCK:  
+        case T55X7_KERI_CONFIG_BLOCK:
+        case T55X7_NEXWATCH_CONFIG_BLOCK:
+        case T55X7_JABLOTRON_CONFIG_BLOCK:
             return true;
     }
     return false;
@@ -2044,17 +2052,18 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         case T55X7_EM_UNIQUE_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "EM unique, Paxton ");
             break;
+        case T55X7_FDXB_2_CONFIG_BLOCK:
         case T55X7_FDXB_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "FDXB ");
             break;
         case T55X7_HID_26_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b (ProxCard) ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b (ProxCard), Paradox, AWID ");
             break;
         case T55X7_PYRAMID_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyramid ");
             break;
         case T55X7_INDALA_64_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 64");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 64, Motorola");
             break;
         case T55X7_INDALA_224_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 224 ");
@@ -2065,7 +2074,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         case T55X7_VIKING_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Viking ");
             break;
-        case T55X7_NORALYS_CONFIG_BLOCK:
+        case T55X7_NORALSY_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Noralys ");
             break;
         case T55X7_IOPROX_CONFIG_BLOCK:
@@ -2080,12 +2089,33 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         case T55X7_NEDAP_128_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Nedap 128 ");
             break;
+        case T55X7_PAC_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "PAC/Stanley ");
+            break;
+        case T55X7_VERICHIP_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Verichip ");
+            break;
+        case T55X7_VISA2000_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "VISA2000 ");
+            break;
+        case T55X7_JABLOTRON_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Jablotron ");
+            break;
+        case T55X7_KERI_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "KERI ");
+            break;
+        case T55X7_SECURAKEY_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "SecuraKey ");
+            break;
+        case T55X7_NEXWATCH_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "NexWatch, Quadrakey ");
+            break;        
         default:
             break;
     }
 
     if (strlen(s) > 0)
-        PrintAndLogEx(NORMAL, "\n Config block match        : " _YELLOW_("%s"), s);
+        PrintAndLogEx(SUCCESS, "\nConfig block match        : " _YELLOW_("%s"), s);
 }
 
 static int CmdT55xxInfo(const char *Cmd) {
@@ -2224,11 +2254,11 @@ static int CmdT55xxInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, " POR-Delay                 : %s", (por) ? _GREEN_("Yes") : "No");
     }
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, " Raw Data - Page 0");
+    PrintAndLogEx(NORMAL, " Raw Data - Page 0,  block 0");
     if (gotdata)
-        PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X", block0);
+        PrintAndLogEx(NORMAL, "    0x" _GREEN_("%08X"), block0);
     else
-        PrintAndLogEx(NORMAL, "     Block 0  : 0x%08X  %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
+        PrintAndLogEx(NORMAL, "    0x" _GREEN_("%08X") " %s", block0, sprint_bin(DemodBuffer + config.offset, 32));
 
     if (((!gotdata) && (!config.Q5)) || (gotdata && (!dataasq5)))
         printT5x7KnownBlock0(block0);

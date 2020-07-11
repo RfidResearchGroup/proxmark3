@@ -1286,6 +1286,7 @@ int CmdLFfind(const char *Cmd) {
         }
     }
 
+    if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
     if (demodHID() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
     if (demodAWID() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
     if (demodIOProx() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
@@ -1308,8 +1309,8 @@ int CmdLFfind(const char *Cmd) {
     if (demodPyramid() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
     if (demodSecurakey() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
     if (demodViking() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
-    if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
     if (demodGallagher() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
+   
 //    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
     //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
 

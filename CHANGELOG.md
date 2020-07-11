@@ -3,8 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Added lf em function: 4x50_sread (@tharexde)
- - Added lf em functions: 4x50_info, 4x50_write, 4x50_write_password (@tharexde)
+ - Readded verichip command which seems missing (@iceman1001)
+ - Fix missing t55x7 config block detection (@iceman1001)
+ - Fix missing define on proxspace (@mwalker33)
+ - Added `lf em 4x50_dump` (@iceman1001)
+ - Added `lf em 4x50_read` (@tharexde)
+ - Added `lf em 4x50_info` (@tharexde)
+ - Added `4x50_write` (@tharexde)
+ - Added `4x50_write_password` (@tharexde)
  - Fix em4x50 demodulation error (@tharexde)  
  - Fix `hf mfdes` authentification issues, DES working (@bkerler)
  - Add Android cross-compilation to client cmake (@dxl, @doegox)

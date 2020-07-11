@@ -39,9 +39,13 @@ static int usage_lf_verichip_clone(void) {
 
 //see NRZDemod for what args are accepted
 static int CmdVerichipDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodVerichip();
+}
 
+int demodVerichip(void) {
     //NRZ
-    if (NRZrawDemod(Cmd, false) != PM3_SUCCESS) {
+    if (NRZrawDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - VERICHIP: NRZ Demod failed");
         return PM3_ESOFT;
     }
@@ -154,20 +158,15 @@ int CmdLFVerichip(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-// by marshmellow
-// find PAC preamble in already demoded data
+// find VERICHIP preamble in already demoded data
 int detectVerichip(uint8_t *dest, size_t *size) {
     if (*size < 128) return -1; //make sure buffer has data
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0};
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
         return -2; //preamble not found
-    if (*size != 128) return -3; //wrong demoded size
+    if (*size < 128) return -3; //wrong demoded size
     //return start position
     return (int)startIdx;
-}
-
-int demodVerichip(void) {
-    return CmdVerichipDemod("");
 }
 
