@@ -85,6 +85,18 @@ static int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_dump f card_nnn p 11223344"));
     return PM3_SUCCESS;
 }
+static int usage_lf_em4x50_wipe(void) {
+    PrintAndLogEx(NORMAL, "Wipe data from EM4x50 tag. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_wipe [h] [p <pwd>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_wwipe p 11223344"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 
 static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t *words) {
 
@@ -670,5 +682,59 @@ int CmdEM4x50Dump(const char *Cmd) {
     saveFileEML(filename, data, sizeof(data), 4);
     saveFile(filename, ".bin", data, sizeof(data));
     //saveFileJSON...
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50Wipe(const char *Cmd) {
+
+    // fills EM4x50 tag with zeros including password
+
+    bool errors = false, bpwd = false;
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_wipe();
+
+            case 'p':
+                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
+                     PrintAndLogEx(FAILED, "\npassword has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
+                }
+                bpwd = true;
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "\nUnknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || !bpwd)
+         return usage_lf_em4x50_wipe();
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&etd, sizeof(etd));
+
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2*TIMEOUT)) {
+        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
+        return PM3_ETIMEOUT;
+    }
+
+    // print response
+    bool isOK = resp.status;
+    if (isOK) {
+        PrintAndLogEx(SUCCESS,"\nwiping data " _GREEN_("ok") "\n");
+    } else {
+        PrintAndLogEx(FAILED,"\nwiping data " _RED_("failed") "\n");
+        return PM3_ESOFT;
+    }
+
     return PM3_SUCCESS;
 }

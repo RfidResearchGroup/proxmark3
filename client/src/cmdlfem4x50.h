@@ -23,4 +23,6 @@ int CmdEM4x50Write(const char *Cmd);
 int CmdEM4x50WritePassword(const char *Cmd);
 int CmdEM4x50Read(const char *Cmd);
 int CmdEM4x50Dump(const char *Cmd);
+int CmdEM4x50Wipe(const char *Cmd);
+
 #endif
