@@ -100,7 +100,6 @@ int gLow = 0;
 static void init_tag(void) {
 
     // initialize global tag structure
-    
     for (int i = 0; i < 34; i++)
         for (int j = 0; j < 7; j++)
             tag.sectors[i][j] = 0x00;
@@ -109,9 +108,7 @@ static void init_tag(void) {
 static uint8_t bits2byte(uint8_t *bits, int length) {
 
     // converts <length> separate bits into a single "byte"
-    
     uint8_t byte = 0;
-    
     for (int i = 0; i < length; i++) {
 
         byte |= bits[i];
@@ -124,11 +121,10 @@ static uint8_t bits2byte(uint8_t *bits, int length) {
 }
 
 static void msb2lsb_word(uint8_t *word) {
-    
+
     // reorders given <word> according to EM4x50 datasheet (msb -> lsb)
-    
+
     uint8_t buff[4];
-    
     buff[0] = reflect8(word[3]);
     buff[1] = reflect8(word[2]);
     buff[2] = reflect8(word[1]);
@@ -141,13 +137,12 @@ static void msb2lsb_word(uint8_t *word) {
 }
 
 static void save_word(int pos, uint8_t bits[EM4X50_TAG_WORD]) {
-    
+
     // split "raw" word into data, row and column parity bits and stop bit and
     // save them in global tag structure
-    
     uint8_t row_parity[4];
     uint8_t col_parity[8];
-    
+
     // data and row parities
     for (int i = 0; i < 4; i++) {
         tag.sectors[pos][i] = bits2byte(&bits[9*i],8);
@@ -161,7 +156,7 @@ static void save_word(int pos, uint8_t bits[EM4X50_TAG_WORD]) {
         col_parity[i] = bits[36+i];
 
     tag.sectors[pos][5] = bits2byte(col_parity,8);
-    
+
     // stop bit
     tag.sectors[pos][6] = bits[44];
 }
@@ -169,7 +164,7 @@ static void save_word(int pos, uint8_t bits[EM4X50_TAG_WORD]) {
 static void wait_timer(int timer, uint32_t period) {
 
     // do nothing for <period> using timer <timer>
-    
+
     if (timer == FPGA_TIMER_0) {
 
         AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
@@ -184,9 +179,8 @@ static void wait_timer(int timer, uint32_t period) {
 }
 
 static void em4x50_setup_read(void) {
- 
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
     // 50ms for the resonant antenna to settle.
@@ -195,12 +189,12 @@ static void em4x50_setup_read(void) {
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
     // start a 1.5ticks is 1us
     StartTicks();
- 
+
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    
+
     // Steal this pin from the SSP (SPI communication channel with fpga) and
     // use it to control the modulation
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
@@ -208,7 +202,7 @@ static void em4x50_setup_read(void) {
 
     // Disable modulation at default, which means enable the field
     LOW(GPIO_SSC_DOUT);
-    
+
     // Enable Peripheral Clock for
     //   TIMER_CLOCK0, used to measure exact timing before answering
     //   TIMER_CLOCK1, used to capture edges of the tag frames
@@ -221,17 +215,17 @@ static void em4x50_setup_read(void) {
 
     // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-    
+
     // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-      
+
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    
+
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
-    
+
     // Watchdog hit
     WDT_HIT();
 }
@@ -239,21 +233,21 @@ static void em4x50_setup_read(void) {
 // functions for "reader" use case
 
 static bool get_signalproperties(void) {
-    
+
     // calculate signal properties (mean amplitudes) from measured data:
     // 32 amplitudes (maximum values) -> mean amplitude value -> gHigh -> gLow
-    
+
     bool signal_found = false;
     int no_periods = 32, pct = 75, noise = 140;
-    uint8_t sample = 0, sample_ref = 127;
+    uint8_t sample_ref = 127;
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
     uint32_t sample_max_sum = 0;
+    memcpy(sample_max, 0x00, sizeof(sample_max));
 
-    
     // wait until signal/noise > 1 (max. 32 periods)
     for (int i = 0; i < T0 * no_periods; i++) {
-        
+
         // about 2 samples per bit period
         wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
 
@@ -261,9 +255,9 @@ static bool get_signalproperties(void) {
             signal_found = true;
             break;
         }
-    
+
     }
-    
+
     if (!signal_found)
         return false;
 
@@ -273,39 +267,36 @@ static bool get_signalproperties(void) {
 
         AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
         while (AT91C_BASE_TC0->TC_CV < T0 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
-            
-            sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            
+
+            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+
             if (sample > sample_max[i])
                 sample_max[i] = sample;
-            
+
         }
-        
+
         sample_max_sum += sample_max[i];
     }
-    
+
     sample_max_mean = sample_max_sum / no_periods;
-    
+
     // set global envelope variables
     gHigh = sample_ref + pct * (sample_max_mean - sample_ref) / 100;
     gLow = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
-    
     return true;
 }
 
 static int get_next_bit(void) {
-    
+
     // returns bit value (or EM4X50_BIT_OTHER -> no bit pattern) by evaluating
     // a single sample within a bit period (given there is no LIW, ACK or NAK)
     // This function is not used for decoding, it is only used for identifying
     // a listen window (return value = EM4X50_BIT_OTHER) in functions
     // "find_double_listen_window" and "check_ack"
-  
-    uint8_t sample;
 
     // get sample at 3/4 of bit period
     wait_timer(0, T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
-    sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
     wait_timer(0, T0 * EM4X50_T_TAG_QUARTER_PERIOD);
@@ -315,7 +306,7 @@ static int get_next_bit(void) {
         return EM4X50_BIT_0;
     else if (sample < gLow)
         return EM4X50_BIT_1;
-    
+
     return EM4X50_BIT_OTHER;
 }
 
