@@ -608,10 +608,11 @@ int CmdEM4x50Dump(const char *Cmd) {
     em4x50_data_t etd;
     etd.pwd_given = false;
     etd.addr_given = false;
-    
+    etd.newpwd_given = false;
+
     char filename[FILE_PATH_SIZE] = {0x00};
     char *fptr = filename;
-    
+
     bool errors = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -655,9 +656,9 @@ int CmdEM4x50Dump(const char *Cmd) {
     bool success = (resp.status & STATUS_SUCCESS) >> 1;
     if (success == false) {
         PrintAndLogEx(FAILED, "reading tag " _RED_("failed"));
-        return PM3_ESOFT;        
+        return PM3_ESOFT;
     }
-    
+
     // structured format
     em4x50_word_t words[EM4X50_NO_WORDS];
     prepare_result(resp.data.asBytes, 0, EM4X50_NO_WORDS - 1, words);
