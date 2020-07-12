@@ -598,9 +598,8 @@ int lf_read(bool verbose, uint32_t samples) {
     struct p {
         uint8_t verbose;
         uint32_t samples;
-    } PACKED;
+    } payload;
 
-    struct p payload;
     payload.verbose = verbose;
     payload.samples = samples;
 

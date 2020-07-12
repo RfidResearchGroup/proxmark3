@@ -187,17 +187,17 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    char cmd_name[128];
-    memset(cmd_name, 0, sizeof(cmd_name));
+    char cmd_name[128] = { 0 };
 
     int len = 0;
     // %n == receives an integer of value equal to the number of chars read so far.
     // len = max 127
     sscanf(Cmd, "%127s%n", cmd_name, &len);
 
+    // Convert commands to lower case
     str_lower(cmd_name);
 
-    // Comment
+    // Ignore comment
     if (cmd_name[0] == '#')
         return PM3_SUCCESS;
 
@@ -243,7 +243,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 static char pparent[512] = {0};
 static char *parent = pparent;
 
-void dumpCommandsRecursive(const command_t cmds[], int markdown) {
+void dumpCommandsRecursive(const command_t cmds[], bool markdown) {
     if (cmds[0].Name == NULL) return;
 
     int i = 0;
