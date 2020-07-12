@@ -6,6 +6,22 @@
 //-----------------------------------------------------------------------------
 // Low frequency Paradox tag commands
 // FSK2a, rf/50, 96 bits (completely known)
+// Below section is edited by jumpycalm, last modified date 20200712
+// Example of raw 
+// Block0 = 0x00107060 (Always use this for Paradox)
+// Block1 = 0x0F555555 = 0000 1111 0101 0101 0101 0101 0101 0101
+// Manchester demod                                          0 0
+//                       [Premble 14 bits-----------------] [Start of FC 8 bit
+// Block2 = 0x5666A9AA = 0101 0110 0110 0110 1010 1001 1010 1010
+// Manchester demod       0 0  0 1  0 1  0 1  1 1  1 0  1 1  1 1
+//                    End of FC 8 bits] [Start of CN 16 bits
+// Block3 = 0xA6A5AA6A = 1010 0110 1010 0101 1010 1010 0110 1010
+// Manchester demod       1 1  0 1  1 1  0 0  1 1  1 1  0 1
+//                   End of CN 16 bits] [Checksum 8 bits--] [End, always 1010]
+// In the above example, FC is 0x05 or 5n, CN is 0x7BF7 or 31735n Checksum is 0x3D
+// Therefore the Paradox ID is 0x057BF73D [FC 8 bit][CN 16 bit][Checksum 8 bit]
+// As of today (20200712), there's no public known way to calculate the 8 bit
+// Check sum based on the 8 bit FC and 16 bit CN
 //-----------------------------------------------------------------------------
 #include "cmdlfparadox.h"
 
@@ -24,7 +40,9 @@
 #include "lfdemod.h"
 #include "protocols.h"  // t55xx defines
 #include "cmdlft55xx.h" // clone..
-#include "crc.h"        // maxim
+
+#define PARADOX_RAW_FULL_LEN 96
+#define PARADOX_RAW_PREAMBLE_LEN 28
 
 static int CmdHelp(const char *Cmd);
 
@@ -59,25 +77,14 @@ static int usage_lf_paradox_sim(void) {
 }
 */
 
-const uint8_t paradox_lut[] = {
-    0xDB, 0xFC, 0x3F, 0xC5, 0x50, 0x14, 0x05, 0x47,
-    0x9F, 0xED, 0x7D, 0x59, 0x22, 0x84, 0x21, 0x4E,
-    0x39, 0x48, 0x12, 0x88, 0x53, 0xDE, 0xBB, 0xE4,
-    0xB4, 0x2D, 0x4D, 0x55, 0xCA, 0xBE, 0xA3, 0xE2
-    };
-// FC:108, Card01827
-// 00000000  01101100       00000111     00100011
-// hex(0xED xor 0x7D xor 0x22 xor 0x84 xor 0xDE xor 0xBB xor 0xE4 xor 0x4D xor 0xA3 xor 0xE2 xor 0x47) 0xFC
-
-#define PARADOX_PREAMBLE_LEN 8
 
 static int CmdParadoxDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     return demodParadox();
 }
 
-//by marshmellow
-//Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
+//by marshmellow, jumpycalm
+//Paradox Prox demod - FSK2a RF/50 with preamble of 0000 1111 0101 0101 0101 0101 0101 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
 
 int demodParadox(void) {
@@ -107,93 +114,45 @@ int demodParadox(void) {
         return PM3_ESOFT;
     }
 
-    uint8_t *b = bits + idx;
-    uint8_t rawhex[12] = {0};
-    for (uint8_t i = 0, m = 0, p = 1; i < 96; i++) {
-
-        // convert hex
-        rawhex[m] <<= 1;
-        rawhex[m] |= (*b & 1);
-        b++;
-
-        if (p == 8) {
-            m++;
-            p = 1;
-        } else {
-            p++;
-        }
-    }
-
-    uint32_t hi2 = 0, hi = 0, lo = 0;
-    uint8_t error = 0;
-
-    // Remove manchester encoding from FSK bits, skip pre
-    for (uint8_t i = idx + PARADOX_PREAMBLE_LEN; i < (idx + 96); i += 2) {
-
+    // Remove manchester encoding from FSK bits, skip pre (28 bit) and end (4 bit always 1010)
+    // (96 - 28 - 4) / 2 = 32, therefore use one uint32 variable to hold paradox ID
+    uint32_t paradox_id = 0;
+    for (uint8_t i = idx + PARADOX_RAW_PREAMBLE_LEN; i < (idx + PARADOX_RAW_FULL_LEN - 4); i += 2) {
         // not manchester data
         if (bits[i] == bits[i + 1]) {
             PrintAndLogEx(WARNING, "Error Manchester at %u", i); 
-            error++;
         }
 
-        hi2 = (hi2 << 1) | (hi >> 31);
-        hi = (hi << 1) | (lo >> 31);
-        lo <<= 1;
+        paradox_id <<= 1;
 
         if (bits[i] && !bits[i + 1])  {
-            lo |= 1;  // 10
+            paradox_id |= 1;  // 10 manchester represents 1, 01 manchester represents 0
         }
     }
    
     setDemodBuff(bits, size, idx);
     setClockGrid(50, wave_idx + (idx * 50));
 
-    if (hi2 == 0 && hi == 0 && lo == 0) {
+    if (!paradox_id) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox no value found");
         return PM3_ESOFT;
     }
 
-    uint32_t fc = ((hi & 0x3) << 6) | (lo >> 26);
-    uint32_t cardnum = (lo >> 10) & 0xFFFF;
-    uint8_t chksum = (lo >> 2) & 0xFF;
-
-
-    // Calc CRC & Checksum
-    // 000088f0b - FC: 8 - Card: 36619 - Checksum: 05 - RAW: 0f55555559595aa559a5566a
-    // checksum?
-    uint8_t calc_chksum = 0x47;
-    uint8_t pos = 0;
-    for(uint8_t i = 0; i < 8; i++ ) { 
-        
-        uint8_t ice = rawhex[i+1];
-        for(uint8_t j = 0x80; j > 0; j >>= 2) {
-            
-            if (ice & j) {
-                calc_chksum ^= paradox_lut[pos];
-            }
-            pos++;
-        }
-    }
-
-    uint32_t crc = CRC8Maxim(rawhex + 1, 8);
-    PrintAndLogEx(DEBUG, " FSK/MAN raw : %s", sprint_hex(rawhex, sizeof(rawhex)));
-    PrintAndLogEx(DEBUG, "         raw : %s = (maxim crc8) %02x == %02x", sprint_hex(rawhex + 1, 8), crc, calc_chksum);
-//    PrintAndLogEx(DEBUG, " OTHER sample CRC-8/MAXIM : 55 55 69 A5 55 6A 59 5A  = FC");    
+    uint8_t fc = (uint8_t)(paradox_id >> 24);
+    uint16_t cn = (uint16_t)((paradox_id & 0xFFFFFF) >> 8);
+    uint8_t chksum = (uint8_t)(paradox_id & 0xFF);
 
     uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
     uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
     uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 
-    PrintAndLogEx(INFO, "Paradox - ID: " _GREEN_("%x%08x") " FC: " _GREEN_("%d") " Card: " _GREEN_("%d") ", Checksum: %02x, Raw: %08x%08x%08x",
-                  hi >> 10,
-                  (hi & 0x3) << 26 | (lo >> 10),
+    PrintAndLogEx(INFO, "Paradox - ID: "_GREEN_("%08x")" FC: "_GREEN_("%d")" CN: "_GREEN_("%d")", Checksum: "_GREEN_("%02x")", Raw: "_GREEN_("%08x%08x%08x")"",
+                  paradox_id,
                   fc,
-                  cardnum,
+                  cn,
                   chksum,
-                  rawHi2,
-                  rawHi,
-                  rawLo
-                 );
+                  rawHi2, rawHi, rawLo
+                  );
 
     PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %zu, Printing Demod Buffer:", idx, size);
     if (g_debugMode)
@@ -324,7 +283,7 @@ int CmdLFParadox(const char *Cmd) {
 // loop to get raw paradox waveform then FSK demodulate the TAG ID from it
 int detectParadox(uint8_t *dest, size_t *size, int *wave_start_idx) {
     //make sure buffer has data
-    if (*size < 96 * 50) return -1;
+    if (*size < PARADOX_RAW_FULL_LEN * 50) return -1;
 
     if (getSignalProperties()->isnoise) return -2;
 
@@ -332,11 +291,11 @@ int detectParadox(uint8_t *dest, size_t *size, int *wave_start_idx) {
     *size = fskdemod(dest, *size, 50, 1, 10, 8, wave_start_idx); // paradox fsk2a
 
     //did we get a good demod?
-    if (*size < 96) return -3;
+    if (*size < PARADOX_RAW_FULL_LEN) return -3;
 
     // 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
     size_t idx = 0;
-    uint8_t preamble[] = {0, 0, 0, 0, 1, 1, 1, 1};
+    uint8_t preamble[] = {0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &idx))
         return -4; //preamble not found
 
