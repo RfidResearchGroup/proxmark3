@@ -228,7 +228,8 @@ static uint32_t IceHIDDemod(void) {
 
     int dummyIdx = 0;
 
-    uint32_t hi2 = 0, hi = 0, lo = 0;
+    uint64_t hid_id_hi = 0;
+    uint64_t hid_id_lo = 0;
 
     // large enough to catch 2 sequences of largest format
 //    size_t size = 50 * 128 * 2;  // 12800 bytes
@@ -237,7 +238,7 @@ static uint32_t IceHIDDemod(void) {
     uint8_t *dest = BigBuf_get_addr();
 
     // FSK demodulator
-    int idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
+    int idx = DemodManchesterFSK(dest, &size, &hid_id_hi, &hid_id_lo, &dummyIdx, hid_preamble, HID_RAW_FULL_LEN, sizeof(hid_preamble));
     if (idx < 0) {
         BigBuf_free();
         return PM3_ESOFT;
@@ -249,13 +250,12 @@ static uint32_t IceHIDDemod(void) {
         memset(entry, 0, sizeof(entry));
 
         // go over previously decoded manchester data and decode into usable tag ID
-        if (hi2 != 0) { //extra large HID tags  88/192 bits
+        if (!hid_id_hi) { //extra large HID tags  88/192 bits
 
-            sprintf((char *)entry, "HID large: %"PRIx32"%08"PRIx32"%08"PRIx32" (%"PRIu32")\n",
-                    hi2,
-                    hi,
-                    lo,
-                    (lo >> 1) & 0xFFFF
+            sprintf((char *)entry, "HID large: %"PRIx64"%16"PRIx64" (%"PRIu32")\n",
+                    hid_id_hi,
+                    hid_id_lo,
+                    (hid_id_lo >> 1) & 0xFFFF
                    );
 
             append(entry, strlen((char *)entry));
@@ -264,6 +264,9 @@ static uint32_t IceHIDDemod(void) {
             uint8_t bitlen = 0;
             uint32_t fac = 0;
             uint32_t cardnum = 0;
+            // TODO: Need to rework the logic to remove hi and lo
+            uint32_t hi = (uint32_t)(hid_id_lo >> 32);
+            uint32_t lo = (uint32_t)(hid_id_lo & 0xFFFFFFFF);
 
             if (((hi >> 5) & 1) == 1) { //if bit 38 is set then < 37 bit format is used
                 uint32_t lo2 = 0;
@@ -298,10 +301,9 @@ static uint32_t IceHIDDemod(void) {
                 fac = ((hi & 0xF) << 12) | (lo >> 20);
             }
 
-            sprintf((char *)entry, "HID: %"PRIx32"%08"PRIx32" (%"PRIu32") Format: %d bit FC: %"PRIu32" Card: %"PRIu32"\n",
-                    hi,
-                    lo,
-                    (lo >> 1) & 0xFFFF,
+            sprintf((char *)entry, "HID: %"PRIx64" (%"PRIu32") Format: %d bit FC: %"PRIu32" Card: %"PRIu32"\n",
+                    hid_id_lo,
+                    (hid_id_lo >> 1) & 0xFFFF,
                     bitlen,
                     fac,
                     cardnum

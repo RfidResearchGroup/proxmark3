@@ -28,6 +28,9 @@
 #include "pmflash.h"
 #include "flashmem.h" // persistence on flash
 
+#define HID_RAW_FULL_LEN 96
+uint8_t hid_preamble[] = {0, 0, 0, 1, 1, 1, 0, 1};
+
 /*
 Notes about EM4xxx timings.
 
@@ -1227,7 +1230,8 @@ void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
 int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
 
     size_t size;
-    uint32_t hi2 = 0, hi = 0, lo = 0;
+    uint64_t hid_id_hi = 0;
+    uint64_t hid_id_lo = 0;
     int dummyIdx = 0;
     // Configure to go in 125kHz listen mode
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
@@ -1263,22 +1267,24 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
         // 50 * 128 * 2 - big enough to catch 2 sequences of largest format
         size = MIN(12800, BigBuf_max_traceLen());
         
-        int idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
+        int idx = DemodManchesterFSK(dest, &size, &hid_id_hi, &hid_id_lo, &dummyIdx, hid_preamble, HID_RAW_FULL_LEN, sizeof(hid_preamble));
         if (idx < 0) continue;
 
-        if (idx > 0 && lo > 0 && (size == 96 || size == 192)) {
+        if (idx > 0 && hid_id_lo > 0 && (size == 96 || size == 192)) {
             // go over previously decoded manchester data and decode into usable tag ID
-            if (hi2 != 0) { //extra large HID tags  88/192 bits
-                Dbprintf("TAG ID: " _GREEN_("%x%08x%08x") " (%d)",
-                         hi2,
-                         hi,
-                         lo,
-                         (lo >> 1) & 0xFFFF
+            if (hid_id_hi) { //extra large HID tags  88/192 bits
+                Dbprintf("TAG ID: " _GREEN_("%lx%16lx") " (%d)",
+                         hid_id_hi,
+                         hid_id_lo,
+                         (hid_id_lo >> 1) & 0xFFFF
                         );
             } else {  //standard HID tags 44/96 bits
                 uint8_t bitlen = 0;
                 uint32_t fac = 0;
                 uint32_t cardnum = 0;
+                // TODO: Need to rework the logic to remove hi and lo
+                uint32_t hi = (uint32_t)(hid_id_lo >> 32);
+                uint32_t lo = (uint32_t)(hid_id_lo & 0xFFFFFFFF);
 
                 if (((hi >> 5) & 1) == 1) { //if bit 38 is set then < 37 bit format is used
                     uint32_t lo2 = 0;
@@ -1312,23 +1318,23 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
                     cardnum = (lo >> 1) & 0x7FFFF;
                     fac = ((hi & 0xF) << 12) | (lo >> 20);
                 }
-                Dbprintf("TAG ID: " _GREEN_("%x%08x (%d)") " - Format Len: " _GREEN_("%d") " bit - FC: " _GREEN_("%d") " - Card: "_GREEN_("%d"),
-                         hi,
-                         lo,
-                         (lo >> 1) & 0xFFFF,
+                Dbprintf("TAG ID: " _GREEN_("%lx (%d)") " - Format Len: " _GREEN_("%d") " bit - FC: " _GREEN_("%d") " - Card: "_GREEN_("%d"),
+                         hid_id_lo,
+                         (hid_id_lo >> 1) & 0xFFFF,
                          bitlen,
                          fac,
                          cardnum
                         );
             }
             if (findone) {
-                *high = hi;
-                *low = lo;
+                *high = hid_id_lo >> 32;
+                *low = hid_id_lo & 0xFFFF;
                 break;
             }
             // reset
         }
-        hi2 = hi = lo = idx = 0;
+        hid_id_lo = 0;
+        idx = 0;
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();

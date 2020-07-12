@@ -42,7 +42,7 @@
 #include "cmdlft55xx.h" // clone..
 
 #define PARADOX_RAW_FULL_LEN 96
-#define PARADOX_RAW_PREAMBLE_LEN 28
+uint8_t paradox_preamble[] = {0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
 
 static int CmdHelp(const char *Cmd);
 
@@ -86,7 +86,6 @@ static int CmdParadoxDemod(const char *Cmd) {
 //by marshmellow, jumpycalm
 //Paradox Prox demod - FSK2a RF/50 with preamble of 0000 1111 0101 0101 0101 0101 0101 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
-
 int demodParadox(void) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
@@ -96,39 +95,34 @@ int demodParadox(void) {
         return PM3_ESOFT;
     }
 
-    int wave_idx = 0;
     //get binary from fsk wave
-    int idx = detectParadox(bits, &size, &wave_idx);
+    uint64_t paradox_id_hi_temp = 0; // Not used for Paradox
+    uint64_t paradox_id_lo_temp = 0;
+    int wave_idx = 0;
+    int idx = DemodManchesterFSK(bits, &size, &paradox_id_hi_temp, &paradox_id_lo_temp, &wave_idx, paradox_preamble, PARADOX_RAW_FULL_LEN, sizeof(paradox_preamble));
     if (idx < 0) {
         if (idx == -1)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox programming error, check your source code"));
         else if (idx == -2)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox just noise detected");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox not enough samples"));
         else if (idx == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox problem during FSK demod");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox just noise detected"));
         else if (idx == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox preamble not found");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox problem during FSK demod"));
+        else if (idx == -5)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox preamble not found"));
+        else if (idx == -6)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox wrong size after finding preamble"));
+        else if (idx == -7)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox error in Manchester data, size %zu"), size);
         else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("Paradox error demoding fsk %d"), idx);
 
         return PM3_ESOFT;
     }
 
-    // Remove manchester encoding from FSK bits, skip pre (28 bit) and end (4 bit always 1010)
-    // (96 - 28 - 4) / 2 = 32, therefore use one uint32 variable to hold paradox ID
-    uint32_t paradox_id = 0;
-    for (uint8_t i = idx + PARADOX_RAW_PREAMBLE_LEN; i < (idx + PARADOX_RAW_FULL_LEN - 4); i += 2) {
-        // not manchester data
-        if (bits[i] == bits[i + 1]) {
-            PrintAndLogEx(WARNING, "Error Manchester at %u", i); 
-        }
-
-        paradox_id <<= 1;
-
-        if (bits[i] && !bits[i + 1])  {
-            paradox_id |= 1;  // 10 manchester represents 1, 01 manchester represents 0
-        }
-    }
+    // Last 2 bits of demoded Paradox is always 11, strip the last 2 bits to get the actual Paradox ID
+    uint32_t paradox_id = (uint32_t)(paradox_id_lo_temp >> 2);
    
     setDemodBuff(bits, size, idx);
     setClockGrid(50, wave_idx + (idx * 50));
@@ -160,6 +154,7 @@ int demodParadox(void) {
 
     return PM3_SUCCESS;
 }
+
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdParadoxRead(const char *Cmd) {
@@ -278,28 +273,6 @@ static int CmdHelp(const char *Cmd) {
 int CmdLFParadox(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-}
-
-// loop to get raw paradox waveform then FSK demodulate the TAG ID from it
-int detectParadox(uint8_t *dest, size_t *size, int *wave_start_idx) {
-    //make sure buffer has data
-    if (*size < PARADOX_RAW_FULL_LEN * 50) return -1;
-
-    if (getSignalProperties()->isnoise) return -2;
-
-    // FSK demodulator
-    *size = fskdemod(dest, *size, 50, 1, 10, 8, wave_start_idx); // paradox fsk2a
-
-    //did we get a good demod?
-    if (*size < PARADOX_RAW_FULL_LEN) return -3;
-
-    // 00001111 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
-    size_t idx = 0;
-    uint8_t preamble[] = {0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &idx))
-        return -4; //preamble not found
-
-    return (int)idx;
 }
 
 

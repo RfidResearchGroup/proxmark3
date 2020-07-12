@@ -37,9 +37,8 @@
 #include "lfdemod.h"
 #include "wiegand_formats.h"
 
-#ifndef BITS
-# define BITS 96
-#endif
+#define HID_RAW_FULL_LEN 96
+uint8_t hid_preamble[] = {0, 0, 0, 1, 1, 1, 0, 1};
 
 static int CmdHelp(const char *Cmd);
 
@@ -160,8 +159,8 @@ static int CmdHIDDemod(const char *Cmd) {
         convertGraphFromBitstream();
     }
 
-    //raw fsk demod no manchester decoding no start bit finding just get binary from wave
-    uint32_t hi2 = 0, hi = 0, lo = 0;
+    uint64_t hid_id_hi = 0;
+    uint64_t hid_id_lo = 0;
 
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
@@ -171,18 +170,23 @@ static int CmdHIDDemod(const char *Cmd) {
     }
     //get binary from fsk wave
     int waveIdx = 0;
-    int idx = HIDdemodFSK(bits, &size, &hi2, &hi, &lo, &waveIdx);
+    int idx = 0;
+    // Try to demod HID
+    idx = DemodManchesterFSK(bits, &size, &hid_id_hi, &hid_id_lo, &waveIdx, hid_preamble, HID_RAW_FULL_LEN, sizeof(hid_preamble));
     if (idx < 0) {
-
         if (idx == -1)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID not enough samples"));
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID programming error, check your source code"));
         else if (idx == -2)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID just noise detected"));
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID not enough samples"));
         else if (idx == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID problem during FSK demod"));
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID just noise detected"));
         else if (idx == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID preamble not found"));
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID problem during FSK demod"));
         else if (idx == -5)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID preamble not found"));
+        else if (idx == -6)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID wrong size after finding preamble"));
+        else if (idx == -7)
             PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error in Manchester data, size %zu"), size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error demoding fsk %d"), idx);
@@ -193,19 +197,22 @@ static int CmdHIDDemod(const char *Cmd) {
     setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
 
-    if (hi2 == 0 && hi == 0 && lo == 0) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID no values found"));
-        return PM3_ESOFT;
-    }
-
-    if (hi2 != 0) { //extra large HID tags
-        PrintAndLogEx(SUCCESS, "HID Prox - " _GREEN_("%x%08x%08x (%u)"), hi2, hi, lo, (lo >> 1) & 0xFFFF);
+    if (hid_id_hi) { //extra large HID tags
+        PrintAndLogEx(SUCCESS, "HID Prox - " _GREEN_("%lx%16lx%08x (%u)"), hid_id_hi, hid_id_lo, (hid_id_lo >> 1) & 0xFFFF);
     } else {  //standard HID tags <38 bits
+        if (!hid_id_lo) {
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID no values found"));
+            return PM3_ESOFT;
+        }
+
         uint8_t fmtLen = 0;
         uint32_t cc = 0;
         uint32_t fc = 0;
         uint32_t cardnum = 0;
         uint8_t oem = 0;
+        // TODO: Need to rework the logic to remove hi and lo
+        uint32_t hi = (uint32_t)(hid_id_lo >> 32);
+        uint32_t lo = (uint32_t)(hid_id_lo & 0xFFFFFFFF);
         if (((hi >> 5) & 1) == 1) {//if bit 38 is set then < 37 bit format is used
             uint32_t lo2 = 0;
             lo2 = (((hi & 31) << 12) | (lo >> 20)); //get bits 21-37 to check for format len bit
@@ -246,11 +253,12 @@ static int CmdHIDDemod(const char *Cmd) {
         }
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
             PrintAndLogEx(SUCCESS,
-                "HID Prox (Kastle format) - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("32") " bit CC: " _GREEN_("%u") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u"), hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+                "HID Prox (Kastle format) - " _GREEN_("%lx (%u)") " - len: " _GREEN_("32") " bit CC: " _GREEN_("%u") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u"),
+                hid_id_lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
             PrintAndLogEx(SUCCESS, 
-                "HID Prox - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("%u") " bit - OEM: " _GREEN_("%03u") " FC: " _GREEN_("%u")" Card: " _GREEN_("%u"),
-                          hi, lo, cardnum, fmtLen, oem, fc, cardnum);
+                "HID Prox - " _GREEN_("%lx (%u)") " - len: " _GREEN_("%u") " bit - OEM: " _GREEN_("%03u") " FC: " _GREEN_("%u")" Card: " _GREEN_("%u"),
+                            hid_id_lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }
 

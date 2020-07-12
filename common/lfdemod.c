@@ -2127,43 +2127,45 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     return 1;
 }
 
+// Get ID tag from Manchester FSK raw
+int DemodManchesterFSK(uint8_t *dest, size_t *size, uint64_t *demod_id_hi, uint64_t *demod_id_lo, int *waveStartIdx,
+                       uint8_t *preamble, uint8_t raw_full_len, uint8_t raw_pre_len) {
+    if (g_debugMode == 2)
+        prnt("DEBUG: (DemodManchesterFSK raw_full_len: %d, raw_pre_len: %d",
+              raw_full_len,
+              raw_pre_len);
+    // Check to make sure input size is not out of range
+    if (raw_full_len - raw_pre_len > 256) return -1;
 
-// loop to get raw HID waveform then FSK demodulate the TAG ID from it
-int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
-    //make sure buffer has data
-    if (*size < 96 * 50) return -1;
+    // Make sure buffer has data
+    if (*size < 96 * 50) return -2;
 
-    if (signalprop.isnoise) return -2;
+    if (signalprop.isnoise) return -3;
 
     // FSK demodulator  fsk2a so invert and fc/10/8
-    *size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx); //hid fsk2a
+    *size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);
 
-    //did we get a good demod?
-    if (*size < 96 * 2) return -3;
+    // Did we get a good demod?
+    if (*size < raw_full_len) return -4;
 
-    // 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
     size_t start_idx = 0;
-    uint8_t preamble[] = {0, 0, 0, 1, 1, 1, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx))
-        return -4; //preamble not found
+    if (!preambleSearch(dest, preamble, raw_pre_len, size, &start_idx))
+        return -5; // preamble not found
 
-    // wrong size?  (between to preambles)
-    //if (*size != 96) return -5;
+    // Check size after preamble search
+    if (*size < raw_pre_len)
+        return -6; // Wrong size after preamble search
 
-    size_t num_start = start_idx + sizeof(preamble);
     // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
-    for (size_t idx = num_start; (idx - num_start) < *size - sizeof(preamble); idx += 2) {
+    for (size_t idx = start_idx + raw_pre_len; idx < start_idx + *size; idx += 2) {
         if (dest[idx] == dest[idx + 1]) {
-            return -5; //not manchester data
+            return -7; //not manchester data
         }
-        *hi2 = (*hi2 << 1) | (*hi >> 31);
-        *hi = (*hi << 1) | (*lo >> 31);
-        //Then, shift in a 0 or one into low
-        *lo <<= 1;
-        if (dest[idx] && !dest[idx + 1]) // 1 0
-            *lo |= 1;
-        else // 0 1
-            *lo |= 0;
+        //Then, shift in a 0 or 1 into low
+        *demod_id_hi = (*demod_id_hi << 1) | (*demod_id_lo >> 63);
+        *demod_id_lo <<= 1;
+        if (dest[idx] && !dest[idx + 1]) // 10 manchester represents 1, 01 manchester represents 0
+            *demod_id_lo |= 1;
     }
     return (int)start_idx;
 }
