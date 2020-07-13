@@ -918,7 +918,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
 
-    bool use_sc = IsCryptoHelperPresent();
+    bool use_sc = IsCryptoHelperPresent(true);
 
     if (have_key == false && use_sc == false) {
         int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
@@ -1092,7 +1092,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
 
-    bool use_sc = IsCryptoHelperPresent();
+    bool use_sc = IsCryptoHelperPresent(true);
 
     if (have_key == false && use_sc == false) {
         size_t keylen = 0;
@@ -1814,7 +1814,6 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
 
 static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth) {
 
-    int numberAuthRetries = ICLASS_AUTH_RETRY;
     // return data.
     struct p {
         bool isOK;
@@ -1822,61 +1821,51 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
     } PACKED;
     struct p *result = NULL;
 
-    do {
-        // block 0,1 should always be able to read,  and block 5 on some cards.
-        if (auth || blockno >= 2) {
-            uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-            uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-            if (select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose) == false) {
-                numberAuthRetries--;
-                DropField();
-                continue;
-            }
-        } else {
-            uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-            uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-            if (select_only(CSN, CCNR, (keyType == 0x18), verbose) == false) {
-                numberAuthRetries--;
-                DropField();
-                continue;
-            }
+    // block 0,1 should always be able to read,  and block 5 on some cards.
+    if (auth || blockno >= 2) {
+        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        if (select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose) == false) {
+            return PM3_ESOFT;
         }
-
-        PacketResponseNG resp;
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_ICLASS_READBL, (uint8_t *)&blockno, sizeof(uint8_t));
-
-        if (WaitForResponseTimeout(CMD_HF_ICLASS_READBL, &resp, 2000) == 0) {
-            if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
-            DropField();
-            return PM3_ETIMEOUT;
+    } else {
+        uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        if (select_only(CSN, CCNR, (keyType == 0x18), verbose) == false) {
+             return PM3_ESOFT;
         }
+    }
 
-        if (resp.status != PM3_SUCCESS) {
-            if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
-            DropField();
-            return PM3_EWRONGANSWER;
-        }
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_READBL, (uint8_t *)&blockno, sizeof(uint8_t));
 
-        result = (struct p *)resp.data.asBytes;
-        if (result->isOK)
-            break;
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_READBL, &resp, 2000) == 0) {
+        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
 
-    } while (numberAuthRetries);
+    if (resp.status != PM3_SUCCESS) {
+        if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+        return PM3_EWRONGANSWER;
+    }
+
+    result = (struct p *)resp.data.asBytes;
+    if (result->isOK == false)
+        return PM3_ESOFT;
 
     DropField();
-
-    if (numberAuthRetries == 0) {
-        PrintAndLogEx(ERR, "failed to authenticate and read block");
-        return PM3_ESOFT;
-    }
 
     PrintAndLogEx(SUCCESS, "block %02X: " _GREEN_("%s"), blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
 
     if (memcmp(result->blockdata, empty, 8) == 0)
         return PM3_SUCCESS;
 
-    bool use_sc = IsCryptoHelperPresent();
+    if (blockno < 6 || blockno > 7)
+        return PM3_SUCCESS;
+        
+    bool use_sc = IsCryptoHelperPresent(verbose);
     if (use_sc == false) 
         return PM3_SUCCESS;
     
@@ -1887,8 +1876,6 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
             break;
         }
         case 7: {
-//        case 8:
-//        case 9: {
             PrintAndLogEx(INFO, "Trying to decrypt...");
 
             uint8_t dec_data[8];
@@ -1902,7 +1889,7 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
                 mid = bytes_to_num(dec_data, 4);
                 bot = bytes_to_num(dec_data + 4, 4);
 
-                PrintAndLogEx(INFO, "Block 7 binary");
+                PrintAndLogEx(INFO, "Binary");
 
                 char hexstr[8 + 1] = {0};
                 hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
@@ -1914,7 +1901,7 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
 
                 PrintAndLogEx(SUCCESS, "%s", binstr + i);
 
-                PrintAndLogEx(INFO, "Wiegand decode");
+                PrintAndLogEx(INFO, "-----------------------------------------------------------------");
                 wiegand_message_t packed = initialize_message_object(top, mid, bot);
                 HIDTryUnpack(&packed, true);
                 PrintAndLogEx(INFO, "-----------------------------------------------------------------");

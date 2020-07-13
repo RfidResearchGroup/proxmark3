@@ -22,7 +22,7 @@
 static uint8_t cmd[] = {0x96, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 // look for CryptoHelper
-bool IsCryptoHelperPresent(void) {
+bool IsCryptoHelperPresent(bool verbose) {
 
     if (IfPm3Smartcard()) {
         int resp_len = 0;
@@ -31,14 +31,13 @@ bool IsCryptoHelperPresent(void) {
         ExchangeAPDUSC(true, version, sizeof(version), true, true, resp, sizeof(resp), &resp_len);
 
         if (strstr("CryptoHelper", (char *)resp) == 0) {
-            PrintAndLogEx(INFO, "Found smart card helper");
+            if (verbose) {
+                PrintAndLogEx(INFO, "Found smart card helper");
+            }
             return true;
-        } else {
-            return false;
         }
-    } else {
-        return false;
     }
+    return false;
 }
 
 static bool executeCrypto(uint8_t ins, uint8_t *src, uint8_t *dest) {

@@ -14,7 +14,7 @@
 #include <ctype.h>
 #include "common.h"
 
-bool IsCryptoHelperPresent(void);
+bool IsCryptoHelperPresent(bool verbose);
 bool Encrypt(uint8_t *src, uint8_t *dest);
 bool Decrypt(uint8_t *src, uint8_t *dest);
 void DecodeBlock6(uint8_t *src);
