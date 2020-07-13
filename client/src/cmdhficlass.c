@@ -371,6 +371,15 @@ typedef enum {
     TRIPLEDES
 } BLOCK79ENCRYPTION;
 
+static inline uint32_t leadingzeros(uint64_t a) {
+#if defined __GNUC__
+    return __builtin_clzll(a);
+#else
+    return 0;
+#endif
+}
+ 
+
 static uint8_t isset(uint8_t val, uint8_t mask) {
     return (val & mask);
 }
@@ -1857,14 +1866,14 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
 
     DropField();
 
-    PrintAndLogEx(SUCCESS, "block %02X: " _GREEN_("%s"), blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
+    PrintAndLogEx(SUCCESS, " block %02X : " _GREEN_("%s"), blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
 
     if (memcmp(result->blockdata, empty, 8) == 0)
         return PM3_SUCCESS;
 
     if (blockno < 6 || blockno > 7)
         return PM3_SUCCESS;
-        
+
     bool use_sc = IsCryptoHelperPresent(verbose);
     if (use_sc == false) 
         return PM3_SUCCESS;
@@ -1876,10 +1885,16 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
             break;
         }
         case 7: {
-            PrintAndLogEx(INFO, "Trying to decrypt...");
-
+            PrintAndLogEx(INFO, "-----------------------------------------------------------------");
             uint8_t dec_data[8];
-            Decrypt(result->blockdata, dec_data);
+            uint64_t a = bytes_to_num(result->blockdata, 8);
+            if (leadingzeros(a) < 16) {
+                PrintAndLogEx(INFO, "data looks encrypted, false positive is possible");
+                Decrypt(result->blockdata, dec_data);
+                PrintAndLogEx(SUCCESS, "decrypted : " _GREEN_("%s"), sprint_hex(dec_data, sizeof(dec_data)));
+            } else {
+                PrintAndLogEx(INFO, "data looks unencrypted, trying to decode");
+            }
 
             if (memcmp(dec_data, empty, 8) != 0) {
 
@@ -1889,28 +1904,26 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
                 mid = bytes_to_num(dec_data, 4);
                 bot = bytes_to_num(dec_data + 4, 4);
 
-                PrintAndLogEx(INFO, "Binary");
-
-                char hexstr[8 + 1] = {0};
+                char hexstr[16 + 1] = {0};
                 hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
-
-                char binstr[8 * 8 + 1] = {0};
+                char binstr[64 + 1] = {0};
                 hextobinstring(binstr, hexstr);
                 uint8_t i = 0;
                 while (i < strlen(binstr) && binstr[i++] == '0');
 
-                PrintAndLogEx(SUCCESS, "%s", binstr + i);
-
+                i &= 0x3C;
+                PrintAndLogEx(SUCCESS, "      bin : %s", binstr + i);
                 PrintAndLogEx(INFO, "-----------------------------------------------------------------");
                 wiegand_message_t packed = initialize_message_object(top, mid, bot);
                 HIDTryUnpack(&packed, true);
-                PrintAndLogEx(INFO, "-----------------------------------------------------------------");
             } else {
-                PrintAndLogEx(INFO, "No credential found.");
+                PrintAndLogEx(INFO, "no credential found");
             }
-          }
-    }
 
+            PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+            break;
+        }
+    }
     return PM3_SUCCESS;
 }
 
