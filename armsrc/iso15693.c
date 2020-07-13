@@ -95,17 +95,11 @@
 #define ISO15693_MAX_RESPONSE_LENGTH     36 // allows read single block with the maximum block size of 256bits. Read multiple blocks not supported yet
 #define ISO15693_MAX_COMMAND_LENGTH      45 // allows write single block with the maximum block size of 256bits. Write multiple blocks not supported yet
 
-
 // 32 + 2 crc + 1
 #define ISO15_MAX_FRAME 35
 #define CMD_ID_RESP     5
 #define CMD_READ_RESP   13
 #define CMD_INV_RESP    12
-
-#define FrameSOF              Iso15693FrameSOF
-#define Logic0                Iso15693Logic0
-#define Logic1                Iso15693Logic1
-#define FrameEOF              Iso15693FrameEOF
 
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
@@ -132,7 +126,7 @@ void CodeIso15693AsReader(uint8_t *cmd, int n) {
     // data
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < 8; j += 2) {
-            int these = (cmd[i] >> j) & 0x03;
+            uint8_t these = (cmd[i] >> j) & 0x03;
             switch(these) {
                 case 0:
                     ToSend[++ToSendMax] = 0x40; //01000000
@@ -152,7 +146,6 @@ void CodeIso15693AsReader(uint8_t *cmd, int n) {
 
     // EOF
     ToSend[++ToSendMax] = 0x20; //0010 + 0000 padding
-
     ToSendMax++;
 }
 
@@ -189,11 +182,15 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 
     // EOF
     ToSend[++ToSendMax] = 0x20; //0010 + 0000 padding
-
     ToSendMax++;
 }
 
-static const uint8_t encode_4bits[16] = { 0xaa, 0x6a, 0x9a, 0x5a, 0xa6, 0x66, 0x96, 0x56, 0xa9, 0x69, 0x99, 0x59, 0xa5, 0x65, 0x95, 0x55 };
+static const uint8_t encode_4bits[16] = { 
+    0xaa, 0x6a, 0x9a, 0x5a,
+    0xa6, 0x66, 0x96, 0x56,
+    0xa9, 0x69, 0x99, 0x59,
+    0xa5, 0x65, 0x95, 0x55
+};
 
 void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
     /*
@@ -260,8 +257,8 @@ void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time) {
 
     LED_B_ON();
     for (int c = 0; c < len; c++) {
-        uint8_t data = cmd[c];
-        for (int i = 0; i < 8; i++) {
+        volatile uint8_t data = cmd[c];
+        for (uint8_t i = 0; i < 8; i++) {
             uint16_t send_word = (data & 0x80) ? 0xffff : 0x0000;
             while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
             AT91C_BASE_SSC->SSC_THR = send_word;
@@ -307,7 +304,7 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
     for (size_t c = 0; c < len; c++) {
         for (int i = (c==0?4:7); i >= 0; i--) {
             uint8_t cmd_bits = ((cmd[c] >> i) & 0x01) ? 0xff : 0x00;
-            for (int j = 0; j < (slow?4:1); ) {
+            for (int j = 0; j < (slow ? 4 : 1); ) {
                 if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
                     bits_to_send = bits_to_shift << (8 - shift_delay) | cmd_bits >> shift_delay;
                     AT91C_BASE_SSC->SSC_THR = bits_to_send;
@@ -652,9 +649,9 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
             dma_start_time = GetCountSspClk() & 0xfffffff0;
         }
 
-        uint16_t tagdata = *upTo++;
+        volatile uint16_t tagdata = *upTo++;
 
-        if(upTo >= dmaBuf + ISO15693_DMA_BUFFER_SIZE) {                // we have read all of the DMA buffer content.
+        if (upTo >= dmaBuf + ISO15693_DMA_BUFFER_SIZE) {                // we have read all of the DMA buffer content.
             upTo = dmaBuf;                                             // start reading the circular buffer from the beginning
             if (behindBy > (9 * ISO15693_DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
@@ -705,12 +702,11 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
         Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
     }
 
-    if (LogTrace(DecodeTag.output, DecodeTag.len, (sof_time * 4), (*eof_time * 4), NULL, false) == false)
-        DbpString("GetIso15693AnswerFromTag: failed logtrace");
-
     if (ret < 0) {
         return ret;
     }
+        
+    LogTrace(DecodeTag.output, DecodeTag.len, (sof_time * 4), (*eof_time * 4), NULL, false);
     return DecodeTag.len;
 }
 
@@ -1017,7 +1013,6 @@ static RAMFUNC int Handle15693SampleFromReader(bool bit, DecodeReader_t *DecodeR
 int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time) {
     int samples = 0;
     bool gotFrame = false;
-    uint8_t b;
 
     uint8_t dmaBuf[ISO15693_DMA_BUFFER_SIZE];
 
@@ -1043,15 +1038,15 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     uint8_t *upTo = dmaBuf;
 
     for (;;) {
-        uint16_t behindBy = ((uint8_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (ISO15693_DMA_BUFFER_SIZE-1);
+        uint16_t behindBy = ((uint8_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (ISO15693_DMA_BUFFER_SIZE - 1);
 
         if (behindBy == 0) continue;
 
-        b = *upTo++;
+        volatile uint8_t b = *upTo++;
         if (upTo >= dmaBuf + ISO15693_DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
             upTo = dmaBuf;                                             // start reading the circular buffer from the beginning
             if (behindBy > (9*ISO15693_DMA_BUFFER_SIZE/10)) {
-                Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
+                Dbprintf("About to blow circular buffer - aborted! behindBy %d", behindBy);
                 break;
             }
         }
@@ -1088,11 +1083,10 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 
     if (DecodeReader.byteCount > 0) {
         uint32_t sof_time = *eof_time
-                        - DecodeReader.byteCount * (DecodeReader.Coding==CODING_1_OUT_OF_4?128:2048) // time for byte transfers
+                        - DecodeReader.byteCount * (DecodeReader.Coding == CODING_1_OUT_OF_4 ? 128 : 2048) // time for byte transfers
                         - 32  // time for SOF transfer
                         - 16; // time for EOF transfer
-        if (LogTrace(DecodeReader.output, DecodeReader.byteCount, sof_time*32, *eof_time*32, NULL, true) == false)
-            DbpString("GetIso15693CommandFromReader: failed logtrace");
+        LogTrace(DecodeReader.output, DecodeReader.byteCount, (sof_time * 32), (*eof_time * 32), NULL, true);
     }
 
     return DecodeReader.byteCount;
@@ -1317,7 +1311,7 @@ void Iso15693InitReader(void) {
     // Start from off (no field generated)
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
-    SpinDelay(10);
+    SpinDelay(50);
 
     // switch field on
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
@@ -1328,7 +1322,7 @@ void Iso15693InitReader(void) {
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // give tags some time to energize
-    SpinDelay(250);
+    SpinDelay(200);
 
     set_tracing(true);
 
@@ -1571,6 +1565,8 @@ void Iso15693InitTag(void) {
     // initialize SSC and select proper AD input
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+    set_tracing(true);
 
     // turn on clock
     StartCountSspClk();
