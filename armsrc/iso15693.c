@@ -118,10 +118,11 @@ static void BuildInventoryResponse(uint8_t *uid);
 // n ... length of data
 void CodeIso15693AsReader(uint8_t *cmd, int n) {
 
-    ToSendReset();
+    tosend_reset();
+    tosend_t *ts = get_tosend();
 
     // SOF for 1of4
-    ToSend[++ToSendMax] = 0x84; //10000100
+    ts->buf[++ts->max] = 0x84; //10000100
 
     // data
     for (int i = 0; i < n; i++) {
@@ -129,31 +130,32 @@ void CodeIso15693AsReader(uint8_t *cmd, int n) {
             uint8_t these = (cmd[i] >> j) & 0x03;
             switch(these) {
                 case 0:
-                    ToSend[++ToSendMax] = 0x40; //01000000
+                    ts->buf[++ts->max] = 0x40; //01000000
                     break;
                 case 1:
-                    ToSend[++ToSendMax] = 0x10; //00010000
+                    ts->buf[++ts->max] = 0x10; //00010000
                     break;
                 case 2:
-                    ToSend[++ToSendMax] = 0x04; //00000100
+                    ts->buf[++ts->max] = 0x04; //00000100
                     break;
                 case 3:
-                    ToSend[++ToSendMax] = 0x01; //00000001
+                    ts->buf[++ts->max] = 0x01; //00000001
                     break;
             }
         }
     }
 
     // EOF
-    ToSend[++ToSendMax] = 0x20; //0010 + 0000 padding
-    ToSendMax++;
+    ts->buf[++ts->max] = 0x20; //0010 + 0000 padding
+    ts->max++;
 }
 
 // Encode EOF only
 static void CodeIso15693AsReaderEOF(void) {
-    ToSendReset();
-    ToSend[++ToSendMax] = 0x20;
-    ToSendMax++;
+    tosend_reset();
+    tosend_t *ts = get_tosend();
+    ts->buf[++ts->max] = 0x20;
+    ts->max++;
 }
 
 
@@ -162,27 +164,28 @@ static void CodeIso15693AsReaderEOF(void) {
 // is designed for more robust communication over longer distances
 static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 
-    ToSendReset();
-
+    tosend_reset();
+    tosend_t *ts = get_tosend();
+    
     // SOF for 1of256
-    ToSend[++ToSendMax] = 0x81; //10000001
+    ts->buf[++ts->max] = 0x81; //10000001
 
     // data
     for(int i = 0; i < n; i++) {
         for (int j = 0; j <= 255; j++) {
             if (cmd[i] == j) {
-                ToSendStuffBit(0);
-                ToSendStuffBit(1);
+                tosend_stuffbit(0);
+                tosend_stuffbit(1);
             } else {
-                ToSendStuffBit(0);
-                ToSendStuffBit(0);
+                tosend_stuffbit(0);
+                tosend_stuffbit(0);
             }
         }
     }
 
     // EOF
-    ToSend[++ToSendMax] = 0x20; //0010 + 0000 padding
-    ToSendMax++;
+    ts->buf[++ts->max] = 0x20; //0010 + 0000 padding
+    ts->max++;
 }
 
 static const uint8_t encode_4bits[16] = { 
@@ -219,22 +222,22 @@ void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
      * A logic 0 is 10
      *
      * */
-
-    ToSendReset();
+    tosend_reset();
+    tosend_t *ts = get_tosend();
 
     // SOF
-    ToSend[++ToSendMax] = 0x1D;  // 00011101
+    ts->buf[++ts->max] = 0x1D;  // 00011101
 
     // data
     for (int i = 0; i < len; i++) {
-        ToSend[++ToSendMax] = encode_4bits[cmd[i] & 0xF];
-        ToSend[++ToSendMax] = encode_4bits[cmd[i] >> 4];
+        ts->buf[++ts->max] = encode_4bits[cmd[i] & 0xF];
+        ts->buf[++ts->max] = encode_4bits[cmd[i] >> 4];
     }
 
     // EOF
-    ToSend[++ToSendMax] = 0xB8; // 10111000
+    ts->buf[++ts->max] = 0xB8; // 10111000
 
-    ToSendMax++;
+    ts->max++;
 }
 
 // Transmit the command (to the tag) that was placed in cmd[].
@@ -617,9 +620,7 @@ static void DecodeTagReset(DecodeTag_t *DecodeTag) {
  */
 int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
 
-    int samples = 0;
-    int ret = 0;
-
+    int samples = 0, ret = 0;
     uint16_t dmaBuf[ISO15693_DMA_BUFFER_SIZE];
 
     // the Decoder data structure
@@ -641,7 +642,8 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
     for(;;) {
         uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (ISO15693_DMA_BUFFER_SIZE-1);
 
-        if (behindBy == 0) continue;
+        if (behindBy == 0) 
+            continue;
 
         samples++;
         if (samples == 1) {
@@ -702,7 +704,7 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
         Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
     }
 
-    if (ret < 0) {
+    if (ret ==  -1) {
         return ret;
     }
         
@@ -1115,8 +1117,10 @@ void AcquireRawAdcSamplesIso15693(void) {
     SpinDelay(100);
 
     // Now send the command
+    tosend_t *ts = get_tosend();
+
     uint32_t start_time = 0;
-    TransmitTo15693Tag(ToSend, ToSendMax, &start_time);
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) ;
@@ -1321,10 +1325,10 @@ void Iso15693InitReader(void) {
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
+    set_tracing(true);
+
     // give tags some time to energize
     SpinDelay(200);
-
-    set_tracing(true);
 
     StartCountSspClk();
 }
@@ -1396,8 +1400,9 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
         CodeIso15693AsReader256(send, sendlen);
     }
 
-    TransmitTo15693Tag(ToSend, ToSendMax, &start_time);
-    uint32_t end_time = start_time + 32 * (8 * ToSendMax -4); // substract the 4 padding bits after EOF
+    tosend_t *ts = get_tosend();
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    uint32_t end_time = start_time + 32 * (8 * ts->max - 4); // substract the 4 padding bits after EOF
     LogTrace(send, sendlen, (start_time * 4), (end_time * 4), NULL, true);
 
     int res = 0;
@@ -1410,8 +1415,9 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time) {
 
     CodeIso15693AsReaderEOF();
-    TransmitTo15693Tag(ToSend, ToSendMax, &start_time);
-    uint32_t end_time = start_time + 32 * (8 * ToSendMax - 4); // substract the 4 padding bits after EOF
+    tosend_t *ts = get_tosend();
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    uint32_t end_time = start_time + 32 * (8 * ts->max - 4); // substract the 4 padding bits after EOF
     LogTrace(NULL, 0, (start_time * 4), (end_time * 4), NULL, true);
 
     int res = 0;
@@ -1591,6 +1597,8 @@ void SimTagIso15693(uint8_t *uid) {
     // not so obvious, but in the call to BuildInventoryResponse,  the command is copied to the global ToSend buffer used below.
     BuildInventoryResponse(uid);
 
+    tosend_t *ts = get_tosend();
+
     while (!BUTTON_PRESS()) {
         WDT_HIT();
 
@@ -1602,7 +1610,7 @@ void SimTagIso15693(uint8_t *uid) {
         if ((cmd_len >= 5) && (cmd[0] & ISO15_REQ_INVENTORY) && (cmd[1] == ISO15_CMD_INVENTORY)) { // TODO: check more flags
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             start_time = eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-            TransmitTo15693Reader(ToSend, ToSendMax, &start_time, 0, slow);
+            TransmitTo15693Reader(ts->buf, ts->max, &start_time, 0, slow);
         }
 
         if (DBGLEVEL >= DBG_EXTENDED) {

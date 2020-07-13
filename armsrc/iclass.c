@@ -90,9 +90,10 @@ static void rotateCSN(uint8_t *original_csn, uint8_t *rotated_csn) {
 
 // Encode SOF only
 static void CodeIClassTagSOF(void) {
-    ToSendReset();
-    ToSend[++ToSendMax] = 0x1D;
-    ToSendMax++;
+    tosend_reset();
+    tosend_t *ts = get_tosend();
+    ts->buf[++ts->max] = 0x1D;
+    ts->max++;
 }
 
 
@@ -393,42 +394,43 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
 
     // Prepare card messages
-    ToSendMax = 0;
+    tosend_t *ts = get_tosend();
+    ts->max = 0;
 
     // First card answer: SOF
     CodeIClassTagSOF();
-    memcpy(resp_sof, ToSend, ToSendMax);
-    resp_sof_len = ToSendMax;
+    memcpy(resp_sof, ts->buf, ts->max);
+    resp_sof_len = ts->max;
 
     // Anticollision CSN
     CodeIso15693AsTag(anticoll_data, sizeof(anticoll_data));
-    memcpy(resp_anticoll, ToSend, ToSendMax);
-    resp_anticoll_len = ToSendMax;
+    memcpy(resp_anticoll, ts->buf, ts->max);
+    resp_anticoll_len = ts->max;
 
     // CSN (block 0)
     CodeIso15693AsTag(csn_data, sizeof(csn_data));
-    memcpy(resp_csn, ToSend, ToSendMax);
-    resp_csn_len = ToSendMax;
+    memcpy(resp_csn, ts->buf, ts->max);
+    resp_csn_len = ts->max;
 
     // Configuration (block 1)
     CodeIso15693AsTag(conf_block, sizeof(conf_block));
-    memcpy(resp_conf, ToSend, ToSendMax);
-    resp_conf_len = ToSendMax;
+    memcpy(resp_conf, ts->buf, ts->max);
+    resp_conf_len = ts->max;
 
     // e-Purse (block 2)
     CodeIso15693AsTag(card_challenge_data, sizeof(card_challenge_data));
-    memcpy(resp_cc, ToSend, ToSendMax);
-    resp_cc_len = ToSendMax;
+    memcpy(resp_cc, ts->buf, ts->max);
+    resp_cc_len = ts->max;
 
     // Kd, Kc (blocks 3 and 4)
     CodeIso15693AsTag(ff_data, sizeof(ff_data));
-    memcpy(resp_ff, ToSend, ToSendMax);
-    resp_ff_len = ToSendMax;
+    memcpy(resp_ff, ts->buf, ts->max);
+    resp_ff_len = ts->max;
 
     // Application Issuer Area (block 5)
     CodeIso15693AsTag(aia_data, sizeof(aia_data));
-    memcpy(resp_aia, ToSend, ToSendMax);
-    resp_aia_len = ToSendMax;
+    memcpy(resp_aia, ts->buf, ts->max);
+    resp_aia_len = ts->max;
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
@@ -542,8 +544,8 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                                 trace_data = data_generic_trace;
                                 trace_data_size = 10;
                                 CodeIso15693AsTag(trace_data, trace_data_size);
-                                memcpy(modulated_response, ToSend, ToSendMax);
-                                modulated_response_size = ToSendMax;
+                                memcpy(modulated_response, ts->buf, ts->max);
+                                modulated_response_size = ts->max;
                                 goto send;
                             }
                             break;
@@ -586,9 +588,9 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 trace_data = data_generic_trace;
                 trace_data_size = 4;
                 CodeIso15693AsTag(trace_data, trace_data_size);
-                memcpy(data_response, ToSend, ToSendMax);
+                memcpy(data_response, ts->buf, ts->max);
                 modulated_response = data_response;
-                modulated_response_size = ToSendMax;
+                modulated_response_size = ts->max;
             } else {
                 // Not fullsim, we don't respond
                 // We do not know what to answer, so lets keep quiet
@@ -636,8 +638,8 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 trace_data = data_generic_trace;
                 trace_data_size = 34;
                 CodeIso15693AsTag(trace_data, trace_data_size);
-                memcpy(modulated_response, ToSend, ToSendMax);
-                modulated_response_size = ToSendMax;
+                memcpy(modulated_response, ts->buf, ts->max);
+                modulated_response_size = ts->max;
                 goto send;
             }
 
@@ -650,8 +652,8 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 if (block == 2) { // update e-purse
                     memcpy(card_challenge_data, receivedCmd + 2, 8);
                     CodeIso15693AsTag(card_challenge_data, sizeof(card_challenge_data));
-                    memcpy(resp_cc, ToSend, ToSendMax);
-                    resp_cc_len = ToSendMax;
+                    memcpy(resp_cc, ts->buf, ts->max);
+                    resp_cc_len = ts->max;
                     cipher_state_KD[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
                     cipher_state_KC[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
                     
@@ -684,9 +686,9 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 trace_data = data_generic_trace;
                 trace_data_size = 10;
                 CodeIso15693AsTag(trace_data, trace_data_size);
-                memcpy(data_response, ToSend, ToSendMax);
+                memcpy(data_response, ts->buf, ts->max);
                 modulated_response = data_response;
-                modulated_response_size = ToSendMax;
+                modulated_response_size = ts->max;
             }
             goto send;
 
@@ -714,9 +716,9 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                     trace_data_size = 10;
 
                     CodeIso15693AsTag(trace_data, trace_data_size);
-                    memcpy(data_response, ToSend, ToSendMax);
+                    memcpy(data_response, ts->buf, ts->max);
                     modulated_response = data_response;
-                    modulated_response_size = ToSendMax;
+                    modulated_response_size = ts->max;
                 }
             }
             
@@ -752,8 +754,9 @@ send:
 // THE READER CODE
 static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time) {
     CodeIso15693AsReader(frame, len);
-    TransmitTo15693Tag(ToSend, ToSendMax, start_time);
-    uint32_t end_time = *start_time + (32 * ((8 * ToSendMax) - 4)); // substract the 4 padding bits after EOF
+    tosend_t *ts = get_tosend();
+    TransmitTo15693Tag(ts->buf, ts->max, start_time);
+    uint32_t end_time = *start_time + (32 * ((8 * ts->max) - 4)); // substract the 4 padding bits after EOF
     LogTrace(frame, len, (*start_time * 4), (end_time * 4), NULL, true);
 }
 
@@ -770,7 +773,7 @@ static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* 
         if (expected_size == GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time)) {
             return true;
         }
-        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+//        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     }
     return false;
 }
@@ -796,24 +799,19 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     if (use_credit_key)
         read_check_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
-    
-    set_tracing(true);
 
-    int len;
-    uint32_t start_time;
-    uint8_t tries = 10;
-    do {
-        // wakeup
-        start_time = GetCountSspClk();
-        iclass_send_as_reader(act_all, 1, &start_time);
-        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time);
-        if (len >= 0) {
-            break;
-        } else if (len == -2) {
-            return false;
-        }
-    } while (tries-- > 0);
+    // wakeup
+    uint32_t start_time = GetCountSspClk();
+    iclass_send_as_reader(act_all, 1, &start_time);
+    int len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time);
+    if (len < 0)
+        return false;
 
+/*
+    bool ok = iclass_send_cmd_with_retries(act_all, 1, resp, sizeof(resp), 1, 5, start_time, ICLASS_READER_TIMEOUT_ACTALL, eof_time);
+    if (ok == false)
+        return false;
+*/
     // send Identify
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     iclass_send_as_reader(identify, 1, &start_time);
@@ -880,8 +878,6 @@ void ReaderIClass(uint8_t flags) {
     if ((flags & FLAG_ICLASS_READER_INIT) == FLAG_ICLASS_READER_INIT) {
         Iso15693InitReader();
     }
-
-    set_tracing(true);
 
     if ((flags & FLAG_ICLASS_READER_CLEARTRACE) == FLAG_ICLASS_READER_CLEARTRACE) {
         clear_trace();

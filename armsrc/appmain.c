@@ -62,17 +62,6 @@
 #include "spiffs.h"
 #endif
 
-//=============================================================================
-// A buffer where we can queue things up to be sent through the FPGA, for
-// any purpose (fake tag, as reader, whatever). We go MSB first, since that
-// is the order in which they go out on the wire.
-//=============================================================================
-
-#define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
-uint8_t ToSend[TOSEND_BUFFER_SIZE] = {0};
-int ToSendMax = -1;
-static int ToSendBit;
-
 extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
@@ -81,29 +70,6 @@ static bool allow_send_wtx = false;
 inline void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
         reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
-    }
-}
-
-void ToSendReset(void) {
-    ToSendMax = -1;
-    ToSendBit = 8;
-}
-
-void ToSendStuffBit(int b) {
-    if (ToSendBit >= 8) {
-        ToSendMax++;
-        ToSend[ToSendMax] = 0;
-        ToSendBit = 0;
-    }
-
-    if (b)
-        ToSend[ToSendMax] |= (1 << (7 - ToSendBit));
-
-    ToSendBit++;
-
-    if (ToSendMax >= sizeof(ToSend)) {
-        ToSendBit = 0;
-        DbpString("ToSendStuffBit overflowed!");
     }
 }
 
@@ -326,6 +292,28 @@ static void TimingIntervalAcquisition(void) {
     StartTickCount();
 }
 
+static void print_debug_level(void) {
+    char dbglvlstr[20] = {0};
+    switch(DBGLEVEL) {
+        case DBG_NONE:
+            sprintf(dbglvlstr, "NONE");
+            break;
+        case DBG_ERROR:
+            sprintf(dbglvlstr, "ERROR");
+            break;
+        case DBG_INFO:
+            sprintf(dbglvlstr, "INFO");
+            break;
+        case DBG_DEBUG:
+            sprintf(dbglvlstr, "DEBUG");
+            break;
+        case DBG_EXTENDED:        
+            sprintf(dbglvlstr, "EXTENDED");
+            break;
+    }
+    Dbprintf("  DBGLEVEL................%d ( " _YELLOW_("%s")" )", DBGLEVEL, dbglvlstr);
+}
+
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 static void printConnSpeed(void) {
@@ -372,29 +360,10 @@ static void SendStatus(void) {
     DbpString(_CYAN_("Various"));
 
     print_stack_usage();
-
-    char dbglvlstr[20] = {0};
-    switch(DBGLEVEL) {
-        case DBG_NONE:
-            sprintf(dbglvlstr, "NONE");
-            break;
-        case DBG_ERROR:
-            sprintf(dbglvlstr, "ERROR");
-            break;
-        case DBG_INFO:
-            sprintf(dbglvlstr, "INFO");
-            break;
-        case DBG_DEBUG:
-            sprintf(dbglvlstr, "DEBUG");
-            break;
-        case DBG_EXTENDED:        
-            sprintf(dbglvlstr, "EXTENDED");
-            break;
-    }
-    Dbprintf("  DBGLEVEL................%d ( " _YELLOW_("%s")" )", DBGLEVEL, dbglvlstr);
+    print_debug_level();
     
-    Dbprintf("  ToSendMax...............%d", ToSendMax);
-    Dbprintf("  ToSendBit...............%d", ToSendBit);
+    tosend_t *ts = get_tosend();
+    Dbprintf("  ToSendMax...............%d", ts->max );
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
@@ -752,7 +721,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         // emulator
         case CMD_SET_DBGMODE: {
             DBGLEVEL = packet->data.asBytes[0];
-            Dbprintf("Debug level: %d", DBGLEVEL);
+            print_debug_level();
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
         }

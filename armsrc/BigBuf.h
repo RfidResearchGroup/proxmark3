@@ -21,6 +21,9 @@
 #define CARD_MEMORY_SIZE        4096
 #define DMA_BUFFER_SIZE         128
 
+// 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
+#define TOSEND_BUFFER_SIZE (9 * MAX_FRAME_SIZE + 1 + 1 + 2)  
+
 uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);
 uint8_t *BigBuf_get_EM_addr(void);
@@ -41,5 +44,16 @@ void set_tracelen(uint32_t value);
 bool get_tracing(void);
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length);
+
+
+typedef struct {
+    int max;
+    int bit;
+    uint8_t *buf;
+} tosend_t;
+
+tosend_t *get_tosend(void);
+void tosend_reset(void);
+void tosend_stuffbit(int b);
 
 #endif /* __BIGBUF_H */

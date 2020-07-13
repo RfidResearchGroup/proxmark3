@@ -227,3 +227,47 @@ uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {
     Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset + length), CARD_MEMORY_SIZE);
     return 1;
 }
+
+
+//=============================================================================
+// The ToSend buffer.
+// A buffer where we can queue things up to be sent through the FPGA, for
+// any purpose (fake tag, as reader, whatever). We go MSB first, since that
+// is the order in which they go out on the wire.
+//=============================================================================
+static tosend_t toSend = {
+    .max = -1,
+    .bit = 8,
+    .buf = NULL
+};
+
+// get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
+tosend_t *get_tosend(void) {
+
+    if (toSend.buf == NULL)
+        toSend.buf = BigBuf_malloc(TOSEND_BUFFER_SIZE);
+
+    return &toSend;
+}
+
+void tosend_reset(void) {
+    toSend.max = -1;
+    toSend.bit = 8;
+}
+
+void tosend_stuffbit(int b) {
+    if (toSend.bit >= 8) {
+        toSend.max++;
+        toSend.buf[toSend.max] = 0;
+        toSend.bit = 0;
+    }
+
+    if (b)
+        toSend.buf[ toSend.max] |= (1 << (7 - toSend.bit));
+
+    toSend.bit++;
+
+    if (toSend.max >= TOSEND_BUFFER_SIZE) {
+        toSend.bit = 0;
+    }
+}
