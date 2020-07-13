@@ -200,6 +200,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     data_len = hdr->data_len;
 
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
+        PrintAndLogEx(DEBUG, "trace pos offset %d larger than reported tracelen %d", tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr), traceLen);
         return traceLen;
     }
     
@@ -390,19 +391,23 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
-    if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen)) {
-        memset(explanation, 0x00, sizeof(explanation));
-        if (!hdr->isResponse) {
-            annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
+    if (protocol == PROTO_MIFARE) {
+        if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen)) {
+            memset(explanation, 0x00, sizeof(explanation));
+            if (!hdr->isResponse) {
+                annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
+            }
+            uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
+            PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
+                          sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
+                          (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
+                          explanation);
         }
-        uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
-        PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
-                      sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
-                      (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
-                      explanation);
     }
 
-    if (is_last_record(tracepos, traceLen)) return traceLen;
+    if (is_last_record(tracepos, traceLen)) {
+        return traceLen;
+    }
 
     if (showWaitCycles && !hdr->isResponse && next_record_is_response(tracepos, trace)) {
 
@@ -420,7 +425,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
 static int download_trace(void) {
 
-    if (!IfPm3Present()) {
+    if (IfPm3Present() == false) {
         PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '1' for working from Tracebuffer");
         return PM3_EINVARG;
     }
@@ -437,7 +442,7 @@ static int download_trace(void) {
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(INFO, "downloading tracelog from device");
+    PrintAndLogEx(INFO, "downloading tracelog data from device");
 
     // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
     PacketResponseNG response;
@@ -533,11 +538,6 @@ int CmdTraceList(const char *Cmd) {
     bool errors = false;
     uint8_t protocol = 0;
     char type[10] = {0};
-
-    //int tlen = param_getstr(Cmd,0,type);
-    //char param1 = param_getchar(Cmd, 1);
-    //char param2 = param_getchar(Cmd, 2);
-
     char cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
@@ -651,7 +651,10 @@ int CmdTraceList(const char *Cmd) {
         PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
-        ClearAuthData();
+        // clean authentication data used with the mifare classic decrypt fct
+        if (protocol == ISO_14443A || protocol == PROTO_MIFARE)
+            ClearAuthData();
+        
         while (tracepos < g_traceLen) {
             tracepos = printTraceLine(tracepos, g_traceLen, g_trace, protocol, showWaitCycles, markCRCBytes);
 
