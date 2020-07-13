@@ -20,7 +20,7 @@ endif
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS) \
-             -ffunction-sections -fdata-sections
+             -ffunction-sections -fdata-sections -fno-common
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
@@ -64,9 +64,9 @@ else
 endif
 
 ifneq (,$(findstring WITH_EM4x50,$(APP_CFLAGS)))
-	SRC_EM4x50 = em4x50.c
+    SRC_EM4x50 = em4x50.c
 else
-	SRC_EM4x50 =
+    SRC_EM4x50 =
 endif
 
 ifneq (,$(findstring WITH_LCD,$(APP_CFLAGS)))
@@ -105,7 +105,7 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_HITAG) \
-	$(SRC_EM4x50) \
+    $(SRC_EM4x50) \
     $(SRC_SPIFFS) \
     $(SRC_ISO14443a) \
     $(SRC_ISO14443b) \
@@ -152,95 +152,95 @@ FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 all: showinfo $(OBJS)
 
 showinfo:
-	$(info compiler version:  $(shell $(CC) --version|head -n 1))
+    $(info compiler version:  $(shell $(CC) --version|head -n 1))
 
 .DELETE_ON_ERROR:
 
 # version.c should be remade on every time fullimage.stage1.elf should be remade
 version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
-	$(info [-] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
+    $(info [-] GEN $@)
+    $(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
-	$(info [-] GEN $@)
-	$(Q)$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
+    $(info [-] GEN $@)
+    $(Q)$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
 
 $(OBJDIR)/fpga_all.o: $(OBJDIR)/fpga_all.bit.z
-	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
+    $(info [-] GEN $@)
+    $(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
 
 $(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
-	$(info [-] GEN $@)
+    $(info [-] GEN $@)
 ifeq ($(Q),@)
-	@$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@ >/dev/null
+    @$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@ >/dev/null
 else
-	$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
+    $(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
 endif
 
 $(FPGA_COMPRESSOR):
-	$(error [!] MISSING $@ => To build it, go the root of the repo and do "make $(notdir $@)")
-	$(error [!] MISSING $@)
+    $(error [!] MISSING $@ => To build it, go the root of the repo and do "make $(notdir $@)")
+    $(error [!] MISSING $@)
 
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
-	$(info [=] LD $@)
-	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+    $(info [=] LD $@)
+    $(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.nodata.bin: $(OBJDIR)/fullimage.stage1.elf
-	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
+    $(info [-] GEN $@)
+    $(Q)$(OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
 
 $(OBJDIR)/fullimage.nodata.o: $(OBJDIR)/fullimage.nodata.bin
-	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
+    $(info [-] GEN $@)
+    $(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
 
 $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
-	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
+    $(info [-] GEN $@)
+    $(Q)$(OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
 
 $(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin | $(FPGA_COMPRESSOR)
-	$(info [-] GEN $@)
+    $(info [-] GEN $@)
 ifeq ($(Q),@)
-	@$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@ >/dev/null
+    @$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@ >/dev/null
 else
-	$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
+    $(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
 endif
 
 $(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
-	$(info [-] GEN $@)
-	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
+    $(info [-] GEN $@)
+    $(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
 
 $(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.nodata.o $(OBJDIR)/fullimage.data.o
-	$(info [=] LD $@)
-	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
+    $(info [=] LD $@)
+    $(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
 
 tarbin: $(OBJS)
-	$(info TAR $@)
-	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=armsrc/%) $(OBJS:%.s19=armsrc/%.elf)
+    $(info TAR $@)
+    $(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=armsrc/%) $(OBJS:%.s19=armsrc/%.elf)
 
 clean:
-	$(Q)$(RM) $(DEPENDENCY_FILES)
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.z
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.bin
-	$(Q)$(RM) version.c
+    $(Q)$(RM) $(DEPENDENCY_FILES)
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.z
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.bin
+    $(Q)$(RM) version.c
 
 install: all
-	$(info [@] Installing fullimage to $(DESTDIR)$(PREFIX)...)
-	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
-	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
+    $(info [@] Installing fullimage to $(DESTDIR)$(PREFIX)...)
+    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+    $(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
 
 uninstall:
-	$(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
-	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
+    $(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
+    $(Q)$(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
 
 .PHONY: all clean help install uninstall
 help:
-	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
-	@echo Possible targets:
-	@echo +	all    - Build the full image $(OBJDIR)/fullimage.s19
-	@echo +	clean             - Clean $(OBJDIR)
+    @echo Multi-OS Makefile, you are running on $(DETECTED_OS)
+    @echo Possible targets:
+    @echo + all    - Build the full image $(OBJDIR)/fullimage.s19
+    @echo + clean             - Clean $(OBJDIR)
 

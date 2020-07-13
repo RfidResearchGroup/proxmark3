@@ -25,8 +25,8 @@ VERSIONSRC = version.c
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
 APP_CFLAGS = -I. -ffunction-sections -fdata-sections
 
-# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
-APP_CFLAGS += -fno-stack-protector -fno-pie
+# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitalized vars doesn't end up in COMMON area
+APP_CFLAGS += -fno-stack-protector -fno-pie -fno-common
 
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
@@ -38,42 +38,42 @@ OBJS = $(OBJDIR)/bootrom.s19
 
 # version.c should be remade on every compilation
 version.c: default_version.c
-	$(info [=] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
+    $(info [=] GEN $@)
+    $(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 
 all: showinfo $(OBJS)
 
 showinfo:
-	$(info compiler version:  $(shell $(CC) --version|head -n 1))
+    $(info compiler version:  $(shell $(CC) --version|head -n 1))
 
 tarbin: $(OBJS)
-	$(info [=] GEN $@)
-	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=bootrom/%) $(OBJS:%.s19=bootrom/%.elf)
+    $(info [=] GEN $@)
+    $(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=bootrom/%) $(OBJS:%.s19=bootrom/%.elf)
 
 $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
-	$(info [=] LD $@)
-	$(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+    $(info [=] LD $@)
+    $(Q)$(CC) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
-	$(Q)$(RM) version.c
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
+    $(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
+    $(Q)$(RM) version.c
 
 install: all
-	$(info [@] Installing bootrom to $(DESTDIR)$(PREFIX)...)
-	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
-	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+    $(info [@] Installing bootrom to $(DESTDIR)$(PREFIX)...)
+    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+    $(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
 
 uninstall:
-	$(info [@] Uninstalling bootrom from $(DESTDIR)$(PREFIX)...)
-	$(Q)$(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
+    $(info [@] Uninstalling bootrom from $(DESTDIR)$(PREFIX)...)
+    $(Q)$(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
 
 .PHONY: all clean help install showinfo
 help:
-	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
-	@echo Possible targets:
-	@echo +	all   - Make $(OBJDIR)/bootrom.s19, the main bootrom
-	@echo +	clean - Clean $(OBJDIR)
+    @echo Multi-OS Makefile, you are running on $(DETECTED_OS)
+    @echo Possible targets:
+    @echo + all   - Make $(OBJDIR)/bootrom.s19, the main bootrom
+    @echo + clean - Clean $(OBJDIR)
