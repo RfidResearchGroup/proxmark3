@@ -50,7 +50,7 @@
 #endif
 
 // 4sample
-#define SEND4STUFFBIT(x) ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);ToSendStuffBit(x);
+#define SEND4STUFFBIT(x) tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);
 
 static void iso14b_set_timeout(uint32_t timeout);
 static void iso14b_set_maxframesize(uint16_t size);
@@ -140,7 +140,7 @@ static uint32_t iso14b_timeout = TR0;
 static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 	int i;
 
-	ToSendReset();
+	tosend_reset();
 
     // Transmit a burst of ones, as the initial thing that lets the
     // reader get phase sync.
@@ -199,8 +199,9 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 		SEND4STUFFBIT(1);
 	}
 
+    tosend_t *ts = get_tosend();
 	// Convert from last byte pos to length
-	ToSendMax++;
+	ts->max++;
 }
 
 //-----------------------------------------------------------------------------
@@ -543,24 +544,32 @@ void SimulateIso14443bTag(uint32_t pupi) {
     uint16_t len, cmdsReceived = 0;
     int cardSTATE = SIM_NOFIELD;
     int vHf = 0; // in mV
+
+    tosend_t *ts = get_tosend();
+    
     uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
 
     // prepare "ATQB" tag answer (encoded):
     CodeIso14443bAsTag(respATQB, sizeof(respATQB));
-    uint8_t *encodedATQB = BigBuf_malloc(ToSendMax);
-    uint16_t encodedATQBLen = ToSendMax;
-    memcpy(encodedATQB, ToSend, ToSendMax);
+    uint8_t *encodedATQB = BigBuf_malloc(ts->max);
+    uint16_t encodedATQBLen = ts->max;
+    memcpy(encodedATQB, ts->buf, ts->max);
 
 
     // prepare "OK" tag answer (encoded):
     CodeIso14443bAsTag(respOK, sizeof(respOK));
-    uint8_t *encodedOK = BigBuf_malloc(ToSendMax);
-    uint16_t encodedOKLen = ToSendMax;
-    memcpy(encodedOK, ToSend, ToSendMax);
+    uint8_t *encodedOK = BigBuf_malloc(ts->max);
+    uint16_t encodedOKLen = ts->max;
+    memcpy(encodedOK, ts->buf, ts->max);
 
     // Simulation loop
-    while (!BUTTON_PRESS() && !data_available()) {
+    while (BUTTON_PRESS() == false) {
         WDT_HIT();
+        
+        //iceman: limit with 2000 times..
+        if (data_available()) {
+            break;
+        }
 
         // find reader field
         if (cardSTATE == SIM_NOFIELD) {
@@ -669,7 +678,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
     if (DBGLEVEL >= DBG_DEBUG)
         Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
  
- switch_off(); //simulate
+    switch_off(); //simulate
 }
 
 //=============================================================================
@@ -967,9 +976,10 @@ static void TransmitFor14443b_AsReader(void) {
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
 
 	LED_B_ON();
-
-	for (int c = 0; c < ToSendMax; c++) {
-		uint8_t data = ToSend[c];
+    tosend_t *ts = get_tosend();
+    
+	for (int c = 0; c < ts->max; c++) {
+		uint8_t data = ts->buf[c];
 		for (int i = 0; i < 8; i++) {
 			uint16_t send_word = (data & 0x80) ? 0x0000 : 0xffff;
 			
@@ -1006,48 +1016,48 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     *              1 "stuffbit" = 1ETU (9us)
     */
 
-    ToSendReset();
+    tosend_reset();
 
     // Send SOF
     // 10-11 ETUs of ZERO
     for (int i = 0; i < 10; i++) 
-	    ToSendStuffBit(0);
+	    tosend_stuffbit(0);
 
 
     // 2-3 ETUs of ONE
-    ToSendStuffBit(1);
-    ToSendStuffBit(1);
+    tosend_stuffbit(1);
+    tosend_stuffbit(1);
 
     // Sending cmd, LSB
     // from here we add BITS
     for (int i = 0; i < len; i++) {
         // Start bit
-        ToSendStuffBit(0);
+        tosend_stuffbit(0);
         // Data bits
         uint8_t b = cmd[i];
 
-        ToSendStuffBit(b & 1);
-        ToSendStuffBit((b >> 1) & 1);
-        ToSendStuffBit((b >> 2) & 1);
-        ToSendStuffBit((b >> 3) & 1);
-        ToSendStuffBit((b >> 4) & 1);
-        ToSendStuffBit((b >> 5) & 1);
-        ToSendStuffBit((b >> 6) & 1);
-        ToSendStuffBit((b >> 7) & 1);
+        tosend_stuffbit(b & 1);
+        tosend_stuffbit((b >> 1) & 1);
+        tosend_stuffbit((b >> 2) & 1);
+        tosend_stuffbit((b >> 3) & 1);
+        tosend_stuffbit((b >> 4) & 1);
+        tosend_stuffbit((b >> 5) & 1);
+        tosend_stuffbit((b >> 6) & 1);
+        tosend_stuffbit((b >> 7) & 1);
 
         // Stop bit
-        ToSendStuffBit(1);
+        tosend_stuffbit(1);
         // EGT extra guard time
         // For PCD it ranges 0-57us (1etu = 9us)
-//        ToSendStuffBit(1);
-//        ToSendStuffBit(1);
-//        ToSendStuffBit(1);
+//        tosend_stuffbit(1);
+//        tosend_stuffbit(1);
+//        tosend_stuffbit(1);
     }
 
     // Send EOF
     // 10-11 ETUs of ZERO
     for (int i = 0; i < 10; i++)
-	    ToSendStuffBit(0);
+	    tosend_stuffbit(0);
 
     // Transition time. TR0 - guard time
     // 8ETUS minum?
@@ -1056,11 +1066,12 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 	
 	// ensure that last byte is filled up
     for (int i = 0; i < 8 ; ++i)
-	    ToSendStuffBit(1);
+	    tosend_stuffbit(1);
 
     // TR1 - Synchronization time
     // Convert from last character reference to length
-    ToSendMax++;
+    tosend_t *ts = get_tosend();
+    ts->max++;
 }
 
 /*
