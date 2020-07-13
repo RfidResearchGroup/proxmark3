@@ -2554,7 +2554,6 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
     hf_field_active = true;
 }
 
-
 void hf_field_off(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
