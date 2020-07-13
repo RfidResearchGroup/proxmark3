@@ -35,6 +35,7 @@
 #define ICLASS_KEYS_MAX 8
 #define ICLASS_AUTH_RETRY 10
 #define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
+static uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 static int CmdHelp(const char *Cmd);
 
@@ -954,7 +955,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         uint8_t max_blk = 31;
         getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
 
-        uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
 
         BLOCK79ENCRYPTION aa1_encryption = (decrypted[(6 * 8) + 7] & 0x03);
 
@@ -1484,61 +1485,40 @@ static int CmdHFiClassDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
+static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
 
-    int numberAuthRetries = ICLASS_AUTH_RETRY;
-    do {
-
-        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose) == false) {
-            numberAuthRetries--;
-            DropField();
-            continue;
-        }
-
-        calc_wb_mac(blockno, bldata, div_key, MAC);
-
-        struct p {
-            uint8_t blockno;
-            uint8_t data[12];
-        } PACKED payload;
-        payload.blockno = blockno;
-
-        memcpy(payload.data, bldata, 8);
-        memcpy(payload.data + 8, MAC, 4);
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t *)&payload, sizeof(payload));
-        PacketResponseNG resp;
-
-        if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 2000) == 0) {
-            if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
-            DropField();
-            return PM3_ETIMEOUT;
-        }
-
-        if (resp.status != PM3_SUCCESS) {
-            if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
-            DropField();
-            return PM3_EWRONGANSWER;
-        }
-
-        if (resp.data.asBytes[0] == 1)
-            break;
-
-    } while (numberAuthRetries);
-
-    DropField();
-
-    if (numberAuthRetries > 0) {
-        PrintAndLogEx(SUCCESS, "Write block %02X successful\n", blockno);
-    } else {
-        PrintAndLogEx(ERR, "failed to authenticate and write block");
+    uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose) == false) {
         return PM3_ESOFT;
     }
 
-    return PM3_SUCCESS;
+    calc_wb_mac(blockno, bldata, div_key, MAC);
+
+    struct p {
+        uint8_t blockno;
+        uint8_t data[12];
+    } PACKED payload;
+    payload.blockno = blockno;
+
+    memcpy(payload.data, bldata, 8);
+    memcpy(payload.data + 8, MAC, 4);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 2000) == 0) {
+        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+        return PM3_EWRONGANSWER;
+    }
+
+    return (resp.data.asBytes[0] == 1) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
 static int CmdHFiClass_WriteBlock(const char *Cmd) {
@@ -1620,7 +1600,12 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
 
     if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
 
-    return WriteBlock(blockno, bldata, KEY, use_credit_key, elite, rawkey, verbose);
+    int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, verbose);
+    if (isok == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Wrote block %02X successful", blockno);
+    else
+        PrintAndLogEx(FAILED, "Writing failed");
+    return isok;
 }
 
 static int CmdHFiClassCloneTag(const char *Cmd) {
@@ -1827,7 +1812,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     return resp.status;
 }
 
-static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth) {
+static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth) {
 
     int numberAuthRetries = ICLASS_AUTH_RETRY;
     // return data.
@@ -1886,12 +1871,57 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
+    PrintAndLogEx(SUCCESS, "block %02X: " _GREEN_("%s"), blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
 
-    if (blockno == 6) {
-        if (IsCryptoHelperPresent()) {
+    if (memcmp(result->blockdata, empty, 8) == 0)
+        return PM3_SUCCESS;
+
+    bool use_sc = IsCryptoHelperPresent();
+    if (use_sc == false) 
+        return PM3_SUCCESS;
+    
+    // crypto helper available.
+    switch (blockno) {
+        case 6: {
             DecodeBlock6(result->blockdata);
+            break;
         }
+        case 7: {
+//        case 8:
+//        case 9: {
+            PrintAndLogEx(INFO, "Trying to decrypt...");
+
+            uint8_t dec_data[8];
+            Decrypt(result->blockdata, dec_data);
+
+            if (memcmp(dec_data, empty, 8) != 0) {
+
+                //todo:  remove preamble/sentinal
+
+                uint32_t top = 0, mid, bot;
+                mid = bytes_to_num(dec_data, 4);
+                bot = bytes_to_num(dec_data + 4, 4);
+
+                PrintAndLogEx(INFO, "Block 7 binary");
+
+                char hexstr[8 + 1] = {0};
+                hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
+
+                char binstr[8 * 8 + 1] = {0};
+                hextobinstring(binstr, hexstr);
+                uint8_t i = 0;
+                while (i < strlen(binstr) && binstr[i++] == '0');
+
+                PrintAndLogEx(SUCCESS, "%s", binstr + i);
+
+                PrintAndLogEx(INFO, "Wiegand decode");
+                wiegand_message_t packed = initialize_message_object(top, mid, bot);
+                HIDTryUnpack(&packed, true);
+                PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+            } else {
+                PrintAndLogEx(INFO, "No credential found.");
+            }
+          }
     }
 
     return PM3_SUCCESS;
@@ -1973,7 +2003,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     if (!auth)
         PrintAndLogEx(FAILED, "warning: no authentication used with read, only a few specific blocks can be read accurately without authentication.");
 
-    return ReadBlock(KEY, blockno, keyType, elite, rawkey, verbose, auth);
+    return iclass_read_block(KEY, blockno, keyType, elite, rawkey, verbose, auth);
 }
 
 static int CmdHFiClass_loclass(const char *Cmd) {
