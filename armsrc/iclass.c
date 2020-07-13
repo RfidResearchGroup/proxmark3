@@ -1307,7 +1307,7 @@ void iClass_Dump(uint8_t start_blockno, uint8_t numblks) {
     BigBuf_free();
 }
 
-static bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
+static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data) {
 
     uint8_t write[16] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
     memcpy(write + 2, data, 12); // data + mac
@@ -1344,7 +1344,7 @@ static bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
 // turn off afterwards
 void iClass_WriteBlock(uint8_t blockno, uint8_t *data) {
     LED_A_ON();
-    uint8_t isOK = iClass_WriteBlock_ext(blockno, data);
+    uint8_t isOK = iclass_writeblock_ext(blockno, data);
     switch_off();
     reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
 }
@@ -1356,7 +1356,7 @@ void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
     uint16_t total_blocks = (endblock - startblock) + 1;
     for (uint8_t b = startblock; b < total_blocks; b++) {
 
-        if (iClass_WriteBlock_ext(b, data + ((b - startblock) * 12))) {
+        if (iclass_writeblock_ext(b, data + ((b - startblock) * 12))) {
             Dbprintf("Write block [%02x] successful", b);
             written++;
         } else {
