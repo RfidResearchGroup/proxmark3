@@ -164,7 +164,7 @@ uint32_t BigBuf_get_traceLen(void) {
 **/
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag) {
     if (tracing == false) {
-        if (DBGLEVEL >= DBG_DEBUG) { Dbprintf("trace is turned off"); }
+        Dbprintf("trace is turned off"); 
         return false;
     }
 
@@ -175,8 +175,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 
     // Return when trace is full
     if (TRACELOG_HDR_LEN + iLen + num_paritybytes >= BigBuf_max_traceLen() - trace_len) {
-        tracing = false; // don't trace any more
-        if (DBGLEVEL >= DBG_DEBUG) { Dbprintf("trace is full"); }
+        tracing = false;
         return false;
     }
 
@@ -188,27 +187,24 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     }
 
     if (duration > 0x7FFF) {
-        if (DBGLEVEL >= DBG_DEBUG) {
-            Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x start:0x%08x end:0x%08x", duration, timestamp_start, timestamp_end);
-//            Dbprintf("Forcing duration = 0");
+        if (DBGLEVEL >= DBG_ERROR) { //DBG_DEBUG
+            Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
         }
-        
         duration /= 32;
-        // duration >>= 5;
 //        duration = 0;
     }
-
+        
     hdr->timestamp = timestamp_start;
-    hdr->duration = duration;
+    hdr->duration = duration & 0x7FFF;
     hdr->data_len = iLen;
     hdr->isResponse = !readerToTag;
     trace_len += TRACELOG_HDR_LEN;
 
     // data bytes
     if (btBytes != NULL && iLen != 0) {
-        memcpy(trace + trace_len, btBytes, iLen);
+        memcpy(hdr->frame, btBytes, iLen);
+        trace_len += iLen;
     }
-    trace_len += iLen;
 
     // parity bytes
     if (num_paritybytes != 0) {
@@ -217,8 +213,8 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
         } else {
             memset(trace + trace_len, 0x00, num_paritybytes);
         }
+        trace_len += num_paritybytes;
     }
-    trace_len += num_paritybytes;
     return true;
 }
 
