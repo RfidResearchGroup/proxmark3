@@ -186,11 +186,12 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     }
 
     if (duration > 0x7FFF) {
-        if (DBGLEVEL >= DBG_ERROR) {
+        /*
+        if (DBGLEVEL >= DBG_DEBUG) {
             Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
         }
+        */
         duration /= 32;
-//        duration = 0;
     }
         
     hdr->timestamp = timestamp_start;
