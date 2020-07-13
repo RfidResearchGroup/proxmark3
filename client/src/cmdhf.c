@@ -130,6 +130,15 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for iClass / PicoPass tag...");
+    if (IfPm3Iclass()) {
+        if (readIclass(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
@@ -156,7 +165,6 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
     /*
-        // 14b and iclass is the longest test (put last)
         PROMPT_CLEARLINE;
         PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
         if (IfPm3Iso14443b()) {
@@ -167,7 +175,7 @@ int CmdHFSearch(const char *Cmd) {
         }
     */
 
-    // 14b and iclass is the longest test (put last)
+    // 14b  is the longest test (put last)
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
     if (IfPm3Iso14443b()) {
@@ -177,14 +185,6 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for iClass / PicoPass tag...");
-    if (IfPm3Iclass()) {
-        if (readIclass(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
 
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
