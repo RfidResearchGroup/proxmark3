@@ -122,6 +122,7 @@ typedef struct {
     bool verbose;
 } PACKED sample_config;
 
+// Tracelog Header struct
 typedef struct {
     uint32_t timestamp;
     uint16_t duration;
