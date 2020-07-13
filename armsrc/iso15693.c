@@ -621,7 +621,7 @@ static void DecodeTagReset(DecodeTag_t *DecodeTag) {
 int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
 
     int samples = 0, ret = 0;
-    uint16_t dmaBuf[ISO15693_DMA_BUFFER_SIZE];
+    uint16_t dmaBuf[ISO15693_DMA_BUFFER_SIZE] = {0};
 
     // the Decoder data structure
     DecodeTag_t DecodeTag = { 0 };
@@ -678,7 +678,7 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
         }
 
         if (samples > timeout && DecodeTag.state < STATE_TAG_RECEIVING_DATA) {
-            ret = -1;   // timeout
+            ret = -3;   // timeout
             break;
         }
 
@@ -704,7 +704,7 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
         Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
     }
 
-    if (ret ==  -1) {
+    if (ret == -1) {
         return ret;
     }
         
@@ -1016,7 +1016,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     int samples = 0;
     bool gotFrame = false;
 
-    uint8_t dmaBuf[ISO15693_DMA_BUFFER_SIZE];
+    uint8_t dmaBuf[ISO15693_DMA_BUFFER_SIZE] = {0};
 
     // the decoder data structure
     DecodeReader_t DecodeReader = {0};
@@ -1148,7 +1148,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     set_tracing(true);
 
     // The DMA buffer, used to stream samples from the FPGA
-    uint16_t dmaBuf[ISO15693_DMA_BUFFER_SIZE];
+    uint16_t dmaBuf[ISO15693_DMA_BUFFER_SIZE] = {0};
 
     // Count of samples received so far, so that we can include timing
     // information in the trace buffer.
