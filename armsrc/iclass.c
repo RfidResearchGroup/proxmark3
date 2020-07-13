@@ -752,12 +752,12 @@ send:
 
 
 // THE READER CODE
-static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time) {
+static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time) {
     CodeIso15693AsReader(frame, len);
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, start_time);
-    uint32_t end_time = *start_time + (32 * ((8 * ts->max) - 4)); // substract the 4 padding bits after EOF
-    LogTrace(frame, len, (*start_time * 4), (end_time * 4), NULL, true);
+    *end_time = *start_time + (32 * ((8 * ts->max) - 4)); // substract the 4 padding bits after EOF
+    LogTrace(frame, len, (*start_time * 4), (*end_time * 4), NULL, true);
 }
 
 static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* resp, size_t max_resp_size,
@@ -765,7 +765,7 @@ static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* 
                                           uint16_t timeout, uint32_t *eof_time) {
     while (tries-- > 0) {
 
-        iclass_send_as_reader(cmd, cmdsize, &start_time);
+        iclass_send_as_reader(cmd, cmdsize, &start_time, eof_time);
         
         if (resp == NULL)
             return true;
@@ -773,7 +773,7 @@ static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* 
         if (expected_size == GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time)) {
             return true;
         }
-//        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     }
     return false;
 }
@@ -802,19 +802,15 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     // wakeup
     uint32_t start_time = GetCountSspClk();
-    iclass_send_as_reader(act_all, 1, &start_time);
+    iclass_send_as_reader(act_all, 1, &start_time, eof_time);
     int len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time);
     if (len < 0)
         return false;
 
-/*
-    bool ok = iclass_send_cmd_with_retries(act_all, 1, resp, sizeof(resp), 1, 5, start_time, ICLASS_READER_TIMEOUT_ACTALL, eof_time);
-    if (ok == false)
-        return false;
-*/
+    
     // send Identify
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(identify, 1, &start_time);
+    iclass_send_as_reader(identify, 1, &start_time, eof_time);
 
     // expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
     len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
@@ -826,7 +822,7 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     // select the card
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(select, sizeof(select), &start_time);
+    iclass_send_as_reader(select, sizeof(select), &start_time, eof_time);
 
     // expect a 10-byte response here, 8 byte CSN and 2 byte CRC
     len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
@@ -838,7 +834,7 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     // card selected, now read config (block1) (only 8 bytes no CRC)
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(read_conf, sizeof(read_conf), &start_time);
+    iclass_send_as_reader(read_conf, sizeof(read_conf), &start_time, eof_time);
    
     // expect a 8-byte response here
     len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
@@ -850,7 +846,7 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time);
+    iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, eof_time);
    
     // expect a 8-byte response here
     len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
@@ -1215,7 +1211,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         // Auth Sequence MUST begin with reading e-purse. (block2)
         // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-        iclass_send_as_reader(readcheck_cc, sizeof(readcheck_cc), &start_time);
+        iclass_send_as_reader(readcheck_cc, sizeof(readcheck_cc), &start_time, &eof_time);
 
         LED_B_OFF();
     }
