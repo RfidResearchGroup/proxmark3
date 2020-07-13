@@ -27,6 +27,19 @@ typedef struct iclass_prekey {
     uint8_t key[8];
 } iclass_prekey_t;
 
+typedef struct {
+    uint8_t key[8];
+    bool use_raw;
+    bool use_elite;
+    bool use_credit_key;
+} PACKED iclass_auth_req_t;
+
+typedef struct {
+    bool isOK;
+    uint8_t div_key[8];
+    uint8_t mac[4];
+} PACKED iclass_auth_resp_t;
+
 int CmdHFiClass(const char *Cmd);
 
 int readIclass(bool loop, bool verbose);

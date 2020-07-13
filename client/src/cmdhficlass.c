@@ -1112,7 +1112,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_t MAC[4]) {
+static void calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_t *MAC) {
     uint8_t wb[9];
     wb[0] = blockno;
     memcpy(wb + 1, data, 8);
@@ -1120,24 +1120,25 @@ static void Calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_
 }
 
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool verbose) {
-    PacketResponseNG resp;
-    uint8_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
 
+    uint8_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
     if (use_credit_key)
         flags |= FLAG_ICLASS_READER_CEDITKEY;
 
     clearCommandBuffer();
+    PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return false;
     }
 
-    uint8_t isOK = resp.oldarg[0] & 0xff;
+    uint8_t isok = resp.oldarg[0] & 0xff;
 
-    if (isOK == 0xFF) {
+    // no tag found or button pressed
+    if ((isok == 0) || isok == 0xFF) {
         if (verbose) {
-            PrintAndLogEx(FAILED, "failed tag-select, aborting...  (%d)", isOK);
+            PrintAndLogEx(FAILED, "failed tag-select, aborting...  (%d)", isok);
         }
         return false;
     }
@@ -1159,17 +1160,12 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 
 static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
   
-    struct {
-        uint8_t key[8];
-        bool use_raw;
-        bool use_elite;
-        bool use_credit_key;
-    } PACKED payload;
-    
+    iclass_auth_req_t payload = {
+        .use_raw = rawkey,
+        .use_elite = elite,
+        .use_credit_key = use_credit_key
+    };
     memcpy(payload.key, KEY, 8);
-    payload.use_raw = rawkey;
-    payload.use_elite = elite;
-    payload.use_credit_key = use_credit_key;
     
     SendCommandNG(CMD_HF_ICLASS_AUTH, (uint8_t*)&payload, sizeof(payload));
     PacketResponseNG resp;
@@ -1184,13 +1180,8 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
         return false;
     }
 
-    struct p {
-        bool isOK;
-        uint8_t div_key[8];
-        uint8_t mac[4];
-    } PACKED;
-    struct p *packet = (struct p *)resp.data.asBytes;
-    
+    iclass_auth_resp_t *packet = (iclass_auth_resp_t *)resp.data.asBytes;
+
     if (packet->isOK == 0) {
         if (verbose) PrintAndLogEx(FAILED, "authentication error");
         return false;
@@ -1206,7 +1197,7 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     return true;
 }
 
-static int CmdHFiClassReader_Dump(const char *Cmd) {
+static int CmdHFiClassDump(const char *Cmd) {
 
     uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1245,6 +1236,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
                         memcpy(CreditKEY, iClass_Key_Table[keyNbr], 8);
+                        PrintAndLogEx(INFO, "AA2 (credit) index %u", keyNbr);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
                         errors = true;
@@ -1277,6 +1269,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
                         memcpy(KEY, iClass_Key_Table[keyNbr], 8);
+                        PrintAndLogEx(INFO, "AA1 (debit) index %u", keyNbr);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
                         errors = true;
@@ -1307,12 +1300,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // if no debit key given try credit key on AA1 (not for iclass but for some picopass this will work)
     if (!have_debit_key && have_credit_key) use_credit_key = true;
 
-    uint32_t flags = (
-        FLAG_ICLASS_READER_INIT |
-        FLAG_ICLASS_READER_CLEARTRACE |
-        FLAG_ICLASS_READER_ONLY_ONCE        
-     );
-                     
+    uint32_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
 
     //get config and first 3 blocks
     PacketResponseNG resp;
@@ -1320,7 +1308,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         DropField();
         return PM3_ESOFT;
@@ -1346,21 +1334,22 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     }
 
     // authenticate debit key and get div_key - later store in dump block 3
-    int numberAuthRetries = ICLASS_AUTH_RETRY;
-    do {
-        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
-            break;
-    } while (numberAuthRetries--);
-
-    if (numberAuthRetries <= 0) {
+    if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose) == false) {
         PrintAndLogEx(WARNING, "failed authenticating with debit key");
         DropField();
         return PM3_ESOFT;
     }
 
-    // begin dump
+    struct {
+        uint8_t start_blockno;
+        uint8_t numblks;
+    } PACKED payload;
+    payload.start_blockno = blockno;
+    payload.numblks = numblks - blockno + 1;
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ICLASS_DUMP, blockno, numblks - blockno + 1, 0, NULL, 0);
+    SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t*)&payload, sizeof(payload));
+
     while (true) {
         printf(".");
         fflush(stdout);
@@ -1371,47 +1360,53 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
             return PM3_EOPABORTED;
         }
 
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000))
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000))
             break;
     }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to communicate with card");
+        return resp.status;
+    }
+
     // dump cmd switch off at device when finised.
 
-    uint32_t blocksRead = resp.oldarg[1];
-    uint8_t isOK = resp.oldarg[0] & 0xff;
-    if (!isOK && !blocksRead) {
+    struct p_resp {
+        bool isOK;
+        uint8_t block_cnt;
+        uint32_t bb_offset;
+    } PACKED;
+    struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
+
+    uint32_t blocks_read = packet->block_cnt;
+
+    if (packet->isOK == false) {
         PrintAndLogEx(WARNING, "read block failed");
         return PM3_ESOFT;
     }
 
-    uint32_t startindex = resp.oldarg[2];
-    if (blocksRead * 8 > sizeof(tag_data) - (blockno * 8)) {
+    uint32_t startindex = packet->bb_offset;
+
+    if (blocks_read * 8 > sizeof(tag_data) - (blockno * 8)) {
         PrintAndLogEx(FAILED, "data exceeded buffer size!");
-        blocksRead = (sizeof(tag_data) / 8) - blockno;
+        blocks_read = (sizeof(tag_data) / 8) - blockno;
     }
 
     // response ok - now get bigbuf content of the dump
-    if (!GetFromDevice(BIG_BUF, tag_data + (blockno * 8), blocksRead * 8, startindex, NULL, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, tag_data + (blockno * 8), blocks_read * 8, startindex, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    size_t gotBytes = blocksRead * 8 + blockno * 8;
+    size_t gotBytes = blocks_read * 8 + blockno * 8;
 
-    // try AA2
+    // try AA2 Kc, Credit
     if (have_credit_key) {
-        //turn off hf field before authenticating with different key
-        DropField();
 
         memset(MAC, 0, 4);
 
         // AA2 authenticate credit key and git c_div_key - later store in dump block 4
-        numberAuthRetries = ICLASS_AUTH_RETRY;
-        do {
-            if (select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, verbose))
-                break;
-        } while (numberAuthRetries--);
-
-        if (numberAuthRetries <= 0) {
+        if (select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, verbose) == false) {
             PrintAndLogEx(WARNING, "failed authenticating with credit key");
             DropField();
             return PM3_ESOFT;
@@ -1419,32 +1414,43 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
         // do we still need to read more block?  (aa2 enabled?)
         if (maxBlk > blockno + numblks + 1) {
-            // setup dump and start
+
+            payload.start_blockno = blockno + blocks_read;
+            payload.numblks =  maxBlk - (blockno + blocks_read);
+
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_DUMP, blockno + blocksRead, maxBlk - (blockno + blocksRead), 0, NULL, 0);
-            if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
+            SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t*)&payload, sizeof(payload));
+
+            if (!WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000)) {
                 PrintAndLogEx(WARNING, "command execute timeout 2");
                 return PM3_ETIMEOUT;
             }
-            isOK = resp.oldarg[0] & 0xff;
-            blocksRead = resp.oldarg[1];
-            if (!isOK && !blocksRead) {
-                PrintAndLogEx(WARNING, "read block failed 2");
+
+            if (resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "failed to communicate with card");
+                return resp.status;
+            }
+
+            packet = (struct p_resp *)resp.data.asBytes;
+            if (packet->isOK == false) {
+                PrintAndLogEx(WARNING, "read block failed using credit key");
                 return PM3_ESOFT;
             }
 
-            startindex = resp.oldarg[2];
-            if (blocksRead * 8 > sizeof(tag_data) - gotBytes) {
+            blocks_read = packet->block_cnt;
+            startindex = packet->bb_offset;
+            
+            if (blocks_read * 8 > sizeof(tag_data) - gotBytes) {
                 PrintAndLogEx(FAILED, "data exceeded buffer size!");
-                blocksRead = (sizeof(tag_data) - gotBytes) / 8;
+                blocks_read = (sizeof(tag_data) - gotBytes) / 8;
             }
             // get dumped data from bigbuf
-            if (!GetFromDevice(BIG_BUF, tag_data + gotBytes, blocksRead * 8, startindex, NULL, 0, NULL, 2500, false)) {
+            if (!GetFromDevice(BIG_BUF, tag_data + gotBytes, blocks_read * 8, startindex, NULL, 0, NULL, 2500, false)) {
                 PrintAndLogEx(WARNING, "command execution time out");
                 return PM3_ETIMEOUT;
             }
 
-            gotBytes += blocksRead * 8;
+            gotBytes += blocks_read * 8;
         }
     }
 
@@ -1485,13 +1491,13 @@ static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_c
 
         uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
         uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)) {
+        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose) == false) {
             numberAuthRetries--;
             DropField();
             continue;
         }
 
-        Calc_wb_mac(blockno, bldata, div_key, MAC);
+        calc_wb_mac(blockno, bldata, div_key, MAC);
 
         struct p {
             uint8_t blockno;
@@ -1506,7 +1512,7 @@ static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_c
         SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
 
-        if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 4000) == 0) {
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 2000) == 0) {
             if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
             DropField();
             return PM3_ETIMEOUT;
@@ -1767,7 +1773,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     // calculate all mac for every the block we will write
     for (i = startblock; i <= endblock; i++) {
 
-        Calc_wb_mac(i, tag_data[i - startblock].d, div_key, MAC);
+        calc_wb_mac(i, tag_data[i - startblock].d, div_key, MAC);
         // usb command d start pointer = d + (i - 6) * 12
         // memcpy(pointer,tag_data[i - 6],8) 8 bytes
         // memcpy(pointer + 8,mac,sizoof(mac) 4 bytes;
@@ -1806,7 +1812,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_CLONE, (uint8_t *)&payload, total_bytes + 2);
 
-    if (WaitForResponseTimeout(CMD_HF_ICLASS_CLONE, &resp, 4500) == 0) {
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_CLONE, &resp, 2000) == 0) {
         PrintAndLogEx(WARNING, "command execute timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -1829,7 +1835,6 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
         bool isOK;
         uint8_t blockdata[8];
     } PACKED;
-
     struct p *result = NULL;
 
     do {
@@ -1837,7 +1842,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
         if (auth || blockno >= 2) {
             uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
             uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-            if (!select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose)) {
+            if (select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose) == false) {
                 numberAuthRetries--;
                 DropField();
                 continue;
@@ -1845,7 +1850,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
         } else {
             uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
             uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-            if (!select_only(CSN, CCNR, (keyType == 0x18), verbose)) {
+            if (select_only(CSN, CCNR, (keyType == 0x18), verbose) == false) {
                 numberAuthRetries--;
                 DropField();
                 continue;
@@ -2156,6 +2161,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     bool elite = false;
     bool errors = false;
     uint8_t cmdp = 0;
+    
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -2217,9 +2223,9 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     }
     if (errors || cmdp < 4) return usage_hf_iclass_calc_newkey();
 
-    if (!givenCSN) {
+    if (givenCSN == false) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_only(CSN, CCNR, false, true)) {
+        if (select_only(CSN, CCNR, false, true) == false) {
             DropField();
             return PM3_ESOFT;
         }
@@ -2512,7 +2518,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + key_offset, 4 * keys);
         PacketResponseNG resp;
 
-        while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        while (!WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000)) {
             timeout++;
             printf(".");
             fflush(stdout);
@@ -2927,7 +2933,7 @@ static command_t CommandTable[] = {
     {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "[options..] Check keys"},
     {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Restore a dump file onto a iClass tag"},
     {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
-    {"dump",        CmdHFiClassReader_Dump,     IfPm3Iclass,     "[options..] Dump iClass tag to file"},
+    {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "[options..] Dump iClass tag to file"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] Load iClass dump file into emulator memory"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
     {"info",        CmdHFiClassInfo,            AlwaysAvailable, "            Tag information"},
@@ -2978,8 +2984,6 @@ int readIclass(bool loop, bool verbose) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
             uint8_t readStatus = resp.oldarg[0] & 0xff;
-
-//            PrintAndLogEx(NORMAL, "ICE: %x", readStatus);
 
             // no tag found or button pressed
             if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
