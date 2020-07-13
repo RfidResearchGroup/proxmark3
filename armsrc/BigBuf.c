@@ -28,7 +28,7 @@ Pointer to highest available memory: s_bigbuf_hi
     low  0x00
 */
 
-static uint32_t  s_bigbuf_size = 0;
+static uint32_t s_bigbuf_size = 0;
 
 // High memory mark
 static uint32_t s_bigbuf_hi = 0;
@@ -164,7 +164,6 @@ uint32_t BigBuf_get_traceLen(void) {
 **/
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag) {
     if (tracing == false) {
-        Dbprintf("trace is turned off"); 
         return false;
     }
 
@@ -187,7 +186,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     }
 
     if (duration > 0x7FFF) {
-        if (DBGLEVEL >= DBG_ERROR) { //DBG_DEBUG
+        if (DBGLEVEL >= DBG_ERROR) {
             Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
         }
         duration /= 32;
