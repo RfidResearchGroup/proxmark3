@@ -69,13 +69,11 @@
 //=============================================================================
 
 #define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
-uint8_t ToSend[TOSEND_BUFFER_SIZE];
+uint8_t ToSend[TOSEND_BUFFER_SIZE] = {0};
 int ToSendMax = -1;
+static int ToSendBit;
 
 extern uint32_t _stack_start, _stack_end;
-
-
-static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
@@ -375,7 +373,26 @@ static void SendStatus(void) {
 
     print_stack_usage();
 
-    Dbprintf("  DBGLEVEL................%d", DBGLEVEL);
+    char dbglvlstr[20] = {0};
+    switch(DBGLEVEL) {
+        case DBG_NONE:
+            sprintf(dbglvlstr, "NONE");
+            break;
+        case DBG_ERROR:
+            sprintf(dbglvlstr, "ERROR");
+            break;
+        case DBG_INFO:
+            sprintf(dbglvlstr, "INFO");
+            break;
+        case DBG_DEBUG:
+            sprintf(dbglvlstr, "DEBUG");
+            break;
+        case DBG_EXTENDED:        
+            sprintf(dbglvlstr, "EXTENDED");
+            break;
+    }
+    Dbprintf("  DBGLEVEL................%d ( " _YELLOW_("%s")" )", DBGLEVEL, dbglvlstr);
+    
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
@@ -1453,7 +1470,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_DUMP: {
-            iClass_Dump(packet->oldarg[0], packet->oldarg[1]);
+            struct p {
+                uint8_t start_blockno;
+                uint8_t numblks;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            iClass_Dump(payload->start_blockno, payload->numblks);
             break;
         }
         case CMD_HF_ICLASS_CLONE: {
