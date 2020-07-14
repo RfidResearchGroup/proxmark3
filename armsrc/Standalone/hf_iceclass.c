@@ -20,11 +20,51 @@
 
 #define NUM_CSNS                    9
 #define MAC_RESPONSES_SIZE          (16 * NUM_CSNS)
-#define HF_ICLASS_FULLSIM_ORG_BIN   "iceclass-orig.bin"
-#define HF_ICLASS_FULLSIM_POST_BIN  "iceclass-modified.bin"
-#define HF_ICLASS_FULLSIM_POST_EML  "iceclass-modified-lasttag.bin.eml"
-#define HF_ICLASS_ATTACK_BIN        "iceclass_mac_attack.bin"
+#define HF_ICLASS_FULLSIM_ORIG_BIN  "iceclass-orig.bin"
+#define HF_ICLASS_FULLSIM_MOD       "iceclass-modified"
+#define HF_ICLASS_FULLSIM_MOD_BIN   HF_ICLASS_FULLSIM_MOD".bin"
+#define HF_ICLASS_FULLSIM_MOD_EML   HF_ICLASS_FULLSIM_MOD".eml"
+#define HF_ICLASS_ATTACK_BIN        "iclass_mac_attack.bin"
 
+#define ICE_STATE_NONE    0
+#define ICE_STATE_FULLSIM 1
+#define ICE_STATE_ATTACK  2
+#define ICE_STATE_READER  3
+
+typedef struct {
+    uint8_t app_limit;      //[8]
+    uint8_t otp[2];         //[9-10]
+    uint8_t block_writelock;//[11]
+    uint8_t chip_config;    //[12]
+    uint8_t mem_config;     //[13]
+    uint8_t eas;            //[14]
+    uint8_t fuses;          //[15]
+} picopass_conf_block_t;
+
+// iclass card descriptors
+char * card_types[] = {
+    "PicoPass 16K / 16",                       // 000
+    "PicoPass 32K with current book 16K / 16", // 001
+    "Unknown Card Type!",                      // 010
+    "Unknown Card Type!",                      // 011
+    "PicoPass 2K",                             // 100
+    "Unknown Card Type!",                      // 101
+    "PicoPass 16K / 2",                        // 110
+    "PicoPass 32K with current book 16K / 2",  // 111
+};
+
+uint8_t card_app2_limit[] = {
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0x1f,
+    0xff,
+    0xff,
+    0xff,
+};
+
+static uint8_t aa2_key[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t legacy_aa1_key[] = {0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78};
 
 static uint8_t csns[8 * NUM_CSNS] = {
@@ -40,23 +80,196 @@ static uint8_t csns[8 * NUM_CSNS] = {
     //0x04, 0x08, 0x9F, 0x78, 0x6E, 0xFF, 0x12, 0xE0
 };
 
-static void DownloadLogInstructions(uint8_t t) {
+static void download_instructions(uint8_t t) {
     Dbprintf("");
     switch (t) { 
-        case ICLASS_SIM_MODE_FULL: {
+        case ICE_STATE_FULLSIM: {
             Dbprintf("The emulator memory was saved to flash. Try the following from flash and display it");
-            Dbprintf("1. " _YELLOW_("mem spiffs dump o "HF_ICLASS_FULLSIM_POST_BIN" f "HF_ICLASS_FULLSIM_POST_BIN" e"));
+            Dbprintf("1. " _YELLOW_("mem spiffs dump o "HF_ICLASS_FULLSIM_MOD_BIN" f "HF_ICLASS_FULLSIM_MOD" e"));
             Dbprintf("2. " _YELLOW_("exit proxmark3 client"));
-            Dbprintf("3. " _YELLOW_("cat "HF_ICLASS_FULLSIM_POST_EML));
+            Dbprintf("3. " _YELLOW_("cat "HF_ICLASS_FULLSIM_MOD_EML));
             break;
         } 
-        case ICLASS_SIM_MODE_READER_ATTACK: {
+        case ICE_STATE_ATTACK: {
             Dbprintf("The emulator memory was saved to flash. Try the following from flash and display it");
-            Dbprintf("1. " _YELLOW_("mem spiffs dump o "HF_ICLASS_FULLSIM_POST_BIN" f "HF_ICLASS_FULLSIM_POST_BIN" e"));
+            Dbprintf("1. " _YELLOW_("mem spiffs dump o "HF_ICLASS_ATTACK_BIN" f "HF_ICLASS_ATTACK_BIN));
             Dbprintf("2. " _YELLOW_("hf iclass loclass f "HF_ICLASS_ATTACK_BIN));
             break;
         }
+        case ICE_STATE_READER: {
+            Dbprintf("The found tags was saved to flash. Try to download from flash and display it");
+            Dbprintf("1. " _YELLOW_("mem spiffs tree"));
+            Dbprintf("2. " _YELLOW_("mem spiffs dump h"));
+            break;
+        }        
     }
+}
+
+static void save_to_flash(uint8_t *data, uint16_t datalen) {
+
+    rdv40_spiffs_lazy_mount();
+
+    char fn[SPIFFS_OBJ_NAME_LEN];
+    sprintf(fn, "iclass-%02X%02X%02X%02X%02X%02X%02X%02X.bin",
+        data[0], data[1], data[2], data[3],
+        data[4], data[5], data[6], data[7]
+    );
+
+    if (exists_in_spiffs(fn) == false) {
+        int res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
+        if (res == SPIFFS_OK) {
+            Dbprintf("Saved to `" _YELLOW_("%s") "`", fn);
+        } else {
+            Dbprintf("error writing `" _YELLOW_("%s") "`", fn);
+        } 
+    }    
+
+    rdv40_spiffs_lazy_unmount();
+}
+
+static int fullsim_mode(void) {
+
+    rdv40_spiffs_lazy_mount();
+
+    // Look for a dump file in FLASH MEM.
+    if (exists_in_spiffs(HF_ICLASS_FULLSIM_ORIG_BIN) == false) {
+        Dbprintf("error, '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' file missing");
+        return PM3_EIO;                    
+    }
+  
+    SpinOff(0);
+    uint8_t *emul = BigBuf_get_EM_addr();
+    uint32_t fsize = size_in_spiffs(HF_ICLASS_FULLSIM_ORIG_BIN);
+    int res = rdv40_spiffs_read_as_filetype(HF_ICLASS_FULLSIM_ORIG_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
+    rdv40_spiffs_lazy_unmount();
+    Dbprintf("Found `" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "` , loaded %u bytes to emulator memory", fsize);
+
+    if ( memcmp(emul + (3 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
+        // create diversified key if not in dump.
+        uint8_t ccnr[12] = {0};
+        memcpy(ccnr, emul + (2 * 8), 8);                   
+        bool use_elite = false;
+        
+        iclass_calc_div_key(emul, legacy_aa1_key, emul + (3 * 8), use_elite);       
+//        Dbhexdump(8, emul + (3 * 8), false);
+    }
+
+    iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
+    
+    LED_B_ON();
+    rdv40_spiffs_lazy_mount();
+    res = rdv40_spiffs_write(HF_ICLASS_FULLSIM_MOD_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
+    rdv40_spiffs_lazy_unmount();
+    LED_B_OFF();
+    if (res != 0) {
+        Dbprintf("error writing '"HF_ICLASS_FULLSIM_MOD_BIN"' to flash ( %d )", res);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int reader_attack_mode(void) {
+
+    BigBuf_free();
+    uint16_t mac_response_len = 0;
+    uint8_t *mac_responses = BigBuf_malloc(MAC_RESPONSES_SIZE);
+
+    iclass_simulate(ICLASS_SIM_MODE_READER_ATTACK, NUM_CSNS, false, csns, mac_responses, &mac_response_len);
+
+    if (mac_response_len > 0) {
+
+        LED_B_ON();
+        rdv40_spiffs_lazy_mount();
+        int res = rdv40_spiffs_write(HF_ICLASS_ATTACK_BIN, mac_responses, mac_response_len, RDV40_SPIFFS_SAFETY_SAFE);
+        rdv40_spiffs_lazy_unmount();
+        LED_B_OFF();
+        if (res != 0) {
+            Dbprintf("error writing '"HF_ICLASS_ATTACK_BIN"' to flash ( %d )", res);
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+static int reader_dump_mode(void) {
+    
+    BigBuf_free();
+    uint8_t *card_data = BigBuf_malloc(0xFF * 8);
+    memset(card_data, 0xFF, sizeof(card_data));
+
+    struct p {
+        uint8_t key[8];
+        bool use_raw;
+        bool use_elite;
+        bool use_credit_key;
+    } PACKED;
+
+    for (;;) {
+        
+        if (BUTTON_PRESS()) {
+            DbpString("button pressed");
+            break;
+        }
+
+        // AA1 
+        struct p payload = {
+            .use_raw = false,
+            .use_elite = false,
+            .use_credit_key = false,
+        };
+        memcpy(payload.key, legacy_aa1_key, sizeof(payload.key));
+
+        bool isOK = iclass_auth((uint8_t*)&payload, false, card_data);        
+        if (isOK == false) {
+            continue;
+        }
+        
+        picopass_conf_block_t *conf = (picopass_conf_block_t*)(card_data + 8);
+
+        // get 3 config bits
+        uint8_t type = (conf->chip_config & 0x10) >> 2;
+        type |= (conf->mem_config & 0x80) >> 6;
+        type |= (conf->mem_config & 0x20) >> 5;
+
+        uint8_t app1_limit = conf->app_limit - 5; // minus header blocks
+        uint8_t app2_limit = card_app2_limit[type];
+        
+        
+        uint16_t dumped = 0;
+        uint8_t block;
+        for (block = 5; block < app1_limit; block++) {
+            isOK = iclass_readblock(block, card_data + (8 * block));
+            if (isOK) {
+                dumped++;
+            }
+        }
+
+        // AA2 
+        payload.use_credit_key = true;
+        memcpy(payload.key, aa2_key, sizeof(payload.key));
+
+        isOK = iclass_auth((uint8_t*)&payload, false, card_data);        
+        if (isOK) {
+            for (; block < app2_limit; block++) {
+                isOK = iclass_readblock(block, card_data + (8 * block));
+                if (isOK) {
+                    dumped++;
+                }
+            }
+        }
+
+        Dbprintf("Found %s", card_types[type]);
+/*
+        Dbprintf("APP1 Blocks: %d", app1_limit); 
+        Dbprintf("APP2 Blocks: %d", app2_limit - app1_limit - 5); // minus app1 and header
+        Dbprintf("Got %d blocks (saving %u, %u bytes )", dumped, dumped + 5, ((dumped+5)*8) ); 
+*/
+        if (5 + dumped > app1_limit) {
+            save_to_flash(card_data, (5 + dumped) * 8 );        
+        }        
+    }
+
+    Dbprintf("exit read & dump mode");
+    return PM3_SUCCESS;
 }
 
 void ModInfo(void) {
@@ -71,12 +284,10 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t simtype = ICLASS_SIM_MODE_FULL;
+    uint8_t mode = ICE_STATE_READER;
 
     for (;;) {
         WDT_HIT();
-
-        // exit from RunMod, send a usbcommand.
         if (data_available()) break;
 
         // Was our button held down or pressed?
@@ -85,78 +296,40 @@ void RunMod(void) {
             break;
         }
                 
-        switch (simtype) {
-            case ICLASS_SIM_MODE_FULL: {
+        int res;
+        switch (mode) {
 
+            case ICE_STATE_FULLSIM: {
                 Dbprintf("enter full simulation mode");
+                res = fullsim_mode();
+                if (res == PM3_SUCCESS)
+                    download_instructions(mode);
                 
-                rdv40_spiffs_lazy_mount();
-                // Look for a dump file in FLASH MEM.
-                if (exists_in_spiffs(HF_ICLASS_FULLSIM_ORG_BIN) == false) {
-                    Dbprintf("error, '" _YELLOW_(HF_ICLASS_FULLSIM_ORG_BIN) "' file missing");
-                    Dbprintf("changing to reader attack mode instead");
-                    simtype = ICLASS_SIM_MODE_READER_ATTACK;                    
-                    break;
-                }
-              
-                SpinOff(0);
-                uint8_t *emul = BigBuf_get_EM_addr();
-                uint32_t fsize = size_in_spiffs(HF_ICLASS_FULLSIM_ORG_BIN);
-                int res = rdv40_spiffs_read_as_filetype(HF_ICLASS_FULLSIM_ORG_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
-                rdv40_spiffs_lazy_unmount();
-                Dbprintf("Found `" _YELLOW_(HF_ICLASS_FULLSIM_ORG_BIN) "` , loaded %u bytes to emulator memory", fsize);
-
-                if ( memcmp(emul + (3 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
-                    // create diversified key if not in dump.
-                    uint8_t ccnr[12] = {0};
-                    memcpy(ccnr, emul + (2 * 8), 8);                   
-                    bool use_elite = false;
-                    
-                    iclass_calc_div_key(emul, legacy_aa1_key, emul + (3 * 8), use_elite);
-                    
-                    Dbhexdump(8, emul + (3 * 8), false);
-                }
-
-                iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
-                
-                LED_B_ON();
-                rdv40_spiffs_lazy_mount();
-                res = rdv40_spiffs_write(HF_ICLASS_FULLSIM_POST_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
-                rdv40_spiffs_lazy_unmount();
-                LED_B_OFF();
-                if (res != 0) {
-                    Dbprintf("error writing '"HF_ICLASS_FULLSIM_POST_BIN"' to flash ( %d )", res);
-                }
-                DownloadLogInstructions(simtype);
-                simtype = 0;
+                switch_off();
                 break;
             }
-            case ICLASS_SIM_MODE_READER_ATTACK: {
-
+            case ICE_STATE_ATTACK: {
                 Dbprintf("enter reader attack mode");
-                uint16_t mac_response_len = 0;
-                uint8_t mac_responses[MAC_RESPONSES_SIZE] = {0};
+                res = reader_attack_mode();
+                if (res == PM3_SUCCESS)
+                    download_instructions(mode);
 
-                iclass_simulate(ICLASS_SIM_MODE_READER_ATTACK, NUM_CSNS, false, csns, mac_responses, &mac_response_len);
-
-                if (mac_response_len > 0) {
-
-                    LED_B_ON();
-                    rdv40_spiffs_lazy_mount();
-                    int res = rdv40_spiffs_write(HF_ICLASS_ATTACK_BIN, mac_responses, mac_response_len, RDV40_SPIFFS_SAFETY_SAFE);
-                    rdv40_spiffs_lazy_unmount();
-                    LED_B_OFF();
-                    if (res != 0) {
-                        Dbprintf("error writing '"HF_ICLASS_ATTACK_BIN"' to flash ( %d )", res);
-                    }
-                }
-                DownloadLogInstructions(simtype);
-                simtype = 0;
+                mode = ICE_STATE_NONE;
+                switch_off();
                 break;
             }
-        } // switch
-    } // for loop
+            case ICE_STATE_READER: {
+                Dbprintf("enter read & dump mode");
+                res = reader_dump_mode();
+                if (res == PM3_SUCCESS)
+                    download_instructions(mode);
 
+                mode = ICE_STATE_NONE;
+                switch_off();
+                break;
+            }
+        }
+    }
 
     LEDsoff();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
