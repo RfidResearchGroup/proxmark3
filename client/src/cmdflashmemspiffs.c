@@ -19,49 +19,58 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_flashmemspiffs_remove(void) {
-    PrintAndLogEx(NORMAL, "Remove a file from spiffs filesystem");
-    PrintAndLogEx(NORMAL, " Usage:  mem spiffs remove <filename>");
+    PrintAndLogEx(NORMAL, "Remove a file from spiffs filesystem\n");
+    PrintAndLogEx(NORMAL, "Usage:  mem spiffs remove <filename>");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        mem spiffs remove lasttag.bin"));
     return PM3_SUCCESS;
 }
 
 static int usage_flashmemspiffs_rename(void) {
-    PrintAndLogEx(NORMAL, "Rename/move a file in spiffs filesystem");
-    PrintAndLogEx(NORMAL, " Usage:  mem spiffs rename <source> <destination>");
+    PrintAndLogEx(NORMAL, "Rename/move a file in spiffs filesystem\n");
+    PrintAndLogEx(NORMAL, "Usage:  mem spiffs rename <source> <destination>");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        mem spiffs rename lasttag.bin oldtag.bin"));
     return PM3_SUCCESS;
 }
 
 static int usage_flashmemspiffs_copy(void) {
-    PrintAndLogEx(NORMAL, "Copy a file to another (destructively) in spiffs filesystem");
-    PrintAndLogEx(NORMAL, " Usage:  mem spiffs copy <source> <destination>");
+    PrintAndLogEx(NORMAL, "Copy a file to another (destructively) in spiffs filesystem\n");
+    PrintAndLogEx(NORMAL, "Usage:  mem spiffs copy <source> <destination>");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        mem spiffs copy lasttag.bin lasttag_cpy.bin"));
     return PM3_SUCCESS;
 }
 
 static int usage_flashmemspiffs_dump(void) {
     PrintAndLogEx(NORMAL, "Dumps flash memory on device into a file or in console");
-    PrintAndLogEx(NORMAL, "Size is handled by first sending a STAT command against file existence");
-    PrintAndLogEx(NORMAL, " Usage:  mem spiffs dump o <filename> [f <file name> [e]]  [p]");
-    PrintAndLogEx(NORMAL, "  o <filename>    :      filename in SPIFFS");
-    PrintAndLogEx(NORMAL, "  f <filename>    :      file name to save to");
-    PrintAndLogEx(NORMAL, "  p               :      print dump in console");
-    PrintAndLogEx(NORMAL, "  e               :      also save in EML format (good for tags save and dictonnary files)");
+    PrintAndLogEx(NORMAL, "Size is handled by first sending a STAT command against file existence\n");
+    PrintAndLogEx(NORMAL, "Usage:  mem spiffs dump o <filename> [f <file name> [e]] [p]");
+    PrintAndLogEx(NORMAL, "  o <filename>        - filename in SPIFFS");
+    PrintAndLogEx(NORMAL, "  f <filename>        - file name to save to <w/o .bin>");
+    PrintAndLogEx(NORMAL, "  p                   - print dump in console");
+    PrintAndLogEx(NORMAL, "  e                   - also save in EML format (good for tags save and dictonnary files)");
     PrintAndLogEx(NORMAL, " You must specify at lease option f or option p, both if you wish");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        mem spiffs dump o hf_colin/lasttag f lasttag e");
-    PrintAndLogEx(NORMAL, "        mem spiffs dump o hf_colin/lasttag p");
+    PrintAndLogEx(NORMAL, _YELLOW_("        mem spiffs dump o lasttag.bin f lasttag e"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        mem spiffs dump o lasttag.bin p"));
     return PM3_SUCCESS;
 }
 
 static int usage_flashmemspiffs_load(void) {
     PrintAndLogEx(NORMAL, "Uploads binary-wise file into device filesystem");
-    PrintAndLogEx(NORMAL, "Usage:  mem spiffs load o <filename> f <filename>");
     PrintAndLogEx(NORMAL, "Warning: mem area to be written must have been wiped first");
-    PrintAndLogEx(NORMAL, "(this is already taken care when loading dictionaries)");
-    PrintAndLogEx(NORMAL, "  o <filename>  :  destination filename");
-    PrintAndLogEx(NORMAL, "  f <filename>  :  local filename");
+    PrintAndLogEx(NORMAL, "(this is already taken care when loading dictionaries)\n");
+    PrintAndLogEx(NORMAL, "Usage:  mem spiffs load o <filename> f <filename>");
+    PrintAndLogEx(NORMAL, "  o <filename>       - destination filename");
+    PrintAndLogEx(NORMAL, "  f <filename>       - local filename");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        mem spiffs load f myfile o myapp.conf");
+    PrintAndLogEx(NORMAL, _YELLOW_("        mem spiffs load f myfile o myapp.conf"));
     return PM3_SUCCESS;
 }
 
@@ -277,12 +286,12 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     }
 
     if ((filename[0] == '\0') && (!print)) {
-        PrintAndLogEx(FAILED, "No print asked and Local dump Filename missing or invalid");
+        PrintAndLogEx(FAILED, "No print asked and local dump filename missing or invalid");
         errors = true;
     }
 
     if (destfilename[0] == '\0') {
-        PrintAndLogEx(FAILED, "SPIFFS Filename missing or invalid");
+        PrintAndLogEx(FAILED, "SPIFFS filename missing or invalid");
         errors = true;
     }
 
@@ -320,15 +329,15 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     }
 
     if (filename[0] != '\0') {
-        saveFile(filename, "", dump, len);
+        saveFile(filename, ".bin", dump, len);
         if (eml) {
             uint8_t eml_len = 16;
             
-            if (strstr(filename, "iclass") != NULL)
+            if (strstr(filename, "class") != NULL)
                 eml_len = 8;
             else if (strstr(filename, "mfu") != NULL)
                 eml_len = 4;
-                
+
             saveFileEML(filename, dump, len, eml_len);
         }
     }
