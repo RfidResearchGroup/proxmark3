@@ -536,9 +536,11 @@ static int CmdHFiClassSniff(const char *Cmd) {
         arg_lit0("j",  "jam",    "Jam (prevent) e-purse updates"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);   
     bool jam_epurse_update = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+    
     const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
 
     struct {
@@ -1888,7 +1890,7 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
             PrintAndLogEx(INFO, "-----------------------------------------------------------------");
             uint8_t dec_data[8];
             uint64_t a = bytes_to_num(result->blockdata, 8);
-            if (leadingzeros(a) < 16) {
+            if (leadingzeros(a) < 12) {
                 PrintAndLogEx(INFO, "data looks encrypted, false positive is possible");
                 Decrypt(result->blockdata, dec_data);
                 PrintAndLogEx(SUCCESS, "decrypted : " _GREEN_("%s"), sprint_hex(dec_data, sizeof(dec_data)));
