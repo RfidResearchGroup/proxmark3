@@ -322,7 +322,14 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     if (filename[0] != '\0') {
         saveFile(filename, "", dump, len);
         if (eml) {
-            saveFileEML(filename, dump, len, 16);
+            uint8_t eml_len = 16;
+            
+            if (strstr(filename, "iclass") != NULL)
+                eml_len = 8;
+            else if (strstr(filename, "mfu") != NULL)
+                eml_len = 4;
+                
+            saveFileEML(filename, dump, len, eml_len);
         }
     }
 
