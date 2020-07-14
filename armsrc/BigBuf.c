@@ -114,8 +114,6 @@ void BigBuf_free_keep_EM(void) {
         s_bigbuf_hi = emulator_memory - (uint8_t *)BigBuf;
     else
         s_bigbuf_hi = s_bigbuf_size;
-
-    // shouldn't this empty BigBuf also?
 }
 
 void BigBuf_print_status(void) {
