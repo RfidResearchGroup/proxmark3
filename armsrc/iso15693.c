@@ -1066,16 +1066,16 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             samples++;
         }
 
-        if (gotFrame) {
-            break;
-        }
-
         if (BUTTON_PRESS()) {
             DecodeReader.byteCount = -1;
             break;
         }
 
         WDT_HIT();
+
+        if (gotFrame) {
+            break;
+        }
     }
 
     FpgaDisableSscDma();
