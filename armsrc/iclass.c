@@ -147,6 +147,10 @@ static void CodeIClassTagSOF(void) {
  */
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+    iclass_simulate(arg0, arg1, arg2, datain, NULL, NULL);
+}
+
+void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
 
     LEDsoff();
 
@@ -155,54 +159,63 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
     clear_trace();
     set_tracing(true);
 
-    uint32_t simType = arg0;
-    uint32_t numberOfCSNS = arg1;
-
     //Use the emulator memory for SIM
     uint8_t *emulator = BigBuf_get_EM_addr();
     uint8_t mac_responses[PM3_CMD_DATA_SIZE] = { 0 };
 
-    if (simType == ICLASS_SIM_MODE_CSN) {
+    if (sim_type == ICLASS_SIM_MODE_CSN) {
         // Use the CSN from commandline
         memcpy(emulator, datain, 8);
         doIClassSimulation(ICLASS_SIM_MODE_CSN, NULL);
-    } else if (simType == ICLASS_SIM_MODE_CSN_DEFAULT) {
+
+    } else if (sim_type == ICLASS_SIM_MODE_CSN_DEFAULT) {
         //Default CSN
         uint8_t csn[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0 };
         // Use the CSN from commandline
         memcpy(emulator, csn, 8);
         doIClassSimulation(ICLASS_SIM_MODE_CSN, NULL);
-    } else if (simType == ICLASS_SIM_MODE_READER_ATTACK) {
 
-        Dbprintf("going into attack mode, %d CSNS sent", numberOfCSNS);
+    } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK) {
+
+        Dbprintf("going into attack mode, %d CSNS sent", num_csns);
         // In this mode, a number of csns are within datain. We'll simulate each one, one at a time
         // in order to collect MAC's from the reader. This can later be used in an offlne-attack
         // in order to obtain the keys, as in the "dismantling iclass"-paper.
         #define EPURSE_MAC_SIZE 16
         int i = 0;
-        for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < PM3_CMD_DATA_SIZE; i++) {
+        for (; i < num_csns && i * EPURSE_MAC_SIZE + 8 < PM3_CMD_DATA_SIZE; i++) {
 
             memcpy(emulator, datain + (i * 8), 8);
 
             if (doIClassSimulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
+                
+                if (dataoutlen) 
+                    *dataoutlen = i * EPURSE_MAC_SIZE;
+
                 // Button pressed
-                reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+                if (send_reply)
+                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
                 goto out;
             }
         }
-        reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+        if (dataoutlen) 
+            *dataoutlen = i * EPURSE_MAC_SIZE;
 
-    } else if (simType == ICLASS_SIM_MODE_FULL) {
+        if (send_reply)
+            reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+
+    } else if (sim_type == ICLASS_SIM_MODE_FULL) {
         //This is 'full sim' mode, where we use the emulator storage for data.
         //ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
         doIClassSimulation(ICLASS_SIM_MODE_FULL, NULL);
-    } else if (simType == ICLASS_SIM_MODE_READER_ATTACK_KEYROLL) {
+
+    } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK_KEYROLL) {
 
         // This is the KEYROLL version of sim 2.
         // the collected data (mac_response) is doubled out since we are trying to collect both keys in the keyroll process.
         // Keyroll iceman  9 csns * 8 * 2 = 144
         // keyroll CARL55  15csns * 8 * 2 = 15 * 8 * 2 = 240
-        Dbprintf("going into attack keyroll mode, %d CSNS sent", numberOfCSNS);
+        Dbprintf("going into attack keyroll mode, %d CSNS sent", num_csns);
         // In this mode, a number of csns are within datain. We'll simulate each one, one at a time
         // in order to collect MAC's from the reader. This can later be used in an offlne-attack
         // in order to obtain the keys, as in the "dismantling iclass"-paper.
@@ -211,27 +224,44 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
         // attack below is same as SIM 2, but we run the CSN twice to collected the mac for both keys.
         int i = 0;
         // The usb data is 512 bytes, fitting 65 8-byte CSNs in there.  iceman fork uses 9 CSNS
-        for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < PM3_CMD_DATA_SIZE; i++) {
+        for (; i < num_csns && i * EPURSE_MAC_SIZE + 8 < PM3_CMD_DATA_SIZE; i++) {
 
             memcpy(emulator, datain + (i * 8), 8);
 
             // keyroll 1
             if (doIClassSimulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
-                reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                
+                if (dataoutlen) 
+                    *dataoutlen = i * EPURSE_MAC_SIZE * 2;
+
+                if (send_reply)                
+                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+
                 // Button pressed
                 goto out;
             }
 
             // keyroll 2
-            if (doIClassSimulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + (i + numberOfCSNS) * EPURSE_MAC_SIZE)) {
-                reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+            if (doIClassSimulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + (i + num_csns) * EPURSE_MAC_SIZE)) {
+
+                if (dataoutlen) 
+                    *dataoutlen = i * EPURSE_MAC_SIZE * 2;
+
+                if (send_reply)                
+                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+
                 // Button pressed
                 goto out;
             }
         }
-        // double the amount of collected data.
-        reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
+        if (dataoutlen) 
+            *dataoutlen = i * EPURSE_MAC_SIZE * 2;
+
+        // double the amount of collected data.
+        if (send_reply)
+            reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+        
     } else {
         // We may want a mode here where we hardcode the csns to use (from proxclone).
         // That will speed things up a little, but not required just yet.
@@ -239,6 +269,9 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
     }
 
 out:
+    if (dataout && dataoutlen)
+        memcpy(dataout, mac_responses, *dataoutlen);
+
     switch_off();
     BigBuf_free_keep_EM();
 }
@@ -683,7 +716,9 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 resp_cc_len = ts->max;
                 cipher_state_KD[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
                 cipher_state_KC[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
-                
+                if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                    memcpy(emulator + (current_page * page_size) + (8 * 2), card_challenge_data, 8);
+                }                
             } else if (block == 3) { // update Kd
                 for (int i = 0; i < 8; i++) {
                     if (personalization_mode) {
