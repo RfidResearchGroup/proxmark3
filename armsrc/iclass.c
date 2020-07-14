@@ -1153,6 +1153,10 @@ void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
 // which needs to authenticate before doing more things like read/write
 // selects and authenticate to a card,  sends back div_key and mac to client.
 void iClass_Authentication(uint8_t *bytes) {
+    iclass_auth(bytes, true, NULL);
+}
+
+bool iclass_auth(uint8_t *bytes, bool send_reply, uint8_t *dataout) {
 
     struct p {
         uint8_t key[8];
@@ -1176,8 +1180,10 @@ void iClass_Authentication(uint8_t *bytes) {
 
     packet.isOK = select_iclass_tag(card_data, payload->use_credit_key, &eof_time);
     if (packet.isOK == false) {
-        reply_ng(CMD_HF_ICLASS_AUTH, PM3_ESOFT, (uint8_t *)&packet, sizeof(packet));
-        return;
+        if (send_reply)
+            reply_ng(CMD_HF_ICLASS_AUTH, PM3_ESOFT, (uint8_t *)&packet, sizeof(packet));
+
+        return false;
     }
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     
@@ -1201,7 +1207,15 @@ void iClass_Authentication(uint8_t *bytes) {
     uint8_t resp[ICLASS_BUFFER_SIZE];
     packet.isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     
-    reply_ng(CMD_HF_ICLASS_AUTH, (packet.isOK)? PM3_SUCCESS : PM3_ESOFT, (uint8_t *)&packet, sizeof(packet));
+    if (send_reply)
+        reply_ng(CMD_HF_ICLASS_AUTH, (packet.isOK)? PM3_SUCCESS : PM3_ESOFT, (uint8_t *)&packet, sizeof(packet));
+    
+    if (dataout) {
+        memcpy(dataout, card_data, sizeof(card_data));
+        memcpy(dataout + (3 * 8), packet.div_key, sizeof(packet.div_key));
+    }
+
+    return true;
 }
 
 typedef struct iclass_premac {
@@ -1300,7 +1314,7 @@ out:
 
 // Tries to read block.
 // retries 10times.
-static bool iclass_readblock(uint8_t blockno, uint8_t *data) {
+bool iclass_readblock(uint8_t blockno, uint8_t *data) {
     uint8_t resp[10];
     uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(c + 1, 1);
