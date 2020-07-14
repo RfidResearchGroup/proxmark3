@@ -1057,7 +1057,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void iClassEncryptBlkData(uint8_t *blk_data, uint8_t *key) {
+static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
     uint8_t encrypted_data[16];
     uint8_t *encrypted = encrypted_data;
     mbedtls_des3_context ctx;
@@ -1118,7 +1118,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     if (use_sc) {
         Encrypt(blk_data, blk_data);
     } else {
-        iClassEncryptBlkData(blk_data, key);
+        iclass_encrypt_block_data(blk_data, key);
     }
     PrintAndLogEx(SUCCESS, "encrypted block %s", sprint_hex(blk_data, 8));
     return PM3_SUCCESS;
