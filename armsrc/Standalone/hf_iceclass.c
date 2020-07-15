@@ -26,10 +26,15 @@
 #define HF_ICLASS_FULLSIM_MOD_EML   HF_ICLASS_FULLSIM_MOD".eml"
 #define HF_ICLASS_ATTACK_BIN        "iclass_mac_attack.bin"
 
-#define ICE_STATE_NONE    0
-#define ICE_STATE_FULLSIM 1
-#define ICE_STATE_ATTACK  2
-#define ICE_STATE_READER  3
+#define HF_ICLASS_CC_A              "iceclass_cc_a.bin"
+#define HF_ICLASS_CC_B              "iceclass_cc_b.bin"
+char* cc_files[] = { HF_ICLASS_CC_A, HF_ICLASS_CC_B };
+
+#define ICE_STATE_NONE        0
+#define ICE_STATE_FULLSIM     1
+#define ICE_STATE_ATTACK      2
+#define ICE_STATE_READER      3
+#define ICE_STATE_CONFIGCARD  4
 
 typedef struct {
     uint8_t app_limit;      //[8]
@@ -130,28 +135,23 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
 static int fullsim_mode(void) {
 
     rdv40_spiffs_lazy_mount();
-
-    // Look for a dump file in FLASH MEM.
-    if (exists_in_spiffs(HF_ICLASS_FULLSIM_ORIG_BIN) == false) {
-        Dbprintf("error, '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' file missing");
-        return PM3_EIO;                    
-    }
   
     SpinOff(0);
     uint8_t *emul = BigBuf_get_EM_addr();
     uint32_t fsize = size_in_spiffs(HF_ICLASS_FULLSIM_ORIG_BIN);
     int res = rdv40_spiffs_read_as_filetype(HF_ICLASS_FULLSIM_ORIG_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
     rdv40_spiffs_lazy_unmount();
-    Dbprintf("Found `" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "` , loaded %u bytes to emulator memory", fsize);
+    if (res == SPIFFS_OK) {
+        Dbprintf("loaded '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' (%u bytes) to emulator memory", fsize);
+    }
 
+    // create diversified key if not in dump.
     if ( memcmp(emul + (3 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
-        // create diversified key if not in dump.
         uint8_t ccnr[12] = {0};
         memcpy(ccnr, emul + (2 * 8), 8);                   
         bool use_elite = false;
-        
+       
         iclass_calc_div_key(emul, legacy_aa1_key, emul + (3 * 8), use_elite);       
-//        Dbhexdump(8, emul + (3 * 8), false);
     }
 
     iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
@@ -161,7 +161,7 @@ static int fullsim_mode(void) {
     res = rdv40_spiffs_write(HF_ICLASS_FULLSIM_MOD_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
     rdv40_spiffs_lazy_unmount();
     LED_B_OFF();
-    if (res != 0) {
+    if (res != SPIFFS_OK) {
         Dbprintf("error writing '"HF_ICLASS_FULLSIM_MOD_BIN"' to flash ( %d )", res);
     }
 
@@ -177,13 +177,36 @@ static int reader_attack_mode(void) {
     iclass_simulate(ICLASS_SIM_MODE_READER_ATTACK, NUM_CSNS, false, csns, mac_responses, &mac_response_len);
 
     if (mac_response_len > 0) {
+        
+        bool success = (mac_response_len == MAC_RESPONSES_SIZE);
+        uint8_t num_mac = (mac_response_len >> 4);
+        Dbprintf("%u out of %d MAC obtained [%s]", num_mac, NUM_CSNS, (success) ? _GREEN_("OK") : _RED_("FAIL"));
+
+        size_t dumplen = NUM_CSNS * 24;
+
+        uint8_t *dump = BigBuf_malloc(dumplen);
+        if (dump == false) {
+            Dbprintf("failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
+        memset(dump, 0, dumplen);//<-- Need zeroes for the EPURSE - field
+
+        for (uint8_t i = 0 ; i < NUM_CSNS ; i++) {
+            //copy CSN
+            memcpy(dump + (i * 24), csns + (i * 8), 8);
+            //copy epurse
+            memcpy(dump + (i * 24) + 8, mac_responses + (i * 16), 8);
+            // NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
+            memcpy(dump + (i * 24) + 16, mac_responses + (i * 16) + 8, 8);
+        }
 
         LED_B_ON();
         rdv40_spiffs_lazy_mount();
-        int res = rdv40_spiffs_write(HF_ICLASS_ATTACK_BIN, mac_responses, mac_response_len, RDV40_SPIFFS_SAFETY_SAFE);
+        int res = rdv40_spiffs_write(HF_ICLASS_ATTACK_BIN, dump, dumplen, RDV40_SPIFFS_SAFETY_SAFE);
         rdv40_spiffs_lazy_unmount();
         LED_B_OFF();
-        if (res != 0) {
+        if (res != SPIFFS_OK) {
             Dbprintf("error writing '"HF_ICLASS_ATTACK_BIN"' to flash ( %d )", res);
         }
     }
@@ -272,6 +295,29 @@ static int reader_dump_mode(void) {
     return PM3_SUCCESS;
 }
 
+static int config_sim_mode(void) {
+
+    uint8_t *emul = BigBuf_get_EM_addr();
+  
+    for (uint8_t i = 0; i < 2; i++) {
+        SpinOff(0);
+        uint32_t fsize = size_in_spiffs(cc_files[i]);
+
+        rdv40_spiffs_lazy_mount();
+        int res = rdv40_spiffs_read_as_filetype(cc_files[i], emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
+        rdv40_spiffs_lazy_unmount();
+
+        if (res == SPIFFS_OK) {
+            Dbprintf("loaded '" _YELLOW_("%s") "' (%u bytes) to emulator memory", cc_files[i], fsize);
+        }
+
+        iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
+    }
+
+    rdv40_spiffs_lazy_unmount();
+    return PM3_SUCCESS;
+}
+
 void ModInfo(void) {
     DbpString("  HF iCLASS mode -  aka iceCLASS (iceman)");
 }
@@ -284,28 +330,45 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_STATE_READER;
+    uint8_t mode = ICE_STATE_ATTACK;
 
     for (;;) {
+
         WDT_HIT();
+
+        if (mode == ICE_STATE_NONE) break;
         if (data_available()) break;
 
+/*
         // Was our button held down or pressed?
         int button_pressed = BUTTON_HELD(1000);
         if (button_pressed != BUTTON_NO_CLICK) {
             break;
         }
+        */
                 
         int res;
         switch (mode) {
 
             case ICE_STATE_FULLSIM: {
                 Dbprintf("enter full simulation mode");
-                res = fullsim_mode();
-                if (res == PM3_SUCCESS)
-                    download_instructions(mode);
+
+                // Look for iCLASS dump file
+                rdv40_spiffs_lazy_mount();
+                if (exists_in_spiffs(HF_ICLASS_FULLSIM_ORIG_BIN) == false) {
+                    Dbprintf("error, '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' file missing");
+                    mode = ICE_STATE_NONE;
+                }
+                rdv40_spiffs_lazy_unmount();
                 
-                switch_off();
+                if (mode == ICE_STATE_FULLSIM) {
+                    res = fullsim_mode();
+                    if (res == PM3_SUCCESS) {
+                        download_instructions(mode);
+                    }
+                }
+                // the button press to exit sim, is captured in main loop here
+                mode = ICE_STATE_NONE;
                 break;
             }
             case ICE_STATE_ATTACK: {
@@ -315,7 +378,6 @@ void RunMod(void) {
                     download_instructions(mode);
 
                 mode = ICE_STATE_NONE;
-                switch_off();
                 break;
             }
             case ICE_STATE_READER: {
@@ -325,12 +387,30 @@ void RunMod(void) {
                     download_instructions(mode);
 
                 mode = ICE_STATE_NONE;
-                switch_off();
+                break;
+            }
+            case ICE_STATE_CONFIGCARD: {
+                Dbprintf("enter config card simulation mode");
+
+                // Look for config cards                 
+                rdv40_spiffs_lazy_mount();
+                for (uint8_t i =0; i < 2; i++) {
+                    if (exists_in_spiffs(cc_files[i]) == false) {
+                        Dbprintf("error, '" _YELLOW_("%s") "' file missing", cc_files[i]);
+                        mode = ICE_STATE_NONE;
+                    }
+                }
+                rdv40_spiffs_lazy_unmount();
+                
+                if (mode == ICE_STATE_CONFIGCARD)
+                    config_sim_mode();
+
+                mode = ICE_STATE_NONE;
                 break;
             }
         }
     }
 
-    LEDsoff();
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    switch_off();
+    Dbprintf("-=[ exit iceCLASS ]=-");
 }
