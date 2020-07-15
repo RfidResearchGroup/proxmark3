@@ -2018,9 +2018,6 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         char fileName[FILE_PATH_SIZE] = {0};
         if (param_getstr(Cmd, 1, fileName, sizeof(fileName)) > 0) {
             return bruteforceFileNoKeys(fileName);
-        } else {
-            PrintAndLogEx(WARNING, "You must specify a filename");
-            return PM3_EFILE;
         }
     } else if (opt == 't') {
         char opt2 = tolower(param_getchar(Cmd, 1));
@@ -2035,7 +2032,8 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 
         return PM3_ESOFT;
     }
-    return PM3_SUCCESS;
+
+    return usage_hf_iclass_loclass();
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
