@@ -166,14 +166,14 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
     if (sim_type == ICLASS_SIM_MODE_CSN) {
         // Use the CSN from commandline
         memcpy(emulator, datain, 8);
-        doIClassSimulation(ICLASS_SIM_MODE_CSN, NULL);
+        do_iclass_simulation(ICLASS_SIM_MODE_CSN, NULL);
 
     } else if (sim_type == ICLASS_SIM_MODE_CSN_DEFAULT) {
         //Default CSN
         uint8_t csn[] = { 0x03, 0x1f, 0xec, 0x8a, 0xf7, 0xff, 0x12, 0xe0 };
         // Use the CSN from commandline
         memcpy(emulator, csn, 8);
-        doIClassSimulation(ICLASS_SIM_MODE_CSN, NULL);
+        do_iclass_simulation(ICLASS_SIM_MODE_CSN, NULL);
 
     } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK) {
 
@@ -187,7 +187,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
 
             memcpy(emulator, datain + (i * 8), 8);
 
-            if (doIClassSimulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
+            if (do_iclass_simulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
                 
                 if (dataoutlen) 
                     *dataoutlen = i * EPURSE_MAC_SIZE;
@@ -207,7 +207,11 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
     } else if (sim_type == ICLASS_SIM_MODE_FULL) {
         //This is 'full sim' mode, where we use the emulator storage for data.
         //ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
-        doIClassSimulation(ICLASS_SIM_MODE_FULL, NULL);
+        do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
+    } else if (sim_type == ICLASS_SIM_MODE_CONFIG_CARD) {
+        // config card 
+        do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
+        // swap bin
 
     } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK_KEYROLL) {
 
@@ -229,7 +233,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
             memcpy(emulator, datain + (i * 8), 8);
 
             // keyroll 1
-            if (doIClassSimulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
+            if (do_iclass_simulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
                 
                 if (dataoutlen) 
                     *dataoutlen = i * EPURSE_MAC_SIZE * 2;
@@ -242,7 +246,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
             }
 
             // keyroll 2
-            if (doIClassSimulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + (i + num_csns) * EPURSE_MAC_SIZE)) {
+            if (do_iclass_simulation(ICLASS_SIM_MODE_EXIT_AFTER_MAC, mac_responses + (i + num_csns) * EPURSE_MAC_SIZE)) {
 
                 if (dataoutlen) 
                     *dataoutlen = i * EPURSE_MAC_SIZE * 2;
@@ -281,7 +285,7 @@ out:
  * @param csn - csn to use
  * @param breakAfterMacReceived if true, returns after reader MAC has been received.
  */
-int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
+int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
