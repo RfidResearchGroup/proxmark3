@@ -91,7 +91,7 @@
 ///////////////////////////////////////////////////////////////////////
 
 // buffers
-#define ISO15693_DMA_BUFFER_SIZE        256 // must be a power of 2
+//#define ISO15693_DMA_BUFFER_SIZE        256 // must be a power of 2
 #define ISO15693_MAX_RESPONSE_LENGTH     36 // allows read single block with the maximum block size of 256bits. Read multiple blocks not supported yet
 #define ISO15693_MAX_COMMAND_LENGTH      45 // allows write single block with the maximum block size of 256bits. Write multiple blocks not supported yet
 
@@ -305,7 +305,7 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
     uint8_t bits_to_shift = 0x00;
     uint8_t bits_to_send = 0x00;
     for (size_t c = 0; c < len; c++) {
-        for (int i = (c==0?4:7); i >= 0; i--) {
+        for (int i = (c == 0 ? 4 : 7); i >= 0; i--) {
             uint8_t cmd_bits = ((cmd[c] >> i) & 0x01) ? 0xff : 0x00;
             for (int j = 0; j < (slow ? 4 : 1); ) {
                 if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
@@ -406,7 +406,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *De
                 DecodeTag->threshold_sof = (amplitude - DecodeTag->previous_amplitude) / 2;
             } else {
                 DecodeTag->posCount = 2;
-                DecodeTag->threshold_sof = DecodeTag->threshold_sof/2;
+                DecodeTag->threshold_sof = DecodeTag->threshold_sof / 2;
             }
             // DecodeTag->posCount = 2;
             DecodeTag->state = STATE_TAG_SOF_HIGH;
@@ -621,7 +621,6 @@ static void DecodeTagReset(DecodeTag_t *DecodeTag) {
 int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
 
     int samples = 0, ret = 0;
-    uint16_t dmaBuf[ISO15693_DMA_BUFFER_SIZE] = {0};
 
     // the Decoder data structure
     DecodeTag_t DecodeTag = { 0 };
@@ -635,13 +634,18 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
 
     // Setup and start DMA.
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-    FpgaSetupSscDma((uint8_t*) dmaBuf, ISO15693_DMA_BUFFER_SIZE);
+
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf16_t *dma = get_dma16();
+
+    FpgaSetupSscDma((uint8_t*) dma->buf, DMA_BUFFER_SIZE);
+
     uint32_t dma_start_time = 0;
-    uint16_t *upTo = dmaBuf;
+    uint16_t *upTo = dma->buf;
 
     for(;;) {
-        uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (ISO15693_DMA_BUFFER_SIZE-1);
 
+        uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) 
             continue;
 
@@ -653,17 +657,17 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
 
         volatile uint16_t tagdata = *upTo++;
 
-        if (upTo >= dmaBuf + ISO15693_DMA_BUFFER_SIZE) {                // we have read all of the DMA buffer content.
-            upTo = dmaBuf;                                             // start reading the circular buffer from the beginning
-            if (behindBy > (9 * ISO15693_DMA_BUFFER_SIZE / 10)) {
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                // we have read all of the DMA buffer content.
+            upTo = dma->buf;                                     // start reading the circular buffer from the beginning
+            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
                 ret = -1;
                 break;
             }
         }
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {              // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;          // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = ISO15693_DMA_BUFFER_SIZE;   // DMA Next Counter registers
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {        // DMA Counter Register had reached 0, already rotated.
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;  // refresh the DMA Next Buffer and
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;      // DMA Next Counter registers
         }
 
         if (Handle15693SamplesFromTag(tagdata, &DecodeTag)) {
@@ -1016,8 +1020,6 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     int samples = 0;
     bool gotFrame = false;
 
-    uint8_t dmaBuf[ISO15693_DMA_BUFFER_SIZE] = {0};
-
     // the decoder data structure
     DecodeReader_t DecodeReader = {0};
     DecodeReaderInit(&DecodeReader, received, max_len, 0, NULL);
@@ -1036,25 +1038,26 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
     // Setup and start DMA.
-    FpgaSetupSscDma(dmaBuf, ISO15693_DMA_BUFFER_SIZE);
-    uint8_t *upTo = dmaBuf;
+    dmabuf8_t *dma = get_dma8();
+    FpgaSetupSscDma(dma->buf, DMA_BUFFER_SIZE);
+    uint8_t *upTo = dma->buf;
 
     for (;;) {
-        uint16_t behindBy = ((uint8_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (ISO15693_DMA_BUFFER_SIZE - 1);
+        uint16_t behindBy = ((uint8_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
 
         if (behindBy == 0) continue;
 
         volatile uint8_t b = *upTo++;
-        if (upTo >= dmaBuf + ISO15693_DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
-            upTo = dmaBuf;                                             // start reading the circular buffer from the beginning
-            if (behindBy > (9*ISO15693_DMA_BUFFER_SIZE/10)) {
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
+            upTo = dma->buf;                                             // start reading the circular buffer from the beginning
+            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("About to blow circular buffer - aborted! behindBy %d", behindBy);
                 break;
             }
         }
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {              // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;          // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = ISO15693_DMA_BUFFER_SIZE;   // DMA Next Counter registers
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;          // refresh the DMA Next Buffer and
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;   // DMA Next Counter registers
         }
 
         for (int i = 7; i >= 0; i--) {
@@ -1146,12 +1149,8 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
     clear_trace();
     set_tracing(true);
-
-    // The DMA buffer, used to stream samples from the FPGA
-    uint16_t dmaBuf[ISO15693_DMA_BUFFER_SIZE] = {0};
-
+   
     // Count of samples received so far, so that we can include timing
-    // information in the trace buffer.
     int samples = 0;
 
     DecodeTag_t DecodeTag = {0};
@@ -1168,29 +1167,32 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         Dbprintf("  Trace:         %i bytes", BigBuf_max_traceLen());
         Dbprintf("  Reader -> tag: %i bytes", ISO15693_MAX_COMMAND_LENGTH);
         Dbprintf("  tag -> Reader: %i bytes", ISO15693_MAX_RESPONSE_LENGTH);
-        Dbprintf("  DMA:           %i bytes", ISO15693_DMA_BUFFER_SIZE * sizeof(uint16_t));
+        Dbprintf("  DMA:           %i bytes", DMA_BUFFER_SIZE * sizeof(uint16_t));
     }
 
     Dbprintf("Sniff started. Press PM3 Button to stop.");
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
     LED_D_OFF();
+    
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
     StartCountSspClk();
-    FpgaSetupSscDma((uint8_t*) dmaBuf, ISO15693_DMA_BUFFER_SIZE);
+    
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf16_t *dma = get_dma16();
+    FpgaSetupSscDma((uint8_t*)dma->buf, DMA_BUFFER_SIZE);
+    uint16_t *upTo = dma->buf;
 
     bool TagIsActive = false;
     bool ReaderIsActive = false;
     bool ExpectTagAnswer = false;
     uint32_t dma_start_time = 0;
-    uint16_t *upTo = dmaBuf;
-
     uint16_t max_behindBy = 0;
     
     // And now we loop, receiving samples.
     for(;;) {
-        uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (ISO15693_DMA_BUFFER_SIZE-1);
+        uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy > max_behindBy) {
             max_behindBy = behindBy;
         }
@@ -1204,17 +1206,16 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         }
 
         uint16_t sniffdata = *upTo++;
-
-        if (upTo >= dmaBuf + ISO15693_DMA_BUFFER_SIZE) {                   // we have read all of the DMA buffer content.
-            upTo = dmaBuf;                                                 // start reading the circular buffer from the beginning
-            if (behindBy > (9*ISO15693_DMA_BUFFER_SIZE/10)) {
-
+ 
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                    // we have read all of the DMA buffer content.
+            upTo = dma->buf;                                         // start reading the circular buffer from the beginning
+            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("About to blow circular buffer - aborted! behindBy=%d, samples=%d", behindBy, samples);
                 break;
             }
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {              // DMA Counter Register had reached 0, already rotated.
-                AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;          // refresh the DMA Next Buffer and
-                AT91C_BASE_PDC_SSC->PDC_RNCR = ISO15693_DMA_BUFFER_SIZE;   // DMA Next Counter registers
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {         // DMA Counter Register had reached 0, already rotated.
+                AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;   // refresh the DMA Next Buffer and
+                AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;       // DMA Next Counter registers
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
                     DbpString("Sniff stopped.");

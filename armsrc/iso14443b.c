@@ -26,11 +26,8 @@
 #include "ticks.h"
 
 
-#ifndef ISO14443B_DMA_BUFFER_SIZE
-# define ISO14443B_DMA_BUFFER_SIZE 128
-#endif
 #ifndef RECEIVE_MASK
-# define RECEIVE_MASK  (ISO14443B_DMA_BUFFER_SIZE-1)
+# define RECEIVE_MASK  (DMA_BUFFER_SIZE - 1)
 #endif
 
 #define RECEIVE_SAMPLES_TIMEOUT 64
@@ -480,13 +477,7 @@ static void TransmitFor14443b_AsTag(uint8_t *response, uint16_t len) {
 
         // Put byte into tx holding register as soon as it is ready
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            AT91C_BASE_SSC->SSC_THR = response[++i];
-        }
-
-        // Prevent rx holding register from overflowing
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile uint32_t b = AT91C_BASE_SSC->SSC_RHR;
-            (void)b;
+            AT91C_BASE_SSC->SSC_THR = response[i++];
         }
     }
 }
@@ -702,40 +693,17 @@ void SimulateIso14443bTag(uint32_t pupi) {
  *          false if we are still waiting for some more
  *
  */
-static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
-    int v = 0, myI = ABS(ci), myQ = ABS(cq);
-
-// The soft decision on the bit uses an estimate of just the
-// quadrant of the reference angle, not the exact angle.
-#define MAKE_SOFT_DECISION(void) { \
-        if (Demod.sumI > 0) { \
-            v = ci; \
-        } else { \
-            v = -ci; \
-        } \
-        if (Demod.sumQ > 0) { \
-            v += cq; \
-        } else { \
-            v -= cq; \
-        } \
-    }
+static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
 
 #define SUBCARRIER_DETECT_THRESHOLD 8
-
-//note: couldn't we just use MAX(ABS(ci),ABS(cq)) + (MIN(ABS(ci),ABS(cq))/2) from common.h - marshmellow
-#define CHECK_FOR_SUBCARRIER(void) { v = MAX(myI, myQ) + (MIN(myI, myQ) >> 1); }
 
     switch (Demod.state) {
         case DEMOD_UNSYNCD:
 
-            CHECK_FOR_SUBCARRIER();
-
-            // subcarrier detected
-
-            if (v > SUBCARRIER_DETECT_THRESHOLD) {
+            if (amplitude > SUBCARRIER_DETECT_THRESHOLD) {
                 Demod.state = DEMOD_PHASE_REF_TRAINING;
-                Demod.sumI = ci;
-                Demod.sumQ = cq;
+                Demod.sumI = amplitude;
+                Demod.sumQ = amplitude;
                 Demod.posCount = 1;
             }
             break;
@@ -743,13 +711,11 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
         case DEMOD_PHASE_REF_TRAINING:
             if (Demod.posCount < 8) {
 
-                CHECK_FOR_SUBCARRIER();
-
-                if (v > SUBCARRIER_DETECT_THRESHOLD) {
+                if (amplitude > SUBCARRIER_DETECT_THRESHOLD) {
                     // set the reference phase (will code a logic '1') by averaging over 32 1/fs.
                     // note: synchronization time > 80 1/fs
-                    Demod.sumI += ci;
-                    Demod.sumQ += cq;
+                    Demod.sumI += amplitude;
+                    Demod.sumQ += amplitude;
                     Demod.posCount++;
                 } else {
                     // subcarrier lost
@@ -762,9 +728,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 
         case DEMOD_AWAITING_FALLING_EDGE_OF_SOF:
 
-            MAKE_SOFT_DECISION();
-
-            if (v < 0) { // logic '0' detected
+            if (amplitude == 0) { // logic '0' detected
                 Demod.state = DEMOD_GOT_FALLING_EDGE_OF_SOF;
                 Demod.posCount = 0; // start of SOF sequence
             } else {
@@ -779,9 +743,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
         case DEMOD_GOT_FALLING_EDGE_OF_SOF:
             Demod.posCount++;
 
-            MAKE_SOFT_DECISION();
-
-            if (v > 0) {
+            if (amplitude > 0) {
                 // low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
                 if (Demod.posCount < 9 * 2) {
                     Demod.state = DEMOD_UNSYNCD;
@@ -804,9 +766,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
         case DEMOD_AWAITING_START_BIT:
             Demod.posCount++;
 
-            MAKE_SOFT_DECISION();
-
-            if (v > 0) {
+            if (amplitude > 0) {
                 if (Demod.posCount > 6 * 2) {   // max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
                     LED_C_OFF();
                     if (Demod.bitCount == 0 && Demod.len == 0) { // received SOF only, this is valid for iClass/Picopass
@@ -818,7 +778,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
             } else {                            // start bit detected
                 Demod.bitCount = 0;
                 Demod.posCount = 1;             // this was the first half
-                Demod.thisBit = v;
+                Demod.thisBit = amplitude;
                 Demod.shiftReg = 0;
                 Demod.state = DEMOD_RECEIVING_DATA;
             }
@@ -826,15 +786,13 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
 
         case DEMOD_RECEIVING_DATA:
 
-            MAKE_SOFT_DECISION();
-
             if (Demod.posCount == 0) {
                 // first half of bit
-                Demod.thisBit = v;
+                Demod.thisBit = amplitude;
                 Demod.posCount = 1;
             } else {
                 // second half of bit
-                Demod.thisBit += v;
+                Demod.thisBit += amplitude;
                 Demod.shiftReg >>= 1;
 
                 // OR in a logic '1'
@@ -882,64 +840,66 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  */
 static int GetTagSamplesFor14443bDemod(int timeout) {
-    int ret = 0;
-    int maxBehindBy = 0;
-    int lastRxCounter, samples = 0;
-    int8_t ci, cq;
-    uint32_t time_0 = 0, time_stop = 0;
+
+    int samples = 0, ret = 0;
 
     BigBuf_free();
-    // The response (tag -> reader) that we're receiving.
-    uint8_t *receivedResponse = BigBuf_malloc(MAX_FRAME_SIZE);
-
-    // The DMA buffer, used to stream samples from the FPGA
-    uint16_t *dmaBuf = (uint16_t*) BigBuf_malloc(ISO14443B_DMA_BUFFER_SIZE * sizeof(uint16_t));
 
     // Set up the demodulator for tag -> reader responses.
-    Demod14bInit(receivedResponse);
+    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY))
 
     // Setup and start DMA.
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-    if (FpgaSetupSscDma((uint8_t *) dmaBuf, ISO14443B_DMA_BUFFER_SIZE) == false) {
+    
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf16_t *dma = get_dma16();
+    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
         if (DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return -1;
     }
 
-    uint16_t *upTo = dmaBuf;
-    lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
-
     // Signal field is ON with the appropriate LED:
     LED_D_ON();
+
     // And put the FPGA in the appropriate mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
 
+//    uint32_t dma_start_time;
+    uint16_t *upTo = dma->buf;
+
     for(;;) {
-        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (ISO14443B_DMA_BUFFER_SIZE-1);
-        if (behindBy > maxBehindBy) {
-            maxBehindBy = behindBy;
-        }
+        uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
 
-        if (behindBy < 1) continue;
+        if (behindBy == 0) continue;
 
-        ci = *upTo >> 8;
-        cq = *upTo;
-        upTo++;
-        lastRxCounter--;
-        if (upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {              // we have read all of the DMA buffer content.
-            upTo = dmaBuf;                                             // start reading the circular buffer from the beginning
-            lastRxCounter += ISO14443B_DMA_BUFFER_SIZE;
-        }
-
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {              // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;          // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;  // DMA Next Counter registers
-        }
         samples++;
+        /*
+        if (samples == 1) {
+            // DMA has transferred the very first data
+            dma_start_time = GetCountSspClk() & 0xfffffff0;
+        }
+        */
 
-        if (Handle14443bTagSamplesDemod(ci, cq)) {
+        volatile uint16_t tagdata = *upTo++;
+        
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                 // we have read all of the DMA buffer content.
+            upTo = dma->buf;                                      // start reading the circular buffer from the beginning
+            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
+                Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
+                ret = -1;
+                break;
+            }
+        }
+        
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {         // DMA Counter Register had reached 0, already rotated.
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;   // refresh the DMA Next Buffer and
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;       // DMA Next Counter registers
+        }
+
+        if (Handle14443bTagSamplesDemod(tagdata)) {
             ret = Demod.len;
             break;
         }
@@ -958,7 +918,7 @@ static int GetTagSamplesFor14443bDemod(int timeout) {
     }
 
     if (Demod.len > 0) {
-        LogTrace(Demod.output, Demod.len, time_0, time_stop, NULL, false);   
+        LogTrace(Demod.output, Demod.len, 0, 0, NULL, false);   
     }
 
     return ret;
@@ -976,12 +936,14 @@ static void TransmitFor14443b_AsReader(void) {
     
     for (int c = 0; c < ts->max; c++) {
         uint8_t data = ts->buf[c];
+
         for (int i = 0; i < 8; i++) {
             uint16_t send_word = (data & 0x80) ? 0x0000 : 0xffff;
             
             while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
             
             AT91C_BASE_SSC->SSC_THR = send_word;                        
+
             while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
             AT91C_BASE_SSC->SSC_THR = send_word;
 
@@ -1388,7 +1350,7 @@ static void iso1444b_setup_sniff(void) {
         Dbprintf("[+]   trace: %i bytes", BigBuf_max_traceLen());
         Dbprintf("[+]   reader -> tag: %i bytes", MAX_FRAME_SIZE);
         Dbprintf("[+]   tag -> reader: %i bytes", MAX_FRAME_SIZE);
-        Dbprintf("[+]   DMA: %i bytes", ISO14443B_DMA_BUFFER_SIZE);
+        Dbprintf("[+]   DMA: %i bytes", DMA_BUFFER_SIZE);
     }
 
     // connect Demodulated Signal to ADC:
@@ -1432,12 +1394,7 @@ void RAMFUNC SniffIso14443b(void) {
     bool TagIsActive = false;
     bool ReaderIsActive = false;
 
-    iso1444b_setup_sniff();
-    
-    // The DMA buffer, used to stream samples from the FPGA
-    uint16_t *dmaBuf = (uint16_t*) BigBuf_malloc(ISO14443B_DMA_BUFFER_SIZE * sizeof(uint16_t));
-    uint16_t *upTo = dmaBuf;
-    int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
+    int lastRxCounter = DMA_BUFFER_SIZE;
     int8_t ci, cq;
     int maxBehindBy = 0;
 
@@ -1445,8 +1402,14 @@ void RAMFUNC SniffIso14443b(void) {
     // information in the trace buffer.
     int samples = 0;
 
+    iso1444b_setup_sniff();
+
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf16_t *dma = get_dma16();
+    uint16_t *upTo = dma->buf;
+
     // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *) dmaBuf, ISO14443B_DMA_BUFFER_SIZE)) {
+    if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
         if (DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
         BigBuf_free();
         return;
@@ -1458,29 +1421,31 @@ void RAMFUNC SniffIso14443b(void) {
     // loop and listen
     for(;;) {
 
-        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (ISO14443B_DMA_BUFFER_SIZE - 1);
+        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE - 1);
         if (behindBy > maxBehindBy) {
             maxBehindBy = behindBy;
         }
 
-        if (behindBy < 1) continue;
+        if (behindBy == 0) continue;
 
         ci = *upTo >> 8;
         cq = *upTo;
+        uint16_t tagdata = *upTo;
+
         upTo++;
         lastRxCounter--;
-        if (upTo >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
-            upTo = dmaBuf;                                             // start reading the circular buffer from the beginning again
-            lastRxCounter += ISO14443B_DMA_BUFFER_SIZE;
-            if (behindBy > (9 * ISO14443B_DMA_BUFFER_SIZE / 10)) { 
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
+            upTo = dma->buf;                                    // start reading the circular buffer from the beginning again
+            lastRxCounter += DMA_BUFFER_SIZE;
+            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) { 
                 Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
                 break;
             }
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {              // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;          // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = ISO14443B_DMA_BUFFER_SIZE;  // DMA Next Counter registers
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {       // DMA Counter Register had reached 0, already rotated.
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf; // refresh the DMA Next Buffer and
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;     // DMA Next Counter registers
 
             WDT_HIT();
             if (BUTTON_PRESS()) {
@@ -1522,7 +1487,7 @@ void RAMFUNC SniffIso14443b(void) {
 
             // is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
             // LSB is a fpga signal bit.
-            if (Handle14443bTagSamplesDemod(ci/2, cq/2) >= 0) {
+            if (Handle14443bTagSamplesDemod(tagdata) >= 0) {
                 time_stop = GetCountSspClk() - time_0;
                 LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
                 Uart14bReset();

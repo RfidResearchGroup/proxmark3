@@ -585,10 +585,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *receivedResp = BigBuf_malloc(MAX_FRAME_SIZE);
     uint8_t *receivedRespPar = BigBuf_malloc(MAX_PARITY_SIZE);
 
-    // The DMA buffer, used to stream samples from the FPGA
-    uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-    uint8_t *data = dmaBuf;
-
     uint8_t previous_data = 0;
     int maxDataLen = 0, dataLen;
     bool TagIsActive = false;
@@ -602,8 +598,12 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
     DbpString("Starting to sniff");
 
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf8_t *dma = get_dma8();
+    uint8_t *data = dma->buf;
+
     // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *) dmaBuf, DMA_BUFFER_SIZE)) {
+    if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
         if (DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
@@ -621,7 +621,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         WDT_HIT();
         LED_A_ON();
 
-        int register readBufDataP = data - dmaBuf;
+        int register readBufDataP = data - dma->buf;
         int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
         if (readBufDataP <= dmaBufDataP)
             dataLen = dmaBufDataP - readBufDataP;
@@ -640,13 +640,13 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
         // primary buffer was stopped( <-- we lost data!
         if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
+            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
             AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
             Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
         }
         // secondary buffer sets as primary, secondary buffer was stopped
         if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
 
@@ -710,16 +710,15 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         previous_data = *data;
         rx_samples++;
         data++;
-        if (data == dmaBuf + DMA_BUFFER_SIZE) {
-            data = dmaBuf;
+        if (data == dma->buf + DMA_BUFFER_SIZE) {
+            data = dma->buf;
         }
     } // end main loop
 
     FpgaDisableTracing();
 
     if (DBGLEVEL >= DBG_ERROR) {
-        Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
-        Dbprintf("traceLen=" _YELLOW_("%d")", Uart.output[0]="_YELLOW_("%08x"), BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
+        Dbprintf("trace len = " _YELLOW_("%d"), BigBuf_get_traceLen());
     }
     switch_off();
 }

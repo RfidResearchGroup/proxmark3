@@ -36,6 +36,33 @@ static uint32_t s_bigbuf_hi = 0;
 // pointer to the emulator memory.
 static uint8_t *emulator_memory = NULL;
 
+//=============================================================================
+// The ToSend buffer.
+// A buffer where we can queue things up to be sent through the FPGA, for
+// any purpose (fake tag, as reader, whatever). We go MSB first, since that
+// is the order in which they go out on the wire.
+//=============================================================================
+static tosend_t toSend = {
+    .max = -1,
+    .bit = 8,
+    .buf = NULL
+};
+//=============================================================================
+// The dmaBuf 16bit buffer.
+// A buffer where we recive IQ samples sent from the FPGA, for demodulating
+//=============================================================================
+static dmabuf16_t dma_16 = {
+    .size = DMA_BUFFER_SIZE,
+    .buf = NULL
+};
+// dmaBuf 8bit buffer
+static dmabuf8_t dma_8 = {
+    .size = DMA_BUFFER_SIZE,
+    .buf = NULL
+};
+
+
+
 // trace related variables
 static uint32_t trace_len = 0;
 static bool tracing = true;
@@ -106,6 +133,9 @@ void BigBuf_free(void) {
     s_bigbuf_hi = s_bigbuf_size;
     emulator_memory = NULL;
     // shouldn't this empty BigBuf also?
+    toSend.buf = NULL;
+    dma_16.buf = NULL;
+    dma_8.buf = NULL;
 }
 
 // free allocated chunks EXCEPT the emulator memory
@@ -114,6 +144,10 @@ void BigBuf_free_keep_EM(void) {
         s_bigbuf_hi = emulator_memory - (uint8_t *)BigBuf;
     else
         s_bigbuf_hi = s_bigbuf_size;
+
+    toSend.buf = NULL;
+    dma_16.buf = NULL;
+    dma_8.buf = NULL;
 }
 
 void BigBuf_print_status(void) {
@@ -123,6 +157,10 @@ void BigBuf_print_status(void) {
     DbpString(_CYAN_("Tracing"));
     Dbprintf("  tracing ................%d", tracing);
     Dbprintf("  traceLen ...............%d", trace_len);
+
+    Dbprintf("  dma8 memory.............%d", dma_8.buf - BigBuf_get_addr());
+    Dbprintf("  dma16 memory............%d", (uint8_t*)dma_16.buf - BigBuf_get_addr());
+    Dbprintf("  toSend memory...........%d", toSend.buf - BigBuf_get_addr() );    
 }
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)
@@ -228,17 +266,6 @@ uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {
 }
 
 
-//=============================================================================
-// The ToSend buffer.
-// A buffer where we can queue things up to be sent through the FPGA, for
-// any purpose (fake tag, as reader, whatever). We go MSB first, since that
-// is the order in which they go out on the wire.
-//=============================================================================
-static tosend_t toSend = {
-    .max = -1,
-    .bit = 8,
-    .buf = NULL
-};
 
 // get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
 tosend_t *get_tosend(void) {
@@ -270,3 +297,18 @@ void tosend_stuffbit(int b) {
         toSend.bit = 0;
     }
 }
+
+dmabuf16_t *get_dma16(void) {
+    if (dma_16.buf == NULL)
+        dma_16.buf = (uint16_t*)BigBuf_malloc(DMA_BUFFER_SIZE);
+
+    return &dma_16;
+}
+
+dmabuf8_t *get_dma8(void) {
+    if (dma_8.buf == NULL)
+        dma_8.buf = BigBuf_malloc(DMA_BUFFER_SIZE);
+
+    return &dma_8;
+}
+
