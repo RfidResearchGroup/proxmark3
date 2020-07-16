@@ -32,7 +32,7 @@ static int usage_lto_info(void) {
     PrintAndLogEx(NORMAL, "           h    this help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf lto info");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto info"));
     return PM3_SUCCESS;
 }
 
@@ -44,7 +44,7 @@ static int usage_lto_rdbl(void) {
     PrintAndLogEx(NORMAL, "           e     end block in decimal <= 254");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf lto rdbl s 0 e 254 - Read data block from 0 to 254");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto rdbl s 0 e 254") " - Read data block from 0 to 254");
     return PM3_SUCCESS;
 }
 
@@ -56,8 +56,7 @@ static int usage_lto_wrbl(void) {
     PrintAndLogEx(NORMAL, "           d     32 bytes of data to write (64 hex characters, no space)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf lto wrbl b 128 d 0001020304050607080910111213141516171819202122232425262728293031 - write 00..31 to block address 128");
-    PrintAndLogEx(NORMAL, "           Use 'hf lto rdbl' for verification");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto wrbl b 128 d 0001020304050607080910111213141516171819202122232425262728293031") " - write 00..31 to block address 128");
     return PM3_SUCCESS;
 }
 
@@ -68,7 +67,7 @@ static int usage_lto_dump(void) {
     PrintAndLogEx(NORMAL, "           f     file name");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf lto dump f myfile");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto dump f myfile"));
     return PM3_SUCCESS;
 }
 
@@ -79,7 +78,7 @@ static int usage_lto_restore(void) {
     PrintAndLogEx(NORMAL, "           f     file name [.bin|.eml]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf lto restore f hf_lto_92C7842CFF.bin|.eml");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto restore f hf_lto_92C7842CFF.bin|.eml"));
     return PM3_SUCCESS;
 }
 
@@ -180,8 +179,7 @@ static int CmdHfLTOInfo(const char *Cmd) {
 
     //Validations
     if (errors) {
-        usage_lto_info();
-        return PM3_EINVARG;
+        return usage_lto_info();
     }
 
     return infoLTO(true);
@@ -384,7 +382,7 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
     bool b_opt_selected = false;
     bool d_opt_selected = false;
     uint8_t blk = 128;
-    uint8_t blkData[32] = {0};
+    uint8_t block_data[32] = {0};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -396,7 +394,7 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'd':
-                if (param_gethex(Cmd, cmdp + 1, blkData, 64)) {
+                if (param_gethex(Cmd, cmdp + 1, block_data, 64)) {
                     PrintAndLogEx(WARNING, "block data must include 64 HEX symbols");
                     errors = true;
                     break;
@@ -413,14 +411,17 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
 
     //Validations
     if (errors) {
-        usage_lto_wrbl();
-        return PM3_EINVARG;
+        return usage_lto_wrbl();
     } else if (b_opt_selected == false || d_opt_selected == false) {
-        PrintAndLogEx(WARNING, "Need to specify block address and data. See usage, h option");
-        return PM3_EINVARG;
+        PrintAndLogEx(WARNING, "Need to specify block address and data.");
+        return usage_lto_wrbl();
     }
 
-    return wrblLTO(blk, blkData, true);
+    int res = wrblLTO(blk, block_data, true);
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(HINT, "Try use 'hf lto rdbl' for verification");
+
+    return res;
 }
 
 int dumpLTO(uint8_t *dump, bool verbose) {
@@ -446,11 +447,9 @@ int dumpLTO(uint8_t *dump, bool verbose) {
         ret_val = lto_rdbl(i, block_data_d00_d15,  block_data_d16_d31, verbose);
 
         if (ret_val == PM3_SUCCESS) {
-            //Remove CRCs
-            for (int t = 0; t < 16; t++) {
-                dump[t + i * 32] = block_data_d00_d15[t];
-                dump[t + i * 32 + 16] = block_data_d16_d31[t];
-            }
+            // remove CRCs
+            memcpy(dump + i * 32, block_data_d00_d15, 16);
+            memcpy(dump + (i * 32) + 16, block_data_d16_d31, 16);
         } else {
             lto_switch_off_field();
             return ret_val;
@@ -467,7 +466,6 @@ static int CmdHfLTODump(const char *Cmd) {
     bool errors = false;
     uint32_t dump_len = CM_MEM_MAX_SIZE;
     char filename[FILE_PATH_SIZE] = {0};
-    char serial_number[10] = {0};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -488,39 +486,32 @@ static int CmdHfLTODump(const char *Cmd) {
         }
     }
 
-    //Validations
     if (errors) {
         usage_lto_dump();
         return PM3_EINVARG;
     }
 
-    // alloc memory
     uint8_t *dump = calloc(dump_len, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(ERR, "error, cannot allocate memory");
         return PM3_EMALLOC;
     }
 
-    // loop all blocks
     int ret_val = dumpLTO(dump, true);
     if (ret_val != PM3_SUCCESS) {
         free(dump);
         return ret_val;
     }
 
-    // save to file
     if (filename[0] == '\0') {
-        memcpy(serial_number, sprint_hex_inrow(dump, sizeof(serial_number)), sizeof(serial_number));
-        char tmp_name[17] = "hf_lto_";
-        strcat(tmp_name, serial_number);
-        memcpy(filename, tmp_name, sizeof(tmp_name));
+        char *fptr = filename;
+        fptr += sprintf(fptr, "hf-lto-");
+        FillFileNameByUID(fptr, dump, "-dump", 5);
     }
     saveFile(filename, ".bin", dump, dump_len);
     saveFileEML(filename, dump, dump_len, 32);
 
-    // free memory
     free(dump);
-
     return PM3_SUCCESS;
 }
 
@@ -539,16 +530,14 @@ int restoreLTO(uint8_t *dump, bool verbose) {
         return ret_val;
     }
 
-    uint8_t blkData[32] = {0};
+    uint8_t block_data[32] = {0};
 
     //Block address 0 and 1 are read-only
     for (uint8_t blk = 2; blk < 255; blk++) {
 
-        for (int i = 0; i < 32; i++) {
-            blkData[i] = dump[i + blk * 32];
-        }
+        memcpy(block_data, dump + (blk * 32), 32);
 
-        ret_val = lto_wrbl(blk, blkData, verbose);
+        ret_val = lto_wrbl(blk, block_data, verbose);
 
         if (ret_val == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Block %03d - " _YELLOW_("write success"), blk);
