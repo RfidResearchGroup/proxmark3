@@ -11,7 +11,7 @@ show_usage()
 {
     echo
     echo "Usage:"
-    echo "${0##/} input_eml_without_extension output.pm3scr"
+    echo "${0##/} input_eml_without_extension output.cmd"
     exit
 }
 
