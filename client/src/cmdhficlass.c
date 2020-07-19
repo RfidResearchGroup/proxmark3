@@ -649,9 +649,9 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, 8 * NUM_CSNS);
 
-            while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+            while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
                 tries++;
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
@@ -698,9 +698,9 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, 8 * NUM_CSNS);
 
-            while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+            while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
                 tries++;
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
@@ -1457,10 +1457,11 @@ static int CmdHFiClassDump(const char *Cmd) {
     struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
 
     if (packet->isOK == false) {
-        PrintAndLogEx(WARNING, "read block failed");
+        PrintAndLogEx(WARNING, "read AA1 blocks failed");
         return PM3_ESOFT;
     }
 
+    // 13
     uint32_t blocks_read = packet->block_cnt;
     if (blocks_read == app_limit1 - 5) {
         PrintAndLogEx(INFO, "ICE:  got all AA1");
