@@ -100,5 +100,9 @@ uint8_t GetPinSize(uint8_t *src) {
     uint8_t c[] = {0x96, CARD_INS_PINSIZE, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(c + 5, src, 8);
     ExchangeAPDUSC(true, c, sizeof(c), false, true, resp, sizeof(resp), &resp_len);
-    return resp[8];
+    
+    if ( resp[resp_len - 2] == 0x90 && resp[resp_len - 1] == 0x00) {
+        return resp[8];
+    }
+    return 0;
 }
