@@ -960,6 +960,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
             SniffHitag2();
 //            SniffHitag2(packet->oldarg[0]);
+            reply_ng(CMD_LF_HITAG_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
@@ -1027,6 +1028,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             SniffIso15693(payload->jam_search_len, payload->jam_search_string);
+            reply_ng(CMD_HF_ISO15693_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ISO15693_COMMAND: {
@@ -1089,6 +1091,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ISO14443B_SNIFF: {
             SniffIso14443b();
+            reply_ng(CMD_HF_ISO14443B_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ISO14443B_SIMULATE: {
@@ -1113,6 +1116,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_FELICA_SNIFF: {
             felica_sniff(packet->oldarg[0], packet->oldarg[1]);
+            reply_ng(CMD_HF_FELICA_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_FELICALITE_DUMP: {
@@ -1124,6 +1128,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_ISO14443a
         case CMD_HF_ISO14443A_SNIFF: {
             SniffIso14443a(packet->data.asBytes[0]);
+            reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ISO14443A_READER: {
@@ -1380,6 +1385,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             SniffIClass(payload->jam_search_len, payload->jam_search_string);
+            reply_ng(CMD_HF_ICLASS_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ICLASS_SIMULATE: {

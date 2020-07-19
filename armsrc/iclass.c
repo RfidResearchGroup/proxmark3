@@ -38,7 +38,7 @@
 // The length of a received command will in most cases be no more than 18 bytes.
 // we expect max 34 bytes as tag answer (response to READ4)
 #ifndef ICLASS_BUFFER_SIZE
-#define ICLASS_BUFFER_SIZE 34
+#define ICLASS_BUFFER_SIZE     34 + 2
 #endif
 
 // iCLASS has a slightly different timing compared to ISO15693. According to the picopass data sheet the tag response is expected 330us after
@@ -481,7 +481,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     uint8_t cmd, options, block;
     int len = 0;
 
-    bool exit_loop = 0;
+    bool exit_loop = false;
     while (exit_loop == false) {
         WDT_HIT();
             
@@ -863,12 +863,11 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
     static uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
-    static uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
+    uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
     // Bit 4: K.If this bit equals to one, the READCHECK will use the Credit Key (Kc); if equals to zero, Debit Key (Kd) will be used
     // bit 7: parity.
-
     if (use_credit_key)
         read_check_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
 
@@ -878,7 +877,6 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
     int len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time);
     if (len < 0)
         return false;
-
     
     // send Identify
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -936,7 +934,7 @@ void ReaderIClass(uint8_t flags) {
 
     uint8_t card_data[6 * 8] = {0xFF};
 //    uint8_t last_csn[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t resp[ICLASS_BUFFER_SIZE];
+    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     memset(resp, 0xFF, sizeof(resp));
 
 //    bool flag_readonce = flags & FLAG_ICLASS_READER_ONLY_ONCE;     // flag to read until one tag is found successfully
@@ -1162,21 +1160,9 @@ void iClass_Authentication(uint8_t *bytes) {
 
 bool iclass_auth(uint8_t *bytes, bool send_reply, uint8_t *dataout) {
 
-    struct p {
-        uint8_t key[8];
-        bool use_raw;
-        bool use_elite;
-        bool use_credit_key;
-    } PACKED;
-    struct p *payload = (struct p *)bytes;
-
-    // device response message
-    struct {
-        bool isOK;
-        uint8_t div_key[8];
-        uint8_t mac[4];
-    } PACKED packet;
-
+    iclass_auth_req_t *payload = (iclass_auth_req_t *)bytes;
+    iclass_auth_resp_t packet;
+    
     Iso15693InitReader();
         
     uint8_t card_data[3 * 8] = {0xFF};
@@ -1208,7 +1194,7 @@ bool iclass_auth(uint8_t *bytes, bool send_reply, uint8_t *dataout) {
     check[7] = packet.mac[2];
     check[8] = packet.mac[3];
 
-    uint8_t resp[ICLASS_BUFFER_SIZE];
+    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     packet.isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     
     if (send_reply)
@@ -1236,12 +1222,12 @@ typedef struct iclass_premac {
 void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
     uint8_t i = 0, isOK = 0;
-    uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
+//    uint8_t lastChunk = ((arg0 >> 8) & 0xFF);
     bool use_credit_key = ((arg0 >> 16) & 0xFF);
     uint8_t keyCount = arg1 & 0xFF;
 
     uint8_t check[9] = { ICLASS_CMD_CHECK };
-    uint8_t resp[ICLASS_BUFFER_SIZE];
+    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
     if (use_credit_key)
@@ -1260,8 +1246,8 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     
     Iso15693InitReader();
 
-    uint32_t start_time = 0;
-    uint32_t eof_time = 0;
+    uint32_t start_time = 0, eof_time = 0;
+
     if (select_iclass_tag(card_data, use_credit_key, &eof_time) == false)
         goto out;
     
@@ -1305,15 +1291,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 out:
     // send keyindex.
     reply_mix(CMD_HF_ICLASS_CHKKEYS, isOK, i, 0, 0, 0);
-
-    if (isOK >= 1 || lastChunk) {
-        LED_A_OFF();
-    }
-
     switch_off();
-        
-    LED_B_OFF();
-    LED_C_OFF();
 }
 
 // Tries to read block.
@@ -1338,8 +1316,8 @@ void iClass_ReadBlk(uint8_t blockno) {
 
     LED_A_ON();
     result.isOK = iclass_readblock(blockno, result.blockdata);
-    switch_off();
     reply_ng(CMD_HF_ICLASS_READBL, PM3_SUCCESS, (uint8_t *)&result, sizeof(result));
+    switch_off();    
 }
                               
 // Dump command seems to dump a block related portion of card memory.
@@ -1372,11 +1350,6 @@ void iClass_Dump(uint8_t start_blockno, uint8_t numblks) {
 
     switch_off();
 
-    // return pointer to dump memory in arg3
-    // iceman:  why not return | dataout - getbigbuf ?  Should give exact location.
-//    Dbprintf("ICE::  dataout, %u  max trace %u,  bb start %u,   data-bb %u ",  dataout, BigBuf_max_traceLen(),  BigBuf_get_addr(),  dataout - BigBuf_get_addr()  );
-//    Dbprintf("ICE:: bb size %u,  malloced %u  (255*8)",  BigBuf_get_size(),  BigBuf_get_size() - (dataout - BigBuf_get_addr()) );
-//    reply_mix(CMD_ACK, isOK, blkcnt, BigBuf_max_traceLen(), 0, 0);
     struct p {
         bool isOK;
         uint8_t block_cnt;
@@ -1384,7 +1357,7 @@ void iClass_Dump(uint8_t start_blockno, uint8_t numblks) {
     } PACKED payload;
     payload.isOK = isOK;
     payload.block_cnt = blkcnt;
-    payload.bb_offset = BigBuf_max_traceLen();    
+    payload.bb_offset = dataout - BigBuf_get_addr();
     reply_ng(CMD_HF_ICLASS_DUMP, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     BigBuf_free();
 }

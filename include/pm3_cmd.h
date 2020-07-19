@@ -289,6 +289,23 @@ typedef struct {
     const char *value;
 } PACKED ecdsa_publickey_t;
 
+
+// iCLASS auth request data structure
+typedef struct {
+    uint8_t key[8];
+    bool use_raw;
+    bool use_elite;
+    bool use_credit_key;
+} PACKED iclass_auth_req_t;
+
+// iCLASS auth response data structure
+typedef struct {
+    bool isOK;
+    uint8_t div_key[8];
+    uint8_t mac[4];
+} PACKED iclass_auth_resp_t;
+
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 //#define CMD_SETUP_WRITE                                                   0x0001
