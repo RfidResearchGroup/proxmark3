@@ -70,6 +70,7 @@ uint8_t card_app2_limit[] = {
 };
 
 static uint8_t aa2_key[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
 static uint8_t legacy_aa1_key[] = {0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78};
 
 static uint8_t csns[8 * NUM_CSNS] = {
@@ -145,13 +146,20 @@ static int fullsim_mode(void) {
         Dbprintf("loaded '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' (%u bytes) to emulator memory", fsize);
     }
 
-    // create diversified key if not in dump.
+    // create diversified key AA1/KD if not in dump.
     if ( memcmp(emul + (3 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
         uint8_t ccnr[12] = {0};
         memcpy(ccnr, emul + (2 * 8), 8);                   
         bool use_elite = false;
-       
         iclass_calc_div_key(emul, legacy_aa1_key, emul + (3 * 8), use_elite);       
+    }
+
+    // create diversified key AA2/KC if not in dump.
+    if ( memcmp(emul + (4 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
+        uint8_t ccnr[12] = {0};
+        memcpy(ccnr, emul + (2 * 8), 8);                   
+        bool use_elite = false;
+        iclass_calc_div_key(emul, aa2_key, emul + (4 * 8), use_elite);       
     }
 
     iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
@@ -298,23 +306,21 @@ static int reader_dump_mode(void) {
 static int config_sim_mode(void) {
 
     uint8_t *emul = BigBuf_get_EM_addr();
-  
+
     for (uint8_t i = 0; i < 2; i++) {
         SpinOff(0);
-        uint32_t fsize = size_in_spiffs(cc_files[i]);
-
+        
         rdv40_spiffs_lazy_mount();
+        uint32_t fsize = size_in_spiffs(cc_files[i]);
         int res = rdv40_spiffs_read_as_filetype(cc_files[i], emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
         rdv40_spiffs_lazy_unmount();
 
         if (res == SPIFFS_OK) {
             Dbprintf("loaded '" _YELLOW_("%s") "' (%u bytes) to emulator memory", cc_files[i], fsize);
+            iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
         }
-
-        iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
     }
 
-    rdv40_spiffs_lazy_unmount();
     return PM3_SUCCESS;
 }
 
@@ -330,7 +336,7 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_STATE_ATTACK;
+    uint8_t mode = ICE_STATE_FULLSIM;
 
     for (;;) {
 
