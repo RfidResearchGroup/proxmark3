@@ -1096,14 +1096,18 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, "Block 9 decoder");
-                uint8_t pinsize = 10;
+                uint8_t pinsize = 0;
                 if (use_sc) {
                     pinsize = GetPinSize(decrypted + (8 * 6));
+               
+                    if (pinsize > 0) {
+                
+                        uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
+                        char tmp[17] = {0};
+                        sprintf(tmp, "%."PRIu64, BCD2DEC(pin));
+                        PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
+                    }
                 }
-                uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
-                char tmp[17] = {0};
-                sprintf(tmp, "%."PRIu64, BCD2DEC(pin));
-                PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
             }
         }
 
@@ -1280,7 +1284,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     uint8_t CreditKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t keyNbr = 0;
     uint8_t dataLen = 0;
-    uint8_t app_limit1, app_limit2 = 0;
+    uint8_t app_limit1 = 0, app_limit2 = 0;
     uint8_t fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     char tempStr[50] = {0};
@@ -1370,7 +1374,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     // if no debit key given try credit key on AA1 (not for iclass but for some picopass this will work)
     if (!have_debit_key && have_credit_key) use_credit_key = true;
 
-    uint32_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
+    uint32_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE | FLAG_ICLASS_READER_AIA);
 
     //get config and first 3 blocks
     PacketResponseNG resp;
@@ -1395,8 +1399,8 @@ static int CmdHFiClassDump(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (readStatus & (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF | FLAG_ICLASS_CC)) {
-        memcpy(tag_data, data, 8 * 3);
+    if (readStatus & (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF | FLAG_ICLASS_CC | FLAG_ICLASS_AIA)) {
+        memcpy(tag_data, data, 8 * 6);
 
         uint8_t type = get_mem_config(hdr);
         app_limit1 = hdr->conf.app_limit;
@@ -1418,7 +1422,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         uint8_t start_blockno;
         uint8_t numblks;
     } PACKED payload;
-    payload.start_blockno = 5;
+    payload.start_blockno = 6;
     payload.numblks = app_limit1 - 5;
 
     clearCommandBuffer();
@@ -1443,7 +1447,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         return resp.status;
     }
 
-    // dump cmd switch off at device when finised.
+    // dump cmd switch off at device when finished.
 
     struct p_resp {
         bool isOK;
@@ -1452,30 +1456,26 @@ static int CmdHFiClassDump(const char *Cmd) {
     } PACKED;
     struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
 
-    uint32_t blocks_read = packet->block_cnt;
-
     if (packet->isOK == false) {
         PrintAndLogEx(WARNING, "read block failed");
         return PM3_ESOFT;
     }
 
-    uint16_t offset = (5 * 8);
-    uint32_t startindex = packet->bb_offset;
-
-    if (blocks_read * 8 > sizeof(tag_data) - offset) {
-        PrintAndLogEx(FAILED, "data exceeded buffer size!");
-        blocks_read = (sizeof(tag_data) / 8) - 5;
+    uint32_t blocks_read = packet->block_cnt;
+    if (blocks_read == app_limit1 - 5) {
+        PrintAndLogEx(INFO, "ICE:  got all AA1");
     }
+
+    uint16_t offset = (6 * 8);
+    uint32_t startindex = packet->bb_offset;
 
     // response ok - now get bigbuf content of the dump
     if (!GetFromDevice(BIG_BUF, tag_data + offset, blocks_read * 8, startindex, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
-    
-    PrintAndLogEx(INFO, "BB start index :: %u", startindex);
-    PrintAndLogEx(INFO, "BB :: %s",  sprint_hex(tag_data + (5*8), 32));
 
+    PrintAndLogEx(INFO, "ICE: blocks_read (13) == %u  (0x%02x)", blocks_read, blocks_read);
     offset += (blocks_read * 8);
 
     // try AA2 Kc, Credit
@@ -1491,12 +1491,12 @@ static int CmdHFiClassDump(const char *Cmd) {
         }
 
         payload.start_blockno = app_limit1;
-        payload.numblks = app_limit2 - app_limit1 - 5;
+        payload.numblks = app_limit2 - app_limit1;
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t*)&payload, sizeof(payload));
 
-        if (!WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "command execute timeout 2");
             return PM3_ETIMEOUT;
         }
@@ -1511,10 +1511,13 @@ static int CmdHFiClassDump(const char *Cmd) {
             PrintAndLogEx(WARNING, "read block failed using credit key");
             return PM3_ESOFT;
         }
-
         // 
         blocks_read = packet->block_cnt;
         startindex = packet->bb_offset;
+
+        if (blocks_read == app_limit2 - app_limit1) {
+            PrintAndLogEx(INFO, "ICE:  got all AA2");
+        }
         
         if (blocks_read * 8 > sizeof(tag_data) - offset) {
             PrintAndLogEx(FAILED, "data exceeded buffer size!");
