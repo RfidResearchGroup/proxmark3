@@ -275,13 +275,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (data_len == 0) {
         if (protocol == ICLASS && duration == 2048) {
-			sprintf(line[0], " <SOF>");
+			sprintf(line[0], "<SOF>");
 		} else if (protocol == ISO_15693 && duration == 512) {
-			sprintf(line[0], " <EOF>");
+			sprintf(line[0], "<EOF>");
 		} else {
             sprintf(line[0], "<empty trace - possible error>");
         }
-        return tracepos;
     }
 
     for (int j = 0; j < data_len && j / 18 < 18; j++) {
