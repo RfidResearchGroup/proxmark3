@@ -378,6 +378,14 @@ static inline uint32_t leadingzeros(uint64_t a) {
     return 0;
 #endif
 }
+static inline uint32_t countones(uint64_t a) {
+#if defined __GNUC__
+    return __builtin_popcountll(a);
+#else
+    return 0;
+#endif
+
+}
  
 // iclass card descriptors
 const char * card_types[] = {
@@ -1943,8 +1951,10 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " block %02X : " _GREEN_("%s"), blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
-
+    PrintAndLogEx(NORMAL, "");
+    
     if (memcmp(result->blockdata, empty, 8) == 0)
         return PM3_SUCCESS;
 
@@ -1962,14 +1972,19 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
             break;
         }
         case 7: {
-            PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+            PrintAndLogEx(INFO, "----------------------------- " _CYAN_("cardhelper") " -----------------------------");
             uint8_t dec_data[8];
+
             uint64_t a = bytes_to_num(result->blockdata, 8);
-            if (leadingzeros(a) < 12) {
-                PrintAndLogEx(INFO, "data looks encrypted, false positive is possible");
+            bool starts = (leadingzeros(a) < 12);
+            bool ones = (countones(a) > 16 && countones(a) < 48);
+
+            if (starts && ones) {
+                PrintAndLogEx(INFO, "data looks encrypted, False Positives " _YELLOW_("ARE") " possible");
                 Decrypt(result->blockdata, dec_data);
                 PrintAndLogEx(SUCCESS, "decrypted : " _GREEN_("%s"), sprint_hex(dec_data, sizeof(dec_data)));
             } else {
+                memcpy(dec_data, result->blockdata, sizeof(dec_data));
                 PrintAndLogEx(INFO, "data looks unencrypted, trying to decode");
             }
 
@@ -1990,14 +2005,14 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
 
                 i &= 0x3C;
                 PrintAndLogEx(SUCCESS, "      bin : %s", binstr + i);
-                PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+                PrintAndLogEx(INFO, "");                
+                PrintAndLogEx(INFO, "------------------------------ " _CYAN_("wiegand") " -------------------------------");
                 wiegand_message_t packed = initialize_message_object(top, mid, bot);
                 HIDTryUnpack(&packed, true);
             } else {
                 PrintAndLogEx(INFO, "no credential found");
             }
-
-            PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+            PrintAndLogEx(INFO, "----------------------------------------------------------------------");
             break;
         }
     }
@@ -2008,8 +2023,8 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     uint8_t blockno = 0;
     uint8_t keyType = 0x88; //debit key
     uint8_t KEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t keyNbr = 0;
-    uint8_t dataLen = 0;
+    uint8_t key_idx = 0;
+    uint8_t key_len = 0;
     char tempStr[50] = {0};
     bool got_blockno = false;
     bool elite = false;
@@ -2029,7 +2044,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'c':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("CREDIT"));
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("KC credit"));
                 keyType = 0x18;
                 cmdp++;
                 break;
@@ -2040,20 +2055,19 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 break;
             case 'k':
                 auth = true;
-                dataLen = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (dataLen == 16) {
-                    errors = param_gethex(tempStr, 0, KEY, dataLen);
-                } else if (dataLen == 1) {
-                    keyNbr = param_get8(Cmd, cmdp + 1);
-                    if (keyNbr < ICLASS_KEYS_MAX) {
-                        PrintAndLogEx(SUCCESS, "Using key[%d] %s", keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8));
-                        memcpy(KEY, iClass_Key_Table[keyNbr], 8);
+                key_len = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
+                if (key_len == 16) {
+                    errors = param_gethex(tempStr, 0, KEY, key_len);
+                } else if (key_len == 1) {
+                    key_idx = param_get8(Cmd, cmdp + 1);
+                    if (key_idx < ICLASS_KEYS_MAX) {
+                        memcpy(KEY, iClass_Key_Table[key_idx], 8);
                     } else {
-                        PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
+                        PrintAndLogEx(WARNING, "\nERROR: key index is invalid\n");
                         errors = true;
                     }
                 } else {
-                    PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
+                    PrintAndLogEx(WARNING, "\nERROR: incorrect key length\n");
                     errors = true;
                 }
                 cmdp += 2;
@@ -2077,6 +2091,14 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         errors = true;
 
     if (errors) return usage_hf_iclass_readblock();
+
+    if (verbose) {
+        if (key_len == 1)
+            PrintAndLogEx(SUCCESS, "Using key[%d] %s", key_idx, sprint_hex(KEY, 8));
+        else
+            PrintAndLogEx(SUCCESS, "Using key %s", sprint_hex(KEY, 8));
+    }
+
 
     if (auth == false)
         PrintAndLogEx(WARNING, "warning: no authentication used with read, only a few specific blocks can be read accurately without authentication.");
