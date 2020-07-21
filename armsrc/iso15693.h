@@ -27,7 +27,7 @@ void Iso15693InitReader(void);
 void Iso15693InitTag(void);
 void CodeIso15693AsReader(uint8_t *cmd, int n);
 void CodeIso15693AsTag(uint8_t *cmd, size_t len);
-										   
+										                                              
 void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time, uint32_t slot_time, bool slow);
 int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time);
 void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time);
