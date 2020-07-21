@@ -51,8 +51,8 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
 };
 
 static int usage_hf_iclass_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate a iclass legacy/standard tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass sim [h] <option> [CSN]\n");
+    PrintAndLogEx(NORMAL, "Simulate a iCLASS legacy/standard tag\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iCLASS sim [h] <option> [CSN]\n");
     PrintAndLogEx(NORMAL, "Options");
     PrintAndLogEx(NORMAL, "  h         : Show this help");
     PrintAndLogEx(NORMAL, "  0 <CSN>   : simulate the given CSN");
@@ -64,20 +64,36 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 0 031FEC8AF7FF12E0"));
     PrintAndLogEx(NORMAL, "   -- execute loclass attack online part");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 2"));
-    PrintAndLogEx(NORMAL, "   -- simulate full iClass 2k tag");
+    PrintAndLogEx(NORMAL, "   -- simulate full iCLASS 2k tag");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 3"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_eload(void) {
-    PrintAndLogEx(NORMAL, "Loads iclass tag-dump into emulator memory on device\n");
+    PrintAndLogEx(NORMAL, "Loads iCLASS tag dump into emulator memory on device\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass eload [h] f <filename>\n");
     PrintAndLogEx(NORMAL, "Options");
     PrintAndLogEx(NORMAL, "  h            : Show this help");
     PrintAndLogEx(NORMAL, "  f <filename> : filename of dump");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_hf_iclass_esave(void) {
+    PrintAndLogEx(NORMAL, "Save emulator memory to file.");
+    PrintAndLogEx(NORMAL, "if not filename is supplied, CSN will be used.");
+    PrintAndLogEx(NORMAL, "Number of bytes to download defaults to 256. Other value is 2048\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass esave [h] [f <filename>] [s <num of bytes>]\n");
+    PrintAndLogEx(NORMAL, "Options");
+    PrintAndLogEx(NORMAL, "  h            : Show this help");
+    PrintAndLogEx(NORMAL, "  f <filename> : filename of dump");
+    PrintAndLogEx(NORMAL, "  s <bytes>    : (256|2048) number of bytes to save (default 256)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave f hf-iclass-dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave s 2048 f hf-iclass-dump.bin"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -94,6 +110,7 @@ static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "  d <encrypted blk> : 16 bytes hex");
     PrintAndLogEx(NORMAL, "  f <filename>      : filename of dump");
     PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
+    PrintAndLogEx(NORMAL, "  v                 : verbose output");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt f hf-iclass-AA162D30F8FF12F1-dump.bin"));
@@ -111,6 +128,7 @@ static int usage_hf_iclass_encrypt(void) {
     PrintAndLogEx(NORMAL, "  h                 : Show this help");
     PrintAndLogEx(NORMAL, "  d <block data>    : 16 bytes hex");
     PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
+    PrintAndLogEx(NORMAL, "  v                 : verbose output");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass encrypt d 0102030405060708"));
@@ -119,7 +137,7 @@ static int usage_hf_iclass_encrypt(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_dump(void) {
-    PrintAndLogEx(NORMAL, "Dump all memory from a iClass tag\n");
+    PrintAndLogEx(NORMAL, "Dump all memory from a iCLASS tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass dump f <fileName> k <key> c <creditkey> [e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h            : Show this help");
@@ -139,7 +157,7 @@ static int usage_hf_iclass_dump(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_clone(void) {
-    PrintAndLogEx(NORMAL, "Restore data from dumpfile onto a iClass tag\n");
+    PrintAndLogEx(NORMAL, "Restore data from dumpfile onto a iCLASS tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h            : Show this help");
@@ -158,7 +176,7 @@ static int usage_hf_iclass_clone(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_writeblock(void) {
-    PrintAndLogEx(NORMAL, "Write data to a iClass tag\n");
+    PrintAndLogEx(NORMAL, "Write data to a iCLASS tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass wrbl b <block> d <data> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h         : Show this help");
@@ -177,7 +195,7 @@ static int usage_hf_iclass_writeblock(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readblock(void) {
-    PrintAndLogEx(NORMAL, "Read a iClass block from tag\n");
+    PrintAndLogEx(NORMAL, "Read a iCLASS block from tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass rdbl b <block> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h         : Show this help");
@@ -195,7 +213,7 @@ static int usage_hf_iclass_readblock(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readtagfile(void) {
-    PrintAndLogEx(NORMAL, "Print a iClass tag-dump file\n");
+    PrintAndLogEx(NORMAL, "Print a iCLASS tag dump file\n");
     PrintAndLogEx(NORMAL, "Usage: hf iClass readtagfile [f <filename>] [s <startblock>] [e <endblock>] [v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h                Show this help");
@@ -231,7 +249,7 @@ static int usage_hf_iclass_calc_newkey(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_managekeys(void) {
-    PrintAndLogEx(NORMAL, "Manage iClass Keys in client memory:\n");
+    PrintAndLogEx(NORMAL, "Manage iCLASS Keys in client memory:\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h            : Show this help");
@@ -254,7 +272,7 @@ static int usage_hf_iclass_managekeys(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_reader(void) {
-    PrintAndLogEx(NORMAL, "Act as a Iclass reader.  Look for iClass tags until Enter or the pm3 button is pressed\n");
+    PrintAndLogEx(NORMAL, "Act as a iCLASS reader.  Look for iCLASS tags until Enter or the pm3 button is pressed\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass reader [h] [1]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h   Show this help");
@@ -550,9 +568,14 @@ static void print_picopass_info(const picopass_hdr *hdr) {
     fuse_config(hdr);
     mem_app_config(hdr);
 }
-
-static void printIclassDumpInfo(uint8_t *iclass_dump) {
-    print_picopass_info((picopass_hdr *) iclass_dump);
+static void print_picopass_header(const picopass_hdr *hdr) {
+    PrintAndLogEx(INFO, "------------ " _CYAN_("card") " -------------");
+    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") "  (uid)", sprint_hex(hdr->csn, sizeof(hdr->csn)));
+    PrintAndLogEx(SUCCESS, " Config: %s  (Card configuration)", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
+    PrintAndLogEx(SUCCESS, "E-purse: %s  (Card challenge, CC)", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
+    PrintAndLogEx(SUCCESS, "     Kd: %s  (Debit key, hidden)", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+    PrintAndLogEx(SUCCESS, "     Kc: %s  (Credit key, hidden)", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+    PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
 }
 
 static int CmdHFiClassList(const char *Cmd) {
@@ -701,6 +724,8 @@ static int CmdHFiClassSim(const char *Cmd) {
             /** Now, save to dumpfile **/
             saveFile("iclass_mac_attack", ".bin", dump, datalen);
             free(dump);
+
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass h") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_READER_ATTACK_KEYROLL: {
@@ -765,6 +790,8 @@ static int CmdHFiClassSim(const char *Cmd) {
             }
             saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
             free(dump);
+            
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass h") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_CSN:
@@ -774,6 +801,9 @@ static int CmdHFiClassSim(const char *Cmd) {
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 0, CSN, 8);
+            
+            if (sim_type == ICLASS_SIM_MODE_FULL)
+                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave h") "` to save the emulator memory to file");
             break;
         }
     }
@@ -888,7 +918,8 @@ static int CmdHFiClassELoad(const char *Cmd) {
         dump = newdump;
     }
 
-    printIclassDumpInfo(dump);
+    print_picopass_header((picopass_hdr *) dump);
+    print_picopass_info((picopass_hdr *) dump);
 
     // fast push mode
     conn.block_after_ACK = true;
@@ -914,12 +945,82 @@ static int CmdHFiClassELoad(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFiClassESave(const char *Cmd) {
+
+    char filename[FILE_PATH_SIZE] = {0};
+    char *fnameptr = filename;
+    int len = 0;
+    uint16_t bytes = 256;
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_esave();
+            case 'f':
+                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (len >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            case 's':
+                bytes = param_get32ex(Cmd, cmdp + 1, 256, 10);
+                if (bytes > 4096) {
+                    PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
+                    bytes = 4096;
+                }
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    //Validations
+    if (errors) {
+        return usage_hf_iclass_esave();
+    }
+
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (!dump) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    PrintAndLogEx(INFO, "downloading from emulator memory");
+    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    // user supplied filename?
+    if (len < 1) {
+        fnameptr += sprintf(fnameptr, "hf-iclass-");
+        FillFileNameByUID(fnameptr, dump, "-dump", 8);
+    }
+
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, 16);
+    saveFileJSON(filename, jsfIclass, dump, bytes, NULL);
+    free(dump);
+    
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass readtagfile ") "` to view dump file");
+    return PM3_SUCCESS;    
+}
+
 static int CmdHFiClassDecrypt(const char *Cmd) {
 
     bool errors = false;
     bool have_key = false;
     bool have_data = false;
     bool have_file = false;
+    bool verbose = false;
     uint8_t cmdp = 0;
 
     uint8_t enc_data[8] = {0};
@@ -968,6 +1069,10 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 have_key = true;
                 cmdp += 2;
                 break;
+            case 'v':
+                verbose = true;
+                cmdp++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -977,7 +1082,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
 
-    bool use_sc = IsCryptoHelperPresent(true);
+    bool use_sc = IsCryptoHelperPresent(verbose);
 
     if (have_key == false && use_sc == false) {
         int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
@@ -1145,6 +1250,7 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
 static int CmdHFiClassEncryptBlk(const char *Cmd) {
     bool errors = false;
     bool have_key = false;
+    bool verbose = false;
     uint8_t blk_data[8] = {0};
     uint8_t key[16] = {0};
     uint8_t *keyptr = NULL;
@@ -1169,6 +1275,10 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
                 have_key = true;
                 cmdp += 2;
                 break;
+            case 'v':
+                verbose = true;
+                cmdp++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -1178,7 +1288,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
 
-    bool use_sc = IsCryptoHelperPresent(true);
+    bool use_sc = IsCryptoHelperPresent(verbose);
 
     if (have_key == false && use_sc == false) {
         size_t keylen = 0;
@@ -1572,6 +1682,9 @@ static int CmdHFiClassDump(const char *Cmd) {
     saveFile(filename, ".bin", tag_data, offset);
     saveFileEML(filename, tag_data, offset, 8);
     saveFileJSON(filename, jsfIclass, tag_data, offset, NULL);
+    
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt") "` to decrypt dump file");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass readtagfile ") "` to view dump file");
     return PM3_SUCCESS;
 }
 
@@ -1966,13 +2079,15 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
         return PM3_SUCCESS;
     
     // crypto helper available.
+    PrintAndLogEx(INFO, "----------------------------- " _CYAN_("cardhelper") " -----------------------------");
+
     switch (blockno) {
         case 6: {
             DecodeBlock6(result->blockdata);
             break;
         }
         case 7: {
-            PrintAndLogEx(INFO, "----------------------------- " _CYAN_("cardhelper") " -----------------------------");
+
             uint8_t dec_data[8];
 
             uint64_t a = bytes_to_num(result->blockdata, 8);
@@ -2012,10 +2127,10 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
             } else {
                 PrintAndLogEx(INFO, "no credential found");
             }
-            PrintAndLogEx(INFO, "----------------------------------------------------------------------");
             break;
         }
     }
+    PrintAndLogEx(INFO, "----------------------------------------------------------------------");
     return PM3_SUCCESS;
 }
 
@@ -2227,7 +2342,11 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
         PrintAndLogEx(INFO, "Printing blocks from");
         PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") " end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
     }
+    
+    print_picopass_header((picopass_hdr *) dump);
+    print_picopass_info((picopass_hdr *) dump);
 
+    PrintAndLogEx(NORMAL, "");
     uint8_t *csn = dump;
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
     PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
@@ -2737,7 +2856,7 @@ static int cmp_uint32(const void *a, const void *b) {
         return mx > my;
 }
 
-// this method tries to identify in which configuration mode a iClass / iClass SE reader is in.
+// this method tries to identify in which configuration mode a iCLASS / iCLASS SE reader is in.
 // Standard or Elite / HighSecurity mode.  It uses a default key dictionary list in order to work.
 static int CmdHFiClassLookUp(const char *Cmd) {
 
@@ -3059,24 +3178,25 @@ static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc diversified keys (blocks 3 & 4) to write new keys"},
     {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "[options..] Check keys"},
-    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Restore a dump file onto a iClass tag"},
+    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Restore a dump file onto a iCLASS tag"},
     {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
-    {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "[options..] Dump iClass tag to file"},
-    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] Load iClass dump file into emulator memory"},
+    {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "[options..] Dump iCLASS tag to file"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] Load iCLASS dump file into emulator memory"},
+    {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "[f <fname>] Save emulator memory to file"},    
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
     {"info",        CmdHFiClassInfo,            AlwaysAvailable, "            Tag information"},
-    {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iClass history"},
+    {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iCLASS history"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
-    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iClass"},
+    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iCLASS"},
     {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
-    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read iClass block"},
-    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an iClass reader"},
+    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read iCLASS block"},
+    {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an iCLASS reader"},
     {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display content from tag dump file"},
-    {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read iClass tag via replay attack"},
-    {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iClass tag"},
-    {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop iClass communication"},
-    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write iClass block"},
+    {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read iCLASS tag via replay attack"},
+    {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iCLASS tag"},
+    {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop iCLASS communication"},
+    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write iCLASS block"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -3166,25 +3286,25 @@ int readIclass(bool loop, bool verbose) {
             }
             
             if (readStatus & FLAG_ICLASS_CONF) {
-                printIclassDumpInfo(data);
+                 print_picopass_info(hdr);
             }
                 
             // if CSN ends with FF12E0, it's inside HID CSN range.
-            bool isHidRange = (memcmp((uint8_t *)(data + 5), "\xFF\x12\xE0", 3) == 0);
+            bool isHidRange = (memcmp(hdr->csn + 5, "\xFF\x12\xE0", 3) == 0);
 
             if (readStatus & FLAG_ICLASS_AIA) {
-                bool legacy = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
+                bool legacy = (memcmp(hdr->app_issuer_area, "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
 
-                bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
+                bool se_enabled = (memcmp(hdr->app_issuer_area, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
                 
                 PrintAndLogEx(INFO, "------ " _CYAN_("Fingerprint") " ------");
 
                 if (isHidRange) {
+                    PrintAndLogEx(SUCCESS, "CSN is in HID range");
                     if (legacy)
-                        PrintAndLogEx(SUCCESS, _GREEN_("iCLASS legacy")" credential");
-
+                        PrintAndLogEx(SUCCESS, "Credential : " _GREEN_("iCLASS legacy"));
                     if (se_enabled)
-                        PrintAndLogEx(SUCCESS, _GREEN_("iCLASS SE")" credential");
+                        PrintAndLogEx(SUCCESS, "Credential : " _GREEN_("iCLASS SE"));
 
                 } else {
                     PrintAndLogEx(SUCCESS, _YELLOW_("PicoPass")" (CSN is not in HID range)");
@@ -3192,8 +3312,7 @@ int readIclass(bool loop, bool verbose) {
             }
 
             uint8_t cardtype = get_mem_config(hdr);
-            PrintAndLogEx(SUCCESS, "%s", card_types[cardtype]);
-
+            PrintAndLogEx(SUCCESS, " Card type : " _GREEN_("%s"), card_types[cardtype]);
 
             if (tagFound && !loop) {
                 PrintAndLogEx(NORMAL, "");
