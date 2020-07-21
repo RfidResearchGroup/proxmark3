@@ -512,7 +512,10 @@ static void mem_app_config(const picopass_hdr *hdr) {
     PrintAndLogEx(INFO, "------ " _CYAN_("Memory") " ------");
     PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u bytes)", kb, app_areas, app2_limit * 8);
     PrintAndLogEx(INFO, "    AA1 blocks %u { 0x06 - 0x%02X (06 - %02d) }", app1_limit , app1_limit + 5, app1_limit + 5);
-    PrintAndLogEx(INFO, "    AA2 blocks %u { 0x%02X - 0x%02X (%02d - %02d) }", app2_limit - app1_limit, app1_limit + 5 + 1, app2_limit, app1_limit + 5 + 1, app2_limit);
+    if (app1_limit <= app2_limit)
+        PrintAndLogEx(INFO, "    AA2 blocks %u { 0x%02X - 0x%02X (%02d - %02d) }", app2_limit - app1_limit, app1_limit + 5 + 1, app2_limit, app1_limit + 5 + 1, app2_limit);
+    else 
+        PrintAndLogEx(INFO, "    AA1 is configured to take all available space");
 
     PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") " ------");
     PrintAndLogEx(INFO, " Kd = Debit key (AA1),  Kc = Credit key (AA2)");
