@@ -393,7 +393,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     int trace_data_size = 0;
 
     // Respond SOF -- takes 1 bytes
-    uint8_t *resp_sof = BigBuf_malloc(1);
+    uint8_t *resp_sof = BigBuf_malloc(2);
     int resp_sof_len;
 
     // Anticollision CSN (rotated CSN)
@@ -524,6 +524,32 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             }
             goto send;
 
+		} else if (cmd == ICLASS_CMD_SELECT && len == 9) {
+			// Reader selects anticollision CSN.
+			// Tag sends the corresponding real CSN
+			if (chip_state == ACTIVATED || chip_state == SELECTED) {
+				if (!memcmp(receivedCmd + 1, anticoll_data, 8)) {
+					modulated_response = resp_csn;
+					modulated_response_size = resp_csn_len;
+					trace_data = csn_data;
+					trace_data_size = sizeof(csn_data);
+					chip_state = SELECTED;
+				} else {
+					chip_state = IDLE;
+				}
+			} else if (chip_state == HALTED) {
+				// RESELECT with CSN
+				if (!memcmp(receivedCmd + 1, csn_data, 8)) {
+					modulated_response = resp_csn;
+					modulated_response_size = resp_csn_len;
+					trace_data = csn_data;
+					trace_data_size = sizeof(csn_data);
+					chip_state = SELECTED;
+				}
+			}
+            goto send;
+
+
         } else if (cmd == ICLASS_CMD_READ_OR_IDENTIFY && len == 4) { // 0x0C
 
             if (chip_state != SELECTED) {
@@ -580,37 +606,13 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                         trace_data = data_generic_trace;
                         trace_data_size = 10;
                         CodeIso15693AsTag(trace_data, trace_data_size);
-                        memcpy(modulated_response, ts->buf, ts->max);
+                        memcpy(data_response, ts->buf, ts->max);
+						modulated_response = data_response;
                         modulated_response_size = ts->max;
                     }
                     goto send;
                 }
             } // swith
-
-        } else if (cmd == ICLASS_CMD_SELECT && len == 9) { // 0x81
-            // Reader selects anticollission CSN.
-            // Tag sends the corresponding real CSN
-            if (chip_state == ACTIVATED || chip_state == SELECTED) {
-                if (!memcmp(receivedCmd + 1, anticoll_data, 8)) {
-                    modulated_response = resp_csn;
-                    modulated_response_size = resp_csn_len;
-                    trace_data = csn_data;
-                    trace_data_size = sizeof(csn_data);
-                    chip_state = SELECTED;
-                } else {
-                    chip_state = IDLE;
-                }
-            } else if (chip_state == HALTED) {
-                // RESELECT with CSN
-                if (!memcmp(receivedCmd + 1, csn_data, 8)) {
-                    modulated_response = resp_csn;
-                    modulated_response_size = resp_csn_len;
-                    trace_data = csn_data;
-                    trace_data_size = sizeof(csn_data);
-                    chip_state = SELECTED;
-                }
-            }
-            goto send;
 
         } else if (cmd == ICLASS_CMD_READCHECK) {  // 0x88
             // Read e-purse KD (88 02)  KC  (18 02)
@@ -701,11 +703,12 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             trace_data = data_generic_trace;
             trace_data_size = 34;
             CodeIso15693AsTag(trace_data, trace_data_size);
-            memcpy(modulated_response, ts->buf, ts->max);
+            memcpy(data_response, ts->buf, ts->max);
+            modulated_response = data_response;
             modulated_response_size = ts->max;
             goto send;
 
-        } else if (simulationMode == ICLASS_SIM_MODE_FULL && cmd == ICLASS_CMD_UPDATE  && (len == 12 || len == 14)) {
+        } else if (cmd == ICLASS_CMD_UPDATE  && (len == 12 || len == 14)) {
 
             // We're expected to respond with the data+crc, exactly what's already in the receivedCmd
             // receivedCmd is now UPDATE 1b | ADDRESS 1b | DATA 8b | Signature 4b or CRC 2b
@@ -810,7 +813,7 @@ send:
         if (modulated_response_size > 0) {
             uint32_t response_time = reader_eof_time + DELAY_ICLASS_VCD_TO_VICC_SIM;
             TransmitTo15693Reader(modulated_response, modulated_response_size, &response_time, 0, false);
-            LogTrace(trace_data, trace_data_size, response_time * 32, (response_time * 32) + (modulated_response_size * 32 * 64), NULL, false);
+            LogTrace_ISO15693(trace_data, trace_data_size, response_time * 32, (response_time * 32) + (modulated_response_size * 32 * 64), NULL, false);
         }
     }
 
@@ -829,7 +832,7 @@ static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time,
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, start_time);
     *end_time = *start_time + (32 * ((8 * ts->max) - 4)); // substract the 4 padding bits after EOF
-    LogTrace(frame, len, (*start_time * 4), (*end_time * 4), NULL, true);
+    LogTrace_ISO15693(frame, len, (*start_time * 4), (*end_time * 4), NULL, true);
 }
 
 static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* resp, size_t max_resp_size,
