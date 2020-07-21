@@ -221,17 +221,17 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
         duration = (UINT32_MAX - timestamp_start) + timestamp_end;
     }
 
-    if (duration > 0x7FFF) {
+    if (duration > 0xFFFF) {
         /*
         if (DBGLEVEL >= DBG_DEBUG) {
-            Dbprintf("Error in LogTrace: duration too long for 15 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
+            Dbprintf("Error in LogTrace: duration too long for 16 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
         }
         */
-        duration /= 32;
+        duration = 0;
     }
         
     hdr->timestamp = timestamp_start;
-    hdr->duration = duration & 0x7FFF;
+    hdr->duration = duration & 0xFFFF;
     hdr->data_len = iLen;
     hdr->isResponse = !readerToTag;
     trace_len += TRACELOG_HDR_LEN;
@@ -253,6 +253,15 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     }
     return true;
 }
+
+// specific LogTrace function for ISO15693: the duration needs to be scaled because otherwise it won't fit into a uint16_t
+bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, uint8_t *parity, bool reader2tag) {
+    uint32_t duration = ts_end - ts_start;
+    duration /= 32;
+    ts_end = ts_start + duration;
+    return LogTrace(bytes, len, ts_start, ts_end, parity, reader2tag);
+}
+
 
 // Emulator memory
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {
