@@ -574,7 +574,7 @@ pm3 --> mem load f iclass_default_keys i
 
 Upgrade Sim Module firmware
 ```
-pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
+pm3 --> smart upgrade f ../tools/simmodule/sim011.bin
 ```
 
 ## Smart Card
@@ -582,12 +582,12 @@ pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 
 Get Smart Card Information
 ```
-pm3 --> sc info
+pm3 --> smart info
 ```
 
 Act like an IS07816 reader
 ```
-pm3 --> sc reader
+pm3 --> smart reader
 ```
 
 Set clock speed
@@ -596,7 +596,7 @@ Options
 ---
 c <speed>       : clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz)
 
-pm3 --> sc setclock c 2
+pm3 --> smart setclock c 2
 ```
 
 Send raw hex data
@@ -604,16 +604,16 @@ Send raw hex data
 Options
 ---
 r           : do not read response
-a           : active smartcard without select (reset sc module)
+a           : active smartcard without select (reset smart module)
 s           : active smartcard with select (get ATR)
 t           : executes TLV decoder if it possible
 0           : use protocol T=0
 d <bytes>   : bytes to send
 
-pm3 --> sc raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR
-pm3 --> sc raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory
-pm3 --> sc raw 0 t d 00a4040007a0000000041010               : Mastercard
-pm3 --> sc raw 0 t d 00a4040007a0000000031010               : Visa
+pm3 --> smart raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR
+pm3 --> smart raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory
+pm3 --> smart raw 0 t d 00a4040007a0000000041010               : Mastercard
+pm3 --> smart raw 0 t d 00a4040007a0000000031010               : Visa
 ````
 
 Bruteforce SPI
@@ -622,6 +622,6 @@ Options
 ---
 t          : executes TLV decoder if it possible
 
-pm3 --> sc brute
-pm3 --> sc brute t
+pm3 --> smart brute
+pm3 --> smart brute t
 ```
