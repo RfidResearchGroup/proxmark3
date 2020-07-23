@@ -27,7 +27,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_sm_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
+    PrintAndLogEx(NORMAL, "Usage: smart raw [h|r|c] d <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       r          :  do not read response");
     PrintAndLogEx(NORMAL, "       a          :  active smartcard without select (reset sc module)");
@@ -37,58 +37,58 @@ static int usage_sm_raw(void) {
     PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
-    PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
-    PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000041010              - Mastercard");
-    PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000031010                - Visa");
+    PrintAndLogEx(NORMAL, "        smart raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
+    PrintAndLogEx(NORMAL, "        smart raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
+    PrintAndLogEx(NORMAL, "        smart raw 0 t d 00a4040007a0000000041010              - Mastercard");
+    PrintAndLogEx(NORMAL, "        smart raw 0 t d 00a4040007a0000000031010                - Visa");
     return PM3_SUCCESS;
 }
 static int usage_sm_reader(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc reader [h|s]");
+    PrintAndLogEx(NORMAL, "Usage: smart reader [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc reader");
+    PrintAndLogEx(NORMAL, "        smart reader");
     return PM3_SUCCESS;
 }
 static int usage_sm_info(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc info [h|s]");
+    PrintAndLogEx(NORMAL, "Usage: smart info [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc info");
+    PrintAndLogEx(NORMAL, "        smart info");
     return PM3_SUCCESS;
 }
 static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "Upgrade RDV4.0 Sim module firmware");
-    PrintAndLogEx(NORMAL, "Usage:  sc upgrade f <file name>");
+    PrintAndLogEx(NORMAL, "Usage:  smart upgrade f <file name>");
     PrintAndLogEx(NORMAL, "       h               :  this help");
     PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/sim011.bin");
+    PrintAndLogEx(NORMAL, "        smart upgrade f ../tools/simmodule/sim011.bin");
     return PM3_SUCCESS;
 }
 static int usage_sm_setclock(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
+    PrintAndLogEx(NORMAL, "Usage: smart setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz) ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc setclock c 2");
+    PrintAndLogEx(NORMAL, "        smart setclock c 2");
     return PM3_SUCCESS;
 }
 static int usage_sm_brute(void) {
     PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, using a known list of AID's ");
-    PrintAndLogEx(NORMAL, "Usage: sc brute [h]");
+    PrintAndLogEx(NORMAL, "Usage: smart brute [h]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
 //  PrintAndLogEx(NORMAL, "       0          :  use protocol T=0");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc brute t");
+    PrintAndLogEx(NORMAL, "        smart brute t");
     return PM3_SUCCESS;
 }
 
@@ -1201,4 +1201,5 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
 
     return true;
 }
+
 
