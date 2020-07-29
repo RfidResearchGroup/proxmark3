@@ -1407,36 +1407,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_WRITEBL: {
-            struct p {
-                uint8_t blockno;
-                uint8_t data[12];
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            iClass_WriteBlock(payload->blockno, payload->data);
-            break;
-        }
-        // iceman2019, unused?
-        case CMD_HF_ICLASS_READCHECK: { // auth step 1
-            iClass_ReadCheck(packet->oldarg[0], packet->oldarg[1]);
+            iClass_WriteBlock(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_READBL: {
-            /*
-                        struct p {
-                            uint8_t blockno;
-                        } PACKED;
-                        struct p *payload = (struct p *)packet->data.asBytes;
-                        */
-            iClass_ReadBlk(packet->data.asBytes[0]);
+            iClass_ReadBlock(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_AUTH: { //check
-            /*
-                        struct p {
-                            uint8_t mac[4];
-                        } PACKED;
-                        struct p *payload = (struct p *)packet->data.asBytes;
-            */
             iClass_Authentication(packet->data.asBytes);
             break;
         }
@@ -1445,12 +1423,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_DUMP: {
-            struct p {
-                uint8_t start_blockno;
-                uint8_t numblks;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            iClass_Dump(payload->start_blockno, payload->numblks);
+            iClass_Dump(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_CLONE: {
@@ -1461,6 +1434,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             iClass_Clone(payload->startblock, payload->endblock, payload->data);
+            break;
+        }
+        case CMD_HF_ICLASS_RESTORE: {
+            iClass_Restore(packet->data.asBytes);
             break;
         }
 #endif

@@ -58,6 +58,12 @@
 #define AddCrc(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
 
 /*
+static uint8_t get_pagemap(const picopass_hdr *hdr) {
+    return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
+}
+*/
+
+/*
 * CARD TO READER
 * in ISO15693-2 mode -  Manchester
 * in ISO 14443b - BPSK coding
@@ -836,19 +842,21 @@ static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time,
 }
 
 static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* resp, size_t max_resp_size,
-                                          uint8_t expected_size, uint8_t tries, uint32_t start_time,
+                                          uint8_t expected_size, uint8_t tries, uint32_t *start_time,
                                           uint16_t timeout, uint32_t *eof_time) {
     while (tries-- > 0) {
 
-        iclass_send_as_reader(cmd, cmdsize, &start_time, eof_time);
+        iclass_send_as_reader(cmd, cmdsize, start_time, eof_time);
         
-        if (resp == NULL)
-            return true;
+        if (resp == NULL) {
+            return true;            
+        }
 
         if (expected_size == GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time)) {
             return true;
         }
-        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+        *start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     }
     return false;
 }
@@ -860,12 +868,13 @@ static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* 
  * @return false = fail
  *         true = Got all.
  */
-static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t *eof_time) {
+static bool select_iclass_tag_ex(uint8_t *card_data, bool use_credit_key, uint32_t *eof_time, uint8_t *status) {
 
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
     static uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
+    uint8_t read_aia[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
     uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
@@ -916,19 +925,68 @@ static bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t 
 
     //Save CONF in response data
     memcpy(card_data + 8, resp, 8);
+    
+   if (status)
+       *status |= (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF);
 
-    // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-    start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, eof_time);
-   
-    // expect a 8-byte response here
-    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
-    if (len != 8)
-        return false;
+    picopass_hdr *hdr = (picopass_hdr *)card_data;
+    uint8_t pagemap = (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;  // 0x18
 
-    //Save CC (e-purse) in response data
-    memcpy(card_data + 16, resp, 8);
+    if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
+
+        //Read App Issuer Area block 5
+        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_aia, sizeof(read_aia), &start_time, eof_time);
+       
+        // expect a 10-byte response here 
+        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+        if (len != 10)
+            return false;
+        
+        if (status) {
+            *status |= FLAG_ICLASS_AIA;
+            memcpy(card_data + (8 * 5), resp, 8);
+        }
+
+        // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
+        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, eof_time);
+       
+        // expect a 8-byte response here
+        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+        if (len != 8)
+            return false;
+
+        memcpy(card_data + (8 * 2), resp, 8);
+        *status |= FLAG_ICLASS_CC;
+                
+    }  else {
+
+        //Read App Issuer Area block 2
+        read_aia[1] = 0x02;
+        read_aia[2] = 0x61;
+        read_aia[3] = 0x10;
+
+        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_aia, sizeof(read_aia), &start_time, eof_time);
+       
+        // expect a 10-byte response here
+        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+        if (len != 10)
+            return false;
+
+        if (status) {        
+            *status |= FLAG_ICLASS_AIA;
+            memcpy(card_data + (8 * 2), resp, 8);
+        }
+   }        
+        
     return true;
+}
+
+bool select_iclass_tag(uint8_t *card_data, bool use_credit_key, uint32_t *eof_time) {
+    uint8_t result = 0;
+    return select_iclass_tag_ex(card_data, use_credit_key, eof_time, &result);
 }
 
 // Reader iClass Anticollission
@@ -940,9 +998,8 @@ void ReaderIClass(uint8_t flags) {
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     memset(resp, 0xFF, sizeof(resp));
 
-//    bool flag_readonce = flags & FLAG_ICLASS_READER_ONLY_ONCE;     // flag to read until one tag is found successfully
-    bool use_credit_key = flags & FLAG_ICLASS_READER_CEDITKEY;     // flag to use credit key
-    bool flag_read_aia = flags & FLAG_ICLASS_READER_AIA;             // flag to read block5, application issuer area
+//    bool flag_readonce = flags & FLAG_ICLASS_READER_ONLY_ONCE;    // flag to read until one tag is found successfully
+    bool use_credit_key = flags & FLAG_ICLASS_READER_CREDITKEY;     // flag to use credit key
 
     if ((flags & FLAG_ICLASS_READER_INIT) == FLAG_ICLASS_READER_INIT) {
         Iso15693InitReader();
@@ -951,31 +1008,18 @@ void ReaderIClass(uint8_t flags) {
     if ((flags & FLAG_ICLASS_READER_CLEARTRACE) == FLAG_ICLASS_READER_CLEARTRACE) {
         clear_trace();
     }
-    
+
+    uint8_t result_status = 0;
     uint32_t eof_time = 0;
-    bool status = select_iclass_tag(card_data, use_credit_key, &eof_time);
+    bool status = select_iclass_tag_ex(card_data, use_credit_key, &eof_time, &result_status);
     if (status == false) {
         reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
         switch_off();
         return;
     }
 
-    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    uint8_t result_status = (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF | FLAG_ICLASS_CC);
-
-    //Read block 5, AIA
-    if (flag_read_aia) {
-        //Read App Issuer Area block CRC(0x05) => 0xde  0x64
-        uint8_t read_aa[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
-        status = iclass_send_cmd_with_retries(read_aa, sizeof(read_aa), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
-        if (status) {
-            result_status |= FLAG_ICLASS_AIA;
-            memcpy(card_data + (8 * 5), resp, 8);
-        } else {
-            if (DBGLEVEL >= DBG_EXTENDED) DbpString("Failed to dump AIA block");
-        }
-    }
-
+   
+    // Page mapping for secure mode 
     // 0 : CSN
     // 1 : Configuration
     // 2 : e-purse
@@ -983,7 +1027,12 @@ void ReaderIClass(uint8_t flags) {
     // 4 : kc / credit / aa1 (write-only)
     // 5 : AIA, Application issuer area
     //
-    //Then we can 'ship' back the 6 * 8 bytes of data,
+    // Page mapping for non secure mode 
+    // 0 : CSN
+    // 1 : Configuration
+    // 2 : AIA, Application issuer area
+
+    // Return to client, e 6 * 8 bytes of data.
     // with 0xFF:s in block 3 and 4.
     
     LED_B_ON();
@@ -1046,7 +1095,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         memcpy(check + 5, mac, 4);
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
-        if (iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
+        if (iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
             if (DBGLEVEL >= DBG_EXTENDED) DbpString("Error: Authentication Fail!");
             continue;
         }
@@ -1056,7 +1105,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
         AddCrc(read + 1, 1);
 
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;        
-        if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
+        if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
             if (DBGLEVEL >= DBG_EXTENDED) DbpString("Dump config (block 1) failed");
             continue;
         }
@@ -1085,7 +1134,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
             AddCrc(read + 1, 1);
 
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-            if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
+            if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
                 if (DBGLEVEL >= DBG_EXTENDED) {
                     Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
                          block,
@@ -1142,73 +1191,47 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
     switch_off();
 }
 
-// not used. ?!? ( CMD_HF_ICLASS_READCHECK)
-// turn off afterwards
-void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
-    uint8_t readcheck[] = { keytype, blockno };
-    uint8_t resp[8] = {0};
-    uint32_t eof_time = 0;
-//    start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;    
-    bool isOK = iclass_send_cmd_with_retries(readcheck, sizeof(readcheck), resp, sizeof(resp), 8, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
-    reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
-    switch_off();
-}
-
 // used with function select_and_auth (cmdhficlass.c)
 // which needs to authenticate before doing more things like read/write
 // selects and authenticate to a card,  sends back div_key and mac to client.
-void iClass_Authentication(uint8_t *bytes) {
-    iclass_auth(bytes, true, NULL);
+void iClass_Authentication(uint8_t *msg) {
 }
 
-bool iclass_auth(uint8_t *bytes, bool send_reply, uint8_t *dataout) {
+bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out) {
 
-    iclass_auth_req_t *payload = (iclass_auth_req_t *)bytes;
-    iclass_auth_resp_t packet;
-    
-    Iso15693InitReader();
-        
-    uint8_t card_data[3 * 8] = {0xFF};
-    uint32_t eof_time = 0;
-
-    packet.isOK = select_iclass_tag(card_data, payload->use_credit_key, &eof_time);
-    if (packet.isOK == false) {
-        if (send_reply)
-            reply_ng(CMD_HF_ICLASS_AUTH, PM3_ESOFT, (uint8_t *)&packet, sizeof(packet));
-
-        return false;
-    }
-    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    
-    uint8_t check[9] = { ICLASS_CMD_CHECK };
+    uint8_t cmd_check[9] = { ICLASS_CMD_CHECK };
+    uint8_t div_key[8] = {0};
+    uint8_t mac[4] = {0};
+    uint8_t resp_auth[4] = {0};
     uint8_t ccnr[12] = {0};
-    memcpy(ccnr, card_data + 16, 8);
+    
+    uint8_t *pmac = mac;
+    if (mac_out)
+        pmac = mac_out;
+    
+    memcpy(ccnr, hdr->epurse, sizeof(hdr->epurse));
 
     if (payload->use_raw)
-        memcpy(packet.div_key, payload->key, 8);
+        memcpy(div_key, payload->key, 8);
     else
-        iclass_calc_div_key(card_data, payload->key, packet.div_key, payload->use_elite);
+        iclass_calc_div_key(hdr->csn, payload->key, div_key, payload->use_elite);
 
-    opt_doReaderMAC(ccnr, packet.div_key, packet.mac);
+    if (payload->use_credit_key)
+        memcpy(hdr->key_c, div_key, sizeof(hdr->key_c));
+    else
+        memcpy(hdr->key_d, div_key, sizeof(hdr->key_d));
+
+//    Dbhexdump(sizeof(div_key), div_key, false);
+
+    opt_doReaderMAC(ccnr, div_key, pmac);
 
     // copy MAC to check command (readersignature)
-    check[5] = packet.mac[0];
-    check[6] = packet.mac[1];
-    check[7] = packet.mac[2];
-    check[8] = packet.mac[3];
+    cmd_check[5] = pmac[0];
+    cmd_check[6] = pmac[1];
+    cmd_check[7] = pmac[2];
+    cmd_check[8] = pmac[3];
 
-    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
-    packet.isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
-    
-    if (send_reply)
-        reply_ng(CMD_HF_ICLASS_AUTH, (packet.isOK)? PM3_SUCCESS : PM3_ESOFT, (uint8_t *)&packet, sizeof(packet));
-    
-    if (dataout) {
-        memcpy(dataout, card_data, sizeof(card_data));
-        memcpy(dataout + (3 * 8), packet.div_key, sizeof(packet.div_key));
-    }
-
-    return true;
+    return iclass_send_cmd_with_retries(cmd_check, sizeof(cmd_check), resp_auth, sizeof(resp_auth), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time);
 }
 
 typedef struct iclass_premac {
@@ -1279,7 +1302,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         check[8] = keys[i].mac[3];
 
         // expect 4bytes, 3 retries times..
-        isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+        isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
         if (isOK)
             goto out;
 
@@ -1299,27 +1322,78 @@ out:
 
 // Tries to read block.
 // retries 10times.
-bool iclass_readblock(uint8_t blockno, uint8_t *data) {
+// reply 8 bytes block
+bool iclass_read_block(uint8_t blockno, uint8_t *data) {
     uint8_t resp[10];
     uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(c + 1, 1);
-    uint32_t eof_time = 0;
-    bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 10, 0, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
-    memcpy(data, resp, 8);
+    uint32_t eof_time = 0, start_time = 0;
+    bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 10, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    if (isOK)
+        memcpy(data, resp, 8);
     return isOK;
 }
 
 // turn off afterwards
-// readblock 8 + 2.  only want 8.
-void iClass_ReadBlk(uint8_t blockno) {
-    struct p {
-        bool isOK;
-        uint8_t blockdata[8];
-    } PACKED result;
+// send in authentication needed data,  if to use auth.
+// reply 8 bytes block if send_reply  (for client)
+void iClass_ReadBlock(uint8_t *msg) {
 
-    LED_A_ON();
-    result.isOK = iclass_readblock(blockno, result.blockdata);
-    reply_ng(CMD_HF_ICLASS_READBL, PM3_SUCCESS, (uint8_t *)&result, sizeof(result));
+    iclass_auth_req_t *payload = (iclass_auth_req_t *)msg;
+
+    iclass_readblock_resp_t response = { .isOK = true };
+    memset(response.data, 0, sizeof(response.data));
+
+    uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, payload->blockno, 0x00, 0x00};
+    AddCrc(cmd_read + 1, 1);
+    
+    Iso15693InitReader();
+    
+    // select tag.
+    uint32_t eof_time = 0;
+    picopass_hdr hdr = {0};
+    bool res = select_iclass_tag( (uint8_t *)&hdr, payload->use_credit_key, &eof_time);
+    if (res == false) {
+        if (payload->send_reply) {
+            response.isOK = res;
+            reply_ng(CMD_HF_ICLASS_READBL, PM3_ETIMEOUT, (uint8_t *)&response, sizeof(response));
+        }
+        goto out;
+    }
+
+    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    
+    // authenticate    
+    if (payload->do_auth) {
+    
+        res = authenticate_iclass_tag(payload, &hdr, &start_time, &eof_time, NULL);
+        if (res == false) {
+            if (payload->send_reply) {
+                response.isOK = res;
+                reply_ng(CMD_HF_ICLASS_READBL, PM3_ETIMEOUT, (uint8_t *)&response, sizeof(response));
+            }
+            goto out;
+        }
+    }
+
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+    // read data
+    uint8_t resp[10];
+    res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), resp, sizeof(resp), 10, 10, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    if (res) {
+        memcpy(response.data, resp, sizeof(response.data));        
+        if (payload->send_reply) { 
+            reply_ng(CMD_HF_ICLASS_READBL, PM3_SUCCESS, (uint8_t *)&response, sizeof(response));
+        }
+    } else {
+        if (payload->send_reply) {
+            response.isOK = res;
+            reply_ng(CMD_HF_ICLASS_READBL, PM3_ETIMEOUT, (uint8_t *)&response, sizeof(response));
+        }
+    }
+
+out:
     switch_off();    
 }
                               
@@ -1328,8 +1402,8 @@ void iClass_ReadBlk(uint8_t blockno) {
 // then authenticate AA2, and read those blocks by calling this.
 // By the looks at it only 2K cards is supported,  or first page dumps on larger cards.
 // turn off afterwards        
-void iClass_Dump(uint8_t start_blockno, uint8_t numblks) {
-
+void iClass_Dump(uint8_t *msg) {
+    
     BigBuf_free();
 
     uint8_t *dataout = BigBuf_malloc(0xFF * 8);
@@ -1341,27 +1415,90 @@ void iClass_Dump(uint8_t start_blockno, uint8_t numblks) {
     }
     memset(dataout, 0xFF, 0xFF * 8);
 
-    bool isOK;
-    uint8_t blkcnt = 0;
-    for (; blkcnt < numblks; blkcnt++) {
-        isOK = iclass_readblock(start_blockno + blkcnt, dataout + (8 * blkcnt));
-        if (isOK == false) {
-            Dbprintf("failed to read block %02X", start_blockno + blkcnt);
-            break;
+    iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
+    iclass_auth_req_t *req = &cmd->req;
+
+    Iso15693InitReader();
+    
+    // select tag.
+    uint32_t eof_time = 0;
+    picopass_hdr hdr = {0};
+    bool res = select_iclass_tag( (uint8_t *)&hdr, req->use_credit_key, &eof_time);
+    if (res == false) {
+        if (req->send_reply) {
+            reply_ng(CMD_HF_ICLASS_DUMP, PM3_ETIMEOUT, NULL, 0);
+        }
+        switch_off();
+        return;
+    }
+
+    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    
+    // authenticate    
+    if (req->do_auth) {
+    
+        res = authenticate_iclass_tag(req, &hdr, &start_time, &eof_time, NULL);
+        if (res == false) {
+            if (req->send_reply) {
+                reply_ng(CMD_HF_ICLASS_DUMP, PM3_ETIMEOUT, NULL, 0);
+            }
+            switch_off();
+            return;
         }
     }
 
-    switch_off();
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
-    struct p {
-        bool isOK;
-        uint8_t block_cnt;
-        uint32_t bb_offset;
-    } PACKED payload;
-    payload.isOK = isOK;
-    payload.block_cnt = blkcnt;
-    payload.bb_offset = dataout - BigBuf_get_addr();
-    reply_ng(CMD_HF_ICLASS_DUMP, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
+    // main read loop
+    uint8_t i = cmd->start_block;
+    for (; i <= cmd->end_block; i++) {
+        res = iclass_read_block(i, dataout + (8 * i));
+        if (res == false) {
+            Dbprintf("failed to read block %02X", req->blockno + i);
+            break;
+        }
+        /*
+        else {
+            Dbprintf("blk: %u (0x%02x) |  %02x %02x %02x %02x %02x %02x %02x %02x ",
+              i,
+              i,
+              dataout[8 * i],
+              dataout[(8 * i) + 1],
+              dataout[(8 * i) + 2],
+              dataout[(8 * i) + 3],
+              dataout[(8 * i) + 4],
+              dataout[(8 * i) + 5],
+              dataout[(8 * i) + 6],
+              dataout[(8 * i) + 7]
+              );
+              
+              
+        }
+        */
+    }
+
+    switch_off();    
+
+    // copy diversified key back.
+    if (req->do_auth) {
+        if (req->use_credit_key)
+            memcpy(dataout + (8 * 4), hdr.key_c, 8);
+        else
+            memcpy(dataout + (8 * 3), hdr.key_d, 8);
+    }
+
+    if (req->send_reply) {
+        struct p {
+            bool isOK;
+            uint8_t block_cnt;
+            uint32_t bb_offset;
+        } PACKED response;
+
+        response.isOK = res;
+        response.block_cnt = i;
+        response.bb_offset = dataout - BigBuf_get_addr();
+        reply_ng(CMD_HF_ICLASS_DUMP, PM3_SUCCESS, (uint8_t *)&response, sizeof(response));
+    }
     BigBuf_free();
 }
 
@@ -1372,8 +1509,8 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data) {
     AddCrc(write + 1, 13);
 
     uint8_t resp[10] = {0};    
-    uint32_t eof_time = 0;
-    bool isOK = iclass_send_cmd_with_retries(write, sizeof(write), resp, sizeof(resp), 10, 3, 0, ICLASS_READER_TIMEOUT_UPDATE, &eof_time);
+    uint32_t eof_time = 0, start_time = 0;
+    bool isOK = iclass_send_cmd_with_retries(write, sizeof(write), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_UPDATE, &eof_time);
     if (isOK == false) {
         return false;
     }
@@ -1400,21 +1537,103 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data) {
 }
 
 // turn off afterwards
-void iClass_WriteBlock(uint8_t blockno, uint8_t *data) {
+void iClass_WriteBlock(uint8_t *msg) {
+    
     LED_A_ON();
-    uint8_t isOK = iclass_writeblock_ext(blockno, data);
+    
+    iclass_writeblock_req_t *payload = (iclass_writeblock_req_t *)msg;
+
+    uint8_t write[16] = { 0x80 | ICLASS_CMD_UPDATE, payload->req.blockno };
+    
+    Iso15693InitReader();
+    
+    // select tag.
+    uint32_t eof_time = 0;
+    picopass_hdr hdr = {0};
+    bool res = select_iclass_tag( (uint8_t *)&hdr, payload->req.use_credit_key, &eof_time);
+    if (res == false) {
+        goto out;
+    }
+
+    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+    uint8_t mac[4] = {0};
+
+    // authenticate    
+    if (payload->req.do_auth) {
+
+        res = authenticate_iclass_tag(&payload->req, &hdr, &start_time, &eof_time, mac);
+        if (res == false) {
+            goto out;
+        }
+    }
+
+    // calc new mac for write
+    uint8_t wb[9];
+    wb[0] = payload->req.blockno;
+    memcpy(wb + 1, payload->data, 8);
+
+    if (payload->req.use_credit_key)
+        doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+    else
+        doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+   
+    memcpy(write + 2, payload->data, 8);   // data
+    memcpy(write + 10, mac, sizeof(mac));  // mac
+    AddCrc(write + 1, 13);
+
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    
+    uint8_t resp[10] = {0};
+    res = iclass_send_cmd_with_retries(write, sizeof(write), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_UPDATE, &eof_time);
+    if (res == false) {
+        goto out;
+    }
+
+    // verify write
+    uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    if (payload->req.blockno == 2) {
+        // check response. e-purse update swaps first and second half
+        if (memcmp(payload->data + 4, resp, 4) || memcmp(payload->data, resp + 4, 4)) { 
+            res = false;
+            goto out;
+        }
+    } else if (payload->req.blockno == 3 || payload->req.blockno == 4) {
+        // check response. Key updates always return 0xffffffffffffffff
+        if (memcmp(all_ff, resp, 8)) { 
+            res = false;
+            goto out;
+        }
+    } else {
+        // check response. All other updates return unchanged data
+        if (memcmp(payload->data, resp, 8)) { 
+            res = false;
+            goto out;
+        }
+    }
+
+out:
     switch_off();
-    reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
+
+    if (payload->req.send_reply)
+        reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
 }
 
 // turn off afterwards
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
+}
+
+void iClass_Restore(uint8_t *msg) {
+    
+    iclass_restore_req_t *cmd = (iclass_restore_req_t *)msg;
+//    iclass_auth_req_t *req = &cmd->req;
+    
     LED_A_ON();
     uint16_t written = 0;
-    uint16_t total_blocks = (endblock - startblock) + 1;
-    for (uint8_t b = startblock; b < total_blocks; b++) {
+    uint16_t total_blocks = (cmd->end_block - cmd->start_block) + 1;
+    for (uint8_t b = cmd->start_block; b < total_blocks; b++) {
 
-        if (iclass_writeblock_ext(b, data + ((b - startblock) * 12))) {
+        if (iclass_writeblock_ext(b, cmd->data + ((b - cmd->start_block) * 12))) {
             Dbprintf("Write block [%02x] successful", b);
             written++;
         } else {

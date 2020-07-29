@@ -291,19 +291,74 @@ typedef struct {
 
 
 // iCLASS auth request data structure
+// used with read block, dump, write block
 typedef struct {
     uint8_t key[8];
     bool use_raw;
     bool use_elite;
     bool use_credit_key;
+    bool send_reply;
+    bool do_auth;
+    uint8_t blockno;
 } PACKED iclass_auth_req_t;
 
-// iCLASS auth response data structure
+// iCLASS read block response data structure
 typedef struct {
     bool isOK;
     uint8_t div_key[8];
     uint8_t mac[4];
-} PACKED iclass_auth_resp_t;
+    uint8_t data[8];
+} PACKED iclass_readblock_resp_t;
+
+// iCLASS dump data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t start_block;
+    uint8_t end_block;
+} PACKED iclass_dump_req_t;
+
+// iCLASS write block request data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t data[8];
+} PACKED iclass_writeblock_req_t;
+
+// iCLASS dump data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t start_block;
+    uint8_t end_block;
+    uint8_t data[];
+} PACKED iclass_restore_req_t;
+
+
+// iclass / picopass chip config structures and shared routines
+typedef struct {
+    uint8_t app_limit;      //[8]
+    uint8_t otp[2];         //[9-10]
+    uint8_t block_writelock;//[11]
+    uint8_t chip_config;    //[12]
+    uint8_t mem_config;     //[13]
+    uint8_t eas;            //[14]
+    uint8_t fuses;          //[15]
+} picopass_conf_block_t;
+
+// iCLASS secure mode memory mapping
+typedef struct {
+    uint8_t csn[8];
+    picopass_conf_block_t conf;
+    uint8_t epurse[8];
+    uint8_t key_d[8];
+    uint8_t key_c[8];
+    uint8_t app_issuer_area[8];
+} picopass_hdr;
+
+// iCLASS non-secure mode memory mapping
+typedef struct {
+    uint8_t csn[8];
+    picopass_conf_block_t conf;
+    uint8_t app_issuer_area[8];
+} picopass_ns_hdr;
 
 
 // For the bootloader
@@ -485,6 +540,7 @@ typedef struct {
 #define CMD_HF_LEGIC_INFO                                                 0x03BC
 #define CMD_HF_LEGIC_ESET                                                 0x03BD
 
+// iCLASS / Picopass
 #define CMD_HF_ICLASS_READCHECK                                           0x038F
 #define CMD_HF_ICLASS_CLONE                                               0x0390
 #define CMD_HF_ICLASS_DUMP                                                0x0391
@@ -497,6 +553,7 @@ typedef struct {
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
 #define CMD_HF_ICLASS_AUTH                                                0x0399
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
+#define CMD_HF_ICLASS_RESTORE                                             0x039B
 
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE                                            0x03A0
@@ -602,7 +659,7 @@ typedef struct {
 #define FLAG_ICLASS_READER_INIT        0x01
 #define FLAG_ICLASS_READER_CLEARTRACE  0x02
 #define FLAG_ICLASS_READER_ONLY_ONCE   0x04
-#define FLAG_ICLASS_READER_CEDITKEY    0x08
+#define FLAG_ICLASS_READER_CREDITKEY   0x08
 #define FLAG_ICLASS_READER_AIA         0x10
 
 // iCLASS reader status flags

@@ -13,10 +13,14 @@
 #include "BigBuf.h"
 #include "fpgaloader.h"
 #include "util.h"
+#include "ticks.h"
 #include "dbprint.h"
 #include "spiffs.h"
 #include "iclass.h"
+#include "iso15693.h"
 #include "optimized_cipher.h"
+#include "pm3_cmd.h"
+#include "protocols.h"
 
 #define NUM_CSNS                    9
 #define MAC_RESPONSES_SIZE          (16 * NUM_CSNS)
@@ -36,15 +40,8 @@ char* cc_files[] = { HF_ICLASS_CC_A, HF_ICLASS_CC_B };
 #define ICE_STATE_READER      3
 #define ICE_STATE_CONFIGCARD  4
 
-typedef struct {
-    uint8_t app_limit;      //[8]
-    uint8_t otp[2];         //[9-10]
-    uint8_t block_writelock;//[11]
-    uint8_t chip_config;    //[12]
-    uint8_t mem_config;     //[13]
-    uint8_t eas;            //[14]
-    uint8_t fuses;          //[15]
-} picopass_conf_block_t;
+// times in ssp_clk_cycles @ 3,3625MHz when acting as reader
+#define DELAY_ICLASS_VICC_TO_VCD_READER  DELAY_ISO15693_VICC_TO_VCD_READER
 
 // iclass card descriptors
 char * card_types[] = {
@@ -70,8 +67,11 @@ uint8_t card_app2_limit[] = {
 };
 
 static uint8_t aa2_key[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
 static uint8_t legacy_aa1_key[] = {0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78};
+
+static uint8_t get_pagemap(const picopass_hdr *hdr) {
+    return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
+}
 
 static uint8_t csns[8 * NUM_CSNS] = {
     0x01, 0x0A, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
@@ -224,16 +224,10 @@ static int reader_attack_mode(void) {
 static int reader_dump_mode(void) {
     
     BigBuf_free();
+
     uint8_t *card_data = BigBuf_malloc(0xFF * 8);
     memset(card_data, 0xFF, sizeof(card_data));
-
-    struct p {
-        uint8_t key[8];
-        bool use_raw;
-        bool use_elite;
-        bool use_credit_key;
-    } PACKED;
-
+   
     for (;;) {
         
         if (BUTTON_PRESS()) {
@@ -241,65 +235,104 @@ static int reader_dump_mode(void) {
             break;
         }
 
-        // AA1 
-        struct p payload = {
+         // setup authenticate AA1 
+        iclass_auth_req_t auth = {
             .use_raw = false,
             .use_elite = false,
             .use_credit_key = false,
+            .do_auth = true,
+            .send_reply = false,
         };
-        memcpy(payload.key, legacy_aa1_key, sizeof(payload.key));
+        memcpy(auth.key, legacy_aa1_key, sizeof(auth.key));
 
-        bool isOK = iclass_auth((uint8_t*)&payload, false, card_data);        
-        if (isOK == false) {
+
+        Iso15693InitReader();
+
+        // select tag.
+        uint32_t eof_time = 0;
+        bool res = select_iclass_tag(card_data, auth.use_credit_key, &eof_time);
+        if (res == false) {
+            switch_off();
             continue;
         }
-        
-        picopass_conf_block_t *conf = (picopass_conf_block_t*)(card_data + 8);
+       
+        uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
+        picopass_hdr *hdr = (picopass_hdr *)card_data;
+        
         // get 3 config bits
-        uint8_t type = (conf->chip_config & 0x10) >> 2;
-        type |= (conf->mem_config & 0x80) >> 6;
-        type |= (conf->mem_config & 0x20) >> 5;
+        uint8_t type = (hdr->conf.chip_config & 0x10) >> 2;
+        type |= (hdr->conf.mem_config & 0x80) >> 6;
+        type |= (hdr->conf.mem_config & 0x20) >> 5;
 
-        uint8_t app1_limit = conf->app_limit - 5; // minus header blocks
-        uint8_t app2_limit = card_app2_limit[type];
-        
-        
-        uint16_t dumped = 0;
-        uint8_t block;
-        for (block = 5; block < app1_limit; block++) {
-            isOK = iclass_readblock(block, card_data + (8 * block));
-            if (isOK) {
-                dumped++;
+        uint8_t pagemap = get_pagemap(hdr);
+        uint8_t app1_limit, app2_limit, start_block;
+
+        // tags configured for NON SECURE PAGE,  acts different
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+            app1_limit = card_app2_limit[type];
+            app2_limit = 0;
+            start_block = 3;
+        } else {
+
+            app1_limit = hdr->conf.app_limit;
+            app2_limit = card_app2_limit[type];
+            start_block = 6;
+           
+            res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
+            if (res == false) {
+                switch_off();
+                DbpString("failed AA1 auth");
+                continue;
             }
+            
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         }
 
-        // AA2 
-        payload.use_credit_key = true;
-        memcpy(payload.key, aa2_key, sizeof(payload.key));
+        uint16_t dumped = 0;
 
-        isOK = iclass_auth((uint8_t*)&payload, false, card_data);        
-        if (isOK) {
-            for (; block < app2_limit; block++) {
-                isOK = iclass_readblock(block, card_data + (8 * block));
-                if (isOK) {
-                    dumped++;
+        // main read loop
+        for (uint8_t i = start_block; i <= app1_limit; i++) {
+            res = iclass_read_block(i, card_data + (8 * i));
+            if (res) {
+                dumped++;
+            }
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        }
+
+        if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
+           
+            // authenticate AA2 
+            auth.use_credit_key = true;
+            memcpy(auth.key, aa2_key, sizeof(auth.key));
+            
+            res = select_iclass_tag(card_data, auth.use_credit_key, &eof_time);
+            if (res) {        
+                res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
+                if (res) {                    
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    
+                    for (uint8_t i = app1_limit + 1; i <= app2_limit; i++) {
+                        res = iclass_read_block(i, card_data + (8 * i));
+                        if (res) {
+                            dumped++;
+                        }
+                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    }
+                } else {
+                    DbpString("failed AA2 auth");
                 }
             }
         }
 
-        Dbprintf("Found %s", card_types[type]);
-/*
-        Dbprintf("APP1 Blocks: %d", app1_limit); 
-        Dbprintf("APP2 Blocks: %d", app2_limit - app1_limit - 5); // minus app1 and header
-        Dbprintf("Got %d blocks (saving %u, %u bytes )", dumped, dumped + 5, ((dumped+5)*8) ); 
-*/
-        if (5 + dumped > app1_limit) {
-            save_to_flash(card_data, (5 + dumped) * 8 );        
-        }        
+        switch_off();
+        save_to_flash(card_data, (start_block + dumped) * 8 );
+
+        SpinDelay(250);
+        Dbprintf("Found a %s", card_types[type]);
     }
 
-    Dbprintf("exit read & dump mode");
+    Dbprintf("-=[ exiting `read & dump` mode");
     return PM3_SUCCESS;
 }
 
@@ -336,7 +369,7 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_STATE_FULLSIM;
+    uint8_t mode = ICE_STATE_READER;
 
     for (;;) {
 
@@ -344,14 +377,6 @@ void RunMod(void) {
 
         if (mode == ICE_STATE_NONE) break;
         if (data_available()) break;
-
-/*
-        // Was our button held down or pressed?
-        int button_pressed = BUTTON_HELD(1000);
-        if (button_pressed != BUTTON_NO_CLICK) {
-            break;
-        }
-        */
                 
         int res;
         switch (mode) {
@@ -387,7 +412,7 @@ void RunMod(void) {
                 break;
             }
             case ICE_STATE_READER: {
-                Dbprintf("enter read & dump mode");
+                Dbprintf("enter read & dump mode, continuous scanning");
                 res = reader_dump_mode();
                 if (res == PM3_SUCCESS)
                     download_instructions(mode);
