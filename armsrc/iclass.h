@@ -24,6 +24,7 @@ void iClass_Dump(uint8_t *msg);
 void iClass_Restore(uint8_t *msg);
 void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data);
 
+int do_iclass_simulation_nonsec(void);
 int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout,  uint16_t *dataoutlen);
