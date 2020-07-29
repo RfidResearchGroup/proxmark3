@@ -249,11 +249,31 @@ static void opt_MAC(uint8_t *k, uint8_t *input, uint8_t *out) {
     opt_output(k, &_init, out);
 }
 
+static void opt_MAC_N(uint8_t *k, uint8_t *input, uint8_t in_size, uint8_t *out) {
+    State _init  =  {
+        ((k[0] ^ 0x4c) + 0xEC) & 0xFF,// l
+        ((k[0] ^ 0x4c) + 0x21) & 0xFF,// r
+        0x4c, // b
+        0xE012 // t
+    };
+
+    opt_suc(k, &_init, input, in_size, false);
+    opt_output(k, &_init, out);
+}
+
 void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
     opt_MAC(div_key_p, cc_nr_p, dest);
     memcpy(mac, dest, 4);
 }
+
+void doMAC_N(uint8_t *in_p, uint8_t in_size, uint8_t *div_key_p, uint8_t mac[4]) {
+    uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
+    opt_MAC_N(div_key_p, in_p, in_size, dest);
+    memcpy(mac, dest, 4);
+}
+
+
 
 void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4]) {
     State _init  =  {
