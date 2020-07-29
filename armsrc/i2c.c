@@ -713,7 +713,6 @@ bool GetATR(smart_card_atr_t *card_ptr) {
 void SmartCardAtr(void) {
     smart_card_atr_t card;
     LED_D_ON();
-    clear_trace();
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
     bool isOK = GetATR(&card);
@@ -730,10 +729,13 @@ void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data) {
     uint8_t *resp = BigBuf_malloc(ISO7618_MAX_FRAME);
     smartcard_command_t flags = arg0;
 
-    if ((flags & SC_CONNECT))
+    if ((flags & SC_CLEARLOG) == SC_CLEARLOG)
         clear_trace();
 
-    set_tracing(true);
+    if ((flags & SC_LOG) == SC_LOG)
+        set_tracing(true);
+    else 
+        set_tracing(false);
 
     if ((flags & SC_CONNECT)) {
 
