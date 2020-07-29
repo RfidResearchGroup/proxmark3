@@ -1772,6 +1772,7 @@ write_dump:
     
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt") "` to decrypt dump file");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view") "` to view dump file");
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
