@@ -297,7 +297,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define TOPAZ_WRITE_E8                0x54 // Write-with-erase (eight bytes)
 #define TOPAZ_WRITE_NE8               0x1B // Write-no-erase (eight bytes)
 
-
 // Definitions of which protocol annotations there are available
 #define ISO_14443A       0
 #define ICLASS           1
@@ -315,7 +314,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
 
-//-- Picopass fuses
+// Picopass fuses
 #define FUSE_FPERS   0x80
 #define FUSE_CODING1 0x40
 #define FUSE_CODING0 0x20
@@ -324,6 +323,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FUSE_FPROD1  0x04
 #define FUSE_FPROD0  0x02
 #define FUSE_RA      0x01
+
+// Picopass Pagemode fuses
+#define PICOPASS_NON_SECURE_PAGEMODE 0x01
+#define PICOPASS_SECURE_PAGEMODE     0x11
+
 
 // ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_READ_BINARY             0xB0
