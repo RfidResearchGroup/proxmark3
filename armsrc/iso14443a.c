@@ -596,7 +596,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // Set up the demodulator for the reader -> tag commands
     Uart14aInit(receivedCmd, receivedCmdPar);
 
-    DbpString("Starting to sniff");
+    Dbprintf("Starting to sniff. Press PM3 Button to stop.");
 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf8_t *dma = get_dma8();
