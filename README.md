@@ -109,8 +109,9 @@ Offical channels
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Twitter](https://twitter.com/proxmark3/)
-   
- _no discord or slack channel_
+   - [Proxmark3 community discord server](https://discord.gg/zjxc8ZB)
+ 
+ _no slack channel_
 
 Iceman has quite a few videos on his [youtube channel](https://www.youtube.com/c/ChrisHerrmann1001)
 
