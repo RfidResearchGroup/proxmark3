@@ -103,6 +103,8 @@ uint8_t crypto1_byte(struct Crypto1State *s, uint8_t in, int is_encrypted) {
 }
 uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted) {
     uint32_t ret = 0;
+    // note: xor args have been swapped because some compilers emit a warning
+    // for 10^x and 2^x as possible misuses for exponentiation. No comment.
     ret |= crypto1_bit(s, BEBIT(in, 0), is_encrypted) << (24 ^ 0);
     ret |= crypto1_bit(s, BEBIT(in, 1), is_encrypted) << (24 ^ 1);
     ret |= crypto1_bit(s, BEBIT(in, 2), is_encrypted) << (24 ^ 2);
@@ -137,7 +139,7 @@ uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted) {
     ret |= crypto1_bit(s, BEBIT(in, 28), is_encrypted) << (24 ^ 28);
     ret |= crypto1_bit(s, BEBIT(in, 29), is_encrypted) << (24 ^ 29);
     ret |= crypto1_bit(s, BEBIT(in, 30), is_encrypted) << (24 ^ 30);
-    ret |= crypto1_bit(s, BEBIT(in, 31), is_encrypted) << (24^ 31);
+    ret |= crypto1_bit(s, BEBIT(in, 31), is_encrypted) << (24 ^ 31);
     return ret;
 }
 

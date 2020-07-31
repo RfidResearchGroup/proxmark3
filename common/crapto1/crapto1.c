@@ -332,6 +332,8 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb) {
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb) {
 
     uint32_t ret = 0;
+    // note: xor args have been swapped because some compilers emit a warning
+    // for 10^x and 2^x as possible misuses for exponentiation. No comment.
     ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (24 ^ 31);
     ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (24 ^ 30);
     ret |= lfsr_rollback_bit(s, BEBIT(in, 29), fb) << (24 ^ 29);
