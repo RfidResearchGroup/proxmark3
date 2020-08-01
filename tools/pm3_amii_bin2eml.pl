@@ -12,12 +12,13 @@
 # perl -lne 'chomp; s/\s+(\S+)$//;$f=$1;if($f=~s/-(\S+)//){$g=hex($1);}else{$g=hex($f)}$f=hex($f); for$m($f..$g){print "0x" . substr(unpack("H4",pack("n",$m)),1) ." => \"$_\","}' /tmp/game  >> game2
 # perl -lne 'if(/^(\S.*?)\s+\w?\w\w\w\w(\s*-\s*\w?\w\w\w\w)?\s*$/){$l=$1} s/(\w{4,5}\s*-\s*)?(\w{4,5})$//; $a=$1;$b=$2; $b=hex($b); $a=$a?hex($a):$b; for$m($a..$b){print "0x" . substr(unpack("H4",pack("n",$m)),0) ." => \"$l\","}' /tmp/g2
 
-my $BLOCKS = 255;
 my $UIDLOC = -540; # UID is 540 bytes from the end
 my $BLOCKSIZE = 4; # in bytes
 my $AMIITOOL = '../client/amiitool/amiitool'; # path to amiitool (unless in $PATH)
 my $KEYFILE = '../client/amiitool/key_retail.bin'; # path to retail key file
-my $ADDHDR = 1; # add 48 byte header?
+my $ADDHDR = 1; # add 56 byte header?
+my $FIXPWD = 1; # recalculate PWD if dump value is 0
+my $FIXACK = 1; # set ACK if dump value is 0
 my $DECRYPT = 0; # auto-decrypt
 
 my %game = (
@@ -605,59 +606,80 @@ elsif (!$dec_check && !$enc_check)
   die "Does not look like proper file format! Exiting.\n";
 }
 
-my $lines = $BLOCKS;
+my @blocks = ();
 my $uid = unpack("H14",
   substr($file, length($file) + $UIDLOC, 3) .
   substr($file, (length($file) + $UIDLOC) + 4, 4));
 my $pwd = unpack("H8", substr($file, length($file) - 8, 4));
+my $ack = unpack("H8", substr($file, length($file) - 4, 4));
 
-# file does not contain our 48 byte header, let's add it
+my $fixedpwd = 0;
+if ($FIXPWD && hex($pwd) == 0) {
+  # calculate correct amiibo password according to UID
+  err "PWD is blank, recalculating";
+  my $uid_a = hex(substr $uid, 2, 8);
+  my $uid_b = hex(substr $uid, 6, 8);
+  $pwd = sprintf("%08x", $uid_a ^ $uid_b ^ 0xaa55aa55);
+
+  $fixedpwd = 1;
+}
+
+my $fixedack = 0;
+if ($FIXACK && hex($ack) == 0) {
+  # this is the command to be sent back to the Switch if
+  # the Switch sends the correct PWD
+  err "ACK is blank, fixing";
+  $ack = "80808080";
+
+  $fixedack = 1;
+}
+
+# file does not contain our 56 byte header, let's add it
+my $addedhdr = 0;
 if ($ADDHDR && length($file) == -1 * $UIDLOC)
 {
   err "Does not contain header, adding";
   while (<DATA>)
   {
-    $lines--;
     chomp; # there may not be a newline so chomp and add below
-    print "$_\n";
+    push @blocks, $_;
   }
+
+  $addedhdr = 1;
 }
 
+my $pages = 0;
 while (length($file))
 {
   my $out = substr($file, 0, $BLOCKSIZE, ""); # was 16
   $out = unpack("H*", $out);
-  print "$out\n";
+  push @blocks, $out;
 
-  # grab UID
-=cut
-  if ($BLOCKS - $lines == 12)
-  {
-    $uid = substr($out, 0, 6);
-  }
-  elsif ($BLOCKS - $lines == 13)
-  {
-    $uid .= substr($out, 0, 8);
-  }
-=cut
-
-  $lines--;
+  $pages++;
 }
 
-# still need to pad to 255 4-byte (8 hex char) blocks
-if ($lines > 0)
-{
-  while ($lines--)
-  {
-    print "00000000\n";
-  }
+if ($fixedpwd) {
+  @blocks[-2] = $pwd;
 }
 
+if ($fixedack) {
+  @blocks[-1] = $ack;
+}
+
+if ($addedhdr) {
+  @blocks[2] .= sprintf "%02X", ($pages - 1);
+}
+
+# finally, output the data
+foreach(@blocks) {
+  print "$_\n";
+}
 
 print STDERR "\n";
 print STDERR "$_\n" for @err;
 print STDERR "UID: $uid\n";
 print STDERR "PWD: $pwd\n";
+print STDERR "ACK: $ack\n";
 print STDERR "\n";
 $uid = uc $uid;
 #print STDERR "amiitool -d -k ../client/amiitool/key_retail.bin -i $input -o $input.decrypted\n";
@@ -669,13 +691,15 @@ print STDERR "hf 14a sim t 7 u $uid\n";
 __DATA__
 00040402
 01001103
-01000000
-00808000
-92580b4c
-45a9c42f
-a90145ce
-5e5f9c43
-09a43d47
-d232a3d1
-68cbade6
-7f8185c6
+010000
+92580B4C
+45A9C42F
+A90145CE
+5E5F9C43
+09A43D47
+D232A3D1
+68CBADE6
+7F8185C6
+00000000
+00000000
+00000000
