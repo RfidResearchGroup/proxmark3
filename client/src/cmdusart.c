@@ -36,7 +36,7 @@ static int usage_usart_bt_pin(void) {
     PrintAndLogEx(NORMAL, "           d NNNN     Desired PIN");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "      usart btpin 1234");
+    PrintAndLogEx(NORMAL, "      usart btpin d 1234");
     PrintAndLogEx(NORMAL, "expected output: nothing");
     return PM3_SUCCESS;
 }
