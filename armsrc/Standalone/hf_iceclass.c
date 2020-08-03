@@ -227,6 +227,8 @@ static int reader_dump_mode(void) {
 
     uint8_t *card_data = BigBuf_malloc(0xFF * 8);
     memset(card_data, 0xFF, sizeof(card_data));
+
+    bool have_aa2 = memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
    
     for (;;) {
         
@@ -300,7 +302,7 @@ static int reader_dump_mode(void) {
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         }
 
-        if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
+        if (pagemap != PICOPASS_NON_SECURE_PAGEMODE && have_aa2) {
            
             // authenticate AA2 
             auth.use_credit_key = true;
