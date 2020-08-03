@@ -1397,7 +1397,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_REPLAY: {
-            ReaderIClass_Replay(packet->oldarg[0], packet->data.asBytes);
+            struct p {
+                uint8_t reader;
+                uint8_t mac[4];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;            
+            ReaderIClass_Replay(payload->reader, payload->mac);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {

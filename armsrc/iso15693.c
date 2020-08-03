@@ -190,9 +190,13 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 }
 
 static const uint8_t encode_4bits[16] = { 
+//  0     1     2     3
     0xaa, 0x6a, 0x9a, 0x5a,
+//  4     5     6     7
     0xa6, 0x66, 0x96, 0x56,
+//  8     9     A     B
     0xa9, 0x69, 0x99, 0x59,
+//  C    D      E     F
     0xa5, 0x65, 0x95, 0x55
 };
 
@@ -230,9 +234,11 @@ void CodeIso15693AsTag(uint8_t *cmd, size_t len) {
     ts->buf[++ts->max] = 0x1D;  // 00011101
 
     // data
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < len; i += 2) {
         ts->buf[++ts->max] = encode_4bits[cmd[i] & 0xF];
         ts->buf[++ts->max] = encode_4bits[cmd[i] >> 4];
+        ts->buf[++ts->max] = encode_4bits[cmd[i + 1] & 0xF];
+        ts->buf[++ts->max] = encode_4bits[cmd[i + 1] >> 4];
     }
 
     // EOF
@@ -304,8 +310,8 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
 
     LED_C_ON();
     uint8_t bits_to_shift = 0x00;
-    uint8_t bits_to_send = 0x00;
-
+    uint8_t bits_to_send = 0x00;    
+    
     for (size_t c = 0; c < len; c++) {
         for (int i = (c == 0 ? 4 : 7); i >= 0; i--) {
 
@@ -322,12 +328,15 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
         }
         WDT_HIT();
     }
+
     // send the remaining bits, padded with 0:
     bits_to_send = bits_to_shift << (8 - shift_delay);
-    for ( ; ; ) {
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            AT91C_BASE_SSC->SSC_THR = bits_to_send;
-            break;
+    if (bits_to_send) {
+        for ( ; ; ) {
+            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                AT91C_BASE_SSC->SSC_THR = bits_to_send;
+                break;
+            }
         }
     }
     LED_C_OFF();
@@ -614,8 +623,12 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
     int samples = 0, ret = 0;
 
     // the Decoder data structure
-    DecodeTag_t DecodeTag = { 0 };
-    DecodeTagInit(&DecodeTag, response, max_len);
+    DecodeTag_t dtm = { 0 };
+    DecodeTag_t *dt = &dtm;
+    DecodeTagInit(dt, response, max_len);
+    
+    //DecodeTag_t *dt = (DecodeTag_t *)BigBuf_malloc(sizeof(DecodeTag_t));
+    //DecodeTagInit(dt, response, max_len);
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
@@ -665,18 +678,18 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;      // DMA Next Counter registers
         }
 
-        if (Handle15693SamplesFromTag(tagdata, &DecodeTag)) {
+        if (Handle15693SamplesFromTag(tagdata, dt)) {
             *eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM; // end of EOF
-            if (DecodeTag.lastBit == SOF_PART2) {
+            if (dt->lastBit == SOF_PART2) {
                 *eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
             }
-            if (DecodeTag.len > DecodeTag.max_len) {
+            if (dt->len > dt->max_len) {
                 ret = -2; // buffer overflow
             }
             break;
         }
 
-        if (samples > timeout && DecodeTag.state < STATE_TAG_RECEIVING_DATA) {
+        if (samples > timeout && dt->state < STATE_TAG_RECEIVING_DATA) {
             ret = -3;   // timeout
             break;
         }
@@ -686,20 +699,20 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
     FpgaDisableSscDma();
 
     uint32_t sof_time = *eof_time
-                        - (DecodeTag.len * 8 * 8 * 16) // time for byte transfers
+                        - (dt->len * 8 * 8 * 16) // time for byte transfers
                         - (32 * 16)  // time for SOF transfer
-                        - (DecodeTag.lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
+                        - (dt->lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
 
     if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf("samples = %d, ret = %d, Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, posCount = %d, maxlen = %u",
                     samples,
                     ret,
-                    DecodeTag.state,
-                    DecodeTag.lastBit,
-                    DecodeTag.len,
-                    DecodeTag.bitCount,
-                    DecodeTag.posCount,
-                    DecodeTag.max_len
+                    dt->state,
+                    dt->lastBit,
+                    dt->len,
+                    dt->bitCount,
+                    dt->posCount,
+                    dt->max_len
                 );
         Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
     }
@@ -708,8 +721,8 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
         return ret;
     }
 
-    LogTrace_ISO15693(DecodeTag.output, DecodeTag.len, (sof_time * 4), (*eof_time * 4), NULL, false);
-    return DecodeTag.len;
+    LogTrace_ISO15693(dt->output, dt->len, (sof_time * 4), (*eof_time * 4), NULL, false);
+    return dt->len;
 }
 
 
@@ -1049,8 +1062,8 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     bool gotFrame = false;
 
     // the decoder data structure
-    DecodeReader_t DecodeReader = {0};
-    DecodeReaderInit(&DecodeReader, received, max_len, 0, NULL);
+    DecodeReader_t *dr = (DecodeReader_t *)BigBuf_malloc(sizeof(DecodeReader_t));
+    DecodeReaderInit(dr, received, max_len, 0, NULL);
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
@@ -1097,7 +1110,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
         }
 
         for (int i = 7; i >= 0; i--) {
-            if (Handle15693SampleFromReader((b >> i) & 0x01, &DecodeReader)) {
+            if (Handle15693SampleFromReader((b >> i) & 0x01, dr)) {
                 *eof_time = dma_start_time + samples - DELAY_READER_TO_ARM; // end of EOF
                 gotFrame = true;
                 break;
@@ -1110,7 +1123,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
         }
 
         if (BUTTON_PRESS()) {
-            DecodeReader.byteCount = -1;
+            dr->byteCount = -1;
             break;
         }
 
@@ -1121,19 +1134,19 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 
     if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf("samples = %d, gotFrame = %d, Decoder: state = %d, len = %d, bitCount = %d, posCount = %d",
-             samples, gotFrame, DecodeReader.state, DecodeReader.byteCount,
-             DecodeReader.bitCount, DecodeReader.posCount);
+             samples, gotFrame, dr->state, dr->byteCount,
+             dr->bitCount, dr->posCount);
     }
 
-    if (DecodeReader.byteCount >= 0) {
+    if (dr->byteCount >= 0) {
         uint32_t sof_time = *eof_time
-                        - DecodeReader.byteCount * (DecodeReader.Coding == CODING_1_OUT_OF_4 ? 128 : 2048) // time for byte transfers
+                        - dr->byteCount * (dr->Coding == CODING_1_OUT_OF_4 ? 128 : 2048) // time for byte transfers
                         - 32  // time for SOF transfer
                         - 16; // time for EOF transfer
-        LogTrace_ISO15693(DecodeReader.output, DecodeReader.byteCount, (sof_time * 32), (*eof_time * 32), NULL, true);
+        LogTrace_ISO15693(dr->output, dr->byteCount, (sof_time * 32), (*eof_time * 32), NULL, true);
     }
 
-    return DecodeReader.byteCount;
+    return dr->byteCount;
 }
 
 //-----------------------------------------------------------------------------
@@ -1193,19 +1206,19 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     // Count of samples received so far, so that we can include timing
     int samples = 0;
 
-//    DecodeTag_t dtag = {0};
-//    uint8_t response[ISO15693_MAX_RESPONSE_LENGTH] = {0};
-//    DecodeTagInit(&dtag, response, sizeof(response));
-    DecodeTag_t *dtag = (DecodeTag_t *)BigBuf_malloc(sizeof(DecodeTag_t));
-    uint8_t *response = BigBuf_malloc(ISO15693_MAX_RESPONSE_LENGTH);
-    DecodeTagInit(dtag, response, ISO15693_MAX_RESPONSE_LENGTH);
+    DecodeTag_t dtag = {0};
+    uint8_t response[ISO15693_MAX_RESPONSE_LENGTH] = {0};
+    DecodeTagInit(&dtag, response, sizeof(response));
+//    DecodeTag_t *dtag = (DecodeTag_t *)BigBuf_malloc(sizeof(DecodeTag_t));
+//    uint8_t *response = BigBuf_malloc(ISO15693_MAX_RESPONSE_LENGTH);
+//    DecodeTagInit(dtag, response, ISO15693_MAX_RESPONSE_LENGTH);
 
-//    DecodeReader_t dreader = {0};
-//    uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
-//    DecodeReaderInit(&dreader, cmd, sizeof(cmd), jam_search_len, jam_search_string);
-    DecodeReader_t *dreader = (DecodeReader_t *)BigBuf_malloc(sizeof(DecodeReader_t));
-    uint8_t *cmd = BigBuf_malloc(ISO15693_MAX_COMMAND_LENGTH);
-    DecodeReaderInit(dreader, cmd, ISO15693_MAX_COMMAND_LENGTH, jam_search_len, jam_search_string);
+    DecodeReader_t dreader = {0};
+    uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
+    DecodeReaderInit(&dreader, cmd, sizeof(cmd), jam_search_len, jam_search_string);
+//    DecodeReader_t *dreader = (DecodeReader_t *)BigBuf_malloc(sizeof(DecodeReader_t));
+//    uint8_t *cmd = BigBuf_malloc(ISO15693_MAX_COMMAND_LENGTH);
+//    DecodeReaderInit(dreader, cmd, ISO15693_MAX_COMMAND_LENGTH, jam_search_len, jam_search_string);
 
     // Print some debug information about the buffer sizes
     if (DBGLEVEL >= DBG_EXTENDED) {
@@ -1214,7 +1227,18 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         Dbprintf("  Reader -> tag: %i bytes", ISO15693_MAX_COMMAND_LENGTH);
         Dbprintf("  Tag -> Reader: %i bytes", ISO15693_MAX_RESPONSE_LENGTH);
         Dbprintf("  DMA:           %i bytes", DMA_BUFFER_SIZE * sizeof(uint16_t));
+
+        Dbprintf("  Decoder Reader : %u bytes", (uint32_t)&dreader );
+        Dbprintf("  Decode Tag     : %u bytes", (uint32_t)&dtag);
     }
+
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf16_t *dma = get_dma16();
+    
+    Dbprintf("dmabuf      %u", (uint32_t)dma->buf );
+    Dbprintf("dmabuf +1   %u", (uint32_t)dma->buf + 1);
+    Dbprintf("dmabuf +256 %u", (uint32_t)dma->buf + DMA_BUFFER_SIZE);
+    Dbprintf("dmabuf +512 %u", (uint32_t)dma->buf + (DMA_BUFFER_SIZE * 2));
 
     Dbprintf("Starting to sniff. Press PM3 Button to stop.");
 
@@ -1226,11 +1250,11 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     StartCountSspClk();
     
     // The DMA buffer, used to stream samples from the FPGA
-    dmabuf16_t *dma = get_dma16();
+    //dmabuf16_t *dma = get_dma16();
     uint16_t *upTo = dma->buf;
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE * 2) == false) {
         if (DBGLEVEL > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         switch_off();
         return;
@@ -1291,6 +1315,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
         uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) continue;
+        Dbprintf("behindBy %d", behindBy);
 
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                    // we have read all of the DMA buffer content.
 
@@ -1321,69 +1346,69 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         // no need to try decoding reader data if the tag is sending
         if (tag_is_active == false) {
 
-            if (Handle15693SampleFromReader(sniffdata & 0x02, dreader)) {
+            if (Handle15693SampleFromReader(sniffdata & 0x02, &dreader)) {
 
                 uint32_t eof_time = dma_start_time + (samples * 16) + 8 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
-                if (dreader->byteCount > 0) {
+                if (dreader.byteCount > 0) {
                     uint32_t sof_time = eof_time
-                                    - dreader->byteCount * (dreader->Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
+                                    - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
                                     - 32 * 16  // time for SOF transfer
                                     - 16 * 16; // time for EOF transfer
-                    LogTrace_ISO15693(dreader->output, dreader->byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
+                    LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
                 }
                 // And ready to receive another command.
-                DecodeReaderReset(dreader);
+                DecodeReaderReset(&dreader);
                 // And also reset the demod code, which might have been
                 // false-triggered by the commands from the reader.
-                DecodeTagReset(dtag);
+                DecodeTagReset(&dtag);
                 reader_is_active = false;
                 expect_tag_answer = true;
 
-            } else if (Handle15693SampleFromReader(sniffdata & 0x01, dreader)) {
+            } else if (Handle15693SampleFromReader(sniffdata & 0x01, &dreader)) {
 
                 uint32_t eof_time = dma_start_time + (samples * 16) + 16 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
-                if (dreader->byteCount > 0) {
+                if (dreader.byteCount > 0) {
                     uint32_t sof_time = eof_time
-                                    - dreader->byteCount * (dreader->Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
+                                    - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
                                     - 32 * 16  // time for SOF transfer
                                     - 16 * 16; // time for EOF transfer
-                    LogTrace_ISO15693(dreader->output, dreader->byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
+                    LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
                 }
                 // And ready to receive another command
-                DecodeReaderReset(dreader);
+                DecodeReaderReset(&dreader);
 
                 // And also reset the demod code, which might have been
                 // false-triggered by the commands from the reader.
-                DecodeTagReset(dtag);
+                DecodeTagReset(&dtag);
                 reader_is_active = false;
                 expect_tag_answer = true;
 
             } else {
-                reader_is_active = (dreader->state >= STATE_READER_RECEIVE_DATA_1_OUT_OF_4);
+                reader_is_active = (dreader.state >= STATE_READER_RECEIVE_DATA_1_OUT_OF_4);
             }
         }
 
         if (reader_is_active == false && expect_tag_answer) {                       // no need to try decoding tag data if the reader is currently sending or no answer expected yet
 
-            if (Handle15693SamplesFromTag(sniffdata >> 2, dtag)) {
+            if (Handle15693SamplesFromTag(sniffdata >> 2, &dtag)) {
 
                 uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
-                if (dtag->lastBit == SOF_PART2) {
+                if (dtag.lastBit == SOF_PART2) {
                     eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                 }
                 uint32_t sof_time = eof_time
-                                    - dtag->len * 8 * 8 * 16 // time for byte transfers
+                                    - dtag.len * 8 * 8 * 16 // time for byte transfers
                                     - (32 * 16)  // time for SOF transfer
-                                    - (dtag->lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
+                                    - (dtag.lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
 
-                LogTrace_ISO15693(dtag->output, dtag->len, (sof_time * 4), (eof_time * 4), NULL, false);
+                LogTrace_ISO15693(dtag.output, dtag.len, (sof_time * 4), (eof_time * 4), NULL, false);
                 // And ready to receive another response.
-                DecodeTagReset(dtag);
-                DecodeReaderReset(dreader);
+                DecodeTagReset(&dtag);
+                DecodeReaderReset(&dreader);
                 expect_tag_answer = false;
                 tag_is_active = false;
             } else {
-                tag_is_active = (dtag->state >= STATE_TAG_RECEIVING_DATA);
+                tag_is_active = (dtag.state >= STATE_TAG_RECEIVING_DATA);
             }
         }
 
@@ -1394,12 +1419,12 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
     DbpString("Sniff statistics:");
     Dbprintf("  ExpectTagAnswer: %d, TagIsActive: %d, ReaderIsActive: %d", expect_tag_answer, tag_is_active, reader_is_active);
-    Dbprintf("  DecodeTag State: %d", dtag->state);
-    Dbprintf("  DecodeTag byteCnt: %d", dtag->len);
-    Dbprintf("  DecodeTag posCount: %d", dtag->posCount);
-    Dbprintf("  DecodeReader State: %d", dreader->state);
-    Dbprintf("  DecodeReader byteCnt: %d", dreader->byteCount);
-    Dbprintf("  DecodeReader posCount: %d", dreader->posCount);
+    Dbprintf("  DecodeTag State: %d", dtag.state);
+    Dbprintf("  DecodeTag byteCnt: %d", dtag.len);
+    Dbprintf("  DecodeTag posCount: %d", dtag.posCount);
+    Dbprintf("  DecodeReader State: %d", dreader.state);
+    Dbprintf("  DecodeReader byteCnt: %d", dreader.byteCount);
+    Dbprintf("  DecodeReader posCount: %d", dreader.posCount);
     Dbprintf("  Trace length: %d", BigBuf_get_traceLen());
 //    Dbprintf("  Max behindBy: %d", max_behindBy);       
 }

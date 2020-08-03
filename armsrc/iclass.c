@@ -35,8 +35,16 @@
 #include "ticks.h"
 #include "iso15693.h"
 
+static bool is_se(picopass_hdr *hdr) {
+    return ( memcmp(hdr->app_issuer_area, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
+}
+
+static uint8_t get_pagemap(const picopass_hdr *hdr) {
+    return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
+}
+
 // The length of a received command will in most cases be no more than 18 bytes.
-// we expect max 34 bytes as tag answer (response to READ4)
+// we expect max 34 (32+2) bytes as tag answer (response to READ4)
 #ifndef ICLASS_BUFFER_SIZE
 #define ICLASS_BUFFER_SIZE     34 + 2
 #endif
@@ -57,11 +65,6 @@
 
 #define AddCrc(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
 
-/*
-static uint8_t get_pagemap(const picopass_hdr *hdr) {
-    return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
-}
-*/
 
 /*
 * CARD TO READER
@@ -102,7 +105,6 @@ static void CodeIClassTagSOF(void) {
     ts->max++;
 }
 
-
 /*
  * SOF comprises 3 parts;
  * * An unmodulated time of 56.64 us
@@ -138,7 +140,6 @@ static void CodeIClassTagSOF(void) {
  *
  */
 
-
 /**
  * @brief SimulateIClass simulates an iClass card.
  * @param arg0 type of simulation
@@ -154,6 +155,8 @@ static void CodeIClassTagSOF(void) {
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     iclass_simulate(arg0, arg1, arg2, datain, NULL, NULL);
+    
+    DbpString("Button pressed");
 }
 
 void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
@@ -215,14 +218,13 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
         //This is 'full sim' mode, where we use the emulator storage for data.
         //ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
         picopass_hdr *hdr = (picopass_hdr *)BigBuf_get_EM_addr();
-        uint8_t pagemap = (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;  // 0x18
+        uint8_t pagemap = get_pagemap(hdr);
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             do_iclass_simulation_nonsec();
         } else {
             do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
         }
 
-        
     } else if (sim_type == ICLASS_SIM_MODE_CONFIG_CARD) {
 
         // config card 
@@ -355,7 +357,6 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
         // (iceman) this only works for 2KS / 16KS tags.
         // Use application data from block 5
         memcpy(aia_data, emulator + (8 * 5), 8);
-        // older 2K / 16K tags has its application issuer data on block 2
     }
 
     AddCrc(conf_block, 8);
@@ -411,26 +412,26 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     int trace_data_size = 0;
 
     // Respond SOF -- takes 1 bytes
-    uint8_t *resp_sof = BigBuf_malloc(2);
+    uint8_t *resp_sof = BigBuf_malloc(1);
     int resp_sof_len;
 
     // Anticollision CSN (rotated CSN)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_anticoll = BigBuf_malloc(28);
+    uint8_t *resp_anticoll = BigBuf_malloc(22);
     int resp_anticoll_len;
 
-    // CSN
+    // CSN (block 0)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_csn = BigBuf_malloc(28);
+    uint8_t *resp_csn = BigBuf_malloc(22);
     int resp_csn_len;
 
     // configuration (blk 1) PICOPASS 2ks
-    uint8_t *resp_conf = BigBuf_malloc(28);
+    uint8_t *resp_conf = BigBuf_malloc(22);
     int resp_conf_len;
 
     // e-Purse (blk 2)
     // 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
-    uint8_t *resp_cc = BigBuf_malloc(28);
+    uint8_t *resp_cc = BigBuf_malloc(18);
     int resp_cc_len;
 
     // Kd, Kc (blocks 3 and 4). Cannot be read. Always respond with 0xff bytes only
@@ -440,7 +441,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     AddCrc(ff_data, 8);
 
     // Application Issuer Area  (blk 5)
-    uint8_t *resp_aia = BigBuf_malloc(28);
+    uint8_t *resp_aia = BigBuf_malloc(22);
     int resp_aia_len;
 
     // receive command
@@ -448,7 +449,6 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     // Prepare card messages
     tosend_t *ts = get_tosend();
-    ts->max = 0;
 
     // First card answer: SOF
     CodeIClassTagSOF();
@@ -487,11 +487,11 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
-    uint8_t *data_generic_trace = BigBuf_malloc(32 + 2); // 32 bytes data + 2byte CRC is max tag answer
+    uint8_t *data_generic_trace = BigBuf_malloc(34); // 32 bytes data + 2byte CRC is max tag answer
 
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
-    uint8_t *data_response = BigBuf_malloc((32 + 2) * 2 + 2);
+    uint8_t *data_response = BigBuf_malloc((34 * 2) + 3);
 
     enum { IDLE, ACTIVATED, SELECTED, HALTED } chip_state = IDLE;
 
@@ -502,6 +502,13 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     bool exit_loop = false;
     while (exit_loop == false) {
         WDT_HIT();
+
+        // Now look at the reader command and provide appropriate responses
+        // default is no response:
+        modulated_response = NULL;
+        modulated_response_size = 0;
+        trace_data = NULL;
+        trace_data_size = 0;
             
         uint32_t reader_eof_time = 0;
         len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time);
@@ -510,13 +517,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             exit_loop = true;
             continue;
         }
-
-        // Now look at the reader command and provide appropriate responses
-        // default is no response:
-        modulated_response = NULL;
-        modulated_response_size = 0;
-        trace_data = NULL;
-        trace_data_size = 0;
+        
 
         // extra response data
         cmd = receivedCmd[0] & 0xF;
@@ -525,11 +526,9 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
         if (cmd == ICLASS_CMD_ACTALL && len == 1) {   // 0x0A
             // Reader in anti collision phase
-            if (chip_state != HALTED) { 
-                modulated_response = resp_sof;
-                modulated_response_size = resp_sof_len;
-                chip_state = ACTIVATED;
-            }
+            modulated_response = resp_sof;
+            modulated_response_size = resp_sof_len;
+            chip_state = ACTIVATED;
             goto send;
                 
         } else if (cmd == ICLASS_CMD_READ_OR_IDENTIFY && len == 1) { // 0x0C
@@ -542,29 +541,29 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             }
             goto send;
 
-		} else if (cmd == ICLASS_CMD_SELECT && len == 9) {
-			// Reader selects anticollision CSN.
-			// Tag sends the corresponding real CSN
-			if (chip_state == ACTIVATED || chip_state == SELECTED) {
-				if (!memcmp(receivedCmd + 1, anticoll_data, 8)) {
-					modulated_response = resp_csn;
-					modulated_response_size = resp_csn_len;
-					trace_data = csn_data;
-					trace_data_size = sizeof(csn_data);
-					chip_state = SELECTED;
-				} else {
-					chip_state = IDLE;
-				}
-			} else if (chip_state == HALTED) {
-				// RESELECT with CSN
-				if (!memcmp(receivedCmd + 1, csn_data, 8)) {
-					modulated_response = resp_csn;
-					modulated_response_size = resp_csn_len;
-					trace_data = csn_data;
-					trace_data_size = sizeof(csn_data);
-					chip_state = SELECTED;
-				}
-			}
+        } else if (cmd == ICLASS_CMD_SELECT && len == 9) {
+            // Reader selects anticollision CSN.
+            // Tag sends the corresponding real CSN
+            if (chip_state == ACTIVATED || chip_state == SELECTED) {
+                if (!memcmp(receivedCmd + 1, anticoll_data, 8)) {
+                    modulated_response = resp_csn;
+                    modulated_response_size = resp_csn_len;
+                    trace_data = csn_data;
+                    trace_data_size = sizeof(csn_data);
+                    chip_state = SELECTED;
+                } else {
+                    chip_state = IDLE;
+                }
+            } else if (chip_state == HALTED || chip_state == IDLE) {
+                // RESELECT with CSN
+                if (!memcmp(receivedCmd + 1, csn_data, 8)) {
+                    modulated_response = resp_csn;
+                    modulated_response_size = resp_csn_len;
+                    trace_data = csn_data;
+                    trace_data_size = sizeof(csn_data);
+                    chip_state = SELECTED;
+                }
+            }
             goto send;
 
 
@@ -573,72 +572,79 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             if (chip_state != SELECTED) {
                 goto send;
             }
-            // block0,1,2,5 is always readable.
-            switch (block) {
-                case 0: { // csn (0c 00)
-                    modulated_response = resp_csn;
-                    modulated_response_size = resp_csn_len;
-                    trace_data = csn_data;
-                    trace_data_size = sizeof(csn_data);
-                    goto send;
-                }
-                case 1: { // configuration (0c 01)
-                    modulated_response = resp_conf;
-                    modulated_response_size = resp_conf_len;
-                    trace_data = conf_block;
-                    trace_data_size = sizeof(conf_block);
-                    goto send;
-                }
-                case 2: {// e-purse (0c 02)
-                    modulated_response = resp_cc;
-                    modulated_response_size = resp_cc_len;
-                    trace_data = card_challenge_data;
-                    trace_data_size = sizeof(card_challenge_data);
-                    // set epurse of sim2,4 attack
-                    if (reader_mac_buf != NULL) {
-                        memcpy(reader_mac_buf, card_challenge_data, 8);
+            if (simulationMode == ICLASS_SIM_MODE_EXIT_AFTER_MAC) {
+                // provide defaults for blocks 0 ... 5
+            
+                // block0,1,2,5 is always readable.
+                switch (block) {
+                    case 0: { // csn (0c 00)
+                        modulated_response = resp_csn;
+                        modulated_response_size = resp_csn_len;
+                        trace_data = csn_data;
+                        trace_data_size = sizeof(csn_data);
+                        goto send;
                     }
-                    goto send;
-                }
-                case 3:
-                case 4: { // Kd, Kc, always respond with 0xff bytes
+                    case 1: { // configuration (0c 01)
+                        modulated_response = resp_conf;
+                        modulated_response_size = resp_conf_len;
+                        trace_data = conf_block;
+                        trace_data_size = sizeof(conf_block);
+                        goto send;
+                    }
+                    case 2: {// e-purse (0c 02)
+                        modulated_response = resp_cc;
+                        modulated_response_size = resp_cc_len;
+                        trace_data = card_challenge_data;
+                        trace_data_size = sizeof(card_challenge_data);
+                        // set epurse of sim2,4 attack
+                        if (reader_mac_buf != NULL) {
+                            memcpy(reader_mac_buf, card_challenge_data, 8);
+                        }
+                        goto send;
+                    }
+                    case 3:
+                    case 4: { // Kd, Kc, always respond with 0xff bytes
+                        modulated_response = resp_ff;
+                        modulated_response_size = resp_ff_len;
+                        trace_data = ff_data;
+                        trace_data_size = sizeof(ff_data);
+                        goto send;
+                    }
+                    case 5: { // Application Issuer Area (0c 05)
+                        modulated_response = resp_aia;
+                        modulated_response_size = resp_aia_len;
+                        trace_data = aia_data;
+                        trace_data_size = sizeof(aia_data);
+                        goto send;
+                    }
+                } // switch
+            } else if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                if (block == 3 || block == 4) { // Kd, Kc, always respond with 0xff bytes
                     modulated_response = resp_ff;
                     modulated_response_size = resp_ff_len;
                     trace_data = ff_data;
                     trace_data_size = sizeof(ff_data);
-                    goto send;
+                } else { // use data from emulator memory
+                    memcpy(data_generic_trace, emulator + current_page * page_size + 8 * block, 8);
+                    AddCrc(data_generic_trace, 8);
+                    trace_data = data_generic_trace;
+                    trace_data_size = 10;
+                    CodeIso15693AsTag(trace_data, trace_data_size);
+                    memcpy(data_response, ts->buf, ts->max);
+                    modulated_response = data_response;
+                    modulated_response_size = ts->max;
                 }
-                case 5: { // Application Issuer Area (0c 05)
-                    modulated_response = resp_aia;
-                    modulated_response_size = resp_aia_len;
-                    trace_data = aia_data;
-                    trace_data_size = sizeof(aia_data);
-                    goto send;
-                }
-                default : {
-                    if (simulationMode == ICLASS_SIM_MODE_FULL) { // 0x0C
-                        //Read block
-                        //Take the data...
-                        memcpy(data_generic_trace, emulator + (block << 3), 8);
-                        AddCrc(data_generic_trace, 8);
-                        trace_data = data_generic_trace;
-                        trace_data_size = 10;
-                        CodeIso15693AsTag(trace_data, trace_data_size);
-                        memcpy(data_response, ts->buf, ts->max);
-						modulated_response = data_response;
-                        modulated_response_size = ts->max;
-                    }
-                    goto send;
-                }
-            } // swith
+                goto send;
+            }
 
-        } else if (cmd == ICLASS_CMD_READCHECK) {  // 0x88
+        } else if (cmd == ICLASS_CMD_READCHECK && block == 0x02 && len == 2) {  // 0x88
             // Read e-purse KD (88 02)  KC  (18 02)
             if (chip_state != SELECTED) {
                 goto send;
             }
 
-            if ( ICLASS_DEBIT(cmd) ){
+            // debit key
+            if ( receivedCmd[0] == 0x88 ){
                 cipher_state = &cipher_state_KD[current_page];
                 diversified_key = diversified_kd;
             } else {
@@ -671,11 +677,6 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 modulated_response_size = ts->max;
             } else {
                 // Not fullsim, we don't respond
-                // We do not know what to answer, so lets keep quiet
-                modulated_response = resp_sof;
-                modulated_response_size = 0;
-                trace_data = NULL;
-                trace_data_size = 0;
                 chip_state = HALTED;
 
                 if (simulationMode == ICLASS_SIM_MODE_EXIT_AFTER_MAC) {
@@ -716,8 +717,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 goto send;
             }
             //Read block
-            memcpy(data_generic_trace, emulator + (current_page * page_size) + (block * 8), 8 * 4);
-            AddCrc(data_generic_trace, 8 * 4);
+            memcpy(data_generic_trace, emulator + (current_page * page_size) + (block * 8), 32);
+            AddCrc(data_generic_trace, 32);
             trace_data = data_generic_trace;
             trace_data_size = 34;
             CodeIso15693AsTag(trace_data, trace_data_size);
@@ -946,7 +947,7 @@ int do_iclass_simulation_nonsec(void) {
     memcpy(resp_conf, ts->buf, ts->max);
     resp_conf_len = ts->max;
 
-    // Application Issuer Area (block 5)
+    // Application Issuer Area (block 2)
     CodeIso15693AsTag(aia_data, sizeof(aia_data));
     memcpy(resp_aia, ts->buf, ts->max);
     resp_aia_len = ts->max;
@@ -1008,29 +1009,29 @@ int do_iclass_simulation_nonsec(void) {
             }
             goto send;
 
-		} else if (cmd == ICLASS_CMD_SELECT && len == 9) {
-			// Reader selects anticollision CSN.
-			// Tag sends the corresponding real CSN
-			if (chip_state == ACTIVATED || chip_state == SELECTED) {
-				if (!memcmp(receivedCmd + 1, anticoll_data, 8)) {
-					modulated_response = resp_csn;
-					modulated_response_size = resp_csn_len;
-					trace_data = csn_data;
-					trace_data_size = sizeof(csn_data);
-					chip_state = SELECTED;
-				} else {
-					chip_state = IDLE;
-				}
-			} else if (chip_state == HALTED) {
-				// RESELECT with CSN
-				if (!memcmp(receivedCmd + 1, csn_data, 8)) {
-					modulated_response = resp_csn;
-					modulated_response_size = resp_csn_len;
-					trace_data = csn_data;
-					trace_data_size = sizeof(csn_data);
-					chip_state = SELECTED;
-				}
-			}
+        } else if (cmd == ICLASS_CMD_SELECT && len == 9) {
+            // Reader selects anticollision CSN.
+            // Tag sends the corresponding real CSN
+            if (chip_state == ACTIVATED || chip_state == SELECTED) {
+                if (!memcmp(receivedCmd + 1, anticoll_data, 8)) {
+                    modulated_response = resp_csn;
+                    modulated_response_size = resp_csn_len;
+                    trace_data = csn_data;
+                    trace_data_size = sizeof(csn_data);
+                    chip_state = SELECTED;
+                } else {
+                    chip_state = IDLE;
+                }
+            } else if (chip_state == HALTED) {
+                // RESELECT with CSN
+                if (!memcmp(receivedCmd + 1, csn_data, 8)) {
+                    modulated_response = resp_csn;
+                    modulated_response_size = resp_csn_len;
+                    trace_data = csn_data;
+                    trace_data_size = sizeof(csn_data);
+                    chip_state = SELECTED;
+                }
+            }
             goto send;
 
 
@@ -1206,8 +1207,6 @@ static bool iclass_send_cmd_with_retries(uint8_t* cmd, size_t cmdsize, uint8_t* 
         if (expected_size == GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time)) {
             return true;
         }
-
-        *start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     }
     return false;
 }
@@ -1281,8 +1280,8 @@ static bool select_iclass_tag_ex(uint8_t *card_data, bool use_credit_key, uint32
        *status |= (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF);
 
     picopass_hdr *hdr = (picopass_hdr *)card_data;
-    uint8_t pagemap = (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;  // 0x18
 
+    uint8_t pagemap = get_pagemap(hdr);
     if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
 
         //Read App Issuer Area block 5
@@ -1414,7 +1413,7 @@ void ReaderIClass(uint8_t flags) {
 }
 
 // turn off afterwards
-void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
+void ReaderIClass_Replay(uint8_t reader, uint8_t *mac) {
 
     uint8_t cardsize = 0;
     uint8_t mem = 0;
@@ -1540,6 +1539,8 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
               0
              );
     switch_off();
+
+    reply_ng(CMD_HF_ICLASS_REPLAY, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
 }
 
 // used with function select_and_auth (cmdhficlass.c)
@@ -1653,7 +1654,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         check[8] = keys[i].mac[3];
 
         // expect 4bytes, 3 retries times..
-        isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+        isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
         if (isOK)
             goto out;
 
@@ -1672,14 +1673,14 @@ out:
 }
 
 // Tries to read block.
-// retries 10times.
+// retries 3times.
 // reply 8 bytes block
 bool iclass_read_block(uint8_t blockno, uint8_t *data) {
     uint8_t resp[10];
     uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(c + 1, 1);
     uint32_t eof_time = 0, start_time = 0;
-    bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 10, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     if (isOK)
         memcpy(data, resp, 8);
     return isOK;
@@ -1697,7 +1698,7 @@ void iClass_ReadBlock(uint8_t *msg) {
 
     uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, payload->blockno, 0x00, 0x00};
     AddCrc(cmd_read + 1, 1);
-    
+  
     Iso15693InitReader();
     
     // select tag.
@@ -1731,7 +1732,7 @@ void iClass_ReadBlock(uint8_t *msg) {
 
     // read data
     uint8_t resp[10];
-    res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), resp, sizeof(resp), 10, 10, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
     if (res) {
         memcpy(response.data, resp, sizeof(response.data));        
         if (payload->send_reply) { 
@@ -1757,17 +1758,19 @@ void iClass_Dump(uint8_t *msg) {
     
     BigBuf_free();
 
+    iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
+    iclass_auth_req_t *req = &cmd->req;
+
     uint8_t *dataout = BigBuf_malloc(0xFF * 8);
     if (dataout == NULL) {
         DbpString("fail to allocate memory");
-        reply_ng(CMD_HF_ICLASS_DUMP, PM3_EMALLOC, NULL, 0);
+        if (req->send_reply) {
+            reply_ng(CMD_HF_ICLASS_DUMP, PM3_EMALLOC, NULL, 0);
+        }
         switch_off();
         return;
     }
     memset(dataout, 0xFF, 0xFF * 8);
-
-    iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
-    iclass_auth_req_t *req = &cmd->req;
 
     Iso15693InitReader();
     
@@ -1782,12 +1785,11 @@ void iClass_Dump(uint8_t *msg) {
         switch_off();
         return;
     }
-
+   
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     
     // authenticate    
     if (req->do_auth) {
-    
         res = authenticate_iclass_tag(req, &hdr, &start_time, &eof_time, NULL);
         if (res == false) {
             if (req->send_reply) {
@@ -1800,32 +1802,23 @@ void iClass_Dump(uint8_t *msg) {
 
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
+    bool dumpsuccess = true;
+
     // main read loop
-    uint8_t i = cmd->start_block;
-    for (; i <= cmd->end_block; i++) {
-        res = iclass_read_block(i, dataout + (8 * i));
-        if (res == false) {
-            Dbprintf("failed to read block %02X", req->blockno + i);
-            break;
+    uint8_t i;
+    for (i = cmd->start_block; i <= cmd->end_block; i++) {
+
+        uint8_t resp[10];
+        uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, i, 0x00, 0x00};
+        AddCrc(c + 1, 1);
+
+        res = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+        if (res) {
+            memcpy(dataout + (8 * i), resp, 8);
+        } else {
+            Dbprintf("failed to read block %u ( 0x%02x)", i, i);
+            dumpsuccess = false;
         }
-        /*
-        else {
-            Dbprintf("blk: %u (0x%02x) |  %02x %02x %02x %02x %02x %02x %02x %02x ",
-              i,
-              i,
-              dataout[8 * i],
-              dataout[(8 * i) + 1],
-              dataout[(8 * i) + 2],
-              dataout[(8 * i) + 3],
-              dataout[(8 * i) + 4],
-              dataout[(8 * i) + 5],
-              dataout[(8 * i) + 6],
-              dataout[(8 * i) + 7]
-              );
-              
-              
-        }
-        */
     }
 
     switch_off();    
@@ -1845,11 +1838,12 @@ void iClass_Dump(uint8_t *msg) {
             uint32_t bb_offset;
         } PACKED response;
 
-        response.isOK = res;
+        response.isOK = dumpsuccess;
         response.block_cnt = i;
         response.bb_offset = dataout - BigBuf_get_addr();
         reply_ng(CMD_HF_ICLASS_DUMP, PM3_SUCCESS, (uint8_t *)&response, sizeof(response));
     }
+
     BigBuf_free();
 }
 
