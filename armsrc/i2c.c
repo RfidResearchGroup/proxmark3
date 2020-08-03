@@ -631,7 +631,7 @@ int I2C_get_version(uint8_t *maj, uint8_t *min) {
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.
-static bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
+bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
 
     uint8_t i = 3;
     int16_t len = 0;
@@ -658,7 +658,7 @@ static bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
     return true;
 }
 
-bool GetATR(smart_card_atr_t *card_ptr) {
+bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 
     if (!card_ptr)
         return false;
@@ -706,7 +706,10 @@ bool GetATR(smart_card_atr_t *card_ptr) {
     }
 
     card_ptr->atr_len = len;
-    LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
+    if (verbose) {
+        LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
+    }
+
     return true;
 }
 
@@ -715,7 +718,7 @@ void SmartCardAtr(void) {
     LED_D_ON();
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
-    bool isOK = GetATR(&card);
+    bool isOK = GetATR(&card, true);
     reply_mix(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
     set_tracing(false);
     LEDsoff();
@@ -743,7 +746,7 @@ void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data) {
 
         if ((flags & SC_SELECT)) {
             smart_card_atr_t card;
-            bool gotATR = GetATR(&card);
+            bool gotATR = GetATR(&card, true);
             //reply_old(CMD_ACK, gotATR, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
             if (!gotATR)
                 goto OUT;
