@@ -309,7 +309,7 @@ void tosend_stuffbit(int b) {
 
 dmabuf16_t *get_dma16(void) {
     if (dma_16.buf == NULL)
-        dma_16.buf = (uint16_t*)BigBuf_malloc(DMA_BUFFER_SIZE);
+        dma_16.buf = (uint16_t*)BigBuf_malloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
 
     return &dma_16;
 }
