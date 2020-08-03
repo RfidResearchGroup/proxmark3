@@ -12,22 +12,27 @@
   * [ Setup ](#setup)
     * [ Setting up Termux ](#setting-up-termux)
     * [ Install Proxmark3 package ](#install-proxmark3-package)
+  * [ PC-like method ](#pc-like-method)
+    * [ Specific requirements ](#specific-requirements)
     * [ USB_ACM ](#usb_acm)
     * [ Enable the driver ](#enable-the-driver)
     * [ Building the kernel ](#building-the-kernel)
     * [ Flashing the kernel ](#flashing-the-kernel)
-  * [ Testing ](#testing)
-  * [ Troubleshooting ](#troubleshooting)
+    * [ Testing ](#testing)
+    * [ Troubleshooting ](#troubleshooting)
+  * [ TCP bridge method ](#tcp-bridge-method)
+    * [ USB connection ](#usb-connection)
+    * [ USB-UART bridge application ](#usb-uart-bridge-application)
+    * [ Setting up usb socket ](#setting-up-usb-socket)
+    * [ Bluetooth connection ](#bluetooth-connection)
+    * [ BT-UART bridge application ](#bt-uart-bridge-application)
+    * [ Setting up bt socket ](#setting-up-bt-socket)
+    * [ Termux connection ](#termux-connection)
 
 ## Requirements
 ^[Top](#top)
 
 - Android phone
-- Kernel with one of:
-    - USB_ACM driver
-    - module loading enabled
-    - published sources
-- Root
 - [Termux](https://play.google.com/store/apps/details?id=com.termux)
 
 ## Notes
@@ -81,14 +86,31 @@ Install [Termux](https://play.google.com/store/apps/details?id=com.termux) and s
 
 Run the following commands:
 ```
-pkg install proxmark3 tsu
+pkg install proxmark3
 ```
 ### Optional: Building Proxmark3 client from source
 ```
-pkg install make clang clang++ readline libc++ git tsu
+pkg install make clang clang++ readline libc++ git
 git clone https://github.com/RfidResearchGroup/proxmark3.git
 cd proxmark
 make clean && make client
+```
+
+## PC-like method
+^[Top](#top)
+
+### Specific requirements
+^[Top](#top)
+
+- Kernel with one of:
+    - USB_ACM driver
+    - module loading enabled
+    - published sources
+- Root
+
+termux shell:
+```
+pkg install tsu
 ```
 
 ### USB_ACM
@@ -125,3 +147,53 @@ Everything should work just like if it was your PC!
 
 - `dmesg | grep usb` - useful debug info
 - `/proc/config.gz` - contains your kernel's build configuration. Look for `CONFIG_USB_ACM`, which should be enabled
+
+## TCP bridge method
+^[Top](#top)
+
+Termux doesn't come with usb serial neither bluetooth serial drivers.
+However, it is fully integrated with phone's network, so we need to talk to the proxmark using serial to tcp sockets (carried out by android apps).
+
+### USB connection
+^[Top](#top)
+
+### USB-UART Bridge Application
+^[Top](#top)
+
+Install [this free app](https://play.google.com/store/apps/details?id=com.hardcodedjoy.tcpuart) on the Play Store
+
+### Setting up usb socket
+^[Top](#top)
+
+The app lets you choose the baudrate. Default value (115 200 baud) is fine.
+Plug the PM3 in and click connect.
+Set the toggle in server mode and choose a random port not used by system (e.g. 4321) and start the server.
+
+### Bluetooth connection
+^[Top](#top)
+
+### BT-UART Bridge Application
+^[Top](#top)
+
+Install [this free app](https://play.google.com/store/apps/details?id=masar.bb) or [the paid version](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) (which includes usb bridge)
+
+### Setting up bt socket
+^[Top](#top)
+
+You need to pair the proxmark3 in the Android settings.
+In the app choose your registred PM3 device as 'device A'.
+Select TCP server as 'Device B' and choose an unused port (e.g. 4321).
+Ensure 'Retransmission' is set to 'both ways'.
+
+### Termux connection
+^[Top](#top)
+
+Start a new session, then:
+```
+proxmark3 tcp:localhost:<chosenPort>
+```
+Alternatively, if you have made the client in the git repo:
+```
+./client/proxmark3 tcp:localhost:<chosenPort>
+```
+ENJOY !

@@ -57,7 +57,7 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 This repo compiles nicely on 
    - Proxspace v3.x
-     - [latest release v3.4](https://github.com/Gator96100/ProxSpace/releases)
+     - [latest release v3.5](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/mingw environment with Qt5.6.1 & GCC 4.9
    - Ubuntu 1604 -> 2004
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
@@ -109,8 +109,9 @@ Offical channels
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Twitter](https://twitter.com/proxmark3/)
-   
- _no discord or slack channel_
+   - [Proxmark3 community discord server](https://discord.gg/zjxc8ZB)
+ 
+ _no slack channel_
 
 Iceman has quite a few videos on his [youtube channel](https://www.youtube.com/c/ChrisHerrmann1001)
 
