@@ -475,9 +475,15 @@ static void fuse_config(const picopass_hdr *hdr) {
 }
 
 static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *app_areas, uint8_t *kb) {
-    // mem-bit 5, mem-bit 7, chip-bit 4: defines chip type
+    // How to determine chip type  
+
+    // mem-bit 7 = 16K 
+    // mem-bit 5 = Book
+    // mem-bit 4 = 2K
+    // chip-bit 4 = Multi App
+
     uint8_t k16 = isset(mem_cfg, 0x80);
-    //uint8_t k2 = isset(mem_cfg, 0x08);
+    //uint8_t k2 = isset(mem_cfg, 0x10);
     uint8_t book = isset(mem_cfg, 0x20);
 
     if (isset(chip_cfg, 0x10) && !k16 && !book) {
@@ -502,12 +508,14 @@ static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *app_areas, 
 }
 
 static uint8_t get_mem_config(const picopass_hdr *hdr) {
-    uint8_t mem = hdr->conf.mem_config;
-    uint8_t chip = hdr->conf.chip_config;
     // three configuration bits that decides sizes
-    uint8_t type = (chip & 0x10) >> 2;
-    type |= (mem & 0x80) >> 6;
-    type |= (mem & 0x20) >> 5;
+    uint8_t type = (hdr->conf.chip_config & 0x10) >> 2;
+    // 16K bit  0 ==  1==
+    type |= (hdr->conf.mem_config & 0x80) >> 6;
+    //  BOOK bit 0 ==  1==
+    type |= (hdr->conf.mem_config & 0x20) >> 5;
+    // 2K
+    //type |= (hdr->conf.mem_config & 0x10) >> 5;
     return type;
 }
 
@@ -532,7 +540,7 @@ static void mem_app_config(const picopass_hdr *hdr) {
         return;
     }
 
-    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u bytes)", kb, app_areas, app2_limit * 8);
+    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u bytes)", kb, app_areas, (app2_limit + 1) * 8);
     PrintAndLogEx(INFO, "    AA1 blocks %u { 0x06 - 0x%02X (06 - %02d) }", app1_limit , app1_limit + 5, app1_limit + 5);
     PrintAndLogEx(INFO, "    AA2 blocks %u { 0x%02X - 0x%02X (%02d - %02d) }", app2_limit - app1_limit, app1_limit + 5 + 1, app2_limit, app1_limit + 5 + 1, app2_limit);
 
@@ -1628,7 +1636,7 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     struct p_resp {
         bool isOK;
-        uint8_t block_cnt;
+        uint16_t block_cnt;
         uint32_t bb_offset;
     } PACKED;
     struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
@@ -2351,6 +2359,16 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
 
+    picopass_hdr *hdr = (picopass_hdr *)iclass_dump;
+//    picopass_ns_hdr *ns_hdr = (picopass_ns_hdr *)iclass_dump;
+//    uint8_t pagemap = get_pagemap(hdr);
+//    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) { } 
+    
+    uint8_t lock = hdr->conf.block_writelock;
+
+    // is chip in ReadOnly (RO)
+    bool ro = ((lock & 0x80) == 0);
+
     uint8_t maxmemcount;
     uint8_t filemaxblock = filesize / 8;
     uint8_t mem_config = iclass_dump[13];
@@ -2384,7 +2402,44 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     PrintAndLogEx(INFO, "------+----+-------------------------+----------");
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
-        PrintAndLogEx(INFO, "      |0x%02X| %s", i, sprint_hex_ascii(blk, 8));
+        
+        bool bl_lock = false;
+        if ( ro == false ) {
+            switch(i) {
+                case 12: { 
+                    bl_lock = ((lock & 0x40) == 0);
+                    break;
+                }
+                case 11: {
+                    bl_lock = ((lock & 0x20) == 0);
+                    break;
+                }
+                case 10: {
+                    bl_lock = ((lock & 0x10) == 0);
+                    break;
+                }
+                case 9: {
+                    bl_lock = ((lock & 0x08) == 0);
+                    break;
+                }
+                case 8: {
+                    bl_lock = ((lock & 0x04) == 0);
+                    break;
+                }
+                case 7: {
+                    bl_lock = ((lock & 0x02) == 0);
+                    break;
+                }
+                case 6: {
+                    bl_lock = ((lock & 0x01) == 0);
+                    break;
+                }
+            }
+        } else {
+            bl_lock = true;
+        }
+        
+        PrintAndLogEx(INFO, "  %c   |0x%02X| %s", (bl_lock) ? 'x' : ' ', i, sprint_hex_ascii(blk, 8));
         i++;
     }
     PrintAndLogEx(INFO, "------+----+-------------------------+----------");
@@ -2579,6 +2634,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     }
 
     HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, old_elite, true);
+    
     return PM3_SUCCESS;
 }
 
