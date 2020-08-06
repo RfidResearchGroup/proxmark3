@@ -41,7 +41,13 @@ char* cc_files[] = { HF_ICLASS_CC_A, HF_ICLASS_CC_B };
 #define ICE_STATE_CONFIGCARD  4
 
 // times in ssp_clk_cycles @ 3,3625MHz when acting as reader
+#ifndef DELAY_ICLASS_VICC_TO_VCD_READER
 #define DELAY_ICLASS_VICC_TO_VCD_READER  DELAY_ISO15693_VICC_TO_VCD_READER
+#endif
+
+#ifndef ICLASS_16KS_SIZE
+#define ICLASS_16KS_SIZE       0x100 * 8
+#endif
 
 // iclass card descriptors
 char * card_types[] = {
@@ -68,6 +74,10 @@ uint8_t card_app2_limit[] = {
 
 static uint8_t aa2_key[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t legacy_aa1_key[] = {0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78};
+
+static bool have_aa2(void) {
+    return memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+}
 
 static uint8_t get_pagemap(const picopass_hdr *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
@@ -111,6 +121,10 @@ static void download_instructions(uint8_t t) {
     }
 }
 
+//
+// Save to flash if file doesn't exist.
+// Write over file if size of flash file is less than new datalen
+//
 static void save_to_flash(uint8_t *data, uint16_t datalen) {
 
     rdv40_spiffs_lazy_mount();
@@ -121,22 +135,33 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
         data[4], data[5], data[6], data[7]
     );
 
+    int res;
     if (exists_in_spiffs(fn) == false) {
-        int res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
+        res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
         if (res == SPIFFS_OK) {
             Dbprintf("Saved to `" _YELLOW_("%s") "`", fn);
-        } else {
-            Dbprintf("error writing `" _YELLOW_("%s") "`", fn);
         } 
+    } else {
+        
+        // if already exist,  see if saved file is smaller..
+        uint32_t fsize = 0;
+        res = rdv40_spiffs_stat(fn, &fsize, RDV40_SPIFFS_SAFETY_SAFE);
+        if (res == SPIFFS_OK) {           
+
+            if (fsize < datalen) {
+                res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
+                if (res == SPIFFS_OK) {
+                    Dbprintf("Wrote over `" _YELLOW_("%s") "`", fn);
+                }                 
+            }
+        }
     }    
 
     rdv40_spiffs_lazy_unmount();
 }
 
 static int fullsim_mode(void) {
-
-    bool have_aa2 = memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
-    
+   
     rdv40_spiffs_lazy_mount();
   
     SpinOff(0);
@@ -161,7 +186,7 @@ static int fullsim_mode(void) {
         }
 
         // create diversified key AA2/KC if not in dump.
-        if (have_aa2) {
+        if (have_aa2()) {
             if (memcmp(hdr->key_c, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
                 uint8_t ccnr[12] = {0};
                 memcpy(ccnr, hdr->epurse, 8);                   
@@ -232,15 +257,17 @@ static int reader_attack_mode(void) {
 
 static int reader_dump_mode(void) {
     
-    bool have_aa2 = (memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) != 0);
-    
+    DbpString("This mode has no tracelog");
+    if (have_aa2())
+        DbpString("Dumping of " _YELLOW_("AA2 enabled"));
+
     for (;;) {
 
         BigBuf_free();
     
-        uint8_t *card_data = BigBuf_malloc(0x100 * 8);
-        memset(card_data, 0xFF, sizeof(card_data));
-        
+        uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
+        memset(card_data, 0xFF, ICLASS_16KS_SIZE);
+       
         if (BUTTON_PRESS()) {
             DbpString("button pressed");
             break;
@@ -257,6 +284,7 @@ static int reader_dump_mode(void) {
         memcpy(auth.key, legacy_aa1_key, sizeof(auth.key));
 
         Iso15693InitReader();
+        set_tracing(false);
 
         // select tag.
         uint32_t eof_time = 0;
@@ -265,15 +293,23 @@ static int reader_dump_mode(void) {
             switch_off();
             continue;
         }
-       
-        uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
         picopass_hdr *hdr = (picopass_hdr *)card_data;
-        
+                
+        // sanity check of CSN.
+        if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
+            switch_off();
+            continue;
+        }
+       
+        uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+      
         // get 3 config bits
         uint8_t type = (hdr->conf.chip_config & 0x10) >> 2;
         type |= (hdr->conf.mem_config & 0x80) >> 6;
         type |= (hdr->conf.mem_config & 0x20) >> 5;
+
+        Dbprintf("Found " _GREEN_("%s") " dumping...", card_types[type]);
 
         uint8_t pagemap = get_pagemap(hdr);
         uint8_t app1_limit, app2_limit, start_block;
@@ -292,7 +328,7 @@ static int reader_dump_mode(void) {
             res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
             if (res == false) {
                 switch_off();
-                DbpString("failed AA1 auth");
+                Dbprintf("%s found, " _RED_("failed AA1 auth") " , skipping ", card_types[type]);
                 continue;
             }
             
@@ -303,13 +339,12 @@ static int reader_dump_mode(void) {
           
         // main read loop
         for (uint16_t i = start_block; i <= app1_limit; i++) {
-
-            if (iclass_read_block(i, card_data + (8 * i))) {
+            if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
                 dumped++;
             }
         }
 
-        if (pagemap != PICOPASS_NON_SECURE_PAGEMODE && have_aa2) {
+        if (pagemap != PICOPASS_NON_SECURE_PAGEMODE && have_aa2()) {
           
             // authenticate AA2 
             auth.use_raw = false;
@@ -319,32 +354,39 @@ static int reader_dump_mode(void) {
             res = select_iclass_tag(card_data, auth.use_credit_key, &eof_time);
             if (res) {  
 
+                // sanity check of CSN.
+                if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
+                    switch_off();
+                    continue;
+                }
+
                 res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
                 if (res) {
-
                     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                     
                     for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
-                        if (iclass_read_block(i, card_data + (8 * i))) {
+                        if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
                             dumped++;
                         }
-                        //start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                     }
                 } else {
-                    DbpString("failed AA2 auth");
+                    DbpString(_RED_("failed AA2 auth"));
                 }
             } else {
-                DbpString("failed AA2 selecting");
+                DbpString(_RED_("failed selecting AA2"));
+
+                // sanity check of CSN.
+                if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
+                    switch_off();
+                    continue;
+                }
             }
         }
-
         switch_off();
-
         save_to_flash(card_data, (start_block + dumped) * 8 );
-        Dbprintf("Found a %s  (blocks dumped %u)", card_types[type], dumped);
+        Dbprintf("%u bytes saved", (start_block + dumped) * 8);
     }
-
-    DbpString("-=[ exiting `read & dump` mode");
+    DbpString("-=[ exiting " _YELLOW_("`read & dump`") " mode ]=-");
     return PM3_SUCCESS;
 }
 

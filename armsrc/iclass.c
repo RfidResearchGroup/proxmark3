@@ -45,6 +45,10 @@ static uint8_t get_pagemap(const picopass_hdr *hdr) {
 #define ICLASS_BUFFER_SIZE     34 + 2
 #endif
 
+#ifndef ICLASS_16KS_SIZE
+#define ICLASS_16KS_SIZE       0x100 * 8
+#endif
+
 // iCLASS has a slightly different timing compared to ISO15693. According to the picopass data sheet the tag response is expected 330us after
 // the reader command. This is measured from end of reader EOF to first modulation of the tag's SOF which starts with a 56,64us unmodulated period.
 // 330us = 140 ssp_clk cycles @ 423,75kHz when simulating.
@@ -162,7 +166,9 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
     Iso15693InitTag();
    
     clear_trace();
-    set_tracing(true);
+    
+    // only logg if we are called from the client.
+    set_tracing(send_reply);
 
     //Use the emulator memory for SIM
     uint8_t *emulator = BigBuf_get_EM_addr();
@@ -1242,12 +1248,14 @@ static bool select_iclass_tag_ex(uint8_t *card_data, bool use_credit_key, uint32
 
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
-    static uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
+    uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t read_aia[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
     uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
+    picopass_hdr *hdr = (picopass_hdr *)card_data;
+    
     // Bit 4: K.If this bit equals to one, the READCHECK will use the Credit Key (Kc); if equals to zero, Debit Key (Kd) will be used
     // bit 7: parity.
     if (use_credit_key)
@@ -1281,8 +1289,8 @@ static bool select_iclass_tag_ex(uint8_t *card_data, bool use_credit_key, uint32
     if (len != 10)
         return false;
 
-    //Save CSN in response data
-    memcpy(card_data, resp, 8);
+    // save CSN
+    memcpy(hdr->csn, resp, sizeof(hdr->csn));
 
     // card selected, now read config (block1) (only 8 bytes no CRC)
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -1293,18 +1301,16 @@ static bool select_iclass_tag_ex(uint8_t *card_data, bool use_credit_key, uint32
     if (len != 10)
         return false;
 
-    //Save CONF in response data
-    memcpy(card_data + 8, resp, 8);
+    // save CONF
+    memcpy( (uint8_t*)&hdr->conf, resp, sizeof(hdr->conf));
     
    if (status)
        *status |= (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF);
 
-    picopass_hdr *hdr = (picopass_hdr *)card_data;
-
     uint8_t pagemap = get_pagemap(hdr);
     if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
 
-        //Read App Issuer Area block 5
+        // read App Issuer Area block 5
         start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         iclass_send_as_reader(read_aia, sizeof(read_aia), &start_time, eof_time);
        
@@ -1315,7 +1321,7 @@ static bool select_iclass_tag_ex(uint8_t *card_data, bool use_credit_key, uint32
         
         if (status) {
             *status |= FLAG_ICLASS_AIA;
-            memcpy(card_data + (8 * 5), resp, 8);
+            memcpy(hdr->app_issuer_area, resp, sizeof(hdr->app_issuer_area));
         }
 
         // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
@@ -1327,12 +1333,12 @@ static bool select_iclass_tag_ex(uint8_t *card_data, bool use_credit_key, uint32
         if (len != 8)
             return false;
 
-        memcpy(card_data + (8 * 2), resp, 8);
+        memcpy(hdr->epurse, resp, sizeof(hdr->epurse));
         *status |= FLAG_ICLASS_CC;
                 
     }  else {
 
-        //Read App Issuer Area block 2
+        // read App Issuer Area block 2
         read_aia[1] = 0x02;
         read_aia[2] = 0x61;
         read_aia[3] = 0x10;
@@ -1593,8 +1599,6 @@ bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr *hdr, uint
     else
         memcpy(hdr->key_d, div_key, sizeof(hdr->key_d));
 
-//    Dbhexdump(sizeof(div_key), div_key, false);
-
     opt_doReaderMAC(ccnr, div_key, pmac);
 
     // copy MAC to check command (readersignature)
@@ -1603,7 +1607,7 @@ bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr *hdr, uint
     cmd_check[7] = pmac[2];
     cmd_check[8] = pmac[3];
 
-    return iclass_send_cmd_with_retries(cmd_check, sizeof(cmd_check), resp_auth, sizeof(resp_auth), 4, 3, start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+    return iclass_send_cmd_with_retries(cmd_check, sizeof(cmd_check), resp_auth, sizeof(resp_auth), 4, 2, start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time);
 }
 
 typedef struct iclass_premac {
@@ -1695,12 +1699,11 @@ out:
 // Tries to read block.
 // retries 3times.
 // reply 8 bytes block
-bool iclass_read_block(uint8_t blockno, uint8_t *data) {
+bool iclass_read_block(uint16_t blockno, uint8_t *data, uint32_t *start_time, uint32_t *eof_time) {
     uint8_t resp[10];
     uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(c + 1, 1);
-    uint32_t eof_time = 0, start_time = 0;
-    bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 2, start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time);
     if (isOK)
         memcpy(data, resp, 8);
     return isOK;
