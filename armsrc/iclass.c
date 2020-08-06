@@ -35,10 +35,6 @@
 #include "ticks.h"
 #include "iso15693.h"
 
-static bool is_se(picopass_hdr *hdr) {
-    return ( memcmp(hdr->app_issuer_area, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
-}
-
 static uint8_t get_pagemap(const picopass_hdr *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
 }
@@ -53,7 +49,7 @@ static uint8_t get_pagemap(const picopass_hdr *hdr) {
 // the reader command. This is measured from end of reader EOF to first modulation of the tag's SOF which starts with a 56,64us unmodulated period.
 // 330us = 140 ssp_clk cycles @ 423,75kHz when simulating.
 // 56,64us = 24 ssp_clk_cycles
-#define DELAY_ICLASS_VCD_TO_VICC_SIM     (140 - 24)
+#define DELAY_ICLASS_VCD_TO_VICC_SIM     (140 - 26) // (140 - 24)
 
 // times in ssp_clk_cycles @ 3,3625MHz when acting as reader
 #define DELAY_ICLASS_VICC_TO_VCD_READER  DELAY_ISO15693_VICC_TO_VCD_READER
@@ -377,6 +373,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     // the page is then "in application mode".
     bool personalization_mode = conf_block[7] & 0x80;
 
+    uint8_t block_wr_lock = conf_block[3];
+    
     // chip memory may be divided in 8 pages
     uint8_t max_page = ((conf_block[4] & 0x10) == 0x10) ? 0 : 7;
 
@@ -518,7 +516,6 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             continue;
         }
         
-
         // extra response data
         cmd = receivedCmd[0] & 0xF;
         options = (receivedCmd[0] >> 4) & 0xFF;
@@ -734,6 +731,16 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             if (chip_state != SELECTED) {
                 goto send;
             }
+            // is chip in ReadOnly (RO)
+            if ((block_wr_lock & 0x80) == 0) goto send;
+
+            if ( block == 12 && (block_wr_lock & 0x40) == 0) goto send;
+            if ( block == 11 && (block_wr_lock & 0x20) == 0) goto send;
+            if ( block == 10 && (block_wr_lock & 0x10) == 0) goto send;
+            if ( block ==  9 && (block_wr_lock & 0x08) == 0) goto send;
+            if ( block ==  8 && (block_wr_lock & 0x04) == 0) goto send;
+            if ( block ==  7 && (block_wr_lock & 0x02) == 0) goto send;
+            if ( block ==  6 && (block_wr_lock & 0x01) == 0) goto send;
 
             if (block == 2) { // update e-purse
                 memcpy(card_challenge_data, receivedCmd + 2, 8);
@@ -795,7 +802,13 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
             if (simulationMode == ICLASS_SIM_MODE_FULL && max_page > 0) {
 
-                current_page = receivedCmd[1];
+                // if on 2k,  always ignore 3msb,  & 0x1F)
+                uint8_t page = receivedCmd[1] & 0x1F;
+                if ( page > max_page) {
+                    goto send;
+                }
+
+                current_page = page;
 
                 memcpy(data_generic_trace, emulator + (current_page * page_size) + (8 * 1), 8);
                 memcpy(diversified_kd, emulator + (current_page * page_size) + (8 * 3), 8);
@@ -804,6 +817,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 cipher_state = &cipher_state_KD[current_page];
 
                 personalization_mode = data_generic_trace[7] & 0x80;
+                block_wr_lock = data_generic_trace[3];
+                
                 AddCrc(data_generic_trace, 8);
 
                 trace_data = data_generic_trace;
@@ -833,6 +848,11 @@ send:
             uint32_t response_time = reader_eof_time + DELAY_ICLASS_VCD_TO_VICC_SIM;
             TransmitTo15693Reader(modulated_response, modulated_response_size, &response_time, 0, false);
             LogTrace_ISO15693(trace_data, trace_data_size, response_time * 32, (response_time * 32) + (modulated_response_size * 32 * 64), NULL, false);
+        }
+        
+        if (chip_state == HALTED) {
+            uint32_t wait_time = GetCountSspClk() + ICLASS_READER_TIMEOUT_ACTALL;
+            while (GetCountSspClk() < wait_time) {};
         }
     }
 
@@ -1540,7 +1560,7 @@ void ReaderIClass_Replay(uint8_t reader, uint8_t *mac) {
              );
     switch_off();
 
-    reply_ng(CMD_HF_ICLASS_REPLAY, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
+//    reply_ng(CMD_HF_ICLASS_REPLAY, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
 }
 
 // used with function select_and_auth (cmdhficlass.c)
@@ -1761,7 +1781,7 @@ void iClass_Dump(uint8_t *msg) {
     iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
     iclass_auth_req_t *req = &cmd->req;
 
-    uint8_t *dataout = BigBuf_malloc(0xFF * 8);
+    uint8_t *dataout = BigBuf_malloc(0x100 * 8);
     if (dataout == NULL) {
         DbpString("fail to allocate memory");
         if (req->send_reply) {
@@ -1770,7 +1790,7 @@ void iClass_Dump(uint8_t *msg) {
         switch_off();
         return;
     }
-    memset(dataout, 0xFF, 0xFF * 8);
+    memset(dataout, 0xFF, 0x100 * 8);
 
     Iso15693InitReader();
     
@@ -1805,7 +1825,7 @@ void iClass_Dump(uint8_t *msg) {
     bool dumpsuccess = true;
 
     // main read loop
-    uint8_t i;
+    uint16_t i;
     for (i = cmd->start_block; i <= cmd->end_block; i++) {
 
         uint8_t resp[10];
@@ -1834,7 +1854,7 @@ void iClass_Dump(uint8_t *msg) {
     if (req->send_reply) {
         struct p {
             bool isOK;
-            uint8_t block_cnt;
+            uint16_t block_cnt;
             uint32_t bb_offset;
         } PACKED response;
 
