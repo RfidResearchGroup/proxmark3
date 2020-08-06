@@ -552,7 +552,7 @@ void rdv40_spiffs_safe_print_fsinfo(void) {
     Dbprintf("  Max Path Length............" _YELLOW_("%d")" chars", fsinfo.maxPathLength);
     DbpString("");
     Dbprintf("  filesystem    size      used        available    use%    mounted");
-    Dbprintf("  spiffs        %6d B      %6d B    %6d B"_YELLOW_("%2d%")"    /"
+    Dbprintf("  spiffs        %6d B %6d B    %6d B      " _YELLOW_("%2d%")"     /"
              , fsinfo.totalBytes
              , fsinfo.usedBytes
              , fsinfo.freeBytes
