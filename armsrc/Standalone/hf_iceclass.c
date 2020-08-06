@@ -135,6 +135,8 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
 
 static int fullsim_mode(void) {
 
+    bool have_aa2 = memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+    
     rdv40_spiffs_lazy_mount();
   
     SpinOff(0);
@@ -145,21 +147,28 @@ static int fullsim_mode(void) {
     if (res == SPIFFS_OK) {
         Dbprintf("loaded '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' (%u bytes) to emulator memory", fsize);
     }
+           
+    picopass_hdr *hdr = (picopass_hdr *)emul;
+    
+    uint8_t pagemap = get_pagemap(hdr);
+    if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
+        // create diversified key AA1/KD if not in dump.
+        if ( memcmp(hdr->key_d, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
+            uint8_t ccnr[12] = {0};
+            memcpy(ccnr, hdr->epurse, 8); 
+            bool use_elite = false;
+            iclass_calc_div_key(emul, legacy_aa1_key, hdr->key_d, use_elite);       
+        }
 
-    // create diversified key AA1/KD if not in dump.
-    if ( memcmp(emul + (3 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
-        uint8_t ccnr[12] = {0};
-        memcpy(ccnr, emul + (2 * 8), 8);                   
-        bool use_elite = false;
-        iclass_calc_div_key(emul, legacy_aa1_key, emul + (3 * 8), use_elite);       
-    }
-
-    // create diversified key AA2/KC if not in dump.
-    if ( memcmp(emul + (4 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
-        uint8_t ccnr[12] = {0};
-        memcpy(ccnr, emul + (2 * 8), 8);                   
-        bool use_elite = false;
-        iclass_calc_div_key(emul, aa2_key, emul + (4 * 8), use_elite);       
+        // create diversified key AA2/KC if not in dump.
+        if (have_aa2) {
+            if (memcmp(hdr->key_c, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
+                uint8_t ccnr[12] = {0};
+                memcpy(ccnr, hdr->epurse, 8);                   
+                bool use_elite = false;
+                iclass_calc_div_key(emul, aa2_key, hdr->key_c, use_elite);       
+            }
+        }
     }
 
     iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
@@ -223,14 +232,14 @@ static int reader_attack_mode(void) {
 
 static int reader_dump_mode(void) {
     
-    BigBuf_free();
-
-    uint8_t *card_data = BigBuf_malloc(0xFF * 8);
-    memset(card_data, 0xFF, sizeof(card_data));
-
-    bool have_aa2 = memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
-   
+    bool have_aa2 = (memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) != 0);
+    
     for (;;) {
+
+        BigBuf_free();
+    
+        uint8_t *card_data = BigBuf_malloc(0x100 * 8);
+        memset(card_data, 0xFF, sizeof(card_data));
         
         if (BUTTON_PRESS()) {
             DbpString("button pressed");
@@ -246,7 +255,6 @@ static int reader_dump_mode(void) {
             .send_reply = false,
         };
         memcpy(auth.key, legacy_aa1_key, sizeof(auth.key));
-
 
         Iso15693InitReader();
 
@@ -279,7 +287,7 @@ static int reader_dump_mode(void) {
 
             app1_limit = hdr->conf.app_limit;
             app2_limit = card_app2_limit[type];
-            start_block = 6;
+            start_block = 5;
            
             res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
             if (res == false) {
@@ -292,49 +300,51 @@ static int reader_dump_mode(void) {
         }
 
         uint16_t dumped = 0;
-
+          
         // main read loop
-        for (uint8_t i = start_block; i <= app1_limit; i++) {
-            res = iclass_read_block(i, card_data + (8 * i));
-            if (res) {
+        for (uint16_t i = start_block; i <= app1_limit; i++) {
+
+            if (iclass_read_block(i, card_data + (8 * i))) {
                 dumped++;
             }
-            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         }
 
         if (pagemap != PICOPASS_NON_SECURE_PAGEMODE && have_aa2) {
-           
+          
             // authenticate AA2 
+            auth.use_raw = false;
             auth.use_credit_key = true;
             memcpy(auth.key, aa2_key, sizeof(auth.key));
             
             res = select_iclass_tag(card_data, auth.use_credit_key, &eof_time);
-            if (res) {        
+            if (res) {  
+
                 res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
-                if (res) {                    
+                if (res) {
+
                     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                     
-                    for (uint8_t i = app1_limit + 1; i <= app2_limit; i++) {
-                        res = iclass_read_block(i, card_data + (8 * i));
-                        if (res) {
+                    for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
+                        if (iclass_read_block(i, card_data + (8 * i))) {
                             dumped++;
                         }
-                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                        //start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                     }
                 } else {
                     DbpString("failed AA2 auth");
                 }
+            } else {
+                DbpString("failed AA2 selecting");
             }
         }
 
         switch_off();
-        save_to_flash(card_data, (start_block + dumped) * 8 );
 
-        SpinDelay(250);
-        Dbprintf("Found a %s", card_types[type]);
+        save_to_flash(card_data, (start_block + dumped) * 8 );
+        Dbprintf("Found a %s  (blocks dumped %u)", card_types[type], dumped);
     }
 
-    Dbprintf("-=[ exiting `read & dump` mode");
+    DbpString("-=[ exiting `read & dump` mode");
     return PM3_SUCCESS;
 }
 
