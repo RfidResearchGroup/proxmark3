@@ -292,7 +292,7 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
 
     uint32_t modulation_start_time = *start_time - DELAY_ARM_TO_READER + 3 * 8;  // no need to transfer the unmodulated start of SOF
-
+    
     while (GetCountSspClk() > (modulation_start_time & 0xfffffff8) + 3) { // we will miss the intended time
         if (slot_time) {
             modulation_start_time += slot_time; // use next available slot
@@ -626,9 +626,6 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
     DecodeTag_t dtm = { 0 };
     DecodeTag_t *dt = &dtm;
     DecodeTagInit(dt, response, max_len);
-    
-    //DecodeTag_t *dt = (DecodeTag_t *)BigBuf_malloc(sizeof(DecodeTag_t));
-    //DecodeTagInit(dt, response, max_len);
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
@@ -1084,8 +1081,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     }
     uint8_t *upTo = dma->buf;
 
-//    uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
-    uint32_t dma_start_time;
+    uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
     for (;;) {
         volatile uint16_t behindBy = ((uint8_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
@@ -1098,15 +1094,15 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 
         volatile uint8_t b = *upTo++;
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
-            upTo = dma->buf;                                             // start reading the circular buffer from the beginning
+            upTo = dma->buf;                                    // start reading the circular buffer from the beginning
             if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("About to blow circular buffer - aborted! behindBy %d", behindBy);
                 break;
             }
         }
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {              // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;          // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;   // DMA Next Counter registers
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {       // DMA Counter Register had reached 0, already rotated.
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf; // refresh the DMA Next Buffer and
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;     // DMA Next Counter registers
         }
 
         for (int i = 7; i >= 0; i--) {
@@ -1343,6 +1339,8 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
             break;
         }
 */
+
+
         // no need to try decoding reader data if the tag is sending
         if (tag_is_active == false) {
 
