@@ -225,7 +225,7 @@ static bool I2C_WaitForSim(void) {
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
     // 1byte transfer == 1ms  with max frame being 256bytes
-    if (!WaitSCL_H_delay(20 * 1000 * 50))
+    if (!WaitSCL_H_delay(30 * 1000 * 50))
         return false;
 
     return true;
@@ -666,19 +666,18 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     card_ptr->atr_len = 0;
     memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
 
-
     // Send ATR
     // start [C0 01] stop start C1 len aa bb cc stop]
     I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
     //wait for sim card to answer.
-    // 1byte = 1ms ,  max frame 256bytes.  SHould wait 256ms atleast just in case.
-    if (!I2C_WaitForSim())
+    // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
+    if (I2C_WaitForSim() == false)
         return false;
 
     // read bytes from module
     uint8_t len = sizeof(card_ptr->atr);
-    if (!sc_rx_bytes(card_ptr->atr, &len))
+    if (sc_rx_bytes(card_ptr->atr, &len) == false)
         return false;
 
     uint8_t pos_td = 1;
