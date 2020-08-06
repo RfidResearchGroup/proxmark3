@@ -20,6 +20,7 @@
 #include "fpga.h"
 #include "fpgaloader.h"
 #include "string.h"
+#include "printf.h"
 #include "legicrf.h"
 #include "BigBuf.h"
 #include "iso14443a.h"
