@@ -47,7 +47,7 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 };
 
 static int usage_hf_iclass_sim(void) {
@@ -293,7 +293,6 @@ static int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-
 static int usage_hf_iclass_loclass(void) {
     PrintAndLogEx(NORMAL, "Execute the offline part of loclass attack");
     PrintAndLogEx(NORMAL, "  An iclass dumpfile is assumed to consist of an arbitrary number of");
@@ -385,7 +384,6 @@ static inline uint32_t countones(uint64_t a) {
 
 }
  
-// iclass card descriptors
 const char * card_types[] = {
     "PicoPass 16K / 16",                       // 000
     "PicoPass 32K with current book 16K / 16", // 001
@@ -801,7 +799,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         default: {
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 0, CSN, 8);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, CSN, 8);
             
             if (sim_type == ICLASS_SIM_MODE_FULL)
                 PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave h") "` to save the emulator memory to file");
@@ -1534,7 +1532,7 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     //get CSN and config
     PacketResponseNG resp;
-    uint8_t tag_data[255 * 8];
+    uint8_t tag_data[0x100 * 8];
     memset(tag_data, 0xFF, sizeof(tag_data));
 
     clearCommandBuffer();
@@ -1649,7 +1647,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     uint32_t startindex = packet->bb_offset;
     uint32_t blocks_read = packet->block_cnt;
 
-    uint8_t tempbuf[0xFF * 8];
+    uint8_t tempbuf[0x100 * 8];
 
     // response ok - now get bigbuf content of the dump
     if (!GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false)) {
@@ -2339,6 +2337,9 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         char fileName[FILE_PATH_SIZE] = {0};
         if (param_getstr(Cmd, 1, fileName, sizeof(fileName)) > 0) {
             return bruteforceFileNoKeys(fileName);
+        } else {
+            PrintAndLogEx(WARNING, "You must specify a filename");
+            return PM3_EFILE;
         }
     } else if (opt == 't') {
         char opt2 = tolower(param_getchar(Cmd, 1));
@@ -2549,6 +2550,7 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
         PrintAndLogEx(SUCCESS, "Xor div key : " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
     }
 }
+
 
 static int CmdHFiClassCalcNewKey(const char *Cmd) {
     uint8_t OLDKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
