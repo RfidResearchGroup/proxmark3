@@ -93,7 +93,6 @@ static uint8_t csns[8 * NUM_CSNS] = {
     0x17, 0x96, 0x85, 0x71, 0xF7, 0xFF, 0x12, 0xE0,
     0xCE, 0xC5, 0x0F, 0x77, 0xF7, 0xFF, 0x12, 0xE0,
     0xD2, 0x5A, 0x82, 0xF8, 0xF7, 0xFF, 0x12, 0xE0
-    //0x04, 0x08, 0x9F, 0x78, 0x6E, 0xFF, 0x12, 0xE0
 };
 
 static void download_instructions(uint8_t t) {
@@ -171,29 +170,6 @@ static int fullsim_mode(void) {
     rdv40_spiffs_lazy_unmount();
     if (res == SPIFFS_OK) {
         Dbprintf("loaded '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' (%u bytes) to emulator memory", fsize);
-    }
-           
-    picopass_hdr *hdr = (picopass_hdr *)emul;
-    
-    uint8_t pagemap = get_pagemap(hdr);
-    if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
-        // create diversified key AA1/KD if not in dump.
-        if ( memcmp(hdr->key_d, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
-            uint8_t ccnr[12] = {0};
-            memcpy(ccnr, hdr->epurse, 8); 
-            bool use_elite = false;
-            iclass_calc_div_key(emul, legacy_aa1_key, hdr->key_d, use_elite);       
-        }
-
-        // create diversified key AA2/KC if not in dump.
-        if (have_aa2()) {
-            if (memcmp(hdr->key_c, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8) == 0) {
-                uint8_t ccnr[12] = {0};
-                memcpy(ccnr, hdr->epurse, 8);                   
-                bool use_elite = false;
-                iclass_calc_div_key(emul, aa2_key, hdr->key_c, use_elite);       
-            }
-        }
     }
 
     iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
@@ -423,7 +399,7 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_STATE_READER;
+    uint8_t mode = ICE_STATE_FULLSIM;
 
     for (;;) {
 
