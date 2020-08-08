@@ -22,6 +22,25 @@
 #include "pm3_cmd.h"
 #include "protocols.h"
 
+
+#define ICE_STATE_NONE        0
+#define ICE_STATE_FULLSIM     1
+#define ICE_STATE_ATTACK      2
+#define ICE_STATE_READER      3
+#define ICE_STATE_CONFIGCARD  4
+
+// ====================================================
+// Select which standalone function to be active.
+// 4 possiblities.  Uncomment the one you wanna use.
+
+//#define ICE_USE               ICE_STATE_FULLSIM
+//#define ICE_USE               ICE_STATE_ATTACK
+#define ICE_USE               ICE_STATE_READER
+//#define ICE_USE               ICE_STATE_CONFIGCARD
+
+// ====================================================
+
+
 #define NUM_CSNS                    9
 #define MAC_RESPONSES_SIZE          (16 * NUM_CSNS)
 #define HF_ICLASS_FULLSIM_ORIG_BIN  "iceclass-orig.bin"
@@ -34,11 +53,7 @@
 #define HF_ICLASS_CC_B              "iceclass_cc_b.bin"
 char* cc_files[] = { HF_ICLASS_CC_A, HF_ICLASS_CC_B };
 
-#define ICE_STATE_NONE        0
-#define ICE_STATE_FULLSIM     1
-#define ICE_STATE_ATTACK      2
-#define ICE_STATE_READER      3
-#define ICE_STATE_CONFIGCARD  4
+
 
 // times in ssp_clk_cycles @ 3,3625MHz when acting as reader
 #ifndef DELAY_ICLASS_VICC_TO_VCD_READER
@@ -416,7 +431,7 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_STATE_FULLSIM;
+    uint8_t mode = ICE_USE;
 
     for (;;) {
 
