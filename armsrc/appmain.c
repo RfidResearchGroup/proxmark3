@@ -1900,6 +1900,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
+        case CMD_SPIFFS_WIPE: {
+            LED_B_ON();
+            rdv40_spiffs_safe_wipe();
+            reply_ng(CMD_SPIFFS_WIPE, PM3_SUCCESS, NULL, 0);
+            LED_B_OFF();
+            break;
+        }
         case CMD_FLASHMEM_SET_SPIBAUDRATE: {
             if (packet->length != sizeof(uint32_t))
                 break;

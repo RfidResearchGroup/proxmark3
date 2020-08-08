@@ -409,11 +409,12 @@ typedef struct {
 #define CMD_SPIFFS_MOUNT                                                  0x0130
 #define CMD_SPIFFS_UNMOUNT                                                0x0131
 #define CMD_SPIFFS_WRITE                                                  0x0132
+
 // We take +0x1000 when having a variant of similar function (todo : make it an argument!)
 #define CMD_SPIFFS_APPEND                                                 0x1132
 
 #define CMD_SPIFFS_READ                                                   0x0133
-//We use no open/close instruvtion, as they are handled internally.
+//We use no open/close instruction, as they are handled internally.
 #define CMD_SPIFFS_REMOVE                                                 0x0134
 #define CMD_SPIFFS_RM                                                     CMD_SPIFFS_REMOVE
 #define CMD_SPIFFS_RENAME                                                 0x0135
@@ -424,6 +425,9 @@ typedef struct {
 #define CMD_SPIFFS_FSTAT                                                  0x0138
 #define CMD_SPIFFS_INFO                                                   0x0139
 #define CMD_SPIFFS_FORMAT                                                 CMD_FLASHMEM_WIPE
+
+#define CMD_SPIFFS_WIPE                                                   0x013A
+
 // This take a +0x2000 as they are high level helper and special functions
 // As the others, they may have safety level argument if it makkes sense
 #define CMD_SPIFFS_PRINT_TREE                                             0x2130
