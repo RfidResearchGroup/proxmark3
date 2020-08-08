@@ -155,8 +155,6 @@ static void CodeIClassTagSOF(void) {
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
     iclass_simulate(arg0, arg1, arg2, datain, NULL, NULL);
-    
-    DbpString("Button pressed");
 }
 
 void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
@@ -502,8 +500,10 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     bool button_pressed = false;
     uint8_t cmd, options, block;
     int len = 0;
-
     bool exit_loop = false;
+    bool using_kc = false;
+    int kc_attempt = 0;
+
     while (exit_loop == false) {
         WDT_HIT();
 
@@ -628,7 +628,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                     trace_data = ff_data;
                     trace_data_size = sizeof(ff_data);
                 } else { // use data from emulator memory
-                    memcpy(data_generic_trace, emulator + current_page * page_size + 8 * block, 8);
+                    memcpy(data_generic_trace, emulator + (current_page * page_size) + (block * 8), 8);
                     AddCrc(data_generic_trace, 8);
                     trace_data = data_generic_trace;
                     trace_data_size = 10;
@@ -647,12 +647,14 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             }
 
             // debit key
-            if ( receivedCmd[0] == 0x88 ){
+            if (receivedCmd[0] == 0x88 ){
                 cipher_state = &cipher_state_KD[current_page];
                 diversified_key = diversified_kd;
+                using_kc = false;
             } else {
                 cipher_state = &cipher_state_KC[current_page];
                 diversified_key = diversified_kc;
+                using_kc = true;
             }
 
             modulated_response = resp_cc;
@@ -678,6 +680,10 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 memcpy(data_response, ts->buf, ts->max);
                 modulated_response = data_response;
                 modulated_response_size = ts->max;
+
+                if (using_kc)
+                    kc_attempt++;
+
             } else {
                 // Not fullsim, we don't respond
                 chip_state = HALTED;
@@ -699,7 +705,6 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                     }
                     exit_loop = true;
                 }
-                            
             }
             goto send;
 
@@ -837,7 +842,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             }
             goto send;
             
-//            } else if(cmd == ICLASS_CMD_DETECT) {  // 0x0F
+        } else if(cmd == ICLASS_CMD_DETECT) {  // 0x0F
+            // not supported yet, ignore
         } else if (cmd == 0x26 && len == 5) {
             // standard ISO15693 INVENTORY command. Ignore.
         } else {
@@ -859,6 +865,15 @@ send:
         if (chip_state == HALTED) {
             uint32_t wait_time = GetCountSspClk() + ICLASS_READER_TIMEOUT_ACTALL;
             while (GetCountSspClk() < wait_time) {};
+        }
+
+        // CC attack
+        // wait to trigger the reader bug, then wait 1000ms
+        if (kc_attempt > 3) {
+            uint32_t wait_time = GetCountSspClk() + (16000 * 100);
+            while (GetCountSspClk() < wait_time) {};
+            kc_attempt = 0;
+            exit_loop = true;
         }
     }
 
