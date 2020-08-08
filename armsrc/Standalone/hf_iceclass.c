@@ -28,7 +28,7 @@
 #define HF_ICLASS_FULLSIM_MOD       "iceclass-modified"
 #define HF_ICLASS_FULLSIM_MOD_BIN   HF_ICLASS_FULLSIM_MOD".bin"
 #define HF_ICLASS_FULLSIM_MOD_EML   HF_ICLASS_FULLSIM_MOD".eml"
-#define HF_ICLASS_ATTACK_BIN        "iclass_mac_attack.bin"
+#define HF_ICLASS_ATTACK_BIN        "iclass_mac_attack"
 
 #define HF_ICLASS_CC_A              "iceclass_cc_a.bin"
 #define HF_ICLASS_CC_B              "iceclass_cc_b.bin"
@@ -120,10 +120,8 @@ static void download_instructions(uint8_t t) {
     }
 }
 
-//
 // Save to flash if file doesn't exist.
 // Write over file if size of flash file is less than new datalen
-//
 static void save_to_flash(uint8_t *data, uint16_t datalen) {
 
     rdv40_spiffs_lazy_mount();
@@ -208,7 +206,8 @@ static int reader_attack_mode(void) {
             return PM3_EMALLOC;
         }
 
-        memset(dump, 0, dumplen);//<-- Need zeroes for the EPURSE - field
+        // need zeroes for the EPURSE
+        memset(dump, 0, dumplen);
 
         for (uint8_t i = 0 ; i < NUM_CSNS ; i++) {
             //copy CSN
@@ -221,13 +220,26 @@ static int reader_attack_mode(void) {
 
         LED_B_ON();
         rdv40_spiffs_lazy_mount();
-        int res = rdv40_spiffs_write(HF_ICLASS_ATTACK_BIN, dump, dumplen, RDV40_SPIFFS_SAFETY_SAFE);
+        
+        char fn[32];
+        uint16_t p_namelen = strlen(HF_ICLASS_ATTACK_BIN);
+        uint16_t num = 1;
+        sprintf(fn, "%.*s%s", p_namelen, HF_ICLASS_ATTACK_BIN, ".bin");
+        
+        while (exists_in_spiffs(fn)) {
+            sprintf(fn, "%.*s-%u%s", p_namelen, HF_ICLASS_ATTACK_BIN, num, ".bin");
+            num++;
+        }        
+        int res = rdv40_spiffs_write(fn, dump, dumplen, RDV40_SPIFFS_SAFETY_SAFE);
         rdv40_spiffs_lazy_unmount();
         LED_B_OFF();
-        if (res != SPIFFS_OK) {
-            Dbprintf("error writing '"HF_ICLASS_ATTACK_BIN"' to flash ( %d )", res);
+        if (res == SPIFFS_OK) {
+           Dbprintf("Saved to `" _YELLOW_("%s") "`", fn);
+        } else {
+            Dbprintf("error writing '%s' to flash ( %d )", fn, res);
         }
     }
+    BigBuf_free();
     return PM3_SUCCESS;
 }
 
@@ -399,7 +411,7 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_STATE_FULLSIM;
+    uint8_t mode = ICE_STATE_ATTACK;
 
     for (;;) {
 
