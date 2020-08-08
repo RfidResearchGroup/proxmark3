@@ -779,7 +779,9 @@ static void DecodeReaderReset(DecodeReader_t* reader) {
     reader->state = STATE_READER_UNSYNCD;
 }
 
-static RAMFUNC int Handle15693SampleFromReader(bool bit, DecodeReader_t *reader) {
+//int RAMFUNC
+static inline __attribute__((always_inline))
+ int Handle15693SampleFromReader(bool bit, DecodeReader_t *reader) {
     switch (reader->state) {
         case STATE_READER_UNSYNCD:
             // wait for unmodulated carrier
@@ -1205,27 +1207,22 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     DecodeTag_t dtag = {0};
     uint8_t response[ISO15693_MAX_RESPONSE_LENGTH] = {0};
     DecodeTagInit(&dtag, response, sizeof(response));
-//    DecodeTag_t *dtag = (DecodeTag_t *)BigBuf_malloc(sizeof(DecodeTag_t));
-//    uint8_t *response = BigBuf_malloc(ISO15693_MAX_RESPONSE_LENGTH);
-//    DecodeTagInit(dtag, response, ISO15693_MAX_RESPONSE_LENGTH);
 
     DecodeReader_t dreader = {0};
     uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
     DecodeReaderInit(&dreader, cmd, sizeof(cmd), jam_search_len, jam_search_string);
-//    DecodeReader_t *dreader = (DecodeReader_t *)BigBuf_malloc(sizeof(DecodeReader_t));
-//    uint8_t *cmd = BigBuf_malloc(ISO15693_MAX_COMMAND_LENGTH);
-//    DecodeReaderInit(dreader, cmd, ISO15693_MAX_COMMAND_LENGTH, jam_search_len, jam_search_string);
 
     // Print some debug information about the buffer sizes
     if (DBGLEVEL >= DBG_EXTENDED) {
-        Dbprintf("Sniffing buffers initialized:");
-        Dbprintf("  Trace:         %i bytes", BigBuf_max_traceLen());
-        Dbprintf("  Reader -> tag: %i bytes", ISO15693_MAX_COMMAND_LENGTH);
-        Dbprintf("  Tag -> Reader: %i bytes", ISO15693_MAX_RESPONSE_LENGTH);
-        Dbprintf("  DMA:           %i bytes", DMA_BUFFER_SIZE * sizeof(uint16_t));
+        DbpString(_CYAN_("Sniff buffers initialized"));
+        DbpString("=====================================");
+        Dbprintf("  Trace..........%i bytes", BigBuf_max_traceLen());
+        Dbprintf("  Reader -> tag..%i bytes", ISO15693_MAX_COMMAND_LENGTH);
+        Dbprintf("  Tag -> Reader..%i bytes", ISO15693_MAX_RESPONSE_LENGTH);
+        Dbprintf("  DMA............%i bytes", DMA_BUFFER_SIZE * sizeof(uint16_t));
 
-        Dbprintf("  Decoder Reader : %u bytes", (uint32_t)&dreader );
-        Dbprintf("  Decode Tag     : %u bytes", (uint32_t)&dtag);
+        Dbprintf("  Decoder Reader.%u bytes", (uint32_t)&dreader );
+        Dbprintf("  Decode Tag.....%u bytes", (uint32_t)&dtag);
     }
 
     // The DMA buffer, used to stream samples from the FPGA
@@ -1245,8 +1242,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
     StartCountSspClk();
     
-    // The DMA buffer, used to stream samples from the FPGA
-    //dmabuf16_t *dma = get_dma16();
     uint16_t *upTo = dma->buf;
 
     // Setup and start DMA.
@@ -1261,10 +1256,20 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     bool expect_tag_answer = false;
     int dma_start_time = 0;
     
+    uint16_t max_behind_by = 0;
+    
 //    int max_data_len = 0, data_len;
     
     // And now we loop, receiving samples.
     for(;;) {
+
+        uint16_t behind_by = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        if (behind_by > max_behind_by) {
+            max_behind_by = behind_by;
+        }
+        
+        if (behind_by == 0) continue;
+
 
         samples++;
         if (samples == 1) {
@@ -1309,15 +1314,11 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         }   
 */        
 
-        uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
-        if (behindBy == 0) continue;
-        Dbprintf("behindBy %d", behindBy);
-
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                    // we have read all of the DMA buffer content.
 
             upTo = dma->buf;                                         // start reading the circular buffer from the beginning
-            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
-                Dbprintf("About to blow circular buffer - aborted! behindBy=%d, samples=%d", behindBy, samples);
+            if (behind_by > (9 * DMA_BUFFER_SIZE / 10)) {
+                Dbprintf("About to blow circular buffer - aborted! behind_by=%d, samples=%d", behind_by, samples);
                 break;
             }
             
@@ -1326,20 +1327,11 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                 AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;       // DMA Next Counter registers
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
-                    DbpString("Sniff stopped.");
+                    DbpString("Sniff stopped");
                     break;
                 }
             }
         }
-
-/*
-        WDT_HIT();
-        if (BUTTON_PRESS()) {
-            DbpString("Sniff stopped.");
-            break;
-        }
-*/
-
 
         // no need to try decoding reader data if the tag is sending
         if (tag_is_active == false) {
@@ -1411,20 +1403,21 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         }
 
     }
-    FpgaDisableTracing();
 
+    FpgaDisableTracing();
     switch_off();
 
-    DbpString("Sniff statistics:");
-    Dbprintf("  ExpectTagAnswer: %d, TagIsActive: %d, ReaderIsActive: %d", expect_tag_answer, tag_is_active, reader_is_active);
-    Dbprintf("  DecodeTag State: %d", dtag.state);
-    Dbprintf("  DecodeTag byteCnt: %d", dtag.len);
-    Dbprintf("  DecodeTag posCount: %d", dtag.posCount);
-    Dbprintf("  DecodeReader State: %d", dreader.state);
-    Dbprintf("  DecodeReader byteCnt: %d", dreader.byteCount);
-    Dbprintf("  DecodeReader posCount: %d", dreader.posCount);
-    Dbprintf("  Trace length: %d", BigBuf_get_traceLen());
-//    Dbprintf("  Max behindBy: %d", max_behindBy);       
+    DbpString(_CYAN_("Sniff statistics"));
+    DbpString("=====================================");
+    Dbprintf("  ExpectTagAnswer........%d, TagIsActive: %d, ReaderIsActive: %d", expect_tag_answer, tag_is_active, reader_is_active);
+    Dbprintf("  DecodeTag State........%d", dtag.state);
+    Dbprintf("  DecodeTag byteCnt......%d", dtag.len);
+    Dbprintf("  DecodeTag posCount.....%d", dtag.posCount);
+    Dbprintf("  DecodeReader State.....%d", dreader.state);
+    Dbprintf("  DecodeReader byteCnt...%d", dreader.byteCount);
+    Dbprintf("  DecodeReader posCount..%d", dreader.posCount);
+    Dbprintf("  Trace length...........%d", BigBuf_get_traceLen());
+
 }
 
 // Initialize Proxmark3 as ISO15693 reader
