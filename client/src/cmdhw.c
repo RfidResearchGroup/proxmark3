@@ -36,7 +36,7 @@ static int usage_dbg(void) {
     PrintAndLogEx(NORMAL, "           4 - print even debug messages in timing critical functions");
     PrintAndLogEx(NORMAL, "               Note: this option therefore may cause malfunction itself");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hw dbg 3");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hw dbg 3"));
     return 0;
 }
 
@@ -50,7 +50,7 @@ static int usage_hw_detectreader(void) {
     PrintAndLogEx(NORMAL, "       <type>     L = 125/134 kHz, H = 13.56 MHz");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw detectreader L");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw detectreader L"));
     return PM3_SUCCESS;
 }
 
@@ -63,7 +63,7 @@ static int usage_hw_setmux(void) {
     PrintAndLogEx(NORMAL, "       <type>     Low peak, Low raw, Hi peak, Hi raw");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw setmux lopkd");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw setmux lopkd"));
     return PM3_SUCCESS;
 }
 
@@ -78,8 +78,8 @@ static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "       b <baudrate>   Baudrate");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H);
-    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H" b 115200");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw connect p "SERIAL_PORT_EXAMPLE_H));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw connect p "SERIAL_PORT_EXAMPLE_H" b 115200"));
     return PM3_SUCCESS;
 }
 
@@ -486,9 +486,10 @@ static int CmdSetMux(const char *Cmd) {
 }
 
 static int CmdStandalone(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+//    (void)Cmd; // Cmd is not used so far
+    uint8_t arg = param_get8ex(Cmd, 0, 0, 10);
     clearCommandBuffer();
-    SendCommandNG(CMD_STANDALONE, NULL, 0);
+    SendCommandNG(CMD_STANDALONE, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
 }
 
@@ -606,23 +607,23 @@ static int CmdConnect(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",          CmdHelp,        AlwaysAvailable, "This help"},
-    {"connect",       CmdConnect,     AlwaysAvailable, "connect Proxmark3 to serial port"},
-    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
+    {"help",          CmdHelp,         AlwaysAvailable, "This help"},
+    {"connect",       CmdConnect,      AlwaysAvailable, "connect Proxmark3 to serial port"},
+    {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
-    {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
-    {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
-    {"lcdreset",      CmdLCDReset,    IfPm3Lcd,        "Hardware reset LCD"},
-    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responsive"},
-    {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
-    {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
-    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
-    {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
-    {"standalone",    CmdStandalone,  IfPm3Present,    "Jump to the standalone mode"},
-    {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
-    {"tia",           CmdTia,         IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
-    {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
-    {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
+    {"fpgaoff",       CmdFPGAOff,      IfPm3Present,    "Set FPGA off"},
+    {"lcd",           CmdLCD,          IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
+    {"lcdreset",      CmdLCDReset,     IfPm3Lcd,        "Hardware reset LCD"},
+    {"ping",          CmdPing,         IfPm3Present,    "Test if the Proxmark3 is responsive"},
+    {"readmem",       CmdReadmem,      IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
+    {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
+    {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
+    {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
+    {"standalone",    CmdStandalone,   IfPm3Present,    "Jump to the standalone mode"},
+    {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
+    {"tia",           CmdTia,          IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"tune",          CmdTune,         IfPm3Present,    "Measure antenna tuning"},
+    {"version",       CmdVersion,      IfPm3Present,    "Show version information about the connected Proxmark3"},
     {NULL, NULL, NULL, NULL}
 };
 

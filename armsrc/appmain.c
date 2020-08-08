@@ -2064,6 +2064,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_STANDALONE: {
+            uint8_t *bb = BigBuf_get_EM_addr();
+            bb[0] = packet->data.asBytes[0];
             RunMod();
             break;
         }

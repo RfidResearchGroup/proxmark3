@@ -425,13 +425,19 @@ void ModInfo(void) {
 
 void RunMod(void) {
 
+    uint8_t mode = ICE_USE;
+    uint8_t *bb = BigBuf_get_EM_addr();
+    if (bb[0] > 0 && bb[0] < 5) {
+        mode = bb[0];
+    }
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     BigBuf_Clear();
 
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_USE;
+  
 
     for (;;) {
 
