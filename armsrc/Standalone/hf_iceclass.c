@@ -136,7 +136,7 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
     if (exists_in_spiffs(fn) == false) {
         res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
         if (res == SPIFFS_OK) {
-            Dbprintf("Saved to `" _YELLOW_("%s") "`", fn);
+            Dbprintf("saved to " _GREEN_("%s"), fn);
         } 
     } else {
         
@@ -148,7 +148,7 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
             if (fsize < datalen) {
                 res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
                 if (res == SPIFFS_OK) {
-                    Dbprintf("Wrote over `" _YELLOW_("%s") "`", fn);
+                    Dbprintf("wrote over " _GREEN_("%s"), fn);
                 }                 
             }
         }
@@ -167,7 +167,7 @@ static int fullsim_mode(void) {
     int res = rdv40_spiffs_read_as_filetype(HF_ICLASS_FULLSIM_ORIG_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
     rdv40_spiffs_lazy_unmount();
     if (res == SPIFFS_OK) {
-        Dbprintf("loaded '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' (%u bytes) to emulator memory", fsize);
+        Dbprintf("loaded " _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) " (%u bytes)", fsize);
     }
 
     iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
@@ -177,10 +177,13 @@ static int fullsim_mode(void) {
     res = rdv40_spiffs_write(HF_ICLASS_FULLSIM_MOD_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
     rdv40_spiffs_lazy_unmount();
     LED_B_OFF();
-    if (res != SPIFFS_OK) {
-        Dbprintf("error writing '"HF_ICLASS_FULLSIM_MOD_BIN"' to flash ( %d )", res);
+    if (res == SPIFFS_OK) {
+        Dbprintf("wrote emulator memory to " _GREEN_(HF_ICLASS_FULLSIM_MOD_BIN));
+    } else {
+        Dbprintf(_RED_("error") " writing "HF_ICLASS_FULLSIM_MOD_BIN" to flash ( %d )", res);
     }
 
+    DbpString("-=[ exiting " _YELLOW_("`full simulation`") " mode ]=-");
     return PM3_SUCCESS;
 }
 
@@ -196,7 +199,7 @@ static int reader_attack_mode(void) {
         
         bool success = (mac_response_len == MAC_RESPONSES_SIZE);
         uint8_t num_mac = (mac_response_len >> 4);
-        Dbprintf("%u out of %d MAC obtained [%s]", num_mac, NUM_CSNS, (success) ? _GREEN_("OK") : _RED_("FAIL"));
+        Dbprintf("%u out of %d MAC obtained [%s]", num_mac, NUM_CSNS, (success) ? _GREEN_("ok") : _RED_("fail"));
 
         size_t dumplen = NUM_CSNS * 24;
 
@@ -234,20 +237,21 @@ static int reader_attack_mode(void) {
         rdv40_spiffs_lazy_unmount();
         LED_B_OFF();
         if (res == SPIFFS_OK) {
-           Dbprintf("Saved to `" _YELLOW_("%s") "`", fn);
+           Dbprintf("saved to " _GREEN_("%s"), fn);
         } else {
-            Dbprintf("error writing '%s' to flash ( %d )", fn, res);
+            Dbprintf(_RED_("error") " writing %s to flash ( %d )", fn, res);
         }
     }
     BigBuf_free();
+    DbpString("-=[ exiting " _YELLOW_("`reader attack`") " mode ]=-");
     return PM3_SUCCESS;
 }
 
 static int reader_dump_mode(void) {
     
-    DbpString("This mode has no tracelog");
+    DbpString("this mode has no tracelog");
     if (have_aa2())
-        DbpString("Dumping of " _YELLOW_("AA2 enabled"));
+        DbpString("dumping of " _YELLOW_("AA2 enabled"));
 
     for (;;) {
 
@@ -297,7 +301,7 @@ static int reader_dump_mode(void) {
         type |= (hdr->conf.mem_config & 0x80) >> 6;
         type |= (hdr->conf.mem_config & 0x20) >> 5;
 
-        Dbprintf("Found " _GREEN_("%s") " dumping...", card_types[type]);
+        Dbprintf(_GREEN_("%s") ", dumping...", card_types[type]);
 
         uint8_t pagemap = get_pagemap(hdr);
         uint8_t app1_limit, app2_limit, start_block;
@@ -316,7 +320,7 @@ static int reader_dump_mode(void) {
             res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
             if (res == false) {
                 switch_off();
-                Dbprintf("%s found, " _RED_("failed AA1 auth") " , skipping ", card_types[type]);
+                Dbprintf( _RED_("failed AA1 auth") ", skipping ");
                 continue;
             }
             
@@ -391,11 +395,12 @@ static int config_sim_mode(void) {
         rdv40_spiffs_lazy_unmount();
 
         if (res == SPIFFS_OK) {
-            Dbprintf("loaded '" _YELLOW_("%s") "' (%u bytes) to emulator memory", cc_files[i], fsize);
+            Dbprintf("loaded " _YELLOW_("%s") " (%u bytes) to emulator memory", cc_files[i], fsize);
             iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
         }
     }
 
+    DbpString("-=[ exiting " _YELLOW_("`config card simulation`") " mode ]=-");
     return PM3_SUCCESS;
 }
 
@@ -411,7 +416,7 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-    uint8_t mode = ICE_STATE_ATTACK;
+    uint8_t mode = ICE_STATE_FULLSIM;
 
     for (;;) {
 
@@ -429,7 +434,7 @@ void RunMod(void) {
                 // Look for iCLASS dump file
                 rdv40_spiffs_lazy_mount();
                 if (exists_in_spiffs(HF_ICLASS_FULLSIM_ORIG_BIN) == false) {
-                    Dbprintf("error, '" _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) "' file missing");
+                    Dbprintf(_RED_("error") " " _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) " file missing");
                     mode = ICE_STATE_NONE;
                 }
                 rdv40_spiffs_lazy_unmount();
@@ -469,7 +474,7 @@ void RunMod(void) {
                 rdv40_spiffs_lazy_mount();
                 for (uint8_t i =0; i < 2; i++) {
                     if (exists_in_spiffs(cc_files[i]) == false) {
-                        Dbprintf("error, '" _YELLOW_("%s") "' file missing", cc_files[i]);
+                        Dbprintf(_RED_("error") ", " _YELLOW_("%s") " file missing", cc_files[i]);
                         mode = ICE_STATE_NONE;
                     }
                 }
@@ -485,5 +490,5 @@ void RunMod(void) {
     }
 
     switch_off();
-    Dbprintf("-=[ exit iceCLASS ]=-");
+    Dbprintf("-=[ exit ]=-");
 }
