@@ -394,6 +394,7 @@ typedef struct {
 static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *tag) {
 
     switch (tag->state) {
+
         case STATE_TAG_SOF_LOW: {
             // waiting for a rising edge
             if (amplitude > NOISE_THRESHOLD + tag->previous_amplitude) {
@@ -410,6 +411,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             }
             break;
         }
+
         case STATE_TAG_SOF_RISING_EDGE: {
             if (amplitude > tag->threshold_sof + tag->previous_amplitude) { // edge still rising
                 if (amplitude > tag->threshold_sof + tag->threshold_sof) { // steeper edge, take this as time reference
@@ -425,6 +427,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             tag->state = STATE_TAG_SOF_HIGH;
             break;
         }
+
         case STATE_TAG_SOF_HIGH: {
             // waiting for 10 times high. Take average over the last 8
             if (amplitude > tag->threshold_sof) {
@@ -443,6 +446,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             }
             break;
         }
+
         case STATE_TAG_SOF_HIGH_END: {
             // check for falling edge
             if (tag->posCount == 13 && amplitude < tag->threshold_sof) {
@@ -466,16 +470,19 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             }
             break;
         }
+
         case STATE_TAG_RECEIVING_DATA: {
             if (tag->posCount == 1) {
                 tag->sum1 = 0;
                 tag->sum2 = 0;
             }
+
             if (tag->posCount <= 4) {
                 tag->sum1 += amplitude;
             } else {
                 tag->sum2 += amplitude;
             }
+
             if (tag->posCount == 8) {
                 if (tag->sum1 > tag->threshold_half && tag->sum2 > tag->threshold_half) { // modulation in both halves
                     if (tag->lastBit == LOGIC0) {  // this was already part of EOF
@@ -550,16 +557,19 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             tag->posCount++;
             break;
         }
+
         case STATE_TAG_EOF: {
             if (tag->posCount == 1) {
                 tag->sum1 = 0;
                 tag->sum2 = 0;
             }
+
             if (tag->posCount <= 4) {
                 tag->sum1 += amplitude;
             } else {
                 tag->sum2 += amplitude;
             }
+
             if (tag->posCount == 8) {
                 if (tag->sum1 > tag->threshold_half && tag->sum2 < tag->threshold_half) { // modulation in first half
                     tag->posCount = 0;
@@ -574,16 +584,19 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             tag->posCount++;
             break;
         }
+
         case STATE_TAG_EOF_TAIL: {
             if (tag->posCount == 1) {
                 tag->sum1 = 0;
                 tag->sum2 = 0;
             }
+
             if (tag->posCount <= 4) {
                 tag->sum1 += amplitude;
             } else {
                 tag->sum2 += amplitude;
             }
+
             if (tag->posCount == 8) {
                 if (tag->sum1 < tag->threshold_half && tag->sum2 < tag->threshold_half) { // no modulation in both halves
                     LED_C_OFF();
@@ -779,9 +792,8 @@ static void DecodeReaderReset(DecodeReader_t* reader) {
     reader->state = STATE_READER_UNSYNCD;
 }
 
-//int RAMFUNC
-static inline __attribute__((always_inline))
- int Handle15693SampleFromReader(bool bit, DecodeReader_t *reader) {
+//static inline __attribute__((always_inline))
+ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader) {
     switch (reader->state) {
         case STATE_READER_UNSYNCD:
             // wait for unmodulated carrier
@@ -1201,9 +1213,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     clear_trace();
     set_tracing(true);
    
-    // Count of samples received so far, so that we can include timing
-    int samples = 0;
-
     DecodeTag_t dtag = {0};
     uint8_t response[ISO15693_MAX_RESPONSE_LENGTH] = {0};
     DecodeTagInit(&dtag, response, sizeof(response));
@@ -1212,26 +1221,8 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
     DecodeReaderInit(&dreader, cmd, sizeof(cmd), jam_search_len, jam_search_string);
 
-    // Print some debug information about the buffer sizes
-    if (DBGLEVEL >= DBG_EXTENDED) {
-        DbpString(_CYAN_("Sniff buffers initialized"));
-        DbpString("=====================================");
-        Dbprintf("  Trace..........%i bytes", BigBuf_max_traceLen());
-        Dbprintf("  Reader -> tag..%i bytes", ISO15693_MAX_COMMAND_LENGTH);
-        Dbprintf("  Tag -> Reader..%i bytes", ISO15693_MAX_RESPONSE_LENGTH);
-        Dbprintf("  DMA............%i bytes", DMA_BUFFER_SIZE * sizeof(uint16_t));
-
-        Dbprintf("  Decoder Reader.%u bytes", (uint32_t)&dreader );
-        Dbprintf("  Decode Tag.....%u bytes", (uint32_t)&dtag);
-    }
-
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
-    
-    Dbprintf("dmabuf      %u", (uint32_t)dma->buf );
-    Dbprintf("dmabuf +1   %u", (uint32_t)dma->buf + 1);
-    Dbprintf("dmabuf +256 %u", (uint32_t)dma->buf + DMA_BUFFER_SIZE);
-    Dbprintf("dmabuf +512 %u", (uint32_t)dma->buf + (DMA_BUFFER_SIZE * 2));
 
     Dbprintf("Starting to sniff. Press PM3 Button to stop.");
 
@@ -1241,90 +1232,57 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
     StartCountSspClk();
-    
-    uint16_t *upTo = dma->buf;
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE * 2) == false) {
+    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
         if (DBGLEVEL > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         switch_off();
         return;
     }
-    
+
     bool tag_is_active = false;
     bool reader_is_active = false;
     bool expect_tag_answer = false;
     int dma_start_time = 0;
-    
-    uint16_t max_behind_by = 0;
-    
-//    int max_data_len = 0, data_len;
-    
-    // And now we loop, receiving samples.
-    for(;;) {
 
-        uint16_t behind_by = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
-        if (behind_by > max_behind_by) {
-            max_behind_by = behind_by;
-        }
-        
-        if (behind_by == 0) continue;
+    // Count of samples received so far, so that we can include timing
+    int samples = 0;
+    
+    uint16_t *upTo = dma->buf;
 
+    for (;;) {
+
+        volatile int behind_by = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        if (behind_by < 1) continue;
 
         samples++;
         if (samples == 1) {
             // DMA has transferred the very first data
             dma_start_time = GetCountSspClk() & 0xfffffff0;
         }
-        uint16_t sniffdata = *upTo++;
- 
- /*
-        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                    // we have read all of the DMA buffer content.
 
-            upTo = dma->buf;
-            
-            int register read_bufdata_p = upTo - dma->buf;
-            int register dma_buf_data_p = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
-            if (read_bufdata_p <= dma_buf_data_p)
-                data_len = dma_buf_data_p - read_bufdata_p;
-            else
-                data_len = DMA_BUFFER_SIZE - read_bufdata_p + dma_buf_data_p;
+        volatile uint16_t sniffdata = *upTo++;
 
-            // test for length of buffer
-            if (data_len > max_data_len) {
-                max_data_len = data_len;
-                if (data_len > (9 * DMA_BUFFER_SIZE / 10)) {
-                    Dbprintf("[!] blew circular buffer! | datalen %u", data_len);
-                    break;
+        // we have read all of the DMA buffer content
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                    
+
+            // start reading the circular buffer from the beginning
+            upTo = dma->buf;                                         
+
+            // DMA Counter Register had reached 0, already rotated.
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+
+                // primary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
-            }
-
-            // primary buffer was stopped( <-- we lost data!
-            if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
-                AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-                AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-            }
-            // secondary buffer sets as primary, secondary buffer was stopped
-            if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
-                AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-                AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-            }
-        
-            
-        }   
-*/        
-
-        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                    // we have read all of the DMA buffer content.
-
-            upTo = dma->buf;                                         // start reading the circular buffer from the beginning
-            if (behind_by > (9 * DMA_BUFFER_SIZE / 10)) {
-                Dbprintf("About to blow circular buffer - aborted! behind_by=%d, samples=%d", behind_by, samples);
-                break;
-            }
-            
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {         // DMA Counter Register had reached 0, already rotated.
-                AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;   // refresh the DMA Next Buffer and
-                AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;       // DMA Next Counter registers
+                // secondary buffer sets as primary, secondary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+                }
+                
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
                     DbpString("Sniff stopped");
@@ -1336,7 +1294,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         // no need to try decoding reader data if the tag is sending
         if (tag_is_active == false) {
 
-            if (Handle15693SampleFromReader(sniffdata & 0x02, &dreader)) {
+            if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader)) {
 
                 uint32_t eof_time = dma_start_time + (samples * 16) + 8 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
                 if (dreader.byteCount > 0) {
@@ -1348,8 +1306,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                 }
                 // And ready to receive another command.
                 DecodeReaderReset(&dreader);
-                // And also reset the demod code, which might have been
-                // false-triggered by the commands from the reader.
                 DecodeTagReset(&dtag);
                 reader_is_active = false;
                 expect_tag_answer = true;
@@ -1366,9 +1322,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                 }
                 // And ready to receive another command
                 DecodeReaderReset(&dreader);
-
-                // And also reset the demod code, which might have been
-                // false-triggered by the commands from the reader.
                 DecodeTagReset(&dtag);
                 reader_is_active = false;
                 expect_tag_answer = true;
@@ -1407,16 +1360,17 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     FpgaDisableTracing();
     switch_off();
 
+    DbpString("");
     DbpString(_CYAN_("Sniff statistics"));
-    DbpString("=====================================");
-    Dbprintf("  ExpectTagAnswer........%d, TagIsActive: %d, ReaderIsActive: %d", expect_tag_answer, tag_is_active, reader_is_active);
+    DbpString("=================================");
     Dbprintf("  DecodeTag State........%d", dtag.state);
     Dbprintf("  DecodeTag byteCnt......%d", dtag.len);
     Dbprintf("  DecodeTag posCount.....%d", dtag.posCount);
     Dbprintf("  DecodeReader State.....%d", dreader.state);
     Dbprintf("  DecodeReader byteCnt...%d", dreader.byteCount);
     Dbprintf("  DecodeReader posCount..%d", dreader.posCount);
-    Dbprintf("  Trace length...........%d", BigBuf_get_traceLen());
+    Dbprintf("  Trace length..........." _YELLOW_("%d"), BigBuf_get_traceLen());
+    DbpString("");    
 
 }
 
