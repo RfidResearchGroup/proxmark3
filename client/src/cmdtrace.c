@@ -31,7 +31,7 @@ static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
     PrintAndLogEx(NORMAL, "    f      - show frame delay times as well");
     PrintAndLogEx(NORMAL, "    c      - mark CRC bytes");
-	PrintAndLogEx(NORMAL, "    r      - show relative times (gap and duration)");
+    PrintAndLogEx(NORMAL, "    r      - show relative times (gap and duration)");
     PrintAndLogEx(NORMAL, "    u      - display times in microseconds instead of clock cycles");
     PrintAndLogEx(NORMAL, "    x      - show hexdump to convert to pcap(ng) or to import into Wireshark using encapsulation type \"ISO 14443\"");
     PrintAndLogEx(NORMAL, "             syntax to use: `text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`");
@@ -211,7 +211,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 		duration *= 32;
 	}
 
-    
+
     uint8_t *frame = hdr->frame;
     uint8_t *parityBytes = hdr->frame + data_len;
 
@@ -332,18 +332,18 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     const char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
 
-    uint32_t previous_end_of_transmission_timestamp = 0; 
+    uint32_t previous_end_of_transmission_timestamp = 0;
     if (prev_eot) {
 		if (*prev_eot) {
 			previous_end_of_transmission_timestamp = *prev_eot;
 		} else {
 			previous_end_of_transmission_timestamp = hdr->timestamp;
 		}
-	}	
+    }
 
     end_of_transmission_timestamp = hdr->timestamp + duration;
 
-    if (prev_eot) 
+    if (prev_eot)
         *prev_eot = end_of_transmission_timestamp;
 
     // Always annotate LEGIC read/tag
@@ -355,8 +355,18 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (protocol == FELICA)
         annotateFelica(explanation, sizeof(explanation), frame, data_len);
+    
+    if (protocol == PROTO_HITAG1) {
+        annotateHitag1(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+    }
+    if (protocol == PROTO_HITAG2) {
+        annotateHitag2(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+    }
+    if (protocol == PROTO_HITAGS) {
+        annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+    }
 
-    if (!hdr->isResponse) {
+    if (hdr->isResponse == false) {
         switch (protocol) {
             case ICLASS:
                 annotateIclass(explanation, sizeof(explanation), frame, data_len);
@@ -385,15 +395,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case LTO:
                 annotateLTO(explanation, sizeof(explanation), frame, data_len);
                 break;
-            case PROTO_HITAG1:
-                annotateHitag1(explanation, sizeof(explanation), frame, data_len);
-                break;
-            case PROTO_HITAG2:
-                annotateHitag2(explanation, sizeof(explanation), frame, data_len);
-                break;
-            case PROTO_HITAGS:
-                annotateHitagS(explanation, sizeof(explanation), frame, data_len);
-                break;
             default:
                 break;
         }
@@ -402,19 +403,19 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     int num_lines = MIN((data_len - 1) / 18 + 1, 18);
     for (int j = 0; j < num_lines ; j++) {
         if (j == 0) {
-            
+
             uint32_t time1 = hdr->timestamp - first_hdr->timestamp;
 			uint32_t time2 = end_of_transmission_timestamp - first_hdr->timestamp;
 			if (prev_eot) {
 				time1 = hdr->timestamp - previous_end_of_transmission_timestamp;
 				time2 = duration;
 			}
-            
+
             if (use_us) {
                 PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |%-72s | %s| %s",
 					(float)time1/13.56,
 					(float)time2/13.56,
-                    (hdr->isResponse ? "Tag" : "Rdr"),
+                    (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
                     line[j],
                     (j == num_lines - 1) ? crc : "    ",
                     (j == num_lines - 1) ? explanation : ""
@@ -423,12 +424,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-72s | %s| %s",
                     (hdr->timestamp - first_hdr->timestamp),
                     (end_of_transmission_timestamp - first_hdr->timestamp),
-                    (hdr->isResponse ? "Tag" : "Rdr"),
+                    (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
                     line[j],
                     (j == num_lines - 1) ? crc : "    ",
                     (j == num_lines - 1) ? explanation : ""
                 );
-            }          
+            }
 
         } else {
             PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
@@ -442,7 +443,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (protocol == PROTO_MIFARE) {
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen)) {
             memset(explanation, 0x00, sizeof(explanation));
-            if (!hdr->isResponse) {
+            if (hdr->isResponse == false) {
                 annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen);
             }
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
@@ -457,11 +458,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         return traceLen;
     }
 
-    if (showWaitCycles && !hdr->isResponse && next_record_is_response(tracepos, trace)) {
+    if (showWaitCycles && hdr->isResponse == false && next_record_is_response(tracepos, trace)) {
 
         tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-        PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): %d",
+        PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
                       (end_of_transmission_timestamp - first_hdr->timestamp),
                       (next_hdr->timestamp - first_hdr->timestamp),
                       "   ",
@@ -534,10 +535,10 @@ static int SanityOfflineCheck( bool useTraceBuffer ){
 
 static int CmdTraceLoad(const char *Cmd) {
 
-    char filename[FILE_PATH_SIZE];
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_load();
 
+    char filename[FILE_PATH_SIZE];
     param_getstr(Cmd, 0, filename, sizeof(filename));
 
     if (g_trace)
@@ -557,6 +558,9 @@ static int CmdTraceLoad(const char *Cmd) {
 
 static int CmdTraceSave(const char *Cmd) {
 
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_save();
+
     if (g_traceLen == 0) {
         download_trace();
     }
@@ -567,9 +571,6 @@ static int CmdTraceSave(const char *Cmd) {
     }
 
     char filename[FILE_PATH_SIZE];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_save();
-
     param_getstr(Cmd, 0, filename, sizeof(filename));
     saveFile(filename, ".trace", g_trace, g_traceLen);
     return PM3_SUCCESS;
@@ -697,7 +698,7 @@ int CmdTraceList(const char *Cmd) {
 
         if (protocol == THINFILM) {
             if (use_us)
-                PrintAndLogEx(INFO, _YELLOW_("Thinfilm") " - all times are in microseconds");                
+                PrintAndLogEx(INFO, _YELLOW_("Thinfilm") " - all times are in microseconds");
             else
                 PrintAndLogEx(INFO, _YELLOW_("Thinfilm") " - all times are in carrier periods (1/13.56MHz)");
         }
@@ -751,7 +752,7 @@ int CmdTraceList(const char *Cmd) {
         if (use_relative) {
             prev_EOT = &previous_EOT;
         }
-        
+
         while (tracepos < g_traceLen) {
             tracepos = printTraceLine(tracepos, g_traceLen, g_trace, protocol, showWaitCycles, markCRCBytes, prev_EOT, use_us);
 
