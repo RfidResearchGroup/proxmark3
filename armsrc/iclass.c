@@ -382,7 +382,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     // chip memory may be divided in 8 pages
     uint8_t max_page = ((conf_block[4] & 0x10) == 0x10) ? 0 : 7;
 
-    // Precalculate the cipher states, feeding it the CC
+    // pre-calculate the cipher states, feeding it the CC
     cipher_state_KD[0] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
     cipher_state_KC[0] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
 
@@ -390,7 +390,6 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
         for (int i = 1; i < max_page; i++) {
 
-            // does all pages has their own epurse??)
             uint8_t *epurse = emulator + (i * page_size) + (8 * 2);
             uint8_t *kd = emulator + (i * page_size) + (8 * 3);
             uint8_t *kc = emulator + (i * page_size) + (8 * 4);
@@ -673,6 +672,22 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             if (simulationMode == ICLASS_SIM_MODE_FULL) {
                 // NR, from reader, is in receivedCmd +1
                 opt_doTagMAC_2(*cipher_state, receivedCmd + 1, data_generic_trace, diversified_key);
+
+                uint8_t _mac[4] = {0};
+                opt_doReaderMAC_2(*cipher_state, receivedCmd + 1, _mac,  diversified_key);
+
+                if (_mac[0] != receivedCmd[5] || _mac[1] != receivedCmd[6] || _mac[2] != receivedCmd[7] || _mac[3] != receivedCmd[8]) {
+                    Dbprintf("reader auth " _RED_("failed"));                   
+                    Dbprintf("hf iclass lookup u %02x%02x%02x%02x%02x%02x%02x%02x p %02x%02x%02x%02x%02x%02x%02x%02x m %02x%02x%02x%02x%02x%02x%02x%02x f iclass_default_keys.dic",
+                        csn_data[0],csn_data[1],csn_data[2],csn_data[3],csn_data[4],csn_data[5],csn_data[6],csn_data[7],
+                        card_challenge_data[0],card_challenge_data[1],card_challenge_data[2],card_challenge_data[3],
+                        card_challenge_data[4],card_challenge_data[5],card_challenge_data[6],card_challenge_data[7],
+                        receivedCmd[1],receivedCmd[2],receivedCmd[3],receivedCmd[4],
+                        receivedCmd[5],receivedCmd[6],receivedCmd[7],receivedCmd[8]
+                    );
+
+                    goto send;
+                }
 
                 trace_data = data_generic_trace;
                 trace_data_size = 4;
@@ -1455,16 +1470,49 @@ void ReaderIClass(uint8_t flags) {
 
 // turn off afterwards
 void ReaderIClass_Replay(uint8_t reader, uint8_t *mac) {
+    
+    BigBuf_free();
 
-    uint8_t cardsize = 0;
-    uint8_t mem = 0;
-    uint8_t check[] = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t read[]  = { 0x0c, 0x00, 0x00, 0x00 };
-    uint8_t card_data[PM3_CMD_DATA_SIZE] = {0};
-    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+    uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    // copy mac
+    memcpy(check + 5, mac, 4);
 
-    bool use_credit_key = false;
+    uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
+    if (card_data == NULL) {
+        DbpString("fail to allocate memory");
+        reply_ng(CMD_HF_ICLASS_REPLAY, PM3_EMALLOC, NULL, 0);
+        return;
+    }
+    memset(card_data, 0xFF, ICLASS_16KS_SIZE);
 
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    
+    Iso15693InitReader();
+
+    picopass_hdr hdr = {0};
+    bool res = select_iclass_tag( (uint8_t *)&hdr, false, &eof_time);
+    if (res == false) {
+        reply_ng(CMD_HF_ICLASS_REPLAY, PM3_ETIMEOUT, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    uint8_t resp[10] = {0};
+
+    //for now replay captured auth (as cc not updated)
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    res = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+    if (res == false) {
+        reply_ng(CMD_HF_ICLASS_REPLAY, PM3_ETIMEOUT, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    uint8_t mem = hdr.conf.mem_config;
+    uint8_t cardsize = ((mem & 0x80) == 0x80) ? 255 : 32;
+
+/*
     static struct memory_t {
         int k16;
         int book;
@@ -1473,115 +1521,45 @@ void ReaderIClass_Replay(uint8_t reader, uint8_t *mac) {
         int keyaccess;
     } memory;
 
-    uint32_t start_time = 0;
-    uint32_t eof_time = 0;
-    while (BUTTON_PRESS() == false) {
+//    memory.k16 = ((mem & 0x80) == 0x80);
+//    memory.book = ((mem & 0x20) == 0x20);
+//    memory.k2 = ((mem & 0x08) == 0x08);
+//    memory.lockauth = ((mem & 0x02) == 0x02);
+//    memory.keyaccess = ((mem & 0x01) == 0x01);
+//    uint8_t cardsize = memory.k16 ? 255 : 32;
+*/
 
-        WDT_HIT();
+    bool dumpsuccess = true;
 
-        bool read_status = select_iclass_tag(card_data, use_credit_key, &eof_time);
-        if (read_status == false) continue;
+    // main read loop
+    uint16_t i;
+    for (i = 0; i <= cardsize; i++) {
 
-        //for now replay captured auth (as cc not updated)
-        memcpy(check + 5, mac, 4);
-        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, i, 0x00, 0x00};
+        AddCrc(c + 1, 1);
 
-        if (iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
-            if (DBGLEVEL >= DBG_EXTENDED) DbpString("Error: Authentication Fail!");
-            continue;
+        res = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time);
+        if (res) {
+            memcpy(card_data + (8 * i), resp, 8);
+        } else {
+            Dbprintf("failed to read block %u ( 0x%02x)", i, i);
+            dumpsuccess = false;
         }
-
-        //first get configuration block (block 1)
-        read[1] = 1;
-        AddCrc(read + 1, 1);
-
-        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;        
-        if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time) == false) {
-            if (DBGLEVEL >= DBG_EXTENDED) DbpString("Dump config (block 1) failed");
-            continue;
-        }
-
-        mem = resp[5];
-        memory.k16 = ((mem & 0x80) == 0x80);
-        memory.book = ((mem & 0x20) == 0x20);
-        memory.k2 = ((mem & 0x08) == 0x08);
-        memory.lockauth = ((mem & 0x02) == 0x02);
-        memory.keyaccess = ((mem & 0x01) == 0x01);
-
-        cardsize = memory.k16 ? 255 : 32;
-
-        WDT_HIT();
-
-        // set card_data to 0xFF...
-        memset(card_data, 0xFF, PM3_CMD_DATA_SIZE);
-
-        uint8_t failedRead = 0;
-        uint32_t stored_data_length = 0;
-
-        //then loop around remaining blocks
-        for (uint16_t block = 0; block < cardsize; block++) {
-
-            read[1] = block;
-            AddCrc(read + 1, 1);
-
-            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-            if (iclass_send_cmd_with_retries(read, sizeof(read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time)) {
-                if (DBGLEVEL >= DBG_EXTENDED) {
-                    Dbprintf("     %02x: %02x %02x %02x %02x %02x %02x %02x %02x",
-                         block,
-                         resp[0], resp[1], resp[2], resp[3],
-                         resp[4], resp[5], resp[6], resp[7]
-                    );
-                }
-
-                //Fill up the buffer
-                memcpy(card_data + stored_data_length, resp, 8);
-                stored_data_length += 8;
-
-                if (stored_data_length + 8 > PM3_CMD_DATA_SIZE) {
-                    //Time to send this off and start afresh
-                    reply_old(CMD_ACK,
-                              stored_data_length,//data length
-                              failedRead,//Failed blocks?
-                              0,//Not used ATM
-                              card_data,
-                              stored_data_length
-                             );
-                    //reset
-                    stored_data_length = 0;
-                    failedRead = 0;
-                }
-            } else {
-                failedRead = 1;
-                stored_data_length += 8;//Otherwise, data becomes misaligned
-                if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Failed to dump block %d", block);
-            }
-        }
-
-        //Send off any remaining data
-        if (stored_data_length > 0) {
-            reply_old(CMD_ACK,
-                      stored_data_length,//data length
-                      failedRead,//Failed blocks?
-                      0,//Not used ATM
-                      card_data,
-                      stored_data_length
-                     );
-        }
-        //If we got here, let's break
-        break;
     }
-    //Signal end of transmission
-    reply_old(CMD_ACK,
-              0,//data length
-              0,//Failed blocks?
-              0,//Not used ATM
-              card_data,
-              0
-             );
-    switch_off();
 
-//    reply_ng(CMD_HF_ICLASS_REPLAY, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
+    struct p {
+        bool isOK;
+        uint16_t block_cnt;
+        uint32_t bb_offset;
+    } PACKED response;
+
+    response.isOK = dumpsuccess;
+    response.block_cnt = i;
+    response.bb_offset = card_data - BigBuf_get_addr();
+    reply_ng(CMD_HF_ICLASS_REPLAY, PM3_SUCCESS, (uint8_t *)&response, sizeof(response));
+
+    BigBuf_free();
+    switch_off();
 }
 
 // used with function select_and_auth (cmdhficlass.c)
@@ -1799,7 +1777,7 @@ void iClass_Dump(uint8_t *msg) {
     iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
     iclass_auth_req_t *req = &cmd->req;
 
-    uint8_t *dataout = BigBuf_malloc(0x100 * 8);
+    uint8_t *dataout = BigBuf_malloc(ICLASS_16KS_SIZE);
     if (dataout == NULL) {
         DbpString("fail to allocate memory");
         if (req->send_reply) {
@@ -1808,7 +1786,7 @@ void iClass_Dump(uint8_t *msg) {
         switch_off();
         return;
     }
-    memset(dataout, 0xFF, 0x100 * 8);
+    memset(dataout, 0xFF, ICLASS_16KS_SIZE);
 
     Iso15693InitReader();
     

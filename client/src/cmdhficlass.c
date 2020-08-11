@@ -284,12 +284,12 @@ static int usage_hf_iclass_reader(void) {
 }
 static int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "Replay a collected mac message\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass replay [h] <mac>\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass replay [h] [m <mac>]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h       Show this help");
-    PrintAndLogEx(NORMAL, "  <mac>   Mac bytes to replay (8 hexsymbols)");
+    PrintAndLogEx(NORMAL, "  h             Show this help");
+    PrintAndLogEx(NORMAL, "  m <mac>       Mac bytes to replay (8 hexsymbols)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass replay 00112233"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass replay m 89cb984b"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -871,17 +871,78 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
         uint8_t mac[4];
     } PACKED payload;
 
-    if (param_gethex(Cmd, 0, payload.mac, 8)) {
+    if (param_gethex(Cmd, 1, payload.mac, 8)) {
         PrintAndLogEx(FAILED, "MAC must include 8 HEX symbols");
         return PM3_EINVARG;
     }
 
+    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_REPLAY, (uint8_t *)&payload, sizeof(payload));    
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_ICLASS_REPLAY, &resp, 2000) == 0) {
+
+    while (true) {
+        printf(".");
+        fflush(stdout);
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
+            DropField();
+            return PM3_EOPABORTED;
+        }
+
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_REPLAY, &resp, 2000))
+            break;
     }
 
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to communicate with card");
+        return resp.status;
+    }
+
+    struct p_resp {
+        bool isOK;
+        uint16_t block_cnt;
+        uint32_t bb_offset;
+    } PACKED;
+    struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
+
+    if (packet->isOK == false) {
+        PrintAndLogEx(WARNING, "replay reading blocks failed");
+        return PM3_ESOFT;
+    }
+
+    uint32_t startindex = packet->bb_offset;
+    uint32_t bytes_got = (packet->block_cnt * 8);
+
+    uint8_t tag_data[0x100 * 8];
+    memset(tag_data, 0xFF, sizeof(tag_data));
+
+    // response ok - now get bigbuf content of the dump
+    if (!GetFromDevice(BIG_BUF, tag_data, sizeof(tag_data), startindex, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    // print the dump
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------+----+-------------------------+----------");
+    PrintAndLogEx(INFO, " CSN  |0x00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
+    printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got);
+
+    // use CSN as filename
+    char filename[FILE_PATH_SIZE] = {0};
+    strcat(filename, "hf-iclass-");
+    FillFileNameByUID(filename, tag_data, "-dump", 8);
+
+    // save the dump to .bin file
+    PrintAndLogEx(SUCCESS, "saving dump file - %zu blocks read", bytes_got / 8);
+    saveFile(filename, ".bin", tag_data, bytes_got);
+    saveFileEML(filename, tag_data, bytes_got, 8);
+    saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
+    
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt") "` to decrypt dump file");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view") "` to view dump file");
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -2550,7 +2611,6 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
         PrintAndLogEx(SUCCESS, "Xor div key : " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
     }
 }
-
 
 static int CmdHFiClassCalcNewKey(const char *Cmd) {
     uint8_t OLDKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
