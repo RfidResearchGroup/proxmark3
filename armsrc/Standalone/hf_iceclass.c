@@ -33,9 +33,9 @@
 // Select which standalone function to be active.
 // 4 possiblities.  Uncomment the one you wanna use.
 
-//#define ICE_USE               ICE_STATE_FULLSIM
+#define ICE_USE               ICE_STATE_FULLSIM
 //#define ICE_USE               ICE_STATE_ATTACK
-#define ICE_USE               ICE_STATE_READER
+//#define ICE_USE               ICE_STATE_READER
 //#define ICE_USE               ICE_STATE_CONFIGCARD
 
 // ====================================================
@@ -111,27 +111,27 @@ static uint8_t csns[8 * NUM_CSNS] = {
 };
 
 static void download_instructions(uint8_t t) {
-    Dbprintf("");
+    DbpString("");
     switch (t) { 
         case ICE_STATE_FULLSIM: {
-            Dbprintf("The emulator memory was saved to flash. Try the following from flash and display it");
-            Dbprintf("1. " _YELLOW_("mem spiffs dump o "HF_ICLASS_FULLSIM_MOD_BIN" f "HF_ICLASS_FULLSIM_MOD" e"));
-            Dbprintf("2. " _YELLOW_("exit proxmark3 client"));
-            Dbprintf("3. " _YELLOW_("cat "HF_ICLASS_FULLSIM_MOD_EML));
+            DbpString("The emulator memory was saved to SPIFFS");
+            DbpString("1. " _YELLOW_("mem spiffs dump o " HF_ICLASS_FULLSIM_MOD_BIN " f " HF_ICLASS_FULLSIM_MOD" e"));
+            DbpString("2. " _YELLOW_("hf iclass view f " HF_ICLASS_FULLSIM_MOD_BIN));
             break;
         } 
         case ICE_STATE_ATTACK: {
-            Dbprintf("The emulator memory was saved to flash. Try the following from flash and display it");
-            Dbprintf("1. " _YELLOW_("mem spiffs dump o "HF_ICLASS_ATTACK_BIN" f "HF_ICLASS_ATTACK_BIN));
-            Dbprintf("2. " _YELLOW_("hf iclass loclass f "HF_ICLASS_ATTACK_BIN));
+            DbpString("The collected data was saved to SPIFFS. The file names below may differ");
+            DbpString("1. " _YELLOW_("mem spiffs tree"));
+            DbpString("2. " _YELLOW_("mem spiffs dump o " HF_ICLASS_ATTACK_BIN " f " HF_ICLASS_ATTACK_BIN));
+            DbpString("3. " _YELLOW_("hf iclass loclass f " HF_ICLASS_ATTACK_BIN));
             break;
         }
         case ICE_STATE_READER: {
-            Dbprintf("The found tags was saved to flash. Try to download from flash and display it");
-            Dbprintf("1. " _YELLOW_("mem spiffs tree"));
-            Dbprintf("2. " _YELLOW_("mem spiffs dump h"));
+            DbpString("The found tags was saved to SPIFFS");
+            DbpString("1. " _YELLOW_("mem spiffs tree"));
+            DbpString("2. " _YELLOW_("mem spiffs dump h"));
             break;
-        }        
+        }
     }
 }
 
@@ -152,41 +152,41 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
         res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
         if (res == SPIFFS_OK) {
             Dbprintf("saved to " _GREEN_("%s"), fn);
-        } 
+        }
     } else {
-        
+
         // if already exist,  see if saved file is smaller..
         uint32_t fsize = 0;
         res = rdv40_spiffs_stat(fn, &fsize, RDV40_SPIFFS_SAFETY_SAFE);
-        if (res == SPIFFS_OK) {           
+        if (res == SPIFFS_OK) {
 
             if (fsize < datalen) {
                 res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
                 if (res == SPIFFS_OK) {
                     Dbprintf("wrote over " _GREEN_("%s"), fn);
-                }                 
+                }
             }
         }
-    }    
+    }
 
     rdv40_spiffs_lazy_unmount();
 }
 
 static int fullsim_mode(void) {
-   
+
     rdv40_spiffs_lazy_mount();
-  
+
     SpinOff(0);
     uint8_t *emul = BigBuf_get_EM_addr();
     uint32_t fsize = size_in_spiffs(HF_ICLASS_FULLSIM_ORIG_BIN);
     int res = rdv40_spiffs_read_as_filetype(HF_ICLASS_FULLSIM_ORIG_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
     rdv40_spiffs_lazy_unmount();
     if (res == SPIFFS_OK) {
-        Dbprintf("loaded " _YELLOW_(HF_ICLASS_FULLSIM_ORIG_BIN) " (%u bytes)", fsize);
+        Dbprintf("loaded " _GREEN_(HF_ICLASS_FULLSIM_ORIG_BIN) " (%u bytes)", fsize);
     }
 
     iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
-    
+
     LED_B_ON();
     rdv40_spiffs_lazy_mount();
     res = rdv40_spiffs_write(HF_ICLASS_FULLSIM_MOD_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
@@ -198,7 +198,7 @@ static int fullsim_mode(void) {
         Dbprintf(_RED_("error") " writing "HF_ICLASS_FULLSIM_MOD_BIN" to flash ( %d )", res);
     }
 
-    DbpString("-=[ exiting " _YELLOW_("`full simulation`") " mode ]=-");
+    DbpString("-=[ exiting " _CYAN_("`full simulation`") " mode ]=-");
     return PM3_SUCCESS;
 }
 
@@ -211,7 +211,7 @@ static int reader_attack_mode(void) {
     iclass_simulate(ICLASS_SIM_MODE_READER_ATTACK, NUM_CSNS, false, csns, mac_responses, &mac_response_len);
 
     if (mac_response_len > 0) {
-        
+
         bool success = (mac_response_len == MAC_RESPONSES_SIZE);
         uint8_t num_mac = (mac_response_len >> 4);
         Dbprintf("%u out of %d MAC obtained [%s]", num_mac, NUM_CSNS, (success) ? _GREEN_("ok") : _RED_("fail"));
@@ -238,16 +238,16 @@ static int reader_attack_mode(void) {
 
         LED_B_ON();
         rdv40_spiffs_lazy_mount();
-        
+
         char fn[32];
         uint16_t p_namelen = strlen(HF_ICLASS_ATTACK_BIN);
         uint16_t num = 1;
         sprintf(fn, "%.*s%s", p_namelen, HF_ICLASS_ATTACK_BIN, ".bin");
-        
+
         while (exists_in_spiffs(fn)) {
             sprintf(fn, "%.*s-%u%s", p_namelen, HF_ICLASS_ATTACK_BIN, num, ".bin");
             num++;
-        }        
+        }
         int res = rdv40_spiffs_write(fn, dump, dumplen, RDV40_SPIFFS_SAFETY_SAFE);
         rdv40_spiffs_lazy_unmount();
         LED_B_OFF();
@@ -258,12 +258,12 @@ static int reader_attack_mode(void) {
         }
     }
     BigBuf_free();
-    DbpString("-=[ exiting " _YELLOW_("`reader attack`") " mode ]=-");
+    DbpString("-=[ exiting " _CYAN_("`reader attack`") " mode ]=-");
     return PM3_SUCCESS;
 }
 
 static int reader_dump_mode(void) {
-    
+
     DbpString("this mode has no tracelog");
     if (have_aa2())
         DbpString("dumping of " _YELLOW_("AA2 enabled"));
@@ -271,16 +271,16 @@ static int reader_dump_mode(void) {
     for (;;) {
 
         BigBuf_free();
-    
+
         uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
         memset(card_data, 0xFF, ICLASS_16KS_SIZE);
-       
+
         if (BUTTON_PRESS()) {
             DbpString("button pressed");
             break;
         }
 
-         // setup authenticate AA1 
+         // setup authenticate AA1
         iclass_auth_req_t auth = {
             .use_raw = false,
             .use_elite = false,
@@ -302,15 +302,14 @@ static int reader_dump_mode(void) {
         }
 
         picopass_hdr *hdr = (picopass_hdr *)card_data;
-                
         // sanity check of CSN.
         if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
             switch_off();
             continue;
         }
-       
+
         uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-      
+
         // get 3 config bits
         uint8_t type = (hdr->conf.chip_config & 0x10) >> 2;
         type |= (hdr->conf.mem_config & 0x80) >> 6;
@@ -331,19 +330,19 @@ static int reader_dump_mode(void) {
             app1_limit = hdr->conf.app_limit;
             app2_limit = card_app2_limit[type];
             start_block = 5;
-           
+
             res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
             if (res == false) {
                 switch_off();
                 Dbprintf( _RED_("failed AA1 auth") ", skipping ");
                 continue;
             }
-            
+
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         }
 
         uint16_t dumped = 0;
-          
+
         // main read loop
         for (uint16_t i = start_block; i <= app1_limit; i++) {
             if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
@@ -352,14 +351,14 @@ static int reader_dump_mode(void) {
         }
 
         if (pagemap != PICOPASS_NON_SECURE_PAGEMODE && have_aa2()) {
-          
-            // authenticate AA2 
+
+            // authenticate AA2
             auth.use_raw = false;
             auth.use_credit_key = true;
             memcpy(auth.key, aa2_key, sizeof(auth.key));
-            
+
             res = select_iclass_tag(card_data, auth.use_credit_key, &eof_time);
-            if (res) {  
+            if (res) {
 
                 // sanity check of CSN.
                 if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
@@ -370,7 +369,7 @@ static int reader_dump_mode(void) {
                 res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
                 if (res) {
                     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                    
+
                     for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
                         if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
                             dumped++;
@@ -393,7 +392,7 @@ static int reader_dump_mode(void) {
         save_to_flash(card_data, (start_block + dumped) * 8 );
         Dbprintf("%u bytes saved", (start_block + dumped) * 8);
     }
-    DbpString("-=[ exiting " _YELLOW_("`read & dump`") " mode ]=-");
+    DbpString("-=[ exiting " _CYAN_("`read & dump`") " mode ]=-");
     return PM3_SUCCESS;
 }
 
@@ -403,19 +402,18 @@ static int config_sim_mode(void) {
 
     for (uint8_t i = 0; i < 2; i++) {
         SpinOff(0);
-        
         rdv40_spiffs_lazy_mount();
         uint32_t fsize = size_in_spiffs(cc_files[i]);
         int res = rdv40_spiffs_read_as_filetype(cc_files[i], emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
         rdv40_spiffs_lazy_unmount();
 
         if (res == SPIFFS_OK) {
-            Dbprintf("loaded " _YELLOW_("%s") " (%u bytes) to emulator memory", cc_files[i], fsize);
+            Dbprintf("loaded " _GREEN_("%s") " (%u bytes) to emulator memory", cc_files[i], fsize);
             iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
         }
     }
 
-    DbpString("-=[ exiting " _YELLOW_("`config card simulation`") " mode ]=-");
+    DbpString("-=[ exiting " _CYAN_("`glitch & config`") " mode ]=-");
     return PM3_SUCCESS;
 }
 
@@ -432,12 +430,11 @@ void RunMod(void) {
     }
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    BigBuf_Clear();
+    BigBuf_Clear_ext(false);
 
     StandAloneMode();
     Dbprintf(_YELLOW_("HF iCLASS mode a.k.a iceCLASS started"));
 
-  
 
     for (;;) {
 
@@ -445,12 +442,12 @@ void RunMod(void) {
 
         if (mode == ICE_STATE_NONE) break;
         if (data_available()) break;
-                
+
         int res;
         switch (mode) {
 
             case ICE_STATE_FULLSIM: {
-                Dbprintf("enter full simulation mode");
+                DbpString("-=[ enter " _CYAN_("`full simulation`") " mode ]=-");
 
                 // Look for iCLASS dump file
                 rdv40_spiffs_lazy_mount();
@@ -459,7 +456,7 @@ void RunMod(void) {
                     mode = ICE_STATE_NONE;
                 }
                 rdv40_spiffs_lazy_unmount();
-                
+
                 if (mode == ICE_STATE_FULLSIM) {
                     res = fullsim_mode();
                     if (res == PM3_SUCCESS) {
@@ -471,7 +468,7 @@ void RunMod(void) {
                 break;
             }
             case ICE_STATE_ATTACK: {
-                Dbprintf("enter reader attack mode");
+                DbpString("-=[ enter " _CYAN_("`reader attack`") " mode ]=-");
                 res = reader_attack_mode();
                 if (res == PM3_SUCCESS)
                     download_instructions(mode);
@@ -480,7 +477,7 @@ void RunMod(void) {
                 break;
             }
             case ICE_STATE_READER: {
-                Dbprintf("enter read & dump mode, continuous scanning");
+                DbpString("-=[ enter " _CYAN_("`read & dump`") " mode, continuous scanning ]=-");
                 res = reader_dump_mode();
                 if (res == PM3_SUCCESS)
                     download_instructions(mode);
@@ -489,9 +486,9 @@ void RunMod(void) {
                 break;
             }
             case ICE_STATE_CONFIGCARD: {
-                Dbprintf("enter config card simulation mode");
+                DbpString("-=[ enter " _CYAN_("`glitch & config`") " mode ]=-");
 
-                // Look for config cards                 
+                // Look for config cards
                 rdv40_spiffs_lazy_mount();
                 for (uint8_t i =0; i < 2; i++) {
                     if (exists_in_spiffs(cc_files[i]) == false) {
@@ -500,7 +497,7 @@ void RunMod(void) {
                     }
                 }
                 rdv40_spiffs_lazy_unmount();
-                
+
                 if (mode == ICE_STATE_CONFIGCARD)
                     config_sim_mode();
 
