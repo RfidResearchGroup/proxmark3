@@ -287,9 +287,10 @@ static int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass replay [h] [m <mac>]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h             Show this help");
+    PrintAndLogEx(NORMAL, "  r <nonce>     Reader nonce bytes to replay (8 hexsymbols)");
     PrintAndLogEx(NORMAL, "  m <mac>       Mac bytes to replay (8 hexsymbols)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass replay m 89cb984b"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass replay r 00000000 m 89cb984b"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -863,16 +864,56 @@ static int CmdHFiClassReader(const char *Cmd) {
 
 static int CmdHFiClassReader_Replay(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_iclass_replay();
-
     struct {
-        uint8_t reader;
+        uint8_t reader[4];
         uint8_t mac[4];
     } PACKED payload;
 
-    if (param_gethex(Cmd, 1, payload.mac, 8)) {
-        PrintAndLogEx(FAILED, "MAC must include 8 HEX symbols");
+
+    bool got_rnr, got_mac;
+    got_rnr = got_mac = false;
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h': {
+                return usage_hf_iclass_replay();
+            }
+            case 'r': {
+                if (param_gethex(Cmd, cmdp + 1, payload.reader, 8)) {
+                    PrintAndLogEx(FAILED, "Reader Nr must include 8 HEX symbols");
+                    errors = true;
+                } else {
+                    got_rnr = true;
+                }
+                cmdp += 2;
+                break;
+            }
+            case 'm': {
+                if (param_gethex(Cmd, cmdp + 1, payload.mac, 8)) {
+                    PrintAndLogEx(FAILED, "Reader MAC must include 8 HEX symbols");
+                    errors = true;
+                } else {
+                    got_mac = true;
+                }
+                cmdp += 2;
+                break;
+            }
+            default: {
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+            }
+        }
+    }
+
+    //Validations
+    if (errors || cmdp == 0) {
+        return usage_hf_iclass_replay();
+    }
+
+    if (got_rnr == false || got_mac == false) {
+        PrintAndLogEx(FAILED, "Reader Nr and MAC is needed");
         return PM3_EINVARG;
     }
 
