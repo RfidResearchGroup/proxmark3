@@ -502,6 +502,7 @@ static void SendCapabilities(void) {
 
 // Show some leds in a pattern to identify StandAlone mod is running
 void StandAloneMode(void) {
+    DbpString("");
     DbpString("Stand-alone mode, no computer necessary");
     SpinDown(50);
     SpinDelay(50);
@@ -780,7 +781,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_HID_WATCH: {
             uint32_t high, low;
             int res = lf_hid_watch(0, &high, &low);
-            reply_ng(CMD_LF_HID_WATCH, res, NULL, 0);            
+            reply_ng(CMD_LF_HID_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_HID_SIMULATE: {
@@ -1023,12 +1024,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_SNIFF: {
+            /*
             struct p {
                 uint8_t jam_search_len;
                 uint8_t jam_search_string[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
+
             SniffIso15693(payload->jam_search_len, payload->jam_search_string);
+            */
+            SniffIso15693(0, NULL);
             reply_ng(CMD_HF_ISO15693_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -1399,10 +1404,10 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ICLASS_REPLAY: {
             struct p {
-                uint8_t reader;
+                uint8_t reader[4];
                 uint8_t mac[4];
             } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;            
+            struct p *payload = (struct p *) packet->data.asBytes;
             ReaderIClass_Replay(payload->reader, payload->mac);
             break;
         }

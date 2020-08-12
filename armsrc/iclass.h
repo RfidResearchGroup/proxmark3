@@ -17,7 +17,7 @@
 
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);
 void ReaderIClass(uint8_t arg0);
-void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac);
+void ReaderIClass_Replay(uint8_t *rnr, uint8_t *mac);
 
 void iClass_WriteBlock(uint8_t *msg);
 void iClass_Dump(uint8_t *msg);

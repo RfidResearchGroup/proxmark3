@@ -1469,12 +1469,13 @@ void ReaderIClass(uint8_t flags) {
 }
 
 // turn off afterwards
-void ReaderIClass_Replay(uint8_t reader, uint8_t *mac) {
+void ReaderIClass_Replay(uint8_t *rnr, uint8_t *mac) {
     
     BigBuf_free();
 
     uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    // copy mac
+
+    memcpy(check + 1, rnr, 4);
     memcpy(check + 5, mac, 4);
 
     uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
