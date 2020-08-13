@@ -21,10 +21,10 @@ Therefore, the .eml is better to use file when saving dumps.)
 
 ]]
 example = [[
-    1. script run ndef_dump
+    1. script run hf_ndef_dump
 ]]
 usage = [[
-script run ndef_dump [-h] [-d] [-v]
+script run hf_ndef_dump [-h] [-d] [-v]
 ]]
 arguments = [[
     -h              this help
