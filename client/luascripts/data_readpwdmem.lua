@@ -15,25 +15,25 @@ You should now use read_pwd_mem_spiffs instead after the updated BogRun standalo
 ]]
 example = [[
     -- This will scan the first 256 bytes of flash memory for stored passwords
-    script run read_pwd_mem
+    script run data_readpwdmem
 
     -- This will scan 256 bytes of flash memory at offset 64 for stored passwords
-    script run read_pwd_mem -o 64
+    script run data_readpwdmem -o 64
 
     -- This will scan 32 bytes of flash memory at offset 64 for stored passwords
-    script run read_pwd_mem -o 64 -l 32
+    script run data_readpwdmem -o 64 -l 32
 
     -- This will print the stored Mifare dictionary keys
-    script run read_pwd_mem -m
+    script run data_readpwdmem -m
 
     -- This will print the stored t55xx dictionary passwords
-    script run read_pwd_mem -t
+    script run data_readpwdmem -t
 
     -- This will print the stored iClass dictionary keys
-    script run read_pwd_mem -i
+    script run data_readpwdmem -i
 ]]
 usage = [[
-    script run read_pwd_mem [-h] [-o <offset>] [-l <length>] [-k <keylength>] [-m] [-t] [-i]
+    script run data_readpwdmem [-h] [-o <offset>] [-l <length>] [-k <keylength>] [-m] [-t] [-i]
 ]]
 arguments = [[
     -h              :  this help
