@@ -13,13 +13,13 @@ It starts from block 0 and ends at default block 254.
 ]]
 example = [[
     -- default
-    script run lto_dump
+    script run hf_14a_read-ltocm
 
     -- stop at block 10
-    script run lto_dump -e 10
+    script run hf_14a_read-ltocm -e 10
 ]]
 usage = [[
-script run lto_dump -h -s -e
+script run hf_14a_read-ltocm -h -s -e
 ]]
 arguments = [[
       h   this helptext
