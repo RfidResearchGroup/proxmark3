@@ -20,16 +20,16 @@ The script will skip the manufactoring block 0.
 ]]
 example = [[
     -- generate commands
-    1. script run formatMifare
+    1. script run hf_mf_format
 
     -- generate command, replacing key with new key.
-    2. script run formatMifare -k aabbccddeeff -n 112233445566 -a FF0780
+    2. script run hf_mf_format -k aabbccddeeff -n 112233445566 -a FF0780
 
     -- generate commands and execute them against card.
-    3. script run formatMifare -x
+    3. script run hf_mf_format -x
 ]]
 usage = [[
-script run formatMifare -k <key> -n <key> -a <access> -x
+script run hf_mf_format -k <key> -n <key> -a <access> -x
 ]]
 arguments = [[
     -h             - this help
