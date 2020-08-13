@@ -13,13 +13,13 @@ Algo not found by me.
 ]]
 example = [[
      -- if called without, it reads tag uid
-     script run calc_mizip
+     script run hf_mf_uidkeycalc-mizip
 
      --
-     script run calc_mizip -u 11223344
+     script run hf_mf_uidkeycalc-mizip -u 11223344
 ]]
 usage = [[
-script run calc_mizip -h -u <uid>
+script run hf_mf_uidkeycalc-mizip -h -u <uid>
 ]]
 arguments = [[
     -h             : this help
