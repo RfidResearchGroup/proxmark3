@@ -36,13 +36,13 @@ Loop:
     -xx 1C xxxx = RF/128
 
 
-testsuit for the ASK/MANCHESTER demod
+testsuite for the ASK/MANCHESTER demod
 ]]
 example =[[
-    1. script run test_t55x7_ask
+    1. script run lf_t55xx_defaultask
 ]]
 usage = [[
-script run test_t55x7_ask [-h]
+script run lf_t55xx_defaultask [-h]
 ]]
 arguments = [[
     -h             : this help
