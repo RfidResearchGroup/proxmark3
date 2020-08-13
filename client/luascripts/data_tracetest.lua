@@ -18,10 +18,10 @@ The following tracefiles will be loaded:
    modulation*.pm3
 ]]
 example = [[
-    1. script run tracetest
+    1. script run data_tracetest
 ]]
 usage = [[
-script run tracetest [-h]
+script run data_tracetest [-h]
 ]]
 arguments = [[
     -h             : this help
