@@ -13,17 +13,17 @@ author = 'Iceman'
 version = 'v1.0.2'
 desc = [[
 This script will try to load a binary datadump of a Mifare TNP3xxx card.
-It vill try to validate all checksums and view some information stored in the dump
+It will try to validate all checksums and view some information stored in the dump
 For an experimental mode, it tries to manipulate some data.
 At last it sends all data to the PM3 device memory where it can be used in the command  "hf mf sim"
 ]]
 example = [[
-    1. script run tnp3sim
-    2. script run tnp3sim -m
-    3. script run tnp3sim -m -i myfile
+    1. script run hf_mf_autosim
+    2. script run hf_mf_autosim -m
+    3. script run hf_mf_autosim -m -i myfile
 ]]
 usage = [[
-script run tnp3sim [-h] [-m] [-i <filename>]
+script run hf_mf_autosim [-h] [-m] [-i <filename>]
 ]]
 arguments = [[
     -h             : this help
