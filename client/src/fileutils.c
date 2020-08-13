@@ -1439,21 +1439,38 @@ int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
     }
 }
 
-static int filelist(const char *path, const char *ext, bool last, bool tentative) {
+static int filelist(const char *path, const char *ext, uint8_t last, bool tentative, uint8_t indent, uint16_t strip) {
     struct dirent **namelist;
     int n;
 
     n = scandir(path, &namelist, NULL, alphasort);
     if (n == -1) {
-        if (!tentative)
-            PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
+        if (!tentative) {
+            for (uint8_t j = 0; j < indent; j++)
+                PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+            PrintAndLogEx(NORMAL, "%s── "_GREEN_("%s"), last ? "└" : "├", &path[strip]);
+        }
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
+    for (uint8_t j = 0; j < indent; j++)
+        PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+    PrintAndLogEx(NORMAL, "%s── "_GREEN_("%s"), last ? "└" : "├", &path[strip]);
     for (uint16_t i = 0; i < n; i++) {
-        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
-            PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " " : "│", i == n - 1 ? "└" : "├", namelist[i]->d_name);
+        if (namelist[i]->d_type == DT_DIR) {
+            char newpath[1024];
+            if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
+                continue;
+            snprintf(newpath, sizeof(newpath), "%s", path);
+            strncat(newpath, namelist[i]->d_name, sizeof(newpath) - strlen(newpath));
+            strncat(newpath, "/", sizeof(newpath) - strlen(newpath));
+            filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
+        } else {
+            if ((ext == NULL) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
+                for (uint8_t j = 0; j < indent + 1; j++)
+                    PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+                PrintAndLogEx(NORMAL, "%s── %-21s", i == n - 1 ? "└" : "├", namelist[i]->d_name);
+            }
         }
         free(namelist[i]);
     }
@@ -1468,7 +1485,7 @@ int searchAndList(const char *pm3dir, const char *ext) {
         char script_directory_path[strlen(get_my_executable_directory()) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, get_my_executable_directory());
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false, true);
+        filelist(script_directory_path, ext, false, true, 0, 0);
     }
     // try pm3 dirs in user .proxmark3 (user mode)
     const char *user_path = get_my_user_directory();
@@ -1477,7 +1494,7 @@ int searchAndList(const char *pm3dir, const char *ext) {
         strcpy(script_directory_path, user_path);
         strcat(script_directory_path, PM3_USER_DIRECTORY);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false, false);
+        filelist(script_directory_path, ext, false, false, 0, 0);
     }
     // try pm3 dirs in pm3 installation dir (install mode)
     const char *exec_path = get_my_executable_directory();
@@ -1486,7 +1503,7 @@ int searchAndList(const char *pm3dir, const char *ext) {
         strcpy(script_directory_path, exec_path);
         strcat(script_directory_path, PM3_SHARE_RELPATH);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, true, false);
+        filelist(script_directory_path, ext, true, false, 0, 0);
     }
     return PM3_SUCCESS;
 }

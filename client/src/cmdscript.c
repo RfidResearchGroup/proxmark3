@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 // Some lua scripting glue to proxmark core.
 //-----------------------------------------------------------------------------
-// 2020, added Python support (@iceman100)
+// 2020, added Python support (@iceman1001)
 
 
 #include <stdlib.h>
@@ -192,14 +192,17 @@ static void set_python_paths(void) {
 */
 static int CmdScriptList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
+    PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Lua scripts ]"));
     int ret = searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
     if (ret != PM3_SUCCESS)
         return ret;
 
+    PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Cmd scripts ]"));
     ret = searchAndList(CMD_SCRIPTS_SUBDIR, ".cmd");
     if (ret != PM3_SUCCESS)
         return ret;
 #ifdef HAVE_PYTHON
+    PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Python scripts ]"));
     return searchAndList(PYTHON_SCRIPTS_SUBDIR, ".py");
 #else
     return ret;
