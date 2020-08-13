@@ -12,11 +12,11 @@ desc = [[
 This is a script to communicate with a CALYSPO / 14443b tag using the '14b raw' commands
 ]]
 example = [[
-    script run calypso -b 11223344
+    script run hf_14b_calypso -b 11223344
 
 ]]
 usage = [[
-script run calypso -h -b
+script run hf_14b_calypso -h -b
 ]]
 arguments = [[
       h   this helptext
