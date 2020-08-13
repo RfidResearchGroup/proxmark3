@@ -10,12 +10,12 @@ desc =[[
 This script takes an dumpfile in EML (ASCII) format and converts it to the PM3 dumpbin file to be used with `hf mf restore`
 ]]
 example =[[
-    1. script run emul2dump
-    2. script run emul2dump -i myfile.eml
-    3. script run emul2dump -i myfile.eml -o myfile.bin
+    1. script run data_emulatortodump
+    2. script run data_emulatortodump -i myfile.eml
+    3. script run data_emulatortodump -i myfile.eml -o myfile.bin
 ]]
 usage = [[
-script run emul2dump [-i <file>] [-o <file>]
+script run data_emulatortodump [-i <file>] [-o <file>]
 ]]
 arguments = [[
     -h              This help
