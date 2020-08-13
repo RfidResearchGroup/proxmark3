@@ -559,6 +559,7 @@ int CmdEM4x50Read(const char *Cmd) {
     em4x50_data_t etd;
     etd.pwd_given = false;
     etd.addr_given = false;
+    etd.newpwd_given = false;
 
     bool errors = false;
     uint8_t cmdp = 0;
