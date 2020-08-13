@@ -13,10 +13,10 @@ This is a script which automates cracking and dumping mifare classic cards. It s
 place by the device.
 ]]
 example = [[
-    1. script run mifare_autopwn
+    1. script run hf_mf_autopwn
 ]]
 usage = [[
-script run mifare_autopwn [-h] [-d] [-k <key>]
+script run hf_mf_autopwn [-h] [-d] [-k <key>]
 ]]
 arguments = [[
     -h          this help
