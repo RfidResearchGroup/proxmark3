@@ -12,10 +12,10 @@ This is an example script to demonstrate handle parameters in scripts.
 For more info, check the comments in the code
 ]]
 example = [[
-    1. script run parameters -a mytestparam_input -c
+    1. script run data_example_parameters -a mytestparam_input -c
 ]]
 usage = [[
-script run parameters [-h] [-a <txt>] [-b <txt>] [-c] [-d] [-e]
+script run data_example_parameters [-h] [-a <txt>] [-b <txt>] [-c] [-d] [-e]
 ]]
 arguments = [[
     -h              This help
