@@ -11,16 +11,16 @@ It was meant to be used as a help tool after using the BogRun standalone mode.
 ]]
 example = [[
     -- This will read the hf_bog.log file in SPIFFS and print the stored passwords
-    script run read_pwd_mem_spiffs
+    script run data_read_pwd_mem_spiffs
 
     -- This will read the other.log file in SPIFFS and print the stored passwords
-    script run read_pwd_mem_spiffs -f other.log
+    script run data_read_pwd_mem_spiffs -f other.log
 
     -- This will delete the hf_bog.log file from SPIFFS
-    script run read_pwd_mem_spiffs -r
+    script run data_read_pwd_mem_spiffs -r
 ]]
 usage = [[
-    script run read_pwd_mem_spiffs [-h] [-f <filename>] [-r]
+    script run data_read_pwd_mem_spiffs [-h] [-f <filename>] [-r]
 ]]
 arguments = [[
     -h              :  this help
