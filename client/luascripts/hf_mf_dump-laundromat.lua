@@ -17,10 +17,10 @@ desc = [[
 This is a script that tries to dump and decrypt the data of a specific type of Mifare laundromat token.  OBS! Tag must be on the antenna.
 ]]
 example = [[
-    script run luxeodump
+    script run hf_mf_dump-laundromat
 ]]
 usage = [[
-script run luxeodump
+script run hf_mf_dump-laundromat
 ]]
 arguments = [[
     -h              This help
