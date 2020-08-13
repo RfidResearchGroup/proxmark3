@@ -267,13 +267,17 @@ void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     memcpy(mac, dest, 4);
 }
 
+void opt_doReaderMAC_2(State _init,  uint8_t *nr, uint8_t mac[4], const uint8_t *div_key_p) {
+    opt_suc(div_key_p, &_init, nr, 4, false);
+    opt_output(div_key_p, &_init, mac);
+}
+
+
 void doMAC_N(uint8_t *in_p, uint8_t in_size, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
     opt_MAC_N(div_key_p, in_p, in_size, dest);
     memcpy(mac, dest, 4);
 }
-
-
 
 void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4]) {
     State _init  =  {
