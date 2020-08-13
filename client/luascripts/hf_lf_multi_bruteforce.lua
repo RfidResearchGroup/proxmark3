@@ -32,10 +32,10 @@ It uses both LF and HF simulations.
 example = [[
     --  (the above example would bruteforce pyramid tags, starting at 10:1000, ending at 10:991, and waiting 1 second between each card)
 
-    script run brutesim -r pyramid -f 10 -b 1000 -c 10 -t 1 -d down
+    script run hf_lf_multi_bruteforce -r pyramid -f 10 -b 1000 -c 10 -t 1 -d down
 ]]
 usage = [[
-script run brutesim -r rfid_tag -f facility_code -b base_card_number -c count -t timeout -d direction
+script run hf_lf_multi_bruteforce -r rfid_tag -f facility_code -b base_card_number -c count -t timeout -d direction
 ]]
 arguments = [[
     -h       this help
