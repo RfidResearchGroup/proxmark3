@@ -11,11 +11,11 @@ or mifare Ultralight magic card which answers to chinese backdoor commands
 ]]
 example = [[
     -- target a Ultralight based card
-    1. script run remagic -u
+    1. script run hf_mf_magicrevive -u
 
 ]]
 usage = [[
-script run remagic [-h] [-u]
+script run hf_mf_magicrevive [-h] [-u]
 ]]
 arguments = [[
     -h      this help
