@@ -976,7 +976,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
     FillFileNameByUID(filename, tag_data, "-dump", 8);
 
     // save the dump to .bin file
-    PrintAndLogEx(SUCCESS, "saving dump file - %zu blocks read", bytes_got / 8);
+    PrintAndLogEx(SUCCESS, "saving dump file - %u blocks read", bytes_got / 8);
     saveFile(filename, ".bin", tag_data, bytes_got);
     saveFileEML(filename, tag_data, bytes_got, 8);
     saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
@@ -1855,7 +1855,7 @@ write_dump:
     }
 
     // save the dump to .bin file
-    PrintAndLogEx(SUCCESS, "saving dump file - %zu blocks read", bytes_got / 8);
+    PrintAndLogEx(SUCCESS, "saving dump file - %u blocks read", bytes_got / 8);
     saveFile(filename, ".bin", tag_data, bytes_got);
     saveFileEML(filename, tag_data, bytes_got, 8);
     saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
