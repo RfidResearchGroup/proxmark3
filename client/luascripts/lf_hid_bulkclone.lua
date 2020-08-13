@@ -14,10 +14,10 @@ For more info, check the comments in the code
 ]]
 example = [[
     --
-    script run lf_bulk.lua -f 1 -b 1000 -c 10
+    script run lf_hid_bulkclone.lua -f 1 -b 1000 -c 10
 ]]
 usage = [[
-script run lf_bulk.lua -f facility -b base_id_num -c count
+script run lf_hid_bulkclone.lua -f facility -b base_id_num -c count
 ]]
 arguments = [[
     -h      : this help
