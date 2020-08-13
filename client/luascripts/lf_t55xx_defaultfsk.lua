@@ -35,10 +35,10 @@ Loop:
 testsuit for the ASK/MANCHESTER demod
 ]]
 example = [[
-    1. script run test_t55x7_fsk
+    1. script run lf_t55xx_defaultfsk
 ]]
 usage = [[
-script run test_t55x7_fsk [-h]
+script run lf_t55xx_defaultfsk [-h]
 ]]
 arguments = [[
     -h             : this help
