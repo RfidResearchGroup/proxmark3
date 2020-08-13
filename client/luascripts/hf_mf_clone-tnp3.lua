@@ -15,17 +15,17 @@ copyright = ''
 author = "Iceman"
 version = 'v1.0.2'
 desc = [[
-This script will try making a barebone clone of a tnp3 tag on to a magic generation1 card.
+This script will try to make a barebones clone of a tnp3 tag on to a magic generation1 card.
 ]]
 example = [[
-    script run tnp3clone
-    script run tnp3clone -h
-    script run tnp3clone -l
-    script run tnp3clone -t aa00 -s 0030
+    script run hf_mf_clone-tnp3
+    script run hf_mf_clone-tnp3 -h
+    script run hf_mf_clone-tnp3 -l
+    script run hf_mf_clone-tnp3 -t aa00 -s 0030
 
 ]]
 usage = [[
-script run tnp3clone [-h] [-t <toytype>] [-s <subtype>]
+script run hf_mf_clone-tnp3 [-h] [-t <toytype>] [-s <subtype>]
 ]]
 arguments = [[
     -h             : this help
