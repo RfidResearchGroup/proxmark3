@@ -9,11 +9,11 @@ desc = [[
 This script calculates many checksums (CRC) over the provided hex input.
 ]]
 example = [[
-    script run e -b 010203040506070809
-    script run e -b 010203040506070809 -w 16
+    script run data_hex_crc -b 010203040506070809
+    script run data_hex_crc -b 010203040506070809 -w 16
 ]]
 usage = [[
-script run e [-b <hex bytes] [-w <width>]
+script run data_hex_crc [-b <hex bytes] [-w <width>]
 ]]
 arguments = [[
      -b       data in hex
