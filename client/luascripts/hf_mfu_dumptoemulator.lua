@@ -12,10 +12,10 @@ This script takes a dumpfile from 'hf mfu dump' and converts it to a format that
 by the emulator
 ]]
 example = [[
-    script run dumptoemul-mfu -i dumpdata-foobar.bin
+    script run hf_mfu_dumptoemulator -i dumpdata-foobar.bin
 ]]
 usage = [[
-script run dumptoemul-mfu [-i <file>] [-o <file>]
+script run hf_mfu_dumptoemulator [-i <file>] [-o <file>]
 ]]
 arguments = [[
     -h              This help
