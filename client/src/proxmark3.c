@@ -139,16 +139,13 @@ static int check_comm(void) {
     msleep(10);
     return 0;
 }
-static void flush_history(void) {
 #ifdef HAVE_READLINE
+static void flush_history(void) {
     if (session.history_path) {
         write_history(session.history_path);
         free(session.history_path);
     }
-#endif
 }
-
-#ifdef HAVE_READLINE
 
 #  if defined(_WIN32)
 /*
