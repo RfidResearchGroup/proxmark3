@@ -13,10 +13,10 @@ This script takes a dumpfile and produces a html based dump, which is a
 bit more easily analyzed.
 ]]
 example = [[
-    script run htmldump -o mifarecard_foo.html
+    script run data_dumptohtml -o mifarecard_foo.html
 ]]
 usage = [[
-script run htmldump [-i <file>] [-o <file>]
+script run data_dumptohtml [-i <file>] [-o <file>]
 ]]
 arguments = [[
     -h              This help
