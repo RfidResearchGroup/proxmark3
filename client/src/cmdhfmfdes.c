@@ -382,7 +382,7 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
         sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
         sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
-    else if (major == 0x13 && minor == 0x00)
+    else if (major == 0x33 && minor == 0x00)
         sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
         sprintf(retStr, "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
@@ -644,8 +644,8 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV1;
     if (major == 0x12 && minor == 0x00)
         return DESFIRE_EV2;
-//  if (major == 0x13 && minor == 0x00)
-//        return DESFIRE_EV3;
+    if (major == 0x33 && minor == 0x00)
+        return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
     if (major == 0x11 &&  minor == 0x00)

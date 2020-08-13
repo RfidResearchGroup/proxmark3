@@ -20,6 +20,7 @@
 #include "fpga.h"
 #include "fpgaloader.h"
 #include "string.h"
+#include "printf.h"
 #include "legicrf.h"
 #include "BigBuf.h"
 #include "iso14443a.h"
@@ -62,20 +63,7 @@
 #include "spiffs.h"
 #endif
 
-//=============================================================================
-// A buffer where we can queue things up to be sent through the FPGA, for
-// any purpose (fake tag, as reader, whatever). We go MSB first, since that
-// is the order in which they go out on the wire.
-//=============================================================================
-
-#define TOSEND_BUFFER_SIZE (9*MAX_FRAME_SIZE + 1 + 1 + 2)  // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
-uint8_t ToSend[TOSEND_BUFFER_SIZE];
-int ToSendMax = -1;
-
 extern uint32_t _stack_start, _stack_end;
-
-
-static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
@@ -83,29 +71,6 @@ static bool allow_send_wtx = false;
 inline void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
         reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
-    }
-}
-
-void ToSendReset(void) {
-    ToSendMax = -1;
-    ToSendBit = 8;
-}
-
-void ToSendStuffBit(int b) {
-    if (ToSendBit >= 8) {
-        ToSendMax++;
-        ToSend[ToSendMax] = 0;
-        ToSendBit = 0;
-    }
-
-    if (b)
-        ToSend[ToSendMax] |= (1 << (7 - ToSendBit));
-
-    ToSendBit++;
-
-    if (ToSendMax >= sizeof(ToSend)) {
-        ToSendBit = 0;
-        DbpString("ToSendStuffBit overflowed!");
     }
 }
 
@@ -213,7 +178,7 @@ static void MeasureAntennaTuning(void) {
     LED_A_ON();
     // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
     SpinDelay(50);
 
 #if defined RDV4
@@ -328,6 +293,28 @@ static void TimingIntervalAcquisition(void) {
     StartTickCount();
 }
 
+static void print_debug_level(void) {
+    char dbglvlstr[20] = {0};
+    switch(DBGLEVEL) {
+        case DBG_NONE:
+            sprintf(dbglvlstr, "NONE");
+            break;
+        case DBG_ERROR:
+            sprintf(dbglvlstr, "ERROR");
+            break;
+        case DBG_INFO:
+            sprintf(dbglvlstr, "INFO");
+            break;
+        case DBG_DEBUG:
+            sprintf(dbglvlstr, "DEBUG");
+            break;
+        case DBG_EXTENDED:        
+            sprintf(dbglvlstr, "EXTENDED");
+            break;
+    }
+    Dbprintf("  DBGLEVEL................%d ( " _YELLOW_("%s")" )", DBGLEVEL, dbglvlstr);
+}
+
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 static void printConnSpeed(void) {
@@ -374,10 +361,10 @@ static void SendStatus(void) {
     DbpString(_CYAN_("Various"));
 
     print_stack_usage();
-
-    Dbprintf("  DBGLEVEL................%d", DBGLEVEL);
-    Dbprintf("  ToSendMax...............%d", ToSendMax);
-    Dbprintf("  ToSendBit...............%d", ToSendBit);
+    print_debug_level();
+    
+    tosend_t *ts = get_tosend();
+    Dbprintf("  ToSendMax...............%d", ts->max );
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
@@ -515,6 +502,7 @@ static void SendCapabilities(void) {
 
 // Show some leds in a pattern to identify StandAlone mod is running
 void StandAloneMode(void) {
+    DbpString("");
     DbpString("Stand-alone mode, no computer necessary");
     SpinDown(50);
     SpinDelay(50);
@@ -735,7 +723,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         // emulator
         case CMD_SET_DBGMODE: {
             DBGLEVEL = packet->data.asBytes[0];
-            Dbprintf("Debug level: %d", DBGLEVEL);
+            print_debug_level();
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -793,7 +781,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_HID_WATCH: {
             uint32_t high, low;
             int res = lf_hid_watch(0, &high, &low);
-            reply_ng(CMD_LF_HID_WATCH, res, NULL, 0);            
+            reply_ng(CMD_LF_HID_WATCH, res, NULL, 0);
             break;
         }
         case CMD_LF_HID_SIMULATE: {
@@ -974,6 +962,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
             SniffHitag2();
 //            SniffHitag2(packet->oldarg[0]);
+            reply_ng(CMD_LF_HITAG_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
@@ -1034,8 +1023,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             AcquireRawAdcSamplesIso15693();
             break;
         }
-        case CMD_HF_ISO15693_RAWADC: {
-            RecordRawAdcSamplesIso15693();
+        case CMD_HF_ISO15693_SNIFF: {
+            /*
+            struct p {
+                uint8_t jam_search_len;
+                uint8_t jam_search_string[];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
+            SniffIso15693(payload->jam_search_len, payload->jam_search_string);
+            */
+            SniffIso15693(0, NULL);
+            reply_ng(CMD_HF_ISO15693_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ISO15693_COMMAND: {
@@ -1051,7 +1050,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_SIMULATE: {
-            SimTagIso15693(packet->oldarg[0], packet->data.asBytes);
+            struct p {
+                uint8_t uid[10];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            SimTagIso15693(payload->uid);
             break;
         }
 #endif
@@ -1094,6 +1097,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ISO14443B_SNIFF: {
             SniffIso14443b();
+            reply_ng(CMD_HF_ISO14443B_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ISO14443B_SIMULATE: {
@@ -1118,6 +1122,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_FELICA_SNIFF: {
             felica_sniff(packet->oldarg[0], packet->oldarg[1]);
+            reply_ng(CMD_HF_FELICA_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_FELICALITE_DUMP: {
@@ -1129,6 +1134,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_ISO14443a
         case CMD_HF_ISO14443A_SNIFF: {
             SniffIso14443a(packet->data.asBytes[0]);
+            reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ISO14443A_READER: {
@@ -1379,7 +1385,13 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_ICLASS
         // Makes use of ISO14443a FPGA Firmware
         case CMD_HF_ICLASS_SNIFF: {
-            SniffIClass();
+            struct p {
+                uint8_t jam_search_len;
+                uint8_t jam_search_string[];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            SniffIClass(payload->jam_search_len, payload->jam_search_string);
+            reply_ng(CMD_HF_ICLASS_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ICLASS_SIMULATE: {
@@ -1391,7 +1403,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_REPLAY: {
-            ReaderIClass_Replay(packet->oldarg[0], packet->data.asBytes);
+            struct p {
+                uint8_t reader[4];
+                uint8_t mac[4];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            ReaderIClass_Replay(payload->reader, payload->mac);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {
@@ -1401,36 +1418,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_WRITEBL: {
-            struct p {
-                uint8_t blockno;
-                uint8_t data[12];
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            iClass_WriteBlock(payload->blockno, payload->data);
-            break;
-        }
-        // iceman2019, unused?
-        case CMD_HF_ICLASS_READCHECK: { // auth step 1
-            iClass_ReadCheck(packet->oldarg[0], packet->oldarg[1]);
+            iClass_WriteBlock(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_READBL: {
-            /*
-                        struct p {
-                            uint8_t blockno;
-                        } PACKED;
-                        struct p *payload = (struct p *)packet->data.asBytes;
-                        */
-            iClass_ReadBlk(packet->data.asBytes[0]);
+            iClass_ReadBlock(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_AUTH: { //check
-            /*
-                        struct p {
-                            uint8_t mac[4];
-                        } PACKED;
-                        struct p *payload = (struct p *)packet->data.asBytes;
-            */
             iClass_Authentication(packet->data.asBytes);
             break;
         }
@@ -1439,7 +1434,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_DUMP: {
-            iClass_Dump(packet->oldarg[0], packet->oldarg[1]);
+            iClass_Dump(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_CLONE: {
@@ -1450,6 +1445,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             iClass_Clone(payload->startblock, payload->endblock, payload->data);
+            break;
+        }
+        case CMD_HF_ICLASS_RESTORE: {
+            iClass_Restore(packet->data.asBytes);
             break;
         }
 #endif
@@ -1619,7 +1618,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 case 1: // MEASURE_ANTENNA_TUNING_HF_START
                     // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
                     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
                     break;
                 case 2:
@@ -1906,6 +1905,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
+        case CMD_SPIFFS_WIPE: {
+            LED_B_ON();
+            rdv40_spiffs_safe_wipe();
+            reply_ng(CMD_SPIFFS_WIPE, PM3_SUCCESS, NULL, 0);
+            LED_B_OFF();
+            break;
+        }
         case CMD_FLASHMEM_SET_SPIBAUDRATE: {
             if (packet->length != sizeof(uint32_t))
                 break;
@@ -2063,6 +2069,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_STANDALONE: {
+            uint8_t *bb = BigBuf_get_EM_addr();
+            bb[0] = packet->data.asBytes[0];
             RunMod();
             break;
         }

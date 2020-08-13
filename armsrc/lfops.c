@@ -678,7 +678,7 @@ void AcquireTiType(void) {
     AT91C_BASE_SSC->SSC_TCMR = 0;
     // Transmit Frame Mode Register
     AT91C_BASE_SSC->SSC_TFMR = 0;
-    // iceman, FpgaSetupSsc() ?? the code above? can it be replaced?
+    // iceman, FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER) ?? the code above? can it be replaced?
     LED_D_ON();
 
     // modulate antenna
@@ -721,7 +721,7 @@ void AcquireTiType(void) {
     }
 
     // reset SSC
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
 }
 
 // arguments: 64bit data split into 32bit idhi:idlo and optional 16bit crc
@@ -2597,24 +2597,35 @@ void Cotag(uint32_t arg0) {
     LFSetupFPGAForADC(LF_FREQ2DIV(132), true);
 
     //clear buffer now so it does not interfere with timing later
+    BigBuf_free();
     BigBuf_Clear_ext(false);
 
     //send COTAG start pulse
+/*
     ON(740)  OFF(2035)
     ON(3330) OFF(2035)
     ON(740)  OFF(2035)
     ON(1000)
+*/
+
+    ON(800)  OFF(2200)
+    ON(3600) OFF(2200)
+    ON(800)  OFF(2200)
+    ON(3400)
+
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_FREQ2DIV(125));
 
     switch (rawsignal) {
         case 0:
-            doCotagAcquisition(40000);
+            doCotagAcquisition();
             break;
         case 1:
             doCotagAcquisitionManchester();
             break;
-        case 2:
+        case 2: {
             DoAcquisition_config(false, 0);
             break;
+        }
     }
 
     // Turn the field off

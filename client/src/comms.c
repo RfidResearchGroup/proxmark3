@@ -303,7 +303,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
             break;
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
-            if (! packet->ng)
+            if (packet->ng == false)
                 PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
         }

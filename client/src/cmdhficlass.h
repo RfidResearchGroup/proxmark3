@@ -29,7 +29,8 @@ typedef struct iclass_prekey {
 
 int CmdHFiClass(const char *Cmd);
 
-int readIclass(bool loop, bool verbose);
+int info_iclass(void);
+int read_iclass_csn(bool loop, bool verbose);
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize);
 void HFiClassCalcDivKey(uint8_t *CSN, uint8_t *KEY, uint8_t *div_key, bool elite);
 

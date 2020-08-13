@@ -122,6 +122,7 @@ typedef struct {
     bool verbose;
 } PACKED sample_config;
 
+// Tracelog Header struct
 typedef struct {
     uint32_t timestamp;
     uint16_t duration;
@@ -288,6 +289,78 @@ typedef struct {
     const char *value;
 } PACKED ecdsa_publickey_t;
 
+
+// iCLASS auth request data structure
+// used with read block, dump, write block
+typedef struct {
+    uint8_t key[8];
+    bool use_raw;
+    bool use_elite;
+    bool use_credit_key;
+    bool send_reply;
+    bool do_auth;
+    uint8_t blockno;
+} PACKED iclass_auth_req_t;
+
+// iCLASS read block response data structure
+typedef struct {
+    bool isOK;
+    uint8_t div_key[8];
+    uint8_t mac[4];
+    uint8_t data[8];
+} PACKED iclass_readblock_resp_t;
+
+// iCLASS dump data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t start_block;
+    uint8_t end_block;
+} PACKED iclass_dump_req_t;
+
+// iCLASS write block request data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t data[8];
+} PACKED iclass_writeblock_req_t;
+
+// iCLASS dump data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t start_block;
+    uint8_t end_block;
+    uint8_t data[];
+} PACKED iclass_restore_req_t;
+
+
+// iclass / picopass chip config structures and shared routines
+typedef struct {
+    uint8_t app_limit;      //[8]
+    uint8_t otp[2];         //[9-10]
+    uint8_t block_writelock;//[11]
+    uint8_t chip_config;    //[12]
+    uint8_t mem_config;     //[13]
+    uint8_t eas;            //[14]
+    uint8_t fuses;          //[15]
+} picopass_conf_block_t;
+
+// iCLASS secure mode memory mapping
+typedef struct {
+    uint8_t csn[8];
+    picopass_conf_block_t conf;
+    uint8_t epurse[8];
+    uint8_t key_d[8];
+    uint8_t key_c[8];
+    uint8_t app_issuer_area[8];
+} picopass_hdr;
+
+// iCLASS non-secure mode memory mapping
+typedef struct {
+    uint8_t csn[8];
+    picopass_conf_block_t conf;
+    uint8_t app_issuer_area[8];
+} picopass_ns_hdr;
+
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 //#define CMD_SETUP_WRITE                                                   0x0001
@@ -336,11 +409,12 @@ typedef struct {
 #define CMD_SPIFFS_MOUNT                                                  0x0130
 #define CMD_SPIFFS_UNMOUNT                                                0x0131
 #define CMD_SPIFFS_WRITE                                                  0x0132
+
 // We take +0x1000 when having a variant of similar function (todo : make it an argument!)
 #define CMD_SPIFFS_APPEND                                                 0x1132
 
 #define CMD_SPIFFS_READ                                                   0x0133
-//We use no open/close instruvtion, as they are handled internally.
+//We use no open/close instruction, as they are handled internally.
 #define CMD_SPIFFS_REMOVE                                                 0x0134
 #define CMD_SPIFFS_RM                                                     CMD_SPIFFS_REMOVE
 #define CMD_SPIFFS_RENAME                                                 0x0135
@@ -351,6 +425,9 @@ typedef struct {
 #define CMD_SPIFFS_FSTAT                                                  0x0138
 #define CMD_SPIFFS_INFO                                                   0x0139
 #define CMD_SPIFFS_FORMAT                                                 CMD_FLASHMEM_WIPE
+
+#define CMD_SPIFFS_WIPE                                                   0x013A
+
 // This take a +0x2000 as they are high level helper and special functions
 // As the others, they may have safety level argument if it makkes sense
 #define CMD_SPIFFS_PRINT_TREE                                             0x2130
@@ -432,7 +509,7 @@ typedef struct {
 #define CMD_HF_ISO14443B_COMMAND                                          0x0305
 #define CMD_HF_ISO15693_READER                                            0x0310
 #define CMD_HF_ISO15693_SIMULATE                                          0x0311
-#define CMD_HF_ISO15693_RAWADC                                            0x0312
+#define CMD_HF_ISO15693_SNIFF                                             0x0312
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0317
@@ -467,6 +544,7 @@ typedef struct {
 #define CMD_HF_LEGIC_INFO                                                 0x03BC
 #define CMD_HF_LEGIC_ESET                                                 0x03BD
 
+// iCLASS / Picopass
 #define CMD_HF_ICLASS_READCHECK                                           0x038F
 #define CMD_HF_ICLASS_CLONE                                               0x0390
 #define CMD_HF_ICLASS_DUMP                                                0x0391
@@ -479,6 +557,7 @@ typedef struct {
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
 #define CMD_HF_ICLASS_AUTH                                                0x0399
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
+#define CMD_HF_ICLASS_RESTORE                                             0x039B
 
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE                                            0x03A0
@@ -580,14 +659,31 @@ typedef struct {
 #define FLAG_FORCED_ATQA        0x800
 #define FLAG_FORCED_SAK         0x1000
 
-//Iclass reader flags
-#define FLAG_ICLASS_READER_ONLY_ONCE   0x01
-#define FLAG_ICLASS_READER_CC          0x02
-#define FLAG_ICLASS_READER_CSN         0x04
-#define FLAG_ICLASS_READER_CONF        0x08
+// iCLASS reader flags
+#define FLAG_ICLASS_READER_INIT        0x01
+#define FLAG_ICLASS_READER_CLEARTRACE  0x02
+#define FLAG_ICLASS_READER_ONLY_ONCE   0x04
+#define FLAG_ICLASS_READER_CREDITKEY   0x08
 #define FLAG_ICLASS_READER_AIA         0x10
-#define FLAG_ICLASS_READER_ONE_TRY     0x20
-#define FLAG_ICLASS_READER_CEDITKEY    0x40
+
+// iCLASS reader status flags
+#define FLAG_ICLASS_CSN         0x01
+#define FLAG_ICLASS_CC          0x02
+#define FLAG_ICLASS_CONF        0x04
+#define FLAG_ICLASS_AIA         0x08
+
+// iCLASS simulation modes
+#define ICLASS_SIM_MODE_CSN                   0
+#define ICLASS_SIM_MODE_CSN_DEFAULT           1
+#define ICLASS_SIM_MODE_READER_ATTACK         2
+#define ICLASS_SIM_MODE_FULL                  3
+#define ICLASS_SIM_MODE_READER_ATTACK_KEYROLL 4
+#define ICLASS_SIM_MODE_EXIT_AFTER_MAC        5  // note: device internal only
+#define ICLASS_SIM_MODE_CONFIG_CARD           6
+
+#define MODE_SIM_CSN        0
+#define MODE_EXIT_AFTER_MAC 1
+#define MODE_FULLSIM        2
 
 // Dbprintf flags
 #define FLAG_RAWPRINT    0x00

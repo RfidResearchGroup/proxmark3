@@ -134,7 +134,7 @@ static bool waitCmd14b(bool verbose) {
 
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
         if ((resp.oldarg[0] & 0xFF) > 0) return false;
 
@@ -314,7 +314,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-        if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
             uint8_t status = resp.oldarg[0];
             if (status == 0) {
@@ -330,7 +330,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-        if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
             uint8_t status = resp.oldarg[0];
             if (status == 0) {
@@ -515,7 +515,7 @@ static bool HF14B_Std_Info(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         switch_off_field_14b();
         return false;
@@ -556,7 +556,7 @@ static bool HF14B_ST_Info(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return false;
     }
@@ -611,7 +611,7 @@ static bool HF14B_ST_Reader(bool verbose) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return false;
     }
@@ -651,7 +651,7 @@ static bool HF14B_Std_Reader(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return false;
     }
@@ -695,7 +695,7 @@ static bool HF14B_Other_Reader(void) {
     // clearCommandBuffer();
     // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
     // PacketResponseNG resp;
-    // WaitForResponse(CMD_ACK,&resp);
+    // WaitForResponse(CMD_HF_ISO14443B_COMMAND,&resp);
 
     // if (datalen > 2 ) {
     // PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
@@ -709,7 +709,7 @@ static bool HF14B_Other_Reader(void) {
     // clearCommandBuffer();
     // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     // PacketResponseNG resp;
-    // WaitForResponse(CMD_ACK, &resp);
+    // WaitForResponse(CMD_HF_ISO14443B_COMMAND, &resp);
 
     // if (datalen > 0) {
     // PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
@@ -723,7 +723,7 @@ static bool HF14B_Other_Reader(void) {
     // clearCommandBuffer();
     // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     // PacketResponseNG resp;
-    // WaitForResponse(CMD_ACK, &resp);
+    // WaitForResponse(CMD_HF_ISO14443B_COMMAND, &resp);
 
     // if (datalen > 0) {
     // PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
@@ -899,7 +899,7 @@ static int CmdHF14BDump(const char *Cmd) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND,  ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
 
     //select
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
         if (resp.oldarg[0]) {
             PrintAndLogEx(INFO, "failed to select %" PRId64 " | %" PRId64, resp.oldarg[0], resp.oldarg[1]);
             goto out;
@@ -915,7 +915,7 @@ static int CmdHF14BDump(const char *Cmd) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND,  ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
 
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
             uint8_t status = resp.oldarg[0] & 0xFF;
             if (status > 0) {

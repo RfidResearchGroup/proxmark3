@@ -30,7 +30,7 @@ SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
-SRC_ICLASS = iclass.c optimized_cipher.c
+SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c 
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 SRC_NFCBARCODE = thinfilm.c
 
@@ -79,7 +79,7 @@ endif
 include Standalone/Makefile.inc
 
 #the FPGA bitstream files. Note: order matters!
-FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit
+FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit fpga_felica.bit
 
 #the lz4 source files required for decompressing the fpga config at run time
 SRC_LZ4 = lz4.c

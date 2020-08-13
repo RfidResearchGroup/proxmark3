@@ -181,7 +181,7 @@ void lf_init(bool reader, bool simulate) {
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
 
     // When in reader mode, give the field a bit of time to settle.
     // 313T0 = 313 * 8us = 2504us = 2.5ms  Hitag2 tags needs to be fully powered.

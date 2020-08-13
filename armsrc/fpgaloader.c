@@ -134,7 +134,7 @@ void SetupSpi(int mode) {
 // Set up the synchronous serial port with the set of options that fits
 // the FPGA mode. Both RX and TX are always enabled.
 //-----------------------------------------------------------------------------
-void FpgaSetupSsc(void) {
+void FpgaSetupSsc(uint16_t fpga_mode) {
     // First configure the GPIOs, and get ourselves a clock.
     AT91C_BASE_PIOA->PIO_ASR =
         GPIO_SSC_FRAME  |
@@ -152,12 +152,16 @@ void FpgaSetupSsc(void) {
     // data and frame signal is sampled on falling edge of RK
     AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
 
-    // 8 bits per transfer, no loopback, MSB first, 1 transfer per sync
+	// 8, 16 or 32 bits per transfer, no loopback, MSB first, 1 transfer per sync
     // pulse, no output sync
-    AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+	if ((fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER && FpgaGetCurrent() == FPGA_BITSTREAM_HF) {
+		AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+	} else {
+        AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+	}
 
-    // TX clock comes from TK pin, no clock output, outputs change on falling
-    // edge of TK, frame sync is sampled on rising edge of TK, start TX on rising edge of TF
+	// TX clock comes from TK pin, no clock output, outputs change on rising edge of TK, 
+	// TF (frame sync) is sampled on falling edge of TK, start TX on rising edge of TF
     AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) | SSC_CLOCK_MODE_START(5);
 
     // tx framing is the same as the rx framing
@@ -171,7 +175,7 @@ void FpgaSetupSsc(void) {
 // a single buffer as a circular buffer (so that we just chain back to
 // ourselves, not to another buffer).
 //-----------------------------------------------------------------------------
-bool FpgaSetupSscDma(uint8_t *buf, int len) {
+bool FpgaSetupSscDma(uint8_t *buf, uint16_t len) {
     if (buf == NULL) return false;
 
     FpgaDisableSscDma();
@@ -347,8 +351,10 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp co
  * length.
  */
 static int bitparse_find_section(int bitstream_version, char section_name, uint32_t *section_length, lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
-    int result = 0;
+
 #define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
+
+    int result = 0;
     uint16_t numbytes = 0;
     while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
         char current_name = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
@@ -439,7 +445,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
 // The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
 // where C is the 4 bit command and D is the 12 bit data
 //
-// @params cmd and v  gets or over eachother.  Take careful note of overlapping bits.
+// @params cmd and v  gets OR:ED over each other.  Take careful note of overlapping bits.
 //-----------------------------------------------------------------------------
 void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     SetupSpi(SPI_FPGA_MODE);

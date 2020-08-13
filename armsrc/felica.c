@@ -336,7 +336,7 @@ static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
 }
 
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
-    uint8_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
+    uint16_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
     if (power)
         flags |= FPGA_HF_ISO18092_FLAG_READER;
     if (highspeed)
@@ -445,7 +445,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Start iso18092_setup");
 
     LEDsoff();
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_FELICA);
 
     // allocate command receive buffer
     BigBuf_free();
@@ -464,7 +464,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO18092);
 
     // LSB transfer.  Remember to set it back to MSB with
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);

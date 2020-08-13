@@ -28,7 +28,7 @@
 
 void iso14443b_setup(void);
 uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
-uint8_t iso14443b_select_card(iso14b_card_select_t *card);
+int iso14443b_select_card(iso14b_card_select_t *card);
 uint8_t iso14443b_select_card_srx(iso14b_card_select_t *card);
 
 void SimulateIso14443bTag(uint32_t pupi);

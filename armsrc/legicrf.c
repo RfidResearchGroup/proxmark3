@@ -152,7 +152,7 @@ static void tx_bit(bool bit) {
 //-----------------------------------------------------------------------------
 
 static void tx_frame(uint32_t frame, uint8_t len) {
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_TX);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_FULL_MOD);
 
     // wait for next tx timeslot
     last_frame_end += RWD_FRAME_WAIT;
@@ -180,9 +180,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
 }
 
 static uint32_t rx_frame(uint8_t len) {
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
-                      | FPGA_HF_READER_RX_XCORR_848_KHZ
-                      | FPGA_HF_READER_RX_XCORR_QUARTER);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_212_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
 
     // hold sampling until card is expected to respond
     last_frame_end += TAG_FRAME_WAIT;
@@ -210,9 +208,7 @@ static uint32_t rx_frame(uint8_t len) {
 
 static bool rx_ack(void) {
     // change fpga into rx mode
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
-                      | FPGA_HF_READER_RX_XCORR_848_KHZ
-                      | FPGA_HF_READER_RX_XCORR_QUARTER);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_212_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
 
     // hold sampling until card is expected to respond
     last_frame_end += TAG_FRAME_WAIT;
@@ -279,14 +275,12 @@ static int init_card(uint8_t cardtype, legic_card_select_t *p_card) {
 static void init_reader(bool clear_mem) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR
-                      | FPGA_HF_READER_RX_XCORR_848_KHZ
-                      | FPGA_HF_READER_RX_XCORR_QUARTER);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_212_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
     LED_A_ON();
 
     // configure SSC with defaults
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // re-claim GPIO_SSC_DOUT as GPIO and enable output
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;

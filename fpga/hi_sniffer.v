@@ -1,21 +1,14 @@
 module hi_sniffer(
-    pck0, ck_1356meg, ck_1356megb,
+    ck_1356meg,
     pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4,
     adc_d, adc_clk,
-    ssp_frame, ssp_din, ssp_dout, ssp_clk,
-    cross_hi, cross_lo,
-    dbg,
-    xcorr_is_848, snoop, xcorr_quarter_freq // not used.
+    ssp_frame, ssp_din, ssp_clk
 );
-    input pck0, ck_1356meg, ck_1356megb;
+    input ck_1356meg;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
     input [7:0] adc_d;
     output adc_clk;
-    input ssp_dout;
     output ssp_frame, ssp_din, ssp_clk;
-    input cross_hi, cross_lo;
-    output dbg;
-    input xcorr_is_848, snoop, xcorr_quarter_freq; // not used.
 
 // We are only snooping, all off.
 assign pwr_hi  = 1'b0;

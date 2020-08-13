@@ -122,7 +122,7 @@ reg [7:0] divisor;
 reg [7:0] lf_ed_threshold;
 reg [11:0] conf_word;
 
-wire [2:0] major_mode = conf_word[7:5];
+wire [2:0] major_mode = conf_word[8:6];
 wire lf_field = conf_word[0];
 wire lf_ed_toggle_mode = conf_word[1];
 
@@ -135,7 +135,7 @@ begin
         begin
             // 12 bit data
             conf_word <= shift_reg[11:0];
-            if (shift_reg[7:5] == `FPGA_MAJOR_MODE_LF_EDGE_DETECT)
+            if (shift_reg[8:6] == `FPGA_MAJOR_MODE_LF_EDGE_DETECT)
             begin
                 lf_ed_threshold <= 127;  // default threshold
             end

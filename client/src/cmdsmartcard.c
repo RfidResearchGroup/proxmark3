@@ -465,9 +465,10 @@ static int CmdSmartRaw(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_raw();
 
-    uint8_t flags = 0;
+    uint8_t flags = SC_LOG;
     if (active || active_select) {
-        flags |= SC_CONNECT;
+        
+        flags |= (SC_CONNECT | SC_CLEARLOG);
         if (active_select)
             flags |= SC_SELECT;
     }

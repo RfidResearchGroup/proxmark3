@@ -41,12 +41,12 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SNIFF);
 
     // Setting Frame Mode For better performance on high speed data transfer.
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNIFF);
     SpinDelay(100);
 
     *len = (BigBuf_max_traceLen() & 0xFFFE);
@@ -114,17 +114,18 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
 }
 
 void HfPlotDownload(void) {
-    uint8_t *buf = ToSend;
-    uint8_t *this_buf = buf;
+
+    tosend_t *ts = get_tosend();
+    uint8_t *this_buf = ts->buf;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_GET_TRACE);
 
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;   // Disable DMA Transfer
     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) this_buf; // start transfer to this memory address
     AT91C_BASE_PDC_SSC->PDC_RCR = PM3_CMD_DATA_SIZE;   // transfer this many samples
-    buf[0] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;         // clear receive register
+    ts->buf[0] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;         // clear receive register
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;    // Start DMA transfer
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_GET_TRACE);   // let FPGA transfer its internal Block-RAM
@@ -132,7 +133,7 @@ void HfPlotDownload(void) {
     LED_B_ON();
     for (size_t i = 0; i < FPGA_TRACE_SIZE; i += PM3_CMD_DATA_SIZE) {
         // prepare next DMA transfer:
-        uint8_t *next_buf = buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
+        uint8_t *next_buf = ts->buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
 
         AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)next_buf;
         AT91C_BASE_PDC_SSC->PDC_RNCR = PM3_CMD_DATA_SIZE;

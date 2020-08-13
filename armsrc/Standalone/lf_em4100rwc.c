@@ -34,7 +34,7 @@
 #endif
 
 #define MAX_IND 16 // 4 LEDs - 2^4 combinations
-#define CLOCK 64 //for 125kHz
+#define LF_CLOCK 64   // for 125kHz
 
 // low & high - array for storage IDs. Its length must be equal.
 // Predefined IDs must be stored in low[].
@@ -57,34 +57,35 @@ static uint64_t rev_quads(uint64_t bits) {
 }
 
 static void fillbuff(uint8_t bit) {
-    memset(bba + buflen, bit, CLOCK / 2);
-    buflen += (CLOCK / 2);
-    memset(bba + buflen, bit ^ 1, CLOCK / 2);
-    buflen += (CLOCK / 2);
+    memset(bba + buflen, bit, LF_CLOCK / 2);
+    buflen += (LF_CLOCK / 2);
+    memset(bba + buflen, bit ^ 1, LF_CLOCK / 2);
+    buflen += (LF_CLOCK / 2);
 }
 
 static void construct_EM410x_emul(uint64_t id) {
-
+			 
+    int i, j;
     int binary[4] = {0};
     int parity[4] = {0};
     buflen = 0;
     
-    for (uint8_t i = 0; i < 9; i++)
+    for (i = 0; i < 9; i++)
         fillbuff(1);
 
-    for (uint8_t i = 0; i < 10; i++) {
-        for (uint8_t j = 3; j > 0; j--, id /= 2)
+    for (i = 0; i < 10; i++) {
+        for (j = 3; j >= 0; j--, id /= 2)
             binary[j] = id % 2;
 
-        for (uint8_t j = 0; j < 4; j++)
+        for (j = 0; j < 4; j++)
             fillbuff(binary[j]);
 
         fillbuff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
-        for (uint8_t j = 0; j < 4; j++)
+        for (j = 0; j < 4; j++)
             parity[j] ^= binary[j];
     }
 
-    for (uint8_t j = 0; j < 4; j++)
+    for (j = 0; j < 4; j++)
         fillbuff(parity[j]);
 
     fillbuff(0);
@@ -207,7 +208,7 @@ void RunMod(void) {
                     state = 0;
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - write ID to tag
-                    copy_em410x_to_t55xx(0, CLOCK, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff));
+                    copy_em410x_to_t55xx(0, LF_CLOCK, (uint32_t)(low[selected] >> 32), (uint32_t)(low[selected] & 0xffffffff));
                     led_slot(selected);
                     state = 0; // Switch to select mode
                 }
