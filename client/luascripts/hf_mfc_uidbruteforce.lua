@@ -13,14 +13,14 @@ This script bruteforces 4 or 7 byte UID Mifare classic card numbers.
 example =[[
 Bruteforce a 4 byte UID Mifare classic card number, starting at 11223344, ending at 11223346.
 
-    script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
+    script run hf_mfc_uidbruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 
 Bruteforce a 7 byte UID Mifare Ultralight card number, starting at 11223344556677, ending at 11223344556679.
 
-    script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
+    script run hf_mfc_uidbruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 ]]
 usage = [[
-script run hf_bruteforce [-s <start_id>] [-e <end_id>] [-t <timeout>] [-x <mifare_card_type>]
+script run hf_mfc_uidbruteforce [-s <start_id>] [-e <end_id>] [-t <timeout>] [-x <mifare_card_type>]
 ]]
 arguments = [[
     -h       this help
