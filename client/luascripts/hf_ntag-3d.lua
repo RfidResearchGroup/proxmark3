@@ -13,16 +13,16 @@ Thanks to @jack for his invaluable input on some of the configuration.
 ]]
 example =[[
      -- This will generate GOLD, PLA, TH, EU, 200m,  tagbased uid.
-     script run ntag_3d -c 46 -m 50 -p 5448 -s 4555  -l 200
+     script run hf_ntag-3d -c 46 -m 50 -p 5448 -s 4555  -l 200
 
      -- This will generate GOLD, PLA, TH, EU, 200m,  userbased uid.
-     script run ntag_3d -u 11223344556677 -c 46 -m 50 -p 5448 -s 4555  -l 200
+     script run hf_ntag-3d -u 11223344556677 -c 46 -m 50 -p 5448 -s 4555  -l 200
 
      -- This will generate GOLD, PLA, TH, EU, 200m,  userbased uid. and configure a MAGIC NTAG.
-     script run ntag_3d -u 11223344556677 -c 46 -m 50 -p 5448 -s 4555  -l 200 -1
+     script run hf_ntag-3d -u 11223344556677 -c 46 -m 50 -p 5448 -s 4555  -l 200 -1
 ]]
 usage = [[
-script run ntag_3d [-h] [-t] [-u <uid>] [-c <color>] [-m <material>] [-p <region>] [-s <region>] [-l <length>]
+script run hf_ntag-3d [-h] [-t] [-u <uid>] [-c <color>] [-m <material>] [-p <region>] [-s <region>] [-l <length>]
 ]]
 arguments = [[
     -h             : this help
