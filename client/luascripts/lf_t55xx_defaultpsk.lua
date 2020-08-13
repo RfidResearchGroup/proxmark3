@@ -30,10 +30,10 @@ Loop OUTER:
 In all 12 individual test for the PSK demod
 ]]
 example = [[
-    1. script run test_t55x7_psk
+    1. script run lf_t55xx_defaultpsk
 ]]
 usage = [[
-script run test_t55x7_psk [-h]
+script run lf_t55xx_defaultpsk [-h]
 ]]
 arguments = [[
     -h             : this help
