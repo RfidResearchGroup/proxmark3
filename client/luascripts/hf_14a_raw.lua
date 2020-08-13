@@ -11,19 +11,19 @@ This is a script to allow raw 1444a commands to be sent and received.
 ]]
 example = [[
     # 1. Connect and don't disconnect
-    script run 14araw -p
+    script run hf_14a_raw -p
 
     # 2. Send mf auth, read response (nonce)
-    script run 14araw -o -x 6000F57b -p
+    script run hf_14a_raw -o -x 6000F57b -p
 
     # 3. disconnect
-    script run 14araw -o
+    script run hf_14a_raw -o
 
     # All three steps in one go:
-    script run 14araw -x 6000F57b
+    script run hf_14a_raw -x 6000F57b
 ]]
 usage = [[
-script run 14araw -x 6000F57b
+script run hf_14a_raw -x 6000F57b
 ]]
 arguments = [[
     -o              do not connect - use this only if you previously used -p to stay connected
