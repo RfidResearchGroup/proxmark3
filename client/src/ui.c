@@ -302,6 +302,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     char buffer3[MAX_PRINT_BUFFER] = {0};
     // lock this section to avoid interlacing prints from different threads
     pthread_mutex_lock(&print_lock);
+    bool linefeed = true;
 
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
         char *my_logfile_path = NULL;
@@ -354,13 +355,17 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     va_start(argptr, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
-
+    if (buffer[strlen(buffer) - 1] == NOLF[0]) {
+        linefeed = false;
+        buffer[strlen(buffer) - 1] = 0;
+    }
     bool filter_ansi = !session.supports_colors;
     memcpy_filter_ansi(buffer2, buffer, sizeof(buffer), filter_ansi);
     if (g_printAndLog & PRINTANDLOG_PRINT) {
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), session.emoji_mode);
         fprintf(stream, "%s", buffer3);
-        fprintf(stream, "\n");
+        if (linefeed)
+            fprintf(stream, "\n");
     }
 
 #ifdef RL_STATE_READCMD
@@ -377,11 +382,13 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), ALTTEXT);
         if (filter_ansi) { // already done
-            fprintf(logfile, "%s\n", buffer3);
+            fprintf(logfile, "%s", buffer3);
         } else {
             memcpy_filter_ansi(buffer, buffer3, sizeof(buffer3), true);
-            fprintf(logfile, "%s\n", buffer);
+            fprintf(logfile, "%s", buffer);
         }
+        if (linefeed)
+            fprintf(logfile, "\n");
         fflush(logfile);
     }
 
