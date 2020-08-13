@@ -30,9 +30,9 @@ testsuit for T55XX commands demodulation
 
 ]]
 example = [[
-    1. script run test_t55x7
-    2. script run test_t55x7 -t FSK2A
-    3. script run test_t55x7 -t PSK1
+    1. script run lf_t55xx_writetest
+    2. script run lf_t55xx_writetest -t FSK2A
+    3. script run lf_t55xx_writetest -t PSK1
 ]]
 usage = [[
 script run test_t55x7 [-h] [-t <modulation type>
