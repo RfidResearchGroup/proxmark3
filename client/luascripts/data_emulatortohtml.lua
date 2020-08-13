@@ -13,10 +13,10 @@ This script takes a dumpfile on EML (ASCII) format and produces a html based dum
 bit more easily analyzed.
 ]]
 example = [[
-    script run emul2html -o dumpdata.eml
+    script run data_emulatortohtml -o dumpdata.eml
 ]]
 usage = [[
-script run htmldump [-i <file>] [-o <file>]
+script run data_emulatortohtml [-i <file>] [-o <file>]
 ]]
 arguments = [[
     -h              This help
