@@ -349,6 +349,7 @@ check_script:
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+                    g_pendingPrompt = true;
 #ifdef HAVE_READLINE
                     cmd = readline(prompt_filtered);
 #else
@@ -411,6 +412,7 @@ check_script:
                 }
 #endif
                 // process cmd
+                g_pendingPrompt = false;
                 int ret = CommandReceived(cmd);
                 // exit or quit
                 if (ret == PM3_EFATAL)

@@ -18,6 +18,7 @@
 #include "uart/uart.h"
 #include "ui.h"
 #include "crc16.h"
+#include "util.h" // g_pendingPrompt
 #include "util_posix.h" // msclock
 #include "util_darwin.h" // en/dis-ableNapp();
 
@@ -289,6 +290,10 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
             }
 
             if (flag & FLAG_LOG) {
+                if (g_pendingPrompt) {
+                    PrintAndLogEx(NORMAL, "");
+                    g_pendingPrompt = false;
+                }
                 //PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%s", s);
                 PrintAndLogEx(NORMAL, "[" _BLUE_("#") "] %s", s);
             } else {
