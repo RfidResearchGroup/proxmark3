@@ -64,12 +64,12 @@ static void fillbuff(uint8_t bit) {
 }
 
 static void construct_EM410x_emul(uint64_t id) {
-			 
+
     int i, j;
     int binary[4] = {0};
     int parity[4] = {0};
     buflen = 0;
-    
+
     for (i = 0; i < 9; i++)
         fillbuff(1);
 

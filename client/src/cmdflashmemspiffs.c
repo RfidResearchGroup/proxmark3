@@ -339,7 +339,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
         saveFile(filename, ".bin", dump, len);
         if (eml) {
             uint8_t eml_len = 16;
-            
+
             if (strstr(filename, "class") != NULL)
                 eml_len = 8;
             else if (strstr(filename, "mfu") != NULL)
@@ -421,12 +421,12 @@ out:
 }
 
 static int CmdFlashMemSpiFFSWipe(const char *Cmd) {
-    
+
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') {
         return usage_flashmemspiffs_wipe();
     }
-    
+
     PrintAndLogEx(INFO, "Wiping all files from SPIFFS FileSystem");
     PacketResponseNG resp;
     clearCommandBuffer();

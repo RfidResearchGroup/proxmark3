@@ -483,9 +483,9 @@ int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RD
 
         if (DBGLEVEL > 1) Dbprintf("Symlink destination is : " _YELLOW_("%s"), linkdest);
 
-        read_from_spiffs((char *)linkdest, (uint8_t *)dst, size);
-    )
-}
+            read_from_spiffs((char *)linkdest, (uint8_t *)dst, size);
+        )
+        }
 
 // BEWARE ! This function is DESTRUCTIVE as it will UPDATE an existing symlink
 // Since it creates a .lnk extension file it may be minor to mistake the order of arguments
@@ -516,18 +516,18 @@ int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyL
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         RDV40SpiFFSFileType filetype = filetype_in_spiffs((char *)filename);
-        switch (filetype) {
-            case RDV40_SPIFFS_FILETYPE_REAL:
-                rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
-                break;
-            case RDV40_SPIFFS_FILETYPE_SYMLINK:
-                rdv40_spiffs_read_as_symlink((char *)filename, (uint8_t *)dst, size, level);
-                break;
-            case RDV40_SPIFFS_FILETYPE_BOTH:
-            case RDV40_SPIFFS_FILETYPE_UNKNOWN:
-            default:
+    switch (filetype) {
+    case RDV40_SPIFFS_FILETYPE_REAL:
+        rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
+            break;
+        case RDV40_SPIFFS_FILETYPE_SYMLINK:
+            rdv40_spiffs_read_as_symlink((char *)filename, (uint8_t *)dst, size, level);
+            break;
+        case RDV40_SPIFFS_FILETYPE_BOTH:
+        case RDV40_SPIFFS_FILETYPE_UNKNOWN:
+        default:
             ;
-        }
+    }
     )
 }
 
@@ -617,7 +617,7 @@ void rdv40_spiffs_safe_wipe(void) {
     while ((pe = SPIFFS_readdir(&d, pe))) {
 
         if (rdv40_spiffs_is_symlink((const char *)pe->name)) {
-            
+
             char linkdest[SPIFFS_OBJ_NAME_LEN];
             read_from_spiffs((char *)pe->name, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
 

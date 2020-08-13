@@ -1864,7 +1864,7 @@ static int getKeySettings(uint8_t *aid) {
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        mifare_des_authalgo_t algo=MFDES_ALGO_DES;
+        mifare_des_authalgo_t algo = MFDES_ALGO_DES;
         res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
 
         if (res == PM3_SUCCESS) {
@@ -1916,7 +1916,7 @@ static int getKeySettings(uint8_t *aid) {
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        mifare_des_authalgo_t algo=MFDES_ALGO_DES;
+        mifare_des_authalgo_t algo = MFDES_ALGO_DES;
         res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
         if (res == PM3_SUCCESS) {
             desfire_print_keysetting(key_setting, num_keys, algo);
@@ -2669,7 +2669,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 
     if (res_flen) {
         PrintAndLogEx(ERR, "File size input error");
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     swap24(filesize);
@@ -2859,7 +2859,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     // with 2char hex, 512bytes could be input.
     // Instead large binary inputs should be BINARY files and written to card.
     int dlength = 512;
-    uint8_t data[512] = {0}; 
+    uint8_t data[512] = {0};
     int res_data = CLIParamHexToBuf(arg_get_str(ctx, 3), data, 512, &dlength);
 
     int type = arg_get_int(ctx, 4);
@@ -3767,12 +3767,12 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     uint8_t key[24] = {0};
     int keylen = 0;
     int res_klen = CLIParamHexToBuf(arg_get_str(ctx, 3), key, 24, &keylen);
-    
+
     uint8_t newcmdAuthAlgo = arg_get_int_def(ctx, 4, 0);
     uint8_t newkey[24] = {0};
     int newkeylen = 0;
     int res_newklen = CLIParamHexToBuf(arg_get_str(ctx, 5), newkey, 24, &newkeylen);
-    
+
     uint8_t aesversion = arg_get_int_def(ctx, 6, 0);
     CLIParserFree(ctx);
 
@@ -4535,7 +4535,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
         if (res == PM3_SUCCESS) {
             uint32_t len = le24toh(fdata.length);
             NDEFDecodeAndPrint(data, datalen, verbose);
-            
+
         } else {
             PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
             res = handler_desfire_select_application(aid);

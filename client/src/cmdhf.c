@@ -285,16 +285,16 @@ int CmdHFSniff(const char *Cmd) {
                     uint16_t len;
                 } PACKED;
                 struct r *retval = (struct r *)resp.data.asBytes;
-            
+
                 PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
 
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data hpf") "` to remove offset");
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data plot") "` to view");
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data save") "` to save");
 
-                // download bigbuf_malloc:d.  
+                // download bigbuf_malloc:d.
                 // it reserve memory from the higher end.
-                // At the moment, sniff takes all free memory in bigbuff. If this changes, 
+                // At the moment, sniff takes all free memory in bigbuff. If this changes,
                 // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
                 uint32_t start = pm3_capabilities.bigbuf_size - retval->len;
                 int res = getSamplesEx(start, start, false);

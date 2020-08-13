@@ -35,7 +35,7 @@ static int CmdMotorolaDemod(const char *Cmd) {
 }
 
 int demodMotorola(void) {
-    
+
     //PSK1
     if (PSKDemod("32 1", true) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
@@ -118,7 +118,7 @@ int demodMotorola(void) {
     checksum |= DemodBuffer[62] << 1; // b2
     checksum |= DemodBuffer[63] << 0; // b1
 
-    
+
     PrintAndLogEx(SUCCESS, "Motorola - fmt: " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08X%08X", fc, csn, raw1, raw2);
     PrintAndLogEx(DEBUG, "checksum: " _GREEN_("%1d%1d"), checksum >> 1 & 0x01, checksum & 0x01);
     return PM3_SUCCESS;

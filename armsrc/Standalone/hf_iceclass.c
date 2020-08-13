@@ -51,7 +51,7 @@
 
 #define HF_ICLASS_CC_A              "iceclass_cc_a.bin"
 #define HF_ICLASS_CC_B              "iceclass_cc_b.bin"
-char* cc_files[] = { HF_ICLASS_CC_A, HF_ICLASS_CC_B };
+char *cc_files[] = { HF_ICLASS_CC_A, HF_ICLASS_CC_B };
 
 
 
@@ -65,7 +65,7 @@ char* cc_files[] = { HF_ICLASS_CC_A, HF_ICLASS_CC_B };
 #endif
 
 // iclass card descriptors
-char * card_types[] = {
+char *card_types[] = {
     "PicoPass 16K / 16",                       // 000
     "PicoPass 32K with current book 16K / 16", // 001
     "Unknown Card Type!",                      // 010
@@ -112,13 +112,13 @@ static uint8_t csns[8 * NUM_CSNS] = {
 
 static void download_instructions(uint8_t t) {
     DbpString("");
-    switch (t) { 
+    switch (t) {
         case ICE_STATE_FULLSIM: {
             DbpString("The emulator memory was saved to SPIFFS");
             DbpString("1. " _YELLOW_("mem spiffs dump o " HF_ICLASS_FULLSIM_MOD_BIN " f " HF_ICLASS_FULLSIM_MOD" e"));
             DbpString("2. " _YELLOW_("hf iclass view f " HF_ICLASS_FULLSIM_MOD_BIN));
             break;
-        } 
+        }
         case ICE_STATE_ATTACK: {
             DbpString("The collected data was saved to SPIFFS. The file names below may differ");
             DbpString("1. " _YELLOW_("mem spiffs tree"));
@@ -143,9 +143,9 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
 
     char fn[SPIFFS_OBJ_NAME_LEN];
     sprintf(fn, "iclass-%02X%02X%02X%02X%02X%02X%02X%02X.bin",
-        data[0], data[1], data[2], data[3],
-        data[4], data[5], data[6], data[7]
-    );
+            data[0], data[1], data[2], data[3],
+            data[4], data[5], data[6], data[7]
+           );
 
     int res;
     if (exists_in_spiffs(fn) == false) {
@@ -185,7 +185,7 @@ static int fullsim_mode(void) {
         Dbprintf("loaded " _GREEN_(HF_ICLASS_FULLSIM_ORIG_BIN) " (%u bytes)", fsize);
     }
 
-    iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
+    iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, NULL, NULL, NULL);
 
     LED_B_ON();
     rdv40_spiffs_lazy_mount();
@@ -252,7 +252,7 @@ static int reader_attack_mode(void) {
         rdv40_spiffs_lazy_unmount();
         LED_B_OFF();
         if (res == SPIFFS_OK) {
-           Dbprintf("saved to " _GREEN_("%s"), fn);
+            Dbprintf("saved to " _GREEN_("%s"), fn);
         } else {
             Dbprintf(_RED_("error") " writing %s to flash ( %d )", fn, res);
         }
@@ -280,7 +280,7 @@ static int reader_dump_mode(void) {
             break;
         }
 
-         // setup authenticate AA1
+        // setup authenticate AA1
         iclass_auth_req_t auth = {
             .use_raw = false,
             .use_elite = false,
@@ -334,7 +334,7 @@ static int reader_dump_mode(void) {
             res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
             if (res == false) {
                 switch_off();
-                Dbprintf( _RED_("failed AA1 auth") ", skipping ");
+                Dbprintf(_RED_("failed AA1 auth") ", skipping ");
                 continue;
             }
 
@@ -389,7 +389,7 @@ static int reader_dump_mode(void) {
             }
         }
         switch_off();
-        save_to_flash(card_data, (start_block + dumped) * 8 );
+        save_to_flash(card_data, (start_block + dumped) * 8);
         Dbprintf("%u bytes saved", (start_block + dumped) * 8);
     }
     DbpString("-=[ exiting " _CYAN_("`read & dump`") " mode ]=-");
@@ -409,7 +409,7 @@ static int config_sim_mode(void) {
 
         if (res == SPIFFS_OK) {
             Dbprintf("loaded " _GREEN_("%s") " (%u bytes) to emulator memory", cc_files[i], fsize);
-            iclass_simulate(ICLASS_SIM_MODE_FULL, 0 , false, NULL, NULL, NULL);
+            iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, NULL, NULL, NULL);
         }
     }
 
@@ -490,7 +490,7 @@ void RunMod(void) {
 
                 // Look for config cards
                 rdv40_spiffs_lazy_mount();
-                for (uint8_t i =0; i < 2; i++) {
+                for (uint8_t i = 0; i < 2; i++) {
                     if (exists_in_spiffs(cc_files[i]) == false) {
                         Dbprintf(_RED_("error") ", " _YELLOW_("%s") " file missing", cc_files[i]);
                         mode = ICE_STATE_NONE;

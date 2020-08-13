@@ -1002,7 +1002,7 @@ void SniffHitag2(void) {
     size_t periods = 0;
     uint8_t periods_bytes[4];
 
- //   int16_t checked = 0;
+//   int16_t checked = 0;
 
     /*bool waiting_for_first_edge = true;*/
     LED_C_ON();
@@ -1015,18 +1015,18 @@ void SniffHitag2(void) {
 
         WDT_HIT();
 
-/*
-        // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
-            if (data_available()) {
-                checked = -1;
-                break;
-            } else {
-                checked = 0;
-            }
-        }
-        ++checked;
-        */
+        /*
+                // only every 1000th times, in order to save time when collecting samples.
+                if (checked == 1000) {
+                    if (data_available()) {
+                        checked = -1;
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+                */
 
 
         // Receive frame, watch for at most T0*EOF periods

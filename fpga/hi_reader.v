@@ -59,7 +59,7 @@ reg [5:0] corr_i_cnt;
 always @(negedge adc_clk)
 begin
 	corr_i_cnt <= corr_i_cnt + 1;
-end		
+end
 
 
 // A couple of registers in which to accumulate the correlations. From the 64 samples
@@ -67,7 +67,7 @@ end
 // be safe to assume that a tag will not be able to modulate the carrier signal by more than 25%.
 // 32 * 255 * 0,25 = 2040, which can be held in 11 bits. Add 1 bit for sign.
 // Temporary we might need more bits. For the 212kHz subcarrier we could possible add 32 times the
-// maximum signal value before a first subtraction would occur. 32 * 255 = 8160 can be held in 13 bits. 
+// maximum signal value before a first subtraction would occur. 32 * 255 = 8160 can be held in 13 bits.
 // Add one bit for sign -> need 14 bit registers but final result will fit into 12 bits.
 reg signed [13:0] corr_i_accum;
 reg signed [13:0] corr_q_accum;
@@ -87,12 +87,12 @@ begin
 		abs_ci <= corr_i_accum;
 	else
 		abs_ci <= -corr_i_accum;
-	
+
 	if (corr_q_accum[13] == 1'b0)
 		abs_cq <= corr_q_accum;
 	else
 		abs_cq <= -corr_q_accum;
-	
+
 	if (abs_ci > abs_cq)
 	begin
 		max_ci_cq <= abs_ci;
@@ -120,7 +120,7 @@ begin
 			subcarrier_I = ~corr_i_cnt[3];
 			subcarrier_Q = ~(corr_i_cnt[3] ^ corr_i_cnt[2]);
 		end
-	else if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_212_KHZ)	
+	else if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_212_KHZ)
 		begin
 			subcarrier_I = ~corr_i_cnt[5];
 			subcarrier_Q = ~(corr_i_cnt[5] ^ corr_i_cnt[4]);
@@ -146,12 +146,12 @@ begin
 			// send amplitude plus 2 bits reader signal
 			corr_i_out <= corr_amplitude[13:6];
 			corr_q_out <= {corr_amplitude[5:0], after_hysteresis_prev_prev, after_hysteresis_prev};
-		end	
+		end
 		else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ)
 		begin
 
 			// Send 7 most significant bits of in phase tag signal (signed), plus 1 bit reader signal
-			if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111) 
+			if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
 				corr_i_out <= {corr_i_accum[11:5], after_hysteresis_prev_prev};
 			else // truncate to maximum value
 				if (corr_i_accum[13] == 1'b0)
@@ -160,7 +160,7 @@ begin
 					corr_i_out <= {7'b1000000, after_hysteresis_prev_prev};
 
 			// Send 7 most significant bits of quadrature phase tag signal (signed), plus 1 bit reader signal
-			if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111) 
+			if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111)
 				corr_q_out <= {corr_q_accum[11:5], after_hysteresis_prev};
 			else // truncate to maximum value
 				if (corr_q_accum[13] == 1'b0)
@@ -173,12 +173,12 @@ begin
 			// send amplitude
 			corr_i_out <= {2'b00, corr_amplitude[13:8]};
 			corr_q_out <= corr_amplitude[7:0];
-		end	
+		end
 		else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_IQ)
 		begin
 
 			// Send 8 bits of in phase tag signal
-			if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111) 
+			if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
 				corr_i_out <= corr_i_accum[11:4];
 			else // truncate to maximum value
 				if (corr_i_accum[13] == 1'b0)
@@ -187,7 +187,7 @@ begin
 					corr_i_out <= 8'b10000000;
 
 			// Send 8 bits of quadrature phase tag signal
-			if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111) 
+			if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111)
 				corr_q_out <= corr_q_accum[11:4];
 			else // truncate to maximum value
 				if (corr_q_accum[13] == 1'b0)
@@ -199,7 +199,7 @@ begin
 		// for each Q/I pair report two reader signal samples when sniffing. Store the 1st.
 		after_hysteresis_prev_prev <= after_hysteresis;
 
-		// Initialize next correlation. 
+		// Initialize next correlation.
 		// Both I and Q reference signals are high when corr_i_nct == 0. Therefore need to accumulate.
         corr_i_accum <= $signed({1'b0, adc_d});
         corr_q_accum <= $signed({1'b0, adc_d});
@@ -223,7 +223,7 @@ begin
 
     // Then the result from last time is serialized and send out to the ARM.
     // We get one report each cycle, and each report is 16 bits, so the
-    // ssp_clk should be the adc_clk divided by 64/16 = 4. 
+    // ssp_clk should be the adc_clk divided by 64/16 = 4.
 	// ssp_clk frequency = 13,56MHz / 4 = 3.39MHz
 
     if (corr_i_cnt[1:0] == 2'b00)
@@ -307,7 +307,7 @@ begin
         pwr_hi  = ck_1356meg & jam_signal;
         pwr_oe4 = 1'b0;
 	end
-	else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ        
+	else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ
 		  || minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE
 		  || minor_mode == `FPGA_HF_READER_MODE_SNIFF_PHASE)
 	begin // all off
@@ -319,7 +319,7 @@ begin
 		pwr_hi  = ck_1356meg;
 		pwr_oe4 = 1'b0;
 	end
-end 
+end
 
 // always on
 assign pwr_oe1 = 1'b0;

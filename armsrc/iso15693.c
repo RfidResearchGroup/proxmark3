@@ -66,7 +66,7 @@
 #include "ticks.h"
 #include "BigBuf.h"
 #include "crc16.h"
-                    
+
 // Delays in SSP_CLK ticks.
 // SSP_CLK runs at 13,56MHz / 32 = 423.75kHz when simulating a tag
 #define DELAY_READER_TO_ARM               8
@@ -106,7 +106,7 @@
 
 static void BuildIdentifyRequest(uint8_t *cmd);
 
-// ---------------------------                                             
+// ---------------------------
 
 // Signal Processing
 // ---------------------------
@@ -114,12 +114,12 @@ static void BuildIdentifyRequest(uint8_t *cmd);
 // prepare data using "1 out of 4" code for later transmission
 // resulting data rate is 26.48 kbit/s (fc/512)
 // cmd ... data
-// n ... length of data                  
-static uint8_t encode15_lut[] = { 
-      0x40, // 01000000
-      0x10, // 00010000
-      0x04, // 00000100
-      0x01  // 00000001
+// n ... length of data
+static uint8_t encode15_lut[] = {
+    0x40, // 01000000
+    0x10, // 00010000
+    0x04, // 00000100
+    0x01  // 00000001
 };
 
 void CodeIso15693AsReader(uint8_t *cmd, int n) {
@@ -132,16 +132,16 @@ void CodeIso15693AsReader(uint8_t *cmd, int n) {
 
     // data
     for (int i = 0; i < n; i++) {
-        
+
         volatile uint8_t b = (cmd[i] >> 0) & 0x03;
         ts->buf[++ts->max] = encode15_lut[b];
-        
+
         b = (cmd[i] >> 2) & 0x03;
         ts->buf[++ts->max] = encode15_lut[b];
 
         b = (cmd[i] >> 4) & 0x03;
         ts->buf[++ts->max] = encode15_lut[b];
-        
+
         b = (cmd[i] >> 6) & 0x03;
         ts->buf[++ts->max] = encode15_lut[b];
     }
@@ -167,12 +167,12 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
 
     tosend_reset();
     tosend_t *ts = get_tosend();
-    
+
     // SOF for 1of256
     ts->buf[++ts->max] = 0x81; //10000001
 
     // data
-    for(int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         for (int j = 0; j <= 255; j++) {
             if (cmd[i] == j) {
                 tosend_stuffbit(0);
@@ -189,7 +189,7 @@ static void CodeIso15693AsReader256(uint8_t *cmd, int n) {
     ts->max++;
 }
 
-static const uint8_t encode_4bits[16] = { 
+static const uint8_t encode_4bits[16] = {
 //  0     1     2     3
     0xaa, 0x6a, 0x9a, 0x5a,
 //  4     5     6     7
@@ -292,7 +292,7 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
 
     uint32_t modulation_start_time = *start_time - DELAY_ARM_TO_READER + 3 * 8;  // no need to transfer the unmodulated start of SOF
-    
+
     while (GetCountSspClk() > (modulation_start_time & 0xfffffff8) + 3) { // we will miss the intended time
         if (slot_time) {
             modulation_start_time += slot_time; // use next available slot
@@ -310,14 +310,14 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
 
     LED_C_ON();
     uint8_t bits_to_shift = 0x00;
-    uint8_t bits_to_send = 0x00;    
-    
+    uint8_t bits_to_send = 0x00;
+
     for (size_t c = 0; c < len; c++) {
         for (int i = (c == 0 ? 4 : 7); i >= 0; i--) {
 
             uint8_t cmd_bits = ((cmd[c] >> i) & 0x01) ? 0xff : 0x00;
 
-            for (int j = 0; j < (slow ? 4 : 1); ) {
+            for (int j = 0; j < (slow ? 4 : 1);) {
                 if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
                     bits_to_send = bits_to_shift << (8 - shift_delay) | cmd_bits >> shift_delay;
                     AT91C_BASE_SSC->SSC_THR = bits_to_send;
@@ -332,7 +332,7 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
     // send the remaining bits, padded with 0:
     bits_to_send = bits_to_shift << (8 - shift_delay);
     if (bits_to_send) {
-        for ( ; ; ) {
+        for (; ;) {
             if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
                 AT91C_BASE_SSC->SSC_THR = bits_to_send;
                 break;
@@ -631,7 +631,7 @@ static void DecodeTagInit(DecodeTag_t *tag, uint8_t *data, uint16_t max_len) {
 /*
  *  Receive and decode the tag response, also log to tracebuffer
  */
-int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
+int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
 
     int samples = 0, ret = 0;
 
@@ -661,10 +661,10 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
     uint32_t dma_start_time = 0;
     uint16_t *upTo = dma->buf;
 
-    for(;;) {
+    for (;;) {
 
-        volatile uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
-        if (behindBy == 0) 
+        volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        if (behindBy == 0)
             continue;
 
         samples++;
@@ -715,14 +715,14 @@ int GetIso15693AnswerFromTag(uint8_t* response, uint16_t max_len, uint16_t timeo
 
     if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf("samples = %d, ret = %d, Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, posCount = %d, maxlen = %u",
-                    samples,
-                    ret,
-                    dt->state,
-                    dt->lastBit,
-                    dt->len,
-                    dt->bitCount,
-                    dt->posCount,
-                    dt->max_len
+                 samples,
+                 ret,
+                 dt->state,
+                 dt->lastBit,
+                 dt->len,
+                 dt->bitCount,
+                 dt->posCount,
+                 dt->max_len
                 );
         Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
     }
@@ -776,7 +776,7 @@ typedef struct {
     uint8_t     *jam_search_string;
 } DecodeReader_t;
 
-static void DecodeReaderInit(DecodeReader_t* reader, uint8_t *data, uint16_t max_len, uint8_t jam_search_len, uint8_t *jam_search_string) {
+static void DecodeReaderInit(DecodeReader_t *reader, uint8_t *data, uint16_t max_len, uint8_t jam_search_len, uint8_t *jam_search_string) {
     reader->output = data;
     reader->byteCountMax = max_len;
     reader->state = STATE_READER_UNSYNCD;
@@ -788,12 +788,12 @@ static void DecodeReaderInit(DecodeReader_t* reader, uint8_t *data, uint16_t max
     reader->jam_search_string = jam_search_string;
 }
 
-static void DecodeReaderReset(DecodeReader_t* reader) {
+static void DecodeReaderReset(DecodeReader_t *reader) {
     reader->state = STATE_READER_UNSYNCD;
 }
 
 //static inline __attribute__((always_inline))
- static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader) {
+static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader) {
     switch (reader->state) {
         case STATE_READER_UNSYNCD:
             // wait for unmodulated carrier
@@ -832,7 +832,7 @@ static void DecodeReaderReset(DecodeReader_t* reader) {
             reader->posCount++;
 
             if (bit == false) { // detected a falling edge
-                
+
                 if (reader->posCount < 20) {         // falling edge too early (nominally expected at 21 earliest)
                     DecodeReaderReset(reader);
                 } else if (reader->posCount < 23) {  // SOF for 1 out of 4 coding
@@ -911,7 +911,7 @@ static void DecodeReaderReset(DecodeReader_t* reader) {
                     // do nothing, keep waiting
                 }
             } else { // unexpected falling edge
-                    DecodeReaderReset(reader);
+                DecodeReaderReset(reader);
             }
             break;
 
@@ -924,14 +924,14 @@ static void DecodeReaderReset(DecodeReader_t* reader) {
                 reader->sum1 = bit ? 1 : 0;
 
             } else if (reader->posCount <= 4) {
-                
+
                 if (bit)
                     reader->sum1++;
-                
+
             } else if (reader->posCount == 5) {
-                
+
                 reader->sum2 = bit ? 1 : 0;
-                
+
             } else {
                 if (bit)
                     reader->sum2++;
@@ -1098,9 +1098,9 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
     for (;;) {
-        volatile uint16_t behindBy = ((uint8_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        volatile uint16_t behindBy = ((uint8_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) continue;
-        
+
         if (samples == 0) {
             // DMA has transferred the very first data
             dma_start_time = GetCountSspClk() & 0xfffffff0;
@@ -1144,15 +1144,15 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 
     if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf("samples = %d, gotFrame = %d, Decoder: state = %d, len = %d, bitCount = %d, posCount = %d",
-             samples, gotFrame, dr->state, dr->byteCount,
-             dr->bitCount, dr->posCount);
+                 samples, gotFrame, dr->state, dr->byteCount,
+                 dr->bitCount, dr->posCount);
     }
 
     if (dr->byteCount >= 0) {
         uint32_t sof_time = *eof_time
-                        - dr->byteCount * (dr->Coding == CODING_1_OUT_OF_4 ? 128 : 2048) // time for byte transfers
-                        - 32  // time for SOF transfer
-                        - 16; // time for EOF transfer
+                            - dr->byteCount * (dr->Coding == CODING_1_OUT_OF_4 ? 128 : 2048) // time for byte transfers
+                            - 32  // time for SOF transfer
+                            - 16; // time for EOF transfer
         LogTrace_ISO15693(dr->output, dr->byteCount, (sof_time * 32), (*eof_time * 32), NULL, true);
     }
 
@@ -1192,8 +1192,8 @@ void AcquireRawAdcSamplesIso15693(void) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_424_KHZ | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
 
-    for(int c = 0; c < 4000; ) {
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+    for (int c = 0; c < 4000;) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             uint16_t r = AT91C_BASE_SSC->SSC_RHR;
             dest[c++] = r >> 5;
         }
@@ -1212,7 +1212,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     BigBuf_free();
     clear_trace();
     set_tracing(true);
-   
+
     DecodeTag_t dtag = {0};
     uint8_t response[ISO15693_MAX_RESPONSE_LENGTH] = {0};
     DecodeTagInit(&dtag, response, sizeof(response));
@@ -1228,7 +1228,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
     LED_D_OFF();
-    
+
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
     StartCountSspClk();
@@ -1247,12 +1247,12 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
     // Count of samples received so far, so that we can include timing
     int samples = 0;
-    
+
     uint16_t *upTo = dma->buf;
 
     for (;;) {
 
-        volatile int behind_by = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        volatile int behind_by = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behind_by < 1) continue;
 
         samples++;
@@ -1264,10 +1264,10 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
         volatile uint16_t sniffdata = *upTo++;
 
         // we have read all of the DMA buffer content
-        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                    
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {
 
             // start reading the circular buffer from the beginning
-            upTo = dma->buf;                                         
+            upTo = dma->buf;
 
             // DMA Counter Register had reached 0, already rotated.
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
@@ -1282,7 +1282,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
-                
+
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
                     DbpString("Sniff stopped");
@@ -1299,9 +1299,9 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                 uint32_t eof_time = dma_start_time + (samples * 16) + 8 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
                 if (dreader.byteCount > 0) {
                     uint32_t sof_time = eof_time
-                                    - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
-                                    - 32 * 16  // time for SOF transfer
-                                    - 16 * 16; // time for EOF transfer
+                                        - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
+                                        - 32 * 16  // time for SOF transfer
+                                        - 16 * 16; // time for EOF transfer
                     LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
                 }
                 // And ready to receive another command.
@@ -1315,9 +1315,9 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                 uint32_t eof_time = dma_start_time + (samples * 16) + 16 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
                 if (dreader.byteCount > 0) {
                     uint32_t sof_time = eof_time
-                                    - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
-                                    - 32 * 16  // time for SOF transfer
-                                    - 16 * 16; // time for EOF transfer
+                                        - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
+                                        - 32 * 16  // time for SOF transfer
+                                        - 16 * 16; // time for EOF transfer
                     LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
                 }
                 // And ready to receive another command
@@ -1370,14 +1370,14 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     Dbprintf("  DecodeReader byteCnt...%d", dreader.byteCount);
     Dbprintf("  DecodeReader posCount..%d", dreader.posCount);
     Dbprintf("  Trace length..........." _YELLOW_("%d"), BigBuf_get_traceLen());
-    DbpString("");    
+    DbpString("");
 
 }
 
 // Initialize Proxmark3 as ISO15693 reader
 void Iso15693InitReader(void) {
 
-    LEDsoff();    
+    LEDsoff();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // Start from off (no field generated)
@@ -1387,7 +1387,7 @@ void Iso15693InitReader(void) {
     // switch field on
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
     LED_D_ON();
-    
+
     // initialize SSC and select proper AD input
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -1427,7 +1427,7 @@ static void BuildIdentifyRequest(uint8_t *cmd) {
 //  If you do not need the answer use NULL for *recv[]
 //  return: length of received data
 // logging enabled
-int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv, 
+int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time) {
 
     if (init) {
@@ -1599,7 +1599,7 @@ void ReaderIso15693(uint32_t parameter) {
 
 // When SIM: initialize the Proxmark3 as ISO15693 tag
 void Iso15693InitTag(void) {
-    
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // Start from off (no field generated)
@@ -1658,10 +1658,10 @@ void SimTagIso15693(uint8_t *uid) {
     tosend_t *ts = get_tosend();
 
     enum { NO_FIELD, IDLE, ACTIVATED, SELECTED, HALTED } chip_state = NO_FIELD;
-   
+
     bool button_pressed = false;
-    int vHf = 0; // in mV    
-    
+    int vHf = 0; // in mV
+
     bool exit_loop = false;
     while (exit_loop == false) {
         WDT_HIT();
@@ -1678,7 +1678,7 @@ void SimTagIso15693(uint8_t *uid) {
                 chip_state = IDLE;
                 LED_A_ON();
             } else {
-                 continue;
+                continue;
             }
         }
 
@@ -1699,7 +1699,7 @@ void SimTagIso15693(uint8_t *uid) {
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
             LogTrace_ISO15693(resp_inv, CMD_INV_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
-            
+
             chip_state = SELECTED;
         }
     }
@@ -1715,7 +1715,7 @@ void SimTagIso15693(uint8_t *uid) {
 void BruteforceIso15693Afi(uint32_t speed) {
 
     uint8_t data[7] = {0};
-    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH];   
+    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH];
     Iso15693InitReader();
 
     // first without AFI
@@ -1726,7 +1726,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     data[2] = 0; // AFI
     AddCrc15(data, 3);
 
-    int datalen = 5;    
+    int datalen = 5;
     uint32_t eof_time = 0;
     uint32_t start_time = GetCountSspClk();
     int recvlen = SendDataTag(data, datalen, true, speed, recv, sizeof(recv), 0, ISO15693_READER_TIMEOUT, &eof_time);
@@ -1754,7 +1754,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
         recvlen = SendDataTag(data, datalen, false, speed, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time);
         start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-        
+
         WDT_HIT();
 
         if (recvlen >= 12) {
@@ -1790,7 +1790,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
     uint32_t eof_time;
     uint16_t timeout;
     bool request_answer = false;
-    
+
     switch (data[1]) {
         case ISO15_CMD_WRITE:
         case ISO15_CMD_LOCK:
@@ -1804,7 +1804,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
             break;
         default:
             timeout = ISO15693_READER_TIMEOUT;
-    }       
+    }
 
     if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf("SEND:");
@@ -1814,10 +1814,10 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
     recvlen = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), 0, timeout, &eof_time);
 
     // send a single EOF to get the tag response
-    if (request_answer) { 
+    if (request_answer) {
         recvlen = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), 0, ISO15693_READER_TIMEOUT, &eof_time);
     }
-    
+
     // for the time being, switch field off to protect rdv4.0
     // note: this prevents using hf 15 cmd with s option - which isn't implemented yet anyway
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1882,9 +1882,9 @@ void SetTag15693Uid(uint8_t *uid) {
     AddCrc15(cmd[3], 7);
 
     uint32_t start_time = 0;
-    
+
     for (int i = 0; i < 4; i++) {
-        
+
         recvlen = SendDataTag(cmd[i], sizeof(cmd[i]), i == 0 ? true : false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, &eof_time);
         start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 

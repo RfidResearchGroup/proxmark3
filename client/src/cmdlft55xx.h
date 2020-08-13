@@ -38,7 +38,7 @@
 // and it should actually be "10000" (16)
 // #define T55X7_FDXB_CONFIG_BLOCK        0x903F8080  // BiPhase, fdx-b - xtended mode, BiPhase ('57), data rate 32, 4 data blocks
 #define T55X7_FDXB_CONFIG_BLOCK         0x903F0082  // BiPhase, fdx-b - xtended mode, BiPhase ('50), invert data, data rate 32, 4 data blocks
-#define T55X7_FDXB_2_CONFIG_BLOCK       0x00098080  // 
+#define T55X7_FDXB_2_CONFIG_BLOCK       0x00098080  //
 
 #define T55X7_HID_26_CONFIG_BLOCK       0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks
 #define T55X7_PARADOX_CONFIG_BLOCK      0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks

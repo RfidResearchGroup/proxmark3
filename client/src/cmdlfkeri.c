@@ -190,7 +190,7 @@ int demodKeri(void) {
         Might be a hash of FC & CN to generate Internal ID
     */
 
-    PrintAndLogEx(SUCCESS, "KERI - Internal ID: " _GREEN_("%u") ", Raw: %08X%08X" , ID, raw1, raw2);
+    PrintAndLogEx(SUCCESS, "KERI - Internal ID: " _GREEN_("%u") ", Raw: %08X%08X", ID, raw1, raw2);
     /*
         Descramble Data.
     */

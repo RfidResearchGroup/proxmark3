@@ -467,7 +467,7 @@ static int CmdSmartRaw(const char *Cmd) {
 
     uint8_t flags = SC_LOG;
     if (active || active_select) {
-        
+
         flags |= (SC_CONNECT | SC_CLEARLOG);
         if (active_select)
             flags |= SC_SELECT;

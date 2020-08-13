@@ -295,7 +295,7 @@ static void TimingIntervalAcquisition(void) {
 
 static void print_debug_level(void) {
     char dbglvlstr[20] = {0};
-    switch(DBGLEVEL) {
+    switch (DBGLEVEL) {
         case DBG_NONE:
             sprintf(dbglvlstr, "NONE");
             break;
@@ -308,7 +308,7 @@ static void print_debug_level(void) {
         case DBG_DEBUG:
             sprintf(dbglvlstr, "DEBUG");
             break;
-        case DBG_EXTENDED:        
+        case DBG_EXTENDED:
             sprintf(dbglvlstr, "EXTENDED");
             break;
     }
@@ -362,9 +362,9 @@ static void SendStatus(void) {
 
     print_stack_usage();
     print_debug_level();
-    
+
     tosend_t *ts = get_tosend();
-    Dbprintf("  ToSendMax...............%d", ts->max );
+    Dbprintf("  ToSendMax...............%d", ts->max);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks

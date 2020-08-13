@@ -157,20 +157,20 @@ void StartCountSspClk(void) {
     // synchronize the counter with the ssp_frame signal.
     // Note: FPGA must be in a FPGA mode with SSC transfer, otherwise SSC_FRAME and SSC_CLK signals would not be present
     //
-    while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME);      // wait for ssp_frame to be low
-    while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME));   // wait for ssp_frame to go high (start of frame)
-    while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));     // wait for ssp_clk to go high; 1st ssp_clk after start of frame
-    while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);        // wait for ssp_clk to go low;
-    while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));     // wait for ssp_clk to go high; 2nd ssp_clk after start of frame
+    while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME);     // wait for ssp_frame to be low
+    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME));  // wait for ssp_frame to go high (start of frame)
+    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));    // wait for ssp_clk to go high; 1st ssp_clk after start of frame
+    while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);       // wait for ssp_clk to go low;
+    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));    // wait for ssp_clk to go high; 2nd ssp_clk after start of frame
     if ((AT91C_BASE_SSC->SSC_RFMR & SSC_FRAME_MODE_BITS_IN_WORD(32)) == SSC_FRAME_MODE_BITS_IN_WORD(16)) { // 16bit frame
-        while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);    // wait for ssp_clk to go low;
-        while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 3rd ssp_clk after start of frame
-        while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);    // wait for ssp_clk to go low;
-        while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 4th ssp_clk after start of frame
-        while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);    // wait for ssp_clk to go low;
-        while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 5th ssp_clk after start of frame
-        while(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);    // wait for ssp_clk to go low;
-        while(!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 6th ssp_clk after start of frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 3rd ssp_clk after start of frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 4th ssp_clk after start of frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 5th ssp_clk after start of frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 6th ssp_clk after start of frame
     }
 
     // note: up to now two ssp_clk rising edges have passed since the rising edge of ssp_frame

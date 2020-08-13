@@ -1359,8 +1359,8 @@ bool testKnownConfigBlock(uint32_t block0) {
         case T55X7_NEDAP_128_CONFIG_BLOCK:
         case T55X7_VISA2000_CONFIG_BLOCK:
         case T55X7_SECURAKEY_CONFIG_BLOCK:
-        case T55X7_PAC_CONFIG_BLOCK:  
-        case T55X7_VERICHIP_CONFIG_BLOCK:  
+        case T55X7_PAC_CONFIG_BLOCK:
+        case T55X7_VERICHIP_CONFIG_BLOCK:
         case T55X7_KERI_CONFIG_BLOCK:
         case T55X7_NEXWATCH_CONFIG_BLOCK:
         case T55X7_JABLOTRON_CONFIG_BLOCK:
@@ -2109,7 +2109,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             break;
         case T55X7_NEXWATCH_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "NexWatch, Quadrakey ");
-            break;        
+            break;
         default:
             break;
     }

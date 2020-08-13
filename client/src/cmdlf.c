@@ -1206,7 +1206,7 @@ static bool CheckChipType(bool getDeviceData) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf t55xx`") " commands");
         retval = true;
     }
-    
+
     // check for em4x50 chips
     if (detect_4x50_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
@@ -1293,7 +1293,7 @@ int CmdLFfind(const char *Cmd) {
     if (demodParadox() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
     if (demodNexWatch() == PM3_SUCCESS)        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
     if (demodIndala() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
-    
+
     if (demodEM410x() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
     if (demodFDX() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
     if (demodGuard() == PM3_SUCCESS)           { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
@@ -1310,7 +1310,7 @@ int CmdLFfind(const char *Cmd) {
     if (demodSecurakey() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
     if (demodViking() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
     if (demodGallagher() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
-   
+
 //    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
     //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
 

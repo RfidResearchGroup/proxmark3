@@ -63,7 +63,7 @@ static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
     tosend_reset();
 
     tosend_t *ts = get_tosend();
-    
+
     for (uint16_t i = 0; i < len; i++) {
         uint8_t b = cmd[i];
         for (uint8_t j = 0; j < 8; j++) {

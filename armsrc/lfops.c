@@ -1245,7 +1245,7 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-                 
+
         // cancel w usb command.
         if (interval == 4000) {
             if (data_available()) {
@@ -1262,7 +1262,7 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low) {
         // FSK demodulator
         // 50 * 128 * 2 - big enough to catch 2 sequences of largest format
         size = MIN(12800, BigBuf_max_traceLen());
-        
+
         int idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
         if (idx < 0) continue;
 
@@ -1354,7 +1354,7 @@ int lf_awid_watch(int findone, uint32_t *high, uint32_t *low) {
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-         
+
         // cancel w usb command.
         if (interval == 4000) {
             if (data_available()) {
@@ -1535,7 +1535,7 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low) {
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-         
+
         // cancel w usb command.
         if (interval == 4000) {
             if (data_available()) {
@@ -2601,12 +2601,12 @@ void Cotag(uint32_t arg0) {
     BigBuf_Clear_ext(false);
 
     //send COTAG start pulse
-/*
-    ON(740)  OFF(2035)
-    ON(3330) OFF(2035)
-    ON(740)  OFF(2035)
-    ON(1000)
-*/
+    /*
+        ON(740)  OFF(2035)
+        ON(3330) OFF(2035)
+        ON(740)  OFF(2035)
+        ON(1000)
+    */
 
     ON(800)  OFF(2200)
     ON(3600) OFF(2200)

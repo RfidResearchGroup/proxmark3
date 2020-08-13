@@ -111,7 +111,7 @@ static int usage_lf_em410x_brute(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_brute ids.txt"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_brute ids.txt c 32"));
-    PrintAndLogEx(NORMAL, _YELLOW_( "      lf em 410x_brute ids.txt d 3000"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_brute ids.txt d 3000"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_brute ids.txt d 3000 c 32"));
     return PM3_SUCCESS;
 }
@@ -408,7 +408,7 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
 static int CmdEM410xWatch(const char *Cmd) {
     uint8_t c = tolower(param_getchar(Cmd, 0));
     if (c == 'h') return usage_lf_em410x_watch();
-    
+
     PrintAndLogEx(SUCCESS, "Watching for EM410x cards - place tag on antenna");
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
@@ -639,7 +639,7 @@ static int CmdEM410xWrite(const char *Cmd) {
     } else if (card == 0) {
         PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 "(clock rate: %d)", _GREEN_("T5555"), id, clock1);
     }
-    
+
     struct {
         uint8_t card;
         uint8_t clock;
@@ -657,7 +657,7 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_EM410X_WRITE, &resp);
-    switch(resp.status) {
+    switch (resp.status) {
         case PM3_SUCCESS: {
             PrintAndLogEx(SUCCESS, "Done");
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x_read`") " to verify");

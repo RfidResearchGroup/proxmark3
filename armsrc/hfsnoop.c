@@ -52,7 +52,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     *len = (BigBuf_max_traceLen() & 0xFFFE);
     uint8_t *mem = BigBuf_malloc(*len);
 
-    uint32_t trigger_cnt = 0;    
+    uint32_t trigger_cnt = 0;
     uint16_t r = 0, interval = 0;
 
     bool pressed = false;
@@ -77,7 +77,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
 
             // 180 (0xB4) arbitary value to see if a strong RF field is near.
             if (r > 180) {
-               
+
                 if (++trigger_cnt > triggersToSkip) {
                     break;
                 }
@@ -97,7 +97,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
             }
         }
 
-        optimizedSniff((uint16_t*)mem, *len);
+        optimizedSniff((uint16_t *)mem, *len);
 
         if (DBGLEVEL >= DBG_INFO)   {
             Dbprintf("Trigger kicked in (%d >= 180)", r);

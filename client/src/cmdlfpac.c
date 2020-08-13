@@ -88,7 +88,7 @@ static int demodbuf_to_pacid(uint8_t *src, const size_t src_size, uint8_t *dst, 
     }
 
     // overwrite checksum byte with null terminator
-    dst[dataLength - 1] = 0; 
+    dst[dataLength - 1] = 0;
 
     return PM3_SUCCESS;
 }

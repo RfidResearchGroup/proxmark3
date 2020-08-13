@@ -250,7 +250,7 @@ int demodNexWatch(void) {
     } else {
         PrintAndLogEx(DEBUG, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);
     }
-    
+
     PrintAndLogEx(DEBUG, "        checksum : %s (0x%02X)", (m_idx < ARRAYLEN(items)) ? _GREEN_("ok") : _RED_("fail"), chk);
 
     PrintAndLogEx(INFO, " Raw : " _YELLOW_("%"PRIX32"%"PRIX32"%"PRIX32), raw1, raw2, raw3);

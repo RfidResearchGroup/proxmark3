@@ -736,7 +736,7 @@ void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data) {
 
     if ((flags & SC_LOG) == SC_LOG)
         set_tracing(true);
-    else 
+    else
         set_tracing(false);
 
     if ((flags & SC_CONNECT)) {

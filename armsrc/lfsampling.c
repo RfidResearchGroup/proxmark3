@@ -171,7 +171,7 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
     // keep track of total gather samples regardless how many was discarded.
     if (samples.counter-- == 0) return;
 
-     if (bits_per_sample == 0) bits_per_sample = 1;
+    if (bits_per_sample == 0) bits_per_sample = 1;
     if (bits_per_sample > 8) bits_per_sample = 8;
     if (decimation == 0) decimation = 1;
 
@@ -323,7 +323,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
             if (samples.total_saved >= sample_size) break;
         }
     }
- 
+
     if (checked == -1 && verbose) {
         Dbprintf("lf sampling aborted");
     }
@@ -414,14 +414,14 @@ void doT55x7Acquisition(size_t sample_size) {
     bool lowFound = false;
 
     uint16_t checker = 0;
-    
+
     if (DBGLEVEL >= DBG_DEBUG) {
         Dbprintf("doT55x7Acquisition - after init");
         print_stack_usage();
     }
 
     while (skipCnt < 1000 && (i < bufsize)) {
-        
+
         if (BUTTON_PRESS())
             break;
 
@@ -493,17 +493,17 @@ void doCotagAcquisition() {
     dest[0] = 0;
     uint8_t firsthigh = 0, firstlow = 0;
     uint16_t i = 0, noise_counter = 0;
-    
+
     if (DBGLEVEL >= DBG_DEBUG) {
         Dbprintf("doCotagAcquisition - after init");
         print_stack_usage();
     }
 
     while ((i < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
-        
+
         if (BUTTON_PRESS())
             break;
-        
+
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -557,15 +557,15 @@ uint32_t doCotagAcquisitionManchester(void) {
     uint8_t curr = 0, prev = 0;
     uint16_t sample_counter = 0, period = 0;
     uint16_t noise_counter = 0;
-    
+
     if (DBGLEVEL >= DBG_DEBUG) {
         Dbprintf("doCotagAcquisitionManchester - after init");
         print_stack_usage();
     }
-     
+
     while ((sample_counter < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
-        
-        if (BUTTON_PRESS()) 
+
+        if (BUTTON_PRESS())
             break;
 
         WDT_HIT();

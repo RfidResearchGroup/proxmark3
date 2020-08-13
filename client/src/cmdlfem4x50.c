@@ -114,8 +114,8 @@ static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t 
             c[j] = 0;
 
         for (int j = 0; j < 4; j++) {
-            words[i].byte[j] = byte[i*7+j];
-            words[i].row_parity[j] = (byte[i*7+4] >> (3-j)) & 1;
+            words[i].byte[j] = byte[i * 7 + j];
+            words[i].row_parity[j] = (byte[i * 7 + 4] >> (3 - j)) & 1;
 
             // collect parities
             p = 0;
@@ -126,7 +126,7 @@ static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t 
                 p ^= (words[i].byte[j] >> k) & 1;
 
                 // column parity
-                c[k] ^= (words[i].byte[j] >> (7-k)) & 1;
+                c[k] ^= (words[i].byte[j] >> (7 - k)) & 1;
             }
 
             // check row parities
@@ -137,17 +137,17 @@ static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t 
         }
 
         // check column parities
-        words[i].col_parity = byte[i*7+5];
+        words[i].col_parity = byte[i * 7 + 5];
 
         for (int j = 0; j < 8; j++) {
-            words[i].cparity[j] = (((words[i].col_parity >> (7-j)) & 1) == c[j]) ? true : false;
+            words[i].cparity[j] = (((words[i].col_parity >> (7 - j)) & 1) == c[j]) ? true : false;
 
             if (!words[i].cparity[j])
-               words[i].parity = false;
+                words[i].parity = false;
         }
 
         // check stop bit
-        words[i].stopbit = byte[i*7+6] & 1;
+        words[i].stopbit = byte[i * 7 + 6] & 1;
 
         if (words[i].stopbit == 1)
             words[i].stopparity = false;
@@ -166,7 +166,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
     for (int i = fwr; i <= lwr; i++) {
 
         char s[50] = {0};
-        switch(i) {
+        switch (i) {
             case EM4X50_DEVICE_PASSWORD:
                 sprintf(s, _YELLOW_("password, write only"));
                 break;
@@ -191,13 +191,13 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
         for (int j = 3; j >= 0; j--) {
             sprintf(r + strlen(r), "%02x ", reflect8(words[i].byte[j]));
         }
-        
+
         PrintAndLogEx(INFO, " %2i | " _GREEN_("%s") "| %s| %s",
-            i,
-            sprint_hex(words[i].byte, 4),
-            r,
-            s
-        );
+                      i,
+                      sprint_hex(words[i].byte, 4),
+                      r,
+                      s
+                     );
     }
     PrintAndLogEx(INFO, "----+-------------+-------------+--------------------");
 }
@@ -226,14 +226,14 @@ static void print_info_result(uint8_t *data, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("EM4x50 data:"));
     print_result(words, 0, EM4X50_NO_WORDS - 1);
-        
+
     // configuration section
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---- " _CYAN_("Configuration") " ----");
 
     PrintAndLogEx(INFO, "first word read  %3i", fwr);
     PrintAndLogEx(INFO, "last word read   %3i", lwr);
-    PrintAndLogEx(INFO, "password check   %3s", (bpwc) ? _RED_("on"): _GREEN_("off"));
+    PrintAndLogEx(INFO, "password check   %3s", (bpwc) ? _RED_("on") : _GREEN_("off"));
     PrintAndLogEx(INFO, "read after write %3s", (braw) ? "on" : "off");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------- " _CYAN_("Protection") " ---------");
@@ -288,9 +288,9 @@ int CmdEM4x50Info(const char *Cmd) {
 
             case 'p':
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
-                 }
+                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
+                }
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
@@ -308,8 +308,8 @@ int CmdEM4x50Info(const char *Cmd) {
     }
 
     // validation
-     if (errors)
-         return usage_lf_em4x50_info();
+    if (errors)
+        return usage_lf_em4x50_info();
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
@@ -346,17 +346,17 @@ int CmdEM4x50Write(const char *Cmd) {
             }
             case 'p': {
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
-                 }
+                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
+                }
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
             }
             case 'w': {
                 if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
-                     PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
+                    PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
                 }
                 bword = true;
                 cmdp += 2;
@@ -383,7 +383,7 @@ int CmdEM4x50Write(const char *Cmd) {
     }
 
     if (errors || !bword || !baddr)
-         return usage_lf_em4x50_write();
+        return usage_lf_em4x50_write();
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
@@ -428,7 +428,7 @@ static void print_write_password_result(PacketResponseNG *resp, const em4x50_dat
     sprintf(pstring, "\n  writing new password " _GREEN_("ok"));
     strcat(string, pstring);
 
-    PrintAndLogEx(NORMAL,"%s\n", string);
+    PrintAndLogEx(NORMAL, "%s\n", string);
 }
 
 int CmdEM4x50WritePassword(const char *Cmd) {
@@ -452,8 +452,8 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 
             case 'p':
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
+                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
                 }
                 bpwd = true;
                 etd.pwd_given = true;
@@ -462,9 +462,9 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 
             case 'n':
                 if (param_gethex(Cmd, cmdp + 1, etd.new_password, 8)) {
-                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
-                 }
+                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
+                }
                 bnpwd = true;
                 etd.newpwd_given = true;
                 cmdp += 2;
@@ -478,7 +478,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     }
 
     if (errors || !bpwd || !bnpwd)
-         return usage_lf_em4x50_write_password();
+        return usage_lf_em4x50_write_password();
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WRITE_PASSWORD, (uint8_t *)&etd, sizeof(etd));
@@ -493,7 +493,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     if (success)
         print_write_password_result(&resp, &etd);
     else
-        PrintAndLogEx(NORMAL,"\nwriting password " _RED_("failed") "\n");
+        PrintAndLogEx(NORMAL, "\nwriting password " _RED_("failed") "\n");
 
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
@@ -583,9 +583,9 @@ int CmdEM4x50Read(const char *Cmd) {
             }
             case 'p': {
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
-                 }
+                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
+                }
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
@@ -599,7 +599,7 @@ int CmdEM4x50Read(const char *Cmd) {
     }
 
     if (errors || strlen(Cmd) == 0 || etd.addr_given == false)
-         return usage_lf_em4x50_read();
+        return usage_lf_em4x50_read();
 
     return em4x50_read(&etd, NULL, true);
 }
@@ -627,9 +627,9 @@ int CmdEM4x50Dump(const char *Cmd) {
                 break;
             case 'p': {
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                     PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
-                 }
+                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
+                }
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
@@ -642,8 +642,8 @@ int CmdEM4x50Dump(const char *Cmd) {
     }
 
     // validation
-     if (errors)
-         return usage_lf_em4x50_dump();
+    if (errors)
+        return usage_lf_em4x50_dump();
 
     PrintAndLogEx(INFO, "reading EM4x50 tag");
     clearCommandBuffer();
@@ -675,8 +675,8 @@ int CmdEM4x50Dump(const char *Cmd) {
     }
 
     uint8_t data[EM4X50_NO_WORDS * 4] = {0};
-    for (int i=0; i < EM4X50_NO_WORDS; i++) {
-        memcpy(data + (i*4), words[i].byte, 4);
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+        memcpy(data + (i * 4), words[i].byte, 4);
     }
 
     // saveFileEML will add .eml extension to filename
@@ -704,8 +704,8 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
             case 'p':
                 if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                     PrintAndLogEx(FAILED, "\npassword has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
+                    PrintAndLogEx(FAILED, "\npassword has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
                 }
                 bpwd = true;
                 cmdp += 2;
@@ -719,12 +719,12 @@ int CmdEM4x50Wipe(const char *Cmd) {
     }
 
     if (errors || !bpwd)
-         return usage_lf_em4x50_wipe();
+        return usage_lf_em4x50_wipe();
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&etd, sizeof(etd));
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2*TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2 * TIMEOUT)) {
         PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
         return PM3_ETIMEOUT;
     }
@@ -732,9 +732,9 @@ int CmdEM4x50Wipe(const char *Cmd) {
     // print response
     bool isOK = resp.status;
     if (isOK) {
-        PrintAndLogEx(SUCCESS,"\nwiping data " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "\nwiping data " _GREEN_("ok") "\n");
     } else {
-        PrintAndLogEx(FAILED,"\nwiping data " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "\nwiping data " _RED_("failed") "\n");
         return PM3_ESOFT;
     }
 

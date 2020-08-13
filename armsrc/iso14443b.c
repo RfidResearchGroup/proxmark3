@@ -187,12 +187,12 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 
     // Send EOF.
     // 10-11 ETU * 4 sample rate = ZEROS
-    for(i = 0; i < 10; i++) {
+    for (i = 0; i < 10; i++) {
         SEND4STUFFBIT(0);
     }
-    
+
     // why this?
-    for(i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         SEND4STUFFBIT(1);
     }
 
@@ -448,7 +448,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
 
-        if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             for (uint8_t mask = 0x80; mask != 0x00; mask >>= 1) {
                 if (Handle14443bReaderUartBit(b & mask)) {
@@ -501,11 +501,11 @@ void SimulateIso14443bTag(uint32_t pupi) {
     // supports only 106kBit/s in both directions, max frame size = 32Bytes,
     // supports ISO14443-4, FWI=8 (77ms), NAD supported, CID not supported:
     uint8_t respATQB[] = {
-            0x50,
-            0x82, 0x0d, 0xe1, 0x74,
-            0x20, 0x38, 0x19,
-            0x22, 0x00, 0x21, 0x85,
-            0x5e, 0xd7
+        0x50,
+        0x82, 0x0d, 0xe1, 0x74,
+        0x20, 0x38, 0x19,
+        0x22, 0x00, 0x21, 0x85,
+        0x5e, 0xd7
     };
 
     // response to HLTB and ATTRIB
@@ -516,7 +516,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
         num_to_bytes(pupi, 4, respATQB + 1);
         AddCrc14B(respATQB, 12);
     }
-    
+
     // setup device.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -537,7 +537,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
     int vHf = 0; // in mV
 
     tosend_t *ts = get_tosend();
-    
+
     uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
 
     // prepare "ATQB" tag answer (encoded):
@@ -556,7 +556,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
     // Simulation loop
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
-        
+
         //iceman: limit with 2000 times..
         if (data_available()) {
             break;
@@ -588,7 +588,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
         // WUP in HALTED state
         if (len == 5) {
             if ((receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8) == 0x8 && cardSTATE == SIM_HALTED) ||
-                 receivedCmd[0] == ISO14443B_REQB) {
+                    receivedCmd[0] == ISO14443B_REQB) {
                 LogTrace(receivedCmd, len, 0, 0, NULL, true);
                 cardSTATE = SIM_SELECTING;
             }
@@ -668,7 +668,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 
     if (DBGLEVEL >= DBG_DEBUG)
         Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
- 
+
     switch_off(); //simulate
 }
 
@@ -733,7 +733,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
                 Demod.posCount = 0; // start of SOF sequence
             } else {
                 // maximum length of TR1 = 200 1/fs
-                if (Demod.posCount > 200 / 4){
+                if (Demod.posCount > 200 / 4) {
                     Demod.state = DEMOD_UNSYNCD;
                 }
             }
@@ -851,9 +851,9 @@ static int GetTagSamplesFor14443bDemod(int timeout) {
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY))
 
-    // Setup and start DMA.
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-    
+        // Setup and start DMA.
+        FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
@@ -870,8 +870,8 @@ static int GetTagSamplesFor14443bDemod(int timeout) {
 //    uint32_t dma_start_time;
     uint16_t *upTo = dma->buf;
 
-    for(;;) {
-        uint16_t behindBy = ((uint16_t*)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+    for (;;) {
+        uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
 
         if (behindBy == 0) continue;
 
@@ -884,7 +884,7 @@ static int GetTagSamplesFor14443bDemod(int timeout) {
         */
 
         volatile uint16_t tagdata = *upTo++;
-        
+
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                 // we have read all of the DMA buffer content.
             upTo = dma->buf;                                      // start reading the circular buffer from the beginning
             if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
@@ -893,7 +893,7 @@ static int GetTagSamplesFor14443bDemod(int timeout) {
                 break;
             }
         }
-        
+
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {         // DMA Counter Register had reached 0, already rotated.
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;   // refresh the DMA Next Buffer and
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;       // DMA Next Counter registers
@@ -904,7 +904,7 @@ static int GetTagSamplesFor14443bDemod(int timeout) {
             break;
         }
 
-        if(samples > timeout && Demod.state < DEMOD_PHASE_REF_TRAINING) {
+        if (samples > timeout && Demod.state < DEMOD_PHASE_REF_TRAINING) {
             ret = -1;
             LED_C_OFF();
             break;
@@ -918,7 +918,7 @@ static int GetTagSamplesFor14443bDemod(int timeout) {
     }
 
     if (Demod.len > 0) {
-        LogTrace(Demod.output, Demod.len, 0, 0, NULL, false);   
+        LogTrace(Demod.output, Demod.len, 0, 0, NULL, false);
     }
 
     return ret;
@@ -933,23 +933,23 @@ static void TransmitFor14443b_AsReader(void) {
 
     LED_B_ON();
     tosend_t *ts = get_tosend();
-    
+
     for (int c = 0; c < ts->max; c++) {
         uint8_t data = ts->buf[c];
 
         for (int i = 0; i < 8; i++) {
             uint16_t send_word = (data & 0x80) ? 0x0000 : 0xffff;
-            
+
             while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
-            
-            AT91C_BASE_SSC->SSC_THR = send_word;                        
+
+            AT91C_BASE_SSC->SSC_THR = send_word;
 
             while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
             AT91C_BASE_SSC->SSC_THR = send_word;
 
             data <<= 1;
         }
-        WDT_HIT(); 
+        WDT_HIT();
     }
     LED_B_OFF();
 }
@@ -978,7 +978,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 
     // Send SOF
     // 10-11 ETUs of ZERO
-    for (int i = 0; i < 10; i++) 
+    for (int i = 0; i < 10; i++)
         tosend_stuffbit(0);
 
 
@@ -1021,7 +1021,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     // 8ETUS minum?
     // Per specification, Subcarrier must be stopped no later than 2 ETUs after EOF.
     // I'm guessing this is for the FPGA to be able to send all bits before we switch to listening mode
-    
+
     // ensure that last byte is filled up
     for (int i = 0; i < 8 ; ++i)
         tosend_stuffbit(1);
@@ -1068,7 +1068,7 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
 
     if (ret < 3) {
         LED_A_OFF();
-        return 0; 
+        return 0;
     }
 
     // VALIDATE CRC
@@ -1081,7 +1081,7 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
         memcpy(response, Demod.output, Demod.len);
 
     return Demod.len;
-    LED_A_OFF();    
+    LED_A_OFF();
 }
 
 /**
@@ -1322,7 +1322,7 @@ void ReadSTMemoryIso14443b(uint8_t numofblocks) {
         if (i == 0xff) break;
         ++i;
     }
-    
+
     // Todo:  iceman:  send back read data to client.
     // reply_ng(..., );
 
@@ -1419,7 +1419,7 @@ void RAMFUNC SniffIso14443b(void) {
     time_0 = GetCountSspClk();
 
     // loop and listen
-    for(;;) {
+    for (;;) {
 
         int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE - 1);
         if (behindBy > maxBehindBy) {
@@ -1437,7 +1437,7 @@ void RAMFUNC SniffIso14443b(void) {
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
             upTo = dma->buf;                                    // start reading the circular buffer from the beginning again
             lastRxCounter += DMA_BUFFER_SIZE;
-            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) { 
+            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
                 Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
                 break;
             }
@@ -1462,7 +1462,7 @@ void RAMFUNC SniffIso14443b(void) {
             LED_A_INV();
 
             if (Handle14443bReaderUartBit(ci & 0x01)) {
-                
+
                 time_stop = GetCountSspClk() - time_0;
                 LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
                 Uart14bReset();

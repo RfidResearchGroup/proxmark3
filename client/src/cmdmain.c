@@ -249,7 +249,7 @@ static int CmdPref(const char *Cmd) {
 
 static command_t CommandTable[] = {
 
-    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
+    {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
 
     {"analyse", CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
     {"data",    CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
@@ -264,7 +264,7 @@ static command_t CommandTable[] = {
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
     {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
-    {"--------",CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("General") " -----------------------"},
+    {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("General") " -----------------------"},
     {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
     {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use " _YELLOW_("'<command> help'") " for details of a particular command."},
     {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},

@@ -729,7 +729,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par, bool collision) {
 
     tosend_reset();
-    
+
     tosend_t *ts = get_tosend();
 
     // Correction bit, might be removed when not needed
@@ -798,7 +798,7 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
     uint8_t b = cmd;
 
     tosend_reset();
-    
+
     tosend_t *ts = get_tosend();
 
     // Correction bit, might be removed when not needed
@@ -888,7 +888,7 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
     CodeIso14443aAsTag(response_info->response, response_info->response_n);
 
     tosend_t *ts = get_tosend();
-    
+
     // Make sure we do not exceed the free buffer space
     if (ts->max > max_buffer_size) {
         Dbprintf("ToSend buffer, Out-of-bound, when modulating bits for tag answer:");
@@ -908,7 +908,7 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
 bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size) {
 
     tosend_t *ts = get_tosend();
-    
+
     // Retrieve and store the current buffer index
     response_info->modulation = *buffer;
 
@@ -1977,7 +1977,7 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
 
 int EmSend4bit(uint8_t resp) {
     Code4bitAnswerAsTag(resp);
-    tosend_t *ts = get_tosend();    
+    tosend_t *ts = get_tosend();
     int res = EmSendCmd14443aRaw(ts->buf, ts->max);
     // do the tracing for the previous reader request and this tag answer:
     uint8_t par[1] = {0x00};
@@ -1999,7 +1999,7 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par) {
 }
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision) {
     CodeIso14443aAsTagPar(resp, respLen, par, collision);
-    tosend_t *ts = get_tosend();    
+    tosend_t *ts = get_tosend();
     int res = EmSendCmd14443aRaw(ts->buf, ts->max);
 
     // do the tracing for the previous reader request and this tag answer:
@@ -2162,7 +2162,7 @@ void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t
 
     CodeIso14443aBitsAsReaderPar(frame, bits, par);
     // Send command to tag
-    tosend_t *ts = get_tosend();    
+    tosend_t *ts = get_tosend();
     TransmitFor14443a(ts->buf, ts->max, timing);
     if (g_trigger) LED_A_ON();
 

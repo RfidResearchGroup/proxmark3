@@ -176,7 +176,7 @@ reg [3:0] mod_detect_reset_time;
 
 always @(negedge adc_clk)
 begin
-	if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN) 
+	if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)
     // (our) reader signal changes at negedge_cnt[3:0]=9, tag response expected to start n*16+4 ticks later, further delayed by
     // 3 ticks ADC conversion. The maximum filter output (edge detected) will be detected after subcarrier zero crossing (+7 ticks).
     // To allow some timing variances, we want to have the maximum filter outputs well within the detection window, i.e.
@@ -516,7 +516,7 @@ begin
     if(negedge_cnt[3:0] == 4'd0)
     begin
         // What do we communicate to the ARM
-		if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN) 
+		if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN)
             sendbit = after_hysteresis;
 		else if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD)
             /* if(fdt_counter > 11'd772) sendbit = mod_sig_coil; // huh?
@@ -550,7 +550,7 @@ wire sub_carrier;
 assign sub_carrier = ~sub_carrier_cnt[3];
 
 // in FPGA_HF_ISO14443A_READER_MOD: drop carrier for mod_sig_coil==1 (pause); in FPGA_HF_ISO14443A_READER_LISTEN: carrier always on; in other modes: carrier always off
-assign pwr_hi = (ck_1356meg & (((mod_type == `FPGA_HF_ISO14443A_READER_MOD) & ~mod_sig_coil) || (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)));	
+assign pwr_hi = (ck_1356meg & (((mod_type == `FPGA_HF_ISO14443A_READER_MOD) & ~mod_sig_coil) || (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)));
 
 
 // Enable HF antenna drivers:

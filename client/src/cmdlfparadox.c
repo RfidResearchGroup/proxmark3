@@ -64,7 +64,7 @@ const uint8_t paradox_lut[] = {
     0x9F, 0xED, 0x7D, 0x59, 0x22, 0x84, 0x21, 0x4E,
     0x39, 0x48, 0x12, 0x88, 0x53, 0xDE, 0xBB, 0xE4,
     0xB4, 0x2D, 0x4D, 0x55, 0xCA, 0xBE, 0xA3, 0xE2
-    };
+};
 // FC:108, Card01827
 // 00000000  01101100       00000111     00100011
 // hex(0xED xor 0x7D xor 0x22 xor 0x84 xor 0xDE xor 0xBB xor 0xE4 xor 0x4D xor 0xA3 xor 0xE2 xor 0x47) 0xFC
@@ -132,7 +132,7 @@ int demodParadox(void) {
 
         // not manchester data
         if (bits[i] == bits[i + 1]) {
-            PrintAndLogEx(WARNING, "Error Manchester at %u", i); 
+            PrintAndLogEx(WARNING, "Error Manchester at %u", i);
             error++;
         }
 
@@ -144,7 +144,7 @@ int demodParadox(void) {
             lo |= 1;  // 10
         }
     }
-   
+
     setDemodBuff(bits, size, idx);
     setClockGrid(50, wave_idx + (idx * 50));
 
@@ -163,11 +163,11 @@ int demodParadox(void) {
     // checksum?
     uint8_t calc_chksum = 0x47;
     uint8_t pos = 0;
-    for(uint8_t i = 0; i < 8; i++ ) { 
-        
-        uint8_t ice = rawhex[i+1];
-        for(uint8_t j = 0x80; j > 0; j >>= 2) {
-            
+    for (uint8_t i = 0; i < 8; i++) {
+
+        uint8_t ice = rawhex[i + 1];
+        for (uint8_t j = 0x80; j > 0; j >>= 2) {
+
             if (ice & j) {
                 calc_chksum ^= paradox_lut[pos];
             }
@@ -178,7 +178,7 @@ int demodParadox(void) {
     uint32_t crc = CRC8Maxim(rawhex + 1, 8);
     PrintAndLogEx(DEBUG, " FSK/MAN raw : %s", sprint_hex(rawhex, sizeof(rawhex)));
     PrintAndLogEx(DEBUG, "         raw : %s = (maxim crc8) %02x == %02x", sprint_hex(rawhex + 1, 8), crc, calc_chksum);
-//    PrintAndLogEx(DEBUG, " OTHER sample CRC-8/MAXIM : 55 55 69 A5 55 6A 59 5A  = FC");    
+//    PrintAndLogEx(DEBUG, " OTHER sample CRC-8/MAXIM : 55 55 69 A5 55 6A 59 5A  = FC");
 
     uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
     uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);

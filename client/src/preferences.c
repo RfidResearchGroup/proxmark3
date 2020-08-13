@@ -909,7 +909,7 @@ static int CmdPrefShow(const char *Cmd) {
     if (session.preferences_loaded) {
         char *fn = prefGetFilename();
         PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Using "_YELLOW_("%s"), fn);
+        PrintAndLogEx(INFO, "Using "_YELLOW_("%s"), fn);
         free(fn);
     } else {
         PrintAndLogEx(ERR, "Preferences not loaded");

@@ -384,8 +384,8 @@ static inline uint32_t countones(uint64_t a) {
 #endif
 
 }
- 
-const char * card_types[] = {
+
+const char *card_types[] = {
     "PicoPass 16K / 16",                       // 000
     "PicoPass 32K with current book 16K / 16", // 001
     "Unknown Card Type!",                      // 010
@@ -435,7 +435,7 @@ static void fuse_config(const picopass_hdr *hdr) {
         else
             PrintAndLogEx(SUCCESS, "Coding: " _YELLOW_("ISO 14443-B only"));
     }
-    
+
     uint8_t pagemap = get_pagemap(hdr);
     switch (pagemap) {
         case 0x0:
@@ -458,25 +458,25 @@ static void fuse_config(const picopass_hdr *hdr) {
         PrintAndLogEx(INFO, "    RA: Read access not enabled");
 
     PrintAndLogEx(INFO,
-       "App limit " _YELLOW_("0x%02X") ", OTP " _YELLOW_("0x%02X%02X") ", Block write lock " _YELLOW_("0x%02X")
-        , hdr->conf.app_limit
-        , hdr->conf.otp[1]
-        , hdr->conf.otp[0]
-        , hdr->conf.block_writelock
-    );
+                  "App limit " _YELLOW_("0x%02X") ", OTP " _YELLOW_("0x%02X%02X") ", Block write lock " _YELLOW_("0x%02X")
+                  , hdr->conf.app_limit
+                  , hdr->conf.otp[1]
+                  , hdr->conf.otp[0]
+                  , hdr->conf.block_writelock
+                 );
     PrintAndLogEx(INFO,
-       "     Chip " _YELLOW_("0x%02X") ", Mem " _YELLOW_("0x%02X") ", EAS " _YELLOW_("0x%02X") ", Fuses " _YELLOW_("0x%02X")
-        , hdr->conf.chip_config
-        , hdr->conf.mem_config
-        , hdr->conf.eas
-        , hdr->conf.fuses
-    );
+                  "     Chip " _YELLOW_("0x%02X") ", Mem " _YELLOW_("0x%02X") ", EAS " _YELLOW_("0x%02X") ", Fuses " _YELLOW_("0x%02X")
+                  , hdr->conf.chip_config
+                  , hdr->conf.mem_config
+                  , hdr->conf.eas
+                  , hdr->conf.fuses
+                 );
 }
 
 static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *app_areas, uint8_t *kb) {
-    // How to determine chip type  
+    // How to determine chip type
 
-    // mem-bit 7 = 16K 
+    // mem-bit 7 = 16K
     // mem-bit 5 = Book
     // mem-bit 4 = 2K
     // chip-bit 4 = Multi App
@@ -532,7 +532,7 @@ static void mem_app_config(const picopass_hdr *hdr) {
     uint8_t pagemap = get_pagemap(hdr);
 
     PrintAndLogEx(INFO, "------ " _CYAN_("Memory") " ------");
-   
+
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         PrintAndLogEx(INFO, "    %u KBits (%u bytes)", kb, app2_limit * 8);
         PrintAndLogEx(INFO, "    Tag has not App Areas");
@@ -540,7 +540,7 @@ static void mem_app_config(const picopass_hdr *hdr) {
     }
 
     PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u bytes)", kb, app_areas, (app2_limit + 1) * 8);
-    PrintAndLogEx(INFO, "    AA1 blocks %u { 0x06 - 0x%02X (06 - %02d) }", app1_limit , app1_limit + 5, app1_limit + 5);
+    PrintAndLogEx(INFO, "    AA1 blocks %u { 0x06 - 0x%02X (06 - %02d) }", app1_limit, app1_limit + 5, app1_limit + 5);
     PrintAndLogEx(INFO, "    AA2 blocks %u { 0x%02X - 0x%02X (%02d - %02d) }", app2_limit - app1_limit, app1_limit + 5 + 1, app2_limit, app1_limit + 5 + 1, app2_limit);
 
     PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") " ------");
@@ -592,18 +592,18 @@ static int CmdHFiClassSniff(const char *Cmd) {
                   "Usage:\n"
                   _YELLOW_("\thf iclass sniff") "\n"
                   _YELLOW_("\thf iclass sniff -j") " -> jam e-purse updates\n"
-                  );
-    
-    void* argtable[] = {
+                 );
+
+    void *argtable[] = {
         arg_param_begin,
         arg_lit0("j",  "jam",    "Jam (prevent) e-purse updates"),
         arg_param_end
     };
 
-    CLIExecWithReturn(ctx, Cmd, argtable, true);   
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool jam_epurse_update = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    
+
     const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
 
     struct {
@@ -611,17 +611,17 @@ static int CmdHFiClassSniff(const char *Cmd) {
         uint8_t jam_search_string[2];
     } PACKED payload;
 
-    if (jam_epurse_update) {    
+    if (jam_epurse_update) {
         payload.jam_search_len = sizeof(update_epurse_sequence);
         memcpy(payload.jam_search_string, update_epurse_sequence, sizeof(payload.jam_search_string));
     }
-    
+
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_SNIFF, (uint8_t *)&payload, sizeof(payload));
-    
+
     WaitForResponse(CMD_HF_ICLASS_SNIFF, &resp);
-    
+
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass list") "` to look at the collected trace");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
@@ -790,7 +790,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             }
             saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
             free(dump);
-            
+
             PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass h") "` to recover elite key");
             break;
         }
@@ -801,7 +801,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, CSN, 8);
-            
+
             if (sim_type == ICLASS_SIM_MODE_FULL)
                 PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave h") "` to save the emulator memory to file");
             break;
@@ -819,7 +819,7 @@ int read_iclass_csn(bool loop, bool verbose) {
     uint32_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
     int res = PM3_SUCCESS;
 
-    while (kbd_enter_pressed() == false) {        
+    while (kbd_enter_pressed() == false) {
 
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
@@ -840,17 +840,17 @@ int read_iclass_csn(bool loop, bool verbose) {
             }
 
             picopass_hdr *hdr = (picopass_hdr *)resp.data.asBytes;
-           
+
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(hdr->csn, sizeof(hdr->csn)));
             PrintAndLogEx(SUCCESS, " Config: " _GREEN_("%s"), sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
-            
+
             if (loop == false)
                 break;
         }
     }
 
-    DropField();    
+    DropField();
     return res;
 }
 
@@ -858,7 +858,7 @@ static int CmdHFiClassReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_reader();
     bool loop_read = (cmdp == '1') ? false : true;
-    
+
     return read_iclass_csn(loop_read, true);
 }
 
@@ -919,7 +919,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ICLASS_REPLAY, (uint8_t *)&payload, sizeof(payload));    
+    SendCommandNG(CMD_HF_ICLASS_REPLAY, (uint8_t *)&payload, sizeof(payload));
 
     while (true) {
         printf(".");
@@ -980,7 +980,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
     saveFile(filename, ".bin", tag_data, bytes_got);
     saveFileEML(filename, tag_data, bytes_got, 8);
     saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
-    
+
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt") "` to decrypt dump file");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view") "` to view dump file");
     PrintAndLogEx(NORMAL, "");
@@ -1157,9 +1157,9 @@ static int CmdHFiClassESave(const char *Cmd) {
     saveFileEML(filename, dump, bytes, 8);
     saveFileJSON(filename, jsfIclass, dump, bytes, NULL);
     free(dump);
-    
+
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass readtagfile ") "` to view dump file");
-    return PM3_SUCCESS;    
+    return PM3_SUCCESS;
 }
 
 static int CmdHFiClassDecrypt(const char *Cmd) {
@@ -1351,7 +1351,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         } else {
             PrintAndLogEx(INFO, "No credential found.");
         }
-            
+
         // decode block 9
         if (memcmp(decrypted + (8 * 9), empty, 8) != 0) {
 
@@ -1363,9 +1363,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 uint8_t pinsize = 0;
                 if (use_sc) {
                     pinsize = GetPinSize(decrypted + (8 * 6));
-               
+
                     if (pinsize > 0) {
-                
+
                         uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
                         char tmp[17] = {0};
                         sprintf(tmp, "%."PRIu64, BCD2DEC(pin));
@@ -1502,17 +1502,17 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose) {
 }
 
 static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
-  
+
     iclass_auth_req_t payload = {
         .use_raw = rawkey,
         .use_elite = elite,
         .use_credit_key = use_credit_key
     };
     memcpy(payload.key, KEY, 8);
-   
-    SendCommandNG(CMD_HF_ICLASS_AUTH, (uint8_t*)&payload, sizeof(payload));
+
+    SendCommandNG(CMD_HF_ICLASS_AUTH, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    clearCommandBuffer();   
+    clearCommandBuffer();
     if (WaitForResponseTimeout(CMD_HF_ICLASS_AUTH, &resp, 2000) == 0) {
         if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
         return false;
@@ -1529,14 +1529,14 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
         if (verbose) PrintAndLogEx(FAILED, "authentication error");
         return false;
     }
-    
+
     if (div_key)
         memcpy(div_key, packet->div_key, sizeof(packet->div_key));
-    
+
     if (MAC)
         memcpy(MAC, packet->mac, sizeof(packet->mac));
-    
-    if (verbose) 
+
+    if (verbose)
         PrintAndLogEx(SUCCESS, "authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8));
 
     return true;
@@ -1658,7 +1658,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     uint8_t pagemap = get_pagemap(hdr);
 
     if (readStatus & (FLAG_ICLASS_CSN | FLAG_ICLASS_CONF | FLAG_ICLASS_CC)) {
-        
+
         memcpy(tag_data, hdr, 24);
 
         uint8_t type = get_mem_config(hdr);
@@ -1667,22 +1667,22 @@ static int CmdHFiClassDump(const char *Cmd) {
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
 
             PrintAndLogEx(INFO, "Card in non-secure page mode detected");
-    
+
             app_limit1 = card_app2_limit[type];
             app_limit2 = 0;
         } else {
             app_limit1 = hdr->conf.app_limit;
             app_limit2 = card_app2_limit[type];
         }
-        
+
     } else {
         PrintAndLogEx(FAILED, "failed to read block 0,1,2");
         DropField();
-        return PM3_ESOFT;        
+        return PM3_ESOFT;
     }
 
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-        PrintAndLogEx(INFO, "Dumping all available memory, block 3 - %u (0x%02x)",app_limit1 , app_limit1);
+        PrintAndLogEx(INFO, "Dumping all available memory, block 3 - %u (0x%02x)", app_limit1, app_limit1);
         if (auth) {
             PrintAndLogEx(INFO, "No keys needed, ignoring user supplied key");
         }
@@ -1703,7 +1703,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         .end_block = app_limit1,
     };
     memcpy(payload.req.key, KEY, 8);
-    
+
     // tags configured for NON SECURE PAGE,  acts different
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         payload.start_block = 3;
@@ -1711,9 +1711,9 @@ static int CmdHFiClassDump(const char *Cmd) {
     } else {
         payload.start_block = 6;
     }
-        
+
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
 
     while (true) {
         printf(".");
@@ -1757,20 +1757,20 @@ static int CmdHFiClassDump(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {    
+    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         // all memory available
-        memcpy(tag_data + (8 * 3), tempbuf + (8 * 3), (blocks_read * 8) );
+        memcpy(tag_data + (8 * 3), tempbuf + (8 * 3), (blocks_read * 8));
     } else {
         // div key KD
         memcpy(tag_data + (8 * 3), tempbuf + (8 * 3), 8);
         // AIA data
         memcpy(tag_data + (8 * 5), tempbuf + (8 * 5), 8);
         // AA1 data
-        memcpy(tag_data + (8 * 6), tempbuf + (8 * 6), (blocks_read * 8) );
+        memcpy(tag_data + (8 * 6), tempbuf + (8 * 6), (blocks_read * 8));
     }
 
     uint16_t bytes_got = (app_limit1 + 1) * 8;
-    
+
     // try AA2 Kc, Credit
     bool aa2_success = false;
 
@@ -1778,14 +1778,14 @@ static int CmdHFiClassDump(const char *Cmd) {
 
         // AA2 authenticate credit key
         memcpy(payload.req.key, CreditKEY, 8);
-    
+
         payload.req.use_credit_key = true;
         payload.start_block = app_limit1 + 1;
         payload.end_block = app_limit2;
         payload.req.do_auth = true;
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
 
         while (true) {
             printf(".");
@@ -1825,20 +1825,20 @@ static int CmdHFiClassDump(const char *Cmd) {
             PrintAndLogEx(WARNING, "command execution time out");
             goto write_dump;
         }
-              
+
         // div key KC
         memcpy(tag_data + (8 * 4), tempbuf + (8 * 4), 8);
 
         // AA2 data
-        memcpy(tag_data + (8 * (app_limit1 + 1)), tempbuf + (8 * (app_limit1 + 1)), (blocks_read * 8) );
+        memcpy(tag_data + (8 * (app_limit1 + 1)), tempbuf + (8 * (app_limit1 + 1)), (blocks_read * 8));
 
         bytes_got = (blocks_read * 8);
-        
+
         aa2_success = true;
     }
 
 write_dump:
-    
+
     if (have_credit_key && pagemap != 0x01 && aa2_success == false)
         PrintAndLogEx(INFO, "Reading AA2 failed. dumping AA1 data to file");
 
@@ -1859,7 +1859,7 @@ write_dump:
     saveFile(filename, ".bin", tag_data, bytes_got);
     saveFileEML(filename, tag_data, bytes_got, 8);
     saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
-    
+
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt") "` to decrypt dump file");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view") "` to view dump file");
     PrintAndLogEx(NORMAL, "");
@@ -1867,55 +1867,55 @@ write_dump:
 }
 
 static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
-/*
-    uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose) == false) {
-        return PM3_ESOFT;
-    }
+    /*
+        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose) == false) {
+            return PM3_ESOFT;
+        }
 
-    calc_wb_mac(blockno, bldata, div_key, MAC);
+        calc_wb_mac(blockno, bldata, div_key, MAC);
 
-    struct p {
+        struct p {
+            uint8_t blockno;
+            uint8_t data[12];
+        } PACKED payload;
+        payload.blockno = blockno;
+
+        memcpy(payload.data, bldata, 8);
+        memcpy(payload.data + 8, MAC, 4);
+
+
+    //
+    typedef struct {
+        uint8_t key[8];
+        bool use_raw;
+        bool use_elite;
+        bool use_credit_key;
+        bool send_reply;
+        bool do_auth;
         uint8_t blockno;
-        uint8_t data[12];
-    } PACKED payload;
-    payload.blockno = blockno;
+    } PACKED iclass_auth_req_t;
 
-    memcpy(payload.data, bldata, 8);
-    memcpy(payload.data + 8, MAC, 4);
-    
-    
-//    
-typedef struct {
-    uint8_t key[8];
-    bool use_raw;
-    bool use_elite;
-    bool use_credit_key;
-    bool send_reply;
-    bool do_auth;
-    uint8_t blockno;
-} PACKED iclass_auth_req_t;
+    // iCLASS write block request data structure
+    typedef struct {
+        iclass_auth_req_t req;
+        uint8_t data[8];
+    } PACKED iclass_writeblock_req_t;
 
-// iCLASS write block request data structure
-typedef struct {
-    iclass_auth_req_t req;
-    uint8_t data[8];
-} PACKED iclass_writeblock_req_t;
-    
-    
-*/
-iclass_writeblock_req_t payload = {
+
+    */
+    iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
         .req.use_elite = elite,
         .req.use_credit_key = use_credit_key,
         .req.blockno = blockno,
         .req.send_reply = true,
-        .req.do_auth = true,       
+        .req.do_auth = true,
     };
     memcpy(payload.req.key, KEY, 8);
     memcpy(payload.data, bldata, sizeof(payload.data));
-      
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
@@ -2230,26 +2230,26 @@ static int CmdHFiClassRestore(const char *Cmd) {
 }
 
 static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth, uint8_t *out) {
-    
+
     iclass_auth_req_t payload = {
         .use_raw = rawkey,
         .use_elite = elite,
         .use_credit_key = (keyType == 0x18),
         .blockno = blockno,
         .send_reply = true,
-        .do_auth = auth,       
+        .do_auth = auth,
     };
     memcpy(payload.key, KEY, 8);
-      
+
     PacketResponseNG resp;
-    clearCommandBuffer();      
-    SendCommandNG(CMD_HF_ICLASS_READBL, (uint8_t*)&payload, sizeof(payload));
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_READBL, (uint8_t *)&payload, sizeof(payload));
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READBL, &resp, 2000) == false) {
         if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
-        
+
     if (resp.status != PM3_SUCCESS) {
         if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
         return PM3_EWRONGANSWER;
@@ -2355,24 +2355,24 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
     if (auth == false && verbose) {
         PrintAndLogEx(WARNING, "warning: no authentication used with read. Typical for cards configured toin `non-secure page`");
-        
+
     }
 
     uint8_t data[8] = {0};
     int res = iclass_read_block(KEY, blockno, keyType, elite, rawkey, verbose, auth, data);
     if (res != PM3_SUCCESS)
         return res;
-    
+
     if (blockno < 6 || blockno > 7)
         return PM3_SUCCESS;
-    
+
     if (memcmp(data, empty, 8) == 0)
         return PM3_SUCCESS;
 
     bool use_sc = IsCryptoHelperPresent(verbose);
-    if (use_sc == false) 
+    if (use_sc == false)
         return PM3_SUCCESS;
-    
+
     // crypto helper available.
     PrintAndLogEx(INFO, "----------------------------- " _CYAN_("cardhelper") " -----------------------------");
 
@@ -2415,7 +2415,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
                 i &= 0x3C;
                 PrintAndLogEx(SUCCESS, "      bin : %s", binstr + i);
-                PrintAndLogEx(INFO, "");                
+                PrintAndLogEx(INFO, "");
                 PrintAndLogEx(INFO, "------------------------------ " _CYAN_("wiegand") " -------------------------------");
                 wiegand_message_t packed = initialize_message_object(top, mid, bot);
                 HIDTryUnpack(&packed, true);
@@ -2465,8 +2465,8 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     picopass_hdr *hdr = (picopass_hdr *)iclass_dump;
 //    picopass_ns_hdr *ns_hdr = (picopass_ns_hdr *)iclass_dump;
 //    uint8_t pagemap = get_pagemap(hdr);
-//    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) { } 
-    
+//    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) { }
+
     uint8_t lock = hdr->conf.block_writelock;
 
     // is chip in ReadOnly (RO)
@@ -2505,11 +2505,11 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     PrintAndLogEx(INFO, "------+----+-------------------------+----------");
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
-        
+
         bool bl_lock = false;
-        if ( ro == false ) {
-            switch(i) {
-                case 12: { 
+        if (ro == false) {
+            switch (i) {
+                case 12: {
                     bl_lock = ((lock & 0x40) == 0);
                     break;
                 }
@@ -2541,7 +2541,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         } else {
             bl_lock = true;
         }
-        
+
         PrintAndLogEx(INFO, "  %c   |0x%02X| %s", (bl_lock) ? 'x' : ' ', i, sprint_hex_ascii(blk, 8));
         i++;
     }
@@ -2600,7 +2600,7 @@ static int CmdHFiClassView(const char *Cmd) {
         PrintAndLogEx(INFO, "Printing blocks from");
         PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") " end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
     }
-    
+
     print_picopass_header((picopass_hdr *) dump);
     print_picopass_info((picopass_hdr *) dump);
 
@@ -2666,7 +2666,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     bool elite = false;
     bool errors = false;
     uint8_t cmdp = 0;
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -2737,7 +2737,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     }
 
     HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, old_elite, true);
-    
+
     return PM3_SUCCESS;
 }
 
@@ -3045,7 +3045,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         clearCommandBuffer();
         SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + key_offset, 4 * keys);
         PacketResponseNG resp;
-        
+
         bool looped = false;
         while (!WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000)) {
             timeout++;
@@ -3252,7 +3252,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
     // binsearch
     item = (iclass_prekey_t *) bsearch(&lookup, prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
-  
+
     if (item != NULL) {
         PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s"), sprint_hex(item->key, 8));
         add_key(item->key);
@@ -3453,15 +3453,15 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
     {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "[options..] Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
-    {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},    
+    {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
     {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read Picopass / iCLASS tag via replay attack"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fn>   ] Load Picopass / iCLASS dump file into emulator memory"},
-    {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "[f <fn>   ] Save emulator memory to file"},    
+    {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "[f <fn>   ] Save emulator memory to file"},
 
-    {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},    
+    {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc diversified keys (blocks 3 & 4) to write new keys"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
     {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
@@ -3484,16 +3484,16 @@ int CmdHFiClass(const char *Cmd) {
 }
 
 //static void test_credential_type(void) {
-    // need AA1 key
-    // Block 5 -> tells if its a legacy or SIO,  also tells which key to use.
-    
-    // tech   | blocks used           | desc                              | num of payloads 
-    // -------+-----------------------+-----------------------------------+------
-    // legacy | 6,7,8,9               | AA!, Access control payload       | 1
-    // SE     | 6,7,8,9,10,11,12      | AA1, Secure identity object (SIO) | 1
-    // SR     | 6,7,8,9,              | AA1, Access control payload       | 2
-    //        | 10,11,12,13,14,15,16  | AA1, Secure identity object (SIO) |
-    // SEOS   |                       |                                   |
+// need AA1 key
+// Block 5 -> tells if its a legacy or SIO,  also tells which key to use.
+
+// tech   | blocks used           | desc                              | num of payloads
+// -------+-----------------------+-----------------------------------+------
+// legacy | 6,7,8,9               | AA!, Access control payload       | 1
+// SE     | 6,7,8,9,10,11,12      | AA1, Secure identity object (SIO) | 1
+// SR     | 6,7,8,9,              | AA1, Access control payload       | 2
+//        | 10,11,12,13,14,15,16  | AA1, Secure identity object (SIO) |
+// SEOS   |                       |                                   |
 //}
 
 int info_iclass(void) {
@@ -3528,32 +3528,32 @@ int info_iclass(void) {
         if (readStatus & FLAG_ICLASS_CONF) {
             PrintAndLogEx(SUCCESS, " Config: %s  (Card configuration)", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
         }
-            
+
         // page mapping.  If fuse0|1 == 0x01, card is in non-secure mode, with CSN, CONF, AIA as top 3 blocks.
         // page9 in http://www.proxmark.org/files/Documents/13.56%20MHz%20-%20iClass/DS%20Picopass%202KS%20V1-0.pdf
         uint8_t pagemap = get_pagemap(hdr);
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area)));
-        } else { 
+        } else {
 
             if (readStatus & FLAG_ICLASS_CC) {
                 PrintAndLogEx(SUCCESS, "E-purse: %s  (Card challenge, CC)", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
             }
-            
+
             PrintAndLogEx(SUCCESS, "     Kd: %s  (Debit key, hidden)", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
             PrintAndLogEx(SUCCESS, "     Kc: %s  (Credit key, hidden)", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
 
             if (readStatus & FLAG_ICLASS_AIA) {
                 PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
-            }               
+            }
         }
 
         if (readStatus & FLAG_ICLASS_CONF) {
-             print_picopass_info(hdr);
+            print_picopass_info(hdr);
         }
 
         PrintAndLogEx(INFO, "------ " _CYAN_("Fingerprint") " ------");
-        
+
         uint8_t aia[8];
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE)
             memcpy(aia, ns_hdr->app_issuer_area, sizeof(aia));
@@ -3565,7 +3565,7 @@ int info_iclass(void) {
 
         bool legacy = (memcmp(aia, "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
         bool se_enabled = (memcmp(aia, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
-        
+
         if (isHidRange) {
             PrintAndLogEx(SUCCESS, "CSN is in HID range");
             if (legacy)

@@ -219,7 +219,7 @@ hi_get_trace gt(
 //   110 --  unused
 //   111 --  FPGA_MAJOR_MODE_OFF
 
-//                                         000           001           010             011           100            101           110   111                     
+//                                         000           001           010             011           100            101           110   111
 
 mux8 mux_ssp_clk   (major_mode, ssp_clk,   hr_ssp_clk,   hs_ssp_clk,   hisn_ssp_clk,   he_ssp_clk,   hfl_ssp_clk,   gt_ssp_clk,   1'b0, 1'b0);
 mux8 mux_ssp_din   (major_mode, ssp_din,   hr_ssp_din,   hs_ssp_din,   hisn_ssp_din,   he_ssp_din,   hfl_ssp_din,   gt_ssp_din,   1'b0, 1'b0);

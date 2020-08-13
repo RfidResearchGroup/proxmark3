@@ -22,7 +22,7 @@
 #define DMA_BUFFER_SIZE         256
 
 // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
-#define TOSEND_BUFFER_SIZE (9 * MAX_FRAME_SIZE + 1 + 1 + 2)  
+#define TOSEND_BUFFER_SIZE (9 * MAX_FRAME_SIZE + 1 + 1 + 2)
 
 uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);

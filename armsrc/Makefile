@@ -30,7 +30,7 @@ SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
-SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c 
+SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 SRC_NFCBARCODE = thinfilm.c
 

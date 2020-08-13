@@ -42,7 +42,7 @@ assign pwr_lo = 1'b0;		 // LF antenna connected to GND
 assign pwr_oe2 = 1'b0;
 
 assign adc_clk = ck_1356meg;
-assign dbg = ssp_frame;							  
+assign dbg = ssp_frame;
 
 // The comparator with hysteresis on the output from the peak detector.
 reg after_hysteresis;
@@ -67,7 +67,7 @@ begin
         else
 		begin
             has_been_low_for <= has_been_low_for + 1;
-		end	
+		end
     end
 end
 
@@ -95,7 +95,7 @@ begin
 end
 
 
-// Produce the byte framing signal; the phase of this signal 
+// Produce the byte framing signal; the phase of this signal
 // is arbitrary, because it's just a bit stream in this module.
 reg ssp_frame;
 always @(negedge adc_clk)

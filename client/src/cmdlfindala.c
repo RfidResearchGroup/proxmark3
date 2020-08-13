@@ -54,7 +54,7 @@ static int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 32") "       = demod a Indala tag from GraphBuffer using a clock of RF/32");
     PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 32 1") "     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");
     PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 64 1 0") "   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    PrintAndLogEx(NORMAL, ""); 
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 

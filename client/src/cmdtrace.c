@@ -206,10 +206,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         return traceLen;
     }
 
-	// adjust for different time scales
-	if (protocol == ICLASS || protocol == ISO_15693) {
-		duration *= 32;
-	}
+    // adjust for different time scales
+    if (protocol == ICLASS || protocol == ISO_15693) {
+        duration *= 32;
+    }
 
 
     uint8_t *frame = hdr->frame;
@@ -275,10 +275,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (data_len == 0) {
         if (protocol == ICLASS && duration == 2048) {
-			sprintf(line[0], "<SOF>");
-		} else if (protocol == ISO_15693 && duration == 512) {
-			sprintf(line[0], "<EOF>");
-		} else {
+            sprintf(line[0], "<SOF>");
+        } else if (protocol == ISO_15693 && duration == 512) {
+            sprintf(line[0], "<EOF>");
+        } else {
             sprintf(line[0], "<empty trace - possible error>");
         }
     }
@@ -334,11 +334,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     uint32_t previous_end_of_transmission_timestamp = 0;
     if (prev_eot) {
-		if (*prev_eot) {
-			previous_end_of_transmission_timestamp = *prev_eot;
-		} else {
-			previous_end_of_transmission_timestamp = hdr->timestamp;
-		}
+        if (*prev_eot) {
+            previous_end_of_transmission_timestamp = *prev_eot;
+        } else {
+            previous_end_of_transmission_timestamp = hdr->timestamp;
+        }
     }
 
     end_of_transmission_timestamp = hdr->timestamp + duration;
@@ -355,7 +355,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (protocol == FELICA)
         annotateFelica(explanation, sizeof(explanation), frame, data_len);
-    
+
     if (protocol == PROTO_HITAG1) {
         annotateHitag1(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
     }
@@ -405,38 +405,38 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         if (j == 0) {
 
             uint32_t time1 = hdr->timestamp - first_hdr->timestamp;
-			uint32_t time2 = end_of_transmission_timestamp - first_hdr->timestamp;
-			if (prev_eot) {
-				time1 = hdr->timestamp - previous_end_of_transmission_timestamp;
-				time2 = duration;
-			}
+            uint32_t time2 = end_of_transmission_timestamp - first_hdr->timestamp;
+            if (prev_eot) {
+                time1 = hdr->timestamp - previous_end_of_transmission_timestamp;
+                time2 = duration;
+            }
 
             if (use_us) {
                 PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |%-72s | %s| %s",
-					(float)time1/13.56,
-					(float)time2/13.56,
-                    (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
-                    line[j],
-                    (j == num_lines - 1) ? crc : "    ",
-                    (j == num_lines - 1) ? explanation : ""
-                );
+                              (float)time1 / 13.56,
+                              (float)time2 / 13.56,
+                              (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
+                              line[j],
+                              (j == num_lines - 1) ? crc : "    ",
+                              (j == num_lines - 1) ? explanation : ""
+                             );
             } else {
                 PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-72s | %s| %s",
-                    (hdr->timestamp - first_hdr->timestamp),
-                    (end_of_transmission_timestamp - first_hdr->timestamp),
-                    (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
-                    line[j],
-                    (j == num_lines - 1) ? crc : "    ",
-                    (j == num_lines - 1) ? explanation : ""
-                );
+                              (hdr->timestamp - first_hdr->timestamp),
+                              (end_of_transmission_timestamp - first_hdr->timestamp),
+                              (hdr->isResponse ? "Tag" : _YELLOW_("Rdr")),
+                              line[j],
+                              (j == num_lines - 1) ? crc : "    ",
+                              (j == num_lines - 1) ? explanation : ""
+                             );
             }
 
         } else {
             PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
-                line[j],
-                (j == num_lines - 1) ? crc : "    ",
-                (j == num_lines - 1) ? explanation : ""
-            );
+                          line[j],
+                          (j == num_lines - 1) ? crc : "    ",
+                          (j == num_lines - 1) ? explanation : ""
+                         );
         }
     }
 
@@ -683,11 +683,11 @@ int CmdTraceList(const char *Cmd) {
         }
     } else {
 
-		if (use_relative) {
+        if (use_relative) {
             PrintAndLogEx(INFO, _YELLOW_("gap") " = time between transfers. " _YELLOW_("duration") " = duration of data transfer. " _YELLOW_("src") " = source of transfer");
-		} else {
+        } else {
             PrintAndLogEx(INFO, _YELLOW_("start") " = start of start frame " _YELLOW_("end") " = end of frame. " _YELLOW_("src") " = source of transfer");
-		}
+        }
 
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ || protocol == LTO) {
             if (use_us)
@@ -736,9 +736,9 @@ int CmdTraceList(const char *Cmd) {
 
 
         PrintAndLogEx(NORMAL, "");
-		if (use_relative) {
-			PrintAndLogEx(NORMAL, "        Gap |   Duration | Src | Data (! denotes parity error, ' denotes short bytes)                    | CRC | Annotation");
-		} else {
+        if (use_relative) {
+            PrintAndLogEx(NORMAL, "        Gap |   Duration | Src | Data (! denotes parity error, ' denotes short bytes)                    | CRC | Annotation");
+        } else {
             PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
         }
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");

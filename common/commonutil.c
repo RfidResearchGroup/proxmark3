@@ -68,7 +68,7 @@ uint8_t reflect8(uint8_t b) {
 }
 
 
-// Reverse the bits in a byte with 4 operations (64-bit multiply, no division): 
+// Reverse the bits in a byte with 4 operations (64-bit multiply, no division):
 /*
 uint8_t reflect8(uint8_t b) {
     return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;

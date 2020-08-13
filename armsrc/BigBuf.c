@@ -159,8 +159,8 @@ void BigBuf_print_status(void) {
     Dbprintf("  traceLen ...............%d", trace_len);
 
     Dbprintf("  dma8 memory.............%d", dma_8.buf - BigBuf_get_addr());
-    Dbprintf("  dma16 memory............%d", (uint8_t*)dma_16.buf - BigBuf_get_addr());
-    Dbprintf("  toSend memory...........%d", toSend.buf - BigBuf_get_addr() );    
+    Dbprintf("  dma16 memory............%d", (uint8_t *)dma_16.buf - BigBuf_get_addr());
+    Dbprintf("  toSend memory...........%d", toSend.buf - BigBuf_get_addr());
 }
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)
@@ -229,7 +229,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
         */
         duration = 0;
     }
-        
+
     hdr->timestamp = timestamp_start;
     hdr->duration = duration & 0xFFFF;
     hdr->data_len = iLen;
@@ -309,7 +309,7 @@ void tosend_stuffbit(int b) {
 
 dmabuf16_t *get_dma16(void) {
     if (dma_16.buf == NULL)
-        dma_16.buf = (uint16_t*)BigBuf_malloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
+        dma_16.buf = (uint16_t *)BigBuf_malloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
 
     return &dma_16;
 }

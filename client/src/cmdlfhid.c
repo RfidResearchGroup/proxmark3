@@ -246,10 +246,10 @@ static int CmdHIDDemod(const char *Cmd) {
         }
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
             PrintAndLogEx(SUCCESS,
-                "HID Prox (Kastle format) - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("32") " bit CC: " _GREEN_("%u") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u"), hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+                          "HID Prox (Kastle format) - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("32") " bit CC: " _GREEN_("%u") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u"), hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
-            PrintAndLogEx(SUCCESS, 
-                "HID Prox - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("%u") " bit - OEM: " _GREEN_("%03u") " FC: " _GREEN_("%u")" Card: " _GREEN_("%u"),
+            PrintAndLogEx(SUCCESS,
+                          "HID Prox - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("%u") " bit - OEM: " _GREEN_("%03u") " FC: " _GREEN_("%u")" Card: " _GREEN_("%u"),
                           hi, lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }
@@ -276,7 +276,7 @@ static int CmdHIDWatch(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Watching for HID Prox cards - place tag on antenna");
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);    
+    SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_HID_WATCH, &resp);
     PrintAndLogEx(INFO, "Done");

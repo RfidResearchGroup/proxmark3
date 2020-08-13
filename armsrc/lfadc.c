@@ -148,7 +148,7 @@ bool lf_get_reader_modulation(void) {
 }
 
 void lf_wait_periods(size_t periods) {
-                             //       wait  detect gap
+    //       wait  detect gap
     lf_count_edge_periods_ex(periods, true, false);
 }
 
@@ -238,40 +238,40 @@ void lf_finalize(void) {
 }
 
 size_t lf_detect_field_drop(size_t max) {
-/*
-    size_t periods = 0;
-//    int16_t checked = 0;
+    /*
+        size_t periods = 0;
+    //    int16_t checked = 0;
 
-    while (BUTTON_PRESS() == false) {
+        while (BUTTON_PRESS() == false) {
 
-                // // only every 1000th times, in order to save time when collecting samples.
-                // if (checked == 4000) {
-                    // if (data_available()) {
-                        // checked = -1;
-                        // break;
-                    // } else {
-                        // checked = 0;
+                    // // only every 1000th times, in order to save time when collecting samples.
+                    // if (checked == 4000) {
+                        // if (data_available()) {
+                            // checked = -1;
+                            // break;
+                        // } else {
+                            // checked = 0;
+                        // }
                     // }
-                // }
-                // ++checked;
+                    // ++checked;
 
-        WDT_HIT();
+            WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            periods++;
-            volatile uint8_t adc_val = AT91C_BASE_SSC->SSC_RHR;
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                periods++;
+                volatile uint8_t adc_val = AT91C_BASE_SSC->SSC_RHR;
 
-            if (g_logging) logSampleSimple(adc_val);
+                if (g_logging) logSampleSimple(adc_val);
 
-            if (adc_val == 0) {
-                rising_edge = false;
-                return periods;
+                if (adc_val == 0) {
+                    rising_edge = false;
+                    return periods;
+                }
+
+                if (periods == max) return 0;
             }
-
-            if (periods == max) return 0;
         }
-    }
-*/
+    */
     return 0;
 }
 

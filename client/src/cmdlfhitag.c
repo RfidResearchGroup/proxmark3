@@ -738,7 +738,7 @@ void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 }
 
 void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
-        
+
     // iceman: live decrypt of trace?
     if (is_response) {
 
@@ -774,18 +774,18 @@ void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
         }
 
         if (cmdsize == 9)  {
-                snprintf(exp, size, "Nr Ar Is response");
-                return;            
+            snprintf(exp, size, "Nr Ar Is response");
+            return;
         }
     } else {
 
         if (cmdsize == 9)  {
-                snprintf(exp, size, "Nr Ar");
-                return;            
+            snprintf(exp, size, "Nr Ar");
+            return;
         }
     }
-    
-} 
+
+}
 
 
 void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_reader) {
