@@ -13,13 +13,13 @@ Algo not found by me.
 ]]
 example =[[
      -- if called without, it reads tag uid
-     script run hf_mfu_uidkeycalc
+     script run hf_mfu_uidkeycalc-italy
 
      --
-     script run hf_mfu_uidkeycalc -u 11223344556677
+     script run hf_mfu_uidkeycalc-italy -u 11223344556677
 ]]
 usage = [[
-script run hf_mfu_uidkeycalc -h -u <uid> "
+script run hf_mfu_uidkeycalc-italy -h -u <uid> "
 ]]
 arguments = [[
     -h             : this help
