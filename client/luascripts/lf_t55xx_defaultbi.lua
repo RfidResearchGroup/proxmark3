@@ -33,10 +33,10 @@ Loop:
 testsuit for the BIPHASE demod
 ]]
 example = [[
-    1. script run test_t55x7_bi
+    1. script run lf_t55xx_defaultbi
 ]]
 usage = [[
-script run test_t55x7_bi [-h]
+script run lf_t55xx_defaultbi [-h]
 ]]
 arguments = [[
     -h             : this help
