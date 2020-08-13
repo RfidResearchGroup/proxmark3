@@ -14,13 +14,13 @@ xor:  the first three block (0,1,2) is not XORED.  The rest seems to be xored.
 ]]
 example = [[
     -- default
-    script run ufodump
+    script run hf_14a_aztek
 
     -- stop at block 10
-    script run ufodump -b 10
+    script run hf_14a_aztek -b 10
 ]]
 usage = [[
-script run ufudump [-h] [-b]
+script run hf_14a_aztek [-h] [-b]
 ]]
 arguments = [[
       -h   This help
