@@ -16,19 +16,19 @@ This is a script to dump and decrypt the data of a specific type of Mifare Mini 
 The dump is decrypted. If a raw dump is wanted, use the -r parameter
 ]]
 example = [[
-    script run didump
+    script run hf_mfm_dumpdecrypt
 
     -- selftest
-    script run didump -t
+    script run hf_mfm_dumpdecrypt -t
 
     -- Generate raw dump,  into json.
-    script run didump -r
+    script run hf_mfm_dumpdecrypt -r
 
     -- load file
-    script run didump -i dumpdata.json
+    script run hf_mfm_dumpdecrypt -i dumpdata.json
 ]]
 usage = [[
-script run didump -h -t -r -d -e -v -i dumpdata.json
+script run hf_mfm_dumpdecrypt -h -t -r -d -e -v -i dumpdata.json
 ]]
 arguments = [[
       h                 this helptext
