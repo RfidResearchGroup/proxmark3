@@ -15,10 +15,10 @@ Please read the NXP manual before running this script to prevent making irrevers
 Small changes can be to made this script to communicate with the Mifare Plus S, X, or SE.
 ]]
 example = [[
-    1. script run mifareplus
+    1. script run hf_mfp_raw
 ]]
 usage = [[
-script run mifareplus [-h]
+script run hf_mfp_raw [-h]
 ]]
 arguments = [[
     -h             : this help
