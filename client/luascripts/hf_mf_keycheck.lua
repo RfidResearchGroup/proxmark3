@@ -22,10 +22,10 @@ desc = ("This script implements Mifare check keys.\
 It utilises a large list of default keys (currently %d keys).\
 If you want to add more, just put them inside /lualibs/mfc_default_keys.lua\n"):format(#keylist)
 example = [[
-    1. script run mfckeys
+    1. script run hf_mf_keycheck
 ]]
 usage = [[
-script run mfckeys [-p]
+script run hf_mf_keycheck [-p]
 ]]
 arguments = [[
     -h             : this help
