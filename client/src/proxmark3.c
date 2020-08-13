@@ -136,6 +136,7 @@ static int check_comm(void) {
 #endif
         CloseProxmark();
     }
+    msleep(10);
     return 0;
 }
 static void flush_history(void) {
