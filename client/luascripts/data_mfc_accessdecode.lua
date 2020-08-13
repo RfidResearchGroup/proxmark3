@@ -8,10 +8,10 @@ desc = [[
 This script tries to decode Mifare Classic Access bytes
 ]]
 example = [[
-    1. script run mifare_access -a 7F0F0869
+    1. script run data_mfc_accessdecode -a 7F0F0869
 ]]
 usage = [[
-script run mifare_access [-h] [-a <access bytes>]
+script run data_mfc_accessdecode [-h] [-a <access bytes>]
 ]]
 arguments = [[
     -h                   : this help
