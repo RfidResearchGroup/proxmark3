@@ -12,13 +12,13 @@ This script tries to set UID on a mifare Ultralight magic card which either
 ]]
 example = [[
      -- backdoor magic tag
-     script run ul_uid -u 11223344556677
+     script run hf_mfu_setuid -u 11223344556677
 
      -- brickable magic tag
-     script run ul_uid -b -u 11223344556677
+     script run hf_mfu_setuid -b -u 11223344556677
 ]]
 usage = [[
-script run ul_uid [-h] [-b] [-u <uid>]
+script run hf_mfu_setuid [-h] [-b] [-u <uid>]
 ]]
 arguments = [[
     -h             : this help
