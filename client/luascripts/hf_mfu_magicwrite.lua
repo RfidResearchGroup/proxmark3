@@ -16,28 +16,28 @@ version = 'v1.1.3'
 desc = 'This script enables easy programming of a MAGIC NTAG 21* card'
 example = [[
 	-- wipe tag
-	script run mfu_magic -w
+	script run hf_mfu_magicwrite -w
 
 	-- wipe a locked down tag by giving the password
-	script run mfu_magic -k ffffffff -w
+	script run hf_mfu_magicwrite -k ffffffff -w
 
 	--read magic tag configuration
-	script run mfu_magic -c
+	script run hf_mfu_magicwrite -c
 
 	-- set uid
-	script run mfu_magic -u 04112233445566
+	script run hf_mfu_magicwrite -u 04112233445566
 
 	-- set pwd / pack
-	script run mfu_magic -p 11223344 -a 8080
+	script run hf_mfu_magicwrite -p 11223344 -a 8080
 
 	-- set version to NTAG213
-	script run mfu_magic -v 0004040201000f03
+	script run hf_mfu_magicwrite -v 0004040201000f03
 
 	-- set signature
-	script run mfu_magic -s 1122334455667788990011223344556677889900112233445566778899001122
+	script run hf_mfu_magicwrite -s 1122334455667788990011223344556677889900112233445566778899001122
 ]]
 usage = [[
-script run mfu_magic -h -k <passwd> -c -w -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version>
+script run hf_mfu_easywrite -h -k <passwd> -c -w -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version>
 ]]
 arguments = [[
 	-h		this help
