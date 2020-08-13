@@ -11,6 +11,9 @@
 #define _CYAN_(s) "\x1b[36m" s AEND
 #define _WHITE_(s) "\x1b[37m" s AEND
 
+#define _CLEAR_ "\x1b[2J"
+#define _TOP_   "\x1b[1;1f"
+
 // https://wiki.hackzine.org/development/misc/readline-color-prompt.html
 // Applications may indicate that the prompt contains
 // characters that take up no physical screen space when displayed by

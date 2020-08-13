@@ -247,6 +247,11 @@ static int CmdPref(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdClear(const char *Cmd) {
+    PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
 
     {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
@@ -265,7 +270,8 @@ static command_t CommandTable[] = {
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
     {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
     {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("General") " -----------------------"},
-    {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
+    {"auto",    CmdAuto,      IfPm3Present,            "Automated detection process for unknown tags"},
+    {"clear",   CmdClear,     AlwaysAvailable,         "clear screen"},
     {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use " _YELLOW_("'<command> help'") " for details of a particular command."},
     {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
     {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
