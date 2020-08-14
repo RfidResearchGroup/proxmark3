@@ -677,19 +677,33 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                // we have read all of the DMA buffer content.
             upTo = dma->buf;                                     // start reading the circular buffer from the beginning
-            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
-                Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
-                ret = -1;
-                break;
+
+            // DMA Counter Register had reached 0, already rotated.
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+
+                // primary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
+                }
+                // secondary buffer sets as primary, secondary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+                }
+                                
+                WDT_HIT();
+                if (BUTTON_PRESS()) {
+                    DbpString("stopped");
+                    break;
+                }
             }
-        }
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {        // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;  // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;      // DMA Next Counter registers
         }
 
         if (Handle15693SamplesFromTag(tagdata, dt)) {
+
             *eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM; // end of EOF
+
             if (dt->lastBit == SOF_PART2) {
                 *eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
             }
@@ -699,8 +713,9 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             break;
         }
 
+        // timeout
         if (samples > timeout && dt->state < STATE_TAG_RECEIVING_DATA) {
-            ret = -3;   // timeout
+            ret = -3;   
             break;
         }
 
@@ -730,8 +745,9 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     if (ret < 0) {
         return ret;
     }
-
-    LogTrace_ISO15693(dt->output, dt->len, (sof_time * 4), (*eof_time * 4), NULL, false);
+    if (dt->len > 0) {
+        LogTrace_ISO15693(dt->output, dt->len, (sof_time * 4), (*eof_time * 4), NULL, false);
+    }
     return dt->len;
 }
 
@@ -1205,9 +1221,12 @@ void AcquireRawAdcSamplesIso15693(void) {
 
 void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
+    LEDsoff();
     LED_A_ON();
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    DbpString("Starting to sniff. Press PM3 Button to stop.");
 
     BigBuf_free();
     clear_trace();
@@ -1221,21 +1240,20 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
     DecodeReaderInit(&dreader, cmd, sizeof(cmd), jam_search_len, jam_search_string);
 
-    // The DMA buffer, used to stream samples from the FPGA
-    dmabuf16_t *dma = get_dma16();
-
-    Dbprintf("Starting to sniff. Press PM3 Button to stop.");
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
     LED_D_OFF();
 
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+
     StartCountSspClk();
+
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf16_t *dma = get_dma16();
 
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (DBGLEVEL > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (DBGLEVEL > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
         switch_off();
         return;
     }
@@ -1432,6 +1450,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 
     if (init) {
         Iso15693InitReader();
+        start_time = GetCountSspClk();
     }
 
     if (speed_fast) {
@@ -1444,8 +1463,8 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, &start_time);
-    uint32_t end_time = start_time + 32 * ((8 * ts->max) - 4); // substract the 4 padding bits after EOF
-    LogTrace_ISO15693(send, sendlen, (start_time * 4), (end_time * 4), NULL, true);
+    *eof_time = start_time + 32 * ((8 * ts->max) - 4); // substract the 4 padding bits after EOF
+    LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
 
     int res = 0;
     if (recv != NULL) {
@@ -1787,7 +1806,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
 
     int recvlen = 0;
     uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
-    uint32_t eof_time;
+    uint32_t eof_time = 0;
     uint16_t timeout;
     bool request_answer = false;
 
@@ -1811,11 +1830,13 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         Dbhexdump(datalen, data, false);
     }
 
-    recvlen = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), 0, timeout, &eof_time);
+    uint32_t start_time = 0;
+    recvlen = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time);
 
     // send a single EOF to get the tag response
     if (request_answer) {
-        recvlen = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), 0, ISO15693_READER_TIMEOUT, &eof_time);
+        start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+        recvlen = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT, &eof_time);
     }
 
     // for the time being, switch field off to protect rdv4.0
@@ -1841,7 +1862,6 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
     }
 }
-
 
 //-----------------------------------------------------------------------------
 // Work with "magic Chinese" card.
