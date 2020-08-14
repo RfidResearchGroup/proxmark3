@@ -1475,8 +1475,8 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
                 continue;
 
             snprintf(newpath, sizeof(newpath), "%s", path);
-            strncat(newpath, namelist[i]->d_name, sizeof(newpath) - strlen(newpath));
-            strncat(newpath, "/", sizeof(newpath) - strlen(newpath));
+            strncat(newpath, namelist[i]->d_name, sizeof(newpath) - strlen(newpath) - 1);
+            strncat(newpath, "/", sizeof(newpath) - strlen(newpath) - 1);
 
             filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
         } else {
