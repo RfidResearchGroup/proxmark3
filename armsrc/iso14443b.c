@@ -26,11 +26,32 @@
 #include "ticks.h"
 
 
+// Delays in SSP_CLK ticks.
+// SSP_CLK runs at 13,56MHz / 32 = 423.75kHz when simulating a tag
+#define DELAY_READER_TO_ARM               8
+#define DELAY_ARM_TO_READER               0
+
+//SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when acting as reader. All values should be multiples of 16
+#define DELAY_ARM_TO_TAG                 16
+#define DELAY_TAG_TO_ARM                 32
+
+//SSP_CLK runs at 13.56MHz / 4 = 3,39MHz when sniffing. All values should be multiples of 16
+#define DELAY_TAG_TO_ARM_SNIFF           32
+#define DELAY_READER_TO_ARM_SNIFF        32
+
+ // 330/848kHz = 1558us / 4 == 400us, 
+#define ISO14443B_READER_TIMEOUT           330
+
+// 1024/3.39MHz = 302.1us between end of tag response and next reader cmd
+#define DELAY_ISO14443B_VICC_TO_VCD_READER 1024
+
+
+
 #ifndef RECEIVE_MASK
 # define RECEIVE_MASK  (DMA_BUFFER_SIZE - 1)
 #endif
 
-#define RECEIVE_SAMPLES_TIMEOUT 64
+#define RECEIVE_SAMPLES_TIMEOUT 330
 
 // Guard Time (per 14443-2)
 #ifndef TR0
@@ -237,6 +258,10 @@ static void Uart14bInit(uint8_t *data) {
 //-----------------------------------------------------------------------------
 // The software Demod that receives commands from the tag, and its state variables.
 //-----------------------------------------------------------------------------
+
+#define NOISE_THRESHOLD          80                   // don't try to correlate noise
+#define MAX_PREVIOUS_AMPLITUDE   (-1 - NOISE_THRESHOLD)
+
 static struct {
     enum {
         DEMOD_UNSYNCD,
@@ -250,11 +275,14 @@ static struct {
     int      posCount;
     int      thisBit;
     uint16_t shiftReg;
+    uint16_t max_len;
     uint8_t  *output;
     uint16_t len;
     int      sumI;
     int      sumQ;
-    uint32_t startTime, endTime;
+    int sum1;
+    int sum2;
+    uint16_t  previous_amplitude;
 } Demod;
 
 // Clear out the state of the "UART" that receives from the tag.
@@ -267,12 +295,12 @@ static void Demod14bReset(void) {
     Demod.len = 0;
     Demod.sumI = 0;
     Demod.sumQ = 0;
-    Demod.startTime = 0;
-    Demod.endTime = 0;
+    Demod.previous_amplitude = MAX_PREVIOUS_AMPLITUDE;
 }
 
-static void Demod14bInit(uint8_t *data) {
+static void Demod14bInit(uint8_t *data, uint16_t max_len) {
     Demod.output = data;
+    Demod.max_len = max_len;
     Demod14bReset();
 }
 
@@ -319,7 +347,7 @@ static void iso14b_set_maxframesize(uint16_t size) {
  * Returns: true if we received a EOF
  *          false if we are still waiting for some more
  */
-static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
+static RAMFUNC int Handle14443bSampleFromReader(uint8_t bit) {
     switch (Uart.state) {
         case STATE_14B_UNSYNCD:
             if (!bit) {
@@ -451,7 +479,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             for (uint8_t mask = 0x80; mask != 0x00; mask >>= 1) {
-                if (Handle14443bReaderUartBit(b & mask)) {
+                if (Handle14443bSampleFromReader(b & mask)) {
                     *len = Uart.byteCnt;
                     return true;
                 }
@@ -693,29 +721,31 @@ void SimulateIso14443bTag(uint32_t pupi) {
  *          false if we are still waiting for some more
  *
  */
-static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
-
-#define SUBCARRIER_DETECT_THRESHOLD 8
+static RAMFUNC int Handle14443bSamplesFromTag(uint16_t amplitude) {
 
     switch (Demod.state) {
-        case DEMOD_UNSYNCD:
 
-            if (amplitude > SUBCARRIER_DETECT_THRESHOLD) {
+        case DEMOD_UNSYNCD: {
+            // subcarrier detected
+            if (amplitude > NOISE_THRESHOLD + Demod.previous_amplitude) {
                 Demod.state = DEMOD_PHASE_REF_TRAINING;
-                Demod.sumI = amplitude;
-                Demod.sumQ = amplitude;
+                //Demod.sumI = ci;
+                //Demod.sumQ = cq;
                 Demod.posCount = 1;
+            } else {
+                Demod.posCount++;
+                Demod.previous_amplitude = amplitude;
             }
             break;
+        }
 
-        case DEMOD_PHASE_REF_TRAINING:
+        case DEMOD_PHASE_REF_TRAINING: {
             if (Demod.posCount < 8) {
-
-                if (amplitude > SUBCARRIER_DETECT_THRESHOLD) {
+                if (amplitude > NOISE_THRESHOLD + Demod.previous_amplitude) {
                     // set the reference phase (will code a logic '1') by averaging over 32 1/fs.
                     // note: synchronization time > 80 1/fs
-                    Demod.sumI += amplitude;
-                    Demod.sumQ += amplitude;
+                    //Demod.sumI += ci;
+                    //Demod.sumQ += cq;
                     Demod.posCount++;
                 } else {
                     // subcarrier lost
@@ -725,12 +755,15 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
                 Demod.state = DEMOD_AWAITING_FALLING_EDGE_OF_SOF;
             }
             break;
+        }
 
-        case DEMOD_AWAITING_FALLING_EDGE_OF_SOF:
+        case DEMOD_AWAITING_FALLING_EDGE_OF_SOF: {
 
-            if (amplitude == 0) { // logic '0' detected
+            // logic '0' detected
+            if (amplitude == 0) {
                 Demod.state = DEMOD_GOT_FALLING_EDGE_OF_SOF;
-                Demod.posCount = 0; // start of SOF sequence
+                 // start of SOF sequence
+                Demod.posCount = 0;
             } else {
                 // maximum length of TR1 = 200 1/fs
                 if (Demod.posCount > 200 / 4) {
@@ -739,8 +772,9 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
             }
             Demod.posCount++;
             break;
+        }
 
-        case DEMOD_GOT_FALLING_EDGE_OF_SOF:
+        case DEMOD_GOT_FALLING_EDGE_OF_SOF: {
             Demod.posCount++;
 
             if (amplitude > 0) {
@@ -758,12 +792,14 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
                 // low phase of SOF too long (> 12 etu)
                 if (Demod.posCount > 14 * 2) {
                     Demod.state = DEMOD_UNSYNCD;
+                    Demod.previous_amplitude = amplitude;
                     LED_C_OFF();
                 }
             }
             break;
+        }
 
-        case DEMOD_AWAITING_START_BIT:
+        case DEMOD_AWAITING_START_BIT: {
             Demod.posCount++;
 
             if (amplitude > 0) {
@@ -783,8 +819,9 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
                 Demod.state = DEMOD_RECEIVING_DATA;
             }
             break;
+        }
 
-        case DEMOD_RECEIVING_DATA:
+        case DEMOD_RECEIVING_DATA: {
 
             if (Demod.posCount == 0) {
                 // first half of bit
@@ -809,8 +846,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
                     // stop bit == '1', start bit == '0'
                     if ((s & 0x200) && ((s & 0x001) == 0)) {
                         // left shift to drop the startbit
-                        uint8_t b = (s >> 1);
-                        Demod.output[Demod.len] = b;
+                        Demod.output[Demod.len] =  (s >> 1);
                         Demod.len++;
                         Demod.bitCount = 0;
                         Demod.state = DEMOD_AWAITING_START_BIT;
@@ -820,17 +856,21 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
                         LED_C_OFF();
 
                         // This is EOF (start, stop and all data bits == '0'
-                        if (s == 0) return true;
+                        if (s == 0) {
+                            return true;
+                        }
                     }
                 }
                 Demod.posCount = 0;
             }
             break;
+        }
 
-        default:
+        default: {
             Demod.state = DEMOD_UNSYNCD;
             LED_C_OFF();
             break;
+        }
     }
     return false;
 }
@@ -839,103 +879,135 @@ static RAMFUNC int Handle14443bTagSamplesDemod(uint16_t amplitude) {
 /*
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  */
-static int GetTagSamplesFor14443bDemod(int timeout) {
+static int Get14443bAnswerFromTag(int timeout, uint32_t *eof_time) {
 
     int samples = 0, ret = 0;
 
-    BigBuf_free();
-
     // Set up the demodulator for tag -> reader responses.
-    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    uint8_t dm_buf[MAX_FRAME_SIZE];
+    Demod14bInit(dm_buf, sizeof(dm_buf));
+    //Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
 
     // wait for last transfer to complete
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY))
+    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) {};
 
-        // Setup and start DMA.
-        FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+    // And put the FPGA in the appropriate mode
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
+
+    // Setup and start DMA.
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (DBGLEVEL > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return -1;
     }
 
-    // Signal field is ON with the appropriate LED:
-    LED_D_ON();
-
-    // And put the FPGA in the appropriate mode
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
-
-//    uint32_t dma_start_time;
+    uint32_t dma_start_time = 0;
     uint16_t *upTo = dma->buf;
 
     for (;;) {
-        uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
 
-        if (behindBy == 0) continue;
+        volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        if (behindBy == 0)
+            continue;
 
         samples++;
-        /*
         if (samples == 1) {
             // DMA has transferred the very first data
             dma_start_time = GetCountSspClk() & 0xfffffff0;
         }
-        */
 
         volatile uint16_t tagdata = *upTo++;
 
-        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                 // we have read all of the DMA buffer content.
-            upTo = dma->buf;                                      // start reading the circular buffer from the beginning
-            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
-                Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
-                ret = -1;
-                break;
+        // we have read all of the DMA buffer content.
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {
+
+            // start reading the circular buffer from the beginning again
+            upTo = dma->buf;
+
+            // DMA Counter Register had reached 0, already rotated.
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+
+                // primary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
+                }
+                // secondary buffer sets as primary, secondary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+                }
+                
+                WDT_HIT();
+                if (BUTTON_PRESS()) {
+                    DbpString("Sniff stopped");
+                    break;
+                }
             }
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {         // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;   // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;       // DMA Next Counter registers
-        }
+//        if (Handle14443bSamplesFromTag( (tagdata >> 8) & 0xFF, tagdata & 0xFF )) {
+        if (Handle14443bSamplesFromTag(tagdata)) {
 
-        if (Handle14443bTagSamplesDemod(tagdata)) {
-            ret = Demod.len;
+            *eof_time = dma_start_time + (samples * 16); // - DELAY_TAG_TO_ARM; // end of EOF
+
+            if (Demod.len > Demod.max_len) {
+                ret = -2; // buffer overflow
+            }
             break;
         }
 
         if (samples > timeout && Demod.state < DEMOD_PHASE_REF_TRAINING) {
-            ret = -1;
-            LED_C_OFF();
+            ret = -1;   // timeout
             break;
         }
     }
 
     FpgaDisableSscDma();
 
+    uint32_t sof_time = *eof_time
+                        - (Demod.len * 8 * 8 * 16) // time for byte transfers
+                        - (32 * 16)  // time for SOF transfer
+                        - 0; // time for EOF transfer
     if (ret < 0) {
         return ret;
     }
 
     if (Demod.len > 0) {
-        LogTrace(Demod.output, Demod.len, 0, 0, NULL, false);
+        LogTrace(Demod.output, Demod.len, (sof_time * 4), (*eof_time * 4), NULL, false);
     }
 
-    return ret;
+    return Demod.len;
 }
 
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitFor14443b_AsReader(void) {
-
+static void TransmitFor14443b_AsReader(uint32_t *start_time) {
+    
+    tosend_t *ts = get_tosend();
+    
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
 
-    LED_B_ON();
-    tosend_t *ts = get_tosend();
+    if (*start_time < DELAY_ARM_TO_TAG) {
+        *start_time = DELAY_ARM_TO_TAG;
+    }
 
+    *start_time = (*start_time - DELAY_ARM_TO_TAG) & 0xfffffff0;
+    
+    if (GetCountSspClk() > *start_time) { // we may miss the intended time
+        *start_time = (GetCountSspClk() + 16) & 0xfffffff0; // next possible time
+    }
+
+    // wait
+    while (GetCountSspClk() < *start_time) ;
+
+    LED_B_ON();
     for (int c = 0; c < ts->max; c++) {
-        uint8_t data = ts->buf[c];
+        volatile uint8_t data = ts->buf[c];
 
         for (int i = 0; i < 8; i++) {
             uint16_t send_word = (data & 0x80) ? 0x0000 : 0xffff;
@@ -952,6 +1024,8 @@ static void TransmitFor14443b_AsReader(void) {
         WDT_HIT();
     }
     LED_B_OFF();
+
+    *start_time = *start_time + DELAY_ARM_TO_TAG;
 }
 
 //-----------------------------------------------------------------------------
@@ -1035,13 +1109,12 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 /*
 *  Convenience function to encode, transmit and trace iso 14443b comms
 */
-static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len) {
-
-    uint32_t time_start = GetCountSspClk();
-
+static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time) {
+    tosend_t *ts = get_tosend();
     CodeIso14443bAsReader(cmd, len);
-    TransmitFor14443b_AsReader();
-    LogTrace(cmd, len, time_start, GetCountSspClk(), NULL, true);
+    TransmitFor14443b_AsReader(start_time);
+    uint32_t end_time = *start_time + 32 * ((8 * ts->max)); 
+    LogTrace(cmd, len, *start_time, end_time, NULL, true);
 }
 
 /* Sends an APDU to the tag
@@ -1059,10 +1132,16 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
     memcpy(message_frame + 2, message, message_length);
     // EDC (CRC)
     AddCrc14B(message_frame, message_length + 2);
+    
     // send
-    CodeAndTransmit14443bAsReader(message_frame, message_length + 4);
+    uint32_t start_time = 0;
+    CodeAndTransmit14443bAsReader(message_frame, message_length + 4, &start_time);
     // get response
-    int ret = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT);
+    uint32_t eof_time = 0;
+    int ret = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time);
+    
+    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+
 
     FpgaDisableTracing();
 
@@ -1093,8 +1172,10 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     // SELECT command (with space for CRC)
     uint8_t select_srx[] = { ISO14443B_SELECT, 0x00, 0x00, 0x00};
 
-    CodeAndTransmit14443bAsReader(init_srx, sizeof(init_srx));
-    int ret = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT);
+    uint32_t start_time = 0;
+    CodeAndTransmit14443bAsReader(init_srx, sizeof(init_srx), &start_time);
+    uint32_t eof_time = start_time + 0;
+    int ret = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
     if (Demod.len == 0 || ret < 0)
@@ -1109,8 +1190,9 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
 
     AddCrc14B(select_srx, 2);
 
-    CodeAndTransmit14443bAsReader(select_srx, sizeof(select_srx));
-    ret = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT);
+    CodeAndTransmit14443bAsReader(select_srx, sizeof(select_srx), &start_time);
+    eof_time += 0;
+    ret = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
     if (Demod.len != 3 || ret < 0)
@@ -1128,8 +1210,10 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     select_srx[0] = ISO14443B_GET_UID;
 
     AddCrc14B(select_srx, 1);
-    CodeAndTransmit14443bAsReader(select_srx, 3); // Only first three bytes for this one
-    ret = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT);
+    CodeAndTransmit14443bAsReader(select_srx, 3, &start_time); // Only first three bytes for this one
+    
+    eof_time += 0;
+    ret = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
     if (Demod.len != 10 || ret < 0)
@@ -1160,8 +1244,10 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     uint8_t attrib[] = { ISO14443B_ATTRIB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00};
 
     // first, wake up the tag
-    CodeAndTransmit14443bAsReader(wupb, sizeof(wupb));
-    int ret = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT);
+    uint32_t start_time = 0;
+    CodeAndTransmit14443bAsReader(wupb, sizeof(wupb), &start_time);
+    uint32_t eof_time = start_time + 0;
+    int ret = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
     // ATQB too short?
@@ -1185,8 +1271,10 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     attrib[7] = Demod.output[10] & 0x0F;
     AddCrc14B(attrib, 9);
 
-    CodeAndTransmit14443bAsReader(attrib, sizeof(attrib));
-    ret = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT);
+    CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time);
+    
+    eof_time = start_time  + 0;
+    ret = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
     // Answer to ATTRIB too short?
@@ -1231,7 +1319,7 @@ void iso14443b_setup(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // Initialize Demod and Uart structs
-    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
     Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
 
     // connect Demodulated Signal to ADC:
@@ -1262,8 +1350,10 @@ void iso14443b_setup(void) {
 static bool ReadSTBlock(uint8_t block) {
     uint8_t cmd[] = {ISO14443B_READ_BLK, block, 0x00, 0x00};
     AddCrc14B(cmd, 2);
-    CodeAndTransmit14443bAsReader(cmd, sizeof(cmd));
-    int res = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT);
+    uint32_t start_time = 0;
+    CodeAndTransmit14443bAsReader(cmd, sizeof(cmd), &start_time);
+    uint32_t eof_time = start_time + 0;
+    int res = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
     // Check if we got an answer from the tag
@@ -1331,42 +1421,6 @@ out:
     SpinDelay(20);
 }
 
-static void iso1444b_setup_sniff(void) {
-
-    LEDsoff();
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
-    clear_trace();
-    set_tracing(true);
-
-    // Initialize Demod and Uart structs
-    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
-    Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
-
-    if (DBGLEVEL > 1) {
-        // Print debug information about the buffer sizes
-        Dbprintf("[+] Sniff buffers initialized:");
-        Dbprintf("[+]   trace: %i bytes", BigBuf_max_traceLen());
-        Dbprintf("[+]   reader -> tag: %i bytes", MAX_FRAME_SIZE);
-        Dbprintf("[+]   tag -> reader: %i bytes", MAX_FRAME_SIZE);
-        Dbprintf("[+]   DMA: %i bytes", DMA_BUFFER_SIZE);
-    }
-
-    // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-    // Setup for the DMA.
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-
-    // Set FPGA in the appropriate mode
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_SNIFF_IQ);
-    SpinDelay(20);
-
-    // Start the SSP timer
-    StartCountSspClk();
-}
-
 //=============================================================================
 // Finally, the `sniffer' combines elements from both the reader and
 // simulated tag, to show both sides of the conversation.
@@ -1384,129 +1438,184 @@ static void iso1444b_setup_sniff(void) {
  * DMA Buffer - ISO14443B_DMA_BUFFER_SIZE
  * Demodulated samples received - all the rest
  */
-void RAMFUNC SniffIso14443b(void) {
+void SniffIso14443b(void) {
 
-    uint32_t time_0 = 0, time_start = 0, time_stop;
+    LEDsoff();
+    LED_A_ON();
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    DbpString("Starting to sniff. Press PM3 Button to stop.");
+
+    BigBuf_free();
+    clear_trace();
+    set_tracing(true);
+
+    // Initialize Demod and Uart structs
+    uint8_t dm_buf[MAX_FRAME_SIZE] = {0};
+    Demod14bInit(dm_buf, sizeof(dm_buf));
+
+    uint8_t ua_buf[MAX_FRAME_SIZE] = {0};
+    Uart14bInit(ua_buf);
+
+    //Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
+    //Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+
+    // Set FPGA in the appropriate mode
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_SNIFF_IQ);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
+
+    // connect Demodulated Signal to ADC:
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+
+    StartCountSspClk();
+
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf16_t *dma = get_dma16();
+
+    // Setup and start DMA.
+    if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
+        if (DBGLEVEL > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
+        switch_off();
+        return;
+    }
 
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
     // response from the tag.
-    bool TagIsActive = false;
-    bool ReaderIsActive = false;
-
-    int lastRxCounter = DMA_BUFFER_SIZE;
-    int8_t ci, cq;
-    int maxBehindBy = 0;
-
+    bool tag_is_active = false;
+    bool reader_is_active = false;
+    bool expect_tag_answer = false;
+    int dma_start_time = 0;
+    
     // Count of samples received so far, so that we can include timing
-    // information in the trace buffer.
     int samples = 0;
 
-    iso1444b_setup_sniff();
-
-    // The DMA buffer, used to stream samples from the FPGA
-    dmabuf16_t *dma = get_dma16();
     uint16_t *upTo = dma->buf;
 
-    // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
-        if (DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
-        BigBuf_free();
-        return;
-    }
-
-    // time ZERO, the point from which it all is calculated.
-    time_0 = GetCountSspClk();
-
-    // loop and listen
     for (;;) {
 
-        int behindBy = (lastRxCounter - AT91C_BASE_PDC_SSC->PDC_RCR) & (DMA_BUFFER_SIZE - 1);
-        if (behindBy > maxBehindBy) {
-            maxBehindBy = behindBy;
-        }
-
-        if (behindBy == 0) continue;
-
-        ci = *upTo >> 8;
-        cq = *upTo;
-        uint16_t tagdata = *upTo;
-
-        upTo++;
-        lastRxCounter--;
-        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {               // we have read all of the DMA buffer content.
-            upTo = dma->buf;                                    // start reading the circular buffer from the beginning again
-            lastRxCounter += DMA_BUFFER_SIZE;
-            if (behindBy > (9 * DMA_BUFFER_SIZE / 10)) {
-                Dbprintf("About to blow circular buffer - aborted! behindBy=%d", behindBy);
-                break;
-            }
-        }
-
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {       // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf; // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;     // DMA Next Counter registers
-
-            WDT_HIT();
-            if (BUTTON_PRESS()) {
-                DbpString("Button pressed, cancelled");
-                break;
-            }
-        }
+        volatile int behind_by = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        if (behind_by < 1) continue;        
 
         samples++;
+        if (samples == 1) {
+            // DMA has transferred the very first data
+            dma_start_time = GetCountSspClk() & 0xfffffff0;
+        }
+
+        volatile uint16_t sniffdata = *upTo++;
+
+        // we have read all of the DMA buffer content.
+        if (upTo >= dma->buf + DMA_BUFFER_SIZE) {
+
+            // start reading the circular buffer from the beginning again
+            upTo = dma->buf;
+
+            // DMA Counter Register had reached 0, already rotated.
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+
+                // primary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
+                }
+                // secondary buffer sets as primary, secondary buffer was stopped
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
+                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+                }
+                
+                WDT_HIT();
+                if (BUTTON_PRESS()) {
+                    DbpString("Sniff stopped");
+                    break;
+                }
+            }
+        }
 
         // no need to try decoding reader data if the tag is sending
-        if (TagIsActive == false) {
+        if (tag_is_active == false) {
 
-            LED_A_INV();
+            if (Handle14443bSampleFromReader((sniffdata & 0x2) >> 1)) {
+            //if (Handle14443bSampleFromReader((sniffdata & 0x0100) >> 8)) {
+            //if (Handle14443bSampleFromReader(ci & 0x01)) {
 
-            if (Handle14443bReaderUartBit(ci & 0x01)) {
-
-                time_stop = GetCountSspClk() - time_0;
-                LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
+                uint32_t eof_time = dma_start_time + (samples * 16) + 8; // - DELAY_READER_TO_ARM_SNIFF; // end of EOF
+                if (Uart.byteCnt > 0) {
+                    uint32_t sof_time = eof_time
+                                        - Uart.byteCnt * 1 // time for byte transfers
+                                        - 32 * 16          // time for SOF transfer
+                                        - 16 * 16;         // time for EOF transfer
+                    LogTrace(Uart.output, Uart.byteCnt, (sof_time * 4), (eof_time * 4), NULL, true);
+                }
+                // And ready to receive another command.
                 Uart14bReset();
                 Demod14bReset();
-            } else {
-                time_start = GetCountSspClk() - time_0;
+                reader_is_active = false;
+                expect_tag_answer = true;                
             }
 
-            if (Handle14443bReaderUartBit(cq & 0x01)) {
-                time_stop = GetCountSspClk() - time_0;
-                LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
+            if (Handle14443bSampleFromReader(sniffdata & 0x01)) {            
+            //if (Handle14443bSampleFromReader(cq & 0x01)) {
+
+                uint32_t eof_time = dma_start_time + (samples * 16) + 16; // - DELAY_READER_TO_ARM_SNIFF; // end of EOF
+                if (Uart.byteCnt > 0) {
+                    uint32_t sof_time = eof_time
+                                        - Uart.byteCnt * 1 // time for byte transfers
+                                        - 32 * 16          // time for SOF transfer
+                                        - 16 * 16;         // time for EOF transfer
+                    LogTrace(Uart.output, Uart.byteCnt, (sof_time * 4), (eof_time * 4), NULL, true);
+                }
+                // And ready to receive another command
                 Uart14bReset();
                 Demod14bReset();
-            } else {
-                time_start = GetCountSspClk() - time_0;
+                reader_is_active = false;
+                expect_tag_answer = true;
             }
-            ReaderIsActive = (Uart.state > STATE_14B_GOT_FALLING_EDGE_OF_SOF);
+            
+            reader_is_active = (Uart.state > STATE_14B_GOT_FALLING_EDGE_OF_SOF);
         }
 
         // no need to try decoding tag data if the reader is sending - and we cannot afford the time
-        if (!ReaderIsActive) {
+        if (reader_is_active == false && expect_tag_answer) {
 
-            // is this | 0x01 the error?   & 0xfe  in https://github.com/Proxmark/proxmark3/issues/103
-            // LSB is a fpga signal bit.
-            if (Handle14443bTagSamplesDemod(tagdata) >= 0) {
-                time_stop = GetCountSspClk() - time_0;
-                LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
+            if (Handle14443bSamplesFromTag( sniffdata >> 2 )) {
+//            if (Handle14443bSamplesFromTag(((sniffdata >> 8) & 0xFF), sniffdata & 0xFF)) {
+
+                uint32_t eof_time = dma_start_time + (samples * 16); // - DELAY_TAG_TO_ARM_SNIFF; // end of EOF               
+                uint32_t sof_time = eof_time
+                    - Demod.len * 8 * 8 * 16 // time for byte transfers
+                    - (32 * 16)             // time for SOF transfer
+                    - 0;                    // time for EOF transfer
+
+                LogTrace(Demod.output, Demod.len, (sof_time * 4), (eof_time * 4), NULL, false);
+                // And ready to receive another response.
                 Uart14bReset();
                 Demod14bReset();
+                expect_tag_answer = false;
+                tag_is_active = false;
             } else {
-                time_start = GetCountSspClk() - time_0;
+                tag_is_active = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
             }
-            TagIsActive = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
         }
     }
 
-    FpgaDisableSscDma();
-    if (DBGLEVEL >= 2) {
-        DbpString("[+] Sniff statistics:");
-        Dbprintf("[+]  uart State: %x  ByteCount: %i  ByteCountMax: %i", Uart.state,  Uart.byteCnt,  Uart.byteCntMax);
-        Dbprintf("[+]  trace length: %i", BigBuf_get_traceLen());
-    }
-
+    FpgaDisableTracing();
     switch_off();
+
+    DbpString("");
+    DbpString(_CYAN_("Sniff statistics"));
+    DbpString("=================================");
+    Dbprintf("  DecodeTag State........%d", Demod.state);
+    Dbprintf("  DecodeTag byteCnt......%d", Demod.len);
+    Dbprintf("  DecodeTag posCount.....%d", Demod.posCount);
+    Dbprintf("  DecodeReader State.....%d", Uart.state);
+    Dbprintf("  DecodeReader byteCnt...%d", Uart.byteCnt);
+    Dbprintf("  DecodeReader posCount..%d", Uart.posCnt);  
+    Dbprintf("  Trace length..........." _YELLOW_("%d"), BigBuf_get_traceLen());
+    DbpString("");
 }
 
 static void iso14b_set_trigger(bool enable) {
@@ -1577,9 +1686,11 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
             AddCrc14B(cmd, len);
             len += 2;
         }
-
-        CodeAndTransmit14443bAsReader(cmd, len); // raw
-        status = GetTagSamplesFor14443bDemod(RECEIVE_SAMPLES_TIMEOUT); // raw
+        
+        uint32_t start_time = 0;
+        CodeAndTransmit14443bAsReader(cmd, len, &start_time); // raw
+        uint32_t eof_time = start_time + 0;
+        status = Get14443bAnswerFromTag(RECEIVE_SAMPLES_TIMEOUT, &eof_time); // raw
         FpgaDisableTracing();
 
         sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
