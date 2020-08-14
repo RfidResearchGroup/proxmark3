@@ -1445,30 +1445,41 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
 
     n = scandir(path, &namelist, NULL, alphasort);
     if (n == -1) {
-        if (!tentative) {
-            for (uint8_t j = 0; j < indent; j++)
+
+        if (tentative == false) {
+
+            for (uint8_t j = 0; j < indent; j++) {
                 PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+            }
             PrintAndLogEx(NORMAL, "%s── "_GREEN_("%s"), last ? "└" : "├", &path[strip]);
         }
         return PM3_EFILE;
     }
 
-    for (uint8_t j = 0; j < indent; j++)
+    for (uint8_t j = 0; j < indent; j++) {
         PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+    }
+
     PrintAndLogEx(NORMAL, "%s── "_GREEN_("%s"), last ? "└" : "├", &path[strip]);
+
     for (uint16_t i = 0; i < n; i++) {
-        if (namelist[i]->d_type == DT_DIR) {
+
+        if (is_directory(namelist[i]->d_name)) {
             char newpath[1024];
             if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
                 continue;
+
             snprintf(newpath, sizeof(newpath), "%s", path);
             strncat(newpath, namelist[i]->d_name, sizeof(newpath) - strlen(newpath));
             strncat(newpath, "/", sizeof(newpath) - strlen(newpath));
             filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
         } else {
+            
             if ((ext == NULL) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
-                for (uint8_t j = 0; j < indent + 1; j++)
+                
+                for (uint8_t j = 0; j < indent + 1; j++) {
                     PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+                }
                 PrintAndLogEx(NORMAL, "%s── %-21s", i == n - 1 ? "└" : "├", namelist[i]->d_name);
             }
         }
