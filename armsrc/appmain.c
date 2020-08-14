@@ -1024,15 +1024,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_SNIFF: {
-            /*
-            struct p {
-                uint8_t jam_search_len;
-                uint8_t jam_search_string[];
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
-
-            SniffIso15693(payload->jam_search_len, payload->jam_search_string);
-            */
             SniffIso15693(0, NULL);
             reply_ng(CMD_HF_ISO15693_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
