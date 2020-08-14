@@ -1464,7 +1464,12 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
 
     for (uint16_t i = 0; i < n; i++) {
 
-        if (is_directory(namelist[i]->d_name)) {
+        char tmp_fullpath[1024] = {0};
+        strcat(tmp_fullpath, path);
+        strcat(tmp_fullpath, namelist[i]->d_name);
+   
+        if (is_directory(tmp_fullpath)) {
+            
             char newpath[1024];
             if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
                 continue;
@@ -1472,6 +1477,7 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
             snprintf(newpath, sizeof(newpath), "%s", path);
             strncat(newpath, namelist[i]->d_name, sizeof(newpath) - strlen(newpath));
             strncat(newpath, "/", sizeof(newpath) - strlen(newpath));
+
             filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
         } else {
             
