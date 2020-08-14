@@ -622,7 +622,7 @@ static int CmdHFiClassSniff(const char *Cmd) {
 
     WaitForResponse(CMD_HF_ICLASS_SNIFF, &resp);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass list") "` to look at the collected trace");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
