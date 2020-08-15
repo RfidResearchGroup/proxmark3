@@ -147,15 +147,18 @@ static bool waitCmd14b(bool verbose) {
             if (len >= 3) {
                 bool crc = check_crc(CRC_14443_B, data, len);
 
-                PrintAndLogEx(SUCCESS, "[LEN %u] %s[%02X %02X] %s",
+                PrintAndLogEx(SUCCESS, "len %u | %s[%02X %02X] %s",
                               len,
                               sprint_hex(data, len - 2),
                               data[len - 2],
                               data[len - 1],
-                              (crc) ? _GREEN_("OK") : _RED_("FAIL")
+                              (crc) ? _GREEN_("ok") : _RED_("fail")
                              );
+            } else if (len == 0) {
+                PrintAndLogEx(SUCCESS, "received SOF only (maybe iCLASS/Picopass)");
+	
             } else {
-                PrintAndLogEx(SUCCESS, "[LEN %u] %s", len, sprint_hex(data, len));
+                PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
             }
         }
         return true;
@@ -168,7 +171,7 @@ static bool waitCmd14b(bool verbose) {
 static int CmdHF14BList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("14b");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14BSim(const char *Cmd) {
@@ -204,7 +207,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     uint32_t flags = ISO14B_CONNECT;
     uint32_t temp = 0, user_timeout = 0, time_wait = 0;
 
-    if (strlen(Cmd) < 3) return usage_hf_14b_raw();
+    if (strlen(Cmd) < 2) return usage_hf_14b_raw();
 
     // strip
     while (*Cmd == ' ' || *Cmd == '\t') ++Cmd;
