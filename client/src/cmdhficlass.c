@@ -156,22 +156,22 @@ static int usage_hf_iclass_dump(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_clone(void) {
+static int usage_hf_iclass_restore(void) {
     PrintAndLogEx(NORMAL, "Restore data from dumpfile onto a iCLASS tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass restore f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h            : Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to clone from");
-    PrintAndLogEx(NORMAL, "  b <block>    : The first block to clone as 2 hex symbols");
-    PrintAndLogEx(NORMAL, "  l <last blk> : Set the data to write as 16 hex symbols");
+    PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to restore");
+    PrintAndLogEx(NORMAL, "  b <block>    : The first block to restore as 2 hex symbols");
+    PrintAndLogEx(NORMAL, "  l <last blk> : The last block to restore as 2 hex symbols");
     PrintAndLogEx(NORMAL, "  k <key>      : Access key as 16 hex symbols or 1 hex to select key from memory");
     PrintAndLogEx(NORMAL, "  c            : If 'c' is specified, the key set is assumed to be the credit key\n");
     PrintAndLogEx(NORMAL, "  e            : If 'e' is specified, elite computations applied to key");
     PrintAndLogEx(NORMAL, "  r            : If 'r' is specified, no computations applied to key (raw)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass clone f hf-iclass-AA162D30F8FF12F1-dump.bin b 06 l 1A k 1122334455667788 e"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass clone f hf-iclass-AA162D30F8FF12F1-dump b 05 l 19 k 0"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass clone f hf-iclass-AA162D30F8FF12F1-dump b 06 l 19 k 0 e"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass restore f hf-iclass-AA162D30F8FF12F1-dump.bin b 06 l 1A k 1122334455667788 e"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass restore f hf-iclass-AA162D30F8FF12F1-dump b 05 l 19 k 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass restore f hf-iclass-AA162D30F8FF12F1-dump b 06 l 19 k 0 e"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -2045,7 +2045,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_hf_iclass_clone();
+                return usage_hf_iclass_restore();
             case 'b':
                 startblock = param_get8ex(Cmd, cmdp + 1, 07, 16);
                 got_startblk = true;
@@ -2111,7 +2111,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     if (got_endblk == false || got_startblk == false)
         errors = true;
 
-    if (errors || cmdp < 8) return usage_hf_iclass_clone();
+    if (errors || cmdp < 8) return usage_hf_iclass_restore();
 
     if (startblock < 5) {
         PrintAndLogEx(WARNING, "you cannot write key blocks this way. yet... make your start block > 4");
