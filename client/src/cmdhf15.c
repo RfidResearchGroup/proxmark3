@@ -517,34 +517,33 @@ static bool getUID(bool loop, uint8_t *buf) {
     uint8_t reply = 1;
 
     while (kbd_enter_pressed() == false) {
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO15693_COMMAND, sizeof(data), fast, reply, data, sizeof(data));
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
-        // don't give up the at the first try
-        uint8_t retry = 3;
-        while (retry--) {
+            int resplen = resp.oldarg[0];
+            if (resplen >= 12 && CheckCrc15(resp.data.asBytes, 12)) {
+                
+                if (buf)
+                    memcpy(buf, resp.data.asBytes + 2, 8);
 
-            clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ISO15693_COMMAND, sizeof(data), fast, reply, data, sizeof(data));
-            PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+                DropField();
 
-                int resplen = resp.oldarg[0];
-                if (resplen >= 12 && CheckCrc15(resp.data.asBytes, 12)) {
-                    
-                    if (buf)
-                        memcpy(buf, resp.data.asBytes + 2, 8);
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
+                PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("%s"), getTagInfo_15(buf));
 
-                    DropField();
-
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
-                    PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("%s"), getTagInfo_15(buf));
-                    
-                    if (loop == false)
-                        return true;
+                if (loop == false) {
+                    return true;
                 }
             }
         }
+        if (loop == false) {
+            break;
+        }
     }
+
     DropField();
     return false;
 }
