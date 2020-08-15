@@ -188,8 +188,7 @@ bool FpgaSetupSscDma(uint8_t *buf, uint16_t len) {
 }
 
 //----------------------------------------------------------------------------
-// Uncompress (inflate) the FPGA data. Returns one decompressed byte with
-// each call.
+// Uncompress (inflate) the FPGA data. Returns one decompressed byte with each call.
 //----------------------------------------------------------------------------
 static int get_from_fpga_combined_stream(lz4_streamp compressed_fpga_stream, uint8_t *output_buffer) {
     if (fpga_image_ptr == output_buffer + FPGA_RING_BUFFER_BYTES) { // need more data
@@ -526,10 +525,13 @@ int FpgaGetCurrent(void) {
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
 void switch_off(void) {
-    if (DBGLEVEL > 3) Dbprintf("switch_off");
+    if (DBGLEVEL > 3) {
+        Dbprintf("switch_off");
+    }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    if (downloaded_bitstream == FPGA_BITSTREAM_HF)
+    if (downloaded_bitstream == FPGA_BITSTREAM_HF) {
         FpgaDisableSscDma();
+    }
     set_tracing(false);
     LEDsoff();
 }
