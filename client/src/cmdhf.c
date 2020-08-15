@@ -156,25 +156,6 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
-    if (IfPm3Felica()) {
-        if (readFelicaUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-    /*
-        PROMPT_CLEARLINE;
-        PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
-        if (IfPm3Iso14443b()) {
-            if (readHFCryptoRF(false) == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
-                res = PM3_SUCCESS;
-            }
-        }
-    */
-
     // 14b  is the longest test (put last)
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
@@ -185,6 +166,26 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+/*
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+    if (IfPm3Felica()) {
+        if (readFelicaUid(false) == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+*/
+    /*
+        PROMPT_CLEARLINE;
+        PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
+        if (IfPm3Iso14443b()) {
+            if (readHFCryptoRF(false) == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
+                res = PM3_SUCCESS;
+            }
+        }
+    */
 
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
