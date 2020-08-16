@@ -113,13 +113,13 @@ static char iso_type = 0;
 //-----------------------------------------------------------------------------
 // Wrapper for sending APDUs to type A and B cards
 //-----------------------------------------------------------------------------
-static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response) {
+static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t respmaxlen) {
     switch (iso_type) {
         case 'a':
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
             break;
         case 'b':
-            return iso14443b_apdu(apdu, length, response);
+            return iso14443b_apdu(apdu, length, response, respmaxlen);
             break;
         default:
             return 0;
@@ -227,7 +227,9 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
     // select the file EF.CardAccess
     rapdu_length = EPA_APDU((uint8_t *)apdu_select_binary_cardaccess,
                             sizeof(apdu_select_binary_cardaccess),
-                            response_apdu);
+                            response_apdu,
+                            sizeof(response_apdu)
+                            );
     if (rapdu_length < 6
             || response_apdu[rapdu_length - 4] != 0x90
             || response_apdu[rapdu_length - 3] != 0x00) {
@@ -238,7 +240,9 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
     // read the file
     rapdu_length = EPA_APDU((uint8_t *)apdu_read_binary,
                             sizeof(apdu_read_binary),
-                            response_apdu);
+                            response_apdu,
+                            sizeof(response_apdu)
+                            );
     if (rapdu_length <= 6
             || response_apdu[rapdu_length - 4] != 0x90
             || response_apdu[rapdu_length - 3] != 0x00) {
@@ -356,7 +360,9 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
     uint8_t response_apdu[262];
     int send_return = EPA_APDU(apdu,
                                sizeof(apdu),
-                               response_apdu);
+                               response_apdu,
+                               sizeof(response_apdu)
+                               );
     // check if the command succeeded
     if (send_return < 6
             || response_apdu[send_return - 4] != 0x90
@@ -423,7 +429,9 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
     uint8_t response_apdu[6];
     int send_return = EPA_APDU(apdu,
                                apdu_length,
-                               response_apdu);
+                               response_apdu,
+                               sizeof(response_apdu)
+                               );
     // check if the command succeeded
     if (send_return != 6
             || response_apdu[send_return - 4] != 0x90
@@ -480,7 +488,9 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
         StartCountUS();
         func_return = EPA_APDU(apdus_replay[i].data,
                                apdu_lengths_replay[i],
-                               response_apdu);
+                               response_apdu,
+                               sizeof(response_apdu)
+                               );
         timings[i] = GetCountUS();
         // every step but the last one should succeed
         if (i < ARRAYLEN(apdu_lengths_replay) - 1
