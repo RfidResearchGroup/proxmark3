@@ -127,7 +127,7 @@ static void switch_on_field_14b(void) {
 static int switch_off_field_14b(void) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_DISCONNECT, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static bool waitCmd14b(bool verbose) {
@@ -289,7 +289,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
 
     if (!reply) return PM3_SUCCESS;
 
@@ -306,46 +306,34 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
 
 static bool get_14b_UID(iso14b_card_select_t *card) {
 
-    if (!card)
+    if (card == NULL)
         return false;
 
-    int8_t retry = 3;
     PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-    // test for 14b SR
-    while (retry--) {
-
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-
-            uint8_t status = resp.oldarg[0];
-            if (status == 0) {
-                memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
-                return true;
-            }
+        uint8_t status = resp.oldarg[0];
+        if (status == 0) {
+            memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
+            return true;
         }
-    } // retry
+    }
 
     // test 14b standard
-    retry = 3;
-    while (retry--) {
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-
-            uint8_t status = resp.oldarg[0];
-            if (status == 0) {
-                memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
-                return true;
-            }
+        uint8_t status = resp.oldarg[0];
+        if (status == 0) {
+            memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
+            return true;
         }
-    } // retry
+    }
 
-    if (retry <= 0)
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-
+    PrintAndLogEx(WARNING, "timeout while waiting for reply.");
     return false;
 }
 
@@ -356,18 +344,18 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 // 5       = max frame size / -4 info
 // 6       = FWI / Coding options
 static void print_atqb_resp(uint8_t *data, uint8_t cid) {
-    //PrintAndLogEx(NORMAL, "           UID: %s", sprint_hex(data+1,4));
-    PrintAndLogEx(NORMAL, "      App Data: %s", sprint_hex(data, 4));
-    PrintAndLogEx(NORMAL, "      Protocol: %s", sprint_hex(data + 4, 3));
+    //PrintAndLogEx(SUCCESS, "           UID: %s", sprint_hex(data+1,4));
+    PrintAndLogEx(SUCCESS, "      App Data: %s", sprint_hex(data, 4));
+    PrintAndLogEx(SUCCESS, "      Protocol: %s", sprint_hex(data + 4, 3));
     uint8_t BitRate = data[4];
-    if (!BitRate) PrintAndLogEx(NORMAL, "      Bit Rate: 106 kbit/s only PICC <-> PCD");
-    if (BitRate & 0x10) PrintAndLogEx(NORMAL, "      Bit Rate: 212 kbit/s PICC -> PCD supported");
-    if (BitRate & 0x20) PrintAndLogEx(NORMAL, "      Bit Rate: 424 kbit/s PICC -> PCD supported");
-    if (BitRate & 0x40) PrintAndLogEx(NORMAL, "      Bit Rate: 847 kbit/s PICC -> PCD supported");
-    if (BitRate & 0x01) PrintAndLogEx(NORMAL, "      Bit Rate: 212 kbit/s PICC <- PCD supported");
-    if (BitRate & 0x02) PrintAndLogEx(NORMAL, "      Bit Rate: 424 kbit/s PICC <- PCD supported");
-    if (BitRate & 0x04) PrintAndLogEx(NORMAL, "      Bit Rate: 847 kbit/s PICC <- PCD supported");
-    if (BitRate & 0x80) PrintAndLogEx(NORMAL, "                Same bit rate <-> required");
+    if (!BitRate) PrintAndLogEx(SUCCESS, "      Bit Rate: 106 kbit/s only PICC <-> PCD");
+    if (BitRate & 0x10) PrintAndLogEx(SUCCESS, "      Bit Rate: 212 kbit/s PICC -> PCD supported");
+    if (BitRate & 0x20) PrintAndLogEx(SUCCESS, "      Bit Rate: 424 kbit/s PICC -> PCD supported");
+    if (BitRate & 0x40) PrintAndLogEx(SUCCESS, "      Bit Rate: 847 kbit/s PICC -> PCD supported");
+    if (BitRate & 0x01) PrintAndLogEx(SUCCESS, "      Bit Rate: 212 kbit/s PICC <- PCD supported");
+    if (BitRate & 0x02) PrintAndLogEx(SUCCESS, "      Bit Rate: 424 kbit/s PICC <- PCD supported");
+    if (BitRate & 0x04) PrintAndLogEx(SUCCESS, "      Bit Rate: 847 kbit/s PICC <- PCD supported");
+    if (BitRate & 0x80) PrintAndLogEx(SUCCESS, "                Same bit rate <-> required");
 
     uint16_t maxFrame = data[5] >> 4;
     if (maxFrame < 5)       maxFrame = 8 * maxFrame + 16;
@@ -377,26 +365,26 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid) {
     else if (maxFrame == 8) maxFrame = 256;
     else maxFrame = 257;
 
-    PrintAndLogEx(NORMAL, "Max Frame Size: %u%s bytes", maxFrame, (maxFrame == 257) ? "+ RFU" : "");
+    PrintAndLogEx(SUCCESS, "Max Frame Size: %u%s bytes", maxFrame, (maxFrame == 257) ? "+ RFU" : "");
 
     uint8_t protocolT = data[5] & 0xF;
-    PrintAndLogEx(NORMAL, " Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4", (protocolT) ? "" : "not ");
+    PrintAndLogEx(SUCCESS, " Protocol Type: Protocol is %scompliant with ISO/IEC 14443-4", (protocolT) ? "" : "not ");
 
     uint8_t fwt = data[6] >> 4;
     if (fwt < 16) {
         uint32_t etus = (32 << fwt);
         uint32_t fwt_time = (302 << fwt);
-        PrintAndLogEx(NORMAL, "Frame Wait Integer: %u - %u ETUs | %u us", fwt, etus, fwt_time);
+        PrintAndLogEx(SUCCESS, "Frame Wait Integer: %u - %u ETUs | %u us", fwt, etus, fwt_time);
     } else {
-        PrintAndLogEx(NORMAL, "Frame Wait Integer: %u - RFU", fwt);
+        PrintAndLogEx(SUCCESS, "Frame Wait Integer: %u - RFU", fwt);
     }
 
-    PrintAndLogEx(NORMAL, " App Data Code: Application is %s", (data[6] & 4) ? "Standard" : "Proprietary");
-    PrintAndLogEx(NORMAL, " Frame Options: NAD is %ssupported", (data[6] & 2) ? "" : "not ");
-    PrintAndLogEx(NORMAL, " Frame Options: CID is %ssupported", (data[6] & 1) ? "" : "not ");
-    PrintAndLogEx(NORMAL, "Tag :");
-    PrintAndLogEx(NORMAL, "  Max Buf Length: %u (MBLI) %s", cid >> 4, (cid & 0xF0) ? "" : "chained frames not supported");
-    PrintAndLogEx(NORMAL, "  CID : %u", cid & 0x0f);
+    PrintAndLogEx(SUCCESS, " App Data Code: Application is %s", (data[6] & 4) ? "Standard" : "Proprietary");
+    PrintAndLogEx(SUCCESS, " Frame Options: NAD is %ssupported", (data[6] & 2) ? "" : "not ");
+    PrintAndLogEx(SUCCESS, " Frame Options: CID is %ssupported", (data[6] & 1) ? "" : "not ");
+    PrintAndLogEx(SUCCESS, "Tag :");
+    PrintAndLogEx(SUCCESS, "  Max Buf Length: %u (MBLI) %s", cid >> 4, (cid & 0xF0) ? "" : "chained frames not supported");
+    PrintAndLogEx(SUCCESS, "  CID : %u", cid & 0x0f);
     return;
 }
 
@@ -485,9 +473,10 @@ static int print_ST_Lock_info(uint8_t model) {
 // print UID info from SRx chips (ST Microelectronics)
 static void print_st_general_info(uint8_t *data, uint8_t len) {
     //uid = first 8 bytes in data
-    PrintAndLogEx(NORMAL, " UID: " _GREEN_("%s"), sprint_hex(SwapEndian64(data, 8, 8), len));
-    PrintAndLogEx(NORMAL, " MFG: %02X, " _YELLOW_("%s"), data[6], getTagInfo(data[6]));
-    PrintAndLogEx(NORMAL, "Chip: %02X, " _YELLOW_("%s"), data[5] >> 2, get_ST_Chip_Model(data[5] >> 2));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(SwapEndian64(data, 8, 8), len));
+    PrintAndLogEx(SUCCESS, " MFG: %02X, " _YELLOW_("%s"), data[6], getTagInfo(data[6]));
+    PrintAndLogEx(SUCCESS, "Chip: %02X, " _YELLOW_("%s"), data[5] >> 2, get_ST_Chip_Model(data[5] >> 2));
 }
 
 //05 00 00 = find one tag in field
@@ -761,7 +750,9 @@ static int CmdHF14BReadSri(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_SRI_READ, blocks, 0, 0, NULL, 0);
-    return 0;
+    
+    // iceman:  should download read data and print in client.
+    return PM3_SUCCESS;
 }
 
 // New command to write a SRI512/SRIX4K tag.
@@ -928,7 +919,7 @@ static int CmdHF14BDump(const char *Cmd) {
             uint16_t len = (resp.oldarg[1] & 0xFFFF);
             recv = resp.data.asBytes;
 
-            if (!check_crc(CRC_14443_B, recv, len)) {
+            if (check_crc(CRC_14443_B, recv, len) == false) {
                 PrintAndLogEx(FAILED, "crc fail, retrying one more time");
                 continue;
             }
@@ -939,7 +930,6 @@ static int CmdHF14BDump(const char *Cmd) {
                 //last read.
                 break;
             }
-
 
             retry = 0;
             blocknum++;
@@ -958,7 +948,7 @@ static int CmdHF14BDump(const char *Cmd) {
         goto out;
     }
 
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "block#   | data         | ascii");
     PrintAndLogEx(NORMAL, "---------+--------------+----------");
 
@@ -972,12 +962,13 @@ static int CmdHF14BDump(const char *Cmd) {
                      );
     }
 
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 
 
     size_t datalen = (blocks + 1) * 4;
     saveFileEML(filename, data, datalen, 4);
     saveFile(filename, ".bin", data, datalen);
+    // JSON?
 out:
     return switch_off_field_14b();
 }
