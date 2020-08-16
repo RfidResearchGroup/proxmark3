@@ -1428,42 +1428,42 @@ static bool ReadSTBlock(uint8_t blocknr, uint8_t *block) {
     return true;
 }
 
-void ReadSTMemoryIso14443b(uint8_t numofblocks) {
+void ReadSTMemoryIso14443b(uint16_t numofblocks) {
 
     iso14443b_setup();
+
+    uint8_t *mem = BigBuf_malloc((numofblocks + 1) * 4 );
 
     iso14b_card_select_t card;
     uint8_t res = iso14443b_select_srx_card(&card);
 
+    int isOK = PM3_SUCCESS;
     // 0: OK 2: attrib fail, 3:crc fail,
-    if (res > 0) goto out;
-
-    Dbprintf("[+] Tag memory dump, block 0 to %d", numofblocks);
-
-    ++numofblocks;
-    
-    uint8_t data[4] = {0};
-
-    for (uint8_t i = 0; i != 0xFF; i++) {
-        
-        if (i == numofblocks) {
-            DbpString("System area block (0xFF):");
-            i = 0xff;
-        }
-
-        if (ReadSTBlock(i, data ) == false)
-            break;
-
-        if (i == 0xFF)
-            break;
+    if (res > 0) {
+        isOK = PM3_ETIMEOUT;
+        goto out;
     }
 
-    // Todo:  iceman:  send back read data to client.
-    // reply_ng(..., );
+    ++numofblocks;
+
+    for (uint8_t i = 0; i < numofblocks; i++) {
+
+        if (ReadSTBlock(i, mem + ( i * 4)) == false) {
+            isOK = PM3_ETIMEOUT;
+            break;
+        }
+    }
+ 
+   // System area block (0xFF)
+   if (ReadSTBlock(0xFF, mem + (numofblocks * 4)) == false)
+       isOK = PM3_ETIMEOUT;
 
 out:
-    switch_off(); // disconnect raw
-    SpinDelay(20);
+
+    reply_ng(CMD_HF_SRI_READ, isOK, mem, numofblocks * 4);
+
+    BigBuf_free();
+    switch_off();
 }
 
 //=============================================================================
@@ -1624,7 +1624,7 @@ void SniffIso14443b(void) {
         // no need to try decoding tag data if the reader is sending - and we cannot afford the time
         if (reader_is_active == false && expect_tag_answer) {
 
-			if (Handle14443bSamplesFromTag((ci >> 1), (cq >> 1)) >= 0) {
+			if (Handle14443bSamplesFromTag((ci >> 1), (cq >> 1))) {
 
                 uint32_t eof_time = dma_start_time + (samples * 16); // - DELAY_TAG_TO_ARM_SNIFF; // end of EOF               
                 uint32_t sof_time = eof_time
