@@ -643,6 +643,9 @@ typedef struct {
 #define CMD_HF_THINFILM_READ                                              0x0810
 #define CMD_HF_THINFILM_SIMULATE                                          0x0811
 
+//For Atmel CryptoRF
+#define CMD_HF_CRYPTORF_SIM                                               0x0820
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags
