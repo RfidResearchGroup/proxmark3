@@ -485,9 +485,9 @@ static int print_ST_Lock_info(uint8_t model) {
 // print UID info from SRx chips (ST Microelectronics)
 static void print_st_general_info(uint8_t *data, uint8_t len) {
     //uid = first 8 bytes in data
-    PrintAndLogEx(NORMAL, " UID: %s", sprint_hex(SwapEndian64(data, 8, 8), len));
-    PrintAndLogEx(NORMAL, " MFG: %02X, %s", data[6], getTagInfo(data[6]));
-    PrintAndLogEx(NORMAL, "Chip: %02X, %s", data[5] >> 2, get_ST_Chip_Model(data[5] >> 2));
+    PrintAndLogEx(NORMAL, " UID: " _GREEN_("%s"), sprint_hex(SwapEndian64(data, 8, 8), len));
+    PrintAndLogEx(NORMAL, " MFG: %02X, " _YELLOW_("%s"), data[6], getTagInfo(data[6]));
+    PrintAndLogEx(NORMAL, "Chip: %02X, " _YELLOW_("%s"), data[5] >> 2, get_ST_Chip_Model(data[5] >> 2));
 }
 
 //05 00 00 = find one tag in field
@@ -532,7 +532,7 @@ static bool HF14B_Std_Info(bool verbose) {
     switch (status) {
         case 0:
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
@@ -667,7 +667,7 @@ static bool HF14B_Std_Reader(bool verbose) {
     switch (status) {
         case 0:
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
@@ -744,7 +744,6 @@ static bool HF14B_Other_Reader(void) {
 static int CmdHF14BReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_reader();
-
     bool verbose = !(cmdp == 's');
     return readHF14B(verbose);
 }
@@ -764,6 +763,7 @@ static int CmdHF14BReadSri(const char *Cmd) {
     SendCommandMIX(CMD_HF_SRI_READ, blocks, 0, 0, NULL, 0);
     return 0;
 }
+
 // New command to write a SRI512/SRIX4K tag.
 static int CmdHF14BWriteSri(const char *Cmd) {
     /*
@@ -1099,7 +1099,7 @@ static command_t CommandTable[] = {
     {"sniff",       CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO 14443B"},
     {"sriread",     CmdHF14BReadSri,  IfPm3Iso14443b,  "Read contents of a SRI512 | SRIX4K tag"},
     {"sriwrite",    CmdHF14BWriteSri, IfPm3Iso14443b,  "Write data to a SRI512 | SRIX4K tag"},
-    //{"valid",     srix4kValid,      AlwaysAvailable, "srix4k checksum test"},
+// {"valid",     srix4kValid,      AlwaysAvailable, "srix4k checksum test"},
     {NULL, NULL, NULL, NULL}
 };
 
