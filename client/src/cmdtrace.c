@@ -53,6 +53,7 @@ static int usage_trace_list(void) {
     PrintAndLogEx(NORMAL, "    hitag2   - interpret data as Hitag2 communications");
     PrintAndLogEx(NORMAL, "    hitags   - interpret data as HitagS communications");
     PrintAndLogEx(NORMAL, "    lto      - interpret data as LTO-CM communications");
+    PrintAndLogEx(NORMAL, "    cryptorf - interpret data as CryptoRF communitcations");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        trace list 14a f"));
@@ -258,6 +259,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_15693:
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
+            case PROTO_CRYPTORF:
             case ISO_7816_4:
             case PROTO_HITAG1:
             case PROTO_HITAG2:
@@ -297,6 +299,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != THINFILM
                 && protocol != FELICA
                 && protocol != LTO
+                && protocol != PROTO_CRYPTORF
                 && (hdr->isResponse || protocol == ISO_14443A)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
@@ -346,28 +349,30 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (prev_eot)
         *prev_eot = end_of_transmission_timestamp;
 
-    // Always annotate LEGIC read/tag
-    if (protocol == LEGIC)
-        annotateLegic(explanation, sizeof(explanation), frame, data_len);
-
-    if (protocol == PROTO_MIFARE)
-        annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, TRACELOG_PARITY_LEN(hdr), hdr->isResponse);
-
-    if (protocol == FELICA)
-        annotateFelica(explanation, sizeof(explanation), frame, data_len);
-
-    if (protocol == PROTO_HITAG1) {
-        annotateHitag1(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
-    }
-    if (protocol == PROTO_HITAG2) {
-        annotateHitag2(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
-    }
-    if (protocol == PROTO_HITAGS) {
-        annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+    // Always annotate these protocols both reader/tag messages
+    switch (protocol) {
+        case PROTO_MIFARE:
+            annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, TRACELOG_PARITY_LEN(hdr), hdr->isResponse);
+            break;
+        case PROTO_HITAG1:
+            annotateHitag1(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
+        case PROTO_HITAG2:
+            annotateHitag2(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
+        case PROTO_HITAGS:
+            annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
+        default:
+            break;
     }
 
     if (hdr->isResponse == false) {
+
         switch (protocol) {
+            case LEGIC:
+                annotateLegic(explanation, sizeof(explanation), frame, data_len);
+                break;
             case ICLASS:
                 annotateIclass(explanation, sizeof(explanation), frame, data_len);
                 break;
@@ -394,6 +399,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case LTO:
                 annotateLTO(explanation, sizeof(explanation), frame, data_len);
+                break;
+            case PROTO_CRYPTORF:
+                annotateCryptoRF(explanation, sizeof(explanation), frame, data_len);
                 break;
             default:
                 break;
@@ -645,10 +653,11 @@ int CmdTraceList(const char *Cmd) {
             else if (strcmp(type, "felica") == 0)   protocol = FELICA;
             else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
             else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
-            else if (strcmp(type, "hitag2") == 0)    protocol = PROTO_HITAG2;
-            else if (strcmp(type, "hitags") == 0)    protocol = PROTO_HITAGS;
+            else if (strcmp(type, "hitag2") == 0)   protocol = PROTO_HITAG2;
+            else if (strcmp(type, "hitags") == 0)   protocol = PROTO_HITAGS;
             else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
             else if (strcmp(type, "lto") == 0)      protocol = LTO;
+            else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
             else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
             else errors = true;
 
@@ -714,7 +723,7 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(INFO, _YELLOW_("LEGIC") " - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
                           "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
 
-        if (protocol == ISO_14443B) {
+        if (protocol == ISO_14443B || protocol == PROTO_CRYPTORF) {
             if (use_us)
                 PrintAndLogEx(INFO, _YELLOW_("ISO14443B") " - all times are in microseconds");
             else

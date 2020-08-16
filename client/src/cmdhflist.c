@@ -857,7 +857,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 **/
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     switch (cmd[0]) {
-        case ISO14443B_REQB           : {
+        case ISO14443B_REQB : {
 
             switch (cmd[2] & 0x07) {
                 case 0:
@@ -923,6 +923,47 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
     }
 }
+
+// CryptoRF which is based on ISO-14443B
+void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    switch (cmd[0]) {
+        case CRYPTORF_SET_USER_ZONE:
+            snprintf(exp, size, "SET USR ZONE");
+            break;
+        case CRYPTORF_READ_USER_ZONE:
+            snprintf(exp, size, "READ USR ZONE");
+            break;
+        case CRYPTORF_WRITE_USER_ZONE:
+            snprintf(exp, size, "WRITE USR ZONE");
+            break;
+        case CRYPTORF_WRITE_SYSTEM_ZONE:
+            snprintf(exp, size, "WRITE SYSTEM ZONE");
+            break;
+        case CRYPTORF_READ_SYSTEM_ZONE:
+            snprintf(exp, size, "READ SYSTEM ZONE");
+            break;
+        case CRYPTORF_VERIFY_CRYPTO:
+            snprintf(exp, size, "VERIFY CRYPTO");
+            break;
+        case CRYPTORF_SEND_CHECKSUM:
+            snprintf(exp, size, "SEND CHKSUM");
+            break;
+        case CRYPTORF_DESELECT:
+            snprintf(exp, size, "DESELECT");
+            break;  
+        case CRYPTORF_IDLE:
+            snprintf(exp, size, "IDLE");
+            break;              
+        case CRYPTORF_CHECK_PASSWORD:
+            snprintf(exp, size, "CHECK PWD");
+            break;  
+        default:
+            snprintf(exp, size, "?");
+            break;
+    }
+}
+
 
 // LEGIC
 // 1 = read

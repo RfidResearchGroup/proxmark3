@@ -240,9 +240,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
-//meltem
-//defined crypto RF commands
-//only interpreting channel 1 communication
+
+// defined crypto RF commands
+// only interpreting channel 1 communication
 #define CRYPTORF_SET_USER_ZONE      0x11
 #define CRYPTORF_READ_USER_ZONE     0x12
 #define CRYPTORF_WRITE_USER_ZONE    0x13
@@ -254,8 +254,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CRYPTORF_IDLE               0x1B
 #define CRYPTORF_CHECK_PASSWORD     0x1C
 
-//meltem
-//defined Crypto RF errors
+// defined Crypto RF errors
 #define CRYPTORF_ERR_ACCESS_DENIED_ZONE               0x99
 #define CRYPTORF_ERR_PARAM_INVALID                    0xA1
 #define CRYPTORF_ERR_ADDRES_INVALID                   0xA2
@@ -348,6 +347,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define LTO             12
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
+#define PROTO_CRYPTORF  15
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
