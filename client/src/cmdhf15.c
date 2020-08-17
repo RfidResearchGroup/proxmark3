@@ -245,9 +245,11 @@ static int usage_15_reader(void) {
                   "Usage: hf 15 reader [h]\n"
                   "Options:\n"
                   "\th             this help\n"
+                  "\t1             read once\n"
                   "\n"
                   "Example:\n"
-                  _YELLOW_("\thf 15 reader"));
+                  _YELLOW_("\thf 15 reader\n")
+                  _YELLOW_("\thf 15 reader 1\n"));
     return PM3_SUCCESS;
 }
 static int usage_15_sim(void) {
@@ -920,7 +922,7 @@ static int CmdHF15Info(const char *Cmd) {
 
     int status = resp.oldarg[0];
     if (status < 2) {
-        PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command");
+        PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command (%d)", status);
         return PM3_EWRONGANSWER;
     }
 
