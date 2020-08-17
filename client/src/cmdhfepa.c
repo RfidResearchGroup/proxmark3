@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <ctype.h>        // tolower
 
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"   // ARRAYLEN
@@ -23,8 +24,27 @@
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_epa_collect(void) {
+    PrintAndLogEx(NORMAL, "Tries to collect nonces when doing part of PACE protocol.\n"
+                "\n"
+                "Usage:  hf epa cnonces <m> <n> <d>\n"
+                "Options:\n"
+                "\t<m>      nonce size\n"
+                "\t<n>      number of nonces to collect\n"
+                "\t<d>      delay between\n"
+                "\n"
+                "Example:\n"
+                _YELLOW_("\thf epa cnonces 4 4 1")
+            );
+    return PM3_SUCCESS;
+}
+
 // Perform (part of) the PACE protocol
 static int CmdHFEPACollectPACENonces(const char *Cmd) {
+
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (cmdp == 'h') return usage_epa_collect();
+
     // requested nonce size
     uint32_t m = 0;
     // requested number of Nonces
@@ -40,13 +60,20 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Collecting %u %u byte nonces", n, m);
     PrintAndLogEx(SUCCESS, "Start: %" PRIu64, msclock() / 1000);
-    // repeat n times
+    
+    struct p {
+        uint32_t m;
+    } PACKED payload;
+    payload.m = m;
+    
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_EPA_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
+
         PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_EPA_COLLECT_NONCE, (uint8_t*)&payload, sizeof(payload));
+
+        WaitForResponse(CMD_HF_EPA_COLLECT_NONCE, &resp);
 
         // check if command failed
         if (resp.oldarg[0] != 0) {
@@ -65,6 +92,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
             sleep(d);
         }
     }
+    
     PrintAndLogEx(SUCCESS, "End: %" PRIu64, msclock() / 1000);
     return PM3_SUCCESS;
 }
@@ -155,6 +183,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_EPA_REPLAY, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, &resp);
+
     if (resp.oldarg[0] != 0) {
         PrintAndLogEx(SUCCESS, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);
         PrintAndLogEx(SUCCESS, "Measured times:");

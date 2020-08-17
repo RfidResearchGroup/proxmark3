@@ -117,13 +117,10 @@ static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t re
     switch (iso_type) {
         case 'a':
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
-            break;
         case 'b':
             return iso14443b_apdu(apdu, length, response, respmaxlen);
-            break;
         default:
             return 0;
-            break;
     }
 }
 
@@ -149,9 +146,8 @@ void EPA_Finish(void) {
 // TODO: Support elements with long tags (tag is longer than 1 byte)
 // TODO: Support proprietary PACE domain parameters
 //-----------------------------------------------------------------------------
-size_t EPA_Parse_CardAccess(uint8_t *data,
-                            size_t length,
-                            pace_version_info_t *pace_info) {
+size_t EPA_Parse_CardAccess(uint8_t *data, size_t length, pace_version_info_t *pace_info) {
+
     size_t index = 0;
 
     while (index <= length - 2) {
@@ -165,19 +161,22 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
                 index += (data[index - 1] & 0x7F);
             }
         }
+
         // OID
         else if (data[index] == 0x06) {
             // is this a PACE OID?
             if (data[index + 1] == 0x0A // length matches
-                    && memcmp(data + index + 2,
-                              oid_pace_start,
-                              sizeof(oid_pace_start)) == 0 // content matches
+                    && memcmp(data + index + 2, oid_pace_start, sizeof(oid_pace_start)) == 0 // content matches
                     && pace_info != NULL) {
+
                 // first, clear the pace_info struct
                 memset(pace_info, 0, sizeof(pace_version_info_t));
+
                 memcpy(pace_info->oid, data + index + 2, sizeof(pace_info->oid));
+
                 // a PACE OID is followed by the version
                 index += data[index + 1] + 2;
+
                 if (data[index] == 02 && data[index + 1] == 01) {
                     pace_info->version = data[index + 2];
                     index += 3;
@@ -189,6 +188,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data,
                     pace_info->parameter_id = data[index + 2];
                     index += 3;
                 }
+
             } else {
                 // skip this OID
                 index += 2 + data[index + 1];
@@ -230,6 +230,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
                             response_apdu,
                             sizeof(response_apdu)
                             );
+
     if (rapdu_length < 6
             || response_apdu[rapdu_length - 4] != 0x90
             || response_apdu[rapdu_length - 3] != 0x00) {
@@ -243,6 +244,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
                             response_apdu,
                             sizeof(response_apdu)
                             );
+
     if (rapdu_length <= 6
             || response_apdu[rapdu_length - 4] != 0x90
             || response_apdu[rapdu_length - 3] != 0x00) {
@@ -252,22 +254,22 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
 
     // copy the content into the buffer
     // length of data available: apdu_length - 4 (ISO frame) - 2 (SW)
-    size_t to_copy = rapdu_length - 6;
-    to_copy = to_copy < max_length ? to_copy : max_length;
-    memcpy(buffer, response_apdu + 2, to_copy);
-    return to_copy;
+    size_t len = rapdu_length - 6;
+    len = len < max_length ? len : max_length;
+    memcpy(buffer, response_apdu + 2, len);
+    return len;
 }
 
 //-----------------------------------------------------------------------------
 // Abort helper function for EPA_PACE_Collect_Nonce
 // sets relevant data in ack, sends the response
 //-----------------------------------------------------------------------------
-static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return) {
+static void EPA_PACE_Collect_Nonce_Abort(uint32_t cmd, uint8_t step, int func_return) {
     // power down the field
     EPA_Finish();
 
     // send the USB packet
-    reply_mix(CMD_ACK, step, func_return, 0, 0, 0);
+    reply_mix(cmd, step, func_return, 0, 0, 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -287,28 +289,28 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
     // set up communication
     int func_return = EPA_Setup();
     if (func_return != 0) {
-        EPA_PACE_Collect_Nonce_Abort(1, func_return);
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_COLLECT_NONCE, 1, func_return);
         return;
     }
 
     // read the CardAccess file
     // this array will hold the CardAccess file
     uint8_t card_access[256] = {0};
-    int card_access_length = EPA_Read_CardAccess(card_access, 256);
+    int cardlen = EPA_Read_CardAccess(card_access, 256);
     // the response has to be at least this big to hold the OID
-    if (card_access_length < 18) {
-        EPA_PACE_Collect_Nonce_Abort(2, card_access_length);
+    if (cardlen < 18) {
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_COLLECT_NONCE, 2, cardlen);
         return;
     }
 
     // this will hold the PACE info of the card
     pace_version_info_t pace_version_info;
+
     // search for the PACE OID
-    func_return = EPA_Parse_CardAccess(card_access,
-                                       card_access_length,
-                                       &pace_version_info);
+    func_return = EPA_Parse_CardAccess(card_access, cardlen, &pace_version_info);
+
     if (func_return != 0 || pace_version_info.version == 0) {
-        EPA_PACE_Collect_Nonce_Abort(3, func_return);
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_COLLECT_NONCE, 3, func_return);
         return;
     }
 
@@ -317,25 +319,29 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
     func_return = EPA_PACE_MSE_Set_AT(pace_version_info, 2);
     // check if the command succeeded
     if (func_return != 0) {
-        EPA_PACE_Collect_Nonce_Abort(4, func_return);
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_COLLECT_NONCE, 4, func_return);
         return;
     }
 
     // now get the nonce
     uint8_t nonce[256] = {0};
-    uint8_t requested_size = (uint8_t)c->oldarg[0];
-    func_return = EPA_PACE_Get_Nonce(requested_size, nonce);
+    
+    struct p {
+        uint32_t m;
+    } PACKED;
+    struct p *packet = (struct p*)c->data.asBytes;
+
+    func_return = EPA_PACE_Get_Nonce(packet->m, nonce);
     // check if the command succeeded
     if (func_return < 0) {
-        EPA_PACE_Collect_Nonce_Abort(5, func_return);
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_COLLECT_NONCE, 5, func_return);
         return;
     }
 
-    // all done, return
     EPA_Finish();
 
     // save received information
-    reply_mix(CMD_ACK, 0, func_return, 0, nonce, func_return);
+    reply_mix(CMD_HF_EPA_COLLECT_NONCE, 0, func_return, 0, nonce, func_return);
 }
 
 //-----------------------------------------------------------------------------
@@ -347,23 +353,18 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
 // code on failure.
 //-----------------------------------------------------------------------------
 int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
+
     // build the APDU
     uint8_t apdu[sizeof(apdu_general_authenticate_pace_get_nonce) + 1];
+
     // copy the constant part
-    memcpy(apdu,
-           apdu_general_authenticate_pace_get_nonce,
-           sizeof(apdu_general_authenticate_pace_get_nonce));
+    memcpy(apdu, apdu_general_authenticate_pace_get_nonce, sizeof(apdu_general_authenticate_pace_get_nonce));
+    
     // append Le (requested length + 2 due to tag/length taking 2 bytes) in RAPDU
     apdu[sizeof(apdu_general_authenticate_pace_get_nonce)] = requested_length + 4;
 
-    // send it
     uint8_t response_apdu[262];
-    int send_return = EPA_APDU(apdu,
-                               sizeof(apdu),
-                               response_apdu,
-                               sizeof(response_apdu)
-                               );
-    // check if the command succeeded
+    int send_return = EPA_APDU(apdu, sizeof(apdu), response_apdu, sizeof(response_apdu));
     if (send_return < 6
             || response_apdu[send_return - 4] != 0x90
             || response_apdu[send_return - 3] != 0x00) {
@@ -393,26 +394,31 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
 int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password) {
     // create the MSE: Set AT APDU
     uint8_t apdu[23];
+
     // the minimum length (will be increased as more data is added)
     size_t apdu_length = 20;
+
     // copy the constant part
-    memcpy(apdu,
-           apdu_mse_set_at_start,
-           sizeof(apdu_mse_set_at_start));
+    memcpy(apdu, apdu_mse_set_at_start, sizeof(apdu_mse_set_at_start));
+
     // type: OID
     apdu[5] = 0x80;
+
     // length of the OID
     apdu[6] = sizeof(pace_version_info.oid);
+
     // copy the OID
-    memcpy(apdu + 7,
-           pace_version_info.oid,
-           sizeof(pace_version_info.oid));
+    memcpy(apdu + 7, pace_version_info.oid, sizeof(pace_version_info.oid));
+
     // type: password
     apdu[17] = 0x83;
+
     // length: 1
     apdu[18] = 1;
+
     // password
     apdu[19] = password;
+
     // if standardized domain parameters are used, copy the ID
     if (pace_version_info.parameter_id != 0) {
         apdu_length += 3;
@@ -423,19 +429,23 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
         // copy the parameter ID
         apdu[22] = pace_version_info.parameter_id;
     }
+
     // now set Lc to the actual length
     apdu[4] = apdu_length - 5;
+
     // send it
     uint8_t response_apdu[6];
-    int send_return = EPA_APDU(apdu,
-                               apdu_length,
-                               response_apdu,
-                               sizeof(response_apdu)
-                               );
+    int send_return = EPA_APDU(apdu, apdu_length, response_apdu, sizeof(response_apdu));
+
+    Dbprintf("send ret %d bytes", send_return);
+
+//    Dbhexdump(send_return, response_apdu, false);
+
     // check if the command succeeded
-    if (send_return != 6
-            || response_apdu[send_return - 4] != 0x90
-            || response_apdu[send_return - 3] != 0x00) {
+    if (send_return != 6)
+//            && response_apdu[send_return - 4] != 0x90
+//            || response_apdu[send_return - 3] != 0x00) 
+            {
         return 1;
     }
     return 0;
@@ -546,6 +556,6 @@ int EPA_Setup(void) {
         iso_type = 'b';
         return 0;
     }
-    Dbprintf("No card found.");
+    Dbprintf("No card found");
     return 1;
 }
