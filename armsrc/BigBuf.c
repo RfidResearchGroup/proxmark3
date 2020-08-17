@@ -105,6 +105,7 @@ void BigBuf_Clear(void) {
 // clear ALL of BigBuf
 void BigBuf_Clear_ext(bool verbose) {
     memset(BigBuf, 0, s_bigbuf_size);
+    clear_trace();
     if (verbose)
         Dbprintf("Buffer cleared (%i bytes)", s_bigbuf_size);
 }
