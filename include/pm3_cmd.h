@@ -512,7 +512,9 @@ typedef struct {
 #define CMD_HF_ISO15693_SNIFF                                             0x0312
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
-#define CMD_LF_SNIFF_RAW_ADC                                              0x0317
+#define CMD_HF_ISO15693_CSETUID                                           0x0316
+
+#define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 
 // For Hitag2 transponders
 #define CMD_LF_HITAG_SNIFF                                                0x0370

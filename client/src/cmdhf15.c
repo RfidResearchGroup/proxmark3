@@ -25,7 +25,7 @@
 #include "cmdhf15.h"
 #include <ctype.h>
 #include "cmdparser.h"    // command_t
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
 #include "iso15693tools.h"
@@ -1009,16 +1009,21 @@ static int CmdHF15Sim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_sim();
 
-    uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    if (param_gethex(Cmd, 0, uid, 16)) {
+    struct {
+        uint8_t uid[8];
+    } PACKED payload;
+
+    if (param_gethex(Cmd, 0, payload.uid, 16)) {
         PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
 
+    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_SIMULATE, 0, 0, 0, uid, 8);
+    SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t*)&payload, sizeof(payload));
+    WaitForResponse(CMD_HF_ISO15693_SIMULATE, &resp);
     return PM3_SUCCESS;
 }
 
@@ -1744,102 +1749,64 @@ static int CmdHF15Restore(const char *Cmd) {
  * Set UID for magic Chinese card
  */
 static int CmdHF15CSetUID(const char *Cmd) {
-    uint8_t uid[8] = {0x00};
-    uint8_t oldUid[8], newUid[8] = {0x00};
-    PacketResponseNG resp;
-    int reply = 1, fast = 0;
-    uint8_t data[4][9] = {{0x00}};
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_csetuid();
 
-    if (param_gethex(Cmd, 0, uid, 16)) {
+
+    struct {
+        uint8_t uid[8];
+    } PACKED payload;
+
+    if (param_gethex(Cmd, 0, payload.uid, 16)) {
         PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
         return PM3_EINVARG;
     }
 
-    if (uid[0] != 0xe0) {
+    if (payload.uid[0] != 0xE0) {
         PrintAndLogEx(WARNING, "UID must begin with the byte " _YELLOW_("E0"));
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "input new UID | " _YELLOW_("%s"), iso15693_sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "reverse input UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
 
-    if (getUID(false, oldUid) == false) {
-        PrintAndLogEx(FAILED, "can't get old/current UID.");
+    PrintAndLogEx(INFO, "getting current card details...");
+    uint8_t carduid[8] = {0x00};
+    if (getUID(false, carduid) == false) {
+        PrintAndLogEx(FAILED, "can't read card UID");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "using backdoor magic tag function");
+    PrintAndLogEx(INFO, "updating tag uid...");
+    
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_CSETUID, (uint8_t*)&payload, sizeof(payload));
 
-    // Command 1 : 02213E00000000
-    data[0][0] = 0x02;
-    data[0][1] = 0x21;
-    data[0][2] = 0x3e;
-    data[0][3] = 0x00;
-    data[0][4] = 0x00;
-    data[0][5] = 0x00;
-    data[0][6] = 0x00;
-
-    // Command 2 : 02213F69960000
-    data[1][0] = 0x02;
-    data[1][1] = 0x21;
-    data[1][2] = 0x3f;
-    data[1][3] = 0x69;
-    data[1][4] = 0x96;
-    data[1][5] = 0x00;
-    data[1][6] = 0x00;
-
-    // Command 3 : 022138u8u7u6u5 (where uX = uid byte X)
-    data[2][0] = 0x02;
-    data[2][1] = 0x21;
-    data[2][2] = 0x38;
-    data[2][3] = uid[7];
-    data[2][4] = uid[6];
-    data[2][5] = uid[5];
-    data[2][6] = uid[4];
-
-    // Command 4 : 022139u4u3u2u1 (where uX = uid byte X)
-    data[3][0] = 0x02;
-    data[3][1] = 0x21;
-    data[3][2] = 0x39;
-    data[3][3] = uid[3];
-    data[3][4] = uid[2];
-    data[3][5] = uid[1];
-    data[3][6] = uid[0];
-
-    for (int i = 0; i < 4; i++) {
-        AddCrc15(data[i], 7);
-
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO15693_COMMAND, sizeof(data[i]), fast, reply, data[i], sizeof(data[i]));
-
-        if (reply) {
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-                int len = resp.oldarg[0];
-                if (len < 2)  {                    
-                    PrintAndLogEx(WARNING, "command failed");
-                } else {
-                    PrintAndLogEx(INFO, "received %i octets", len);
-                    PrintAndLogEx(INFO, "%s", sprint_hex(resp.data.asBytes, len));
-                }
-            } else {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply");
-            }
-        }
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_CSETUID, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
     }
 
-    if (getUID(false, newUid) == false) {
-        PrintAndLogEx(FAILED, "can't get new UID");
+    PrintAndLogEx(INFO, "getting updated card details...");
+
+    if (getUID(false, carduid) == false) {
+        PrintAndLogEx(FAILED, "can't read card UID");
         return PM3_ESOFT;
     }
 
-    if (memcmp(newUid, uid, 8) != 0) {
-        PrintAndLogEx(FAILED, "setting UID on tag failed");
+    // reverse cardUID to compare
+    uint8_t revuid[8] = {0};
+    uint8_t i = 0;
+    while (i < sizeof(revuid)) {
+        revuid[i] = carduid[7-i];
+        i++;
+    }
+    
+    if (memcmp(revuid, payload.uid, 8) != 0) {
+        PrintAndLogEx(FAILED, "setting new UID (" _RED_("failed") ")");
         return PM3_ESOFT;
     } else {
-        PrintAndLogEx(SUCCESS, "old: %s", iso15693_sprintUID(NULL, oldUid));
-        PrintAndLogEx(SUCCESS, "new: " _GREEN_("%s"), iso15693_sprintUID(NULL, newUid));
+        PrintAndLogEx(SUCCESS, "setting new UID (" _GREEN_("ok") ")");
         return PM3_SUCCESS;
     }
 }
