@@ -55,6 +55,11 @@ clone_script:
 
     Write-Host "[ OK ]" -ForegroundColor Green
 
+    Write-Host "Removing ps startup_check.sh ..." -NoNewLine
+
+    Remove-Item -Recurse -Force -Path c:\ProxSpace\msys2\ps\startup_checks.sh
+
+    Write-Host "[ OK ]" -ForegroundColor Green
 
     Write-Host "Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." -NoNewLine
 
