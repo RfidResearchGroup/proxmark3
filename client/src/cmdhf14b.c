@@ -31,7 +31,7 @@ static int usage_hf_14b_info(void) {
     PrintAndLogEx(NORMAL, "       h    this help");
     PrintAndLogEx(NORMAL, "       s    silently");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       hf 14b info");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b info"));
     return 0;
 }
 static int usage_hf_14b_reader(void) {
@@ -40,7 +40,7 @@ static int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, "       h    this help");
     PrintAndLogEx(NORMAL, "       s    silently");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       hf 14b reader");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b reader"));
     return 0;
 }
 static int usage_hf_14b_raw(void) {
@@ -54,7 +54,7 @@ static int usage_hf_14b_raw(void) {
     PrintAndLogEx(NORMAL, "       -ss   active signal field ON with select for SRx ST Microelectronics tags");
     PrintAndLogEx(NORMAL, "       -t    timeout in ms");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       hf 14b raw -s -c -p 0200a40400");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b raw -s -c -p 0200a40400"));
     return 0;
 }
 static int usage_hf_14b_sniff(void) {
@@ -64,7 +64,7 @@ static int usage_hf_14b_sniff(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h    this help");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       hf 14b sniff");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sniff"));
     return 0;
 }
 static int usage_hf_14b_sim(void) {
@@ -74,8 +74,8 @@ static int usage_hf_14b_sim(void) {
     PrintAndLogEx(NORMAL, "       h    this help");
     PrintAndLogEx(NORMAL, "       u    4byte UID/PUPI");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       hf 14b sim");
-    PrintAndLogEx(NORMAL, "       hf 14b sim u 11223344");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sim"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sim u 11223344"));
     return 0;
 }
 static int usage_hf_14b_read_srx(void) {
@@ -84,8 +84,8 @@ static int usage_hf_14b_read_srx(void) {
     PrintAndLogEx(NORMAL, "       h        this help");
     PrintAndLogEx(NORMAL, "       <1|2>    1 = SRIX4K , 2 = SRI512");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       hf 14b sriread 1");
-    PrintAndLogEx(NORMAL, "       hf 14b sriread 2");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriread 1"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriread 2"));
     return 0;
 }
 static int usage_hf_14b_write_srx(void) {
@@ -96,10 +96,10 @@ static int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, "       <block>  BLOCK number depends on tag, special block == FF");
     PrintAndLogEx(NORMAL, "       <data>   hex bytes of data to be written");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, "       hf 14b sriwrite 1 7F 11223344");
-    PrintAndLogEx(NORMAL, "       hf 14b sriwrite 1 FF 11223344");
-    PrintAndLogEx(NORMAL, "       hf 14b sriwrite 2 15 11223344");
-    PrintAndLogEx(NORMAL, "       hf 14b sriwrite 2 FF 11223344");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 1 7F 11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 1 FF 11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 2 15 11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 2 FF 11223344"));
     return 0;
 }
 static int usage_hf_14b_dump(void) {
@@ -112,8 +112,9 @@ static int usage_hf_14b_dump(void) {
                   "\tf <name>      filename,  if no <name> UID will be used as filename\n"
                   "\n"
                   "Example:\n"
-                  "\thf 14b dump f\n"
-                  "\thf 14b dump 2 f mydump");
+                  _YELLOW_("\thf 14b dump f\n")
+                  _YELLOW_("\thf 14b dump 2 f mydump")
+                  );
     return 0;
 }
 
@@ -136,14 +137,11 @@ static bool waitCmd14b(bool verbose) {
 
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-        if ((resp.oldarg[0] & 0xFF) > 0) return false;
-
         uint16_t len = (resp.oldarg[1] & 0xFFFF);
-
-        uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-        memcpy(data, resp.data.asBytes, len);
+        uint8_t *data = resp.data.asBytes;
 
         if (verbose) {
+
             if (len >= 3) {
                 bool crc = check_crc(CRC_14443_B, data, len);
 
@@ -156,7 +154,6 @@ static bool waitCmd14b(bool verbose) {
                              );
             } else if (len == 0) {
                 PrintAndLogEx(SUCCESS, "received SOF only (maybe iCLASS/Picopass)");
-	
             } else {
                 PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
             }
@@ -291,15 +288,20 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
 
-    if (!reply) return PM3_SUCCESS;
+    if (reply == false) {
+        return PM3_SUCCESS;
+    }
 
     bool success = true;
     // get back iso14b_card_select_t, don't print it.
-    if (select)
+    if (select) {
         success = waitCmd14b(false);
+    }
 
     // get back response from the raw bytes you sent.
-    if (success && datalen > 0) waitCmd14b(true);
+    if (success && datalen > 0) {
+        waitCmd14b(true);
+    }
 
     return PM3_SUCCESS;
 }
@@ -868,7 +870,7 @@ static int CmdHF14BDump(const char *Cmd) {
             break;
     }
 
-    if (!get_14b_UID(&card)) {
+    if (get_14b_UID(&card) == false) {
         PrintAndLogEx(WARNING, "No tag found.");
         return PM3_SUCCESS;
     }
