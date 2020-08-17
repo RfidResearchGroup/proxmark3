@@ -1465,8 +1465,8 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
     for (uint16_t i = 0; i < n; i++) {
 
         char tmp_fullpath[1024] = {0};
-        strcat(tmp_fullpath, path);
-        strcat(tmp_fullpath, namelist[i]->d_name);
+        strncat(tmp_fullpath, path, sizeof(tmp_fullpath) - 1);
+        strncat(tmp_fullpath, namelist[i]->d_name, strlen(tmp_fullpath) - 1);
    
         if (is_directory(tmp_fullpath)) {
             
