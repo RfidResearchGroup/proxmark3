@@ -334,6 +334,30 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     // Draw the CRC column
     const char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
+	// mark short bytes (less than 8 Bit + Parity)
+	if (protocol == ISO_14443A ||
+        protocol == PROTO_MIFARE || 
+        protocol == THINFILM) {
+
+        // approximated with 128 * (9 * data_len);
+        uint16_t bitime = 1056 + 32;
+
+        if (duration < bitime) {
+
+            uint8_t m = 7;
+            while (m > 0) {
+                bitime -= 128;               
+                if ( duration > bitime) {
+                    break;
+                } 
+                m--;
+            }
+            line[(data_len-1)/16][((data_len-1)%16) * 4 + 2] = '(';
+			line[(data_len-1)/16][((data_len-1)%16) * 4 + 3] = m + 0x30; 
+            line[(data_len-1)/16][((data_len-1)%16) * 4 + 4] = ')';
+		}
+	}
+
 
     uint32_t previous_end_of_transmission_timestamp = 0;
     if (prev_eot) {
