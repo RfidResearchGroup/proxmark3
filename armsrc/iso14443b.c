@@ -1044,7 +1044,7 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
     }
     LED_B_OFF();
 
-    *start_time = *start_time + DELAY_ARM_TO_TAG;
+    *start_time += DELAY_ARM_TO_TAG;
 }
 
 //-----------------------------------------------------------------------------
@@ -1128,12 +1128,12 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 /*
 *  Convenience function to encode, transmit and trace iso 14443b comms
 */
-static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time) {
+static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time) {
     tosend_t *ts = get_tosend();
     CodeIso14443bAsReader(cmd, len);
     TransmitFor14443b_AsReader(start_time);
-    uint32_t end_time = *start_time + 32 * ((8 * ts->max)); 
-    LogTrace(cmd, len, *start_time, end_time, NULL, true);
+    *eof_time = *start_time + (32 * (8 * ts->max)); 
+    LogTrace(cmd, len, *start_time, *eof_time, NULL, true);
 }
 
 /* Sends an APDU to the tag
@@ -1155,30 +1155,31 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
     
     // send
     uint32_t start_time = 0;
-    CodeAndTransmit14443bAsReader(message_frame, message_length + 4, &start_time);
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(message_frame, sizeof(message_frame), &start_time, &eof_time);
     
     // get response
-    if (response)  {
-        uint32_t eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;
-        int retlen = Get14443bAnswerFromTag(response, respmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
-        FpgaDisableTracing();
-
-        if (retlen < 3) {
-            LED_A_OFF();
-            return 0;
-        }
-
-        // VALIDATE CRC
-        if (!check_crc(CRC_14443_B, response, retlen)) {
-            if (DBGLEVEL > DBG_DEBUG) DbpString("CRC fail");
-            return 0;
-        }
-
-        return retlen;
-    } else {
+    if (response == NULL)  {
+        LED_A_OFF();
         return 0;
     }
-    LED_A_OFF();
+
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    int retlen = Get14443bAnswerFromTag(response, respmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
+    FpgaDisableTracing();
+
+    if (retlen < 3) {
+        LED_A_OFF();
+        return 0;
+    }
+
+    // VALIDATE CRC
+    if (!check_crc(CRC_14443_B, response, retlen)) {
+        if (DBGLEVEL > DBG_DEBUG) DbpString("CRC fail");
+        return 0;
+    }
+
+    return retlen;
 }
 
 /**
@@ -1192,16 +1193,15 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     uint8_t r_papid[10] = {0x0};
    
     uint32_t start_time = 0;
-    CodeAndTransmit14443bAsReader(init_srx, sizeof(init_srx), &start_time);
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(init_srx, sizeof(init_srx), &start_time, &eof_time);
 
-    uint32_t eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
     int retlen = Get14443bAnswerFromTag(r_init, sizeof(r_init), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
     if (retlen <= 0)
         return 2;
-
-//    Dbprintf("Randomly generated Chip ID (+ 2 byte CRC): %02x [%02x %02x]", r_init[0], r_init[1], r_init[2]);
 
     // Randomly generated Chip ID
     if (card) {
@@ -1215,9 +1215,9 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     AddCrc14B(select_srx, 2);
 
     start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
-    CodeAndTransmit14443bAsReader(select_srx, sizeof(select_srx), &start_time);
+    CodeAndTransmit14443bAsReader(select_srx, sizeof(select_srx), &start_time, &eof_time);
 
-    eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
     retlen = Get14443bAnswerFromTag(r_select, sizeof(r_select), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
@@ -1241,9 +1241,9 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     AddCrc14B(select_srx, 1);
 
     start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
-    CodeAndTransmit14443bAsReader(select_srx, 3, &start_time); // Only first three bytes for this one
+    CodeAndTransmit14443bAsReader(select_srx, 3, &start_time, &eof_time); // Only first three bytes for this one
     
-    eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
     retlen = Get14443bAnswerFromTag(r_papid, sizeof(r_papid), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
@@ -1281,9 +1281,10 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
 
     // first, wake up the tag
     uint32_t start_time = 0;
-    CodeAndTransmit14443bAsReader(wupb, sizeof(wupb), &start_time);
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(wupb, sizeof(wupb), &start_time, &eof_time);
 
-    uint32_t eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;;
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;;
     int retlen = Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
@@ -1310,9 +1311,9 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     attrib[7] = r_pupid[10] & 0x0F;
     AddCrc14B(attrib, 9);
     start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
-    CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time);
+    CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time);
     
-    eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
     retlen = Get14443bAnswerFromTag(r_attrib, sizeof(r_attrib), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
@@ -1399,9 +1400,10 @@ static bool ReadSTBlock(uint8_t blocknr, uint8_t *block) {
     uint8_t r_block[6] = {0};
 
     uint32_t start_time = 0;
-    CodeAndTransmit14443bAsReader(cmd, sizeof(cmd), &start_time);
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(cmd, sizeof(cmd), &start_time, &eof_time);
 
-    uint32_t eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
     int retlen = Get14443bAnswerFromTag(r_block, sizeof(r_block), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
@@ -1730,9 +1732,10 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         uint8_t buf[100] = {0};
                 
         uint32_t start_time = 0;
-        CodeAndTransmit14443bAsReader(cmd, len, &start_time); // raw
+        uint32_t eof_time = 0;
+        CodeAndTransmit14443bAsReader(cmd, len, &start_time, &eof_time); 
 
-        uint32_t eof_time = start_time + DELAY_ISO14443B_VCD_TO_VICC_READER;
+        eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
         status = Get14443bAnswerFromTag(buf, sizeof(buf), 5 * ISO14443B_READER_TIMEOUT, &eof_time); // raw
         FpgaDisableTracing();
 
