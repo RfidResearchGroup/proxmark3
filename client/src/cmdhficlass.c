@@ -2997,11 +2997,11 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(CSN, sizeof(CSN)));
     PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
 
-    PrintAndLogEx(SUCCESS, "Generating diversified keys...");
+    PrintAndLogEx(SUCCESS, "Generating diversified keys %s", (use_elite || use_raw) ? NOLF : "");
     if (use_elite)
-        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
+        PrintAndLogEx(NORMAL, "using " _YELLOW_("elite algo"));
     if (use_raw)
-        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
+        PrintAndLogEx(NORMAL, "using " _YELLOW_("raw mode"));
 
     GenerateMacFrom(CSN, CCNR, use_raw, use_elite, keyBlock, keycount, pre);
 
@@ -3024,7 +3024,8 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         uint8_t timeout = 0;
 
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "Aborted via keyboard!\n");
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "Aborted via keyboard!");
             goto out;
         }
 
@@ -3069,13 +3070,14 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         switch (isOK) {
             case 1: {
                 found_key = true;
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s")
                               , sprint_hex(keyBlock + (key_offset + found_offset) * 8, 8)
                              );
                 break;
             }
             case 0: {
-                PrintAndLogEx(INFO, "Chunk [%d/%d] : %.1fs - no luck"
+                PrintAndLogEx(INPLACE, "Chunk [%d/%d] : %.1fs - no luck"
                               , key_offset
                               , keycount
                               , (float)(t2 / 1000.0)
@@ -3084,8 +3086,9 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             }
             case 99: {
             }
-            default:
+            default: {
                 break;
+            }
         }
 
         // both keys found.
@@ -3098,7 +3101,8 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 out:
     t1 = msclock() - t1;
 
-    PrintAndLogEx(SUCCESS, "Time in iclass chk: " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Time in iclass chk: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
     DropField();
 
     if (found_key) {
