@@ -1,6 +1,7 @@
 /* ----------------------------------------------------------------------------
  * umm_malloc.c - a memory allocator for embedded systems (microcontrollers)
  *
+ * From https://github.com/rhempel/umm_malloc
  * See LICENSE for copyright notice
  * See README.md for acknowledgements and description of internals
  * ----------------------------------------------------------------------------

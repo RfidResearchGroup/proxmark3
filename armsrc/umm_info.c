@@ -7,6 +7,7 @@
 #ifdef UMM_INFO
 
 /* ----------------------------------------------------------------------------
+ * From https://github.com/rhempel/umm_malloc
  * One of the coolest things about this little library is that it's VERY
  * easy to get debug information about the memory heap by simply iterating
  * through all of the memory blocks.

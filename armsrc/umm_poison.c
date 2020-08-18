@@ -1,4 +1,5 @@
 /* poisoning (UMM_POISON_CHECK) {{{ */
+/* From https://github.com/rhempel/umm_malloc */
 
 #include <stdint.h>
 #include <stddef.h>

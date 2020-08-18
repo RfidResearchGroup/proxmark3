@@ -5,6 +5,7 @@
 
 #ifdef UMM_INTEGRITY_CHECK
 /*
+ * From https://github.com/rhempel/umm_malloc
  * Perform integrity check of the whole heap data. Returns 1 in case of
  * success, 0 otherwise.
  *
