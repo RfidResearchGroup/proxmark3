@@ -1,10 +1,10 @@
-#ifdef UMM_INFO
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 
 #include <math.h>
+#ifdef UMM_INFO
 
 /* ----------------------------------------------------------------------------
  * One of the coolest things about this little library is that it's VERY

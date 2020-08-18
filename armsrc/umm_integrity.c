@@ -1,9 +1,9 @@
 /* integrity check (UMM_INTEGRITY_CHECK) {{{ */
-#ifdef UMM_INTEGRITY_CHECK
 
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef UMM_INTEGRITY_CHECK
 /*
  * Perform integrity check of the whole heap data. Returns 1 in case of
  * success, 0 otherwise.
