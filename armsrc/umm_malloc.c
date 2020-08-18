@@ -48,7 +48,8 @@
 
 #define DBGLOG_LEVEL 0
 
-#include "dbglog/dbglog.h"
+//#include "dbglog/dbglog.h"
+#include "dbprint.h"
 
 extern void *UMM_MALLOC_CFG_HEAP_ADDR;
 extern uint32_t UMM_MALLOC_CFG_HEAP_SIZE;

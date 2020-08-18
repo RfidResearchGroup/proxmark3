@@ -50,4 +50,26 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci);
 void print_result(const char *name, uint8_t *buf, size_t len);
 //void PrintToSendBuffer(void);
 
+// Functions for umm_malloc
+// Alternatively, use https://github.com/rhempel/c-helper-macros/blob/develop/dbglog/dbglog.h
+#define DBGLOG_FORCE(...) {\
+    Dbprintf (__VA_ARGS__); \
+    }
+
+#define DBGLOG_ERROR(...) {\
+    if (DBGLEVEL >= DBG_ERROR) Dbprintf (__VA_ARGS__); \
+    }
+
+#define DBGLOG_CRITICAL(...) {\
+    if (DBGLEVEL >= DBG_ERROR) Dbprintf (__VA_ARGS__); \
+    }
+
+#define DBGLOG_DEBUG(...) {\
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf (__VA_ARGS__); \
+    }
+
+#define DBGLOG_TRACE(...) {\
+    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf (__VA_ARGS__); \
+    }
+
 #endif
