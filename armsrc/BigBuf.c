@@ -21,6 +21,9 @@ extern uint8_t _stack_start, __bss_end__;
 // We know that bss is aligned to 4 bytes.
 static uint8_t *BigBuf = &__bss_end__;
 
+void *UMM_MALLOC_CFG_HEAP_ADDR = &__bss_end__;
+uint32_t UMM_MALLOC_CFG_HEAP_SIZE = (uint32_t)&_stack_start - (uint32_t)&__bss_end__;
+
 /* BigBuf memory layout:
 Pointer to highest available memory: s_bigbuf_hi
     high s_bigbuf_size
