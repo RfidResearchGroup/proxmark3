@@ -10,7 +10,8 @@ LXXFLAGS =  -lpthread
 OBJS = cryptolib.o util.o
 HEADERS = cryptolib.h util.h
 SRC = cryptolib.c util.c
-EXES = cm sm sma sma_multi crf
+EXES = cm sm sma sma_multi 
+#EXES = cm sm sma sma_multi crf
 
 all: $(OBJS) $(EXES)
 
