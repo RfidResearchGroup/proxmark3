@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include "util.h"
+#include <stdio.h>
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t *dst)
 {
