@@ -1,9 +1,9 @@
 /*
- * 
+ *
  * Various Utilities
  *
  * Copyright (C) 2010, Flavio D. Garcia, Peter van Rossum, Roel Verdult
- * and Ronny Wichers Schreur. Radboud University Nijmegen   
+ * and Ronny Wichers Schreur. Radboud University Nijmegen
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,17 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-#include <stdint.h>
-#include "defines.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+#include <stdint.h>
 
 #define AEND  "\x1b[0m"
 
@@ -37,7 +39,10 @@
 #define _CYAN_(s) "\x1b[36m" s AEND
 #define _WHITE_(s) "\x1b[37m" s AEND
 
-void num_to_bytes(uint64_t n, size_t len, byte_t* dst);
-void print_bytes(const byte_t* pbtData, const size_t szLen);
+void num_to_bytes(uint64_t n, size_t len, uint8_t *dst);
+void print_bytes(const uint8_t *pbtData, const size_t szLen);
 
+#ifdef __cplusplus
+}
+#endif
 #endif // _UTIL_H_

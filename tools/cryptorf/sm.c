@@ -20,10 +20,16 @@
  * 
  */
 
-#include "defines.h"
+#include <inttypes.h>
+#include <stddef.h>
+#include <stdio.h>
 #include "cryptolib.h"
 #include "util.h"
-#include <stdio.h>
+#ifdef _MSC_VER
+  // avoid scanf warnings in Visual Studio
+  #define _CRT_SECURE_NO_WARNINGS
+  #define _CRT_SECURE_NO_DEPRECATE
+#endif
 
 int main(int argc, const char* argv[])
 {
@@ -31,16 +37,16 @@ int main(int argc, const char* argv[])
   crypto_state_t s;
   size_t pos;
 
-  byte_t    Q[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Reader random
-  byte_t   Gc[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Secret seed
-  byte_t   Ci[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Card random (last state)
-  byte_t   Ch[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Reader answer
-  byte_t Ci_1[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Card answer
+  uint8_t    Q[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Reader random
+  uint8_t   Gc[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Secret seed
+  uint8_t   Ci[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Card random (last state)
+  uint8_t   Ch[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Reader answer
+  uint8_t Ci_1[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Card answer
 
   // Various argument options
-  ui64 nGc; // Card secret
-  ui64 nCi; // Card random
-  ui64 nQ; // Reader main-random
+  uint64_t nGc; // Card secret
+  uint64_t nCi; // Card random
+  uint64_t nQ; // Reader main-random
 
   // Show header and help syntax
   printf("SecureMemory simulator - (c) Radboud University Nijmegen\n");
@@ -51,9 +57,9 @@ int main(int argc, const char* argv[])
   }
 
   // Parse arguments
-  sscanf(argv[1],"%016llx",&nGc); num_to_bytes(nGc,8,Gc);
-  sscanf(argv[2],"%016llx",&nCi); num_to_bytes(nCi,8,Ci);
-  sscanf(argv[3],"%016llx",&nQ); num_to_bytes(nQ,8,Q);
+  sscanf(argv[1],"%016" SCNx64,&nGc); num_to_bytes(nGc,8,Gc);
+  sscanf(argv[2],"%016" SCNx64,&nCi); num_to_bytes(nCi,8,Ci);
+  sscanf(argv[3],"%016" SCNx64,&nQ); num_to_bytes(nQ,8,Q);
 
   // Calculate authentication
   sm_auth(Gc,Ci,Q,Ch,Ci_1,&s);

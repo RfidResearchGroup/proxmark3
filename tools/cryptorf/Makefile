@@ -1,31 +1,23 @@
-CC = gcc
-CXX = g++
-LD = gcc
-LXX = g++
-CFLAGS = -W -Wall -O4
-CXXFLAGS = -W -Wall -O4 -std=c++11
-LDFLAGS = 
-LXXFLAGS =  -lpthread 
+MYSRCPATHS = ../../common ../../common/cryptorf
+MYSRCS = cryptolib.c util.c
+MYINCLUDES = -I../../common/cryptorf
+MYCFLAGS =
+MYDEFS =
+MYLDLIBS = -lpthread
 
-OBJS = cryptolib.o util.o
-HEADERS = cryptolib.h util.h
-SRC = cryptolib.c util.c
-EXES = cm sm sma sma_multi 
-#EXES = cm sm sma sma_multi crf
+BINS = cm sm sma sma_multi
+INSTALLTOOLS = $(BINS)
 
-all: $(OBJS) $(EXES)
+include ../../Makefile.host
 
-%.o : %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+# checking platform can be done only after Makefile.host
+ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    CFLAGS += -D_ISOC99_SOURCE
+endif
 
-% : %.c $(OBJS)
-	$(LD) $(CFLAGS) $(LDFLAGS) -o $@ $< $(OBJS)
-
-% : %.cpp $(SRC)
-	$(LXX) $(CXXFLAGS) -o $@ $< $(SRC) $(LXXFLAGS)
-
-crf: crf.c $(OBJS)
-	$(LD) $(CFLAGS) $(LDFLAGS) -o crf $< $(OBJS) -lnfc
-
-clean:
-	rm -f $(OBJS) $(EXES) crf
+cm : $(OBJDIR)/cm.o $(MYOBJS)
+sm : $(OBJDIR)/sm.o $(MYOBJS)
+sma : $(OBJDIR)/sma.o $(MYOBJS)
+sma_multi : $(OBJDIR)/sma_multi.o $(MYOBJS)

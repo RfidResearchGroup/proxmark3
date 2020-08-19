@@ -20,21 +20,24 @@
  * 
  * Modified Iceman, 2020
  */
- 
-#include "defines.h"
-#include "cryptolib.h"
-#include "util.h"
+
 #include <stdio.h>
-#include <time.h>
+#include <string.h>
+#include <inttypes.h>
 #include <iostream>
 #include <vector>
 #include <map>
 #include <algorithm> // sort, max_element, random_shuffle, remove_if, lower_bound 
 #include <functional> // greater, bind2nd
+#include "cryptolib.h"
+#include "util.h"
 
 using namespace std;
 
 #ifdef _MSC_VER
+  // avoid scanf warnings in Visual Studio
+  #define _CRT_SECURE_NO_WARNINGS
+  #define _CRT_SECURE_NO_DEPRECATE
   #define inline __inline
 #endif
 
@@ -125,13 +128,13 @@ typedef struct {
     nibble b1r;
     nibble b1s;
   bool invalid;
-  byte_t Gc[8];
+  uint8_t Gc[8];
 }cs_t;
 typedef cs_t* pcs;
 
 typedef struct {
-    byte_t addition;
-    byte_t out;
+    uint8_t addition;
+    uint8_t out;
 } lookup_entry;
 
 enum cipher_state_side {
@@ -145,18 +148,18 @@ void print_cs(const char* text,pcs s)
   
   printf("%s",text);
   for(pos=6;pos>=0;pos--)
-    printf(" %02x",(byte_t)(s->l>>(pos*5))&0x1f);
+    printf(" %02x",(uint8_t)(s->l>>(pos*5))&0x1f);
   printf(" |");
   for(pos=6;pos>=0;pos--)
-    printf(" %02x",(byte_t)(s->m>>(pos*7))&0x7f);
+    printf(" %02x",(uint8_t)(s->m>>(pos*7))&0x7f);
   printf(" |");
   for(pos=4;pos>=0;pos--)
-    printf(" %02x",(byte_t)(s->r>>(pos*5))&0x1f);
+    printf(" %02x",(uint8_t)(s->r>>(pos*5))&0x1f);
   
   printf("\n");
 }
 
-static inline byte_t mod(byte_t a, byte_t m)
+static inline uint8_t mod(uint8_t a, uint8_t m)
 {
   // Just return the input when this is less or equal than the modular value
   if (a<m) return a;
@@ -168,27 +171,27 @@ static inline byte_t mod(byte_t a, byte_t m)
   return (a == 0) ? m : a;
 }
 
-static inline byte_t bit_rotate_l(byte_t a, byte_t n_bits)
+static inline uint8_t bit_rotate_l(uint8_t a, uint8_t n_bits)
 {
   // Rotate value a with the length of n_bits only 1 time
-  byte_t mask = (1 << n_bits) - 1;
+  uint8_t mask = (1 << n_bits) - 1;
   return ((a << 1) | (a >> (n_bits - 1))) & mask;
 }
 
-static inline byte_t bit_rotate_r(byte_t a, byte_t n_bits)
+static inline uint8_t bit_rotate_r(uint8_t a, uint8_t n_bits)
 {
   return ((a >> 1) | ((a&1) << (n_bits - 1)));
 }
 
-static byte_t lookup_left_substraction[0x400];
-static byte_t lookup_right_subtraction[0x400];
+static uint8_t lookup_left_substraction[0x400];
+static uint8_t lookup_right_subtraction[0x400];
 static lookup_entry lookup_left[0x100000];
 static lookup_entry lookup_right[0x8000];
-static byte_t left_addition[0x100000];
+static uint8_t left_addition[0x100000];
 
 static inline void init_lookup_left()
 {
-  byte_t b3,b6,temp;
+  uint8_t b3,b6,temp;
   int i,index;
 
     for(i = 0; i <0x400; i++)
@@ -207,7 +210,7 @@ static inline void init_lookup_left()
 
 static inline void init_lookup_right()
 {
-    byte_t b16,b18,temp;
+    uint8_t b16,b18,temp;
   int i,index;
 
   for(i = 0; i <0x400; i++)
@@ -226,8 +229,8 @@ static void init_lookup_left_substraction()
 {
     for(int index = 0; index < 0x400 ; index++)
     {
-        byte_t b3 = (index >> 5 & 0x1f);
-        byte_t bx = (index & 0x1f);
+        uint8_t b3 = (index >> 5 & 0x1f);
+        uint8_t bx = (index & 0x1f);
         lookup_left_substraction[index] = bit_rotate_r(mod((bx+0x1f)-b3,0x1f),5);
     }
 }
@@ -237,12 +240,12 @@ static void init_lookup_right_substraction()
     for(int index = 0; index < 0x400 ; index++)
     {
         int b16 = (index >>5);
-        byte_t bx = (index & 0x1f);
+        uint8_t bx = (index & 0x1f);
         lookup_right_subtraction[index] = mod((bx+0x1f)-b16,0x1f);
     }
 }
 
-static inline void previous_left(byte_t in, vector<cs_t> *candidate_states)
+static inline void previous_left(uint8_t in, vector<cs_t> *candidate_states)
 {
   pcs state;
   size_t size = candidate_states->size();
@@ -250,7 +253,7 @@ static inline void previous_left(byte_t in, vector<cs_t> *candidate_states)
   {
     state = &((*candidate_states)[pos]);
 
-    byte_t bx = (byte_t)((state->l >> 30) & 0x1f);
+    uint8_t bx = (uint8_t)((state->l >> 30) & 0x1f);
     unsigned b3 = (unsigned)(state->l >> 5) & 0x3e0;
     state->l = (state->l << 5);
 
@@ -267,7 +270,7 @@ static inline void previous_left(byte_t in, vector<cs_t> *candidate_states)
         state->l ^= (((uint64_t)in & 0x1f) << 20);
       }
     } else {
-      byte_t b6 = lookup_left_substraction[b3|bx];
+      uint8_t b6 = lookup_left_substraction[b3|bx];
       state->l = (state->l & 0x7ffffffe0ull) | b6;
       state->l ^= (((uint64_t)in & 0x1f) << 20);
 
@@ -282,7 +285,7 @@ static inline void previous_left(byte_t in, vector<cs_t> *candidate_states)
   }
 }
 
-static inline void previous_right(byte_t in, vector<cs_t> *candidate_states)
+static inline void previous_right(uint8_t in, vector<cs_t> *candidate_states)
 {
   pcs state;
   size_t size = candidate_states->size();
@@ -290,7 +293,7 @@ static inline void previous_right(byte_t in, vector<cs_t> *candidate_states)
   {
     state = &((*candidate_states)[pos]);
     
-    byte_t bx = (byte_t)((state->r >> 20) & 0x1f);
+    uint8_t bx = (uint8_t)((state->r >> 20) & 0x1f);
     unsigned b16 = (unsigned)(state->r & 0x3e0);//(state->buffer_r >> 10) & 0x1f;
     
     state->r = (state->r << 5);
@@ -307,7 +310,7 @@ static inline void previous_right(byte_t in, vector<cs_t> *candidate_states)
         state->r ^= (((uint64_t)in & 0xf8) << 12);
       }
     } else{
-          byte_t b18 = lookup_right_subtraction[b16|bx];
+          uint8_t b18 = lookup_right_subtraction[b16|bx];
           state->r = (state->r & 0x1ffffe0ull) | b18;
           state->r ^= (((uint64_t)in & 0xf8) << 12);
           //state->b_right  = ((b14^b17) & 0x0f);
@@ -323,7 +326,7 @@ static inline void previous_right(byte_t in, vector<cs_t> *candidate_states)
   }
 }
 
-static inline byte_t next_left_fast(byte_t in, uint64_t* left)
+static inline uint8_t next_left_fast(uint8_t in, uint64_t* left)
 {
   if (in) *left ^= ((in & 0x1f) << 20);
   lookup_entry* lookup = &(lookup_left[((*left) & 0xf801f)]);
@@ -331,10 +334,10 @@ static inline byte_t next_left_fast(byte_t in, uint64_t* left)
     return lookup->out;
 }
 
-static inline byte_t next_left_ksbyte(uint64_t* left)
+static inline uint8_t next_left_ksbyte(uint64_t* left)
 {
   lookup_entry* lookup;
-  byte_t bt;
+  uint8_t bt;
   
   *left = (((*left) >> 5)| ((uint64_t)left_addition[((*left) & 0xf801f)] << 30));
   lookup = &(lookup_left[((*left) & 0xf801f)]);
@@ -347,7 +350,7 @@ static inline byte_t next_left_ksbyte(uint64_t* left)
     return bt;
 }
 
-static inline byte_t next_right_fast(byte_t in, uint64_t* right)
+static inline uint8_t next_right_fast(uint8_t in, uint64_t* right)
 {
     if (in) *right ^= ((in&0xf8) << 12);
     lookup_entry* lookup = &(lookup_right[((*right) & 0x7c1f)]);
@@ -355,10 +358,10 @@ static inline byte_t next_right_fast(byte_t in, uint64_t* right)
     return lookup->out;
 }
 
-static inline void sm_left_mask(const byte_t* ks, byte_t* mask, uint64_t rstate)
+static inline void sm_left_mask(const uint8_t* ks, uint8_t* mask, uint64_t rstate)
 {
   size_t pos;
-  byte_t bt;
+  uint8_t bt;
   
   for (pos=0; pos<16; pos++)
   {
@@ -375,14 +378,14 @@ static inline void sm_left_mask(const byte_t* ks, byte_t* mask, uint64_t rstate)
   }
 }
 
-static inline uint32_t sm_right(const byte_t* ks, byte_t* mask, vector<uint64_t>* pcrstates)
+static inline uint32_t sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_t>* pcrstates)
 {
-  byte_t tmp_mask[16];
+  uint8_t tmp_mask[16];
   size_t pos,bits,bit,topbits;
   uint64_t rstate,counter;
   map<uint64_t,uint64_t> bincstates;
   map<uint64_t,uint64_t>::iterator it;
-  byte_t bt;
+  uint8_t bt;
 
   topbits = 0;
   for (counter=0; counter<0x2000000; counter++)
@@ -452,7 +455,7 @@ static inline uint32_t sm_right(const byte_t* ks, byte_t* mask, vector<uint64_t>
 
 static inline void previous_all_input(vector<cs_t> *pcstates, uint32_t gc_byte_index, cipher_state_side css)
 {
-  byte_t btGc,in;
+  uint8_t btGc,in;
   vector<cs_t> ncstates;
   vector<cs_t> prev_ncstates;
     vector<cs_t>::iterator it,itnew;
@@ -489,7 +492,7 @@ static inline void previous_all_input(vector<cs_t> *pcstates, uint32_t gc_byte_i
   *pcstates = prev_ncstates;
 }
 
-static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, const uint64_t rstate_after_gc, const byte_t* Q, vector<cs_t>* pcstates)
+static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, const uint64_t rstate_after_gc, const uint8_t* Q, vector<cs_t>* pcstates)
 {
   vector<cs_t>::iterator it;
   vector<cs_t> csl_cand;
@@ -556,14 +559,14 @@ static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, c
   }
 }
 
-static inline void sm_left(const byte_t* ks, byte_t* mask, vector<cs_t>* pcstates)
+static inline void sm_left(const uint8_t* ks, uint8_t* mask, vector<cs_t>* pcstates)
 {
   map<uint64_t,cs_t> bincstates;
   map<uint64_t,cs_t>::iterator it;
   uint64_t counter,lstate;
   size_t pos,bits,bit;
-  byte_t correct_bits[16];
-  byte_t bt;
+  uint8_t correct_bits[16];
+  uint8_t bt;
   cs_t state;
   lookup_entry* lookup;
 
@@ -645,7 +648,7 @@ static inline void sm_left(const byte_t* ks, byte_t* mask, vector<cs_t>* pcstate
   reverse(pcstates->begin(),pcstates->end()); 
 }
 
-static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, const byte_t* Q, vector<cs_t>* pcstates)
+static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, const uint8_t* Q, vector<cs_t>* pcstates)
 {
   vector<cs_t> csl_cand,csl_search;
   vector<cs_t>::iterator itsearch,itcand;
@@ -778,31 +781,31 @@ int main(int argc, const char* argv[])
     vector<cs_t>::iterator it;
   uint32_t rbits;
   
-//  byte_t   Gc[ 8] = {0x4f,0x79,0x4a,0x46,0x3f,0xf8,0x1d,0x81};
-//  byte_t   Gc[ 8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-//  byte_t   Ci[ 8] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
-//  byte_t    Q[ 8] = {0x12,0x34,0x56,0x78,0x12,0x34,0x56,0x78};
-  byte_t   Gc[ 8];
-  byte_t   Ci[ 8];
-  byte_t    Q[ 8];
-  byte_t   Ch[ 8];
-  byte_t Ci_1[ 8];
+//  uint8_t   Gc[ 8] = {0x4f,0x79,0x4a,0x46,0x3f,0xf8,0x1d,0x81};
+//  uint8_t   Gc[ 8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+//  uint8_t   Ci[ 8] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
+//  uint8_t    Q[ 8] = {0x12,0x34,0x56,0x78,0x12,0x34,0x56,0x78};
+  uint8_t   Gc[ 8];
+  uint8_t   Ci[ 8];
+  uint8_t    Q[ 8];
+  uint8_t   Ch[ 8];
+  uint8_t Ci_1[ 8];
 
-  byte_t   Gc_chk[ 8];
-  byte_t   Ch_chk[ 8];
-  byte_t Ci_1_chk[ 8];
+  uint8_t   Gc_chk[ 8];
+  uint8_t   Ch_chk[ 8];
+  uint8_t Ci_1_chk[ 8];
 
-  //  byte_t   ks[16] = {0xde,0x88,0xc2,0xc9,0xee,0xd4,0x1b,0x46,0x1c,0x6a,0x92,0x50,0x76,0x1a,0xe9,0x87};
-  //  byte_t mask[16] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-  //  byte_t mask[16] = {0x04,0xb0,0xe1,0x10,0xc0,0x33,0x44,0x20,0x20,0x00,0x70,0x8c,0x22,0x04,0x10,0x80};
+  //  uint8_t   ks[16] = {0xde,0x88,0xc2,0xc9,0xee,0xd4,0x1b,0x46,0x1c,0x6a,0x92,0x50,0x76,0x1a,0xe9,0x87};
+  //  uint8_t mask[16] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  //  uint8_t mask[16] = {0x04,0xb0,0xe1,0x10,0xc0,0x33,0x44,0x20,0x20,0x00,0x70,0x8c,0x22,0x04,0x10,0x80};
 
-  byte_t   ks[16];
-  byte_t mask[16];
+  uint8_t   ks[16];
+  uint8_t mask[16];
   
-  ui64 nCi;   // Card random
-  ui64 nQ;    // Reader random
-  ui64 nCh;   // Reader challange
-  ui64 nCi_1; // Card anwser
+  uint64_t nCi;   // Card random
+  uint64_t nQ;    // Reader random
+  uint64_t nCh;   // Reader challange
+  uint64_t nCi_1; // Card anwser
   
   if ((argc != 2) && (argc != 5))
   {
@@ -818,7 +821,7 @@ int main(int argc, const char* argv[])
   if (argc == 2)
   {
     // Generate random values for the key and randoms
-    srand((uint32_t)time(null));
+    srand((uint32_t)time(NULL));
     for (pos = 0; pos<8; pos++)
     {
       Gc[pos] = rand();
@@ -828,10 +831,10 @@ int main(int argc, const char* argv[])
     sm_auth(Gc,Ci,Q,Ch,Ci_1,&ostate);
     printf("  Gc: "); print_bytes(Gc,8);
   } else {
-    sscanf(argv[1],"%016llx",&nCi); num_to_bytes(nCi,8,Ci);
-    sscanf(argv[2],"%016llx",&nQ); num_to_bytes(nQ,8,Q);
-    sscanf(argv[3],"%016llx",&nCh); num_to_bytes(nCh,8,Ch);
-    sscanf(argv[4],"%016llx",&nCi_1); num_to_bytes(nCi_1,8,Ci_1);
+    sscanf(argv[1],"%016" SCNx64,&nCi); num_to_bytes(nCi,8,Ci);
+    sscanf(argv[2],"%016" SCNx64,&nQ); num_to_bytes(nQ,8,Q);
+    sscanf(argv[3],"%016" SCNx64,&nCh); num_to_bytes(nCh,8,Ch);
+    sscanf(argv[4],"%016" SCNx64,&nCi_1); num_to_bytes(nCi_1,8,Ci_1);
     printf("  Gc: unknown\n");
   }
   
@@ -883,7 +886,7 @@ int main(int argc, const char* argv[])
   {
     rstate_after_gc = *itrstates;
     sm_left_mask(ks,mask,rstate_after_gc);
-    printf("Using the state from the top-right bin: " _YELLOW_("0x%07llx")"\n",(unsigned long long)rstate_after_gc);
+    printf("Using the state from the top-right bin: " _YELLOW_("0x%07" PRIx64)"\n",rstate_after_gc);
     
     search_gc_candidates_right(rstate_before_gc,rstate_after_gc,Q,&crstates);
     printf("Found " _YELLOW_("%lu")" right candidates using the meet-in-the-middle attack\n",crstates.size());
@@ -908,7 +911,7 @@ int main(int argc, const char* argv[])
       sm_auth(Gc_chk,Ci,Q,Ch_chk,Ci_1_chk,&ostate);
       if ((memcmp(Ch_chk,Ch,8) == 0) && (memcmp(Ci_1_chk,Ci_1,8) == 0))
       {
-        printf("\nFound valid key: " _GREEN_("%016llX")"\n\n",(unsigned long long)*itgc);
+        printf("\nFound valid key: " _GREEN_("%016" PRIx64)"\n\n",*itgc);
         return 0;
       }
     }
