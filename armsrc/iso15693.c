@@ -716,7 +716,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             if (dt->lastBit == SOF_PART2) {
                 *eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
             }
-            if (dt->len >= dt->max_len) {
+            if (dt->len > dt->max_len) {
                 ret = -2; // buffer overflow
                 Dbprintf("overflow (%d >= %d", dt->len, dt->max_len);
             }
