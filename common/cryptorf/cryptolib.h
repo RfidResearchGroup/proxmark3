@@ -33,14 +33,14 @@ extern "C" {
 typedef uint8_t nibble;
 
 typedef struct {
-  uint64_t l;
-  uint64_t m;
-  uint64_t r;
-  nibble b0;
-  nibble b1;
-  nibble b1l;
-  nibble b1r;
-  nibble b1s;
+    uint64_t l;
+    uint64_t m;
+    uint64_t r;
+    nibble b0;
+    nibble b1;
+    nibble b1l;
+    nibble b1r;
+    nibble b1s;
 } crypto_state_t;
 typedef crypto_state_t *crypto_state;
 

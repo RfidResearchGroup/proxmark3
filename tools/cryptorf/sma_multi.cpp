@@ -1,9 +1,9 @@
 /*
- * 
+ *
  * SecureMemory recovery Multithread
  *
  * Copyright (C) 2010, Flavio D. Garcia, Peter van Rossum, Roel Verdult
- * and Ronny Wichers Schreur. Radboud University Nijmegen   
+ * and Ronny Wichers Schreur. Radboud University Nijmegen
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Modifed Iceman, 2020
  */
 
@@ -27,7 +27,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
-#include <algorithm>   // sort, max_element, random_shuffle, remove_if, lower_bound 
+#include <algorithm>   // sort, max_element, random_shuffle, remove_if, lower_bound
 #include <functional>  // greater, bind2nd
 #include <thread>      // std::thread
 #include <atomic>
@@ -38,10 +38,10 @@
 using namespace std;
 
 #ifdef _MSC_VER
-  // avoid scanf warnings in Visual Studio
-  #define _CRT_SECURE_NO_WARNINGS
-  #define _CRT_SECURE_NO_DEPRECATE
-  #define inline __inline
+// avoid scanf warnings in Visual Studio
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_DEPRECATE
+#define inline __inline
 #endif
 
 /*
@@ -56,7 +56,7 @@ Authenticate
 Ci+1: de c2 ee 1b 1c 92 76 e9
 
   Ks: de 88 c2 c9 ee d4 1b 46 1c 6a 92 50 76 1a e9 87
-  
+
    left: 1ddeac626
   right: 19aba45
 
@@ -108,21 +108,21 @@ Ci+1: de c2 ee 1b 1c 92 76 e9
 */
 
 const uint64_t left_candidates[43] = {
-  0x6221539d9ull, 0x1ddeac626ull, 0x7cc847482ull, 0x0337b8b7dull,
-  0x159d1687eull, 0x7bade8a41ull, 0x4c51c6463ull, 0x4e3d88bf9ull,
-  0x4e3d88819ull, 0x31c2777e6ull, 0x31c277406ull, 0x0059ff7d5ull,
-  0x5fb612b96ull, 0x2049ed469ull, 0x0452175beull, 0x00d2ff4edull,
-  0x68918cba9ull, 0x03a6f882aull, 0x7086372b6ull, 0x6c9a11672ull,
-  0x60531191aull, 0x4ba9b653full, 0x4ba9b6520ull, 0x1facee6e5ull,
-  0x0f79c8d49ull, 0x0b29f2a5bull, 0x032df8b12ull, 0x7c90849f8ull,
-  0x48916e84eull, 0x176e73456ull, 0x036f7b607ull, 0x5b2aeb858ull,
-  0x51c8755b5ull, 0x4c9432733ull, 0x0f6c834fbull, 0x03b2ff59bull,
-  0x0f78aac5bull, 0x3770cdaf3ull, 0x205078bbaull, 0x04445c715ull,
-  0x004df8a64ull, 0x6f696e09eull, 0x109691f61ull
+    0x6221539d9ull, 0x1ddeac626ull, 0x7cc847482ull, 0x0337b8b7dull,
+    0x159d1687eull, 0x7bade8a41ull, 0x4c51c6463ull, 0x4e3d88bf9ull,
+    0x4e3d88819ull, 0x31c2777e6ull, 0x31c277406ull, 0x0059ff7d5ull,
+    0x5fb612b96ull, 0x2049ed469ull, 0x0452175beull, 0x00d2ff4edull,
+    0x68918cba9ull, 0x03a6f882aull, 0x7086372b6ull, 0x6c9a11672ull,
+    0x60531191aull, 0x4ba9b653full, 0x4ba9b6520ull, 0x1facee6e5ull,
+    0x0f79c8d49ull, 0x0b29f2a5bull, 0x032df8b12ull, 0x7c90849f8ull,
+    0x48916e84eull, 0x176e73456ull, 0x036f7b607ull, 0x5b2aeb858ull,
+    0x51c8755b5ull, 0x4c9432733ull, 0x0f6c834fbull, 0x03b2ff59bull,
+    0x0f78aac5bull, 0x3770cdaf3ull, 0x205078bbaull, 0x04445c715ull,
+    0x004df8a64ull, 0x6f696e09eull, 0x109691f61ull
 };
 
 typedef struct {
-  uint64_t l;
+    uint64_t l;
     uint64_t m;
     uint64_t r;
     nibble b0;
@@ -130,10 +130,10 @@ typedef struct {
     nibble b1l;
     nibble b1r;
     nibble b1s;
-  bool invalid;
-  uint8_t Gc[8];
-}cs_t;
-typedef cs_t* pcs;
+    bool invalid;
+    uint8_t Gc[8];
+} cs_t;
+typedef cs_t *pcs;
 
 typedef struct {
     uint8_t addition;
@@ -141,39 +141,39 @@ typedef struct {
 } lookup_entry;
 
 enum cipher_state_side {
-  CSS_LEFT,
-  CSS_RIGHT
+    CSS_LEFT,
+    CSS_RIGHT
 };
 
-void print_cs(const char* text,pcs s) {
-  int pos;
-  
-  printf("%s",text);
+void print_cs(const char *text, pcs s) {
+    int pos;
 
-  for(pos=6;pos>=0;pos--)
-    printf(" %02x",(uint8_t)(s->l>>(pos*5))&0x1f);
+    printf("%s", text);
 
-  printf(" |");
-  for(pos=6;pos>=0;pos--)
-    printf(" %02x",(uint8_t)(s->m>>(pos*7))&0x7f);
+    for (pos = 6; pos >= 0; pos--)
+        printf(" %02x", (uint8_t)(s->l >> (pos * 5)) & 0x1f);
 
-  printf(" |");
+    printf(" |");
+    for (pos = 6; pos >= 0; pos--)
+        printf(" %02x", (uint8_t)(s->m >> (pos * 7)) & 0x7f);
 
-  for(pos=4;pos>=0;pos--)
-    printf(" %02x",(uint8_t)(s->r>>(pos*5))&0x1f);
-  
-  printf("\n");
+    printf(" |");
+
+    for (pos = 4; pos >= 0; pos--)
+        printf(" %02x", (uint8_t)(s->r >> (pos * 5)) & 0x1f);
+
+    printf("\n");
 }
 
 static inline uint8_t mod(uint8_t a, uint8_t m) {
-  // Just return the input when this is less or equal than the modular value
-  if (a<m) return a;
-  
-  // Compute the modular value
-  a %= m;
+    // Just return the input when this is less or equal than the modular value
+    if (a < m) return a;
 
-  // Return the funny value, when the output was now zero, return the modular value
-  return (a == 0) ? m : a;
+    // Compute the modular value
+    a %= m;
+
+    // Return the funny value, when the output was now zero, return the modular value
+    return (a == 0) ? m : a;
 }
 
 /*
@@ -200,21 +200,21 @@ static lookup_entry lookup_right[0x8000];
 static uint8_t left_addition[0x100000];
 
 static inline void init_lookup_left() {
-  uint8_t b3, b6, temp;
-  int i, index;
+    uint8_t b3, b6, temp;
+    int i, index;
 
-    for (i = 0; i <0x400; i++){
+    for (i = 0; i < 0x400; i++) {
         b6 = i & 0x1f;
         b3 = (i >> 5) & 0x1f;
         index = (b3 << 15) | b6;
-        
+
 //      b6 = bit_rotate_l(b6, 5);
         b6 = BIT_ROL(b6);
 
-        temp = mod(b3 + b6,0x1f);
+        temp = mod(b3 + b6, 0x1f);
         left_addition[index] = temp;
         lookup_left[index].addition = temp;
-        lookup_left[index].out = ((temp^b3) & 0x0f);
+        lookup_left[index].out = ((temp ^ b3) & 0x0f);
     }
 }
 
@@ -222,143 +222,143 @@ static inline void init_lookup_right() {
     uint8_t b16, b18, temp;
     int i, index;
 
-    for(i = 0; i <0x400; i++) {
+    for (i = 0; i < 0x400; i++) {
         b18 = i & 0x1f;
         b16 = (i >> 5) & 0x1f;
         index = (b16 << 10) | b18;
 
-        temp = mod(b18 + b16,0x1f);
+        temp = mod(b18 + b16, 0x1f);
         lookup_right[index].addition = temp;
-        lookup_right[index].out = ((temp^b16) & 0x0f);
+        lookup_right[index].out = ((temp ^ b16) & 0x0f);
     }
 }
 
 static void init_lookup_left_substraction() {
-    for(int index = 0; index < 0x400 ; index++) {
+    for (int index = 0; index < 0x400 ; index++) {
         uint8_t b3 = (index >> 5 & 0x1f);
         uint8_t bx = (index & 0x1f);
 
         //lookup_left_substraction[index] = bit_rotate_r(mod((bx+0x1f)-b3,0x1f),5);
-        lookup_left_substraction[index] = BIT_ROR( mod((bx + 0x1F) - b3, 0x1F));        
+        lookup_left_substraction[index] = BIT_ROR(mod((bx + 0x1F) - b3, 0x1F));
     }
 }
 
 static void init_lookup_right_substraction() {
-    for(int index = 0; index < 0x400 ; index++) {
-        int b16 = (index >>5);
+    for (int index = 0; index < 0x400 ; index++) {
+        int b16 = (index >> 5);
         uint8_t bx = (index & 0x1f);
         lookup_right_subtraction[index] = mod((bx + 0x1F) - b16, 0x1F);
     }
 }
 
 static inline void previous_left(uint8_t in, vector<cs_t> *candidate_states) {
-  pcs state;
-  size_t size = candidate_states->size();
-  for(size_t pos=0; pos<size; pos++)  {
-    state = &((*candidate_states)[pos]);
+    pcs state;
+    size_t size = candidate_states->size();
+    for (size_t pos = 0; pos < size; pos++)  {
+        state = &((*candidate_states)[pos]);
 
-    uint8_t bx = (uint8_t)((state->l >> 30) & 0x1f);
-    unsigned b3 = (unsigned)(state->l >> 5) & 0x3e0;
-    state->l = (state->l << 5);
+        uint8_t bx = (uint8_t)((state->l >> 30) & 0x1f);
+        unsigned b3 = (unsigned)(state->l >> 5) & 0x3e0;
+        state->l = (state->l << 5);
 
-    //Ignore impossible states
-    if (bx == 0) {
-      // Are we dealing with an impossible state?
-      if (b3 != 0) {
-            state->invalid = true;
-      } else {
-        // We only need to consider b6=0
-        state->l &= 0x7ffffffe0ull;
-        state->l ^= (((uint64_t)in & 0x1f) << 20);
-      }
-    } else {
-      uint8_t b6 = lookup_left_substraction[b3|bx];
-      state->l = (state->l & 0x7ffffffe0ull) | b6;
-      state->l ^= (((uint64_t)in & 0x1f) << 20);
+        //Ignore impossible states
+        if (bx == 0) {
+            // Are we dealing with an impossible state?
+            if (b3 != 0) {
+                state->invalid = true;
+            } else {
+                // We only need to consider b6=0
+                state->l &= 0x7ffffffe0ull;
+                state->l ^= (((uint64_t)in & 0x1f) << 20);
+            }
+        } else {
+            uint8_t b6 = lookup_left_substraction[b3 | bx];
+            state->l = (state->l & 0x7ffffffe0ull) | b6;
+            state->l ^= (((uint64_t)in & 0x1f) << 20);
 
-      // Check if we have a second candidate
-      if (b6 == 0x1f) {
-        cs_t nstate = *state;
-        nstate.l &= 0x7ffffffe0ull;
-        candidate_states->push_back(nstate);
-      }
+            // Check if we have a second candidate
+            if (b6 == 0x1f) {
+                cs_t nstate = *state;
+                nstate.l &= 0x7ffffffe0ull;
+                candidate_states->push_back(nstate);
+            }
+        }
     }
-  }
 }
 
 static inline void previous_right(uint8_t in, vector<cs_t> *candidate_states) {
-  pcs state;
-  size_t size = candidate_states->size();
-  for(size_t pos=0; pos<size; pos++) {
-    state = &((*candidate_states)[pos]);
-    
-    uint8_t bx = (uint8_t)((state->r >> 20) & 0x1f);
-    unsigned b16 = (unsigned)(state->r & 0x3e0);//(state->buffer_r >> 10) & 0x1f;
-    
-    state->r = (state->r << 5);
-    
-      // Ignore impossible states
-    if (bx == 0) {
-      if (b16 != 0) {
-            state->invalid=true;
-      } else {
-        // We only need to consider b18=0
-              state->r &= 0x1ffffe0ull;
-        state->r ^= (((uint64_t)in & 0xf8) << 12);
-      }
-    } else {
-          uint8_t b18 = lookup_right_subtraction[b16|bx];
-          state->r = (state->r & 0x1ffffe0ull) | b18;
-          state->r ^= (((uint64_t)in & 0xf8) << 12);
-          //state->b_right  = ((b14^b17) & 0x0f);
-      
-          // Check if we have a second candidate
-          if (b18 == 0x1f) {
-              cs_t nstate = *state;
-              nstate.r &= 0x1ffffe0ull;
-              candidate_states->push_back(nstate);
-          }
-      }
-  }
+    pcs state;
+    size_t size = candidate_states->size();
+    for (size_t pos = 0; pos < size; pos++) {
+        state = &((*candidate_states)[pos]);
+
+        uint8_t bx = (uint8_t)((state->r >> 20) & 0x1f);
+        unsigned b16 = (unsigned)(state->r & 0x3e0);//(state->buffer_r >> 10) & 0x1f;
+
+        state->r = (state->r << 5);
+
+        // Ignore impossible states
+        if (bx == 0) {
+            if (b16 != 0) {
+                state->invalid = true;
+            } else {
+                // We only need to consider b18=0
+                state->r &= 0x1ffffe0ull;
+                state->r ^= (((uint64_t)in & 0xf8) << 12);
+            }
+        } else {
+            uint8_t b18 = lookup_right_subtraction[b16 | bx];
+            state->r = (state->r & 0x1ffffe0ull) | b18;
+            state->r ^= (((uint64_t)in & 0xf8) << 12);
+            //state->b_right  = ((b14^b17) & 0x0f);
+
+            // Check if we have a second candidate
+            if (b18 == 0x1f) {
+                cs_t nstate = *state;
+                nstate.r &= 0x1ffffe0ull;
+                candidate_states->push_back(nstate);
+            }
+        }
+    }
 }
 
-static inline uint8_t next_left_fast(uint8_t in, uint64_t* left) {
-    if (in) 
+static inline uint8_t next_left_fast(uint8_t in, uint64_t *left) {
+    if (in)
         *left ^= ((in & 0x1f) << 20);
 
-    lookup_entry* lookup = &(lookup_left[((*left) & 0xf801f)]);
-    *left = (((*left) >> 5)| ((uint64_t)lookup->addition << 30));
+    lookup_entry *lookup = &(lookup_left[((*left) & 0xf801f)]);
+    *left = (((*left) >> 5) | ((uint64_t)lookup->addition << 30));
     return lookup->out;
 }
 
-static inline uint8_t next_left_ksbyte(uint64_t* left) {
-  lookup_entry* lookup;
-  uint8_t bt;
-  
-  *left = (((*left) >> 5)| ((uint64_t)left_addition[((*left) & 0xf801f)] << 30));
-  lookup = &(lookup_left[((*left) & 0xf801f)]);
-  *left = (((*left) >> 5)| ((uint64_t)lookup->addition << 30));
-  bt = lookup->out << 4;
-  *left = (((*left) >> 5)| ((uint64_t)left_addition[((*left) & 0xf801f)] << 30));
-  lookup = &(lookup_left[((*left) & 0xf801f)]);
-  *left = (((*left) >> 5)| ((uint64_t)lookup->addition << 30));
-  bt |= lookup->out;
+static inline uint8_t next_left_ksbyte(uint64_t *left) {
+    lookup_entry *lookup;
+    uint8_t bt;
+
+    *left = (((*left) >> 5) | ((uint64_t)left_addition[((*left) & 0xf801f)] << 30));
+    lookup = &(lookup_left[((*left) & 0xf801f)]);
+    *left = (((*left) >> 5) | ((uint64_t)lookup->addition << 30));
+    bt = lookup->out << 4;
+    *left = (((*left) >> 5) | ((uint64_t)left_addition[((*left) & 0xf801f)] << 30));
+    lookup = &(lookup_left[((*left) & 0xf801f)]);
+    *left = (((*left) >> 5) | ((uint64_t)lookup->addition << 30));
+    bt |= lookup->out;
     return bt;
 }
 
-static inline uint8_t next_right_fast(uint8_t in, uint64_t* right) {
-    if (in) *right ^= ((in&0xf8) << 12);
-    lookup_entry* lookup = &(lookup_right[((*right) & 0x7c1f)]);
+static inline uint8_t next_right_fast(uint8_t in, uint64_t *right) {
+    if (in) *right ^= ((in & 0xf8) << 12);
+    lookup_entry *lookup = &(lookup_right[((*right) & 0x7c1f)]);
     *right = (((*right) >> 5) | (lookup->addition << 20));
     return lookup->out;
 }
 
-static inline void sm_left_mask(const uint8_t* ks, uint8_t* mask, uint64_t rstate) {
+static inline void sm_left_mask(const uint8_t *ks, uint8_t *mask, uint64_t rstate) {
     for (uint8_t pos = 0; pos < 16; pos++) {
-        next_right_fast(0,&rstate);
-        uint8_t bt = next_right_fast(0,&rstate) << 4;
-        next_right_fast(0,&rstate);
-        bt |= next_right_fast(0,&rstate);
+        next_right_fast(0, &rstate);
+        uint8_t bt = next_right_fast(0, &rstate) << 4;
+        next_right_fast(0, &rstate);
+        bt |= next_right_fast(0, &rstate);
 
         // xor the bits with the keystream and count the "correct" bits
         bt ^= ks[pos];
@@ -374,19 +374,19 @@ std::atomic<uint64_t> key{0};
 std::atomic<size_t> topbits{0};
 std::mutex g_ice_mtx;
 uint32_t g_num_cpus = std::thread::hardware_concurrency();
-        
-        
+
+
 static void ice_sm_right_thread(
     uint8_t offset,
-    uint8_t skips, 
-    const uint8_t* ks,
-    map<uint64_t,uint64_t>* bincstates,
-    uint8_t* mask
-    ) {
-  
+    uint8_t skips,
+    const uint8_t *ks,
+    map<uint64_t, uint64_t> *bincstates,
+    uint8_t *mask
+) {
+
     uint8_t tmp_mask[16];
     uint8_t bt;
-    
+
     for (uint64_t counter = offset; counter < 0x2000000; counter += skips) {
         // Reset the current bitcount of correct bits
         size_t bits = 0;
@@ -428,7 +428,7 @@ static void ice_sm_right_thread(
             memcpy(mask, tmp_mask, 16);
         }
         g_ice_mtx.unlock();
-    
+
         // Ignore states under 90
         if (bits >= 90) {
             //  Make sure the bits are used for ordering
@@ -436,39 +436,39 @@ static void ice_sm_right_thread(
             if (bincstates->find((((uint64_t)bits) << 56) | counter) != bincstates->end())
                 bincstates->at((((uint64_t)bits) << 56) | counter) = counter;
             else
-                bincstates->insert( std::pair<uint64_t,uint64_t>( (((uint64_t)bits) << 56) | counter, counter));
+                bincstates->insert(std::pair<uint64_t, uint64_t>((((uint64_t)bits) << 56) | counter, counter));
             g_ice_mtx.unlock();
         }
-        
+
         if ((counter & 0xfffff) == 0) {
             g_ice_mtx.lock();
             printf(".");
             fflush(stdout);
             g_ice_mtx.unlock();
         }
-    }   
+    }
 }
-static uint32_t ice_sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_t>* pcrstates) {
+static uint32_t ice_sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
 
     uint32_t g_num_cpus = std::thread::hardware_concurrency();
-    map<uint64_t,uint64_t> bincstates;
+    map<uint64_t, uint64_t> bincstates;
     topbits = ATOMIC_VAR_INIT(0);
 
     std::vector<std::thread> threads(g_num_cpus);
     for (uint8_t m = 0; m < g_num_cpus; m++) {
-        threads[m] = std::thread( ice_sm_right_thread, m, g_num_cpus, ks, &bincstates, mask);
+        threads[m] = std::thread(ice_sm_right_thread, m, g_num_cpus, ks, &bincstates, mask);
     }
-    for (auto& t : threads) {
+    for (auto &t : threads) {
         t.join();
     }
 
     printf("\n");
 
-    // Clear the candidate state vector 
+    // Clear the candidate state vector
     pcrstates->clear();
 
     // Copy the order the states from lowest-bin to highest-bin
-    map<uint64_t,uint64_t>::iterator it;
+    map<uint64_t, uint64_t>::iterator it;
     for (it = bincstates.begin(); it != bincstates.end(); ++it) {
         pcrstates->push_back(it->second);
     }
@@ -481,35 +481,35 @@ static uint32_t ice_sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_t>*
 
 static void ice_sm_left_thread(
     uint8_t offset,
-    uint8_t skips, 
-    const uint8_t* ks,
-    map<uint64_t, cs_t>* bincstates,
-    uint8_t* mask
-    ) {
+    uint8_t skips,
+    const uint8_t *ks,
+    map<uint64_t, cs_t> *bincstates,
+    uint8_t *mask
+) {
 
     size_t pos, bits;
     uint8_t correct_bits[16];
-    uint8_t bt;    
-    lookup_entry* lookup;
+    uint8_t bt;
+    lookup_entry *lookup;
 
     // Reset and initialize the cryptostate and vector
     cs_t state;
     memset(&state, 0x00, sizeof(cs_t));
     state.invalid = false;
-    
+
 
     for (uint64_t counter = offset; counter < 0x800000000ull; counter += skips) {
         uint64_t lstate = counter;
 
         for (pos = 0; pos < 16; pos++) {
 
-            lstate = (((lstate) >> 5)| ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
+            lstate = (((lstate) >> 5) | ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
             lookup = &(lookup_left[((lstate) & 0xf801f)]);
-            lstate = (((lstate) >> 5)| ((uint64_t)lookup->addition << 30));
+            lstate = (((lstate) >> 5) | ((uint64_t)lookup->addition << 30));
             bt = lookup->out << 4;
-            lstate = (((lstate) >> 5)| ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
+            lstate = (((lstate) >> 5) | ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
             lookup = &(lookup_left[((lstate) & 0xf801f)]);
-            lstate = (((lstate) >> 5)| ((uint64_t)lookup->addition << 30));
+            lstate = (((lstate) >> 5) | ((uint64_t)lookup->addition << 30));
             bt |= lookup->out;
 
             // xor the bits with the keystream and count the "correct" bits
@@ -521,10 +521,10 @@ static void ice_sm_left_thread(
             // Save the correct bits for statistical information
             correct_bits[pos] = bt;
         }
-        
+
         // If we have parsed all 16 bytes of keystream, we have a valid CANDIDATE!
         if (pos == 16) {
-            // Count the total correct bits 
+            // Count the total correct bits
             bits = 0;
             for (pos = 0; pos < 16; pos++) {
                 // Get the next byte-value with correct bits
@@ -541,9 +541,9 @@ static void ice_sm_left_thread(
                 if (((bt >> 6) & 0x01) == 0) bits++;
                 if (((bt >> 7) & 0x01) == 0) bits++;
             }
-            
+
             state.l = counter;
-            
+
             //  Make sure the bits are used for ordering
             g_ice_mtx.lock();
             printf(".");
@@ -551,53 +551,53 @@ static void ice_sm_left_thread(
             if (bincstates->find((((uint64_t)bits) << 56) | counter) != bincstates->end())
                 bincstates->at((((uint64_t)bits) << 56) | counter) = state;
             else
-                bincstates->insert( std::pair<uint64_t,cs_t>( (((uint64_t)bits) << 56) | counter, state));
+                bincstates->insert(std::pair<uint64_t, cs_t>((((uint64_t)bits) << 56) | counter, state));
             g_ice_mtx.unlock();
-            
+
         }
-    
+
         if ((counter & 0xffffffffull) == 0) {
             g_ice_mtx.lock();
-            printf("%02.1f%%.", ((float)100/8) * (counter >> 32));
+            printf("%02.1f%%.", ((float)100 / 8) * (counter >> 32));
             fflush(stdout);
             g_ice_mtx.unlock();
         }
     }
 }
 
-static void ice_sm_left(const uint8_t* ks, uint8_t* mask, vector<cs_t>* pcstates) {
+static void ice_sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates) {
 
     uint32_t g_num_cpus = std::thread::hardware_concurrency();
 
     map<uint64_t, cs_t> bincstates;
     std::vector<std::thread> threads(g_num_cpus);
     for (uint8_t m = 0; m < g_num_cpus; m++) {
-        threads[m] = std::thread( ice_sm_left_thread, m, g_num_cpus, ks, &bincstates, mask);
+        threads[m] = std::thread(ice_sm_left_thread, m, g_num_cpus, ks, &bincstates, mask);
     }
 
-    for (auto& t : threads) {
+    for (auto &t : threads) {
         t.join();
     }
 
     printf("100%%\n");
 
-    // Clear the candidate state vector 
+    // Clear the candidate state vector
     pcstates->clear();
 
     // Copy the order the states from lowest-bin to highest-bin
     map<uint64_t, cs_t>::iterator it;
-    for(it = bincstates.begin(); it != bincstates.end(); ++it) {
+    for (it = bincstates.begin(); it != bincstates.end(); ++it) {
         pcstates->push_back(it->second);
     }
     // Reverse the vector order (so the higest bin comes first)
-    reverse(pcstates->begin(), pcstates->end());  
+    reverse(pcstates->begin(), pcstates->end());
 }
 
-static inline uint32_t sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_t>* pcrstates) {
+static inline uint32_t sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
     uint8_t tmp_mask[16];
     size_t pos, bits, bit, topbits;
-    map<uint64_t,uint64_t> bincstates;
-    map<uint64_t,uint64_t>::iterator it;
+    map<uint64_t, uint64_t> bincstates;
+    map<uint64_t, uint64_t>::iterator it;
     uint8_t bt;
     topbits = 0;
 
@@ -624,7 +624,7 @@ static inline uint32_t sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_
             for (bit = 0; bit < 8; bit++) {
                 // When the bit is xored away (=zero), it was the same, so correct ;)
                 if ((bt & 0x01) == 0) bits++;
-                    bt >>= 1;
+                bt >>= 1;
             }
         }
 
@@ -633,13 +633,13 @@ static inline uint32_t sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_
             // Copy the winning mask
             memcpy(mask, tmp_mask, 16);
         }
-    
+
         // Ignore states under 90
         if (bits >= 90) {
-            //  Make sure the bits are used for ordering 
+            //  Make sure the bits are used for ordering
             bincstates[(((uint64_t)bits) << 56) | counter] = counter;
         }
-    
+
         if ((counter & 0xfffff) == 0) {
             printf(".");
             fflush(stdout);
@@ -647,7 +647,7 @@ static inline uint32_t sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_
     }
     printf("\n");
 
-    // Clear the candidate state vector 
+    // Clear the candidate state vector
     pcrstates->clear();
 
     // Copy the order the states from lowest-bin to highest-bin
@@ -662,189 +662,189 @@ static inline uint32_t sm_right(const uint8_t* ks, uint8_t* mask, vector<uint64_
 }
 
 static inline void previous_all_input(vector<cs_t> *pcstates, uint32_t gc_byte_index, cipher_state_side css) {
-    uint8_t btGc,in;
+    uint8_t btGc, in;
     vector<cs_t> ncstates;
     vector<cs_t> prev_ncstates;
-    vector<cs_t>::iterator it,itnew;
+    vector<cs_t>::iterator it, itnew;
 
-  // Loop through the complete entryphy of 5 bits for each candidate
-  // We ignore zero (xor 0x00) to avoid duplicates
-  for (btGc=0; btGc<0x20; btGc++)  {
-    // Copy the original candidates that are supplied
-    ncstates = *pcstates;
+    // Loop through the complete entryphy of 5 bits for each candidate
+    // We ignore zero (xor 0x00) to avoid duplicates
+    for (btGc = 0; btGc < 0x20; btGc++)  {
+        // Copy the original candidates that are supplied
+        ncstates = *pcstates;
 
-    // Rollback the (candidate) cipher states with this input
-    if (css == CSS_RIGHT) {
-      in = btGc << 3;
-      previous_right(in,&ncstates);
-    } else {
-      in = btGc;
-      previous_left(in,&ncstates);
-    }
-    
-    for(itnew = ncstates.begin(); itnew != ncstates.end(); ++itnew)  {
-      // Wipe away the invalid states
-      if (itnew->invalid == false) { 
-        itnew->Gc[gc_byte_index] = in;
-        prev_ncstates.push_back(*itnew);
-      }
-    }
-  }
-  
-  // Copy the previous states into the vector
-  *pcstates = prev_ncstates;
-}
-
-static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, const uint64_t rstate_after_gc, const uint8_t* Q, vector<cs_t>* pcstates) {
-  vector<cs_t>::iterator it;
-  vector<cs_t> csl_cand;
-  map<uint64_t,uint64_t> matchbox;
-  map<uint64_t,uint64_t>::iterator itmatch;
-  uint64_t rstate;
-  size_t counter;
-  cs_t state;  
-  
-  // Generate 2^20 different (5 bits) values for the first 4 Gc bytes (0,1,2,3)
-  for (counter=0; counter<0x100000; counter++) {
-    rstate  = rstate_before_gc;
-    next_right_fast((counter >> 12) & 0xf8,&rstate);
-    next_right_fast((counter >> 7)  & 0xf8,&rstate);
-    next_right_fast(Q[4],&rstate);
-    next_right_fast((counter >> 2) & 0xf8,&rstate);
-    next_right_fast((counter << 3) & 0xf8,&rstate);
-    next_right_fast(Q[5],&rstate);
-    matchbox[rstate] = counter;
-  }
-
-  // Reset and initialize the cryptostate and vecctor
-  memset(&state,0x00,sizeof(cs_t));
-  state.invalid = false;
-  state.r = rstate_after_gc;
-  csl_cand.clear();
-  csl_cand.push_back(state);
-
-  // Generate 2^20(+splitting) different (5 bits) values for the last 4 Gc bytes (4,5,6,7)
-  previous_right(Q[7],&csl_cand);
-  previous_all_input(&csl_cand,7,CSS_RIGHT);
-  previous_all_input(&csl_cand,6,CSS_RIGHT);
-  previous_right(Q[6],&csl_cand);
-  previous_all_input(&csl_cand,5,CSS_RIGHT);
-  previous_all_input(&csl_cand,4,CSS_RIGHT);
-  
-  pcstates->clear();
-  
-  // Take the intersection of the corresponding states ~2^15 values (40-25 = 15 bits)
-  for (it=csl_cand.begin();it!=csl_cand.end();++it) {
-    itmatch = matchbox.find(it->r);
-    if (itmatch != matchbox.end()) {
-      it->Gc[0] = (itmatch->second >> 12) & 0xf8;
-      it->Gc[1] = (itmatch->second >>  7) & 0xf8;
-      it->Gc[2] = (itmatch->second >>  2) & 0xf8;
-      it->Gc[3] = (itmatch->second <<  3) & 0xf8;
-
-      pcstates->push_back(*it);
-    }
-  }
-}
-
-static inline void sm_left(const uint8_t* ks, uint8_t* mask, vector<cs_t>* pcstates) {
-  map<uint64_t, cs_t> bincstates;
-  map<uint64_t, cs_t>::iterator it;
-  uint64_t counter, lstate;
-  size_t pos, bits;
-  uint8_t correct_bits[16];
-  uint8_t bt;
-  cs_t state;
-  lookup_entry* lookup;
-
-  // Reset and initialize the cryptostate and vecctor
-  memset(&state, 0x00, sizeof(cs_t));
-  state.invalid = false;
-  
-  for (counter = 0; counter < 0x800000000ull; counter++) {
-    lstate = counter;
-
-    for (pos = 0; pos < 16; pos++) {
-
-      lstate = (((lstate) >> 5)| ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
-      lookup = &(lookup_left[((lstate) & 0xf801f)]);
-      lstate = (((lstate) >> 5)| ((uint64_t)lookup->addition << 30));
-      bt = lookup->out << 4;
-      lstate = (((lstate) >> 5)| ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
-      lookup = &(lookup_left[((lstate) & 0xf801f)]);
-      lstate = (((lstate) >> 5)| ((uint64_t)lookup->addition << 30));
-      bt |= lookup->out;
-      
-      // xor the bits with the keystream and count the "correct" bits
-      bt ^= ks[pos];
-
-      // When the REQUIRED bits are NOT xored away (=zero), ignore this wrong state
-      if ((bt & mask[pos]) != 0) break;
-
-      // Save the correct bits for statistical information
-      correct_bits[pos] = bt;
-    }
-
-    // If we have parsed all 16 bytes of keystream, we have a valid CANDIDATE!
-    if (pos == 16) {
-        // Count the total correct bits 
-        bits = 0;
-        for (pos = 0; pos < 16; pos++) {
-            // Get the next byte-value with correct bits
-            bt = correct_bits[pos];
-
-            // Count all the (correct) bits
-            // When the bit is xored away (=zero), it was the same, so correct ;)
-            if ((bt & 0x01) == 0) bits++;
-            if (((bt >> 1) & 0x01) == 0) bits++;
-            if (((bt >> 2) & 0x01) == 0) bits++;
-            if (((bt >> 3) & 0x01) == 0) bits++;
-            if (((bt >> 4) & 0x01) == 0) bits++;
-            if (((bt >> 5) & 0x01) == 0) bits++;
-            if (((bt >> 6) & 0x01) == 0) bits++;
-            if (((bt >> 7) & 0x01) == 0) bits++;
-            
+        // Rollback the (candidate) cipher states with this input
+        if (css == CSS_RIGHT) {
+            in = btGc << 3;
+            previous_right(in, &ncstates);
+        } else {
+            in = btGc;
+            previous_left(in, &ncstates);
         }
 
-        // Print the left candidate
-        //      printf("%09llx (%d)\n",counter,bits);
-        printf(".");
-        fflush(stdout);
-
-        state.l = counter;
-        //  Make sure the bits are used for ordering 
-        bincstates[(((uint64_t)bits)<<56) | counter] = state;
+        for (itnew = ncstates.begin(); itnew != ncstates.end(); ++itnew)  {
+            // Wipe away the invalid states
+            if (itnew->invalid == false) {
+                itnew->Gc[gc_byte_index] = in;
+                prev_ncstates.push_back(*itnew);
+            }
+        }
     }
-    
-    if ((counter & 0xffffffffull) == 0) {
-        printf("%02.1f%%.", ((float)100/8)*(counter>>32));
-        fflush(stdout);
-    }
-  }
 
-  printf("100%%\n");
-  
-  // Clear the candidate state vector 
-  pcstates->clear();
-
-  // Copy the order the states from lowest-bin to highest-bin
-  for(it = bincstates.begin(); it != bincstates.end(); ++it) {
-    pcstates->push_back(it->second);
-  }
-  // Reverse the vector order (so the higest bin comes first)
-  reverse(pcstates->begin(), pcstates->end()); 
+    // Copy the previous states into the vector
+    *pcstates = prev_ncstates;
 }
 
-static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, const uint8_t* Q, vector<cs_t>* pcstates) {
-    vector<cs_t> csl_cand,csl_search;
-    vector<cs_t>::iterator itsearch,itcand;
-    map<uint64_t,uint64_t> matchbox;
-    map<uint64_t,uint64_t>::iterator itmatch;
+static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, const uint64_t rstate_after_gc, const uint8_t *Q, vector<cs_t> *pcstates) {
+    vector<cs_t>::iterator it;
+    vector<cs_t> csl_cand;
+    map<uint64_t, uint64_t> matchbox;
+    map<uint64_t, uint64_t>::iterator itmatch;
+    uint64_t rstate;
+    size_t counter;
+    cs_t state;
+
+    // Generate 2^20 different (5 bits) values for the first 4 Gc bytes (0,1,2,3)
+    for (counter = 0; counter < 0x100000; counter++) {
+        rstate  = rstate_before_gc;
+        next_right_fast((counter >> 12) & 0xf8, &rstate);
+        next_right_fast((counter >> 7)  & 0xf8, &rstate);
+        next_right_fast(Q[4], &rstate);
+        next_right_fast((counter >> 2) & 0xf8, &rstate);
+        next_right_fast((counter << 3) & 0xf8, &rstate);
+        next_right_fast(Q[5], &rstate);
+        matchbox[rstate] = counter;
+    }
+
+    // Reset and initialize the cryptostate and vecctor
+    memset(&state, 0x00, sizeof(cs_t));
+    state.invalid = false;
+    state.r = rstate_after_gc;
+    csl_cand.clear();
+    csl_cand.push_back(state);
+
+    // Generate 2^20(+splitting) different (5 bits) values for the last 4 Gc bytes (4,5,6,7)
+    previous_right(Q[7], &csl_cand);
+    previous_all_input(&csl_cand, 7, CSS_RIGHT);
+    previous_all_input(&csl_cand, 6, CSS_RIGHT);
+    previous_right(Q[6], &csl_cand);
+    previous_all_input(&csl_cand, 5, CSS_RIGHT);
+    previous_all_input(&csl_cand, 4, CSS_RIGHT);
+
+    pcstates->clear();
+
+    // Take the intersection of the corresponding states ~2^15 values (40-25 = 15 bits)
+    for (it = csl_cand.begin(); it != csl_cand.end(); ++it) {
+        itmatch = matchbox.find(it->r);
+        if (itmatch != matchbox.end()) {
+            it->Gc[0] = (itmatch->second >> 12) & 0xf8;
+            it->Gc[1] = (itmatch->second >>  7) & 0xf8;
+            it->Gc[2] = (itmatch->second >>  2) & 0xf8;
+            it->Gc[3] = (itmatch->second <<  3) & 0xf8;
+
+            pcstates->push_back(*it);
+        }
+    }
+}
+
+static inline void sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates) {
+    map<uint64_t, cs_t> bincstates;
+    map<uint64_t, cs_t>::iterator it;
+    uint64_t counter, lstate;
+    size_t pos, bits;
+    uint8_t correct_bits[16];
+    uint8_t bt;
+    cs_t state;
+    lookup_entry *lookup;
+
+    // Reset and initialize the cryptostate and vecctor
+    memset(&state, 0x00, sizeof(cs_t));
+    state.invalid = false;
+
+    for (counter = 0; counter < 0x800000000ull; counter++) {
+        lstate = counter;
+
+        for (pos = 0; pos < 16; pos++) {
+
+            lstate = (((lstate) >> 5) | ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
+            lookup = &(lookup_left[((lstate) & 0xf801f)]);
+            lstate = (((lstate) >> 5) | ((uint64_t)lookup->addition << 30));
+            bt = lookup->out << 4;
+            lstate = (((lstate) >> 5) | ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
+            lookup = &(lookup_left[((lstate) & 0xf801f)]);
+            lstate = (((lstate) >> 5) | ((uint64_t)lookup->addition << 30));
+            bt |= lookup->out;
+
+            // xor the bits with the keystream and count the "correct" bits
+            bt ^= ks[pos];
+
+            // When the REQUIRED bits are NOT xored away (=zero), ignore this wrong state
+            if ((bt & mask[pos]) != 0) break;
+
+            // Save the correct bits for statistical information
+            correct_bits[pos] = bt;
+        }
+
+        // If we have parsed all 16 bytes of keystream, we have a valid CANDIDATE!
+        if (pos == 16) {
+            // Count the total correct bits
+            bits = 0;
+            for (pos = 0; pos < 16; pos++) {
+                // Get the next byte-value with correct bits
+                bt = correct_bits[pos];
+
+                // Count all the (correct) bits
+                // When the bit is xored away (=zero), it was the same, so correct ;)
+                if ((bt & 0x01) == 0) bits++;
+                if (((bt >> 1) & 0x01) == 0) bits++;
+                if (((bt >> 2) & 0x01) == 0) bits++;
+                if (((bt >> 3) & 0x01) == 0) bits++;
+                if (((bt >> 4) & 0x01) == 0) bits++;
+                if (((bt >> 5) & 0x01) == 0) bits++;
+                if (((bt >> 6) & 0x01) == 0) bits++;
+                if (((bt >> 7) & 0x01) == 0) bits++;
+
+            }
+
+            // Print the left candidate
+            //      printf("%09llx (%d)\n",counter,bits);
+            printf(".");
+            fflush(stdout);
+
+            state.l = counter;
+            //  Make sure the bits are used for ordering
+            bincstates[(((uint64_t)bits) << 56) | counter] = state;
+        }
+
+        if ((counter & 0xffffffffull) == 0) {
+            printf("%02.1f%%.", ((float)100 / 8) * (counter >> 32));
+            fflush(stdout);
+        }
+    }
+
+    printf("100%%\n");
+
+    // Clear the candidate state vector
+    pcstates->clear();
+
+    // Copy the order the states from lowest-bin to highest-bin
+    for (it = bincstates.begin(); it != bincstates.end(); ++it) {
+        pcstates->push_back(it->second);
+    }
+    // Reverse the vector order (so the higest bin comes first)
+    reverse(pcstates->begin(), pcstates->end());
+}
+
+static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, const uint8_t *Q, vector<cs_t> *pcstates) {
+    vector<cs_t> csl_cand, csl_search;
+    vector<cs_t>::iterator itsearch, itcand;
+    map<uint64_t, uint64_t> matchbox;
+    map<uint64_t, uint64_t>::iterator itmatch;
     uint64_t lstate;
     size_t counter;
 
     // Generate 2^20 different (5 bits) values for the first 4 Gc bytes (0,1,2,3)
-    for (counter=0; counter < 0x100000; counter++) {
+    for (counter = 0; counter < 0x100000; counter++) {
         lstate  = lstate_before_gc;
         next_left_fast((counter >> 15) & 0x1f, &lstate);
         next_left_fast((counter >> 10) & 0x1f, &lstate);
@@ -872,9 +872,9 @@ static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, co
         previous_all_input(&csl_search, 4, CSS_LEFT);
 
         // Take the intersection of the corresponding states ~2^15 values (40-25 = 15 bits)
-        for(itsearch = csl_search.begin(); itsearch != csl_search.end(); ++itsearch) {
+        for (itsearch = csl_search.begin(); itsearch != csl_search.end(); ++itsearch) {
             itmatch = matchbox.find(itsearch->l);
-            if (itmatch != matchbox.end()){
+            if (itmatch != matchbox.end()) {
                 itsearch->Gc[0] = (itmatch->second >> 15) & 0x1f;
                 itsearch->Gc[1] = (itmatch->second >> 10) & 0x1f;
                 itsearch->Gc[2] = (itmatch->second >>  5) & 0x1f;
@@ -889,14 +889,14 @@ static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, co
     printf("\n");
 }
 
-void combine_valid_left_right_states(vector<cs_t>* plcstates, vector<cs_t>* prcstates, vector<uint64_t>* pgc_candidates) {
+void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcstates, vector<uint64_t> *pgc_candidates) {
     vector<cs_t>::iterator itl, itr;
-    size_t pos,count;
+    size_t pos, count;
     uint64_t gc;
     bool valid;
 
     vector<cs_t> outer, inner;
-    if ( plcstates->size() > prcstates->size()) {
+    if (plcstates->size() > prcstates->size()) {
         outer = *plcstates;
         inner = *prcstates;
     } else {
@@ -909,8 +909,8 @@ void combine_valid_left_right_states(vector<cs_t>* plcstates, vector<cs_t>* prcs
     // Clean up the candidate list
     pgc_candidates->clear();
     count = 0;
-    for( itl = outer.begin(); itl != outer.end(); ++itl) {
-        for(itr = inner.begin(); itr != inner.end(); ++itr) {
+    for (itl = outer.begin(); itl != outer.end(); ++itl) {
+        for (itr = inner.begin(); itr != inner.end(); ++itr) {
             valid = true;
             // Check for left and right candidates that share the overlapping bits (8 x 2bits of Gc)
             for (pos = 0; pos < 8; pos++) {
@@ -932,26 +932,26 @@ void combine_valid_left_right_states(vector<cs_t>* plcstates, vector<cs_t>* prcs
             count++;
         }
     }
-    printf("Found a total of " _YELLOW_("%llu")" combinations, ",((unsigned long long)plcstates->size()) * prcstates->size());
+    printf("Found a total of " _YELLOW_("%llu")" combinations, ", ((unsigned long long)plcstates->size()) * prcstates->size());
     printf("but only " _GREEN_("%lu")" were valid!\n", pgc_candidates->size());
 }
 
 static void ice_compare(
-  uint8_t offset,
-  uint8_t skips,
-  vector<uint64_t>* candidates,
-  crypto_state_t* ostate,
-  uint8_t *Ci,
-  uint8_t *Q,
-  uint8_t *Ch,
-  uint8_t *Ci_1
-  ) {
+    uint8_t offset,
+    uint8_t skips,
+    vector<uint64_t> *candidates,
+    crypto_state_t *ostate,
+    uint8_t *Ci,
+    uint8_t *Q,
+    uint8_t *Ch,
+    uint8_t *Ci_1
+) {
     uint8_t Gc_chk[8];
-    uint8_t Ch_chk[ 8];   
+    uint8_t Ch_chk[ 8];
     uint8_t Ci_1_chk[ 8];
 
     for (std::size_t i = offset; i < candidates->size(); i += skips) {
-        if (key_found.load(std::memory_order_relaxed)) 
+        if (key_found.load(std::memory_order_relaxed))
             break;
 
         uint64_t tkey = candidates->at(i);
@@ -968,7 +968,7 @@ static void ice_compare(
 }
 
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[]) {
     size_t pos;
     crypto_state_t ostate;
     uint64_t rstate_before_gc, rstate_after_gc;
@@ -984,7 +984,7 @@ int main(int argc, const char* argv[]) {
     //  uint8_t   Gc[ 8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     //  uint8_t   Ci[ 8] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
     //  uint8_t    Q[ 8] = {0x12,0x34,0x56,0x78,0x12,0x34,0x56,0x78};
-    uint8_t   Gc[ 8];  
+    uint8_t   Gc[ 8];
     uint8_t   Ci[ 8];
     uint8_t    Q[ 8];
     uint8_t   Ch[ 8];
@@ -1015,32 +1015,42 @@ int main(int argc, const char* argv[]) {
     if (argc == 2) {
         // Generate random values for the key and randoms
         srand((uint32_t)time(NULL));
-        for (pos = 0; pos<8; pos++) {
+        for (pos = 0; pos < 8; pos++) {
             Gc[pos] = rand();
             Ci[pos] = rand();
             Q[pos] = rand();
         }
-        sm_auth(Gc,Ci,Q,Ch,Ci_1,&ostate);
-        printf("  Gc: "); print_bytes(Gc,8);
+        sm_auth(Gc, Ci, Q, Ch, Ci_1, &ostate);
+        printf("  Gc: ");
+        print_bytes(Gc, 8);
     } else {
-        sscanf(argv[1],"%016" SCNx64,&nCi); num_to_bytes(nCi,8,Ci);
-        sscanf(argv[2],"%016" SCNx64,&nQ); num_to_bytes(nQ,8,Q);
-        sscanf(argv[3],"%016" SCNx64,&nCh); num_to_bytes(nCh,8,Ch);
-        sscanf(argv[4],"%016" SCNx64,&nCi_1); num_to_bytes(nCi_1,8,Ci_1);
+        sscanf(argv[1], "%016" SCNx64, &nCi);
+        num_to_bytes(nCi, 8, Ci);
+        sscanf(argv[2], "%016" SCNx64, &nQ);
+        num_to_bytes(nQ, 8, Q);
+        sscanf(argv[3], "%016" SCNx64, &nCh);
+        num_to_bytes(nCh, 8, Ch);
+        sscanf(argv[4], "%016" SCNx64, &nCi_1);
+        num_to_bytes(nCi_1, 8, Ci_1);
         printf("  Gc: unknown\n");
     }
 
-    for (pos = 0; pos<8; pos++) {
-        ks[2*pos] = Ci_1[pos];
-        ks[(2*pos)+1] = Ch[pos];
+    for (pos = 0; pos < 8; pos++) {
+        ks[2 * pos] = Ci_1[pos];
+        ks[(2 * pos) + 1] = Ch[pos];
     }
 
-    printf("  Ci: "); print_bytes(Ci,8);
-    printf("   Q: "); print_bytes(Q,8);
-    printf("  Ch: "); print_bytes(Ch,8);
-    printf("Ci+1: "); print_bytes(Ci_1,8);
+    printf("  Ci: ");
+    print_bytes(Ci, 8);
+    printf("   Q: ");
+    print_bytes(Q, 8);
+    printf("  Ch: ");
+    print_bytes(Ch, 8);
+    printf("Ci+1: ");
+    print_bytes(Ci_1, 8);
     printf("\n");
-    printf("  Ks: "); print_bytes(ks,16);
+    printf("  Ks: ");
+    print_bytes(ks, 16);
     printf("\n");
 
     printf("\nMultithreaded, will use " _YELLOW_("%u") " threads\n", g_num_cpus);
@@ -1061,17 +1071,17 @@ int main(int argc, const char* argv[]) {
     lstate_before_gc = 0;
 
     for (pos = 0; pos < 4; pos++) {
-        next_right_fast(Ci[2*pos  ], &rstate_before_gc);
-        next_right_fast(Ci[2*pos+1], &rstate_before_gc);
+        next_right_fast(Ci[2 * pos  ], &rstate_before_gc);
+        next_right_fast(Ci[2 * pos + 1], &rstate_before_gc);
         next_right_fast(Q[pos], &rstate_before_gc);
 
-        next_left_fast(Ci[2*pos  ], &lstate_before_gc);
-        next_left_fast(Ci[2*pos+1], &lstate_before_gc);
+        next_left_fast(Ci[2 * pos  ], &lstate_before_gc);
+        next_left_fast(Ci[2 * pos + 1], &lstate_before_gc);
         next_left_fast(Q[pos], &lstate_before_gc);
     }
 
     printf("Determing the right states that correspond to the keystream\n");
-    //rbits = sm_right(ks, mask, &rstates);   
+    //rbits = sm_right(ks, mask, &rstates);
     rbits = ice_sm_right(ks, mask, &rstates);
 
     printf("Top-bin for the right state contains " _GREEN_("%d")" correct bits\n", rbits);
@@ -1080,7 +1090,7 @@ int main(int argc, const char* argv[]) {
     if (rbits < 96) {
         printf(_RED_("\n  WARNING!!! Better find another trace, the right top-bin is < 96 bits\n\n"));
     }
-  
+
     for (itrstates = rstates.begin(); itrstates != rstates.end(); ++itrstates) {
         rstate_after_gc = *itrstates;
         sm_left_mask(ks, mask, rstate_after_gc);
@@ -1097,8 +1107,8 @@ int main(int argc, const char* argv[]) {
         printf("Found a total of " _YELLOW_("%lu")" left cipher states, recovering left candidates...\n", clstates.size());
         if (clstates.size() == 0) continue;
         search_gc_candidates_left(lstate_before_gc, Q, &clstates);
-        
-        
+
+
         printf("The meet-in-the-middle attack returned " _YELLOW_("%lu")" left cipher candidates\n", clstates.size());
         if (clstates.size() == 0) continue;
 
@@ -1106,16 +1116,16 @@ int main(int argc, const char* argv[]) {
         combine_valid_left_right_states(&clstates, &crstates, &pgc_candidates);
 
         printf("Filtering the correct one using the middle part\n");
-        
+
 
         key_found = ATOMIC_VAR_INIT(false);
 
         std::vector<std::thread> threads(g_num_cpus);
         for (uint8_t m = 0; m < g_num_cpus; m++) {
-            threads[m] =  std::thread( ice_compare, m, g_num_cpus, &pgc_candidates, &ostate, ref(Ci), ref(Q), ref(Ch), ref(Ci_1) );
+            threads[m] =  std::thread(ice_compare, m, g_num_cpus, &pgc_candidates, &ostate, ref(Ci), ref(Q), ref(Ch), ref(Ci_1));
         }
 
-        for (auto& t : threads) {
+        for (auto &t : threads) {
             t.join();
         }
 
@@ -1123,7 +1133,7 @@ int main(int argc, const char* argv[]) {
             printf("\nFound valid key: " _GREEN_("%016lX")"\n\n", key.load());
             break;
         }
-        
+
         printf(_RED_("\nCould not find key using this right cipher state.\n\n"));
     }
     return 0;
