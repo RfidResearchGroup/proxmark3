@@ -1644,7 +1644,7 @@ OUT:
             bar |= ((uint16_t)(found[m] & 1) << j++);
         }
 
-        uint8_t *tmp =  BigBuf_malloc(480 + 10);
+        uint8_t *tmp = BigBuf_malloc(480 + 10);
         memcpy(tmp, k_sector, sectorcnt * sizeof(sector_t));
         num_to_bytes(foo, 8, tmp + 480);
         tmp[488] = bar & 0xFF;
@@ -1974,7 +1974,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
                 emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
             } else { // sector trailer, keep the keys, set only the AC
                 emlGetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
-                memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
+                memcpy(dataoutbuf2 + 6, dataoutbuf + 6, 4);
                 emlSetMem(dataoutbuf2,  FirstBlockOfSector(sectorNo) + blockNo, 1);
             }
         }
