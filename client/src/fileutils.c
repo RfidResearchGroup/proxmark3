@@ -47,6 +47,9 @@
 #include "commonutil.h"
 #include "proxmark3.h"
 #include "util.h"
+#include "cmdhficlass.h"  // pagemap
+#include "protocols.h"    // iclass defines
+
 #ifdef _WIN32
 #include "scandir.h"
 #include <direct.h>
@@ -426,15 +429,28 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         }
         case jsfIclass: {
             JsonSaveStr(root, "FileType", "iclass");
-            uint8_t csn[8] = {0};
-            memcpy(csn, data, 8);
-            JsonSaveBufAsHexCompact(root, "$.Card.CSN", csn, sizeof(csn));
+            
+            picopass_hdr *hdr = (picopass_hdr *)data;
+            JsonSaveBufAsHexCompact(root, "$.Card.CSN", hdr->csn, sizeof(hdr->csn));
+            JsonSaveBufAsHexCompact(root, "$.Card.Configuration",(uint8_t *)&hdr->conf, sizeof(hdr->conf));
+
+            uint8_t pagemap = get_pagemap(hdr);
+            if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+                picopass_ns_hdr *ns_hdr = (picopass_ns_hdr *)data;
+                JsonSaveBufAsHexCompact(root, "$.Card.AIA", ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area));
+            } else {                
+                JsonSaveBufAsHexCompact(root, "$.Card.Epurse", hdr->epurse, sizeof(hdr->epurse));
+                JsonSaveBufAsHexCompact(root, "$.Card.Kd",hdr->key_d, sizeof(hdr->key_d));
+                JsonSaveBufAsHexCompact(root, "$.Card.Kc", hdr->key_c, sizeof(hdr->key_c));
+                JsonSaveBufAsHexCompact(root, "$.Card.AIA", hdr->app_issuer_area, sizeof(hdr->app_issuer_area));
+            }
 
             for (size_t i = 0; i < (datalen / 8); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 8), 8);
             }
+
             break;
         }
         case jsfT55x7: {
