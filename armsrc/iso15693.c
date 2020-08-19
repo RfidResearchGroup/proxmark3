@@ -718,7 +718,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             }
             if (dt->len > dt->max_len) {
                 ret = -2; // buffer overflow
-                Dbprintf("overflow (%d >= %d", dt->len, dt->max_len);
+                Dbprintf("overflow (%d > %d", dt->len, dt->max_len);
             }
             break;
         }
@@ -755,9 +755,8 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     if (ret < 0) {
         return ret;
     }
-    if (dt->len > 0) {
-        LogTrace_ISO15693(dt->output, dt->len, (sof_time * 4), (*eof_time * 4), NULL, false);
-    }
+
+    LogTrace_ISO15693(dt->output, dt->len, (sof_time * 4), (*eof_time * 4), NULL, false);
     return dt->len;
 }
 
