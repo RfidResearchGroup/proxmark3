@@ -375,7 +375,6 @@ std::atomic<size_t> topbits{0};
 std::mutex g_ice_mtx;
 uint32_t g_num_cpus = std::thread::hardware_concurrency();
 
-
 static void ice_sm_right_thread(
     uint8_t offset,
     uint8_t skips,
@@ -450,7 +449,6 @@ static void ice_sm_right_thread(
 }
 static uint32_t ice_sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
 
-    uint32_t g_num_cpus = std::thread::hardware_concurrency();
     map<uint64_t, uint64_t> bincstates;
     topbits = ATOMIC_VAR_INIT(0);
 
@@ -496,7 +494,6 @@ static void ice_sm_left_thread(
     cs_t state;
     memset(&state, 0x00, sizeof(cs_t));
     state.invalid = false;
-
 
     for (uint64_t counter = offset; counter < 0x800000000ull; counter += skips) {
         uint64_t lstate = counter;
@@ -566,8 +563,6 @@ static void ice_sm_left_thread(
 }
 
 static void ice_sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates) {
-
-    uint32_t g_num_cpus = std::thread::hardware_concurrency();
 
     map<uint64_t, cs_t> bincstates;
     std::vector<std::thread> threads(g_num_cpus);
@@ -967,7 +962,6 @@ static void ice_compare(
     return;
 }
 
-
 int main(int argc, const char *argv[]) {
     size_t pos;
     crypto_state_t ostate;
@@ -1119,7 +1113,7 @@ int main(int argc, const char *argv[]) {
 
 
         key_found = ATOMIC_VAR_INIT(false);
-
+        key = ATOMIC_VAR_INIT(0);
         std::vector<std::thread> threads(g_num_cpus);
         for (uint8_t m = 0; m < g_num_cpus; m++) {
             threads[m] =  std::thread(ice_compare, m, g_num_cpus, &pgc_candidates, &ostate, ref(Ci), ref(Q), ref(Ch), ref(Ci_1));
