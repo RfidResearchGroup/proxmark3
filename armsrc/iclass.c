@@ -673,6 +673,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 // NR, from reader, is in receivedCmd +1
                 opt_doTagMAC_2(*cipher_state, receivedCmd + 1, data_generic_trace, diversified_key);
 
+                /*
                 uint8_t _mac[4] = {0};
                 opt_doReaderMAC_2(*cipher_state, receivedCmd + 1, _mac,  diversified_key);
 
@@ -688,6 +689,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
                     goto send;
                 }
+                */
 
                 trace_data = data_generic_trace;
                 trace_data_size = 4;
