@@ -515,7 +515,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                             tag->output[tag->len] = tag->shiftReg;
                             tag->len++;
 
-                            if (tag->len >= tag->max_len) {
+                            if (tag->len > tag->max_len) {
                                 // buffer overflow, give up
                                 LED_C_OFF();
                                 return true;
@@ -540,7 +540,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                             tag->output[tag->len] = tag->shiftReg;
                             tag->len++;
 
-                            if (tag->len >= tag->max_len) {
+                            if (tag->len > tag->max_len) {
                                 // buffer overflow, give up
                                 tag->posCount = 0;
                                 tag->previous_amplitude = amplitude;
