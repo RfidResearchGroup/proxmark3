@@ -23,6 +23,7 @@
 #include "crc16.h"
 #include "crapto1/crapto1.h"
 #include "protocols.h"
+#include "cmdhficlass.h"
 
 enum MifareAuthSeq {
     masNone,
@@ -326,59 +327,99 @@ void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     applyIso14443a(exp, size, cmd, cmdsize);
 }
 
-void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
-    uint8_t c = cmd[0] & 0x0F;
-    uint8_t parity = 0;
-    for (uint8_t i = 0; i < 7; i++) {
-        parity ^= (cmd[0] >> i) & 1;
-    }
+void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse) {
 
-    switch (c) {
-        case ICLASS_CMD_HALT:
-            snprintf(exp, size, "HALT");
-            break;
-        case ICLASS_CMD_SELECT:
-            snprintf(exp, size, "SELECT");
-            break;
-        case ICLASS_CMD_ACTALL:
-            snprintf(exp, size, "ACTALL");
-            break;
-        case ICLASS_CMD_DETECT:
-            snprintf(exp, size, "DETECT");
-            break;
-        case ICLASS_CMD_CHECK:
-            snprintf(exp, size, "CHECK");
-            break;
-        case ICLASS_CMD_READ4:
-            snprintf(exp, size, "READ4(%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_READ_OR_IDENTIFY: {
-            if (cmdsize > 1) {
-                snprintf(exp, size, "READ(%d)", cmd[1]);
-            } else {
-                snprintf(exp, size, "IDENTIFY");
-            }
-            break;
+    enum pico_state {PICO_NONE, PICO_SELECT, PICO_AUTH_EPURSE, PICO_AUTH_MACS };
+    static enum pico_state curr_state = PICO_NONE;
+    static uint8_t csn[8];
+    static uint8_t epurse[8];
+    static uint8_t rmac[4];
+    static uint8_t tmac[4];
+
+    if ( isResponse == false )  {
+        uint8_t c = cmd[0] & 0x0F;
+        uint8_t parity = 0;
+        for (uint8_t i = 0; i < 7; i++) {
+            parity ^= (cmd[0] >> i) & 1;
         }
-        case ICLASS_CMD_PAGESEL:
-            snprintf(exp, size, "PAGESEL(%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_UPDATE:
-            snprintf(exp, size, "UPDATE(%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_READCHECK:
-            if (ICLASS_CREDIT(cmd[0])) {
-                snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
-            } else {
-                snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);
+
+        switch (c) {
+            case ICLASS_CMD_HALT:
+                snprintf(exp, size, "HALT");
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_SELECT:
+                snprintf(exp, size, "SELECT");
+                curr_state = PICO_SELECT;
+                break;
+            case ICLASS_CMD_ACTALL:
+                snprintf(exp, size, "ACTALL");
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_DETECT:
+                snprintf(exp, size, "DETECT");
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_CHECK:
+                snprintf(exp, size, "CHECK");
+                curr_state = PICO_AUTH_MACS;
+                memcpy(rmac, cmd + 1, 4);
+                memcpy(tmac, cmd + 5, 4);
+                break;
+            case ICLASS_CMD_READ4:
+                snprintf(exp, size, "READ4(%d)", cmd[1]);
+                break;
+            case ICLASS_CMD_READ_OR_IDENTIFY: {
+
+                if (cmdsize > 1) {
+                    snprintf(exp, size, "READ(%d)", cmd[1]);
+                } else {
+                    snprintf(exp, size, "IDENTIFY");
+                }
+                break;
             }
-            break;
-        case ICLASS_CMD_ACT:
-            snprintf(exp, size, "ACT");
-            break;
-        default:
-            snprintf(exp, size, "?");
-            break;
+            case ICLASS_CMD_PAGESEL:
+                snprintf(exp, size, "PAGESEL(%d)", cmd[1]);
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_UPDATE:
+                snprintf(exp, size, "UPDATE(%d)", cmd[1]);
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_READCHECK:
+                if (ICLASS_CREDIT(cmd[0])) {
+                    snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
+                    curr_state = PICO_AUTH_EPURSE;
+                } else {
+                    snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);
+                    curr_state = PICO_AUTH_EPURSE;
+                }
+                break;
+            case ICLASS_CMD_ACT:
+                snprintf(exp, size, "ACT");
+                curr_state = PICO_NONE;
+                break;
+            default:
+                snprintf(exp, size, "?");
+                curr_state = PICO_NONE;
+                break;
+        }
+
+    } else {
+        
+        if (curr_state == PICO_SELECT) {
+            memcpy(csn, cmd, 8);
+            curr_state = PICO_NONE;
+        } else if (curr_state == PICO_AUTH_EPURSE) {
+            memcpy(epurse, cmd, 8);
+        } else if ( curr_state == PICO_AUTH_MACS) {
+
+            uint8_t key[8];
+            if (check_known_default(csn, epurse, rmac, tmac, key)) {
+                snprintf(exp, size, "( " _GREEN_("%s") ")", sprint_hex(key, 8) );
+            }
+            curr_state = PICO_NONE;
+        }
     }
     return;
 }

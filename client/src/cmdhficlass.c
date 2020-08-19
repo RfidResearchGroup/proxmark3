@@ -362,6 +362,46 @@ static int usage_hf_iclass_permutekey(void) {
     return PM3_SUCCESS;
 }
 
+static int cmp_uint32(const void *a, const void *b) {
+
+    const iclass_prekey_t *x = (const iclass_prekey_t *)a;
+    const iclass_prekey_t *y = (const iclass_prekey_t *)b;
+
+    uint32_t mx = bytes_to_num((uint8_t *)x->mac, 4);
+    uint32_t my = bytes_to_num((uint8_t *)y->mac, 4);
+
+    if (mx < my)
+        return -1;
+    else
+        return mx > my;
+}
+
+bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t* rmac, uint8_t* tmac, uint8_t* key) {
+
+    iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
+    if (prekey == false) {
+        return PM3_EMALLOC;
+    }
+
+    uint8_t ccnr[12];
+    memcpy(ccnr, epurse, 8);
+    memcpy(ccnr + 8, rmac, 4);
+
+    GenerateMacKeyFrom(csn, ccnr, false, false, (uint8_t*)iClass_Key_Table, ICLASS_KEYS_MAX, prekey);
+    qsort(prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
+
+    iclass_prekey_t lookup;
+    memcpy(lookup.mac, tmac, 4);
+
+    // binsearch
+    iclass_prekey_t * item = (iclass_prekey_t *) bsearch(&lookup, prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
+    if (item != NULL) {
+        memcpy(key, item->key, 8);
+        return true;
+    }
+    return false;
+}
+
 typedef enum {
     None = 0,
     DES,
@@ -415,7 +455,7 @@ static uint8_t notset(uint8_t val, uint8_t mask) {
     return !(val & mask);
 }
 
-static uint8_t get_pagemap(const picopass_hdr *hdr) {
+uint8_t get_pagemap(const picopass_hdr *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
 }
 
@@ -2926,9 +2966,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t fileNameLen = 0;
-    iclass_premac_t *pre = NULL;
 
-    // time
     uint64_t t1 = msclock();
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -2973,7 +3011,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         return res;
     }
 
-    pre = calloc(keycount, sizeof(iclass_premac_t));
+    iclass_premac_t *pre = calloc(keycount, sizeof(iclass_premac_t));
     if (!pre) {
         free(keyBlock);
         return PM3_EMALLOC;
@@ -3114,20 +3152,6 @@ out:
     free(keyBlock);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
-}
-
-static int cmp_uint32(const void *a, const void *b) {
-
-    const iclass_prekey_t *x = (const iclass_prekey_t *)a;
-    const iclass_prekey_t *y = (const iclass_prekey_t *)b;
-
-    uint32_t mx = bytes_to_num((uint8_t *)x->mac, 4);
-    uint32_t my = bytes_to_num((uint8_t *)y->mac, 4);
-
-    if (mx < my)
-        return -1;
-    else
-        return mx > my;
 }
 
 // this method tries to identify in which configuration mode a iCLASS / iCLASS SE reader is in.

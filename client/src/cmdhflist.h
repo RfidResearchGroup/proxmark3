@@ -38,7 +38,7 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 
 int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
-void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse);
 void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);

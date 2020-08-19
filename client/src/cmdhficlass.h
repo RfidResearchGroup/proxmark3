@@ -13,6 +13,7 @@
 
 #include "common.h"
 #include "fileutils.h"
+#include "pm3_cmd.h"
 
 typedef struct iclass_block {
     uint8_t d[8];
@@ -38,4 +39,7 @@ void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, 
 void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_prekey_t *list);
 void PrintPreCalcMac(uint8_t *keys, uint32_t keycnt, iclass_premac_t *pre_list);
 void PrintPreCalc(iclass_prekey_t *list, uint32_t itemcnt);
+
+uint8_t get_pagemap(const picopass_hdr *hdr);
+bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t* rmac, uint8_t* tmac, uint8_t* key);
 #endif

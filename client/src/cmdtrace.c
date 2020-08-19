@@ -387,6 +387,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         case PROTO_HITAGS:
             annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
+        case ICLASS:
+                annotateIclass(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+                break;
         default:
             break;
     }
@@ -396,9 +399,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         switch (protocol) {
             case LEGIC:
                 annotateLegic(explanation, sizeof(explanation), frame, data_len);
-                break;
-            case ICLASS:
-                annotateIclass(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_14443A:
                 annotateIso14443a(explanation, sizeof(explanation), frame, data_len);
