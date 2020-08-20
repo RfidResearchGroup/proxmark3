@@ -373,7 +373,7 @@ std::atomic<bool> key_found{0};
 std::atomic<uint64_t> key{0};
 std::atomic<size_t> topbits{0};
 std::mutex g_ice_mtx;
-uint32_t g_num_cpus = std::thread::hardware_concurrency();
+static uint32_t g_num_cpus = std::thread::hardware_concurrency();
 
 static void ice_sm_right_thread(
     uint8_t offset,
@@ -954,8 +954,10 @@ static void ice_compare(
 
         sm_auth(Gc_chk, Ci, Q, Ch_chk, Ci_1_chk, ostate);
         if ((memcmp(Ch_chk, Ch, 8) == 0) && (memcmp(Ci_1_chk, Ci_1, 8) == 0)) {
+            g_ice_mtx.lock();
             key_found = true;
             key = tkey;
+            g_ice_mtx.unlock();
             break;
         }
     }
