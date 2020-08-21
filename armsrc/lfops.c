@@ -2152,7 +2152,10 @@ void T55xx_ChkPwds(uint8_t flags) {
         payload.candidate = bytes_to_num(pwds + (idx * 4), 4);
     }
 
+#ifdef WITH_FLASH
 OUT:
+#endif
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     reply_ng(CMD_LF_T55XX_CHK_PWDS, PM3_SUCCESS, (uint8_t*)&payload, sizeof(payload));
