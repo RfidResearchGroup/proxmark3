@@ -29,6 +29,7 @@ typedef enum {
     CRC_CCITT,
     CRC_KERMIT,
     CRC_XMODEM,
+    CRC_CRYPTORF,
 } CrcType_t;
 
 uint16_t update_crc16_ex(uint16_t crc, uint8_t c, uint16_t polynomial);
