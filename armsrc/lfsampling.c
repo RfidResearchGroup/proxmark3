@@ -127,7 +127,7 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
         Dbprintf("initSampleBufferEx, param NULL");
         return;
     }
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 
     // We can't erase the buffer now, it would drastically delay the acquisition
     if (use_malloc) {
