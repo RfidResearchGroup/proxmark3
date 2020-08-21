@@ -2155,7 +2155,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
     if (startblock < 5) {
         PrintAndLogEx(WARNING, "you cannot write key blocks this way. yet... make your start block > 4");
-        return PM3_EINVARG;
+        return PM3_EINVARG; 
     }
 
     int total_bytes = (((endblock - startblock) + 1) * 12);
@@ -3115,11 +3115,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
                 break;
             }
             case 0: {
-                PrintAndLogEx(INPLACE, "Chunk [%d/%d] : %.1fs - no luck"
-                              , key_offset
-                              , keycount
-                              , (float)(t2 / 1000.0)
-                             );
+                PrintAndLogEx(INPLACE, "Chunk [%d/%d]", key_offset, keycount);
                 break;
             }
             case 99: {
@@ -3140,7 +3136,7 @@ out:
     t1 = msclock() - t1;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Time in iclass chk: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in iclass chk " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
     DropField();
 
     if (found_key) {
@@ -3287,7 +3283,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "Time in iclass lookup: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in iclass lookup " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
 
     free(prekey);
     free(keyBlock);

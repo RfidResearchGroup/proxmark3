@@ -1071,7 +1071,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                     if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, try_with_pwd && usepwd, password, m) == false)
                         continue;
 
-                    if (tryDetectModulationEx(m, T55XX_PrintConfig, 0, password) == false)
+                    if (tryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
                         continue;
 
                     found = true;
@@ -1079,7 +1079,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                 }
             } else {
                 if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
-                    found = tryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, password);
+                    found = tryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
                 }
             }
 
@@ -3121,7 +3121,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
 out:
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\nTime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 
@@ -3199,7 +3199,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") " ]", curr);
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\nTime in bruteforce: %.0f seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in bruteforce " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 
