@@ -3865,8 +3865,9 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf cwipe",
                   "Wipe gen1 magic chinese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
-                  "Usage:\n\thf mf cwipe -> wipe card.\n"
-                  "\thf mf cwipe  -u 09080706 -a 0004 -s 18      -- set UID, ATQA and SAK and wipe card.");
+                  "Usage:\n"
+                  _YELLOW_("\thf mf cwipe") " -> wipe card\n"
+                  _YELLOW_("\thf mf cwipe -u 09080706 -a 0004 -s 18") "      -- set UID, ATQA and SAK and wipe card");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4452,8 +4453,9 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf auth4",
                   "Executes AES authentication command in ISO14443-4",
-                  "Usage:\n\thf mf auth4 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
-                  "\thf mf auth4 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication\n");
+                  "Usage:\n"
+                  _YELLOW_("\thf mf auth4 4000 000102030405060708090a0b0c0d0e0f") " -> executes authentication\n"
+                  _YELLOW_("\thf mf auth4 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF") " -> executes authentication\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4487,9 +4489,9 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf mad",
                   "Checks and prints Mifare Application Directory (MAD)",
                   "Usage:\n"
-                  "\thf mf mad                                -> shows MAD if exists\n"
-                  "\thf mf mad --aid e103 -k ffffffffffff -b  -> shows NDEF data if exists. read card with custom key and key B\n"
-                  "\thf mf mad --dch -k ffffffffffff          -> decode CardHolder information\n");
+                  _YELLOW_("\thf mf mad") "                                -> shows MAD if exists\n"
+                  _YELLOW_("\thf mf mad --aid e103 -k ffffffffffff -b") "  -> shows NDEF data if exists. read card with custom key and key B\n"
+                  _YELLOW_("\thf mf mad --dch -k ffffffffffff") "          -> decode CardHolder information\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4628,9 +4630,10 @@ static int CmdHFMFNDEF(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "Usage:\n\thf mf ndef                       -> shows NDEF parsed data\n"
-                  "\thf mf ndef -vv                           -> shows NDEF parsed and raw data\n"
-                  "\thf mf ndef --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B\n");
+                  "Usage:\n"
+                  _YELLOW_("\thf mf ndef") "                       -> shows NDEF parsed data\n"
+                  _YELLOW_("\thf mf ndef -vv") "                           -> shows NDEF parsed and raw data\n"
+                  _YELLOW_("\thf mf ndef --aid e103 -k ffffffffffff -b") " -> shows NDEF data with custom AID, key and with key B\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4743,11 +4746,12 @@ static int CmdHFMFPersonalize(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf personalize",
                   "Personalize the UID of a Mifare Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",
-                  "Usage:\n\thf mf personalize UIDF0                        -> double size UID according to ISO/IEC14443-3\n"
-                  "\thf mf personalize UIDF1                        -> double size UID according to ISO/IEC14443-3, optional usage of selection process shortcut\n"
-                  "\thf mf personalize UIDF2                        -> single size random ID according to ISO/IEC14443-3\n"
-                  "\thf mf personalize UIDF3                        -> single size NUID according to ISO/IEC14443-3\n"
-                  "\thf mf personalize -t B -k B0B1B2B3B4B5 UIDF3   -> use key B = 0xB0B1B2B3B4B5 instead of default key A\n");
+                  "Usage:\n"
+                  _YELLOW_("\thf mf personalize UIDF0") "                        -> double size UID according to ISO/IEC14443-3\n"
+                  _YELLOW_("\thf mf personalize UIDF1") "                        -> double size UID according to ISO/IEC14443-3, optional usage of selection process shortcut\n"
+                  _YELLOW_("\thf mf personalize UIDF2") "                        -> single size random ID according to ISO/IEC14443-3\n"
+                  _YELLOW_("\thf mf personalize UIDF3") "                        -> single size NUID according to ISO/IEC14443-3\n"
+                  _YELLOW_("\thf mf personalize -t B -k B0B1B2B3B4B5 UIDF3") "   -> use key B = 0xB0B1B2B3B4B5 instead of default key A\n");
 
     void *argtable[] = {
         arg_param_begin,
