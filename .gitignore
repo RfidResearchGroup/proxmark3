@@ -66,6 +66,10 @@ tools/fpga_compress/fpga_compress
 tools/mfkey/mfkey32
 tools/mfkey/mfkey64
 tools/nonce2key/nonce2key
+tools/cryptorf/cm
+tools/cryptorf/sm
+tools/cryptorf/sma
+tools/cryptorf/sma_multi
 
 fpga/*
 !fpga/tests
