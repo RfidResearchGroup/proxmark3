@@ -87,7 +87,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     char asBuff[120];
     memset(asBuff, 0, sizeof(asBuff));
     uint32_t mem_avail = 0;
-    PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Hardware ]"));
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
 
     switch (iChipID) {
         case 0x270B0A40:
@@ -710,19 +710,19 @@ void pm3_version(bool verbose, bool oneliner) {
 
     if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
         char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
-        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Proxmark3 RFID instrument ]"));
-        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ CLIENT ]"));
+        PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
+        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
         FormatVersionInformation(temp, sizeof(temp), "  client: ", &version_information);
         PrintAndLogEx(NORMAL, "%s", temp);
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
         if (IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
-            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 ]"));
+            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
         } else {
-            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 ]"));
+            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3 RDV4") " ]");
             PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 Extras ]"));
+            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3 RDV4 Extras") " ]");
             PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
 
             if (IfPm3FpcUsartDevFromUsb()) {

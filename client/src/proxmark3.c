@@ -34,8 +34,8 @@
 #include "flash.h"
 #include "preferences.h"
 
-#define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
-#define BANNERMSG2 "  bleeding edge :coffee:"
+#define BANNERMSG1 ""
+#define BANNERMSG2 "  :snowflake: bleeding edge :coffee:"
 #define BANNERMSG3 "  https://github.com/rfidresearchgroup/proxmark3/"
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
