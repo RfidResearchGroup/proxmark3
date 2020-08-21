@@ -181,7 +181,8 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
 bool GetT55xxBlockData(uint32_t *blockdata);
 bool DecodeT55xxBlock(void);
 bool tryDetectModulation(uint8_t downlink_mode, bool print_config);
-bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf);
+//bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf);
+bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd);
 bool testKnownConfigBlock(uint32_t block0);
 
 bool tryDetectP1(bool getData);
