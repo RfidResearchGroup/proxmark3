@@ -2074,13 +2074,16 @@ void T55xx_ChkPwds(uint8_t flags) {
         b1 = 0;
         T55xxReadBlock(0, 0, true, 0, 0, downlink_mode);
         for (uint16_t j = 0; j < CHK_SAMPLES_SIGNAL; ++j) {
-            b1 += buf[j];
+            b1 += (buf[j] * buf[j]);
         }
         b1 *= b1;
         b1 >>= 8;
         baseline_faulty += b1;
     }
     baseline_faulty >>= 5;
+
+    if (DBGLEVEL >= DBG_DEBUG)
+        Dbprintf("Baseline " _YELLOW_("%llu"), baseline_faulty);    
 
     uint8_t *pwds = BigBuf_get_EM_addr();
     uint16_t pwd_count = 0;
@@ -2133,7 +2136,7 @@ void T55xx_ChkPwds(uint8_t flags) {
 
         uint64_t sum = 0;
         for (uint16_t j = 0; j < CHK_SAMPLES_SIGNAL; ++j) {
-            sum += buf[j];
+            sum += (buf[j] * buf[j]);
         }
         sum *= sum;
         sum >>= 8;
@@ -2141,6 +2144,9 @@ void T55xx_ChkPwds(uint8_t flags) {
         int64_t tmp_dist = (baseline_faulty - sum);
         curr = ABS(tmp_dist);
 
+        if (DBGLEVEL >= DBG_DEBUG)
+            Dbprintf("%08x has distance " _YELLOW_("%llu"), pwd, curr);
+            
         if (curr > prev) {
             idx = i;
             prev = curr;
