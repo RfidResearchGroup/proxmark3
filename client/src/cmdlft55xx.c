@@ -253,16 +253,16 @@ static int usage_t55xx_chk(void) {
     PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
     PrintAndLogEx(NORMAL,  _RED_("WARNING:") " this may brick non-password protected chips!");
     PrintAndLogEx(NORMAL, "Try to reading block 7 before\n");
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx chk [h] [m] [r <mode>] [i <*.dic>]");
+    PrintAndLogEx(NORMAL, "Usage: lf t55xx chk [h] [m] [r <mode>] [f <*.dic>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
     PrintAndLogEx(NORMAL, "     m            - use dictionary from flashmemory\n");
     print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL, T55XX_DLMODE_ALL);
-    PrintAndLogEx(NORMAL, "     i <*.dic>    - loads a default keys dictionary file <*.dic>");
+    PrintAndLogEx(NORMAL, "     f <*.dic>    - loads a default keys dictionary file <*.dic>");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf t55xx chk m"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf t55xx chk i t55xx_default_pwds"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf t55xx chk f t55xx_default_pwds"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -3002,7 +3002,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 from_flash = true;
                 cmdp++;
                 break;
-            case 'i':
+            case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
                     PrintAndLogEx(ERR, "Error, no filename after 'f' was found");
                     errors = true;
