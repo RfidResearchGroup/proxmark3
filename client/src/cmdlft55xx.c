@@ -3053,12 +3053,12 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         struct p* packet = (struct p*)resp.data.asBytes;
 
         if (packet->found) {
-            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX64) " ]", packet->candidate);
+            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX32) " ]", packet->candidate);
 
             if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, packet->candidate, downlink_mode)) {
                 found = tryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, packet->candidate);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password [ " _GREEN_("%08"PRIX64) " ]", packet->candidate);
+                    PrintAndLogEx(SUCCESS, "Found valid password [ " _GREEN_("%08"PRIX32) " ]", packet->candidate);
 
                 } else {
                     PrintAndLogEx(WARNING, "Check pwd failed");
@@ -3097,9 +3097,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 return PM3_EOPABORTED;
             }
 
-            uint64_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
+            uint32_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
-            PrintAndLogEx(INFO, "Testing %08"PRIX64, curr_password);
+            PrintAndLogEx(INFO, "Testing %08"PRIX32, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
                 if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
@@ -3108,7 +3108,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
                 found = tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", curr_password);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                     dl_mode = 4; // Exit other downlink mode checks
                     c = keycount; // Exit loop
                 }
