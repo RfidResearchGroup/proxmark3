@@ -236,15 +236,15 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
-    // 50ms for the resonant antenna to settle.
-    if (reader_field)
-        SpinDelay(50);
-
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
 
     // start a 1.5ticks is 1us
     StartTicks();
+
+    // 50ms for the resonant antenna to settle.
+    if (reader_field)
+        WaitMS(50);
 }
 
 /**
@@ -277,9 +277,9 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
     while (BUTTON_PRESS() == false) {
 
-        // only every 1000th times, in order to save time when collecting samples.
+        // only every 4000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if ((checked == 4000) && (trigger_threshold > 0)) {
+        if ((checked >= 4000) && (trigger_threshold > 0)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -479,27 +479,23 @@ void doT55x7Acquisition(size_t sample_size) {
 **/
 
 #define COTAG_T1 384
-#define COTAG_T2 (COTAG_T1>>1)
-#define COTAG_ONE_THRESHOLD 128+5
-#define COTAG_ZERO_THRESHOLD 128-5
+#define COTAG_T2 (COTAG_T1 >> 1)
+#define COTAG_ONE_THRESHOLD 127+5
+#define COTAG_ZERO_THRESHOLD 127-5
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif
-void doCotagAcquisition() {
+void doCotagAcquisition(void) {
 
-    uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
+    uint8_t *dest = BigBuf_malloc(bufsize);
 
     dest[0] = 0;
-    uint8_t firsthigh = 0, firstlow = 0;
+
+    bool firsthigh = false, firstlow = false;
     uint16_t i = 0, noise_counter = 0;
 
-    if (DBGLEVEL >= DBG_DEBUG) {
-        Dbprintf("doCotagAcquisition - after init");
-        print_stack_usage();
-    }
-
-    while ((i < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
+    while ((i < bufsize) && (noise_counter < COTAG_T1 << 1)) {
 
         if (BUTTON_PRESS())
             break;
@@ -507,93 +503,79 @@ void doCotagAcquisition() {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
             // find first peak
-            if (!firsthigh) {
+            if (firsthigh == false) {
                 if (sample < COTAG_ONE_THRESHOLD) {
                     noise_counter++;
                     continue;
                 }
+
                 noise_counter = 0;
-                firsthigh = 1;
+                firsthigh = true;
             }
-            if (!firstlow) {
+
+            if (firstlow == false) {
                 if (sample > COTAG_ZERO_THRESHOLD) {
                     noise_counter++;
                     continue;
                 }
+
                 noise_counter = 0;
-                firstlow = 1;
+                firstlow = true;
             }
 
-            ++i;
-
-            if (sample > COTAG_ONE_THRESHOLD)
-                dest[i] = 255;
-            else if (sample < COTAG_ZERO_THRESHOLD)
-                dest[i] = 0;
-            else
-                dest[i] = dest[i - 1];
+            if (++i < bufsize) {
+                if (sample > COTAG_ONE_THRESHOLD) {
+                    dest[i] = 255;
+                } else if (sample < COTAG_ZERO_THRESHOLD) {
+                    dest[i] = 0;
+                } else {
+                    dest[i] = dest[i - 1];
+                }
+            }
         }
     }
-
-    Dbprintf("doCotagAcquisition - %u high %u == 1   low %u == 1", i, firsthigh, firstlow);
 
     // Ensure that DC offset removal and noise check is performed for any device-side processing
-    removeSignalOffset(dest, bufsize);
-    printSamples();
-    computeSignalProperties(dest, bufsize);
-    printSamples();
+    removeSignalOffset(dest, i);
+    computeSignalProperties(dest, i);
 }
 
-uint32_t doCotagAcquisitionManchester(void) {
+uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen) {
 
-    uint8_t *dest = BigBuf_get_addr();
-    uint16_t bufsize = MIN(COTAG_BITS, BigBuf_max_traceLen());
-
+    if (dest == NULL)
+        return 0;
+   
     dest[0] = 0;
-    uint8_t firsthigh = 0, firstlow = 0;
+
+    bool firsthigh = false, firstlow = false;
     uint8_t curr = 0, prev = 0;
-    uint16_t sample_counter = 0, period = 0;
-    uint16_t noise_counter = 0;
+    uint16_t i = 0;
+    uint16_t period = 0;
 
-    if (DBGLEVEL >= DBG_DEBUG) {
-        Dbprintf("doCotagAcquisitionManchester - after init");
-        print_stack_usage();
-    }
-
-    while ((sample_counter < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
-
-        if (BUTTON_PRESS())
-            break;
+    while ((i < destlen) && BUTTON_PRESS() == false) {
 
         WDT_HIT();
-
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            LED_D_ON();
-        }
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
             // find first peak
-            if (!firsthigh) {
+            if (firsthigh == false) {
                 if (sample < COTAG_ONE_THRESHOLD) {
-                    noise_counter++;
                     continue;
                 }
-                noise_counter = 0;
-                firsthigh = 1;
+                firsthigh = true;
             }
 
-            if (!firstlow) {
+            if (firstlow == false) {
                 if (sample > COTAG_ZERO_THRESHOLD) {
-                    noise_counter++;
                     continue;
                 }
-                noise_counter = 0;
-                firstlow = 1;
+                firstlow = true;
             }
 
             // set sample 255, 0,  or previous
@@ -613,10 +595,11 @@ uint32_t doCotagAcquisitionManchester(void) {
                 continue;
             }
 
-            dest[sample_counter] = curr;
-            ++sample_counter;
+            dest[i] = curr;
+            ++i;
             period = COTAG_T1;
         }
     }
-    return sample_counter;
+
+    return i;
 }

@@ -27,6 +27,7 @@
 #include "protocols.h"
 #include "pmflash.h"
 #include "flashmem.h" // persistence on flash
+#include "appmain.h" // print stack
 
 /*
 Notes about EM4xxx timings.
@@ -2611,44 +2612,53 @@ void Cotag(uint32_t arg0) {
 
     LED_A_ON();
 
-    LFSetupFPGAForADC(LF_FREQ2DIV(132), true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     //clear buffer now so it does not interfere with timing later
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
     //send COTAG start pulse
-    /*
-        ON(740)  OFF(2035)
-        ON(3330) OFF(2035)
-        ON(740)  OFF(2035)
-        ON(1000)
-    */
+    ON(740)  OFF(2035)
+    ON(3330) OFF(2035)
+    ON(740)  OFF(2035)
+    ON(1000)
 
+
+/*
     ON(800)  OFF(2200)
     ON(3600) OFF(2200)
     ON(800)  OFF(2200)
     ON(3400)
-
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_FREQ2DIV(125));
-
+*/
     switch (rawsignal) {
-        case 0:
+        case 0: {
             doCotagAcquisition();
+            reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, NULL, 0);
             break;
-        case 1:
-            doCotagAcquisitionManchester();
+        }
+        case 1: {
+            uint8_t *dest = BigBuf_malloc(COTAG_BITS);
+            uint16_t bits = doCotagAcquisitionManchester(dest, COTAG_BITS);
+            reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, dest, bits);
             break;
+        }
         case 2: {
             DoAcquisition_config(false, 0);
+            reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+        default: {
+            reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, NULL, 0);
             break;
         }
     }
 
+
     // Turn the field off
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, NULL, 0);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
+
 }
 
 /*

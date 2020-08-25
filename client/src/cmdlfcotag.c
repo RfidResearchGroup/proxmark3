@@ -84,9 +84,11 @@ static int CmdCOTAGRead(const char *Cmd) {
     uint32_t rawsignal = 1;
     sscanf(Cmd, "%u", &rawsignal);
 
+    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_COTAG_READ, rawsignal, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_LF_COTAG_READ, NULL, 7000)) {
+
+    if (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 7000)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -100,11 +102,8 @@ static int CmdCOTAGRead(const char *Cmd) {
             break;
         }
         case 1: {
-
-            if (!GetFromDevice(BIG_BUF, DemodBuffer, COTAG_BITS, 0, NULL, 0, NULL, 1000, false)) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-                return PM3_ETIMEOUT;
-            }
+            PrintAndLogEx(INFO, "ICE_:: bits %u", resp.length);
+            memcpy(DemodBuffer, resp.data.asBytes, COTAG_BITS);
             DemodBufferLen = COTAG_BITS;
             return CmdCOTAGDemod("");
         }

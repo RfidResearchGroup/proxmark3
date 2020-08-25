@@ -22,7 +22,7 @@ typedef struct {
 * and is Manchester?,  we directly gather the manchester data into bigbuff
 **/
 void doCotagAcquisition(void);
-uint32_t doCotagAcquisitionManchester(void);
+uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen);
 
 /**
 * acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
