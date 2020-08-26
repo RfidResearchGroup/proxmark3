@@ -106,8 +106,8 @@ static int CmdCOTAGRead(const char *Cmd) {
         }
         case 1: {
             memcpy(DemodBuffer, resp.data.asBytes, resp.length);
-            DemodBufferLen = COTAG_BITS;
-            return CmdCOTAGDemod("");
+            DemodBufferLen = resp.length;
+            return demodCOTAG();
         }
     }
     return PM3_SUCCESS;
