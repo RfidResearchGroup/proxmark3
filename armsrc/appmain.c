@@ -954,7 +954,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_COTAG_READ: {
-            Cotag(packet->oldarg[0]);
+            struct p {
+                uint8_t mode;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            Cotag(payload->mode);
             break;
         }
 #endif

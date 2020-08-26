@@ -82,21 +82,33 @@ static int CmdCOTAGDemod(const char *Cmd) {
 // 2 = raw signal -  maxlength bigbuff
 static int CmdCOTAGRead(const char *Cmd) {
 
-    if (tolower(Cmd[0]) == 'h') return usage_lf_cotag_read();
+    if (tolower(Cmd[0]) == 'h')
+        return usage_lf_cotag_read();
 
-    uint32_t rawsignal = 1;
-    sscanf(Cmd, "%u", &rawsignal);
+    struct p {
+        uint8_t mode;
+    } PACKED payload;
+    payload.mode = param_get8ex(Cmd, 0, 1, 10);
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_COTAG_READ, rawsignal, 0, 0, NULL, 0);
+    SendCommandNG(CMD_LF_COTAG_READ, (uint8_t*)&payload, sizeof(payload));
 
-    if (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 7000)) {
-        PrintAndLogEx(WARNING, "command execution time out");
-        return PM3_ETIMEOUT;
+    uint8_t timeout = 3;
+    while (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 2000)) {
+        timeout--;
+        printf(".");
+        fflush(stdout);
+
+        if (timeout == 0) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
     }
+    if (timeout != 3)
+        PrintAndLogEx(NORMAL, "");
 
-    switch (rawsignal) {
+    switch (payload.mode) {
         case 0:
         case 2: {
             CmdPlot("");
