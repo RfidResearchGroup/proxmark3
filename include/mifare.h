@@ -162,6 +162,8 @@ typedef enum SMARTCARD_COMMAND {
     SC_RAW = (1 << 2),
     SC_SELECT = (1 << 3),
     SC_RAW_T0 = (1 << 4),
+    SC_CLEARLOG = (1 << 5),
+    SC_LOG = (1 << 6),
 } smartcard_command_t;
 
 //-----------------------------------------------------------------------------

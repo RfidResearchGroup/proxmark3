@@ -51,6 +51,7 @@
 
 #ifndef ON_DEVICE
 #include "ui.h"
+#include "util.h"
 # include "cmddata.h"
 # define prnt(args...) PrintAndLogEx(DEBUG, ## args );
 #else
@@ -1536,6 +1537,11 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
     getNextHigh(bits, *size, high, &pos);
 //    getNextLow(bits, *size, low, &pos);
 
+    // do not skip first transition
+    if ((pos > cl_2 - cl_4 - 1) && (pos <= clk + cl_4 + 1)) {
+        bits[bitCnt++] = invert ^ 1;
+    }
+
     // sample counts,   like clock = 32.. it tries to find  32/4 = 8,  32/2 = 16
     for (size_t i = pos; i < *size; i++) {
         if (bits[i] >= high && waveHigh) {
@@ -1560,7 +1566,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                     } else if (waveHigh) {
                         bits[bitCnt++] = invert;
                         bits[bitCnt++] = invert;
-                    } else if (!waveHigh) {
+                    } else {
                         bits[bitCnt++] = invert ^ 1;
                         bits[bitCnt++] = invert ^ 1;
                     }
@@ -1582,9 +1588,10 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
 
                     if (waveHigh) {
                         bits[bitCnt++] = invert;
-                    } else if (!waveHigh) {
+                    } else {
                         bits[bitCnt++] = invert ^ 1;
                     }
+
                     if (*startIdx == 0) {
                         *startIdx = i - cl_2;
                         if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);

@@ -62,7 +62,7 @@ typedef enum {
     jsfT55x7,
     jsfT5555,
     jsfMfPlusKeys,
-    jsfSettings,
+    jsfCustom,
     jsfMfDesfireKeys,
 } JSONFileType;
 
@@ -77,6 +77,7 @@ int fileExists(const char *filename);
 //bool create_path(const char *dirname);
 //bool setDefaultPath (savePaths_t pathIndex,const char *Path);  // set a path in the path list session.defaultPaths
 
+char *newfilenamemcopy(const char *preferredName, const char *suffix);
 
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that
@@ -115,7 +116,8 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *));
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *));
 
 /** STUB
  * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
@@ -176,6 +178,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
  * @return PM3_SUCCESS for ok, PM3_E* for failz
 */
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
+int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
  * E.g. dumpdata-15.txt
@@ -186,6 +189,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
  * @return 0 for ok, 1 for failz
 */
 int loadFileEML(const char *preferredName, void *data, size_t *datalen);
+int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.
@@ -197,7 +201,9 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen);
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen);
+int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, void (*callback)(json_t *));
+int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *));
+
 
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
@@ -210,7 +216,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
  * @param keycnt key count that lays in data. may be NULL
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
+int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint32_t *keycnt);
 
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
@@ -228,7 +234,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
  * @param verbose print messages if true
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint32_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose);
 
 /**
@@ -240,16 +246,25 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
  * @param keylen  the number of bytes a key per row is
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt);
+int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt);
 
+
+typedef enum {
+    MFU_DF_UNKNOWN,
+    MFU_DF_PLAINBIN,
+    MFU_DF_OLDBIN,
+    MFU_DF_NEWBIN
+} mfu_df_e;
 /**
- * @brief  Utility function to check and convert old mfu dump format to new
- *
+ * @brief  Utility function to check and convert plain mfu dump format to new mfu binary format.
+ * plain dumps doesn't have any extra data, like version, signature etc.
  * @param dump pointer to loaded dump to check and convert format
  * @param dumplen the number of bytes loaded dump and converted
- * @return 0 for ok, 1 for fails
+ * @param verbose - extra debug output
+ * @return PM3_SUCCESS for ok, PM3_ESOFT for fails
 */
-int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
+int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);

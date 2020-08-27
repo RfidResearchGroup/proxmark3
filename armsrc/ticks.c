@@ -117,47 +117,61 @@ uint32_t RAMFUNC GetCountUS(void) {
 void StartCountSspClk(void) {
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);  // Enable Clock to all timers
     AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_TIOA1       // XC0 Clock = TIOA1
-                              | AT91C_TCB_TC1XC1S_NONE        // XC1 Clock = none
-                              | AT91C_TCB_TC2XC2S_TIOA0;      // XC2 Clock = TIOA0
+                              | AT91C_TCB_TC1XC1S_NONE      // XC1 Clock = none
+                              | AT91C_TCB_TC2XC2S_TIOA0;    // XC2 Clock = TIOA0
 
     // configure TC1 to create a short pulse on TIOA1 when a rising edge on TIOB1 (= ssp_clk from FPGA) occurs:
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;               // disable TC1
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK // TC1 Clock = MCK(48MHz)/2 = 24MHz
-                             | AT91C_TC_CPCSTOP              // Stop clock on RC compare
-                             | AT91C_TC_EEVTEDG_RISING       // Trigger on rising edge of Event
-                             | AT91C_TC_EEVT_TIOB            // Event-Source: TIOB1 (= ssp_clk from FPGA = 13,56MHz/16)
-                             | AT91C_TC_ENETRG               // Enable external trigger event
-                             | AT91C_TC_WAVESEL_UP           // Upmode without automatic trigger on RC compare
-                             | AT91C_TC_WAVE                 // Waveform Mode
-                             | AT91C_TC_AEEVT_SET            // Set TIOA1 on external event
-                             | AT91C_TC_ACPC_CLEAR;          // Clear TIOA1 on RC Compare
-    AT91C_BASE_TC1->TC_RC = 0x04;                           // RC Compare value = 0x04
+                             | AT91C_TC_CPCSTOP             // Stop clock on RC compare
+                             | AT91C_TC_EEVTEDG_RISING      // Trigger on rising edge of Event
+                             | AT91C_TC_EEVT_TIOB           // Event-Source: TIOB1 (= ssp_clk from FPGA = 13,56MHz/16)
+                             | AT91C_TC_ENETRG              // Enable external trigger event
+                             | AT91C_TC_WAVESEL_UP          // Upmode without automatic trigger on RC compare
+                             | AT91C_TC_WAVE                // Waveform Mode
+                             | AT91C_TC_AEEVT_SET           // Set TIOA1 on external event
+                             | AT91C_TC_ACPC_CLEAR;         // Clear TIOA1 on RC Compare
+    AT91C_BASE_TC1->TC_RC = 0x01;                           // RC Compare value = 0x01, pulse width to TC0
 
     // use TC0 to count TIOA1 pulses
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;               // disable TC0
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_XC0              // TC0 clock = XC0 clock = TIOA1
-                             | AT91C_TC_WAVE                 // Waveform Mode
-                             | AT91C_TC_WAVESEL_UP           // just count
-                             | AT91C_TC_ACPA_CLEAR           // Clear TIOA0 on RA Compare
-                             | AT91C_TC_ACPC_SET;            // Set TIOA0 on RC Compare
+                             | AT91C_TC_WAVE                // Waveform Mode
+                             | AT91C_TC_WAVESEL_UP          // just count
+                             | AT91C_TC_ACPA_CLEAR          // Clear TIOA0 on RA Compare
+                             | AT91C_TC_ACPC_SET;           // Set TIOA0 on RC Compare
     AT91C_BASE_TC0->TC_RA = 1;                              // RA Compare value = 1; pulse width to TC2
     AT91C_BASE_TC0->TC_RC = 0;                              // RC Compare value = 0; increment TC2 on overflow
 
     // use TC2 to count TIOA0 pulses (giving us a 32bit counter (TC0/TC2) clocked by ssp_clk)
     AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;               // disable TC2
     AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_XC2              // TC2 clock = XC2 clock = TIOA0
-                             | AT91C_TC_WAVE                 // Waveform Mode
-                             | AT91C_TC_WAVESEL_UP;          // just count
+                             | AT91C_TC_WAVE                // Waveform Mode
+                             | AT91C_TC_WAVESEL_UP;         // just count
 
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;                // enable and reset TC0
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;                // enable and reset TC1
     AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;                // enable and reset TC2
 
+    //
     // synchronize the counter with the ssp_frame signal.
-    // Note: FPGA must be in any iso14443 mode, otherwise the frame signal would not be present
-    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME));  // wait for ssp_frame to go high (start of frame)
+    // Note: FPGA must be in a FPGA mode with SSC transfer, otherwise SSC_FRAME and SSC_CLK signals would not be present
+    //
     while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME);     // wait for ssp_frame to be low
-    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));    // wait for ssp_clk to go high
+    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME));  // wait for ssp_frame to go high (start of frame)
+    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));    // wait for ssp_clk to go high; 1st ssp_clk after start of frame
+    while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);       // wait for ssp_clk to go low;
+    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));    // wait for ssp_clk to go high; 2nd ssp_clk after start of frame
+    if ((AT91C_BASE_SSC->SSC_RFMR & SSC_FRAME_MODE_BITS_IN_WORD(32)) == SSC_FRAME_MODE_BITS_IN_WORD(16)) { // 16bit frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 3rd ssp_clk after start of frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 4th ssp_clk after start of frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 5th ssp_clk after start of frame
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 6th ssp_clk after start of frame
+    }
 
     // note: up to now two ssp_clk rising edges have passed since the rising edge of ssp_frame
     // it is now safe to assert a sync signal. This sets all timers to 0 on next active clock edge

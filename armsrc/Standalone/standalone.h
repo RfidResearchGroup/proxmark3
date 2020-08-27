@@ -11,7 +11,7 @@
 #ifndef __STANDALONE_H
 #define __STANDALONE_H
 
-void RunMod();
-void ModInfo();
+void RunMod(void);
+void ModInfo(void);
 
 #endif /* __STANDALONE_H */

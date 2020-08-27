@@ -20,6 +20,7 @@
 #include "ui.h"
 #include "cmdhw.h"
 #include "cmddata.h"
+#include "commonutil.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -35,7 +36,7 @@ static int usage_dbg(void) {
     PrintAndLogEx(NORMAL, "           4 - print even debug messages in timing critical functions");
     PrintAndLogEx(NORMAL, "               Note: this option therefore may cause malfunction itself");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hw dbg 3");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hw dbg 3"));
     return 0;
 }
 
@@ -49,7 +50,7 @@ static int usage_hw_detectreader(void) {
     PrintAndLogEx(NORMAL, "       <type>     L = 125/134 kHz, H = 13.56 MHz");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw detectreader L");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw detectreader L"));
     return PM3_SUCCESS;
 }
 
@@ -62,7 +63,7 @@ static int usage_hw_setmux(void) {
     PrintAndLogEx(NORMAL, "       <type>     Low peak, Low raw, Hi peak, Hi raw");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw setmux lopkd");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw setmux lopkd"));
     return PM3_SUCCESS;
 }
 
@@ -77,8 +78,8 @@ static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "       b <baudrate>   Baudrate");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H);
-    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H" b 115200");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw connect p "SERIAL_PORT_EXAMPLE_H));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hw connect p "SERIAL_PORT_EXAMPLE_H" b 115200"));
     return PM3_SUCCESS;
 }
 
@@ -86,7 +87,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     char asBuff[120];
     memset(asBuff, 0, sizeof(asBuff));
     uint32_t mem_avail = 0;
-    PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Hardware ]"));
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
 
     switch (iChipID) {
         case 0x270B0A40:
@@ -485,9 +486,10 @@ static int CmdSetMux(const char *Cmd) {
 }
 
 static int CmdStandalone(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+//    (void)Cmd; // Cmd is not used so far
+    uint8_t arg = param_get8ex(Cmd, 0, 0, 10);
     clearCommandBuffer();
-    SendCommandNG(CMD_STANDALONE, NULL, 0);
+    SendCommandNG(CMD_STANDALONE, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
 }
 
@@ -506,19 +508,23 @@ static int CmdStatus(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_STATUS, NULL, 0);
-    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false)
-        PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "Status command timeout. Communication speed test timed out");
+        return PM3_ETIMEOUT;
+    }
     return PM3_SUCCESS;
 }
 
 static int CmdTia(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
     PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition (TIA)...");
-    PacketResponseNG resp;
+    clearCommandBuffer();
     SendCommandNG(CMD_TIA, NULL, 0);
-    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false)
-        PrintAndLogEx(WARNING, "TIA command failed. You probably need to unplug the Proxmark3.");
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "TIA command timeout. You probably need to unplug the Proxmark3.");
+        return PM3_ETIMEOUT;
+    }
     PrintAndLogEx(INFO, "TIA done.");
     return PM3_SUCCESS;
 }
@@ -579,7 +585,7 @@ static int CmdConnect(const char *Cmd) {
 
     // default back to previous used serial port
     if (strlen(port) == 0) {
-        if (strlen((char *)conn.serial_port_name) == 0) {
+        if (strlen(conn.serial_port_name) == 0) {
             return usage_hw_connect();
         }
         memcpy(port, conn.serial_port_name, sizeof(port));
@@ -601,23 +607,23 @@ static int CmdConnect(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",          CmdHelp,        AlwaysAvailable, "This help"},
-    {"connect",       CmdConnect,     AlwaysAvailable, "connect Proxmark3 to serial port"},
-    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
+    {"help",          CmdHelp,         AlwaysAvailable, "This help"},
+    {"connect",       CmdConnect,      AlwaysAvailable, "connect Proxmark3 to serial port"},
+    {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
-    {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
-    {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
-    {"lcdreset",      CmdLCDReset,    IfPm3Lcd,        "Hardware reset LCD"},
-    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responsive"},
-    {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
-    {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
-    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
-    {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
-    {"standalone",    CmdStandalone,  IfPm3Present,    "Jump to the standalone mode"},
-    {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
-    {"tia",           CmdTia,         IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
-    {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
-    {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
+    {"fpgaoff",       CmdFPGAOff,      IfPm3Present,    "Set FPGA off"},
+    {"lcd",           CmdLCD,          IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
+    {"lcdreset",      CmdLCDReset,     IfPm3Lcd,        "Hardware reset LCD"},
+    {"ping",          CmdPing,         IfPm3Present,    "Test if the Proxmark3 is responsive"},
+    {"readmem",       CmdReadmem,      IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
+    {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
+    {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
+    {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
+    {"standalone",    CmdStandalone,   IfPm3Present,    "Jump to the standalone mode"},
+    {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
+    {"tia",           CmdTia,          IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"tune",          CmdTune,         IfPm3Present,    "Measure antenna tuning"},
+    {"version",       CmdVersion,      IfPm3Present,    "Show version information about the connected Proxmark3"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -661,10 +667,10 @@ void pm3_version(bool verbose, bool oneliner) {
 # define PM3HOSTOS " OS:OpenBSD"
 #elif defined(__CYGWIN__)
 # define PM3HOSTOS " OS:Cygwin"
-#elif defined(_WIN64) | defined(__WIN64__)
+#elif defined(_WIN64) || defined(__WIN64__)
 // must be tested before _WIN32
 # define PM3HOSTOS " OS:Windows (64b)"
-#elif defined(_WIN32) | defined(__WIN32__)
+#elif defined(_WIN32) || defined(__WIN32__)
 # define PM3HOSTOS " OS:Windows (32b)"
 #else
 # define PM3HOSTOS " OS:unknown"
@@ -688,7 +694,9 @@ void pm3_version(bool verbose, bool oneliner) {
 
     if (oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
-        printf("Client: RRG/Iceman compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n");
+        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+        FormatVersionInformation(temp, sizeof(temp), "Client: ", &version_information);
+        printf("%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
         return;
     }
 
@@ -701,18 +709,20 @@ void pm3_version(bool verbose, bool oneliner) {
     SendCommandNG(CMD_VERSION, NULL, 0);
 
     if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Proxmark3 RFID instrument ]"));
-        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ CLIENT ]"));
-        PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
+        char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+        PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3 RFID instrument") " ]");
+        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
+        FormatVersionInformation(temp, sizeof(temp), "  client: ", &version_information);
+        PrintAndLogEx(NORMAL, "%s", temp);
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
         if (IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
-            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 ]"));
+            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
         } else {
-            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 ]"));
+            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3 RDV4") " ]");
             PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 Extras ]"));
+            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3 RDV4 Extras") " ]");
             PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
 
             if (IfPm3FpcUsartDevFromUsb()) {

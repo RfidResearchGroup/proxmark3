@@ -1,5 +1,5 @@
 MYSRCPATHS =
-MYINCLUDES = -I. -I.. -I../jansson -I../../../common -I../../../include
+MYINCLUDES = -I. -I.. -I../jansson -I../../../common -I../../../common/mbedtls -I../../../include
 MYCFLAGS =
 MYDEFS =
 MYSRCS = \

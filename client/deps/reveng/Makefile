@@ -4,7 +4,7 @@
 # Add -DPRESETS  to compile with preset models (edit config.h)
 
 MYSRCPATHS =
-MYINCLUDES = -I../cliparser
+MYINCLUDES = -I../cliparser -I../../src -I../../../include
 MYCFLAGS =
 MYDEFS = -DPRESETS
 MYSRCS = \
@@ -22,6 +22,7 @@ MYCLEANOLDPATH = ../../reveng
 
 include ../../../Makefile.host
 
+ifneq ($(SKIPREVENGTEST),1)
 CLEAN += bmptst
 
 $(BINDIR)/$(LIB_A): $(BINDIR)/bmptst
@@ -31,5 +32,6 @@ $(BINDIR)/bmptst: bmpbit.c config.h reveng.h
 	$(Q)$(CC) $(CFLAGS) -DBMPTST -o $@ $<
 	$(info [=] TEST $@)
 	$(Q)( ./$@ && $(TOUCH) $@ ) || ( $(RM) $@ && $(FALSE) )
+endif
 
 .PHONY: all clean

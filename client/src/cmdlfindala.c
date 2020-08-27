@@ -22,6 +22,7 @@
 #include "cliparser.h"
 #include "commonutil.h"
 #include "ui.h"         // PrintAndLog
+#include "proxgui.h"
 #include "lfdemod.h"    // parityTest, bitbytes_to_byte
 #include "cmddata.h"
 #include "cmdlf.h"      // lf_read
@@ -49,10 +50,11 @@ static int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, "      maxerror :  Set maximum allowed errors, default = 100.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        lf indala demod");
-    PrintAndLogEx(NORMAL, "        lf indala demod 32       = demod a Indala tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "        lf indala demod 32 1     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "        lf indala demod 64 1 0   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 32") "       = demod a Indala tag from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 32 1") "     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf indala demod 64 1 0") "   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -67,7 +69,8 @@ static int usage_lf_indala_sim(void) {
     PrintAndLogEx(NORMAL, "        c <cardnum> :  Cardnumber for Heden 2L format (decimal)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf indala sim deadc0de");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf indala sim deadc0de"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -142,7 +145,7 @@ static void decodeHeden2L(uint8_t *bits) {
     if (bits[offset +  7]) cardnumber += 16384;
     if (bits[offset + 23]) cardnumber += 32768;
 
-    PrintAndLogEx(SUCCESS, "\tHeden-2L    | " _YELLOW_("%u"), cardnumber);
+    PrintAndLogEx(SUCCESS, "\tHeden-2L    | " _GREEN_("%u"), cardnumber);
 }
 
 // Indala 26 bit decode
@@ -192,13 +195,7 @@ static int CmdIndalaDemod(const char *Cmd) {
     uint64_t foo = uid2 & 0x7FFFFFFF;
 
     if (DemodBufferLen == 64) {
-        PrintAndLogEx(
-            SUCCESS
-            , "Indala Found - bitlength %zu, Raw " _YELLOW_("%x%08x")
-            , DemodBufferLen
-            , uid1
-            , uid2
-        );
+        PrintAndLogEx(SUCCESS, "Indala - len %zu, Raw: %x%08x", DemodBufferLen, uid1, uid2);
 
         uint16_t p1  = 0;
         p1 |= DemodBuffer[32 + 3] << 8;
@@ -245,8 +242,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         checksum |= DemodBuffer[62] << 1; // b2
         checksum |= DemodBuffer[63] << 0; // b1
 
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "Fmt 26 bit FC " _YELLOW_("%u") ", CN " _YELLOW_("%u") ", checksum " _YELLOW_("%1d%1d")
+        PrintAndLogEx(SUCCESS, "Fmt " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " checksum: " _GREEN_("%1d%1d")
                       , fc
                       , csn
                       , checksum >> 1 & 0x01
@@ -266,7 +262,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         uint32_t uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
         PrintAndLogEx(
             SUCCESS
-            , "Indala Found - bitlength %zu, Raw 0x%x%08x%08x%08x%08x%08x%08x"
+            , "Indala - len %zu, Raw: %x%08x%08x%08x%08x%08x%08x"
             , DemodBufferLen
             , uid1
             , uid2
@@ -559,13 +555,14 @@ static int CmdIndalaClone(const char *Cmd) {
     uint8_t fc = 0;
     uint16_t cn = 0;
 
-    CLIParserInit("lf indala clone",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf indala clone",
                   "clone INDALA tag to T55x7 (or to q5/T5555)",
                   "Examples:\n"
-                  "\tlf indala clone --heden 888\n"
-                  "\tlf indala clone --fc 123 --cn 1337\n"
-                  "\tlf indala clone -r a0000000a0002021\n"
-                  "\tlf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5");
+                  _YELLOW_("\tlf indala clone --heden 888\n")
+                  _YELLOW_("\tlf indala clone --fc 123 --cn 1337\n")
+                  _YELLOW_("\tlf indala clone -r a0000000a0002021\n")
+                  _YELLOW_("\tlf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"));
 
     void *argtable[] = {
         arg_param_begin,
@@ -577,28 +574,28 @@ static int CmdIndalaClone(const char *Cmd) {
         arg_int0("", "cn",      "<decimal>", "Cardnumber (26 bit format)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    is_long_uid = arg_get_lit(1);
+    is_long_uid = arg_get_lit(ctx, 1);
 
     // raw param
-    CLIGetHexWithReturn(3, data, &datalen);
+    CLIGetHexWithReturn(ctx, 3, data, &datalen);
 
-    is_t5555 = arg_get_lit(4);
+    is_t5555 = arg_get_lit(ctx, 4);
 
     if (is_long_uid == false) {
 
         // Heden param
-        cardnumber = arg_get_int_def(2, -1);
+        cardnumber = arg_get_int_def(ctx, 2, -1);
         got_cn = (cardnumber != -1);
 
         // 26b FC/CN param
-        fc = arg_get_int_def(5, 0);
-        cn = arg_get_int_def(6, 0);
+        fc = arg_get_int_def(ctx, 5, 0);
+        cn = arg_get_int_def(ctx, 6, 0);
         got_26 = (fc != 0 && cn != 0);
     }
 
-    CLIParserFree();
+    CLIParserFree(ctx);
 
     if (is_long_uid) {
         // 224 BIT UID
@@ -838,10 +835,11 @@ int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert) {
         goto inv;
     }
 
-inv:
     if (res == 0) {
         return -4;
     }
+
+inv:
 
     *invert ^= 1;
 
@@ -857,7 +855,7 @@ out:
 
     *size = found_size;
 
-    if (found_size != 224 && found_size != 64) {
+    if (found_size < 64) {
         PrintAndLogEx(INFO, "DEBUG: detectindala | %zu", found_size);
         return -5;
     }

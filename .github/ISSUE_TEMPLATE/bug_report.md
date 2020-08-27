@@ -7,6 +7,18 @@ assignees: ''
 
 ---
 
+***Things to try before submitting bug report***
+read the [troubleshooting guide](/doc/md/Installation_Instructions/Troubleshooting.md)
+
+***Compilation problems***
+Try compiling with verbose.  `make VERBOSE=1` with main makefile or `make V=1` with cmake.
+
+***flashing problems***
+Have you followed the instructions properly?  ie,  flashed bootrom seperately first if you are going from Offical repo to RRG/Iceman repo.
+
+
+-
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 

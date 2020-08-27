@@ -355,7 +355,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     return 1;
 }
 
-int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
+static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
     uint8_t bt[2] = {0x00, 0x00};
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
@@ -509,7 +509,7 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) {
     return mifare_classic_halt_ex(pcs);
 }
 
-int mifare_ultra_halt() {
+int mifare_ultra_halt(void) {
     uint16_t len = 0;
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_HALT, 0x00, receivedAnswer, NULL, NULL);

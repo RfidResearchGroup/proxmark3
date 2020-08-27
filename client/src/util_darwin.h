@@ -11,9 +11,16 @@
 #ifndef UTIL_DARWIN_H__
 #define UTIL_DARWIN_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void disableAppNap(const char *reason);
 void enableAppNap(void);
 void makeUnfocusable(void);
 void makeFocusable(void);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

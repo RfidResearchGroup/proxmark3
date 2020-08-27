@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include "elite_crack.h"
 
-
 static void calc_score(uint8_t *csn, uint8_t *k) {
     uint8_t score = 0 ;
     uint8_t i;

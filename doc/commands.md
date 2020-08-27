@@ -845,14 +845,14 @@ Check column "offline" for their availability.
           
 |command                  |offline |description          
 |-------                  |------- |-----------          
-|`sc help                `|Y       |`This help`          
-|`sc list                `|N       |`List ISO 7816 history`          
-|`sc info                `|N       |`Tag information`          
-|`sc reader              `|N       |`Act like an IS07816 reader`          
-|`sc raw                 `|N       |`Send raw hex data to tag`          
-|`sc upgrade             `|Y       |`Upgrade sim module firmware`          
-|`sc setclock            `|N       |`Set clock speed`          
-|`sc brute               `|N       |`Bruteforce SFI`          
+|`smart help             `|Y       |`This help`          
+|`smart list             `|N       |`List ISO 7816 history`          
+|`smart info             `|N       |`Tag information`          
+|`smart reader           `|N       |`Act like an IS07816 reader`          
+|`smart raw              `|N       |`Send raw hex data to tag`          
+|`smart upgrade          `|Y       |`Upgrade sim module firmware`          
+|`smart setclock         `|N       |`Set clock speed`          
+|`smart brute            `|N       |`Bruteforce SFI`          
 
           
 ### script

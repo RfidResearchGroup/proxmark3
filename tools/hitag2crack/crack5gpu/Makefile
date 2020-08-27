@@ -1,23 +1,27 @@
-CFLAGS?=-Wall
-#INCLUDE=-I/usr/local/cuda-7.5/include
-INCLUDE=-I/opt/nvidia/cuda/include
-#Linux
-#LIBS=-L/usr/local/cuda-7.5/lib64 -lOpenCL
-LIBS=-L/opt/nvidia/cuda/lib64 -lOpenCL
-#Mac
-#LIBS=-framework OpenCL
-VPATH=../common
-INC=-I ../common
+MYSRCPATHS = ../common
+MYSRCS = ht2crackutils.c hitagcrypto.c
+MYCFLAGS =
+MYDEFS =
+ifeq ($(platform),Darwin)
+    MYLDLIBS ?= -framework OpenCL
+else
+    #MYINCLUDES ?=-I/usr/local/cuda-7.5/include
+    #MYINCLUDES ?=-I/opt/nvidia/cuda/include
+    #MYLDLIBS ?= -L/usr/local/cuda-7.5/lib64 -lOpenCL
+    MYLDLIBS ?= -L/opt/nvidia/cuda/lib64 -lOpenCL
+endif
+MYINCLUDES +=-I ../common
 
-all: ht2crack5.c ht2crackutils.o hitagcrypto.o
-	$(CC) $(CFLAGS) $(INC) -o ht2crack5gpu $< ht2crackutils.o hitagcrypto.o $(LIBS) -lpthread
+BINS = ht2crack5gpu
+INSTALLTOOLS = $(BINS)
 
-hitagcrypto.o: hitagcrypto.c hitagcrypto.h
-	$(CC) $(CFLAGS) $(INCLUDE) -c $<
+include ../../../Makefile.host
 
-ht2crackutils.o: ht2crackutils.c ht2crackutils.h
-	$(CC) $(CFLAGS) $(INCLUDE) -c $<
+# checking platform can be done only after Makefile.host
+ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    CFLAGS += -D_ISOC99_SOURCE
+endif
 
-clean:
-	rm -f *.o ht2crack5gpu
-fresh: clean all
+ht2crack5gpu : $(OBJDIR)/ht2crack5gpu.o $(MYOBJS)

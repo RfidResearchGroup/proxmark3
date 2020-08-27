@@ -3,7 +3,7 @@
 There are two ways to install, build and use Proxmark3 on Windows:
 
 * Using Gator96100 **ProxSpace**, a package to assist in your Windows installation of MinGW
-* Using native **WSL**, if you're running a Windows 10 version recent enough (FCU 1709 or later)
+* Using native **WSL 1**, if you're running a Windows 10 version recent enough (FCU 1709 or later)
 
 ---
 
@@ -56,11 +56,13 @@ To use the compiled client, the only differences are that executables end with `
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-# Installing on Windows with WSL
+# Installing on Windows with WSL 1
 
-It requires to run a Windows 10 version 1709 or above. Previous versions didn't have support for COM ports.
+WSL 1 requires to run on Windows 10 version 1709 or above. Previous versions didn't have support for COM ports.
 
-Install WSL with e.g. the standard Ubuntu.
+*Microsoft introduced WSL 2 starting on Windows 10 version 2004 with Hyper-V powering its virtualization; As of 2020-08-13, WSL 2 does not support USB and Serial.*
+
+Install WSL 1 with e.g. the standard Ubuntu. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions!
 
 For WSL configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
 
@@ -77,7 +79,7 @@ Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instruct
 ```sh
 sudo apt-get update
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.

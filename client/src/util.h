@@ -21,19 +21,15 @@
 # define FILE_PATH_SIZE 1000
 #endif
 
-uint8_t g_debugMode;
-uint8_t g_printAndLog;
+extern uint8_t g_debugMode;
+extern uint8_t g_printAndLog;
+extern bool g_pendingPrompt;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
 
 int kbd_enter_pressed(void);
-void AddLogLine(const char *fn, const char *data, const char *c);
-void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len);
-void AddLogUint64(const char *fn, const char *data, const uint64_t value);
-void AddLogCurrentDT(const char *fn);
 void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext, const int uidlen);
-
 // fill buffer from structure [{uint8_t data, size_t length},...]
 int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...);
 
@@ -59,9 +55,12 @@ void print_blocks(uint32_t *data, size_t len);
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
+
+// Swap endian on arrays up to 64bytes.
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
 void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSize, uint8_t *dest);
 
+// parameter helper functions
 int param_getlength(const char *line, int paramnum);
 char param_getchar(const char *line, int paramnum);
 char param_getchar_indx(const char *line, int indx, int paramnum);
@@ -87,7 +86,6 @@ void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
 
 //void xor(unsigned char *dst, unsigned char *src, size_t len);
-int32_t le24toh(uint8_t data[3]);
 
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);

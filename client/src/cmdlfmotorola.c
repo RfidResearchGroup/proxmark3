@@ -30,6 +30,11 @@ static int CmdHelp(const char *Cmd);
 
 //see PSKDemod for what args are accepted
 static int CmdMotorolaDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodMotorola();
+}
+
+int demodMotorola(void) {
 
     //PSK1
     if (PSKDemod("32 1", true) != PM3_SUCCESS) {
@@ -113,10 +118,9 @@ static int CmdMotorolaDemod(const char *Cmd) {
     checksum |= DemodBuffer[62] << 1; // b2
     checksum |= DemodBuffer[63] << 0; // b1
 
-    PrintAndLogEx(SUCCESS, "Motorola Tag Found -- Raw: %08X%08X", raw1, raw2);
-    PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01);
-    PrintAndLogEx(NORMAL, "");
 
+    PrintAndLogEx(SUCCESS, "Motorola - fmt: " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08X%08X", fc, csn, raw1, raw2);
+    PrintAndLogEx(DEBUG, "checksum: " _GREEN_("%1d%1d"), checksum >> 1 & 0x01, checksum & 0x01);
     return PM3_SUCCESS;
 }
 
@@ -141,7 +145,7 @@ static int CmdMotorolaRead(const char *Cmd) {
     sc.divisor = LF_DIVISOR_125;
     sc.samples_to_skip = 0;
     lf_config(&sc);
-    return CmdMotorolaDemod(Cmd);
+    return demodMotorola();
 }
 
 static int CmdMotorolaClone(const char *Cmd) {
@@ -150,12 +154,13 @@ static int CmdMotorolaClone(const char *Cmd) {
     uint8_t data[8];
     int datalen = 0;
 
-    CLIParserInit("lf indala clone",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf indala clone",
                   "Enables cloning of Motorola card with specified uid onto T55x7\n"
                   "defaults to 64.\n",
                   "\n"
                   "Samples:\n"
-                  "\tlf motorola clone a0000000a0002021\n"
+                  _YELLOW_("\tlf motorola clone a0000000a0002021") "\n"
                  );
 
     void *argtable[] = {
@@ -163,9 +168,9 @@ static int CmdMotorolaClone(const char *Cmd) {
         arg_strx1(NULL, NULL, "<uid (hex)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, false);
-    CLIGetHexWithReturn(1, data, &datalen);
-    CLIParserFree();
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    CLIParserFree(ctx);
 
     //TODO add selection of chip for Q5 or T55x7
     // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
@@ -250,10 +255,6 @@ int detectMotorola(uint8_t *dest, size_t *size) {
     }
 
     return (int)start_idx;
-}
-
-int demodMotorola(void) {
-    return CmdMotorolaDemod("");
 }
 
 int readMotorolaUid(void) {

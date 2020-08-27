@@ -54,7 +54,7 @@
 #define LF_HIDCOLLECT_LOGFILE "lf_hidcollect.log"
 
 
-void DownloadLogInstructions() {
+static void DownloadLogInstructions(void) {
     Dbprintf("");
     Dbprintf("[=] To get the logfile from flash and display it:");
     Dbprintf("[=] " _YELLOW_("1.") " mem spiffs dump o "LF_HIDCOLLECT_LOGFILE" f "LF_HIDCOLLECT_LOGFILE);
@@ -64,7 +64,7 @@ void DownloadLogInstructions() {
 
 bool log_exists;
 
-void append(uint8_t *entry, size_t entry_len) {
+static void append(uint8_t *entry, size_t entry_len) {
 
     LED_B_ON();
     if (log_exists == false) {
@@ -76,7 +76,7 @@ void append(uint8_t *entry, size_t entry_len) {
     LED_B_OFF();
 }
 
-uint32_t IceEM410xdemod() {
+static uint32_t IceEM410xdemod(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     size_t idx = 0;
@@ -128,7 +128,7 @@ uint32_t IceEM410xdemod() {
     return PM3_SUCCESS;
 }
 
-uint32_t IceAWIDdemod() {
+static uint32_t IceAWIDdemod(void) {
 
     uint8_t *dest = BigBuf_get_addr();
     size_t size = MIN(12800, BigBuf_max_traceLen());
@@ -180,7 +180,7 @@ uint32_t IceAWIDdemod() {
     return PM3_SUCCESS;
 }
 
-uint32_t IceIOdemod() {
+static uint32_t IceIOdemod(void) {
 
     int dummyIdx = 0;
     uint8_t version = 0, facilitycode = 0;
@@ -224,14 +224,15 @@ uint32_t IceIOdemod() {
     return PM3_SUCCESS;
 }
 
-uint32_t IceHIDDemod() {
+static uint32_t IceHIDDemod(void) {
 
     int dummyIdx = 0;
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
 
     // large enough to catch 2 sequences of largest format
-    size_t size = 50 * 128 * 2;  // 12800 bytes
+//    size_t size = 50 * 128 * 2;  // 12800 bytes
+    size_t size = MIN(12800, BigBuf_max_traceLen());
     //uint8_t *dest = BigBuf_malloc(size);
     uint8_t *dest = BigBuf_get_addr();
 
@@ -320,7 +321,7 @@ void ModInfo(void) {
     DbpString(_YELLOW_("  LF HID / IOprox / AWID / EM4100 collector mode") " - a.k.a IceHID (Iceman)");
 }
 
-void RunMod() {
+void RunMod(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
@@ -350,30 +351,32 @@ void RunMod() {
 
         uint32_t res;
 
-        // since we steal  12800 from bigbuffer, no need to sample it.
-        DoAcquisition_config(false, 28000);
+        // since we steal 12800 from bigbuffer, no need to sample it.
+        size_t size = MIN(28000, BigBuf_max_traceLen());
+        DoAcquisition_config(false, size);
         res = IceHIDDemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, 28000);
+        DoAcquisition_config(false, size);
         res = IceAWIDdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, 20000);
-        res = IceEM410xdemod();
+        DoAcquisition_config(false, size);
+        res = IceIOdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;
         }
 
-        DoAcquisition_config(false, 28000);
-        res = IceIOdemod();
+        size = MIN(20000, BigBuf_max_traceLen());
+        DoAcquisition_config(false, size);
+        res = IceEM410xdemod();
         if (res == PM3_SUCCESS) {
             LED_A_OFF();
             continue;

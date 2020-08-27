@@ -8,7 +8,7 @@
 #include "drbg.h"
 #include <assert.h>
 #include <string.h>
-#include "mbedtls/md.h"
+#include "md.h"
 
 void nfc3d_drbg_init(nfc3d_drbg_ctx *ctx, const uint8_t *hmacKey, size_t hmacKeySize, const uint8_t *seed, size_t seedSize) {
     assert(ctx != NULL);

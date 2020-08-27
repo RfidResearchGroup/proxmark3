@@ -30,7 +30,6 @@
 void ReadThinFilm(void) {
 
     clear_trace();
-
     set_tracing(true);
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -49,9 +48,9 @@ void ReadThinFilm(void) {
 #define SEC_D 0xf0
 #define SEC_E 0x0f
 #define SEC_F 0x00
-uint16_t FpgaSendQueueDelay;
+static uint16_t FpgaSendQueueDelay;
 
-uint16_t ReadReaderField(void) {
+static uint16_t ReadReaderField(void) {
 #if defined RDV4
     return AvgAdc(ADC_CHAN_HF_RDV40);
 #else
@@ -60,18 +59,22 @@ uint16_t ReadReaderField(void) {
 }
 
 static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
-    ToSendReset();
+
+    tosend_reset();
+
+    tosend_t *ts = get_tosend();
+
     for (uint16_t i = 0; i < len; i++) {
         uint8_t b = cmd[i];
         for (uint8_t j = 0; j < 8; j++) {
-            ToSend[++ToSendMax] = (b & 0x80) ? SEC_D : SEC_E;
+            ts->buf[++ts->max] = (b & 0x80) ? SEC_D : SEC_E;
             b <<= 1;
         }
     }
-    ToSendMax++;
+    ts->max++;
 }
 
-int EmSendCmdThinfilmRaw(uint8_t *resp, uint16_t respLen) {
+static int EmSendCmdThinfilmRaw(uint8_t *resp, uint16_t respLen) {
     volatile uint8_t b;
     uint16_t i = 0;
     uint32_t ThisTransferTime;
@@ -122,7 +125,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -131,6 +134,8 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     SpinDelay(100);
 
     uint16_t hf_baseline = ReadReaderField();
+
+    tosend_t *ts = get_tosend();
 
     // Start the timer
     StartCountSspClk();
@@ -147,7 +152,8 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
         if (hf_av < hf_baseline)
             hf_baseline = hf_av;
         if (hf_av > hf_baseline + 10) {
-            EmSendCmdThinfilmRaw(ToSend, ToSendMax);
+
+            EmSendCmdThinfilmRaw(ts->buf, ts->max);
             if (!reader_detected) {
                 LED_B_ON();
                 //Dbprintf("Reader detected, start beaming data");

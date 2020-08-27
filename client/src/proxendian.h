@@ -16,17 +16,26 @@
 #ifdef _WIN32
 # define HOST_LITTLE_ENDIAN
 #else
-# include <sys/types.h>
-# ifndef BYTE_ORDER
-#  define BYTE_ORDER __BYTE_ORDER
-#  define LITTLE_ENDIAN __LITTLE_ENDIAN
-#  define BIG_ENDIAN __BIG_ENDIAN
+// Only some OSes include endian.h from sys/types.h, not Termux, so let's include endian.h directly
+# if defined(__APPLE__)
+#  include <machine/endian.h>
+# else
+#  include <endian.h>
 # endif
-# if !defined(BYTE_ORDER) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
-#  error Define BYTE_ORDER to be equal to either LITTLE_ENDIAN or BIG_ENDIAN
-# endif
-# if BYTE_ORDER == LITTLE_ENDIAN
-#  define HOST_LITTLE_ENDIAN
+# if !defined(BYTE_ORDER)
+#  if !defined(__BYTE_ORDER) || (__BYTE_ORDER != __LITTLE_ENDIAN && __BYTE_ORDER != __BIG_ENDIAN)
+#   error Define BYTE_ORDER to be equal to either LITTLE_ENDIAN or BIG_ENDIAN
+#  endif
+#  if __BYTE_ORDER == __LITTLE_ENDIAN
+#   define HOST_LITTLE_ENDIAN
+#  endif
+# else
+#  if BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN
+#   error Define BYTE_ORDER to be equal to either LITTLE_ENDIAN or BIG_ENDIAN
+#  endif
+#  if BYTE_ORDER == LITTLE_ENDIAN
+#   define HOST_LITTLE_ENDIAN
+#  endif
 # endif
 #endif
 

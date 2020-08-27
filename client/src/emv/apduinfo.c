@@ -425,7 +425,7 @@ int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
     if (len)
         *len = 0;
 
-    if (apdu->le > 0x10000 || apdu->lc > 0xffff)
+    if (apdu->le > 0x10000)
         return 1;
 
     size_t dptr = 0;
@@ -434,7 +434,7 @@ int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
     data[dptr++] = apdu->p1;
     data[dptr++] = apdu->p2;
 
-    if (apdu->lc) {
+    if (apdu->lc) { // apdu->lc is uint16_t so max 0xffff
         if (apdu->extended_apdu || apdu->lc > 0xff || apdu->le > 0x100) {
             data[dptr++] = 0x00;
             data[dptr++] = (apdu->lc >> 8) & 0xff;

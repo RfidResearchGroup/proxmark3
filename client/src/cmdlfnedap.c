@@ -41,7 +41,8 @@ static int usage_lf_nedap_gen(void) {
     PrintAndLogEx(NORMAL, "      l               : optional - long (128), default to short (64)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nedap generate s 1 c 123 i 12345");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap generate s 1 c 123 i 12345"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -58,7 +59,8 @@ static int usage_lf_nedap_clone(void) {
 //  PrintAndLogEx(NORMAL, "      Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nedap clone s 1 c 123 i 12345");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap clone s 1 c 123 i 12345"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -76,7 +78,8 @@ static int usage_lf_nedap_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
 // TODO proper example?
-    PrintAndLogEx(NORMAL, "       lf nedap sim s 1 c 7 i 1337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap sim s 1 c 7 i 1337"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -95,7 +98,9 @@ static inline uint32_t bitcount(uint32_t a) {
 }
 
 static uint8_t isEven_64_63(const uint8_t *data) { // 8
-    return (bitcount(*(uint32_t *) data) + (bitcount((*(uint32_t *)(data + 4)) & 0xfeffffff))) & 1;
+    uint32_t tmp[2];
+    memcpy(tmp, data, 8);
+    return (bitcount(tmp[0]) + (bitcount(tmp[1] & 0xfeffffff))) & 1;
 }
 
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
@@ -163,14 +168,14 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
     buffer[6] = (data[3] << 7) | ((data[4] & 0xe0) >> 1) | ((data[4] & 0x01) << 3) | ((data[5] & 0xe0) >> 5);
     buffer[5] = (data[5] << 7) | ((data[6] & 0xe0) >> 1) | ((data[6] & 0x01) << 3) | ((data[7] & 0xe0) >> 5);
-
-    bool isValid = (checksum == *(uint16_t *)(buffer + 5));
+    uint16_t checksum2 = (buffer[6] << 8) + buffer[5];
+    bool isValid = (checksum == checksum2);
 
     subtype = (data[1] & 0x1e) >> 1;
     customerCode = ((data[1] & 0x01) << 11) | (data[2] << 3) | ((data[3] & 0xe0) >> 5);
 
     if (isValid == false) {
-        PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("failed"), checksum, *(uint16_t *)(buffer + 5));
+        PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("fail"), checksum, checksum2);
         ret = PM3_ESOFT;
     }
 
@@ -190,9 +195,9 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
         badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
 
-        PrintAndLogEx(SUCCESS, "NEDAP Tag Found: Card ID "_YELLOW_("%05u")" subtype: "_YELLOW_("%1u")" customer code: "_YELLOW_("%03x"), badgeId, subtype, customerCode);
-        PrintAndLogEx(SUCCESS, "Checksum is %s (0x%04X)",  _GREEN_("OK"), checksum);
-        PrintAndLogEx(SUCCESS, "Raw: %s", sprint_hex(data, size / 8));
+        PrintAndLogEx(SUCCESS, "NEDAP - Card: " _YELLOW_("%05u") " subtype: " _YELLOW_("%1u")" customer code: " _YELLOW_("%03x") ", Raw: %s", badgeId, subtype, customerCode, sprint_hex(data, size / 8));
+        PrintAndLogEx(DEBUG, "Checksum (%s) 0x%04X",  _GREEN_("ok"), checksum);
+
     } else {
         PrintAndLogEx(ERR, "Invalid idx (1:%02x - 2:%02x - 3:%02x - 4:%02x - 5:%02x)", idxC1, idxC2, idxC3, idxC4, idxC5);
         ret = PM3_ESOFT;
@@ -237,7 +242,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
         if (!r0 && (r1 < 10) && (r2 < 10) && (r3 < 10) && (r4 < 10) && (r5 < 10)) {
 
             badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
-            PrintAndLogEx(SUCCESS, "Second Card Id " _YELLOW_("%05u"), badgeId);
+            PrintAndLogEx(SUCCESS, "Second Card: " _YELLOW_("%05u"), badgeId);
 
             if ((fixed0 == FIXED_71) && (fixed1 == FIXED_40))
                 PrintAndLogEx(DEBUG, "Fixed part {0 = 0x%02x, 1 = 0x%02x}", fixed0, fixed1);

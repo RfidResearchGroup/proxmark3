@@ -177,8 +177,9 @@ static int ecdsa_init(mbedtls_ecdsa_context *ctx, mbedtls_ecp_group_id curveid, 
 int ecdsa_key_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t *key_xy) {
     int res;
     mbedtls_ecdsa_context ctx;
-    ecdsa_init(&ctx, curveid, NULL, NULL);
-
+    res = ecdsa_init(&ctx, curveid, NULL, NULL);
+    if (res)
+        goto exit;
 
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -276,7 +277,10 @@ int ecdsa_signature_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t
         goto exit;
 
     mbedtls_ecdsa_context ctx;
-    ecdsa_init(&ctx, curveid, key_d, key_xy);
+    res = ecdsa_init(&ctx, curveid, key_d, key_xy);
+    if (res)
+        goto exit;
+
     res = mbedtls_ecdsa_write_signature(
               &ctx,
               MBEDTLS_MD_SHA256,
@@ -308,7 +312,10 @@ static int ecdsa_signature_create_test(mbedtls_ecp_group_id curveid, const char 
     param_gethex_to_eol(random, 0, fixed_rand_value, sizeof(fixed_rand_value), &rndlen);
 
     mbedtls_ecdsa_context ctx;
-    ecdsa_init_str(&ctx, curveid, key_d, key_x, key_y);
+    res = ecdsa_init_str(&ctx, curveid, key_d, key_x, key_y);
+    if (res)
+        return res;
+
     res = mbedtls_ecdsa_write_signature(&ctx, MBEDTLS_MD_SHA256, shahash, sizeof(shahash), signature, signaturelen, fixed_rand, NULL);
 
     mbedtls_ecdsa_free(&ctx);
@@ -323,7 +330,10 @@ static int ecdsa_signature_verify_keystr(mbedtls_ecp_group_id curveid, const cha
         return res;
 
     mbedtls_ecdsa_context ctx;
-    ecdsa_init_str(&ctx, curveid, NULL, key_x, key_y);
+    res = ecdsa_init_str(&ctx, curveid, NULL, key_x, key_y);
+    if (res)
+        return res;
+
     res = mbedtls_ecdsa_read_signature(
               &ctx,
               hash ? shahash : input,
@@ -347,6 +357,9 @@ int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_
 
     mbedtls_ecdsa_context ctx;
     res = ecdsa_init(&ctx, curveid, NULL, key_xy);
+    if (res)
+        return res;
+
     res = mbedtls_ecdsa_read_signature(
               &ctx,
               hash ? shahash : input,

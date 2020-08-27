@@ -12,21 +12,21 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
+#include <unistd.h>
 #include "common.h"
 
 #define PROXPROMPT_MAX_SIZE 255
 
 #define PROXPROMPT_COMPOSE "[" "%s%s" "] pm3 --> "
 
-#define PROXPROMPT_CTX_SCRIPTFILE  "|" _GREEN_("script")
-#define PROXPROMPT_CTX_SCRIPTCMD   "|" _GREEN_("script")
-#define PROXPROMPT_CTX_STDIN       "|" _GREEN_("script")
+#define PROXPROMPT_CTX_SCRIPTFILE  "|" _RL_GREEN_("script")
+#define PROXPROMPT_CTX_SCRIPTCMD   "|" _RL_GREEN_("script")
+#define PROXPROMPT_CTX_STDIN       "|" _RL_GREEN_("script")
 #define PROXPROMPT_CTX_INTERACTIVE ""
 
-#define PROXPROMPT_DEV_USB     _BOLD_GREEN_("usb")
-#define PROXPROMPT_DEV_FPC     _BOLD_GREEN_("fpc")
-#define PROXPROMPT_DEV_OFFLINE _BOLD_RED_("offline")
-
+#define PROXPROMPT_DEV_USB     _RL_BOLD_GREEN_("usb")
+#define PROXPROMPT_DEV_FPC     _RL_BOLD_GREEN_("fpc")
+#define PROXPROMPT_DEV_OFFLINE _RL_BOLD_RED_("offline")
 
 #define PROXHISTORY "history.txt"
 #define PROXLOG "log_%Y%m%d.txt"
@@ -35,6 +35,14 @@
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+// Load all settings into memory (struct)
+#ifdef _WIN32
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#define GetCurrentDir getcwd
 #endif
 
 int push_cmdscriptfile(char *path, bool stayafter);

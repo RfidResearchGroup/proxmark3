@@ -50,7 +50,7 @@ static int usage_hints(void) {
     PrintAndLogEx(NORMAL, "       <0|1>      off or on");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hints 1");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hints 1"));
     return PM3_SUCCESS;
 }
 
@@ -63,7 +63,7 @@ static int usage_msleep(void) {
     PrintAndLogEx(NORMAL, "       <ms>       time in milliseconds");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       msleep 100");
+    PrintAndLogEx(NORMAL, _YELLOW_("       msleep 100"));
     return PM3_SUCCESS;
 }
 
@@ -75,11 +75,11 @@ static int usage_auto(void) {
     PrintAndLogEx(NORMAL, "       h          This help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       auto");
+    PrintAndLogEx(NORMAL, _YELLOW_("       auto"));
     return PM3_SUCCESS;
 }
 
-static void AppendDate(char *s, size_t slen, char *fmt) {
+static void AppendDate(char *s, size_t slen, const char *fmt) {
     struct tm *ct, tm_buf;
     time_t now = time(NULL);
 #if defined(_WIN32)
@@ -247,9 +247,15 @@ static int CmdPref(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdClear(const char *Cmd) {
+    PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use '<command> help' for details of a particular command."},
-    {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
+
+    {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("Technology") " -----------------------"},
+
     {"analyse", CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
     {"data",    CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
     {"emv",     CmdEMV,       AlwaysAvailable,         "{ EMV ISO-14443 / ISO-7816... }"},
@@ -258,15 +264,18 @@ static command_t CommandTable[] = {
     {"lf",      CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
     {"mem",     CmdFlashMem,  IfPm3Flash,              "{ Flash Memory manipulation... }"},
     {"reveng",  CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software }"},
-    {"sc",      CmdSmartcard, IfPm3Smartcard,          "{ Smart card ISO-7816 commands... }"},
+    {"smart",   CmdSmartcard, AlwaysAvailable,         "{ Smart card ISO-7816 commands... }"},
     {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
     {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
-    {"",        CmdHelp,      AlwaysAvailable,         ""},
+    {"--------", CmdHelp,      AlwaysAvailable,         "----------------------- " _CYAN_("General") " -----------------------"},
+    {"auto",    CmdAuto,      IfPm3Present,            "Automated detection process for unknown tags"},
+    {"clear",   CmdClear,     AlwaysAvailable,         "clear screen"},
+    {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use " _YELLOW_("'<command> help'") " for details of a particular command."},
     {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
-    {"pref",    CmdPref,      AlwaysAvailable,         "Edit preferences"},
     {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
+    {"pref",    CmdPref,      AlwaysAvailable,         "Edit preferences"},
     {"rem",     CmdRem,       AlwaysAvailable,         "Add a text line in log file"},
     {"quit",    CmdQuit,      AlwaysAvailable,         ""},
     {"exit",    CmdQuit,      AlwaysAvailable,         "Exit program"},
@@ -287,7 +296,7 @@ int CommandReceived(char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-command_t *getTopLevelCommandTable() {
+command_t *getTopLevelCommandTable(void) {
     return CommandTable;
 }
 

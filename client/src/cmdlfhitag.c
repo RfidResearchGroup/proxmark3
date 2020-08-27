@@ -22,7 +22,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static char *getHitagTypeStr(uint32_t uid) {
+static const char *getHitagTypeStr(uint32_t uid) {
     //uid s/n        ********
     uint8_t type = (uid >> 4) & 0xF;
     switch (type) {
@@ -330,7 +330,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'j':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileJSON(filename, data, maxdatalen, &datalen);
+                res = loadFileJSON(filename, data, maxdatalen, &datalen, NULL);
                 if (res > 0) {
                     errors = true;
                     break;
@@ -363,7 +363,7 @@ static int CmdLFHitagSim(const char *Cmd) {
 
     clearCommandBuffer();
     if (tag_mem_supplied) {
-        SendCommandOLD(cmd, 1, 0, 0, data, datalen);
+        SendCommandMIX(cmd, 1, 0, 0, data, datalen);
     } else {
         SendCommandMIX(cmd, 0, 0, 0, NULL, 0);
     }
@@ -572,17 +572,20 @@ static int CmdLFHitagReader(const char *Cmd) {
             // No additional parameters needed
             break;
         }
+        default:
+        case RHT1F_PLAIN:
+        case RHT1F_AUTHENTICATE:
         case WHTSF_CHALLENGE:
         case WHTSF_KEY:
+        case WHT2F_PASSWORD:
         case WHT2F_CRYPTO:
-        default:
             return usage_hitag_reader();
     }
 
     clearCommandBuffer();
     SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -638,7 +641,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
     }
 
     //Validations
-    if (errors) {
+    if (errors || strlen(Cmd) == 0) {
         free(data);
         return usage_hitag_checkchallenges();
     }
@@ -678,6 +681,9 @@ static int CmdLFHitagWriter(const char *Cmd) {
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
             break;
         }
+        default:
+        case RHT1F_PLAIN:
+        case RHT1F_AUTHENTICATE:
         case RHTSF_CHALLENGE:
         case RHTSF_KEY:
         case RHT2F_PASSWORD:
@@ -685,12 +691,11 @@ static int CmdLFHitagWriter(const char *Cmd) {
         case RHT2F_CRYPTO:
         case RHT2F_TEST_AUTH_ATTEMPTS:
         case RHT2F_UID_ONLY:
-        default:
             return usage_hitag_writer();
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LF_HITAGS_WRITE, htf, 0, arg2, &htd, sizeof(htd));
+    SendCommandMIX(CMD_LF_HITAGS_WRITE, htf, 0, arg2, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -722,50 +727,68 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     saveFile(filename, ".bin", data, 48);
     saveFileEML(filename, data, 48, 4);
-    saveFileJSON(filename, jsfHitag, data, 48);
+    saveFileJSON(filename, jsfHitag, data, 48, NULL);
 
     return PM3_SUCCESS;
 }
 
 
 // Annotate HITAG protocol
-void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_reader) {
 }
 
-void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
-    uint8_t cmdbits = (cmd[0] & 0xC0) >> 6;
+    // iceman: live decrypt of trace?
+    if (is_response) {
 
-    if (cmdsize == 1) {
-        if (cmdbits == HITAG2_START_AUTH) {
-            snprintf(exp, size, "START AUTH");
+
+        uint8_t cmdbits = (cmd[0] & 0xC0) >> 6;
+
+        if (cmdsize == 1) {
+            if (cmdbits == HITAG2_START_AUTH) {
+                snprintf(exp, size, "START AUTH");
+                return;
+            }
+            if (cmdbits == HITAG2_HALT) {
+                snprintf(exp, size, "HALT");
+                return;
+            }
+        }
+
+        if (cmdsize == 3) {
+            if (cmdbits == HITAG2_START_AUTH) {
+                // C     1     C   0
+                // 1100 0 00 1 1100 000
+                uint8_t page = (cmd[0] & 0x38) >> 3;
+                uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+                snprintf(exp, size, "READ page(%x) %x", page, inv_page);
+                return;
+            }
+            if (cmdbits == HITAG2_WRITE_PAGE) {
+                uint8_t page = (cmd[0] & 0x38) >> 3;
+                uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+                snprintf(exp, size, "WRITE page(%x) %x", page, inv_page);
+                return;
+            }
+        }
+
+        if (cmdsize == 9)  {
+            snprintf(exp, size, "Nr Ar Is response");
             return;
         }
-        if (cmdbits == HITAG2_HALT) {
-            snprintf(exp, size, "HALT");
+    } else {
+
+        if (cmdsize == 9)  {
+            snprintf(exp, size, "Nr Ar");
             return;
         }
     }
 
-    if (cmdsize == 2) {
-        if (cmdbits == HITAG2_START_AUTH) {
-            // C     1     C   0
-            // 1100 0 00 1 1100 000
-            uint8_t page = (cmd[0] & 0x38) >> 3;
-            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
-            snprintf(exp, size, "READ page(%x) %x", page, inv_page);
-            return;
-        }
-        if (cmdbits == HITAG2_WRITE_PAGE) {
-            uint8_t page = (cmd[0] & 0x38) >> 3;
-            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
-            snprintf(exp, size, "WRITE page(%x) %x", page, inv_page);
-            return;
-        }
-    }
 }
 
-void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_reader) {
 }
 
 static command_t CommandTable[] = {

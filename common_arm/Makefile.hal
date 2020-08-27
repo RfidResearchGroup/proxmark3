@@ -81,7 +81,8 @@ endif
 # common LF support
 PLATFORM_DEFS += \
     -DWITH_LF \
-    -DWITH_HITAG
+    -DWITH_HITAG \
+    -DWITH_EM4x50
 
 # common HF support
 PLATFORM_DEFS += \

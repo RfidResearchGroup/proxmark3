@@ -1,18 +1,20 @@
-CFLAGS?=-Wall -Werror -O3
-LIBS=-lpthread
-VPATH=../common
-INC=-I ../common
+MYSRCPATHS = ../common
+MYSRCS = ht2crackutils.c hitagcrypto.c
+MYINCLUDES =-I ../common
+MYCFLAGS = -D_GNU_SOURCE
+MYDEFS =
+MYLDLIBS = -lpthread
 
-all: ht2crack4.c hitagcrypto.o ht2crackutils.o
-	$(CC) $(CFLAGS) $(INC) -o ht2crack4 $< hitagcrypto.o ht2crackutils.o $(LIBS)
+BINS = ht2crack4
+INSTALLTOOLS = $(BINS)
 
-hitagcrypto.o: hitagcrypto.c hitagcrypto.h
-	$(CC) $(CFLAGS) -c $<
+include ../../../Makefile.host
 
-ht2crackutils.o: ht2crackutils.c ht2crackutils.h
-	$(CC) $(CFLAGS) -c $<
+# checking platform can be done only after Makefile.host
+ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    CFLAGS += -D_ISOC99_SOURCE
+endif
 
-clean:
-	rm -rf *.o ht2crack4
-
-fresh: clean all
+ht2crack4 : $(OBJDIR)/ht2crack4.o $(MYOBJS)

@@ -18,29 +18,21 @@
 #include "appmain.h"
 #include "cmd.h"
 
-static void RAMFUNC optimizedSniff(void) {
-    int n = BigBuf_max_traceLen() / sizeof(uint16_t); // take all memory
-
-    uint16_t *dest = (uint16_t *)BigBuf_get_addr();
-    uint16_t *destend = dest + n - 1;
-
-    // Reading data loop
-    while (dest <= destend) {
+static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
+    while (dsize > 0) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             *dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             dest++;
+            dsize -= sizeof(dsize);
         }
     }
-    //setting tracelen - important!  it was set by buffer overflow before
-    set_tracelen(BigBuf_max_traceLen());
 }
 
-void HfSniff(int samplesToSkip, int triggersToSkip) {
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
     BigBuf_free();
-    BigBuf_Clear();
+    BigBuf_Clear_ext(false);
 
-    Dbprintf("Skipping first %d sample pairs, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
-    int trigger_cnt = 0;
+    Dbprintf("Skipping first %d sample pairs, Skipping %d triggers", samplesToSkip, triggersToSkip);
 
     LED_D_ON();
 
@@ -49,59 +41,91 @@ void HfSniff(int samplesToSkip, int triggersToSkip) {
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SNIFF);
 
     // Setting Frame Mode For better performance on high speed data transfer.
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNIFF);
     SpinDelay(100);
 
-    uint16_t r = 0;
-    while (!BUTTON_PRESS() && !data_available()) {
+    *len = (BigBuf_max_traceLen() & 0xFFFE);
+    uint8_t *mem = BigBuf_malloc(*len);
+
+    uint32_t trigger_cnt = 0;
+    uint16_t r = 0, interval = 0;
+
+    bool pressed = false;
+    while (pressed == false) {
         WDT_HIT();
 
+        // cancel w usb command.
+        if (interval == 2000) {
+            if (data_available())
+                break;
+
+            interval = 0;
+        } else {
+            interval++;
+        }
+
+        // check if trigger is reached
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             r = (uint16_t)AT91C_BASE_SSC->SSC_RHR;
-            r = MAX(r & 0xff, r >> 8);
-            if (r >= 180) {  // 0xB4 ??
-                if (++trigger_cnt > triggersToSkip)
+
+            r = MAX(r & 0xFF, r >> 8);
+
+            // 180 (0xB4) arbitary value to see if a strong RF field is near.
+            if (r > 180) {
+
+                if (++trigger_cnt > triggersToSkip) {
                     break;
+                }
             }
         }
+
+        pressed = BUTTON_PRESS();
     }
 
-    if (!BUTTON_PRESS()) {
-        int waitcount = samplesToSkip; // lets wait 40000 ticks of pck0
-        while (waitcount != 0) {
+    if (pressed == false) {
 
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
-                waitcount--;
+        // skip samples loop
+        while (samplesToSkip != 0) {
+
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                samplesToSkip--;
+            }
         }
-        optimizedSniff();
-        Dbprintf("Trigger kicked! Value: %d, Dumping Samples Hispeed now.", r);
+
+        optimizedSniff((uint16_t *)mem, *len);
+
+        if (DBGLEVEL >= DBG_INFO)   {
+            Dbprintf("Trigger kicked in (%d >= 180)", r);
+            Dbprintf("Collected %u samples", *len);
+        }
     }
 
     //Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-
-    DbpString("HF Sniffing end");
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_D_OFF();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    BigBuf_free();
+    return (pressed) ? PM3_EOPABORTED : PM3_SUCCESS;
 }
 
 void HfPlotDownload(void) {
-    uint8_t *buf = ToSend;
-    uint8_t *this_buf = buf;
+
+    tosend_t *ts = get_tosend();
+    uint8_t *this_buf = ts->buf;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_GET_TRACE);
 
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;   // Disable DMA Transfer
     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) this_buf; // start transfer to this memory address
     AT91C_BASE_PDC_SSC->PDC_RCR = PM3_CMD_DATA_SIZE;   // transfer this many samples
-    buf[0] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;         // clear receive register
+    ts->buf[0] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;         // clear receive register
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;    // Start DMA transfer
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_GET_TRACE);   // let FPGA transfer its internal Block-RAM
@@ -109,7 +133,7 @@ void HfPlotDownload(void) {
     LED_B_ON();
     for (size_t i = 0; i < FPGA_TRACE_SIZE; i += PM3_CMD_DATA_SIZE) {
         // prepare next DMA transfer:
-        uint8_t *next_buf = buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
+        uint8_t *next_buf = ts->buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
 
         AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)next_buf;
         AT91C_BASE_PDC_SSC->PDC_RNCR = PM3_CMD_DATA_SIZE;

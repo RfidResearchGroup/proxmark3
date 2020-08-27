@@ -17,15 +17,16 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "../emv_pk.h"
 #include "../crypto.h"
 #include "../dump.h"
 #include "../tlv.h"
 #include "../emv_pki.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include "ui.h"         // printandlog
 #include "sda_test.h"
 
 struct emv_pk vsdc_01 = {
@@ -53,6 +54,7 @@ struct emv_pk vsdc_01 = {
         0xbc, 0xa2, 0x12, 0x4a, 0x30, 0xa2, 0x8f, 0x54, 0x40, 0x2c, 0x34, 0xae, 0xca, 0x33, 0x1a, 0xb6,
         0x7e, 0x1e, 0x79, 0xb2, 0x85, 0xdd, 0x57, 0x71, 0xb5, 0xd9, 0xff, 0x79, 0xea, 0x63, 0x0b, 0x75,
     },
+    .expire = 0,
 };
 
 const unsigned char issuer_cert[] = {
@@ -91,6 +93,7 @@ const unsigned char ssd1[] = {
     0x5f, 0x24, 0x03, 0x08, 0x12, 0x31, 0x5a, 0x08, 0x42, 0x76, 0x55, 0x00, 0x13, 0x23, 0x45, 0x99, 0x5f, 0x34, 0x01, 0x01, 0x9f, 0x07, 0x02, 0xff, 0x00, 0x9f, 0x0d, 0x05, 0xd0, 0x40, 0xac, 0xa8, 0x00, 0x9f, 0x0e, 0x05, 0x00, 0x10, 0x00, 0x00, 0x00, 0x9f, 0x0f, 0x05, 0xd0, 0x68, 0xbc, 0xf8, 0x00,
     0x5c, 0x00,
 };
+
 static const struct tlv ssd1_tlv = {
     .len = sizeof(ssd1),
     .value = ssd1,
@@ -118,7 +121,7 @@ static int sda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("issuer cert:\n");
+        PrintAndLogEx(INFO, "issuer cert:");
         dump_buffer(ipk_data, ipk_data_len, stdout, 0);
     }
 
@@ -148,7 +151,7 @@ static int sda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash:\n");
+        PrintAndLogEx(INFO, "crypto hash:");
         dump_buffer(h, 20, stdout, 0);
     }
 
@@ -175,7 +178,7 @@ static int sda_test_raw(bool verbose) {
         return 1;
 
     if (verbose) {
-        printf("ssad:\n");
+        PrintAndLogEx(INFO, "ssad:");
         dump_buffer(ssad, ssad_len, stdout, 0);
     }
 
@@ -196,14 +199,12 @@ static int sda_test_raw(bool verbose) {
     }
 
     if (verbose) {
-        printf("crypto hash2:\n");
+        PrintAndLogEx(INFO, "crypto hash2:");
         dump_buffer(h2, 20, stdout, 0);
     }
 
     crypto_hash_close(ch);
-
     free(ssad);
-
     return 0;
 }
 
@@ -218,7 +219,7 @@ static int sda_test_pk(bool verbose) {
 
     struct emv_pk *ipk = emv_pki_recover_issuer_cert(pk, db);
     if (!ipk) {
-        fprintf(stderr, "Could not recover Issuer certificate!\n");
+        PrintAndLogEx(WARNING, "Could not recover Issuer certificate!");
         tlvdb_free(db);
         return 2;
     }
@@ -227,7 +228,7 @@ static int sda_test_pk(bool verbose) {
 
     struct tlvdb *dacdb = emv_pki_recover_dac(ipk, db, &ssd1_tlv);
     if (!dacdb) {
-        fprintf(stderr, "Could not recover DAC!\n");
+        PrintAndLogEx(WARNING, "Could not recover DAC!");
         emv_pk_free(ipk);
         tlvdb_free(db);
         return 2;
@@ -235,7 +236,7 @@ static int sda_test_pk(bool verbose) {
 
     const struct tlv *dac = tlvdb_get(dacdb, 0x9f45, NULL);
     if (!dac) {
-        fprintf(stderr, "DAC not found!\n");
+        PrintAndLogEx(WARNING, "DAC not found!");
         tlvdb_free(dacdb);
         emv_pk_free(ipk);
         tlvdb_free(db);
@@ -243,34 +244,29 @@ static int sda_test_pk(bool verbose) {
     }
 
     if (verbose) {
-        printf("dac:\n");
+        PrintAndLogEx(INFO, "dac:");
         dump_buffer(dac->value, dac->len, stdout, 0);
     }
 
     tlvdb_free(dacdb);
     emv_pk_free(ipk);
     tlvdb_free(db);
-
     return 0;
 }
 
 int exec_sda_test(bool verbose) {
-    int ret;
-    fprintf(stdout, "\n");
-
-    ret = sda_test_raw(verbose);
+    int ret = sda_test_raw(verbose);
     if (ret) {
-        fprintf(stderr, "SDA raw test: failed\n");
+        PrintAndLogEx(WARNING, "SDA raw test: %s", _RED_("failed"));
         return ret;
     }
-    fprintf(stdout, "SDA raw test: passed\n");
+    PrintAndLogEx(SUCCESS, "SDA raw test: %s", _GREEN_("passed"));
 
     ret = sda_test_pk(verbose);
     if (ret) {
-        fprintf(stderr, "SDA test pk: failed\n");
+        PrintAndLogEx(WARNING, "SDA test pk: %s", _RED_("failed"));
         return ret;
     }
-    fprintf(stdout, "SDA test pk: passed\n");
-
+    PrintAndLogEx(SUCCESS, "SDA test pk: %s", _GREEN_("passed"));
     return 0;
 }

@@ -68,28 +68,43 @@ typedef struct {
 *  T (x 0 x 1 . . . . . . x 15 ) = x 0 ⊕ x 1 ⊕ x 5 ⊕ x 7 ⊕ x 10 ⊕ x 11 ⊕ x 14 ⊕ x 15 .
 **/
 static bool T(State state) {
-    bool x0 = state.t & 0x8000;
-    bool x1 = state.t & 0x4000;
-    bool x5 = state.t & 0x0400;
-    bool x7 = state.t & 0x0100;
-    bool x10 = state.t & 0x0020;
-    bool x11 = state.t & 0x0010;
-    bool x14 = state.t & 0x0002;
-    bool x15 = state.t & 0x0001;
-    return x0 ^ x1 ^ x5 ^ x7 ^ x10 ^ x11 ^ x14 ^ x15;
+    /*
+        bool x0 = state.t & 0x8000;
+        bool x1 = state.t & 0x4000;
+        bool x5 = state.t & 0x0400;
+        bool x7 = state.t & 0x0100;
+        bool x10 = state.t & 0x0020;
+        bool x11 = state.t & 0x0010;
+        bool x14 = state.t & 0x0002;
+        bool x15 = state.t & 0x0001;
+        return x0 ^ x1 ^ x5 ^ x7 ^ x10 ^ x11 ^ x14 ^ x15;
+    */
+#define  _x0  ((state.t & 0x8000) >> 15 )
+#define  _x1  ((state.t & 0x4000) >> 14 )
+#define  _x5  ((state.t & 0x0400) >> 10 )
+#define  _x7  ((state.t & 0x0100) >> 8 )
+#define  _x10 ((state.t & 0x0020) >> 5 )
+#define  _x11 ((state.t & 0x0010) >> 4 )
+#define  _x14 ((state.t & 0x0002) >> 1 )
+#define  _x15 (state.t & 0x0001)
+    return (_x0) ^ (_x1) ^ (_x5) ^ (_x7) ^ (_x10) ^ (_x11) ^ (_x14) ^ (_x15);
 }
 /**
 *  Similarly, the feedback function for the bottom register B : F 8/2 → F 2 is defined as
 *  B(x 0 x 1 . . . x 7 ) = x 1 ⊕ x 2 ⊕ x 3 ⊕ x 7 .
 **/
-static bool B(State state) {
+/*static bool B(State state) {
     bool x1 = state.b & 0x40;
     bool x2 = state.b & 0x20;
     bool x3 = state.b & 0x10;
     bool x7 = state.b & 0x01;
     return x1 ^ x2 ^ x3 ^ x7;
 }
+*/
+#define B(x) (((x.b & 0x40) >> 6)  ^ ((x.b & 0x20) >> 5) ^ ((x.b & 0x10) >> 4) ^ (x.b & 0x01))
 
+//   12 3456
+// 0100 0000
 
 /**
 *  Definition 3 (Selection function). The selection function select : F 2 × F 2 ×
@@ -99,29 +114,49 @@ static bool B(State state) {
 *  z 2 = (r 3 ∧ r 5 ) ⊕ (r 4 ∧ r 6 ) ⊕ r 7 ⊕ x
 **/
 static uint8_t _select(bool x, bool y, uint8_t r) {
-    bool r0 = r >> 7 & 0x1;
-    bool r1 = r >> 6 & 0x1;
-    bool r2 = r >> 5 & 0x1;
-    bool r3 = r >> 4 & 0x1;
-    bool r4 = r >> 3 & 0x1;
-    bool r5 = r >> 2 & 0x1;
-    bool r6 = r >> 1 & 0x1;
-    bool r7 = r & 0x1;
+#define _r0 ((r >> 7) & 0x01)
+#define _r1 ((r >> 6) & 0x01)
+#define _r2 ((r >> 5) & 0x01)
+#define _r3 ((r >> 4) & 0x01)
+#define _r4 ((r >> 3) & 0x01)
+#define _r5 ((r >> 2) & 0x01)
+#define _r6 ((r >> 1) & 0x01)
+#define _r7 (r & 0x01)
 
-    bool z0 = (r0 & r2) ^ (r1 & (!r3)) ^ (r2 | r4);
-    bool z1 = (r0 | r2) ^ (r5 | r7) ^ r1 ^ r6 ^ x ^ y;
-    bool z2 = (r3 & (!r5)) ^ (r4 & r6) ^ r7 ^ x;
+#define _z0  ( (_r0 & _r2) ^ ( _r1 & (!_r3)) ^ (_r2 | _r4) )
+#define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ (x) ^ (y) )
+#define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ (x) )
 
-    // The three bitz z0.. z1 are packed into a uint8_t:
-    // 00000ZZZ
-    //Return value is a uint8_t
-    uint8_t retval = 0;
-    retval |= (z0 << 2) & 4;
-    retval |= (z1 << 1) & 2;
-    retval |= (z2) & 1;
+    /*
+        uint8_t r0 = r >> 7 & 0x1;
+        uint8_t r1 = r >> 6 & 0x1;
+        uint8_t r2 = r >> 5 & 0x1;
+        uint8_t r3 = r >> 4 & 0x1;
+        uint8_t r4 = r >> 3 & 0x1;
+        uint8_t r5 = r >> 2 & 0x1;
+        uint8_t r6 = r >> 1 & 0x1;
+        uint8_t r7 = r & 0x1;
 
-    // Return value 0 <= retval <= 7
-    return retval;
+        bool z0 = (r0 & r2) ^ (r1 & (!r3)) ^ (r2 | r4);
+        bool z1 = (r0 | r2) ^ (r5 | r7) ^ r1 ^ r6 ^ x ^ y;
+        bool z2 = (r3 & (!r5)) ^ (r4 & r6) ^ r7 ^ x;
+
+        // The three bitz z0.. z1 are packed into a uint8_t:
+        // 00000ZZZ
+        //Return value is a uint8_t
+        return ((z0 << 2) & 4) | ((z1 << 1) & 2) | (z2 & 1);
+    */
+    return ((_z0 << 2) & 4) | ((_z1 << 1) & 2) | (_z2 & 1);
+
+    /*
+        uint8_t retval = 0;
+        retval |= (z0 << 2) & 4;
+        retval |= (z1 << 1) & 2;
+        retval |= (z2) & 1;
+
+        // Return value 0 <= retval <= 7
+        return retval;
+    */
 }
 
 /**
@@ -142,10 +177,10 @@ static State successor(uint8_t *k, State s, bool y) {
     State successor = {0, 0, 0, 0};
 
     successor.t = s.t >> 1;
-    successor.t |= (T(s) ^ r0 ^ r4) << 15;
+    successor.t |= ((T(s)) ^ (r0) ^ (r4)) << 15;
 
     successor.b = s.b >> 1;
-    successor.b |= (B(s) ^ r7) << 7;
+    successor.b |= ((B(s)) ^ (r7)) << 7;
 
     bool Tt = T(s);
 
@@ -212,7 +247,6 @@ static void MAC(uint8_t *k, BitstreamIn input, BitstreamOut out) {
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t cc_nr[13] = { 0 };
     uint8_t div_key[8];
-    //cc_nr=(uint8_t*) calloc(length+1, sizeof(uint8_t));
 
     memcpy(cc_nr, cc_nr_p, 12);
     memcpy(div_key, div_key_p, 8);
@@ -225,7 +259,6 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));
     memcpy(mac, dest, 4);
-    //free(cc_nr);
 }
 
 void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]) {
@@ -248,7 +281,7 @@ void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_ke
 }
 
 #ifndef ON_DEVICE
-int testMAC() {
+int testMAC(void) {
     PrintAndLogEx(SUCCESS, "Testing MAC calculation...");
 
     //From the "dismantling.IClass" paper:
@@ -261,9 +294,9 @@ int testMAC() {
     doMAC(cc_nr, div_key, calculated_mac);
 
     if (memcmp(calculated_mac, correct_MAC, 4) == 0) {
-        PrintAndLogEx(SUCCESS, "MAC calculation OK!");
+        PrintAndLogEx(SUCCESS, "    MAC calculation (%s)", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "FAILED: MAC calculation failed:");
+        PrintAndLogEx(FAILED, "    MAC calculation (%s)", _RED_("failed"));
         printarr("    Calculated_MAC", calculated_mac, 4);
         printarr("    Correct_MAC   ", correct_MAC, 4);
         return PM3_ESOFT;

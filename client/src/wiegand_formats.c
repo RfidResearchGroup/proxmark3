@@ -597,12 +597,12 @@ static const cardformat_t FormatTable[] = {
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit" }, // from cardinfo.barkweb.com.au
+    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit", {1, 1, 0, 1, 0}}, // from cardinfo.barkweb.com.au
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };
 
-void HIDListFormats() {
+void HIDListFormats(void) {
     if (FormatTable[0].Name == NULL)
         return;
 
@@ -671,21 +671,21 @@ static void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t form
             PrintAndLogEx(SUCCESS, "       Parity: %s",card->ParityValid ? "Valid" : "Invalid");
     */
 
-    char s[80] = {0};
+    char s[110] = {0};
     if (format.Fields.hasFacilityCode)
-        snprintf(s, sizeof(s), "FC: %u", card->FacilityCode);
+        snprintf(s, sizeof(s), "FC: " _GREEN_("%u"), card->FacilityCode);
 
     if (format.Fields.hasCardNumber)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  CN: %" PRIu64, card->CardNumber);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  CN: " _GREEN_("%"PRIu64), card->CardNumber);
 
     if (format.Fields.hasIssueLevel)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue %u", card->IssueLevel);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue " _GREEN_("%u"), card->IssueLevel);
 
     if (format.Fields.hasOEMCode)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: %u", card->OEM);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: " _GREEN_("%u"), card->OEM);
 
     if (format.Fields.hasParity)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "    parity: %s", card->ParityValid ? "valid" : "invalid");
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "    parity: %s", card->ParityValid ? _GREEN_("valid") : _RED_("invalid"));
 
     PrintAndLogEx(SUCCESS, "[%s] - %s;  %s", format.Name, format.Descrp, s);
 }

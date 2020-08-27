@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ui.h"
+#include "proxgui.h"
 #include "util.h"    //param_get32ex
 #include "lfdemod.h"
 #include "cmddata.h" //for g_debugmode
@@ -18,7 +19,6 @@
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 size_t GraphTraceLen;
-int s_Buff[MAX_GRAPH_TRACE_LEN];
 
 /* write a manchester bit to the graph
 TODO,  verfy that this doesn't overflow buffer  (iceman)
@@ -115,7 +115,7 @@ bool isGraphBitstream(void) {
     return true;
 }
 
-void convertGraphFromBitstream() {
+void convertGraphFromBitstream(void) {
     convertGraphFromBitstreamEx(1, 0);
 }
 
@@ -246,7 +246,10 @@ int GetPskClock(const char *str, bool printAns) {
     size_t firstPhaseShiftLoc = 0;
     uint8_t curPhase = 0, fc = 0;
     clock1 = DetectPSKClock(bits, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
-    setClockGrid(clock1, firstPhaseShiftLoc);
+
+    if (clock1 >= 0)
+        setClockGrid(clock1, firstPhaseShiftLoc);
+
     // Only print this message if we're not looping something
     if (printAns)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);

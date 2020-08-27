@@ -48,8 +48,7 @@ static int temp2 = 0;
 static int sof_bits;               // number of start-of-frame bits
 static uint8_t pwdh0, pwdl0, pwdl1; // password bytes
 static uint32_t rnd = 0x74124485;  // randomnumber
-size_t blocknr;
-bool end = false;
+static bool end = false;
 //#define SENDBIT_TEST
 
 /* array index 3 2 1 0 // bytes in sim.bin file are 0 1 2 3
@@ -110,7 +109,7 @@ bool end = false;
  * Implementation of the crc8 calculation from Hitag S
  * from http://www.proxmark.org/files/Documents/125%20kHz%20-%20Hitag/HitagS.V11.pdf
  */
-void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount) {
+static void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount) {
     *crc ^= data; // crc = crc (exor) data
     do {
         if (*crc & 0x80) { // if (MSB-CRC == 1)
@@ -333,7 +332,7 @@ static int check_select(uint8_t *rx, uint32_t uid) {
     return 0;
 }
 
-void hitagS_set_frame_modulation() {
+static void hitagS_set_frame_modulation(void) {
     switch (tag.mode) {
         case HT_STANDARD:
             sof_bits = 1;
@@ -434,8 +433,8 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             temp2++;
             *txlen = 32;
             state = _hitag2_init(REV64(tag.key),
-                                 REV32(tag.pages[0][0]),
-                                 REV32(((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0]))
+                                 REV32((tag.pages[0][3] << 24) + (tag.pages[0][2] << 16) + (tag.pages[0][1] << 8) + tag.pages[0][0]),
+                                 REV32((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0])
                                 );
             Dbprintf(",{0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X}",
                      rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
@@ -446,7 +445,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 _hitag2_byte(&state);
 
             //send con2, pwdh0, pwdl0, pwdl1 encrypted as a response
-            tx[0] = _hitag2_byte(&state) ^ ((tag.pages[0][1] >> 16) & 0xff);
+            tx[0] = _hitag2_byte(&state) ^ tag.pages[1][2];
             tx[1] = _hitag2_byte(&state) ^ tag.pwdh0;
             tx[2] = _hitag2_byte(&state) ^ tag.pwdl0;
             tx[3] = _hitag2_byte(&state) ^ tag.pwdl1;
@@ -454,7 +453,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 //add crc8
                 *txlen = 40;
                 crc = CRC_PRESET;
-                calc_crc(&crc, ((tag.pages[0][1] >> 16) & 0xff), 8);
+                calc_crc(&crc, tag.pages[1][2], 8);
                 calc_crc(&crc, tag.pwdh0, 8);
                 calc_crc(&crc, tag.pwdl0, 8);
                 calc_crc(&crc, tag.pwdl1, 8);
@@ -466,10 +465,16 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
              if (temp2 % 2 == 0) {
              tag.uid = 0x11223344;
-             tag.pages[0][0] = 0x44332211;
+             tag.pages[0][0] = 0x11;
+             tag.pages[0][1] = 0x22;
+             tag.pages[0][2] = 0x33;
+             tag.pages[0][3] = 0x44;
              } else {
              tag.uid = 0x55667788;
-             tag.pages[0][0] = 0x88776655;
+             tag.pages[0][0] = 0x55;
+             tag.pages[0][1] = 0x66;
+             tag.pages[0][2] = 0x77;
+             tag.pages[0][3] = 0x88;
              }
              */
         }
@@ -480,16 +485,20 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             //data received to be written
             if (tag.tstate == HT_WRITING_PAGE_DATA) {
                 tag.tstate = HT_NO_OP;
-                tag.pages[page_to_be_written / 4][page_to_be_written % 4] = (rx[0]
-                                                                            << 0) + (rx[1] << 8) + (rx[2] << 16) + (rx[3] << 24);
+                tag.pages[page_to_be_written][0] = rx[0];
+                tag.pages[page_to_be_written][1] = rx[1];
+                tag.pages[page_to_be_written][2] = rx[2];
+                tag.pages[page_to_be_written][3] = rx[3];
                 //send ack
                 *txlen = 2;
                 tx[0] = 0x40;
                 page_to_be_written = 0;
                 hitagS_set_frame_modulation();
             } else if (tag.tstate == HT_WRITING_BLOCK_DATA) {
-                tag.pages[page_to_be_written / 4][page_to_be_written % 4] = (rx[0]
-                                                                            << 24) + (rx[1] << 16) + (rx[2] << 8) + rx[3];
+                tag.pages[page_to_be_written][0] = rx[0];
+                tag.pages[page_to_be_written][1] = rx[1];
+                tag.pages[page_to_be_written][2] = rx[2];
+                tag.pages[page_to_be_written][3] = rx[3];
                 //send ack
                 *txlen = 2;
                 tx[0] = 0x40;
@@ -889,9 +898,12 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     }
 
     tag.uid = ((tag.pages[0][3]) << 24) | ((tag.pages[0][2]) << 16) | ((tag.pages[0][1]) << 8) | tag.pages[0][0];
-    tag.key = ((tag.pages[3][3]) << 24) | ((tag.pages[3][2]) << 16) | ((tag.pages[3][1]) << 8) | tag.pages[3][0];
-    tag.key <<= 16;
-    tag.key += ((tag.pages[2][3]) << 8) + tag.pages[2][2];
+    tag.key = (((uint64_t)tag.pages[3][3]) << 40) |
+              (((uint64_t)tag.pages[3][2]) << 32) |
+              (((uint64_t)tag.pages[3][1]) << 24) |
+              (((uint64_t)tag.pages[3][0]) << 16) |
+              (((uint64_t)tag.pages[2][3]) << 8) |
+              (((uint64_t)tag.pages[2][2]));
     tag.pwdl0 = tag.pages[2][0];
     tag.pwdl1 = tag.pages[2][1];
     tag.pwdh0 = tag.pages[1][3];
@@ -1027,7 +1039,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
         // Check if frame was captured
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, true);
+            LogTrace(rx, nbytes(rxlen), response, response, NULL, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
             AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
@@ -1075,7 +1087,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     DbpString("Sim Stopped");
 }
 
-void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
+static void hitagS_receive_frame(uint8_t *rx, size_t *rxlen, int *response) {
 
     // Reset values for receiving frames
     memset(rx, 0x00, HITAG_FRAME_LEN * sizeof(uint8_t));
@@ -1269,7 +1281,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
+            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
         }
 
         // By default reset the transmission buffer
@@ -1398,7 +1410,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
         // Add transmitted frame to total count
         if (txlen > 0) {
 //            frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, 0, NULL, true);
+            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 
         hitagS_receive_frame(rx, &rxlen, &response);
@@ -1526,7 +1538,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
+            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
         }
 
         //check for valid input
@@ -1613,7 +1625,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
         // Add transmitted frame to total count
         if (txlen > 0) {
 //            frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, 0, NULL, true);
+            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 
         hitagS_receive_frame(rx, &rxlen, &response);
@@ -1645,7 +1657,7 @@ void check_challenges(bool file_given, uint8_t *data) {
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
     int t_wait = HITAG_T_WAIT_MAX;
-    int lastbit, STATE = 0;;
+    int lastbit, STATE = 0;
     bool bStop;
     int response_bit[200];
     unsigned char mask = 1;
@@ -1720,7 +1732,7 @@ void check_challenges(bool file_given, uint8_t *data) {
         // Check if frame was captured and store it
         if (rxlen > 0) {
 //            frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
+            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
         }
 
         uint8_t *tx = txbuf;
@@ -1852,7 +1864,7 @@ void check_challenges(bool file_given, uint8_t *data) {
         // Add transmitted frame to total count
         if (txlen > 0) {
 //            frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, 0, NULL, true);
+            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 
         hitagS_receive_frame(rx, &rxlen, &response);

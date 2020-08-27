@@ -39,13 +39,12 @@ s32_t SPIFFS_format(spiffs *fs) {
         return -1;
     }
 
-    s32_t res;
     SPIFFS_LOCK(fs);
 
     spiffs_block_ix bix = 0;
     while (bix < fs->block_count) {
         fs->max_erase_count = 0;
-        res = spiffs_erase_block(fs, bix);
+        s32_t res = spiffs_erase_block(fs, bix);
         if (res != SPIFFS_OK) {
             res = SPIFFS_ERR_ERASE_FAIL;
         }
@@ -1121,11 +1120,11 @@ s32_t SPIFFS_check(spiffs *fs) {
     SPIFFS_LOCK(fs);
 
     res = spiffs_lookup_consistency_check(fs, 0);
-
+    (void)res;
     res = spiffs_object_index_consistency_check(fs);
-
+    (void)res;
     res = spiffs_page_consistency_check(fs);
-
+    (void)res;
     res = spiffs_obj_lu_scan(fs);
 
     SPIFFS_UNLOCK(fs);

@@ -25,29 +25,46 @@
 // config blocks
 #define T55X7_DEFAULT_CONFIG_BLOCK      0x000880E8  // ASK, compat mode, data rate 32, manchester, STT, 7 data blocks
 #define T55X7_RAW_CONFIG_BLOCK          0x000880E0  // ASK, compat mode, data rate 32, manchester, 7 data blocks
-#define T55X7_EM_UNIQUE_CONFIG_BLOCK    0x00148040  // ASK, emulate em4x02/unique - compat mode, manchester, data rate 64, 2 data blocks
-#define T55X7_EM_PAXTON_CONFIG_BLOCK    0x00148040  // ASK, emulate em4x02/paxton - compat mode, manchester, data rate 64, 2 data blocks
+#define T55X7_EM_UNIQUE_CONFIG_BLOCK    0x00148040  // ASK, EM4x02/unique - compat mode, manchester, data rate 64, 2 data blocks
+#define T55X7_EM_PAXTON_CONFIG_BLOCK    0x00148040  // ASK, EM4x02/paxton - compat mode, manchester, data rate 64, 2 data blocks
+#define T55X7_VISA2000_CONFIG_BLOCK     0x00148068  // ASK, data rate 64, 3 data blocks, STT
+#define T55X7_VIKING_CONFIG_BLOCK       0x00088040  // ASK, compat mode, data rate 32, Manchester, 2 data blocks
+#define T55X7_NORALSY_CONFIG_BLOCK      0x00088C6A  // ASK, compat mode,   (NORALSY - KCP3000), data rate 32, 3 data blocks
+#define T55X7_PRESCO_CONFIG_BLOCK       0x00088088  // ASK, data rate 32, Manchester, 4 data blocks, STT
+#define T55X7_SECURAKEY_CONFIG_BLOCK    0x000C8060  // ASK, Manchester, data rate 40, 3 data blocks
+
 // FDXB requires data inversion and BiPhase 57 is simply BiPhase 50 inverted, so we can either do it using the modulation scheme or the inversion flag
 // we've done both below to prove that it works either way, and the modulation value for BiPhase 50 in the Atmel data sheet of binary "10001" (17) is a typo,
 // and it should actually be "10000" (16)
-// #define T55X7_FDXB_CONFIG_BLOCK        0x903F8080  // emulate fdx-b - xtended mode, BiPhase ('57), data rate 32, 4 data blocks
-#define T55X7_FDXB_CONFIG_BLOCK         0x903F0082  // emulate fdx-b - xtended mode, BiPhase ('50), invert data, data rate 32, 4 data blocks
-#define T55X7_HID_26_CONFIG_BLOCK       0x00107060  // hid 26 bit - compat mode, FSK2a, data rate 50, 3 data blocks
-#define T55X7_PYRAMID_CONFIG_BLOCK      0x00107080  // Pyramid 26 bit - compat mode, FSK2a, data rate 50, 4 data blocks
-#define T55X7_INDALA_64_CONFIG_BLOCK    0x00081040  // emulate indala 64 bit - compat mode, PSK1, psk carrier FC * 2, data rate 32, maxblock 2
-#define T55X7_INDALA_224_CONFIG_BLOCK   0x000810E0  // emulate indala 224 bit - compat mode, PSK1, psk carrier FC * 2, data rate 32, maxblock 7
-#define T55X7_GUARDPROXII_CONFIG_BLOCK  0x00150060  // bitrate 64pcb, Direct modulation, Biphase, 3 data blocks
-#define T55X7_VIKING_CONFIG_BLOCK       0x00088040  // ASK, compat mode, data rate 32, Manchester, 2 data blocks
-#define T55X7_NORALYS_CONFIG_BLOCK      0x00088C6A  // ASK, compat mode,   (NORALYS - KCP3000), 3 data blocks
-#define T55X7_IOPROX_CONFIG_BLOCK       0x00147040  // ioprox - FSK2a, data rate 64, 2 data blocks
-#define T55X7_PRESCO_CONFIG_BLOCK       0x00088088  // ASK, data rate 32, Manchester, 4 data blocks, STT
-#define T55X7_NEDAP_64_CONFIG_BLOCK     0x907f0042  // BiPhase,  data rate 64, 2 data blocks
-#define T55X7_NEDAP_128_CONFIG_BLOCK    0x907f0082  // BiPhase,  data rate 64, 4 data blocks
+// #define T55X7_FDXB_CONFIG_BLOCK        0x903F8080  // BiPhase, fdx-b - xtended mode, BiPhase ('57), data rate 32, 4 data blocks
+#define T55X7_FDXB_CONFIG_BLOCK         0x903F0082  // BiPhase, fdx-b - xtended mode, BiPhase ('50), invert data, data rate 32, 4 data blocks
+#define T55X7_FDXB_2_CONFIG_BLOCK       0x00098080  //
 
+#define T55X7_HID_26_CONFIG_BLOCK       0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks
+#define T55X7_PARADOX_CONFIG_BLOCK      0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks
+#define T55X7_AWID_CONFIG_BLOCK         0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks
+#define T55X7_PYRAMID_CONFIG_BLOCK      0x00107080  // FSK2a, Pyramid 26 bit - compat mode, data rate 50, 4 data blocks
+#define T55X7_IOPROX_CONFIG_BLOCK       0x00147040  // FSK2a, data rate 64, 2 data blocks
+
+#define T55X7_INDALA_64_CONFIG_BLOCK    0x00081040  // PSK1, indala 64 bit - compat mode, psk carrier FC * 2, data rate 32, maxblock 2
+#define T55X7_INDALA_224_CONFIG_BLOCK   0x000810E0  // PSK1, indala 224 bit - compat mode, psk carrier FC * 2, data rate 32, maxblock 7
+#define T55X7_MOTOROLA_CONFIG_BLOCK     0x00081040  // PSK1, data rate 32, 2 data blocks
+#define T55X7_NEXWATCH_CONFIG_BLOCK     0x00081060  // PSK1 data rate 16, psk carrier FC * 2, 3 data blocks
+#define T55X7_KERI_CONFIG_BLOCK         0x603E1040  // PSK1, 2 data blocks
+
+#define T55X7_JABLOTRON_CONFIG_BLOCK    0x00158040  // Biphase, data rate 64, 2 data blocks
+#define T55X7_GUARDPROXII_CONFIG_BLOCK  0x00150060  // Biphase, data rate 64, Direct modulation, 3 data blocks
+#define T55X7_NEDAP_64_CONFIG_BLOCK     0x907f0042  // BiPhase, data rate 64, 2 data blocks
+#define T55X7_NEDAP_128_CONFIG_BLOCK    0x907f0082  // BiPhase, data rate 64, 4 data blocks
+
+#define T55X7_PAC_CONFIG_BLOCK          0x00080080  // NRZ, data rate 32, 4 data blocks
+#define T55X7_VERICHIP_CONFIG_BLOCK     0x000C0080  // NRZ, data rate 40, 4 data blocks
 #define T55X7_bin 0b0010
 
-#define T5555_DEFAULT_CONFIG_BLOCK      0x6001F004  // data rate 64 , ask, manchester, 2 data blocks?
-enum {
+// Q5 / Termic / T5555
+#define T5555_DEFAULT_CONFIG_BLOCK      0x6001F004  // ASK, data rate 64, manchester, 2 data blocks?
+
+typedef enum {
     T55x7_RAW = 0x00,
     T55x7_DEFAULT = 0x00,
     T5555_DEFAULT = 0x01,
@@ -164,7 +181,8 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
 bool GetT55xxBlockData(uint32_t *blockdata);
 bool DecodeT55xxBlock(void);
 bool tryDetectModulation(uint8_t downlink_mode, bool print_config);
-bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf);
+//bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf);
+bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd);
 bool testKnownConfigBlock(uint32_t block0);
 
 bool tryDetectP1(bool getData);

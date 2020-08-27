@@ -14,25 +14,23 @@
 */
 
 module hi_flite(
-    pck0, ck_1356meg, ck_1356megb,
+    ck_1356meg,
     pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4,
     adc_d, adc_clk,
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
-    cross_hi, cross_lo,
     dbg,
     mod_type
-
 );
-    input pck0, ck_1356meg, ck_1356megb;
+    input ck_1356meg;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
     input [7:0] adc_d;
     output adc_clk;
     input ssp_dout;
     output ssp_frame, ssp_din, ssp_clk;
-    input cross_hi, cross_lo;
     output dbg;
-    input [2:0] mod_type;
-assign dbg=0;
+    input [3:0] mod_type;
+
+assign dbg = 0;
 
 wire power = mod_type[2];
 wire speed = mod_type[1];
@@ -40,7 +38,7 @@ wire disabl = mod_type[0];
 
 // Most off, oe4 for modulation;
 // Trying reader emulation (would presumably just require switching power on, but I am not sure)
-assign pwr_lo  = 1'b0;
+assign pwr_lo = 1'b0;
 
 // 512x64/fc  -wait before ts0, 32768 ticks
 // tslot: 256*64/fc
@@ -347,11 +345,11 @@ reg pwr_oe4;
 
 wire mod = ((fccount >= bithalf) ^ dlay) & (~disabl);
 
-always @(ck_1356megb or ssp_dout or power or disabl or mod)
+always @(ck_1356meg or ssp_dout or power or disabl or mod)
 begin
     if (power)
         begin
-        pwr_hi <= ck_1356megb;
+        pwr_hi <= ck_1356meg;
         pwr_oe1 <= 1'b0;//mod;
         pwr_oe2 <= 1'b0;//mod;
         pwr_oe3 <= 1'b0;//mod;

@@ -31,9 +31,9 @@ static uint32_t iso14a_timeout;
 // if iso14443a not active - transmit/receive dont try to execute
 static bool hf_field_active = false;
 
-uint8_t colpos = 0;
-int rsamples = 0;
-uint8_t trigger = 0;
+static uint8_t colpos = 0;
+int g_rsamples = 0;
+uint8_t g_trigger = 0;
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
 
@@ -67,7 +67,7 @@ static uint8_t iso14_pcb_blocknum = 0;
 #define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1)
 
 // The FPGA will report its internal sending delay in
-uint16_t FpgaSendQueueDelay;
+static uint16_t FpgaSendQueueDelay;
 // the 5 first bits are the number of bits buffered in mod_sig_buf
 // the last three bits are the remaining ticks/2 after the mod_sig_buf shift
 #define DELAY_FPGA_QUEUE (FpgaSendQueueDelay<<1)
@@ -123,7 +123,7 @@ static uint32_t LastProxToAirDuration;
 #define SEC_Z 0xc0
 
 void iso14a_set_trigger(bool enable) {
-    trigger = enable;
+    g_trigger = enable;
 }
 
 void iso14a_set_timeout(uint32_t timeout) {
@@ -184,14 +184,14 @@ static tUart14a Uart;
 // 0011  -   a 2 tick wide pause, or a three tick wide pause shifted left
 // 0111  -   a 2 tick wide pause shifted left
 // 1001  -   a 2 tick wide pause shifted right
-const bool Mod_Miller_LUT[] = {
+static const bool Mod_Miller_LUT[] = {
     false,  true, false, true,  false, false, false, true,
     false,  true, false, false, false, false, false, false
 };
 #define IsMillerModulationNibble1(b) (Mod_Miller_LUT[(b & 0x000000F0) >> 4])
 #define IsMillerModulationNibble2(b) (Mod_Miller_LUT[(b & 0x0000000F)])
 
-tUart14a *GetUart14a() {
+tUart14a *GetUart14a(void) {
     return &Uart;
 }
 
@@ -351,11 +351,11 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 // 8 ticks modulated:                                     A collision. Save the collision position and treat as Sequence D
 // Note 1: the bitstream may start at any time. We therefore need to sync.
 // Note 2: parameter offset is used to determine the position of the parity bits (required for the anticollision command only)
-tDemod14a Demod;
+static tDemod14a Demod;
 
 // Lookup-Table to decide if 4 raw bits are a modulation.
 // We accept three or four "1" in any position
-const bool Mod_Manchester_LUT[] = {
+static const bool Mod_Manchester_LUT[] = {
     false, false, false, false, false, false, false, true,
     false, false, false, true,  false, true,  true,  true
 };
@@ -363,7 +363,7 @@ const bool Mod_Manchester_LUT[] = {
 #define IsManchesterModulationNibble1(b) (Mod_Manchester_LUT[(b & 0x00F0) >> 4])
 #define IsManchesterModulationNibble2(b) (Mod_Manchester_LUT[(b & 0x000F)])
 
-tDemod14a *GetDemod14a() {
+tDemod14a *GetDemod14a(void) {
     return &Demod;
 }
 void Demod14aReset(void) {
@@ -480,7 +480,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 
 // Thinfilm, Kovio mangels ISO14443A in the way that they don't use start bit nor parity bits.
-RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
+static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
     if (Demod.state == DEMOD_14A_UNSYNCD) {
@@ -585,10 +585,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *receivedResp = BigBuf_malloc(MAX_FRAME_SIZE);
     uint8_t *receivedRespPar = BigBuf_malloc(MAX_PARITY_SIZE);
 
-    // The DMA buffer, used to stream samples from the FPGA
-    uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
-    uint8_t *data = dmaBuf;
-
     uint8_t previous_data = 0;
     int maxDataLen = 0, dataLen;
     bool TagIsActive = false;
@@ -600,10 +596,14 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // Set up the demodulator for the reader -> tag commands
     Uart14aInit(receivedCmd, receivedCmdPar);
 
-    DbpString("Starting to sniff");
+    Dbprintf("Starting to sniff. Press PM3 Button to stop.");
+
+    // The DMA buffer, used to stream samples from the FPGA
+    dmabuf8_t *dma = get_dma8();
+    uint8_t *data = dma->buf;
 
     // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *) dmaBuf, DMA_BUFFER_SIZE)) {
+    if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
         if (DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
@@ -621,7 +621,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         WDT_HIT();
         LED_A_ON();
 
-        int register readBufDataP = data - dmaBuf;
+        int register readBufDataP = data - dma->buf;
         int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
         if (readBufDataP <= dmaBufDataP)
             dataLen = dmaBufDataP - readBufDataP;
@@ -640,13 +640,13 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
         // primary buffer was stopped( <-- we lost data!
         if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
+            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
             AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
             Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
         }
         // secondary buffer sets as primary, secondary buffer was stopped
         if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
 
@@ -710,16 +710,15 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         previous_data = *data;
         rx_samples++;
         data++;
-        if (data == dmaBuf + DMA_BUFFER_SIZE) {
-            data = dmaBuf;
+        if (data == dma->buf + DMA_BUFFER_SIZE) {
+            data = dma->buf;
         }
     } // end main loop
 
     FpgaDisableTracing();
 
     if (DBGLEVEL >= DBG_ERROR) {
-        Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
-        Dbprintf("traceLen=" _YELLOW_("%d")", Uart.output[0]="_YELLOW_("%08x"), BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
+        Dbprintf("trace len = " _YELLOW_("%d"), BigBuf_get_traceLen());
     }
     switch_off();
 }
@@ -729,62 +728,61 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 //-----------------------------------------------------------------------------
 static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, uint8_t *par, bool collision) {
 
-    //uint8_t localCol = 0;
-    ToSendReset();
+    tosend_reset();
+
+    tosend_t *ts = get_tosend();
 
     // Correction bit, might be removed when not needed
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(1);  // <-----
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(1);  // <-----
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
 
     // Send startbit
-    ToSend[++ToSendMax] = SEC_D;
-    LastProxToAirDuration = 8 * ToSendMax - 4;
+    ts->buf[++ts->max] = SEC_D;
+    LastProxToAirDuration = 8 * ts->max - 4;
 
     for (uint16_t i = 0; i < len; i++) {
         uint8_t b = cmd[i];
 
         // Data bits
         for (uint16_t j = 0; j < 8; j++) {
-            //if (collision && (localCol >= colpos)){
             if (collision) {
-                ToSend[++ToSendMax] = SEC_COLL;
-                //localCol++;
+                ts->buf[++ts->max] = SEC_COLL;
             } else {
                 if (b & 1) {
-                    ToSend[++ToSendMax] = SEC_D;
+                    ts->buf[++ts->max] = SEC_D;
                 } else {
-                    ToSend[++ToSendMax] = SEC_E;
+                    ts->buf[++ts->max] = SEC_E;
                 }
                 b >>= 1;
             }
         }
 
         if (collision) {
-            ToSend[++ToSendMax] = SEC_COLL;
-            LastProxToAirDuration = 8 * ToSendMax;
+            ts->buf[++ts->max] = SEC_COLL;
+            LastProxToAirDuration = 8 * ts->max;
         } else {
             // Get the parity bit
             if (par[i >> 3] & (0x80 >> (i & 0x0007))) {
-                ToSend[++ToSendMax] = SEC_D;
-                LastProxToAirDuration = 8 * ToSendMax - 4;
+                ts->buf[++ts->max] = SEC_D;
+                LastProxToAirDuration = 8 * ts->max - 4;
             } else {
-                ToSend[++ToSendMax] = SEC_E;
-                LastProxToAirDuration = 8 * ToSendMax;
+                ts->buf[++ts->max] = SEC_E;
+                LastProxToAirDuration = 8 * ts->max;
             }
         }
     }
 
     // Send stopbit
-    ToSend[++ToSendMax] = SEC_F;
+    ts->buf[++ts->max] = SEC_F;
 
     // Convert from last byte pos to length
-    ToSendMax++;
+    ts->max++;
 }
 
 static void CodeIso14443aAsTagEx(const uint8_t *cmd, uint16_t len, bool collision) {
@@ -799,37 +797,39 @@ static void CodeIso14443aAsTag(const uint8_t *cmd, uint16_t len) {
 static void Code4bitAnswerAsTag(uint8_t cmd) {
     uint8_t b = cmd;
 
-    ToSendReset();
+    tosend_reset();
+
+    tosend_t *ts = get_tosend();
 
     // Correction bit, might be removed when not needed
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(1);  // 1
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
-    ToSendStuffBit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(1);  // 1
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
 
     // Send startbit
-    ToSend[++ToSendMax] = SEC_D;
+    ts->buf[++ts->max] = SEC_D;
 
     for (uint8_t i = 0; i < 4; i++) {
         if (b & 1) {
-            ToSend[++ToSendMax] = SEC_D;
-            LastProxToAirDuration = 8 * ToSendMax - 4;
+            ts->buf[++ts->max] = SEC_D;
+            LastProxToAirDuration = 8 * ts->max - 4;
         } else {
-            ToSend[++ToSendMax] = SEC_E;
-            LastProxToAirDuration = 8 * ToSendMax;
+            ts->buf[++ts->max] = SEC_E;
+            LastProxToAirDuration = 8 * ts->max;
         }
         b >>= 1;
     }
 
     // Send stopbit
-    ToSend[++ToSendMax] = SEC_F;
+    ts->buf[++ts->max] = SEC_F;
 
     // Convert from last byte pos to length
-    ToSendMax++;
+    ts->max++;
 }
 
 //-----------------------------------------------------------------------------
@@ -887,23 +887,27 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
     // Prepare the tag modulation bits from the message
     CodeIso14443aAsTag(response_info->response, response_info->response_n);
 
+    tosend_t *ts = get_tosend();
+
     // Make sure we do not exceed the free buffer space
-    if (ToSendMax > max_buffer_size) {
-        Dbprintf("Out of memory, when modulating bits for tag answer:");
+    if (ts->max > max_buffer_size) {
+        Dbprintf("ToSend buffer, Out-of-bound, when modulating bits for tag answer:");
         Dbhexdump(response_info->response_n, response_info->response, false);
         return false;
     }
 
     // Copy the byte array, used for this modulation to the buffer position
-    memcpy(response_info->modulation, ToSend, ToSendMax);
+    memcpy(response_info->modulation, ts->buf, ts->max);
 
     // Store the number of bytes that were used for encoding/modulation and the time needed to transfer them
-    response_info->modulation_n = ToSendMax;
+    response_info->modulation_n = ts->max;
     response_info->ProxToAirDuration = LastProxToAirDuration;
     return true;
 }
 
 bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size) {
+
+    tosend_t *ts = get_tosend();
 
     // Retrieve and store the current buffer index
     response_info->modulation = *buffer;
@@ -911,8 +915,8 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     // Forward the prepare tag modulation function to the inner function
     if (prepare_tag_modulation(response_info, *max_buffer_size)) {
         // Update the free buffer offset and the remaining buffer size
-        *buffer += ToSendMax;
-        *max_buffer_size -= ToSendMax;
+        *buffer += ts->max;
+        *max_buffer_size -= ts->max;
         return true;
     } else {
         return false;
@@ -980,14 +984,26 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
             // some first pages of UL/NTAG dump is special data
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 19);
+
             // counters and tearing flags
-            for (int i = 0; i < 3; i++) {
+            // for old dumps with all zero headers, we need to set default values.
+            for (uint8_t i = 0; i < 3; i++) {
+
                 counters[i] = le24toh(mfu_header->counter_tearing[i]);
-                tearings[i] = mfu_header->counter_tearing[i][3];
+
+                if (mfu_header->counter_tearing[i][3] != 0x00) {
+                    tearings[i] = mfu_header->counter_tearing[i][3];
+                }
             }
+
             // GET_VERSION
-            memcpy(rVERSION, mfu_header->version, 8);
+            if (memcmp(mfu_header->version, "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
+                memcpy(rVERSION, "\x00\x04\x04\x02\x01\x00\x11\x03", 8);
+            } else {
+                memcpy(rVERSION, mfu_header->version, 8);
+            }
             AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
+
             // READ_SIG
             memcpy(rSIGN, mfu_header->signature, 32);
             AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
@@ -1150,8 +1166,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     // Such a response is less time critical, so we can prepare them on the fly
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
 #define DYNAMIC_MODULATION_BUFFER_SIZE 512
-    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE];
-    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE];
+    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE] = {0};
+    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE] = {0};
     tag_response_info_t dynamic_response_info = {
         .response = dynamic_response_buffer,
         .response_n = 0,
@@ -1487,10 +1503,13 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
             uint8_t pwd[4];
             emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
             if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
-                uint8_t cmd[4];
-                emlGetMemBt(cmd, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
-                AddCrc14A(cmd, sizeof(cmd) - 2);
-                EmSendCmd(cmd, sizeof(cmd));
+                uint8_t pack[4];
+                emlGetMemBt(pack, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
+                if (memcmp(pack, "\x00\x00\x00\x00", 4) == 0) {
+                    memcpy(pack, "\x80\x80\x00\x00", 4);
+                }
+                AddCrc14A(pack, sizeof(pack) - 2);
+                EmSendCmd(pack, sizeof(pack));
             } else {
                 EmSend4bit(CARD_NACK_NA);
                 if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Auth attempt: %08x", bytes_to_num(receivedCmd + 1, 4));
@@ -1613,7 +1632,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 
 // prepare a delayed transfer. This simply shifts ToSend[] by a number
 // of bits specified in the delay parameter.
-void PrepareDelayedTransfer(uint16_t delay) {
+static void PrepareDelayedTransfer(uint16_t delay) {
     delay &= 0x07;
     if (!delay) return;
 
@@ -1623,12 +1642,14 @@ void PrepareDelayedTransfer(uint16_t delay) {
     for (uint16_t i = 0; i < delay; i++)
         bitmask |= (0x01 << i);
 
-    ToSend[ToSendMax++] = 0x00;
+    tosend_t *ts = get_tosend();
 
-    for (uint16_t i = 0; i < ToSendMax; i++) {
-        uint8_t bits_to_shift = ToSend[i] & bitmask;
-        ToSend[i] = ToSend[i] >> delay;
-        ToSend[i] = ToSend[i] | (bits_shifted << (8 - delay));
+    ts->buf[ts->max++] = 0x00;
+
+    for (uint16_t i = 0; i < ts->max; i++) {
+        uint8_t bits_to_shift = ts->buf[i] & bitmask;
+        ts->buf[i] = ts->buf[i] >> delay;
+        ts->buf[i] = ts->buf[i] | (bits_shifted << (8 - delay));
         bits_shifted = bits_to_shift;
     }
 }
@@ -1683,14 +1704,15 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 //-----------------------------------------------------------------------------
 // Prepare reader command (in bits, support short frames) to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
+static void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
     int last = 0;
 
-    ToSendReset();
+    tosend_reset();
+    tosend_t *ts = get_tosend();
 
     // Start of Communication (Seq. Z)
-    ToSend[++ToSendMax] = SEC_Z;
-    LastProxToAirDuration = 8 * (ToSendMax + 1) - 6;
+    ts->buf[++ts->max] = SEC_Z;
+    LastProxToAirDuration = 8 * (ts->max + 1) - 6;
 
     size_t bytecount = nbytes(bits);
     // Generate send structure for the data bits
@@ -1702,17 +1724,17 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
         for (j = 0; j < bitsleft; j++) {
             if (b & 1) {
                 // Sequence X
-                ToSend[++ToSendMax] = SEC_X;
-                LastProxToAirDuration = 8 * (ToSendMax + 1) - 2;
+                ts->buf[++ts->max] = SEC_X;
+                LastProxToAirDuration = 8 * (ts->max + 1) - 2;
                 last = 1;
             } else {
                 if (last == 0) {
                     // Sequence Z
-                    ToSend[++ToSendMax] = SEC_Z;
-                    LastProxToAirDuration = 8 * (ToSendMax + 1) - 6;
+                    ts->buf[++ts->max] = SEC_Z;
+                    LastProxToAirDuration = 8 * (ts->max + 1) - 6;
                 } else {
                     // Sequence Y
-                    ToSend[++ToSendMax] = SEC_Y;
+                    ts->buf[++ts->max] = SEC_Y;
                     last = 0;
                 }
             }
@@ -1724,17 +1746,17 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
             // Get the parity bit
             if (par[i >> 3] & (0x80 >> (i & 0x0007))) {
                 // Sequence X
-                ToSend[++ToSendMax] = SEC_X;
-                LastProxToAirDuration = 8 * (ToSendMax + 1) - 2;
+                ts->buf[++ts->max] = SEC_X;
+                LastProxToAirDuration = 8 * (ts->max + 1) - 2;
                 last = 1;
             } else {
                 if (last == 0) {
                     // Sequence Z
-                    ToSend[++ToSendMax] = SEC_Z;
-                    LastProxToAirDuration = 8 * (ToSendMax + 1) - 6;
+                    ts->buf[++ts->max] = SEC_Z;
+                    LastProxToAirDuration = 8 * (ts->max + 1) - 6;
                 } else {
                     // Sequence Y
-                    ToSend[++ToSendMax] = SEC_Y;
+                    ts->buf[++ts->max] = SEC_Y;
                     last = 0;
                 }
             }
@@ -1744,25 +1766,26 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
     // End of Communication: Logic 0 followed by Sequence Y
     if (last == 0) {
         // Sequence Z
-        ToSend[++ToSendMax] = SEC_Z;
-        LastProxToAirDuration = 8 * (ToSendMax + 1) - 6;
+        ts->buf[++ts->max] = SEC_Z;
+        LastProxToAirDuration = 8 * (ts->max + 1) - 6;
     } else {
         // Sequence Y
-        ToSend[++ToSendMax] = SEC_Y;
+        ts->buf[++ts->max] = SEC_Y;
     }
-    ToSend[++ToSendMax] = SEC_Y;
+    ts->buf[++ts->max] = SEC_Y;
 
     // Convert to length of command:
-    ToSendMax++;
+    ts->max++;
 }
 
 //-----------------------------------------------------------------------------
 // Prepare reader command to send to FPGA
 //-----------------------------------------------------------------------------
-void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *par) {
+/*
+static void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *par) {
     CodeIso14443aBitsAsReaderPar(cmd, len * 8, par);
 }
-
+*/
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
 // Stop when button is pressed (return 1) or field was gone (return 2)
@@ -1954,7 +1977,8 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
 
 int EmSend4bit(uint8_t resp) {
     Code4bitAnswerAsTag(resp);
-    int res = EmSendCmd14443aRaw(ToSend, ToSendMax);
+    tosend_t *ts = get_tosend();
+    int res = EmSendCmd14443aRaw(ts->buf, ts->max);
     // do the tracing for the previous reader request and this tag answer:
     uint8_t par[1] = {0x00};
     GetParity(&resp, 1, par);
@@ -1975,7 +1999,9 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par) {
 }
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision) {
     CodeIso14443aAsTagPar(resp, respLen, par, collision);
-    int res = EmSendCmd14443aRaw(ToSend, ToSendMax);
+    tosend_t *ts = get_tosend();
+    int res = EmSendCmd14443aRaw(ts->buf, ts->max);
+
     // do the tracing for the previous reader request and this tag answer:
     EmLogTrace(Uart.output,
                Uart.len,
@@ -2014,13 +2040,6 @@ int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
                LastTimeProxToAirStart * 16 + DELAY_ARM2AIR_AS_TAG,
                (LastTimeProxToAirStart + p_response->ProxToAirDuration) * 16 + DELAY_ARM2AIR_AS_TAG,
                par);
-
-    if (DBGLEVEL >= DBG_EXTENDED) {
-        Dbprintf("response_info->response %02X", p_response->response);
-        Dbprintf("response_info->response_n %02X", p_response->response_n);
-        Dbprintf("response_info->par %02X", &(p_response->par));
-    }
-
     return ret;
 }
 
@@ -2143,8 +2162,9 @@ void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t
 
     CodeIso14443aBitsAsReaderPar(frame, bits, par);
     // Send command to tag
-    TransmitFor14443a(ToSend, ToSendMax, timing);
-    if (trigger) LED_A_ON();
+    tosend_t *ts = get_tosend();
+    TransmitFor14443a(ts->buf, ts->max, timing);
+    if (g_trigger) LED_A_ON();
 
     LogTrace(frame, nbytes(bits), (LastTimeProxToAirStart << 4) + DELAY_ARM2AIR_AS_READER, ((LastTimeProxToAirStart + LastProxToAirDuration) << 4) + DELAY_ARM2AIR_AS_READER, par, true);
 }
@@ -2153,7 +2173,7 @@ void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *tim
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
+static void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
     // Generate parity and redirect
     uint8_t par[MAX_PARITY_SIZE] = {0x00};
     GetParity(frame, len / 8, par);
@@ -2167,7 +2187,7 @@ void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
+static int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
     if (!GetIso14443aAnswerFromTag(receivedAnswer, par, offset))
         return false;
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
@@ -2521,7 +2541,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // Set up the synchronous serial port
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
@@ -2544,7 +2564,6 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 
     hf_field_active = true;
 }
-
 
 void hf_field_off(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2769,7 +2788,7 @@ OUT:
 // Determine the distance between two nonces.
 // Assume that the difference is small, but we don't know which is first.
 // Therefore try in alternating directions.
-int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
+static int32_t dist_nt(uint32_t nt1, uint32_t nt2) {
 
     if (nt1 == nt2) return 0;
 

@@ -30,6 +30,12 @@
 #endif
 #include "reveng.h"
 
+#ifdef BMPTST
+#  undef fprintf
+#  undef puts
+#  undef fputs
+#endif
+
 #if (defined BMPTST) || (BMP_BIT < 32)
 /* Size in bits of a bmp_t.  Not necessarily a power of two. */
 int bmpbit;

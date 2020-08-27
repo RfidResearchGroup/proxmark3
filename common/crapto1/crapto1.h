@@ -66,6 +66,9 @@ bool validate_prng_nonce(uint32_t nonce);
 #define LF_POLY_EVEN (0x870804)
 #define BIT(x, n) ((x) >> (n) & 1)
 #define BEBIT(x, n) BIT(x, (n) ^ 24)
+#ifdef __OPTIMIZE_SIZE__
+int filter(uint32_t const x);
+#else
 static inline int filter(uint32_t const x) {
     uint32_t f;
 
@@ -76,4 +79,5 @@ static inline int filter(uint32_t const x) {
     f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
     return BIT(0xEC57E80A, f);
 }
+#endif
 #endif

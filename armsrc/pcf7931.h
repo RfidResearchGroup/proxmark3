@@ -6,7 +6,7 @@
 size_t DemodPCF7931(uint8_t **outBlocks);
 bool IsBlock0PCF7931(uint8_t *block);
 bool IsBlock1PCF7931(uint8_t *block);
-void ReadPCF7931();
+void ReadPCF7931(void);
 void SendCmdPCF7931(uint32_t *tab);
 bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int32_t l, int32_t p);
 bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p);

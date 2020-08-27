@@ -135,7 +135,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ICLASS_CMD_ACT              0xE
 
 #define ICLASS_CREDIT(x)            (((x) & 0x10) == 0x10)
-#define ICLASS_DEBIT(x)             !(ICLASS_CREDIT(x))
+#define ICLASS_DEBIT(x)             (((x) & 0x80) == 0x80)
 
 
 #define ISO14443A_CMD_REQA          0x26
@@ -240,6 +240,40 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
+
+// defined crypto RF commands
+// only interpreting channel 1 communication
+#define CRYPTORF_SET_USER_ZONE      0x11
+#define CRYPTORF_READ_USER_ZONE     0x12
+#define CRYPTORF_WRITE_USER_ZONE    0x13
+#define CRYPTORF_WRITE_SYSTEM_ZONE  0x14
+#define CRYPTORF_READ_SYSTEM_ZONE   0x16
+#define CRYPTORF_VERIFY_CRYPTO      0x18
+#define CRYPTORF_SEND_CHECKSUM      0x19
+#define CRYPTORF_DESELECT           0x1A
+#define CRYPTORF_IDLE               0x1B
+#define CRYPTORF_CHECK_PASSWORD     0x1C
+
+// defined Crypto RF errors
+#define CRYPTORF_ERR_ACCESS_DENIED_ZONE               0x99
+#define CRYPTORF_ERR_PARAM_INVALID                    0xA1
+#define CRYPTORF_ERR_ADDRES_INVALID                   0xA2
+#define CRYPTORF_ERR_LENGTH_INVALID                   0xA3
+#define CRYPTORF_ERR_AUTH_ENC_REQ                     0xA9
+#define CRYPTORF_ERR_ACCESS_DENIED_WLOCK              0xB9
+#define CRYPTORF_ERR_BYTE_ACCESS_DENIED_NOT_ALLOWED   0xBA
+#define CRYPTORF_ERR_ACCESS_DENIED_NOT_ALLOWED        0xBA
+#define CRYPTORF_ERR_BYTE_ACCESS_DENIED_PASSWD_REQ    0xBC
+#define CRYPTORF_ERR_CHECKSUM_FAIL2                   0xC8
+#define CRYPTORF_ERR_CHECKSUM_FAIL                    0xC9
+#define CRYPTORF_ERR_PASSWD_REQ                       0xD9
+#define CRYPTORF_ERR_FUSE_ACCESS_DENIED               0xDF
+#define CRYPTORF_ERR_MODIFY_FORBIDDEN                 0xE9
+#define CRYPTORF_ERR_ACCESS_DENIED_FUSE_ORDR          0xE9
+#define CRYPTORF_ERR_MEMORY_WRITE_DATA_M              0xED
+#define CRYPTORF_ERR_MEMORY_ACCESS                    0xEE
+#define CRYPTORF_ERR_MEMORY_ACCESS_SEC                0xF9
+
 //First byte is 26
 #define ISO15693_INVENTORY     0x01
 #define ISO15693_STAYQUIET     0x02
@@ -297,7 +331,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define TOPAZ_WRITE_E8                0x54 // Write-with-erase (eight bytes)
 #define TOPAZ_WRITE_NE8               0x1B // Write-no-erase (eight bytes)
 
-
 // Definitions of which protocol annotations there are available
 #define ISO_14443A       0
 #define ICLASS           1
@@ -314,8 +347,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define LTO             12
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
+#define PROTO_CRYPTORF  15
 
-//-- Picopass fuses
+// Picopass fuses
 #define FUSE_FPERS   0x80
 #define FUSE_CODING1 0x40
 #define FUSE_CODING0 0x20
@@ -324,6 +358,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FUSE_FPROD1  0x04
 #define FUSE_FPROD0  0x02
 #define FUSE_RA      0x01
+
+// Picopass Pagemode fuses
+#define PICOPASS_NON_SECURE_PAGEMODE 0x01
+#define PICOPASS_SECURE_PAGEMODE     0x11
+
 
 // ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_READ_BINARY             0xB0
@@ -359,6 +398,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_READSIG                   0x3C
 #define MFDES_WRITE_DATA                0x3D
 #define MFDES_GET_KEY_SETTINGS          0x45
+#define MFDES_GET_UID                   0x51
 #define MFDES_CHANGE_KEY_SETTINGS       0x54
 #define MFDES_SELECT_APPLICATION        0x5A
 #define MFDES_CHANGE_FILE_SETTINGS      0x5F

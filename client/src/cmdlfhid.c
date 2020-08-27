@@ -51,6 +51,7 @@ static int usage_lf_hid_watch(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        lf hid watch"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_sim(void) {
@@ -63,6 +64,7 @@ static int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "       ID  - HID id");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf hid sim 2006ec0c86"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_clone(void) {
@@ -76,6 +78,7 @@ static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone 2006ec0c86"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone l 2006ec0c86"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_brute(void) {
@@ -100,6 +103,7 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 224"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 21 d 2000"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute v w H10301 f 21 c 200 d 2000"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -195,7 +199,7 @@ static int CmdHIDDemod(const char *Cmd) {
     }
 
     if (hi2 != 0) { //extra large HID tags
-        PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x%08x (%u)"), hi2, hi, lo, (lo >> 1) & 0xFFFF);
+        PrintAndLogEx(SUCCESS, "HID Prox - " _GREEN_("%x%08x%08x (%u)"), hi2, hi, lo, (lo >> 1) & 0xFFFF);
     } else {  //standard HID tags <38 bits
         uint8_t fmtLen = 0;
         uint32_t cc = 0;
@@ -241,9 +245,11 @@ static int CmdHIDDemod(const char *Cmd) {
             fc = ((hi & 0xF) << 12) | (lo >> 20);
         }
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
-            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: " _GREEN_("%x%08x (%u)")" - Format Len: 32bit - CC: %u - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+            PrintAndLogEx(SUCCESS,
+                          "HID Prox (Kastle format) - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("32") " bit CC: " _GREEN_("%u") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u"), hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
-            PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x (%u)")" - Format Len: " _GREEN_("%u bit")" - OEM: %03u - FC: " _GREEN_("%u")" - Card: " _GREEN_("%u"),
+            PrintAndLogEx(SUCCESS,
+                          "HID Prox - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("%u") " bit - OEM: " _GREEN_("%03u") " FC: " _GREEN_("%u")" Card: " _GREEN_("%u"),
                           hi, lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }
@@ -264,13 +270,17 @@ static int CmdHIDRead(const char *Cmd) {
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdHIDWatch(const char *Cmd) {
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_hid_watch();
+    uint8_t c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') return usage_lf_hid_watch();
+
+    PrintAndLogEx(SUCCESS, "Watching for HID Prox cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_HID_DEMOD, NULL, 0);
-    PrintAndLogEx(SUCCESS, "Watching for new HID cards - place tag on antenna");
-    PrintAndLogEx(INFO, "Press pm3-button to stop reading new cards");
-    return PM3_SUCCESS;
+    SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_HID_WATCH, &resp);
+    PrintAndLogEx(INFO, "Done");
+    return resp.status;
 }
 
 static int CmdHIDSim(const char *Cmd) {

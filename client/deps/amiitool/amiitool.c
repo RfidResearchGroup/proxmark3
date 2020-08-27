@@ -15,7 +15,7 @@
 
 static char *self;
 
-void amiitool_usage() {
+void amiitool_usage(void) {
     fprintf(stderr,
             /*"amiitool build %i (commit %s-%08x)\n"*/
             "by Marcos Del Sol Vives <marcos@dracon.es>\n"

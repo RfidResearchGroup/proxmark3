@@ -45,6 +45,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_LF_EM4100EMUL,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_em4100emul.c
 endif
+# WITH_STANDALONE_LF_EM4100RSWB
+ifneq (,$(findstring WITH_STANDALONE_LF_EM4100RSWB,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_em4100rswb.c
+endif
 # WITH_STANDALONE_LF_EM4100RWC
 ifneq (,$(findstring WITH_STANDALONE_LF_EM4100RWC,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_em4100rwc.c
@@ -53,7 +57,11 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_LEGIC,$(APP_CFLAGS)))
    SRC_STANDALONE = hf_legic.c
 endif
-# WITH_STANDALONE_LF_MSDSAL
+# WITH_STANDALONE_HF_MSDSAL
 ifneq (,$(findstring WITH_STANDALONE_HF_MSDSAL,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_msdsal.c
+endif
+# WITH_STANDALONE_HF_ICECLASS
+ifneq (,$(findstring WITH_STANDALONE_HF_ICECLASS,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_iceclass.c
 endif

@@ -38,7 +38,7 @@ static int usage_lf_awid_watch(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf awid watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf awid watch");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid watch"));
     return PM3_SUCCESS;
 }
 
@@ -54,8 +54,8 @@ static int usage_lf_awid_sim(void) {
     PrintAndLogEx(NORMAL, "    <card number> :  16|32-bit value card number");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf awid sim 26 224 1337");
-    PrintAndLogEx(NORMAL, "       lf awid sim 50 2001 13371337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid sim 26 224 1337"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid sim 50 2001 13371337"));
     return PM3_SUCCESS;
 }
 
@@ -72,8 +72,8 @@ static int usage_lf_awid_clone(void) {
     PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf awid clone 26 224 1337");
-    PrintAndLogEx(NORMAL, "       lf awid clone 50 2001 13371337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid clone 26 224 1337"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid clone 50 2001 13371337"));
     return PM3_SUCCESS;
 }
 
@@ -92,9 +92,9 @@ static int usage_lf_awid_brute(void) {
     PrintAndLogEx(NORMAL, "       v                 :  verbose logging, show all tries");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf awid brute a 26 f 224");
-    PrintAndLogEx(NORMAL, "       lf awid brute a 50 f 2001 d 2000");
-    PrintAndLogEx(NORMAL, "       lf awid brute v a 50 f 2001 c 200 d 2000");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid brute a 26 f 224"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid brute a 50 f 2001 d 2000"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf awid brute v a 50 f 2001 c 200 d 2000"));
     return PM3_SUCCESS;
 }
 
@@ -180,11 +180,17 @@ static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn) {
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdAWIDWatch(const char *Cmd) {
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_awid_watch();
+    uint8_t c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') return usage_lf_awid_watch();
+
+    PrintAndLogEx(SUCCESS, "Watching for AWID cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_AWID_DEMOD, NULL, 0);
-    return PM3_SUCCESS;
+    SendCommandNG(CMD_LF_AWID_WATCH, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_AWID_WATCH, &resp);
+    PrintAndLogEx(INFO, "Done");
+    return resp.status;
 }
 
 //by marshmellow
@@ -284,21 +290,21 @@ static int CmdAWIDDemod(const char *Cmd) {
             fc = bytebits_to_byte(bits + 9, 8);
             cardnum = bytebits_to_byte(bits + 17, 16);
             code1 = bytebits_to_byte(bits + 8, fmtLen);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
             break;
         case 34:
             fc = bytebits_to_byte(bits + 9, 8);
             cardnum = bytebits_to_byte(bits + 17, 24);
             code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
             code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             break;
         case 37:
             fc = bytebits_to_byte(bits + 9, 13);
             cardnum = bytebits_to_byte(bits + 22, 18);
             code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
             code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d")" FC: " _GREEN_("%d")" Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             break;
         // case 40:
         // break;
@@ -307,18 +313,18 @@ static int CmdAWIDDemod(const char *Cmd) {
             cardnum = bytebits_to_byte(bits + 25, 32);
             code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
             code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d, FC: %d, Card: %u - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             break;
         default:
             if (fmtLen > 32) {
                 cardnum = bytebits_to_byte(bits + 8 + (fmtLen - 17), 16);
                 code1 = bytebits_to_byte(bits + 8, fmtLen - 32);
                 code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-                PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+                PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             } else {
                 cardnum = bytebits_to_byte(bits + 8 + (fmtLen - 17), 16);
                 code1 = bytebits_to_byte(bits + 8, fmtLen);
-                PrintAndLogEx(SUCCESS, "AWID Found - BitLength: %d -unknown BitLength- (%u) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+                PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
             }
             break;
     }

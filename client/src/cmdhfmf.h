@@ -19,8 +19,8 @@ int CmdHFMF(const char *Cmd);
 int CmdHF14AMfELoad(const char *Cmd); // used by cmd hf mfu eload
 int CmdHF14AMfDbg(const char *Cmd);   // used by cmd hf mfu dbg
 
-void showSectorTable(void);
-void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose);
+void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount);
+void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose);
 void printKeyTable(uint8_t sectorscnt, sector_t *e_sector);
 void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
 void printKeyTable_fast(uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar, uint64_t foo);

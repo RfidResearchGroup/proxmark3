@@ -25,10 +25,12 @@
 
 #include "lfdemod.h"        // device/client demods of LF signals
 #include "ui.h"             // for show graph controls
+#include "proxgui.h"
 #include "graph.h"          // for graph data
 #include "cmddata.h"        // for `lf search`
 #include "cmdlfawid.h"      // for awid menu
 #include "cmdlfem4x.h"      // for em4x menu
+#include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfio.h"        // for ioprox menu
@@ -54,7 +56,7 @@
 #include "cmdlfmotorola.h"  // for Motorola menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 
-bool g_lf_threshold_set = false;
+static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
@@ -285,7 +287,7 @@ static int CmdLFTune(const char *Cmd) {
         }
 
         uint32_t volt = resp.data.asDwords[0];
-        PrintAndLogEx(INPLACE, "%u mV / %3u V", volt, (uint32_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, " %u mV / %3u V", volt, (uint32_t)(volt / 1000));
     }
 
     params[0] = 3;
@@ -669,7 +671,7 @@ int CmdLFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void ChkBitstream() {
+static void ChkBitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
@@ -702,6 +704,8 @@ int CmdLFSim(const char *Cmd) {
 
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
 
+    PacketResponseNG resp;
+
     struct pupload {
         uint8_t flag;
         uint16_t offset;
@@ -726,9 +730,12 @@ int CmdLFSim(const char *Cmd) {
         for (uint16_t j = 0; j < len; j++)
             payload_up.data[j] = GraphBuffer[i + j];
 
-
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
-        WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, NULL);
+        WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Bigbuf is full.");
+            break;
+        }
         printf(".");
         fflush(stdout);
         payload_up.flag = 0;
@@ -750,7 +757,6 @@ int CmdLFSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
-    PacketResponseNG resp;
     WaitForResponse(CMD_LF_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
@@ -1201,6 +1207,14 @@ static bool CheckChipType(bool getDeviceData) {
         retval = true;
     }
 
+    // check for em4x50 chips
+    if (detect_4x50_block()) {
+        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50`") " commands");
+        retval = true;
+        goto out;
+    }
+
 out:
     save_restoreGB(GRAPH_RESTORE);
     save_restoreDB(GRAPH_RESTORE);
@@ -1245,6 +1259,13 @@ int CmdLFfind(const char *Cmd) {
             }
         }
 
+        if (IfPm3EM4x50()) {
+            if (read_em4x50_uid() == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!");
+                return PM3_SUCCESS;
+            }
+        }
+
         // only run if graphbuffer is just noise as it should be for hitag
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
@@ -1265,21 +1286,21 @@ int CmdLFfind(const char *Cmd) {
         }
     }
 
-    if (EM4x50Read("", false) == PM3_SUCCESS)  { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!"); return PM3_SUCCESS;}
-
+    if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
     if (demodHID() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
     if (demodAWID() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
+    if (demodIOProx() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
     if (demodParadox() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+    if (demodNexWatch() == PM3_SUCCESS)        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
+    if (demodIndala() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
 
     if (demodEM410x() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
     if (demodFDX() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
     if (demodGuard() == PM3_SUCCESS)           { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
     if (demodIdteck() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
-    if (demodIndala() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
-    if (demodIOProx() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
+
     if (demodJablotron() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
     if (demodNedap() == PM3_SUCCESS)           { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
-    if (demodNexWatch() == PM3_SUCCESS)        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
     if (demodNoralsy() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
     if (demodKeri() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
     if (demodPac() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
@@ -1288,8 +1309,8 @@ int CmdLFfind(const char *Cmd) {
     if (demodPyramid() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
     if (demodSecurakey() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
     if (demodViking() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
-    if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
     if (demodGallagher() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
+
 //    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
     //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
 
@@ -1339,6 +1360,7 @@ out:
     // identify chipset
     if (CheckChipType(isOnline) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+        retval = false;
     }
     return retval;
 }

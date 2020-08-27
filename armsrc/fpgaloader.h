@@ -20,6 +20,7 @@
 // definitions for multiple FPGA config files support
 #define FPGA_BITSTREAM_LF 1
 #define FPGA_BITSTREAM_HF 2
+#define FPGA_BITSTREAM_HF_FELICA 3
 
 /*
   Communication between ARM / FPGA is done inside armsrc/fpgaloader.c (function FpgaSendCommand)
@@ -52,23 +53,26 @@ thres|                          x x x x x x x x
 #define FPGA_CMD_TRACE_ENABLE                       (2<<12) // C
 
 // Definitions for the FPGA configuration word.
+#define FPGA_MAJOR_MODE_MASK                        0x01C0
+#define FPGA_MINOR_MODE_MASK                        0x003F
+
 // LF
-#define FPGA_MAJOR_MODE_LF_READER                   (0<<5)
-#define FPGA_MAJOR_MODE_LF_EDGE_DETECT              (1<<5)
-#define FPGA_MAJOR_MODE_LF_PASSTHRU                 (2<<5)
-#define FPGA_MAJOR_MODE_LF_ADC                      (3<<5)
+#define FPGA_MAJOR_MODE_LF_READER                   (0<<6)
+#define FPGA_MAJOR_MODE_LF_EDGE_DETECT              (1<<6)
+#define FPGA_MAJOR_MODE_LF_PASSTHRU                 (2<<6)
+#define FPGA_MAJOR_MODE_LF_ADC                      (3<<6)
 
 // HF
-#define FPGA_MAJOR_MODE_HF_READER_TX                (0<<5) // D
-#define FPGA_MAJOR_MODE_HF_READER_RX_XCORR          (1<<5) // D
-#define FPGA_MAJOR_MODE_HF_SIMULATOR                (2<<5) // D
-#define FPGA_MAJOR_MODE_HF_ISO14443A                (3<<5) // D
-#define FPGA_MAJOR_MODE_HF_SNOOP                    (4<<5) // D
-#define FPGA_MAJOR_MODE_HF_ISO18092                 (5<<5) // D
-#define FPGA_MAJOR_MODE_HF_GET_TRACE                (6<<5) // D
+#define FPGA_MAJOR_MODE_HF_READER                   (0<<6) // D
+#define FPGA_MAJOR_MODE_HF_SIMULATOR                (1<<6) // D
+#define FPGA_MAJOR_MODE_HF_ISO14443A                (2<<6) // D
+#define FPGA_MAJOR_MODE_HF_SNIFF                    (3<<6) // D
+#define FPGA_MAJOR_MODE_HF_ISO18092                 (4<<6) // D
+#define FPGA_MAJOR_MODE_HF_GET_TRACE                (5<<6) // D
 
 // BOTH HF / LF
-#define FPGA_MAJOR_MODE_OFF                         (7<<5) // D
+#define FPGA_MAJOR_MODE_OFF                         (7<<6) // D
+
 
 // Options for LF_READER
 #define FPGA_LF_ADC_READER_FIELD                    0x1
@@ -78,13 +82,20 @@ thres|                          x x x x x x x x
 #define FPGA_LF_EDGE_DETECT_READER_FIELD            0x1
 #define FPGA_LF_EDGE_DETECT_TOGGLE_MODE             0x2
 
-// Options for the HF reader, tx to tag
-#define FPGA_HF_READER_TX_SHALLOW_MOD               0x1
+// Options for the HF reader
+#define FPGA_HF_READER_MODE_RECEIVE_IQ              (0<<0)
+#define FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE       (1<<0)
+#define FPGA_HF_READER_MODE_RECEIVE_PHASE           (2<<0)
+#define FPGA_HF_READER_MODE_SEND_FULL_MOD           (3<<0)
+#define FPGA_HF_READER_MODE_SEND_SHALLOW_MOD        (4<<0)
+#define FPGA_HF_READER_MODE_SNIFF_IQ                (5<<0)
+#define FPGA_HF_READER_MODE_SNIFF_AMPLITUDE         (6<<0)
+#define FPGA_HF_READER_MODE_SNIFF_PHASE             (7<<0)
+#define FPGA_HF_READER_MODE_SEND_JAM                (8<<0)
 
-// Options for the HF reader, correlating against rx from tag
-#define FPGA_HF_READER_RX_XCORR_848_KHZ             0x1
-#define FPGA_HF_READER_RX_XCORR_SNOOP               0x2
-#define FPGA_HF_READER_RX_XCORR_QUARTER             0x4
+#define FPGA_HF_READER_SUBCARRIER_848_KHZ           (0<<4)
+#define FPGA_HF_READER_SUBCARRIER_424_KHZ           (1<<4)
+#define FPGA_HF_READER_SUBCARRIER_212_KHZ           (2<<4)
 
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION             0x0 // 0000
@@ -112,9 +123,9 @@ void FpgaEnableTracing(void);
 void FpgaDisableTracing(void);
 void FpgaDownloadAndGo(int bitstream_version);
 // void FpgaGatherVersion(int bitstream_version, char *dst, int len);
-void FpgaSetupSsc(void);
+void FpgaSetupSsc(uint16_t fpga_mode);
 void SetupSpi(int mode);
-bool FpgaSetupSscDma(uint8_t *buf, int len);
+bool FpgaSetupSscDma(uint8_t *buf, uint16_t len);
 void Fpga_print_status(void);
 int FpgaGetCurrent(void);
 void SetAdcMuxFor(uint32_t whichGpio);

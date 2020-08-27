@@ -21,8 +21,10 @@ typedef enum {
     RHTSF_KEY                 = 02,
     WHTSF_CHALLENGE           = 03,
     WHTSF_KEY                 = 04,
+    HTS_LAST_CMD              = WHTSF_KEY,
     RHT1F_PLAIN               = 11,
     RHT1F_AUTHENTICATE        = 12,
+    HT1_LAST_CMD              = RHT1F_AUTHENTICATE,
     RHT2F_PASSWORD            = 21,
     RHT2F_AUTHENTICATE        = 22,
     RHT2F_CRYPTO              = 23,
@@ -30,6 +32,7 @@ typedef enum {
     RHT2F_TEST_AUTH_ATTEMPTS  = 25,
     RHT2F_UID_ONLY            = 26,
     WHT2F_PASSWORD            = 27,
+    HT2_LAST_CMD              = WHT2F_PASSWORD,
 } hitag_function;
 
 typedef struct {

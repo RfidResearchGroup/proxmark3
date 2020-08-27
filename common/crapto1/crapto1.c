@@ -26,7 +26,7 @@
 
 #if !defined LOWMEM && defined __GNUC__
 static uint8_t filterlut[1 << 20];
-static void __attribute__((constructor)) fill_lut() {
+static void __attribute__((constructor)) fill_lut(void) {
     uint32_t i;
     for (i = 0; i < 1 << 20; ++i)
         filterlut[i] = filter(i);
@@ -332,41 +332,43 @@ uint8_t lfsr_rollback_byte(struct Crypto1State *s, uint32_t in, int fb) {
 uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb) {
 
     uint32_t ret = 0;
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (31 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (30 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 29), fb) << (29 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 28), fb) << (28 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 27), fb) << (27 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 26), fb) << (26 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 25), fb) << (25 ^ 24);
+    // note: xor args have been swapped because some compilers emit a warning
+    // for 10^x and 2^x as possible misuses for exponentiation. No comment.
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 31), fb) << (24 ^ 31);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 30), fb) << (24 ^ 30);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 29), fb) << (24 ^ 29);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 28), fb) << (24 ^ 28);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 27), fb) << (24 ^ 27);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 26), fb) << (24 ^ 26);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 25), fb) << (24 ^ 25);
     ret |= lfsr_rollback_bit(s, BEBIT(in, 24), fb) << (24 ^ 24);
 
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 23), fb) << (23 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 22), fb) << (22 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 21), fb) << (21 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 20), fb) << (20 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 19), fb) << (19 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 18), fb) << (18 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 17), fb) << (17 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 16), fb) << (16 ^ 24);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 23), fb) << (24 ^ 23);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 22), fb) << (24 ^ 22);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 21), fb) << (24 ^ 21);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 20), fb) << (24 ^ 20);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 19), fb) << (24 ^ 19);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 18), fb) << (24 ^ 18);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 17), fb) << (24 ^ 17);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 16), fb) << (24 ^ 16);
 
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 15), fb) << (15 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 14), fb) << (14 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 13), fb) << (13 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 12), fb) << (12 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 11), fb) << (11 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 10), fb) << (10 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 9), fb) << (9 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 8), fb) << (8 ^ 24);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 15), fb) << (24 ^ 15);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 14), fb) << (24 ^ 14);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 13), fb) << (24 ^ 13);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 12), fb) << (24 ^ 12);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 11), fb) << (24 ^ 11);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 10), fb) << (24 ^ 10);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 9), fb) << (24 ^ 9);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 8), fb) << (24 ^ 8);
 
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 7), fb) << (7 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 6), fb) << (6 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 5), fb) << (5 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 4), fb) << (4 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 3), fb) << (3 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 2), fb) << (2 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 1), fb) << (1 ^ 24);
-    ret |= lfsr_rollback_bit(s, BEBIT(in, 0), fb) << (0 ^ 24);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 7), fb) << (24 ^ 7);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 6), fb) << (24 ^ 6);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 5), fb) << (24 ^ 5);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 4), fb) << (24 ^ 4);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 3), fb) << (24 ^ 3);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 2), fb) << (24 ^ 2);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 1), fb) << (24 ^ 1);
+    ret |= lfsr_rollback_bit(s, BEBIT(in, 0), fb) << (24 ^ 0);
     return ret;
 }
 

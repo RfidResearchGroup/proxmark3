@@ -36,7 +36,8 @@ static int usage_lf_io_watch(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        lf io watch");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf io watch"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -47,12 +48,13 @@ static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io sim [h] <version> <facility-code> <card-number>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version (decimal)");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (hex)");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (decimal)");
+    PrintAndLogEx(NORMAL, "        <version> :  8bit version (" _YELLOW_("decimal") ")");
+    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (" _YELLOW_("hex") ")");
+    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (" _YELLOW_("decimal") ")");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf io sim 26 101 1337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf io sim 01 101 1337"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -63,24 +65,31 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io clone [h] <version> <facility-code> <card-number> [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version (decimal)");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (hex)");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (decimal)");
+    PrintAndLogEx(NORMAL, "        <version> :  8bit version (" _YELLOW_("decimal") ")");
+    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (" _YELLOW_("hex") ")");
+    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (" _YELLOW_("decimal") ")");
     PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf io clone 26 101 1337");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf io clone 01 101 1337"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdIOProxWatch(const char *Cmd) {
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_io_watch();
+    uint8_t c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') return usage_lf_io_watch();
+
+    PrintAndLogEx(SUCCESS, "Watching for IO Prox cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_IO_DEMOD, NULL, 0);
-    return PM3_SUCCESS;
+    SendCommandNG(CMD_LF_IO_WATCH, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_IO_WATCH, &resp);
+    PrintAndLogEx(INFO, "Done");
+    return resp.status;
 }
 
 //by marshmellow
@@ -160,22 +169,21 @@ static int CmdIOProxDemod(const char *Cmd) {
     calccrc &= 0xff;
     calccrc = 0xff - calccrc;
 
-    char crcStr[30];
-    memset(crcStr, 0x00, sizeof(crcStr));
+    char crc_str[36] = {0};
 
     if (crc == calccrc) {
-        snprintf(crcStr, 3, "ok");
-
+        snprintf(crc_str, sizeof(crc_str), "(" _GREEN_("ok") ")");
     } else {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
-
-        snprintf(crcStr, sizeof(crcStr), "failed 0x%02X != 0x%02X", crc, calccrc);
+        snprintf(crc_str, sizeof(crc_str), "(" _RED_("fail") ") 0x%02X != 0x%02X", crc, calccrc);
         retval = PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
+    PrintAndLogEx(SUCCESS, "IO Prox - " _GREEN_("XSF(%02d)%02x:%05d") ", Raw: %08x%08x %s", version, facilitycode, number, code, code2, crc_str);
 
     if (g_debugMode) {
+        if (crc != calccrc)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
+
         PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %zu, Printing demod buffer:", idx, size);
         printDemodBuff();
     }

@@ -89,6 +89,12 @@ bool IfPm3Hitag(void) {
     return pm3_capabilities.compiled_with_hitag;
 }
 
+bool IfPm3EM4x50(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_em4x50;
+}
+
 bool IfPm3Hfsniff(void) {
     if (!IfPm3Present())
         return false;
@@ -234,8 +240,8 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-char pparent[512] = {0};
-char *parent = pparent;
+static char pparent[512] = {0};
+static char *parent = pparent;
 
 void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     if (cmds[0].Name == NULL) return;

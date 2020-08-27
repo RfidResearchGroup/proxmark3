@@ -1,4 +1,6 @@
 //-----------------------------------------------------------------------------
+// by marshmellow
+// by danshuk
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -9,20 +11,19 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfpac.h"
 
-#include <ctype.h>          //tolower
+#include <ctype.h>      // tolower
 #include <string.h>
 #include <stdlib.h>
-
-#include "commonutil.h"     // ARRAYLEN
+#include "commonutil.h" // ARRAYLEN
 #include "common.h"
-#include "cmdparser.h"    // command_t
+#include "cmdparser.h"  // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"    // preamble test
 #include "protocols.h"  // t55xx defines
-#include "cmdlft55xx.h" // clone..
+#include "cmdlft55xx.h" // clone
 #include "parity.h"
 
 static int CmdHelp(const char *Cmd);
@@ -37,8 +38,8 @@ static int usage_lf_pac_clone(void) {
     PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 16 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf pac clone c CD4F5552 ");
-    PrintAndLogEx(NORMAL, "       lf pac clone b FF2049906D8511C593155B56D5B2649F ");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac clone c CD4F5552 "));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac clone b FF2049906D8511C593155B56D5B2649F "));
     return PM3_SUCCESS;
 }
 static int usage_lf_pac_sim(void) {
@@ -51,10 +52,10 @@ static int usage_lf_pac_sim(void) {
     PrintAndLogEx(NORMAL, "  <Card ID>       : 8 byte PAC/Stanley card id");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf pac sim 12345678");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac sim 12345678"));
     return PM3_SUCCESS;
 }
-// by danshuk
+
 // PAC_8byte format: preamble (8 mark/idle bits), ascii STX (02), ascii '2' (32), ascii '0' (30), ascii bytes 0..7 (cardid), then xor checksum of cardid bytes
 // all bytes following 8 bit preamble are one start bit (0), 7 data bits (lsb first), odd parity bit, and one stop bit (1)
 static int demodbuf_to_pacid(uint8_t *src, const size_t src_size, uint8_t *dst, const size_t dst_size) {
@@ -85,7 +86,9 @@ static int demodbuf_to_pacid(uint8_t *src, const size_t src_size, uint8_t *dst, 
         PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: Bad checksum - expected: %02X, actual: %02X", dst[dataLength - 1], checksum);
         return PM3_ESOFT;
     }
-    dst[dataLength - 1] = 0; // overwrite checksum byte with null terminator
+
+    // overwrite checksum byte with null terminator
+    dst[dataLength - 1] = 0;
 
     return PM3_SUCCESS;
 }
@@ -130,8 +133,9 @@ static void pacCardIdToRaw(uint8_t *outRawBytes, const char *cardId) {
             pattern = reflect8(idbytes[i - 2]);
             pattern |= oddparity8(pattern);
             if (i > 3) checksum ^= idbytes[i - 2];
-        } else
-            pattern = (reflect8(checksum) & 0xFE) | oddparity8(checksum);
+        } else {
+            pattern = (reflect8(checksum) & 0xFE) | (oddparity8(checksum));
+        }
         pattern <<= shift;
 
         outRawBytes[index] |= pattern >> 8 & 0xFF;
@@ -141,9 +145,13 @@ static void pacCardIdToRaw(uint8_t *outRawBytes, const char *cardId) {
 
 //see NRZDemod for what args are accepted
 static int CmdPacDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodPac();
+}
 
+int demodPac(void) {
     //NRZ
-    if (NRZrawDemod(Cmd, false) != PM3_SUCCESS) {
+    if (NRZrawDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: NRZ Demod failed");
         return PM3_ESOFT;
     }
@@ -175,7 +183,7 @@ static int CmdPacDemod(const char *Cmd) {
     int retval = demodbuf_to_pacid(DemodBuffer, DemodBufferLen, cardid, sizeof(cardid));
 
     if (retval == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "PAC/Stanley Tag Found -- Card ID: %s, Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
+        PrintAndLogEx(SUCCESS, "PAC/Stanley - Card: " _GREEN_("%s") ", Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
 
     return retval;
 }
@@ -306,7 +314,6 @@ int CmdLFPac(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-// by marshmellow
 // find PAC preamble in already demoded data
 int detectPac(uint8_t *dest, size_t *size) {
     if (*size < 128) return -1; //make sure buffer has data
@@ -319,7 +326,4 @@ int detectPac(uint8_t *dest, size_t *size) {
     return (int)startIdx;
 }
 
-int demodPac(void) {
-    return CmdPacDemod("");
-}
 

@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void nfc3d_keygen_prepare_seed(const nfc3d_keygen_masterkeys *baseKeys, const uint8_t *baseSeed, uint8_t *output, size_t *outputSize) {
+static void nfc3d_keygen_prepare_seed(const nfc3d_keygen_masterkeys *baseKeys, const uint8_t *baseSeed, uint8_t *output, size_t *outputSize) {
     assert(baseKeys != NULL);
     assert(baseSeed != NULL);
     assert(output != NULL);

@@ -45,11 +45,14 @@ uint32_t intersection(uint64_t *listA, uint64_t *listB) {
 // Darkside attack (hf mf mifare)
 // if successful it will return a list of keys, not just one.
 uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t par_info, uint64_t ks_info, uint64_t **keys) {
-    struct Crypto1State *states;
+    union {
+        struct Crypto1State *states;
+        uint64_t *keylist;
+    } unionstate;
+
     uint32_t i, pos;
     uint8_t ks3x[8], par[8][8];
     uint64_t key_recovered;
-    uint64_t *keylist;
 
     // Reset the last three significant bits of the reader nonce
     nr &= 0xFFFFFF1F;
@@ -68,23 +71,21 @@ uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t
         par[7 - pos][7] = (bt >> 7) & 1;
     }
 
-    states = lfsr_common_prefix(nr, ar, ks3x, par, (par_info == 0));
+    unionstate.states = lfsr_common_prefix(nr, ar, ks3x, par, (par_info == 0));
 
-    if (!states) {
+    if (!unionstate.states) {
         *keys = NULL;
         return 0;
     }
 
-    keylist = (uint64_t *)states;
-
-    for (i = 0; keylist[i]; i++) {
-        lfsr_rollback_word(states + i, uid ^ nt, 0);
-        crypto1_get_lfsr(states + i, &key_recovered);
-        keylist[i] = key_recovered;
+    for (i = 0; unionstate.keylist[i]; i++) {
+        lfsr_rollback_word(unionstate.states + i, uid ^ nt, 0);
+        crypto1_get_lfsr(unionstate.states + i, &key_recovered);
+        unionstate.keylist[i] = key_recovered;
     }
-    keylist[i] = -1;
+    unionstate.keylist[i] = -1;
 
-    *keys = keylist;
+    *keys = unionstate.keylist;
     return i;
 }
 

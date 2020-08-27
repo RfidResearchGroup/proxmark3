@@ -2,10 +2,12 @@
 
 # Usage: run option -h to get help
 
-# BT auto detection: only working under Linux at the moment
+# BT auto detection
 #   Shall we look for white HC-06-USB dongle ?
 FINDBTDONGLE=true
 #   Shall we look for rfcomm interface ?
+FINDBTRFCOMM=true
+#   Shall we look for registered BT device ? (Linux only)
 FINDBTDIRECT=true
 
 PM3PATH=$(dirname "$0")
@@ -28,49 +30,80 @@ SHOWLIST=false
 function get_pm3_list_Linux {
     N=$1
     PM3LIST=()
+    if [ ! -c "/dev/tty0" ]; then
+        echo >&2 "[!!] Script cannot access /dev/ttyXXX files, insufficient privileges"
+        exit 1
+    fi
     for DEV in $(find /dev/ttyACM* 2>/dev/null); do
-        if udevadm info -q property -n "$DEV" |grep -q "ID_VENDOR=proxmark.org"; then
-            PM3LIST+=("$DEV")
-            if [ ${#PM3LIST[*]} -ge $N ]; then
-                return
+        if which udevadm >/dev/null; then
+            if udevadm info -q property -n "$DEV" | grep -q "ID_VENDOR=proxmark.org"; then
+                PM3LIST+=("$DEV")
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                    return
+                fi
+            fi
+        else
+            if grep -q "proxmark.org" "/sys/class/tty/${DEV#/dev/}/../../../manufacturer" 2>/dev/null; then
+                PM3LIST+=("$DEV")
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                    return
+                fi
             fi
         fi
     done
     if $FINDBTDONGLE; then
         # check if the HC-06-USB white dongle is present (still, that doesn't tell us if it's paired with a Proxmark3...)
         for DEV in $(find /dev/ttyUSB* 2>/dev/null); do
-            if udevadm info -q property -n "$DEV" |grep -q "ID_MODEL=CP2104_USB_to_UART_Bridge_Controller"; then
-                PM3LIST+=("$DEV")
-                if [ ${#PM3LIST[*]} -ge $N ]; then
+            if which udevadm >/dev/null; then
+                if udevadm info -q property -n "$DEV" | grep -q "ID_MODEL=CP2104_USB_to_UART_Bridge_Controller"; then
+                    PM3LIST+=("$DEV")
+                    if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                        return
+                    fi
+                fi
+            else
+                if grep -q "DRIVER=cp210x" "/sys/class/tty/${DEV#/dev/}/../../uevent" 2>/dev/null; then
+                    PM3LIST+=("$DEV")
+                    if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                        return
+                    fi
+                fi
+            fi
+        done
+    fi
+    if $FINDBTRFCOMM; then
+        # check if the MAC of a Proxmark3 was bound to a local rfcomm interface
+        # (on OSes without deprecated rfcomm and hcitool, the loop will be simply skipped)
+        for DEVMAC in $(rfcomm -a 2>/dev/null | grep " 20:19:0[45]" | sed 's/^\(.*\): \([0-9:]*\) .*/\1@\2/'); do
+            DEV=${DEVMAC/@*/}
+            MAC=${DEVMAC/*@/}
+            # check which are Proxmark3 and, side-effect, if they're actually present
+            if hcitool name "$MAC" | grep -q "PM3"; then
+                PM3LIST+=("/dev/$DEV")
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
         done
     fi
     if $FINDBTDIRECT; then
-        # check if the MAC of a Proxmark3 was bound to a local rfcomm interface
-        for DEVMAC in $(rfcomm -a|grep " 20:19:0[45]"|sed 's/^\(.*\): \([0-9:]*\) .*/\1@\2/'); do
-            DEV=${DEVMAC/@*/}
-            MAC=${DEVMAC/*@/}
-            # check if Proxmark3 is actually present
-            if hcitool name "$MAC" | grep -q "PM3"; then
-                PM3LIST+=("/dev/$DEV")
-                if [ ${#PM3LIST[*]} -ge $N ]; then
-                    return
-                fi
-            fi
+        # check if the MAC of a Proxmark3 was registered in the known devices
+        for MAC in $(dbus-send --system --print-reply --type=method_call --dest='org.bluez' '/' org.freedesktop.DBus.ObjectManager.GetManagedObjects 2>/dev/null|\
+                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/) print a}'); do
+            PM3LIST+=("bt:$MAC")
         done
+        # we don't probe the device so there is no guarantee the device is actually present
     fi
 }
 
 function get_pm3_list_macOS {
     N=$1
     PM3LIST=()
-    for DEV in $(ioreg -r -c "IOUSBHostDevice" -l|awk -F '"' '
+    for DEV in $(ioreg -r -c "IOUSBHostDevice" -l | awk -F '"' '
         $2=="USB Vendor Name"{b=($4=="proxmark.org")}
         b==1 && $2=="IODialinDevice"{print $4}'); do
         PM3LIST+=("$DEV")
-        if [ ${#PM3LIST[*]} -ge $N ]; then
+        if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
         fi
     done
@@ -79,32 +112,101 @@ function get_pm3_list_macOS {
 function get_pm3_list_Windows {
     N=$1
     PM3LIST=()
-    for DEV in $(wmic path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null|awk '/^COM/{print $1}'); do
+    # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
+    #BT direct SERIAL PORTS (COM)
+    if $FINDBTRFCOMM; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk 'match($0,/COM([0-9]+)/,m){print m[1]}'); do
+            DEV=${DEV/ */}
+            PM3LIST+=("$DEV")
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                return
+            fi
+        done
+    fi
+
+    # Normal SERIAL PORTS (COM)
+    for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
         DEV=${DEV/ */}
         PM3LIST+=("$DEV")
-        if [ ${#PM3LIST[*]} -ge $N ]; then
+        if [ ${#PM3LIST[*]} -ge "$N" ]; then
             return
         fi
     done
+
+    #white BT dongle SERIAL PORTS (COM)
+    if $FINDBTDONGLE; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
+            DEV=${DEV/ */}
+            PM3LIST+=("$DEV")
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                return
+            fi
+        done
+    fi
 }
 
 function get_pm3_list_WSL {
+    N=$1
     PM3LIST=()
-    for DEV in $(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null|awk '/^COM/{print $1}'); do
+
+    # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
+    #BT direct SERIAL PORTS (COM)
+    if $FINDBTRFCOMM; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk 'match($0,/COM([0-9]+)/,m){print m[1]}'); do
+
+            DEV=${DEV/ */}
+            DEV="/dev/ttyS${DEV#COM}"
+            # ttyS counterpart takes some more time to appear
+            if [ -e "$DEV" ]; then
+                PM3LIST+=("$DEV")
+                if [ ! -w "$DEV" ]; then
+                    echo "[!] Let's give users read/write access to $DEV"
+                    sudo chmod 666 "$DEV"
+                fi
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                    return
+                fi
+            fi
+
+        done
+    fi
+
+    # Normal SERIAL PORTS (COM)
+    for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
         DEV=${DEV/ */}
         DEV="/dev/ttyS${DEV#COM}"
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
             PM3LIST+=("$DEV")
             if [ ! -w "$DEV" ]; then
-                echo "[!!] Let's give users read/write access to $DEV"
+                echo "[!] Let's give users read/write access to $DEV"
                 sudo chmod 666 "$DEV"
             fi
-            if [ ${#PM3LIST[*]} -ge $N ]; then
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
                 return
             fi
         fi
     done
+
+    #white BT dongle SERIAL PORTS (COM)
+    if $FINDBTDONGLE; then
+        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
+            DEV=${DEV/ */}
+            DEV="/dev/ttyS${DEV#COM}"
+            # ttyS counterpart takes some more time to appear
+            if [ -e "$DEV" ]; then
+                PM3LIST+=("$DEV")
+                if [ ! -w "$DEV" ]; then
+                    echo "[!] Let's give users read/write access to $DEV"
+                    sudo chmod 666 "$DEV"
+                fi
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                    return
+                fi
+            fi
+
+        done
+    fi
 }
 
 SCRIPT=$(basename -- "$0")
@@ -113,25 +215,46 @@ if [ "$SCRIPT" = "pm3" ]; then
   CMD() { $CLIENT "$@"; }
   HELP() {
       cat << EOF
-Quick helper script for proxmark3 client when working with a Proxmark3 device connected via USB
+
+Quick helper script for proxmark3 client when working with a Proxmark3 device
 
 Description:
     The usage is the same as for the proxmark3 client, with the following differences:
      * the correct port name will be automatically guessed;
      * the script will wait for a Proxmark to be connected (same as option -w of the client).
-    You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
-    Don't use this script if you want to work offline or with the BT addon.
+    You can also specify a first option -n N to access the Nth Proxmark3 connected.
+    Don't use this script if you want to work offline.
     To see a list of available ports, use --list.
 
 Usage:
     $SCRIPT [-n <N>] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
-    $SCRIPT --list
+    $SCRIPT [--list] [--help]
 
-See "$CLIENT -h" for more details on options.
+
+Arguments:
+    --help           this help
+    --list           list all detected com ports
+    -n <N>           connect device refered to the N:th number on the --list output
+    -c 'cmd'         execute the pm3 cmd in client and exit afterwards
+    -i               interactive,  stay in client after executing a cmd or script
+    -s 'script'      execute a cmd script file and exit afterwards
+    -l 'luascript'   execute a lua script file and exit afterwards
+    -w               wait
+    -p <port>        specifiy which port to connect to
+
+
+Samples:
+    ./$SCRIPT                       -- Auto detect/ select com port in the following order BT, USB/CDC, BT DONGLE
+    ./$SCRIPT -p /dev/ttyACM0       -- connect to port /dev/ttyACM0
+    ./$SCRIPT -n 2                  -- use second item from the --list output
+    ./$SCRIPT -c 'lf search' -i     -- run command and stay in client once completed
+
+
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() {
       ARGS=("--port" "$1" "--flash")
@@ -144,7 +267,7 @@ elif [ "$SCRIPT" = "pm3-flash" ]; then
           fi
           shift;
       done
-      $CLIENT ${ARGS[@]};
+      $CLIENT "${ARGS[@]}";
   }
   HELP() {
       cat << EOF
@@ -169,6 +292,7 @@ EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-all" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE"; }
   HELP() {
@@ -188,6 +312,7 @@ EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() { $CLIENT "--port" "$1" "--flash" "--image" "$FULLIMAGE"; }
   HELP() {
@@ -207,6 +332,7 @@ EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
   FINDBTDONGLE=false
+  FINDBTRFCOMM=false
   FINDBTDIRECT=false
   CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE"; }
   HELP() {
@@ -225,7 +351,7 @@ Usage:
 EOF
   }
 else
-  echo "[!!] Script ran under unknown name, abort: $SCRIPT"
+  echo >&2 "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
 fi
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
@@ -244,7 +370,7 @@ done
 if [ "$1" == "--list" ]; then
     shift
     if [ "$1" != "" ]; then
-        echo "Option --list must be used alone"
+        echo >&2 "[!!] Option --list must be used alone"
         exit 1
     fi
     SHOWLIST=true
@@ -258,7 +384,7 @@ if [ "$1" == "-n" ]; then
         N=$1
         shift
     else
-        echo "Option -n requires a number between 1 and 9, got \"$1\""
+        echo >&2 "[!!] Option -n requires a number between 1 and 9, got \"$1\""
         exit 1
     fi
 fi
@@ -267,9 +393,8 @@ HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
     if uname -a|grep -q Microsoft; then
         # Test presence of wmic
-        wmic.exe computersystem get name >/dev/null 2>&1
-        if [ $? -ne 0 ]; then
-            echo "[!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
+        if ! wmic.exe computersystem get name >/dev/null 2>&1; then
+            echo >&2 "[!!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
             exit 1
         fi
         GETPM3LIST=get_pm3_list_WSL
@@ -281,7 +406,7 @@ elif [ "$HOSTOS" = "DARWIN" ]; then
 elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
     GETPM3LIST=get_pm3_list_Windows
 else
-    echo "[!!] Host OS not recognized, abort: $HOSTOS"
+    echo >&2 "[!!] Host OS not recognized, abort: $HOSTOS"
     exit 1
 fi
 
@@ -289,11 +414,11 @@ if $SHOWLIST; then
     # Probe for up to 9 devs
     $GETPM3LIST 9
     if [ ${#PM3LIST} -lt 1 ]; then
-        echo "[!!] No port found"
-        exit 0
+        echo >&2 "[!!] No port found"
+        exit 1
     fi
     n=1
-    for DEV in ${PM3LIST[@]}
+    for DEV in "${PM3LIST[@]}"
         do
             echo "$n: $DEV"
             n=$((n+1))
@@ -302,20 +427,29 @@ if $SHOWLIST; then
 fi
 
 # Wait till we get at least N proxmark3 devices
-$GETPM3LIST $N
-if [ ${#PM3LIST} -lt $N ]; then
+$GETPM3LIST "$N"
+if [ ${#PM3LIST} -lt "$N" ]; then
     echo >&2 "[=] Waiting for Proxmark3 to appear..."
 fi
 while true; do
-    if [ ${#PM3LIST[*]} -ge $N ]; then
+    if [ ${#PM3LIST[*]} -ge "$N" ]; then
         break
     fi
     sleep .1
-    $GETPM3LIST $N
+    $GETPM3LIST "$N"
 done
 
-if [ ${#PM3LIST} -lt $N ]; then
-    echo "[!!] No port found, abort"
+if [ ${#PM3LIST} -lt "$N" ]; then
+    HELP() {
+      cat << EOF
+[!!] No port found, abort
+
+[?] Hint: try '$SCRIPT --list' to see list of available ports,  and use the -n command like below
+[?]    $SCRIPT [-n <N>]
+    
+EOF
+  }
+    HELP
     exit 1
 fi
 

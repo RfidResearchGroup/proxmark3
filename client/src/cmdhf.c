@@ -37,22 +37,24 @@
 #include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
+#include "proxgui.h"
 #include "cmddata.h"
 #include "graph.h"
 #include "fpga.h"
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_search() {
+static int usage_hf_search(void) {
     PrintAndLogEx(NORMAL, "Usage: hf search");
-    PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag. Stops when found.");
+    PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag.");
+    PrintAndLogEx(NORMAL, "Continues to search for all different HF protocols");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h               - This help");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
-static int usage_hf_sniff() {
+static int usage_hf_sniff(void) {
     PrintAndLogEx(NORMAL, "The high frequence sniffer will assign all available memory on device for sniffed data");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
     PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");
@@ -63,18 +65,21 @@ static int usage_hf_sniff() {
     PrintAndLogEx(NORMAL, "       <skip triggers> - skip number of triggers");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf sniff");
-    PrintAndLogEx(NORMAL, "           hf sniff 1000 0");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf sniff"));
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf sniff 1000 0"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
-static int usage_hf_tune() {
+static int usage_hf_tune(void) {
     PrintAndLogEx(NORMAL, "Continuously measure HF antenna tuning.");
-    PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
+    PrintAndLogEx(NORMAL, "Press button or `enter` to interrupt.");
     PrintAndLogEx(NORMAL, "Usage: hf tune [h] [<iter>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - This help");
     PrintAndLogEx(NORMAL, "       <iter>        - number of iterations (default: 0=infinite)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("           hf tune 1"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -89,7 +94,7 @@ int CmdHFSearch(const char *Cmd) {
     int res = PM3_ESOFT;
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
+    PrintAndLogEx(INPLACE, " Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
@@ -98,7 +103,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for LTO-CM tag...");
+    PrintAndLogEx(INPLACE, " Searching for LTO-CM tag...");
     if (IfPm3Iso14443a()) {
         if (infoLTO(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") " found\n");
@@ -107,7 +112,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
+    PrintAndLogEx(INPLACE, " Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
@@ -116,16 +121,25 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
+    PrintAndLogEx(INPLACE, " Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
-        if (readHF15Uid(false)) {
+        if (readHF15Uid(false, false)) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
+    PrintAndLogEx(INPLACE, " Searching for iCLASS / PicoPass tag...");
+    if (IfPm3Iclass()) {
+        if (read_iclass_csn(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") " found\n");
@@ -134,7 +148,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
+    PrintAndLogEx(INPLACE, " Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
@@ -142,29 +156,9 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    // 14b  is the longest test (put last)
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
-    if (IfPm3Felica()) {
-        if (readFelicaUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-    /*
-        // 14b and iclass is the longest test (put last)
-        PROMPT_CLEARLINE;
-        PrintAndLogEx(INPLACE, "Searching for CryptoRF tag...");
-        if (IfPm3Iso14443b()) {
-            if (readHFCryptoRF(false) == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
-                res = PM3_SUCCESS;
-            }
-        }
-    */
-
-    // 14b and iclass is the longest test (put last)
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
+    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
     if (IfPm3Iso14443b()) {
         if (readHF14B(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
@@ -172,14 +166,26 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+/*
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for iClass / PicoPass tag...");
-    if (IfPm3Iclass()) {
-        if (readIclass(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
+    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+    if (IfPm3Felica()) {
+        if (readFelicaUid(false) == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
+*/
+    /*
+        PROMPT_CLEARLINE;
+        PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
+        if (IfPm3Iso14443b()) {
+            if (readHFCryptoRF(false) == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
+                res = PM3_SUCCESS;
+            }
+        }
+    */
 
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
@@ -194,7 +200,7 @@ int CmdHFSearch(const char *Cmd) {
 int CmdHFTune(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_tune();
-    int iter =  param_get32ex(Cmd, 0, 0, 10);
+    int iter = param_get32ex(Cmd, 0, 0, 10);
 
     PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
     PacketResponseNG resp;
@@ -226,7 +232,7 @@ int CmdHFTune(const char *Cmd) {
         }
 
         uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
-        PrintAndLogEx(INPLACE, "%u mV / %2u V", volt, (uint16_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, " %u mV / %2u V", volt, (uint16_t)(volt / 1000));
     }
     mode[0] = 3;
 
@@ -240,20 +246,74 @@ int CmdHFTune(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Collects pars of u8,
+// uses 16bit transfers from FPGA for speed
+// Takes all available bigbuff memory
+// data sample to download?   Not sure what we can do with the data.
 int CmdHFSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_sniff();
 
-    int skippairs =  param_get32ex(Cmd, 0, 0, 10);
-    int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
+    struct {
+        uint32_t samplesToSkip;
+        uint32_t triggersToSkip;
+    } PACKED params;
+
+    params.samplesToSkip = param_get32ex(Cmd, 0, 0, 10);
+    params.triggersToSkip = param_get32ex(Cmd, 1, 0, 10);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_SNIFF, skippairs, skiptriggers, 0, NULL, 0);
+    SendCommandNG(CMD_HF_SNIFF, (uint8_t *)&params, sizeof(params));
+
+    for (;;) {
+
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(INFO, "User aborted");
+            break;
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_SNIFF, &resp, 1000)) {
+
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(INFO, "Button pressed, user aborted");
+                break;
+            }
+            if (resp.status == PM3_SUCCESS) {
+
+                struct r {
+                    uint16_t len;
+                } PACKED;
+                struct r *retval = (struct r *)resp.data.asBytes;
+
+                PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
+
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("data hpf") "` to remove offset");
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("data plot") "` to view");
+                PrintAndLogEx(HINT, "Use `" _YELLOW_("data save") "` to save");
+
+                // download bigbuf_malloc:d.
+                // it reserve memory from the higher end.
+                // At the moment, sniff takes all free memory in bigbuff. If this changes,
+                // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
+                uint32_t start = pm3_capabilities.bigbuf_size - retval->len;
+                int res = getSamplesEx(start, start, false);
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(WARNING, "failed to download samples to client");
+                    return res;
+                }
+                break;
+            }
+        }
+    }
+    PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
 
 int CmdHFPlot(const char *Cmd) {
-    CLIParserInit("hf plot",
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf plot",
                   "Plots HF signal after RF signal path and A/D conversion.",
                   "This can be used after any hf command and will show the last few milliseconds of the HF signal.\n"
                   "Note: If the last hf command terminated because of a timeout you will most probably see nothing.\n");
@@ -261,7 +321,8 @@ int CmdHFPlot(const char *Cmd) {
         arg_param_begin,
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     uint8_t buf[FPGA_TRACE_SIZE];
 

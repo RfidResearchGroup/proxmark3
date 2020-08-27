@@ -8,6 +8,40 @@
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
 #include "commonutil.h"
+#include <string.h>
+
+/* Similar to FpgaGatherVersion this formats stored version information
+ * into a string representation. It takes a pointer to the struct version_information,
+ * verifies the magic properties, then stores a formatted string, prefixed by
+ * prefix in dst.
+ */
+void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_info) {
+    struct version_information *v = (struct version_information *)version_info;
+    dst[0] = 0;
+    strncat(dst, prefix, len - 1);
+    if (v->magic != VERSION_INFORMATION_MAGIC) {
+        strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
+        return;
+    }
+    if (v->versionversion != 1) {
+        strncat(dst, "Version information not understood", len - strlen(dst) - 1);
+        return;
+    }
+    if (!v->present) {
+        strncat(dst, "Version information not available", len - strlen(dst) - 1);
+        return;
+    }
+
+    strncat(dst, v->gitversion, len - strlen(dst) - 1);
+    if (v->clean == 0) {
+        strncat(dst, "-unclean", len - strlen(dst) - 1);
+    } else if (v->clean == 2) {
+        strncat(dst, "-suspect", len - strlen(dst) - 1);
+    }
+
+    strncat(dst, " ", len - strlen(dst) - 1);
+    strncat(dst, v->buildtime, len - strlen(dst) - 1);
+}
 
 /*
  ref  http://www.csm.ornl.gov/~dunigan/crc.html
@@ -26,9 +60,21 @@ uint32_t reflect(uint32_t v, int b) {
     return v;
 }
 
+// https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
+
+// Reverse the bits in a byte with 3 operations (64-bit multiply and modulus division):
+uint8_t reflect8(uint8_t b) {
+    return (b * 0x0202020202ULL & 0x010884422010ULL) % 1023;
+}
+
+
+// Reverse the bits in a byte with 4 operations (64-bit multiply, no division):
+/*
 uint8_t reflect8(uint8_t b) {
     return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 }
+*/
+
 uint16_t reflect16(uint16_t b) {
     uint16_t v = 0;
     v |= (b & 0x8000) >> 15;
@@ -83,10 +129,13 @@ void lsl(uint8_t *data, size_t len) {
     data[len - 1] <<= 1;
 }
 
-int32_t le24toh(uint8_t data[3]) {
+
+// BSWAP24 of array[3]
+uint32_t le24toh(uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
+// BSWAP24, take u32, output array
 void htole24(uint32_t val, uint8_t data[3]) {
     data[0] = (uint8_t) val;
     data[1] = (uint8_t)(val >> 8);

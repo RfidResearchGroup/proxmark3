@@ -43,6 +43,7 @@
 #include <stdlib.h>
 
 #include "comms.h"
+#include "ui.h"
 
 // The windows serial port implementation
 #ifdef _WIN32
@@ -90,7 +91,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_windows *sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
 
     if (sp == 0) {
-        printf("[!] UART failed to allocate memory\n");
+        PrintAndLogEx(WARNING, "UART failed to allocate memory\n");
         return INVALID_SERIAL_PORT;
     }
     // Copy the input "com?" to "\\.\COM?" format
@@ -111,14 +112,14 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     sp->dcb.DCBlength = sizeof(DCB);
     if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1", &sp->dcb)) {
         uart_close(sp);
-        printf("[!] UART error cdc setup\n");
+        PrintAndLogEx(WARNING, "UART error cdc setup\n");
         return INVALID_SERIAL_PORT;
     }
 
     // Update the active serial port
     if (!SetCommState(sp->hPort, &sp->dcb)) {
         uart_close(sp);
-        printf("[!] UART error while setting com state\n");
+        PrintAndLogEx(WARNING, "UART error while setting com state\n");
         return INVALID_SERIAL_PORT;
     }
 
@@ -130,7 +131,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         speed = 115200;
         if (!uart_set_speed(sp, speed)) {
             uart_close(sp);
-            printf("[!] UART error while setting baudrate\n");
+            PrintAndLogEx(WARNING, "UART error while setting baudrate\n");
             return INVALID_SERIAL_PORT;
         }
     }

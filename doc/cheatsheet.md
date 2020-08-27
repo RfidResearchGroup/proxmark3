@@ -1,10 +1,10 @@
-# Command Cheat Sheet
 <a id="Top"></a>
+# Command Cheat Sheet
 
 |Generic|Low Frequence 125 kHz|High Frequence 13.56 MHz|
 |---|---|---|
-|[Generic](#Generic)|[T55XX](#T55XX)|[Mifare](#Mifare)|
-|[Data](#Data)|[HID Prox](#HID-Prox)|[iClass](#iClass)|
+|[Generic](#Generic)|[T55XX](#T55XX)|[MIFARE](#MIFARE)|
+|[Data](#Data)|[HID Prox](#HID-Prox)|[iCLASS](#iCLASS)|
 |[Memory](#Memory)|[Indala](#Indala)||
 |[Sim Module](#Sim-Module)|[Hitag](#Hitag)||
 |[Lua Scripts](#Lua-Scripts)|||
@@ -39,10 +39,10 @@ Check overall status
 pm3 --> hw status
 ```
 
-## iClass
+## iCLASS
 ^[Top](#top)
 
-Reverse permute iClass master key
+Reverse permute iCLASS master key
 ```
 Options
 ---
@@ -51,12 +51,13 @@ r          reverse permuted key
 pm3 --> hf iclass permute r 3F90EBF0910F7B6F
 ```
 
-iClass Reader
+iCLASS Reader
+
 ```
 pm3 --> hf iclass reader
 ```
 
-Dump iClass card contents
+Dump iCLASS card contents
 ```
 Options
 ---
@@ -65,7 +66,7 @@ k <key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
 m3 --> hf iclass dump k 0
 ```
 
-Read iClass Block
+Read iCLASS Block
 ```
 Options
 ---
@@ -75,7 +76,7 @@ k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
 pm3 --> hf iclass rdbl b 7 k 0
 ```
 
-Write to iClass Block
+Write to iCLASS Block
 ```
 Options
 ---
@@ -105,21 +106,44 @@ k <key>       : set a key in memory
 pm3 --> hf iclass managekeys n 3 k AFA785A7DAB33378
 ```
 
-Encrypt iClass Block
-```
-pm3 --> hf iclass encrypt 0000000f2aa3dba8
-```
-
-Load iClass dump into memory for simulation
+Encrypt iCLASS Block
 ```
 Options
 ---
-f <filename>     : load iclass tag-dump filename
+d <block data>    : 16 bytes hex
+k <transport key> : 16 bytes hex
+
+pm3 --> hf iclass encrypt d 0000000f2aa3dba8
+```
+
+Decrypt iCLASS Block / file
+```
+Options
+---
+d <encrypted blk> : 16 bytes hex
+f <filename>      : filename of dump
+k <transport key> : 16 bytes hex
+
+pm3 --> hf iclass decrypt d 2AD4C8211F996871
+pm3 --> hf iclass decrypt f hf-iclass-db883702f8ff12e0.bin
+```
+
+Load iCLASS dump into memory for simulation
+```
+Options
+---
+f <filename>     : load iCLASS tag-dump filename
 
 pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
 ```
 
-Simulate iClass
+Clone iCLASS Legacy Sequence
+```
+pm3 --> hf iclass rdbl b 7 k 0
+pm3 --> hf iclass wrbl b 7 d 6ce099fe7e614fd0 k 0
+```
+
+Simulate iCLASS
 ```
 Options
 ---
@@ -132,20 +156,14 @@ Options
 pm3 --> hf iclass sim 3
 ```
 
-Clone iClass Legacy Sequence
-```
-pm3 --> hf iclass rdbl b 7 k 0
-pm3 --> hf iclass wrbl b 7 d 6ce099fe7e614fd0 k 0
-```
-
-Simulate iClass Sequence
+Simulate iCLASS Sequence
 ```
 pm3 --> hf iclass dump k 0
 pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
 pm3 --> hf iclass sim 3
 ```
 
-Extract custom iClass key (loclass attack)
+Extract custom iCLASS key (loclass attack)
 ```
 Options
 ---
@@ -155,14 +173,15 @@ e              : If 'e' is specified, elite computations applied to key
 
 pm3 --> hf iclass sim 2
 pm3 --> hf iclass loclass f iclass_mac_attack.bin
-pm3 --> hf iclass dump k <Kcus> e
+pm3 --> hf iclass managekeys n 7 k <Kcus>
+pm3 --> hf iclass dump k 7 e
 ```
 
-Verify custom iClass key
+Verify custom iCLASS key
 ```
 Options
 ---
-f <filename> : Dictionary file with default iclass keys
+f <filename> : Dictionary file with default iCLASS keys
 u            : CSN
 p            : EPURSE
 m            : macs
@@ -171,7 +190,7 @@ e            : elite
 pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f iclass_default_keys e
 ```
 
-## Mifare
+## MIFARE
 ^[Top](#top)
 
 Check for default keys
@@ -196,16 +215,16 @@ m             : use dictionary from flashmemory
 pm3 --> hf mf fchk 1 m
 ```
 
-Dump Mifare card contents
+Dump MIFARE card contents
 ```
 Options
 ---
-<card memory> : 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K
+<card memory> : 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K
 k <name>      : key filename, if no <name> given, UID will be used as filename"
 f <name>      : data filename, if no <name> given, UID will be used as filename
 
 pm3 --> hf mf dump 1
-pm3 --> hf mf dump 1 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
+pm3 --> hf mf dump 1 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
 ```
 
 Convert .bin to .eml
@@ -217,7 +236,7 @@ i <file>     : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is us
 pm3 --> script run dumptoemul -i dumpdata.bin
 ```
 
-Write to Mifare block
+Write to MIFARE block
 ```
 Options
 ---
@@ -226,7 +245,7 @@ Options
 pm3 --> hf mf wrbl 0 A FFFFFFFFFFFF d3a2859f6b880400c801002000000016
 ```
 
-Run autopwn
+Run autopwn, to backup a MIFARE tag
 ```
 Options
 ---
@@ -234,7 +253,7 @@ Options
 pm3 --> hf mf autopwn
 ```
 
-Run Hardnested attack
+Run hardnested attack
 ```
 Options
 ---
@@ -244,25 +263,25 @@ w          : Acquire nonces and write them to binary file nonces.bin
 pm3 --> hf mf hardnested 0 A 8829da9daf76 0 A w
 ```
 
-Load Mifare emul dump file into memory for simulation
+Load MIFARE emul dump file into memory for simulation
 ```
 Options
 ---
 <card memory> <file name w/o `.eml`>
-[card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL
+[card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL
 
 pm3 --> hf mf eload hf-mf-353C2AA6
 pm3 --> hf mf eload 1 hf-mf-353C2AA6
 ```
 
-Simulate Mifare
+Simulate MIFARE
 ```
 u     : (Optional) UID 4,7 or 10 bytes. If not specified, the UID 4B from emulator memory will be used
 
 pm3 --> hf mf sim u 353c2aa6
 ```
 
-Simulate Mifare Sequence
+Simulate MIFARE Sequence
 ```
 pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump 1
@@ -271,19 +290,19 @@ pm3 --> hf mf eload 353C2AA6
 pm3 --> hf mf sim u 353c2aa6
 ```
 
-Clone Mifare 1K Sequence
+Clone MIFARE 1K Sequence
 ```
 pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump
-pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
+pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dump.bin
 ```
 
-Read Mifare Ultralight EV1
+Read MIFARE Ultralight EV1
 ```
 pm3 --> hf mfu info
 ```
 
-Clone Mifare Ultralight EV1 Sequence
+Clone MIFARE Ultralight EV1 Sequence
 ```
 pm3 --> hf mfu dump k FFFFFFFF
 pm3 --> script run dumptoemul-mfu -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
@@ -291,12 +310,12 @@ pm3 --> hf mfu eload u hf-mfu-XXXX-dump.eml
 pm3 --> hf mfu sim t 7 u hf-mfu-XXXX-dump.eml
 ```
 
-Bruteforce Mifare Classic card numbers from 11223344 to 11223346
+Bruteforce MIFARE Classic card numbers from 11223344 to 11223346
 ```
 pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 ```
 
-Bruteforce Mifare Ultralight EV1 card numbers from 11223344556677 to 11223344556679
+Bruteforce MIFARE Ultralight EV1 card numbers from 11223344556677 to 11223344556679
 ```
 pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 ```
@@ -524,29 +543,47 @@ pm3 --> data load <filename>
 ## Lua Scripts
 ^[Top](#top)
 
-List Lua Scripts
+List lua Scripts
 
 ```
 pm3 --> script list
 ```
 
+View lua helptext
+
+```
+pm3 --> script run  <nameofscript> -h
+```
+
+
 Convert .bin to .eml
 ```
 Options
 ---
-i <file>    : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
+-i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
+-o <filename>   Specifies the output file. If omitted, <uid>.eml is used
 
 pm3 --> script run dumptoemul -i xxxxxxxxxxxxxx.bin
+```
+
+Convert .eml to .bin
+```
+Options
+---
+-i <filename>   Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
+-o <filename>   Specifies the output file. If omitted, <currdate>.bin is used
+
+pm3 --> script run emul2dump -i myfile.eml -o myfile.bin
 ```
 
 Format Mifare card
 ```
 Options
 ---
-k <key>       : the current six byte key with write access
-n <key>       : the new key that will be written to the card
-a <access>    : the new access bytes that will be written to the card
-x             : execute the commands aswell.
+-k <key>        The current six byte key with write access
+-n <key>        The new key that will be written to the card
+-a <access>     The new access bytes that will be written to the card
+-x              Execute the commands aswell
 
 pm3 --> script run formatMifare -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ```
@@ -554,7 +591,7 @@ pm3 --> script run formatMifare -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ## Memory
 ^[Top](#top)
 
-Load default keys into memory
+Load default keys into flash memory (RDV4 only)
 ```
 Options
 ---
@@ -574,7 +611,7 @@ pm3 --> mem load f iclass_default_keys i
 
 Upgrade Sim Module firmware
 ```
-pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
+pm3 --> smart upgrade f ../tools/simmodule/sim011.bin
 ```
 
 ## Smart Card
@@ -582,12 +619,12 @@ pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 
 Get Smart Card Information
 ```
-pm3 --> sc info
+pm3 --> smart info
 ```
 
 Act like an IS07816 reader
 ```
-pm3 --> sc reader
+pm3 --> smart reader
 ```
 
 Set clock speed
@@ -596,7 +633,7 @@ Options
 ---
 c <speed>       : clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz)
 
-pm3 --> sc setclock c 2
+pm3 --> smart setclock c 2
 ```
 
 Send raw hex data
@@ -604,16 +641,16 @@ Send raw hex data
 Options
 ---
 r           : do not read response
-a           : active smartcard without select (reset sc module)
+a           : active smartcard without select (reset smart module)
 s           : active smartcard with select (get ATR)
 t           : executes TLV decoder if it possible
 0           : use protocol T=0
 d <bytes>   : bytes to send
 
-pm3 --> sc raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR
-pm3 --> sc raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory
-pm3 --> sc raw 0 t d 00a4040007a0000000041010               : Mastercard
-pm3 --> sc raw 0 t d 00a4040007a0000000031010               : Visa
+pm3 --> smart raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR
+pm3 --> smart raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory
+pm3 --> smart raw 0 t d 00a4040007a0000000041010               : Mastercard
+pm3 --> smart raw 0 t d 00a4040007a0000000031010               : Visa
 ````
 
 Bruteforce SPI
@@ -622,6 +659,6 @@ Options
 ---
 t          : executes TLV decoder if it possible
 
-pm3 --> sc brute
-pm3 --> sc brute t
+pm3 --> smart brute
+pm3 --> smart brute t
 ```

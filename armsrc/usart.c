@@ -15,8 +15,8 @@ volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
 volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
 volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;
 
-uint32_t usart_baudrate = 0;
-uint8_t usart_parity = 0;
+uint32_t g_usart_baudrate = 0;
+uint8_t g_usart_parity = 0;
 /*
 void usart_close(void) {
     // Reset the USART mode
@@ -41,8 +41,8 @@ void usart_close(void) {
 
 static uint8_t us_inbuf1[USART_BUFFLEN];
 static uint8_t us_inbuf2[USART_BUFFLEN];
-uint8_t *usart_cur_inbuf = NULL;
-uint16_t usart_cur_inbuf_off = 0;
+static uint8_t *usart_cur_inbuf = NULL;
+static uint16_t usart_cur_inbuf_off = 0;
 static uint8_t us_rxfifo[USART_FIFOLEN];
 static size_t us_rxfifo_low = 0;
 static size_t us_rxfifo_high = 0;
@@ -51,25 +51,32 @@ static size_t us_rxfifo_high = 0;
 static void usart_fill_rxfifo(void) {
     uint16_t rxfifo_free ;
     if (pUS1->US_RNCR == 0) { // One buffer got filled, backup buffer being used
+
         if (us_rxfifo_low > us_rxfifo_high)
             rxfifo_free = us_rxfifo_low - us_rxfifo_high;
         else
             rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
+    
         uint16_t available = USART_BUFFLEN - usart_cur_inbuf_off;
+
         if (available <= rxfifo_free) {
+
             for (uint16_t i = 0; i < available; i++) {
                 us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
                 if (us_rxfifo_high == sizeof(us_rxfifo))
                     us_rxfifo_high = 0;
             }
+
             // Give next buffer
             pUS1->US_RNPR = (uint32_t)usart_cur_inbuf;
             pUS1->US_RNCR = USART_BUFFLEN;
+
             // Swap current buff
             if (usart_cur_inbuf == us_inbuf1)
                 usart_cur_inbuf = us_inbuf2;
             else
                 usart_cur_inbuf = us_inbuf1;
+
             usart_cur_inbuf_off = 0;
         } else {
             // Take only what we have room for
@@ -83,12 +90,16 @@ static void usart_fill_rxfifo(void) {
             return;
         }
     }
+
     if (pUS1->US_RCR < USART_BUFFLEN - usart_cur_inbuf_off) { // Current buffer partially filled
+
         if (us_rxfifo_low > us_rxfifo_high)
             rxfifo_free = us_rxfifo_low - us_rxfifo_high;
         else
             rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
+
         uint16_t available = USART_BUFFLEN - pUS1->US_RCR - usart_cur_inbuf_off;
+
         if (available > rxfifo_free)
             available = rxfifo_free;
         for (uint16_t i = 0; i < available; i++) {
@@ -150,7 +161,7 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 }
 
 // transfer from device to client
-inline int usart_writebuffer_sync(uint8_t *data, size_t len) {
+int usart_writebuffer_sync(uint8_t *data, size_t len) {
 
     // Wait for current PDC bank to be free
     // (and check next bank too, in case there will be a usart_writebuffer_async)
@@ -166,9 +177,9 @@ inline int usart_writebuffer_sync(uint8_t *data, size_t len) {
 void usart_init(uint32_t baudrate, uint8_t parity) {
 
     if (baudrate != 0)
-        usart_baudrate = baudrate;
+        g_usart_baudrate = baudrate;
     if ((parity == 'N') || (parity == 'O') || (parity == 'E'))
-        usart_parity = parity;
+        g_usart_parity = parity;
 
     // For a nice detailed sample, interrupt driven but still relevant.
     // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
@@ -197,7 +208,7 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
                     AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
                     AT91C_US_CHMODE_NORMAL;          // channel mode: normal
 
-    switch (usart_parity) {
+    switch (g_usart_parity) {
         case 'N':
             mode |= AT91C_US_PAR_NONE;               // parity: none
             break;
@@ -227,9 +238,9 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
     //       OVER = 1,  -yes we are oversampling
     //          baudrate == selected clock/8/CD    --> this is ours
     //
-    uint32_t brgr = MCK / (usart_baudrate << 3);
-    // doing fp = round((mck / (usart_baudrate << 3) - brgr) * 8) with integers:
-    uint32_t fp = ((16 * MCK / (usart_baudrate << 3) - 16 * brgr) + 1) / 2;
+    uint32_t brgr = MCK / (g_usart_baudrate << 3);
+    // doing fp = round((mck / (g_usart_baudrate << 3) - brgr) * 8) with integers:
+    uint32_t fp = ((16 * MCK / (g_usart_baudrate << 3) - 16 * brgr) + 1) / 2;
 
     pUS1->US_BRGR = (fp << 16) | brgr;
 

@@ -1,5 +1,7 @@
 //-----------------------------------------------------------------------------
 //
+// by marshmellow
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -41,7 +43,7 @@ static int usage_lf_pyramid_clone(void) {
     PrintAndLogEx(NORMAL, "  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf pyramid clone 123 11223");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pyramid clone 123 11223"));
     return PM3_SUCCESS;
 }
 
@@ -58,15 +60,18 @@ static int usage_lf_pyramid_sim(void) {
     PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf pyramid sim 123 11223");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf pyramid sim 123 11223"));
     return PM3_SUCCESS;
 }
 
-//by marshmellow
-//Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
-//print full Farpointe Data/Pyramid Prox ID and some bit format details if found
 static int CmdPyramidDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
+    return demodPyramid();
+}
+
+//Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
+//print full Farpointe Data/Pyramid Prox ID and some bit format details if found
+int demodPyramid(void) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -176,12 +181,12 @@ static int CmdPyramidDemod(const char *Cmd) {
         uint32_t fc = bytebits_to_byte(bits + 73, 8);
         uint32_t cardnum = bytebits_to_byte(bits + 81, 16);
         uint32_t code1 = bytebits_to_byte(bits + 72, fmtLen);
-        PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
+        PrintAndLogEx(SUCCESS, "Pyramid - len: " _GREEN_("%d") ", FC: " _GREEN_("%d") " Card: " _GREEN_("%d") " - Wiegand: " _GREEN_("%x")", Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi3, rawHi2, rawHi, rawLo);
     } else if (fmtLen == 45) {
         fmtLen = 42; //end = 10 bits not 7 like 26 bit fmt
         uint32_t fc = bytebits_to_byte(bits + 53, 10);
         uint32_t cardnum = bytebits_to_byte(bits + 63, 32);
-        PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d, FC: %d, Card: %d - Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+        PrintAndLogEx(SUCCESS, "Pyramid - len: " _GREEN_("%d") ", FC: " _GREEN_("%d") " Card: " _GREEN_("%d") ", Raw: %08x%08x%08x%08x", fmtLen, fc, cardnum, rawHi3, rawHi2, rawHi, rawLo);
         /*
             } else if (fmtLen > 32) {
                 uint32_t cardnum = bytebits_to_byte(bits + 81, 16);
@@ -192,13 +197,13 @@ static int CmdPyramidDemod(const char *Cmd) {
     } else {
         uint32_t cardnum = bytebits_to_byte(bits + 81, 16);
         //uint32_t code1 = bytebits_to_byte(bits+(size-fmtLen),fmtLen);
-        PrintAndLogEx(SUCCESS, "Pyramid ID Found - BitLength: %d -unknown BitLength- (%d), Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
+        PrintAndLogEx(SUCCESS, "Pyramid - len: " _GREEN_("%d") " -unknown- Card: " _GREEN_("%d") ", Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     }
 
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: checksum : 0x%02X - %02X - %s"
                   , checksum
                   , checkCS
-                  , (checksum == checkCS) ? _GREEN_("Passed") : _RED_("Fail")
+                  , (checksum == checkCS) ? _GREEN_("ok") : _RED_("fail")
                  );
 
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
@@ -350,11 +355,6 @@ int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
     return PM3_SUCCESS;
 }
 
-int demodPyramid(void) {
-    return CmdPyramidDemod("");
-}
-
-// by marshmellow
 // FSK Demod then try to locate a Farpointe Data (pyramid) ID
 int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
     //make sure buffer has data

@@ -15,14 +15,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#include <jansson.h>
+#include "jansson.h"
 
 int PrintAIDDescription(json_t *xroot, char *aid, bool verbose);
 int PrintAIDDescriptionBuf(json_t *root, uint8_t *aid, size_t aidlen, bool verbose);
 json_t *AIDSearchInit(bool verbose);
 json_t *AIDSearchGetElm(json_t *root, int elmindx);
 bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen);
-int AIDSearchFree();
+int AIDSearchFree(json_t *root);
 
 #endif

@@ -23,23 +23,28 @@
 `define FPGA_CMD_TRACE_ENABLE                       2
 
 // Major modes:
-`define FPGA_MAJOR_MODE_HF_READER_TX                0
-`define FPGA_MAJOR_MODE_HF_READER_RX_XCORR          1
-`define FPGA_MAJOR_MODE_HF_SIMULATOR                2
-`define FPGA_MAJOR_MODE_HF_ISO14443A                3
-`define FPGA_MAJOR_MODE_HF_SNOOP                    4
-`define FPGA_MAJOR_MODE_HF_ISO18092                 5
-`define FPGA_MAJOR_MODE_HF_GET_TRACE                6
+`define FPGA_MAJOR_MODE_HF_READER                   0
+`define FPGA_MAJOR_MODE_HF_SIMULATOR                1
+`define FPGA_MAJOR_MODE_HF_ISO14443A                2
+`define FPGA_MAJOR_MODE_HF_SNIFF                    3
+`define FPGA_MAJOR_MODE_HF_ISO18092                 4
+`define FPGA_MAJOR_MODE_HF_GET_TRACE                5
 `define FPGA_MAJOR_MODE_OFF                         7
 
 // Options for the generic HF reader
-// Options for the HF reader, tx to tag
-`define FPGA_HF_READER_TX_SHALLOW_MOD               1
+`define FPGA_HF_READER_MODE_RECEIVE_IQ              0
+`define FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE       1
+`define FPGA_HF_READER_MODE_RECEIVE_PHASE           2
+`define FPGA_HF_READER_MODE_SEND_FULL_MOD           3
+`define FPGA_HF_READER_MODE_SEND_SHALLOW_MOD        4
+`define FPGA_HF_READER_MODE_SNIFF_IQ                5
+`define FPGA_HF_READER_MODE_SNIFF_AMPLITUDE         6
+`define FPGA_HF_READER_MODE_SNIFF_PHASE             7
+`define FPGA_HF_READER_MODE_SEND_JAM                8
 
-// Options for the HF reader, correlating against rx from tag
-`define FPGA_HF_READER_RX_XCORR_848_KHZ             1
-`define FPGA_HF_READER_RX_XCORR_SNOOP               2
-`define FPGA_HF_READER_RX_XCORR_QUARTER             4
+`define FPGA_HF_READER_SUBCARRIER_848_KHZ           0
+`define FPGA_HF_READER_SUBCARRIER_424_KHZ           1
+`define FPGA_HF_READER_SUBCARRIER_212_KHZ           2
 
 // Options for the HF simulated tag, how to modulate
 `define FPGA_HF_SIMULATOR_NO_MODULATION             0
@@ -60,13 +65,12 @@
 `define FPGA_HF_ISO18092_FLAG_424K                  2 // 0010 should enable 414k mode (untested). No autodetect
 `define FPGA_HF_ISO18092_FLAG_READER                4 // 0100 enables antenna power, to act as a reader instead of tag
 
-`include "hi_read_tx.v"
-`include "hi_read_rx_xcorr.v"
+`include "hi_reader.v"
 `include "hi_simulate.v"
 `include "hi_iso14443a.v"
 `include "hi_sniffer.v"
 `include "util.v"
-`include "hi_flite.v"
+// `include "hi_flite.v"
 `include "hi_get_trace.v"
 
 module fpga_hf(
@@ -105,14 +109,14 @@ bit  |    15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
 -----+-------------------------------------------
 cmd  |     x  x  x  x
 major|                          x x x
-opt  |                                      x x
+opt  |                                    x x x
 divi |                          x x x x x x x x
 thres|                          x x x x x x x x
 -----+-------------------------------------------
 */
 
 reg [15:0] shift_reg;
-reg [7:0] conf_word;
+reg [8:0] conf_word;
 reg trace_enable;
 
 // We switch modes between transmitting to the 13.56 MHz tag and receiving
@@ -121,7 +125,7 @@ reg trace_enable;
 always @(posedge ncs)
 begin
     case(shift_reg[15:12])
-        `FPGA_CMD_SET_CONFREG:  conf_word <= shift_reg[7:0];
+        `FPGA_CMD_SET_CONFREG:  conf_word <= shift_reg[8:0];
         `FPGA_CMD_TRACE_ENABLE: trace_enable <= shift_reg[0];
     endcase
 end
@@ -135,25 +139,12 @@ begin
     end
 end
 
-wire [2:0] major_mode = conf_word[7:5];
+// select module (outputs) based on major mode
+wire [2:0] major_mode = conf_word[8:6];
 
-// For the high-frequency transmit configuration: modulation depth, either
-// 100% (just quite driving antenna, steady LOW), or shallower (tri-state
-// some fraction of the buffers)
-wire hi_read_tx_shallow_modulation = conf_word[0];
-
-// For the high-frequency receive correlator: frequency against which to
-// correlate.
-wire hi_read_rx_xcorr_848 = conf_word[0];
-
-// and whether to drive the coil (reader) or just short it (snooper)
-wire hi_read_rx_xcorr_snoop = conf_word[1];
-
-// divide subcarrier frequency by 4
-wire hi_read_rx_xcorr_quarter = conf_word[2];
-
-// For the high-frequency simulated tag: what kind of modulation to use.
-wire [2:0] hi_simulate_mod_type = conf_word[2:0];
+// configuring the HF reader
+wire [1:0] subcarrier_frequency = conf_word[5:4];
+wire [3:0] minor_mode = conf_word[3:0];
 
 //-----------------------------------------------------------------------------
 // And then we instantiate the modules corresponding to each of the FPGA's
@@ -161,95 +152,86 @@ wire [2:0] hi_simulate_mod_type = conf_word[2:0];
 // the output pins.
 //-----------------------------------------------------------------------------
 
-hi_read_tx ht(
-    pck0, ck_1356meg, ck_1356megb,
-    ht_pwr_lo, ht_pwr_hi, ht_pwr_oe1, ht_pwr_oe2, ht_pwr_oe3, ht_pwr_oe4,
-    adc_d, ht_adc_clk,
-    ht_ssp_frame, ht_ssp_din, ssp_dout, ht_ssp_clk,
-    cross_hi, cross_lo,
-    ht_dbg,
-    hi_read_tx_shallow_modulation
+// 000 - HF reader
+hi_reader hr(
+	ck_1356megb,
+	hr_pwr_lo, hr_pwr_hi, hr_pwr_oe1, hr_pwr_oe2, hr_pwr_oe3, hr_pwr_oe4,
+	adc_d, hr_adc_clk,
+	hr_ssp_frame, hr_ssp_din, ssp_dout, hr_ssp_clk,
+	hr_dbg,
+	subcarrier_frequency, minor_mode
 );
 
-hi_read_rx_xcorr hrxc(
-    pck0, ck_1356meg, ck_1356megb,
-    hrxc_pwr_lo, hrxc_pwr_hi, hrxc_pwr_oe1, hrxc_pwr_oe2, hrxc_pwr_oe3, hrxc_pwr_oe4,
-    adc_d, hrxc_adc_clk,
-    hrxc_ssp_frame, hrxc_ssp_din, ssp_dout, hrxc_ssp_clk,
-    cross_hi, cross_lo,
-    hrxc_dbg,
-    hi_read_rx_xcorr_848, hi_read_rx_xcorr_snoop, hi_read_rx_xcorr_quarter
-);
-
+// 001 - HF simulated tag
 hi_simulate hs(
-    pck0, ck_1356meg, ck_1356megb,
+	ck_1356meg,
     hs_pwr_lo, hs_pwr_hi, hs_pwr_oe1, hs_pwr_oe2, hs_pwr_oe3, hs_pwr_oe4,
     adc_d, hs_adc_clk,
     hs_ssp_frame, hs_ssp_din, ssp_dout, hs_ssp_clk,
-    cross_hi, cross_lo,
     hs_dbg,
-    hi_simulate_mod_type
+	minor_mode
 );
 
+// 010 - HF ISO14443-A
 hi_iso14443a hisn(
-    pck0, ck_1356meg, ck_1356megb,
+	ck_1356meg,
     hisn_pwr_lo, hisn_pwr_hi, hisn_pwr_oe1, hisn_pwr_oe2, hisn_pwr_oe3, hisn_pwr_oe4,
     adc_d, hisn_adc_clk,
     hisn_ssp_frame, hisn_ssp_din, ssp_dout, hisn_ssp_clk,
-    cross_hi, cross_lo,
     hisn_dbg,
-    hi_simulate_mod_type
+	minor_mode
 );
 
+// 011 - HF sniff
 hi_sniffer he(
-       pck0, ck_1356meg, ck_1356megb,
-       he_pwr_lo, he_pwr_hi, he_pwr_oe1, he_pwr_oe2, he_pwr_oe3,       he_pwr_oe4,
-       adc_d, he_adc_clk,
-       he_ssp_frame, he_ssp_din, ssp_dout, he_ssp_clk,
-       cross_hi, cross_lo,
-       he_dbg,
-       hi_read_rx_xcorr_848, hi_read_rx_xcorr_snoop, hi_read_rx_xcorr_quarter
+    ck_1356megb,
+    he_pwr_lo, he_pwr_hi, he_pwr_oe1, he_pwr_oe2, he_pwr_oe3, he_pwr_oe4,
+    adc_d, he_adc_clk,
+    he_ssp_frame, he_ssp_din, he_ssp_clk
 );
 
+// 100 - HF ISO18092 FeliCa
+/*
 hi_flite hfl(
-       pck0, ck_1356meg, ck_1356megb,
-       hfl_pwr_lo, hfl_pwr_hi, hfl_pwr_oe1, hfl_pwr_oe2, hfl_pwr_oe3,       hfl_pwr_oe4,
-       adc_d, hfl_adc_clk,
-       hfl_ssp_frame, hfl_ssp_din, ssp_dout, hfl_ssp_clk,
-       cross_hi, cross_lo,
-       hfl_dbg,
-       hi_simulate_mod_type
+    ck_1356megb,
+    hfl_pwr_lo, hfl_pwr_hi, hfl_pwr_oe1, hfl_pwr_oe2, hfl_pwr_oe3, hfl_pwr_oe4,
+    adc_d, hfl_adc_clk,
+    hfl_ssp_frame, hfl_ssp_din, ssp_dout, hfl_ssp_clk,
+    hfl_dbg,
+    minor_mode
 );
+*/
 
+// 101 - HF get trace
 hi_get_trace gt(
 	ck_1356megb,
 	adc_d, trace_enable, major_mode,
 	gt_ssp_frame, gt_ssp_din, gt_ssp_clk
 );
 
-
 // Major modes:
+//   000 --  HF reader; subcarrier frequency and modulation depth selectable
+//   001 --  HF simulated tag
+//   010 --  HF ISO14443-A
+//   011 --  HF sniff
+//   100 --  HF ISO18092 FeliCa
+//   101 --  HF get trace
+//   110 --  unused
+//   111 --  FPGA_MAJOR_MODE_OFF
 
-//   000 --  HF reader, transmitting to tag; modulation depth selectable
-//   001 --  HF reader, receiving from tag, correlating as it goes; frequency selectable
-//   010 --  HF simulated tag
-//   011 --  HF ISO14443-A
-//   100 --  HF Snoop
-//   101 --  Felica modem, reusing HF reader
-//   110 --  HF get trace
-//   111 --  everything off
+//                                         000           001           010             011           100            101           110   111
 
-mux8 mux_ssp_clk   (major_mode, ssp_clk,   ht_ssp_clk,   hrxc_ssp_clk,   hs_ssp_clk,   hisn_ssp_clk,   he_ssp_clk,   hfl_ssp_clk,   gt_ssp_clk,   1'b0);
-mux8 mux_ssp_din   (major_mode, ssp_din,   ht_ssp_din,   hrxc_ssp_din,   hs_ssp_din,   hisn_ssp_din,   he_ssp_din,   hfl_ssp_din,   gt_ssp_din,   1'b0);
-mux8 mux_ssp_frame (major_mode, ssp_frame, ht_ssp_frame, hrxc_ssp_frame, hs_ssp_frame, hisn_ssp_frame, he_ssp_frame, hfl_ssp_frame, gt_ssp_frame, 1'b0);
-mux8 mux_pwr_oe1   (major_mode, pwr_oe1,   ht_pwr_oe1,   hrxc_pwr_oe1,   hs_pwr_oe1,   hisn_pwr_oe1,   he_pwr_oe1,   hfl_pwr_oe1,   1'b0,         1'b0);
-mux8 mux_pwr_oe2   (major_mode, pwr_oe2,   ht_pwr_oe2,   hrxc_pwr_oe2,   hs_pwr_oe2,   hisn_pwr_oe2,   he_pwr_oe2,   hfl_pwr_oe2,   1'b0,         1'b0);
-mux8 mux_pwr_oe3   (major_mode, pwr_oe3,   ht_pwr_oe3,   hrxc_pwr_oe3,   hs_pwr_oe3,   hisn_pwr_oe3,   he_pwr_oe3,   hfl_pwr_oe3,   1'b0,         1'b0);
-mux8 mux_pwr_oe4   (major_mode, pwr_oe4,   ht_pwr_oe4,   hrxc_pwr_oe4,   hs_pwr_oe4,   hisn_pwr_oe4,   he_pwr_oe4,   hfl_pwr_oe4,   1'b0,         1'b0);
-mux8 mux_pwr_lo    (major_mode, pwr_lo,    ht_pwr_lo,    hrxc_pwr_lo,    hs_pwr_lo,    hisn_pwr_lo,    he_pwr_lo,    hfl_pwr_lo,    1'b0,         1'b0);
-mux8 mux_pwr_hi    (major_mode, pwr_hi,    ht_pwr_hi,    hrxc_pwr_hi,    hs_pwr_hi,    hisn_pwr_hi,    he_pwr_hi,    hfl_pwr_hi,    1'b0,         1'b0);
-mux8 mux_adc_clk   (major_mode, adc_clk,   ht_adc_clk,   hrxc_adc_clk,   hs_adc_clk,   hisn_adc_clk,   he_adc_clk,   hfl_adc_clk,   1'b0,         1'b0);
-mux8 mux_dbg       (major_mode, dbg,       ht_dbg,       hrxc_dbg,       hs_dbg,       hisn_dbg,       he_dbg,       hfl_dbg,       1'b0,         1'b0);
+mux8 mux_ssp_clk   (major_mode, ssp_clk,   hr_ssp_clk,   hs_ssp_clk,   hisn_ssp_clk,   he_ssp_clk,   hfl_ssp_clk,   gt_ssp_clk,   1'b0, 1'b0);
+mux8 mux_ssp_din   (major_mode, ssp_din,   hr_ssp_din,   hs_ssp_din,   hisn_ssp_din,   he_ssp_din,   hfl_ssp_din,   gt_ssp_din,   1'b0, 1'b0);
+mux8 mux_ssp_frame (major_mode, ssp_frame, hr_ssp_frame, hs_ssp_frame, hisn_ssp_frame, he_ssp_frame, hfl_ssp_frame, gt_ssp_frame, 1'b0, 1'b0);
+mux8 mux_pwr_oe1   (major_mode, pwr_oe1,   hr_pwr_oe1,   hs_pwr_oe1,   hisn_pwr_oe1,   he_pwr_oe1,   hfl_pwr_oe1,   1'b0,         1'b0, 1'b0);
+mux8 mux_pwr_oe2   (major_mode, pwr_oe2,   hr_pwr_oe2,   hs_pwr_oe2,   hisn_pwr_oe2,   he_pwr_oe2,   hfl_pwr_oe2,   1'b0,         1'b0, 1'b0);
+mux8 mux_pwr_oe3   (major_mode, pwr_oe3,   hr_pwr_oe3,   hs_pwr_oe3,   hisn_pwr_oe3,   he_pwr_oe3,   hfl_pwr_oe3,   1'b0,         1'b0, 1'b0);
+mux8 mux_pwr_oe4   (major_mode, pwr_oe4,   hr_pwr_oe4,   hs_pwr_oe4,   hisn_pwr_oe4,   he_pwr_oe4,   hfl_pwr_oe4,   1'b0,         1'b0, 1'b0);
+mux8 mux_pwr_lo    (major_mode, pwr_lo,    hr_pwr_lo,    hs_pwr_lo,    hisn_pwr_lo,    he_pwr_lo,    hfl_pwr_lo,    1'b0,         1'b0, 1'b0);
+mux8 mux_pwr_hi    (major_mode, pwr_hi,    hr_pwr_hi,    hs_pwr_hi,    hisn_pwr_hi,    he_pwr_hi,    hfl_pwr_hi,    1'b0,         1'b0, 1'b0);
+mux8 mux_adc_clk   (major_mode, adc_clk,   hr_adc_clk,   hs_adc_clk,   hisn_adc_clk,   he_adc_clk,   hfl_adc_clk,   1'b0,         1'b0, 1'b0);
+mux8 mux_dbg       (major_mode, dbg,       hr_dbg,       hs_dbg,       hisn_dbg,       he_dbg,       hfl_dbg,       1'b0,         1'b0, 1'b0);
 
 // In all modes, let the ADC's outputs be enabled.
 assign adc_noe = 1'b0;

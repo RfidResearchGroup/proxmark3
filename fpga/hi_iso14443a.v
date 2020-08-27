@@ -3,31 +3,22 @@
 // Gerhard de Koning Gans, April 2008
 //-----------------------------------------------------------------------------
 
-// constants for the different modes:
-`define SNIFFER         3'b000
-`define TAGSIM_LISTEN   3'b001
-`define TAGSIM_MOD      3'b010
-`define READER_LISTEN   3'b011
-`define READER_MOD      3'b100
-
 module hi_iso14443a(
-    pck0, ck_1356meg, ck_1356megb,
+    ck_1356meg,
     pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4,
     adc_d, adc_clk,
     ssp_frame, ssp_din, ssp_dout, ssp_clk,
-    cross_hi, cross_lo,
     dbg,
     mod_type
 );
-    input pck0, ck_1356meg, ck_1356megb;
+    input ck_1356meg;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
     input [7:0] adc_d;
     output adc_clk;
     input ssp_dout;
     output ssp_frame, ssp_din, ssp_clk;
-    input cross_hi, cross_lo;
     output dbg;
-    input [2:0] mod_type;
+    input [3:0] mod_type;
 
 
 wire adc_clk = ck_1356meg;
@@ -151,7 +142,7 @@ begin
     end
 
     // adjust internal timer counter if necessary:
-    if (negedge_cnt[3:0] == 4'd13 && (mod_type == `SNIFFER || mod_type == `TAGSIM_LISTEN) && deep_modulation)
+	if (negedge_cnt[3:0] == 4'd13 && (mod_type == `FPGA_HF_ISO14443A_SNIFFER || mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN) && deep_modulation)
     begin
         if (reader_falling_edge_time == 4'd1)           // reader signal changes right after sampling. Better sample earlier next time.
         begin
@@ -185,7 +176,7 @@ reg [3:0] mod_detect_reset_time;
 
 always @(negedge adc_clk)
 begin
-    if (mod_type == `READER_LISTEN)
+	if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)
     // (our) reader signal changes at negedge_cnt[3:0]=9, tag response expected to start n*16+4 ticks later, further delayed by
     // 3 ticks ADC conversion. The maximum filter output (edge detected) will be detected after subcarrier zero crossing (+7 ticks).
     // To allow some timing variances, we want to have the maximum filter outputs well within the detection window, i.e.
@@ -195,7 +186,7 @@ begin
         mod_detect_reset_time <= 4'd4;
     end
     else
-    if (mod_type == `SNIFFER)
+	if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
     begin
         // detect a rising edge of reader's signal and sync modulation detector to the tag's answer:
         if (~pre_after_hysteresis && after_hysteresis && deep_modulation)
@@ -320,7 +311,7 @@ reg [3:0] sub_carrier_cnt;
 //       response window of 1128 - 774 = 354 ticks.
 
 // reset on a pause in listen mode. I.e. the counter starts when the pause is over:
-assign fdt_reset = ~after_hysteresis && mod_type == `TAGSIM_LISTEN;
+assign fdt_reset = ~after_hysteresis && mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN;
 
 always @(negedge adc_clk)
 begin
@@ -363,7 +354,7 @@ reg mod_sig_coil;
 
 always @(negedge adc_clk)
 begin
-    if (mod_type == `TAGSIM_MOD)             // need to take care of proper fdt timing
+	if (mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD)			 // need to take care of proper fdt timing
     begin
         if(fdt_counter == `FDT_COUNT)
         begin
@@ -438,7 +429,7 @@ always @(negedge adc_clk)
 begin
     if (negedge_cnt[5:0] == 6'd63)                          // fill the buffer
     begin
-        if (mod_type == `SNIFFER)
+		if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
         begin
             if(deep_modulation)                             // a reader is sending (or there's no field at all)
             begin
@@ -455,7 +446,7 @@ begin
         end
     end
 
-    if(negedge_cnt[2:0] == 3'b000 && mod_type == `SNIFFER)  // shift at double speed
+	if(negedge_cnt[2:0] == 3'b000 && mod_type == `FPGA_HF_ISO14443A_SNIFFER)	// shift at double speed
     begin
         // Don't shift if we just loaded new data, obviously.
         if(negedge_cnt[5:0] != 6'd0)
@@ -464,7 +455,7 @@ begin
         end
     end
 
-    if(negedge_cnt[3:0] == 4'b0000 && mod_type != `SNIFFER)
+	if(negedge_cnt[3:0] == 4'b0000 && mod_type != `FPGA_HF_ISO14443A_SNIFFER)
     begin
         // Don't shift if we just loaded new data, obviously.
         if(negedge_cnt[6:0] != 7'd0)
@@ -484,8 +475,8 @@ reg ssp_frame;
 
 always @(negedge adc_clk)
 begin
-    if(mod_type == `SNIFFER)
-    // SNIFFER mode (ssp_clk = adc_clk / 8, ssp_frame clock = adc_clk / 64)):
+	if(mod_type == `FPGA_HF_ISO14443A_SNIFFER)
+	// FPGA_HF_ISO14443A_SNIFFER mode (ssp_clk = adc_clk / 8, ssp_frame clock = adc_clk / 64)):
     begin
         if(negedge_cnt[2:0] == 3'd0)
             ssp_clk <= 1'b1;
@@ -505,7 +496,7 @@ begin
         if(negedge_cnt[3:0] == 4'd8)
             ssp_clk <= 1'b0;
 
-        if(negedge_cnt[6:0] == 7'd7)    // ssp_frame rising edge indicates start of frame
+		if(negedge_cnt[6:0] == 7'd7)	// ssp_frame rising edge indicates start of frame, sampled on falling edge of ssp_clk
             ssp_frame <= 1'b1;
         if(negedge_cnt[6:0] == 7'd23)
             ssp_frame <= 1'b0;
@@ -525,23 +516,23 @@ begin
     if(negedge_cnt[3:0] == 4'd0)
     begin
         // What do we communicate to the ARM
-        if(mod_type == `TAGSIM_LISTEN)
+		if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN)
             sendbit = after_hysteresis;
-        else if(mod_type == `TAGSIM_MOD)
+		else if(mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD)
             /* if(fdt_counter > 11'd772) sendbit = mod_sig_coil; // huh?
             else */
             sendbit = fdt_indicator;
-        else if (mod_type == `READER_LISTEN)
+		else if (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)
             sendbit = curbit;
         else
             sendbit = 1'b0;
     end
 
 
-    if(mod_type == `SNIFFER)
+	if(mod_type == `FPGA_HF_ISO14443A_SNIFFER)
         // send sampled reader and tag data:
         bit_to_arm = to_arm[7];
-    else if (mod_type == `TAGSIM_MOD && fdt_elapsed && temp_buffer_reset)
+	else if (mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD && fdt_elapsed && temp_buffer_reset)
         // send timing information:
         bit_to_arm = to_arm[7];
     else
@@ -554,22 +545,22 @@ end
 
 assign ssp_din = bit_to_arm;
 
-// Subcarrier (adc_clk/16, for TAGSIM_MOD only).
+// Subcarrier (adc_clk/16, for FPGA_HF_ISO14443A_TAGSIM_MOD only).
 wire sub_carrier;
 assign sub_carrier = ~sub_carrier_cnt[3];
 
-// in READER_MOD: drop carrier for mod_sig_coil==1 (pause); in READER_LISTEN: carrier always on; in other modes: carrier always off
-assign pwr_hi = (ck_1356megb & (((mod_type == `READER_MOD) & ~mod_sig_coil) || (mod_type == `READER_LISTEN)));
+// in FPGA_HF_ISO14443A_READER_MOD: drop carrier for mod_sig_coil==1 (pause); in FPGA_HF_ISO14443A_READER_LISTEN: carrier always on; in other modes: carrier always off
+assign pwr_hi = (ck_1356meg & (((mod_type == `FPGA_HF_ISO14443A_READER_MOD) & ~mod_sig_coil) || (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)));
 
 
 // Enable HF antenna drivers:
 assign pwr_oe1 = 1'b0;
 assign pwr_oe3 = 1'b0;
 
-// TAGSIM_MOD: short circuit antenna with different resistances (modulated by sub_carrier modulated by mod_sig_coil)
+// FPGA_HF_ISO14443A_TAGSIM_MOD: short circuit antenna with different resistances (modulated by sub_carrier modulated by mod_sig_coil)
 // for pwr_oe4 = 1 (tristate): antenna load = 10k || 33         = 32,9 Ohms
 // for pwr_oe4 = 0 (active):   antenna load = 10k || 33 || 33   = 16,5 Ohms
-assign pwr_oe4 = mod_sig_coil & sub_carrier & (mod_type == `TAGSIM_MOD);
+assign pwr_oe4 = mod_sig_coil & sub_carrier & (mod_type == `FPGA_HF_ISO14443A_TAGSIM_MOD);
 
 // This is all LF, so doesn't matter.
 assign pwr_oe2 = 1'b0;

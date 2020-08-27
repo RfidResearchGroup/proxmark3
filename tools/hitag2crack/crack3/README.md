@@ -31,9 +31,9 @@ Tests
 
 If you happen to know the key and want to check that all your nR aR values
 are valid (for high-powered demonstrations only, really) then you can use
-the ht2test program to check them.  It's otherwise massively pointless and a
+the ht2crack3test program to check them.  It's otherwise massively pointless and a
 complete waste of space.
 
 ```
-./ht2test NRARFILE KEY UID
+./ht2crack3test NRARFILE KEY UID
 ```

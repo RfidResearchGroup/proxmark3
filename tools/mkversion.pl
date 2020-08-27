@@ -18,7 +18,7 @@ my $fullgitinfo = 'RRG/Iceman';
 my $ctime;
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 my $clean = 2;
-
+my $undecided = (defined $ARGV[0]) && ($ARGV[0] =~ '--undecided');
 # Do we have acces to git command?
 #######
 # solves some bug on macos i.e:
@@ -37,8 +37,9 @@ if ( defined($commandGIT) )  {
     # now avoiding the "fatal: No names found, cannot describe anything." error by fallbacking to abbrev hash in such case
     my $gitversion = `git describe --dirty --always`;
     my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
-    $clean = $gitversion =~ '-dirty' ? 0 : 1;
-
+    if (not $undecided) {
+      $clean = $gitversion =~ '-dirty' ? 0 : 1;
+    }
     if ( defined($gitbranch) and defined($gitversion) ) {
         $fullgitinfo =  $fullgitinfo.'/'. $gitbranch . '/' . $gitversion;
 
@@ -64,9 +65,15 @@ $fullgitinfo =~ s/(\s)//g;
 $fullgitinfo = substr $fullgitinfo, 0, 49;
 
 print <<EOF
-#include "proxmark3_arm.h"
+#include "common.h"
 /* Generated file, do not edit */
-const struct version_information __attribute__((section(".version_information"))) version_information = {
+#ifndef ON_DEVICE
+#define SECTVERSINFO
+#else
+#define SECTVERSINFO __attribute__((section(".version_information")))
+#endif
+
+const struct version_information SECTVERSINFO version_information = {
     VERSION_INFORMATION_MAGIC,
     1,
     1,

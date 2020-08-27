@@ -129,4 +129,8 @@ size_t enciphered_data_length(const desfiretag_t tag, const size_t nbytes, int c
 void cmac_generate_subkeys(desfirekey_t key);
 void cmac(const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
 
+void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
+void desfire_crc32_append(uint8_t *data, const size_t len);
+void iso14443a_crc_append(uint8_t *data, size_t len);
+void iso14443a_crc(uint8_t *data, size_t len, uint8_t *pbtCrc);
 #endif
