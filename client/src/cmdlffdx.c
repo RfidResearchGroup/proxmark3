@@ -322,7 +322,7 @@ static int CmdFdxClone(const char *Cmd) {
 
     //Q5
     if (tolower(param_getchar(Cmd, 2)) == 'q')
-        blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT;
+        blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT;
 
     // convert from bit stream to block data
     blocks[1] = bytebits_to_byte(bits, 32);

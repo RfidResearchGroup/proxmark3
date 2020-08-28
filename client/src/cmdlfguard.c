@@ -175,8 +175,8 @@ static int CmdGuardClone(const char *Cmd) {
     }
 
     // Q5
-    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
+    if (tolower(param_getchar(Cmd, 3)) == 'q')
+        blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
 
     blocks[1] = bytebits_to_byte(bs, 32);
     blocks[2] = bytebits_to_byte(bs + 32, 32);
