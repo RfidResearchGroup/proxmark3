@@ -242,8 +242,8 @@ static int CmdPyramidClone(const char *Cmd) {
     blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4 << T55x7_MAXBLOCK_SHIFT;
 
     // Q5
-    if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 4 << T5555_MAXBLOCK_SHIFT;
+    if (tolower(param_getchar(Cmd, 2)) == 'q')
+        blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 4 << T5555_MAXBLOCK_SHIFT;
 
     blocks[1] = bytebits_to_byte(bs, 32);
     blocks[2] = bytebits_to_byte(bs + 32, 32);

@@ -178,7 +178,7 @@ static int CmdVisa2kClone(const char *Cmd) {
 
     //Q5
     if (tolower(param_getchar(Cmd, 1)) == 'q')
-        blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     blocks[2] = id;
     blocks[3] = (visa_parity(id) << 4) | visa_chksum(id);
