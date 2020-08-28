@@ -2104,11 +2104,10 @@ static int Cmdhex2bin(const char *Cmd) {
         else
             continue;
 
-        //Uses printf instead of PrintAndLog since the latter adds linebreaks to each printout
         for (int i = 0 ; i < 4 ; ++i)
-            printf("%d", (x >> (3 - i)) & 1);
+            PrintAndLogEx(NORMAL, "%d" NOLF, (x >> (3 - i)) & 1);
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
