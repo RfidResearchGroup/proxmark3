@@ -49,7 +49,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_fdx_clone(void) {
-    PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf fdx clone [h] <country id> <animal id> <extended> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h            : This help");
@@ -58,7 +58,7 @@ static int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "      <extended>   : Extended data");
     //reserved/rfu
     //is animal tag
-    PrintAndLogEx(NORMAL, "      <Q5>        : Specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "      <Q5>         : Specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx clone 999 112233"));
@@ -321,7 +321,8 @@ static int CmdFdxClone(const char *Cmd) {
     uint32_t blocks[5] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
 
     //Q5
-    if (tolower(param_getchar(Cmd, 2)) == 'q')
+    bool q5 = tolower(param_getchar(Cmd, 2)) == 'q';
+    if (q5)
         blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT;
 
     // convert from bit stream to block data
@@ -332,7 +333,7 @@ static int CmdFdxClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: " _GREEN_("%04u-%"PRIu64)" (extended 0x%X)", countryid, animalid, extended);
+    PrintAndLogEx(INFO, "Preparing to clone FDX-B to " _YELLOW_("%s") " with animal ID: " _GREEN_("%04u-%"PRIu64)" (extended 0x%X)", (q5) ? "Q5/T5555" : "T55x7", countryid, animalid, extended);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -393,7 +394,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,     AlwaysAvailable, "this help"},
     {"demod",   CmdFdxDemod, AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
     {"read",    CmdFdxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdFdxClone, IfPm3Lf,         "clone animal ID tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdFdxClone, IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
     {"sim",     CmdFdxSim,   IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
 };
