@@ -405,7 +405,8 @@ static int CmdAWIDClone(const char *Cmd) {
 
     uint32_t blocks[4] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
 
-    if (tolower(param_getchar(Cmd, 3)) == 'q')
+    bool q5 = tolower(param_getchar(Cmd, 3)) == 'q';
+    if (q5)
         //t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
         blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
 
@@ -425,7 +426,7 @@ static int CmdAWIDClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
+    PrintAndLogEx(INFO, "Preparing to clone AWID %u to " _YELLOW_("%s") " with FC: %u, CN: %u", fmtlen, (q5) ? "T5555 / Q5" : "T55x7", fc, cn);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
