@@ -27,15 +27,15 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_viking_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Viking AM tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Viking AM tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf viking clone <Card ID - 8 hex digits> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  <Card Number>  : 8 digit hex viking card number");
-    PrintAndLogEx(NORMAL, "  <Q5>           : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "  <Q5>           : specify writing to Q5/T5555 tag)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337 Q5"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337 Q5") "     - encode for Q5/T5555 tag");
     return PM3_SUCCESS;
 }
 
@@ -114,7 +114,11 @@ static int CmdVikingClone(const char *Cmd) {
 
     num_to_bytes(rawID, 8, &payload.blocks[0]);
 
-    PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s"), id,  sprint_hex(payload.blocks, sizeof(payload.blocks)));
+    PrintAndLogEx(INFO, "Preparing to clone Viking tag on " _YELLOW_("%s") " - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s")
+            , (Q5) ? "Q5/T5555" : "T55x7"
+            , id
+            ,  sprint_hex(payload.blocks, sizeof(payload.blocks))
+            );
 
     clearCommandBuffer();
 
@@ -169,7 +173,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"demod",   CmdVikingDemod, AlwaysAvailable, "Demodulate a Viking tag from the GraphBuffer"},
     {"read",    CmdVikingRead,  IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
-    {"clone",   CmdVikingClone, IfPm3Lf,         "clone Viking tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdVikingClone, IfPm3Lf,         "clone Viking tag to T55x7 or Q5/T5555"},
     {"sim",     CmdVikingSim,   IfPm3Lf,         "simulate Viking tag"},
     {NULL, NULL, NULL, NULL}
 };
