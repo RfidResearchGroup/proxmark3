@@ -28,13 +28,13 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_keri_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 / T5555 (Q5) tag\n");
+    PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 or Q5/T5555 tag\n");
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
-    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] [c <cardnumber>] [Q5]");
+    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] [c <cardnumber>] <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h            : This help");
     PrintAndLogEx(NORMAL, "      <id>         : Keri Internal ID");
-    PrintAndLogEx(NORMAL, "      <Q5>         : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "      <Q5>         : specify writing to Q5/T5555 tag");
     // New format
     PrintAndLogEx(NORMAL, "      <t> [m|i]    : Type m - MS, i - Internal ID");
     PrintAndLogEx(NORMAL, "      <f> <fc>     : Facility Code");
@@ -212,8 +212,6 @@ int demodKeri(void) {
     return PM3_SUCCESS;
 }
 
-
-
 static int CmdKeriRead(const char *Cmd) {
     lf_read(false, 10000);
     return CmdKeriDemod(Cmd);
@@ -288,7 +286,7 @@ static int CmdKeriClone(const char *Cmd) {
     // Prepare and write to card
     // 3 LSB is ONE
     uint64_t data = ((uint64_t)internalid << 3) + 7;
-    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), (q5) ? "T5555/Q5" : "T55x77",internalid);
+    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), (q5) ? "Q5/T5555" : "T55x7",internalid);
 
     blocks[1] = data >> 32;
     blocks[2] = data & 0xFFFFFFFF;
@@ -346,7 +344,7 @@ static command_t CommandTable[] = {
     {"help",  CmdHelp,      AlwaysAvailable, "This help"},
     {"demod", CmdKeriDemod, AlwaysAvailable, "Demodulate an KERI tag from the GraphBuffer"},
     {"read",  CmdKeriRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdKeriClone, IfPm3Lf,         "clone KERI tag to T55x7 (or to q5/T5555)"},
+    {"clone", CmdKeriClone, IfPm3Lf,         "clone KERI tag to T55x7 or Q5/T5555"},
     {"sim",   CmdKeriSim,   IfPm3Lf,         "simulate KERI tag"},
     {NULL, NULL, NULL, NULL}
 };
