@@ -64,13 +64,13 @@ static int usage_lf_em410x_watch(void) {
 }
 
 static int usage_lf_em410x_write(void) {
-    PrintAndLogEx(NORMAL, "Writes EM410x ID to a T55x7 / T5555 (Q5) tag");
+    PrintAndLogEx(NORMAL, "Writes EM410x ID to a T55x7 or Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 410x_write [h] <id> <card> [clock]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       <id>      - ID number");
-    PrintAndLogEx(NORMAL, "       <card>    - 0|1 T5555 (Q5) / T55x7");
+    PrintAndLogEx(NORMAL, "       <card>    - 0|1  0 = Q5/T5555,  1 = T55x7");
     PrintAndLogEx(NORMAL, "       <clock>   - 16|32|40|64, optional, set R/F clock rate, defaults to 64");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_write 0F0368568B 1") "       = write ID to t55x7 card");
@@ -630,15 +630,11 @@ static int CmdEM410xWrite(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (card == 1) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", _GREEN_("T55x7"), id, clock1);
-        // NOTE: We really should pass the clock in as a separate argument, but to
-        //   provide for backwards-compatibility for older firmware, and to avoid
-        //   having to add another argument to CMD_LF_EM410X_WRITE, we just store
-        //   the clock rate in bits 8-15 of the card value
-    } else if (card == 0) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 "(clock rate: %d)", _GREEN_("T5555"), id, clock1);
-    }
+    PrintAndLogEx(SUCCESS, "Writing " _YELLOW_("%s") " tag with UID 0x%010" PRIx64 " (clock rate: %d)", (card==1) ? "T55x7" : "Q5/T5555", id, clock1);
+    // NOTE: We really should pass the clock in as a separate argument, but to
+    //   provide for backwards-compatibility for older firmware, and to avoid
+    //   having to add another argument to CMD_LF_EM410X_WRITE, we just store
+    //   the clock rate in bits 8-15 of the card value
 
     struct {
         uint8_t card;
@@ -1386,7 +1382,7 @@ static command_t CommandTable[] = {
     {"410x_brute",  CmdEM410xBrute,       IfPm3Lf,         "reader bruteforce attack by simulating EM410x tags"},
     {"410x_watch",  CmdEM410xWatch,       IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
     {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-    {"410x_write",  CmdEM410xWrite,       IfPm3Lf,         "write EM410x UID to T5555(Q5) or T55x7 tag"},
+    {"410x_write",  CmdEM410xWrite,       IfPm3Lf,         "write EM410x UID to Q5/T5555 or T55x7 tag"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "-------------------- " _CYAN_("EM 4x05 / 4x69") " -------------------"},
     {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
