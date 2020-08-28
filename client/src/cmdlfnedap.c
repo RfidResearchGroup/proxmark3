@@ -455,8 +455,8 @@ static int CmdLFNedapClone(const char *Cmd) {
     //NEDAP - compat mode, ASK/DIphase, data rate 64, 4 data blocks
     // DI-phase (CDP) T55x7_MODULATION_DIPHASE
 //    blocks[0] = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 7 << T55x7_MAXBLOCK_SHIFT;
-//    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-//        blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 7 <<T5555_MAXBLOCK_SHIFT;
+//    if (tolower(param_getchar(Cmd, 3)) == 'q')
+//        blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 7 <<T5555_MAXBLOCK_SHIFT;
 
     if (DemodBufferLen == 64) {
         max = 3;

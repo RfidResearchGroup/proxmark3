@@ -151,7 +151,7 @@ static int CmdNoralsyClone(const char *Cmd) {
 
     //Q5
     if (tolower(param_getchar(Cmd, 2) == 'q'))
-        blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     uint8_t *bits = calloc(96, sizeof(uint8_t));
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
