@@ -264,7 +264,7 @@ static int CmdKeriClone(const char *Cmd) {
                 cmdidx += 2;
                 break;
             case 'q': // q5
-                blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(128) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
+                blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
                 q5 = true;
                 cmdidx++;
                 break;
