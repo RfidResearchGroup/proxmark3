@@ -604,7 +604,7 @@ static int CmdIndalaClone(const char *Cmd) {
         PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
 
         if (is_t5555)
-            blocks[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
+            blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
         else
             blocks[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
 
@@ -656,7 +656,7 @@ static int CmdIndalaClone(const char *Cmd) {
         PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
 
         if (is_t5555)
-            blocks[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);
+            blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);
         else
             blocks[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
 

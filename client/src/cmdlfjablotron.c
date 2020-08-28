@@ -154,7 +154,7 @@ static int CmdJablotronClone(const char *Cmd) {
 
     //Q5
     if (tolower(param_getchar(Cmd, 1)) == 'q')
-        blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
+        blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
     // clearing the topbit needed for the preambl detection.
     if ((fullcode & 0x7FFFFFFFFF) != fullcode) {

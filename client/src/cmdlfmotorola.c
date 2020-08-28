@@ -173,7 +173,7 @@ static int CmdMotorolaClone(const char *Cmd) {
     CLIParserFree(ctx);
 
     //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+    // data[0] = T5555_FIXED | T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
 
     // config for Motorola 64 format (RF/32;PSK1 with RF/2; Maxblock=2)
     PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit tag with RawID %s", sprint_hex(data, datalen));
