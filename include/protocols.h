@@ -519,7 +519,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define T5555_BITRATE_SHIFT             12 //(RF=2n+2)   ie 64=2*0x1F+2   or n = (RF-2)/2
 #define T5555_FAST_WRITE                0x00004000
 #define T5555_PAGE_SELECT               0x00008000
-#define T5555_FIXED                     0x06000000
+#define T5555_FIXED                     0x60000000
 
 #define T55XX_WRITE_TIMEOUT 1500
 
