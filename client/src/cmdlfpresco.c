@@ -27,7 +27,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_presco_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 or Q5/T555 tag.");
+    PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> c <hex-ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h             : this help");
