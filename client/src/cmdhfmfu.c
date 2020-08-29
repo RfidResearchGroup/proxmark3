@@ -2306,8 +2306,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
         wait4response(b);
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
     }
     PrintAndLogEx(NORMAL, "\n");
 
