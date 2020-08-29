@@ -356,6 +356,16 @@ static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave 4 filename"));
     return PM3_SUCCESS;
 }
+static int usage_hf14_eview(void) {
+    PrintAndLogEx(NORMAL, "It displays emul memory");
+    PrintAndLogEx(NORMAL, " Usage:  hf mf eview [card memory]");
+    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eview"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eview 4"));
+    return PM3_SUCCESS;
+}
 static int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
     PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
@@ -3681,6 +3691,56 @@ static int CmdHF14AMfESave(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfEView(const char *Cmd) {
+
+    uint8_t *dump;
+    int bytes;
+    uint16_t blocks;
+
+    char c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') return usage_hf14_eview();
+
+    if (c != 0) {
+        blocks = NumOfBlocks(c);
+        if (blocks == 0) return usage_hf14_eview();
+    } else {
+        blocks = MIFARE_1K_MAXBLOCK;
+    }
+    bytes = blocks * MFBLOCK_SIZE;
+
+    dump = calloc(bytes, sizeof(uint8_t));
+    if (!dump) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+    memset(dump, 0, bytes);
+
+    PrintAndLogEx(INFO, "downloading from emulator memory");
+    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    PrintAndLogEx(INFO, "blk | data                                            | ascii");
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    for (uint16_t i = 0; i < blocks; i++){
+        if (i == 0) {
+            PrintAndLogEx(INFO, "%03d | " _RED_("%s"), i, sprint_hex_ascii(dump + (i * 16) , 16) );
+        } else if (mfIsSectorTrailer(i)) {
+            PrintAndLogEx(INFO, "%03d | " _YELLOW_("%s"), i, sprint_hex_ascii(dump + (i * 16) , 16) );
+        } else {
+            PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 16) , 16) );
+        }
+    }
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    PrintAndLogEx(NORMAL, "");
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AMfECFill(const char *Cmd) {
     uint8_t keyType = 0;
     uint8_t numSectors = 16;
@@ -4972,6 +5032,7 @@ static command_t CommandTable[] = {
     {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set simulator memory block"},
     {"eload",       CmdHF14AMfELoad,        IfPm3Iso14443a,  "Load from file emul dump"},
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},
+    {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emul memory"},
     {"ecfill",      CmdHF14AMfECFill,       IfPm3Iso14443a,  "Fill simulator memory with help of keys from simulator"},
     {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from simulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " -----------------------"},
