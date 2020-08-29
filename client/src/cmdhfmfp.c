@@ -58,9 +58,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        sprintf(retStr, "0x%02X (" _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-        sprintf(retStr, "0x%02X (" _YELLOW_("%d bytes") ")", fsize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -70,14 +70,14 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     char *retStr = buf;
 
     if (id == 0x04) {
-        sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
     } else if (id == 0x05) {
         if (hw)
-            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-2, 14443-3") ")", id);
         else
-            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-3, 14443-4") ")", id);
     } else {
-        sprintf(retStr, "0x%02X (" _YELLOW_("Unknown") ")", id);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("Unknown") ")", id);
     }
     return buf;
 }
@@ -88,20 +88,20 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire MF3ICD40") ")", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
-//    else if (major == 0x13 && minor == 0x00)
-//        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
+    else if (major == 0x33 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
 
     else if (major == 0x11 && minor == 0x00)
-        sprintf(retStr, "%x.%x (" _YELLOW_("Plus EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Plus EV1") ")", major, minor);
     else
-        sprintf(retStr, "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
 }
 
@@ -112,16 +112,16 @@ static char *getTypeStr(uint8_t type) {
 
     switch (type) {
         case 1:
-            sprintf(retStr, "0x%02X (" _YELLOW_("DESFire") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("DESFire") ")", type);
             break;
         case 2:
-            sprintf(retStr, "0x%02X (" _YELLOW_("Plus") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("Plus") ")", type);
             break;
         case 3:
-            sprintf(retStr, "0x%02X (" _YELLOW_("Ultralight") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("Ultralight") ")", type);
             break;
         case 4:
-            sprintf(retStr, "0x%02X (" _YELLOW_("NTAG") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("NTAG") ")", type);
             break;
         default:
             break;
@@ -144,8 +144,8 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV2;
 
     // DESFire EV3
-//    if (major == 0x13 &&  minor == 0x00 )
-//        return DESFIRE_EV3;
+    if (major == 0x33 &&  minor == 0x00 )
+        return DESFIRE_EV3;
 
     // DESFire Light
     if (major == 0x30 &&  minor == 0x00)
@@ -969,8 +969,10 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
             // main cycle with key check
             for (int i = 0; i < keyListLen; i++) {
                 if (i % 10 == 0) {
-                    if (!verbose)
-                        printf(".");
+
+                    if (verbose == false)
+                        PrintAndLogEx(NORMAL, "." NOLF);
+
                     if (kbd_enter_pressed()) {
                         PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
                         DropField();
@@ -988,9 +990,9 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                         break;
 
                     if (verbose)
-                        PrintAndLogEx(WARNING, "retried[%d]...", retry);
+                        PrintAndLogEx(WARNING, "\nretried[%d]...", retry);
                     else
-                        printf("R");
+                        PrintAndLogEx(NORMAL, "R" NOLF);
 
                     DropField();
                     selectCard = true;
@@ -998,14 +1000,15 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                 }
 
                 if (verbose)
-                    PrintAndLogEx(WARNING, "sector %02d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
+                    PrintAndLogEx(WARNING, "\nsector %02d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
 
                 // key for [sector,keyAB] found
                 if (res == 0) {
                     if (verbose)
-                        PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keyList[i], 16));
+                        PrintAndLogEx(INFO, "\nFound key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keyList[i], 16));
                     else
-                        printf("+");
+                        PrintAndLogEx(NORMAL, "+" NOLF);
+
                     foundKeys[keyAB][sector][0] = 0x01;
                     memcpy(&foundKeys[keyAB][sector][1], keyList[i], AES_KEY_LEN);
                     DropField();
@@ -1017,9 +1020,10 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                 // 5 - auth error (rnd not equal)
                 if (res != 5) {
                     if (verbose)
-                        PrintAndLogEx(ERR, "Exchange error. Aborted.");
+                        PrintAndLogEx(ERR, "\nExchange error. Aborted.");
                     else
-                        printf("E");
+                        PrintAndLogEx(NORMAL, "E" NOLF);
+                    
                     DropField();
                     return PM3_ECARDEXCHANGE;
                 }
@@ -1201,23 +1205,25 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " keys", keyListLen);
     }
 
-    if (!verbose)
-        printf("Search keys:");
+    if (verbose == false)
+        PrintAndLogEx(NORMAL, "Search keys");
 
     while (true) {
         res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
         if (res == PM3_EOPABORTED)
             break;
         if (pattern2b && startPattern < 0x10000) {
-            if (!verbose)
-                printf("p");
+            if (verbose == false)
+                PrintAndLogEx(NORMAL, "p" NOLF);
+
             keyListLen = 0;
             Fill2bPattern(keyList, &keyListLen, &startPattern);
             continue;
         }
         if (dict_filenamelen && endFilePosition) {
-            if (!verbose)
-                printf("d");
+            if (verbose == false)
+                PrintAndLogEx(NORMAL, "d" NOLF);
+
             uint32_t keycnt = 0;
             res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
             keyListLen = keycnt;
@@ -1225,8 +1231,8 @@ static int CmdHFMFPChk(const char *Cmd) {
         }
         break;
     }
-    if (!verbose)
-        printf("\n");
+    if (verbose == false)
+        PrintAndLogEx(NORMAL, "");
 
     // print result
     bool printedHeader = false;
