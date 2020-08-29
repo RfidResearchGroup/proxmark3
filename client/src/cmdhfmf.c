@@ -54,7 +54,7 @@ static int usage_hf14_ice(void) {
 
 static int usage_hf14_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] [k <name>] [f <name>]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, if no <name> given, UID will be used as filename");
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
     PrintAndLogEx(NORMAL, "");
@@ -191,7 +191,7 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "                    [* <card memory>] [f <dictionary>[.dic]] [s] [i <simd type>] [l] [v]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Description:");
-    PrintAndLogEx(NORMAL, "      This command automates the key recovery process on Mifare classic cards.");
+    PrintAndLogEx(NORMAL, "      This command automates the key recovery process on MIFARE Classic cards.");
     PrintAndLogEx(NORMAL, "      It uses the darkside, nested and hardnested attack to extract the keys and card content.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
@@ -219,9 +219,9 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn")"                                             -- target Mifare classic card with default keys");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn * 1 f mfc_default_keys")"                      -- target Mifare classic card (size 1k) with default dictionary");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn k 0 A FFFFFFFFFFFF")"                          -- target Mifare classic card with Sector0 typeA with known key 'FFFFFFFFFFFF'");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn")"                                             -- target MIFARE Classic card with default keys");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn * 1 f mfc_default_keys")"                      -- target MIFARE Classic card (size 1k) with default dictionary");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn k 0 A FFFFFFFFFFFF")"                          -- target MIFARE Classic card with Sector0 typeA with known key 'FFFFFFFFFFFF'");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys")"   -- this command combines the two above (reduce the need for nested / hardnested attacks, by using a dictionary)");
     return PM3_SUCCESS;
 }
@@ -245,7 +245,7 @@ static int usage_hf14_chk(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf14_chk_fast(void) {
-    PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks Mifare Classic tags sector keys against a dictionary file with keys");
+    PrintAndLogEx(NORMAL, "This is a improved checkkeys method speedwise. It checks MIFARE Classic tags sector keys against a dictionary file with keys");
     PrintAndLogEx(NORMAL, "Usage:  hf mf fchk [h] <card memory> [t|d|f] [<key (12 hex symbols)>] [<dic (*.dic)>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
@@ -289,7 +289,7 @@ static int usage_hf14_keybrute(void) {
 static int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-dump.bin");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, specific the full filename of key file");
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, specific the full filename of data file");
@@ -338,7 +338,7 @@ static int usage_hf14_eset(void) {
 static int usage_hf14_eload(void) {
     PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
     PrintAndLogEx(NORMAL, "Usage:  hf mf eload [card memory] <file name w/o `.eml`> [numblocks]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
+    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eload filename"));
@@ -348,7 +348,7 @@ static int usage_hf14_eload(void) {
 static int usage_hf14_esave(void) {
     PrintAndLogEx(NORMAL, "It saves emul dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, " Usage:  hf mf esave [card memory] [file name w/o `.eml`]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf esave"));
@@ -360,7 +360,7 @@ static int usage_hf14_ecfill(void) {
     PrintAndLogEx(NORMAL, "Read card and transfer its data to emulator memory.");
     PrintAndLogEx(NORMAL, "Keys must be laid in the emulator memory. \n");
     PrintAndLogEx(NORMAL, "Usage:  hf mf ecfill <key A/B> [card memory]");
-    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mf ecfill A"));
@@ -457,7 +457,7 @@ static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "       h             this help");
     PrintAndLogEx(NORMAL, "       e             save data to emulator memory");
     PrintAndLogEx(NORMAL, "       u             save data to file, use carduid as filename");
-    PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "       o <filename>  save data to file");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -472,14 +472,14 @@ static int usage_hf14_cview(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf cview [h] [card memory]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             this help");
-    PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (MIFARE Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cview 1"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_nack(void) {
-    PrintAndLogEx(NORMAL, "Test a mifare classic based card for the NACK bug.");
+    PrintAndLogEx(NORMAL, "Test a MIFARE Classic based card for the NACK bug.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf nack [h] [v]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -3321,7 +3321,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         flags |= FLAG_UID_IN_EMUL;
     }
 
-    PrintAndLogEx(INFO, _YELLOW_("Mifare %s") " | %s UID  " _YELLOW_("%s") ""
+    PrintAndLogEx(INFO, _YELLOW_("MIFARE %s") " | %s UID  " _YELLOW_("%s") ""
                   , csize
                   , uidsize
                   , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen)
@@ -4154,7 +4154,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
             case '4':
                 numblocks = NumOfBlocks(ctmp);
                 bytes =  numblocks * MFBLOCK_SIZE;
-                PrintAndLogEx(SUCCESS, "Saving magic mifare %cK", ctmp);
+                PrintAndLogEx(SUCCESS, "Saving magic MIFARE %cK", ctmp);
                 cmdp++;
                 break;
             case 'u':
@@ -4263,11 +4263,13 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
     bool errors = false;
     int flags;
-    uint8_t numblocks = 0, cmdp = 0;
-    uint16_t bytes = 0;
-
+    char ctmp = '1'; 
+    uint8_t cmdp = 0;
+    uint8_t numblocks = NumOfBlocks(ctmp);
+    uint16_t bytes = numblocks * MFBLOCK_SIZE;
+    
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        char ctmp = tolower(param_getchar(Cmd, cmdp));
+        ctmp = tolower(param_getchar(Cmd, cmdp));
         switch (ctmp) {
             case 'h':
                 return usage_hf14_cview();
@@ -4277,7 +4279,6 @@ static int CmdHF14AMfCView(const char *Cmd) {
             case '4':
                 numblocks = NumOfBlocks(ctmp);
                 bytes =  numblocks * MFBLOCK_SIZE;
-                PrintAndLogEx(SUCCESS, "View magic mifare %cK", ctmp);
                 cmdp++;
                 break;
             default:
@@ -4286,8 +4287,10 @@ static int CmdHF14AMfCView(const char *Cmd) {
                 break;
         }
     }
+         
+    if (errors) return usage_hf14_cview();
 
-    if (errors || cmdp == 0) return usage_hf14_cview();
+    PrintAndLogEx(SUCCESS, "View magic MIFARE " _GREEN_("%cK"), ctmp);
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (!dump) {
@@ -4334,7 +4337,6 @@ static int CmdHF14AMfCView(const char *Cmd) {
         }
     }
 
-    // print
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
     PrintAndLogEx(INFO, "blk | data                                            | ascii");
@@ -4350,7 +4352,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
         }
     }
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-
+    PrintAndLogEx(NORMAL, "");
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4428,7 +4430,7 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// Mifare NACK bug detection
+// MIFARE NACK bug detection
 static int CmdHf14AMfNack(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
@@ -4587,7 +4589,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf mad",
-                  "Checks and prints Mifare Application Directory (MAD)",
+                  "Checks and prints MIFARE Application Directory (MAD)",
                   "Usage:\n"
                   _YELLOW_("\thf mf mad") "                                -> shows MAD if exists\n"
                   _YELLOW_("\thf mf mad --aid e103 -k ffffffffffff -b") "  -> shows NDEF data if exists. read card with custom key and key B\n"
@@ -4629,7 +4631,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Mifare App Directory Information") " ----------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("MIFARE App Directory Information") " ----------------");
     PrintAndLogEx(INFO, "-----------------------------------------------------");
 
     bool haveMAD2 = false;
@@ -4845,7 +4847,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf personalize",
-                  "Personalize the UID of a Mifare Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",
+                  "Personalize the UID of a MIFARE Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",
                   "Usage:\n"
                   _YELLOW_("\thf mf personalize UIDF0") "                        -> double size UID according to ISO/IEC14443-3\n"
                   _YELLOW_("\thf mf personalize UIDF1") "                        -> double size UID according to ISO/IEC14443-3, optional usage of selection process shortcut\n"
@@ -4953,15 +4955,15 @@ static command_t CommandTable[] = {
     {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
-    {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE classic tag to binary file"},
+    {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},
     {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
     {"ndef",        CmdHFMFNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
-    {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (Mifare Classic EV1 only)"},
-    {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE classic block"},
-    {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE classic sector"},
-    {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE classic binary file to BLANK tag"},
+    {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (MIFARE Classic EV1 only)"},
+    {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},
+    {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
+    {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
-    {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE classic block"},
+    {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"sim",         CmdHF14AMfSim,          IfPm3Iso14443a,  "Simulate MIFARE card"},
