@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include "elite_crack.h"
+#include "ui.h"
 
 static void calc_score(uint8_t *csn, uint8_t *k) {
     uint8_t score = 0 ;
