@@ -3779,7 +3779,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
         char filename[FILE_PATH_SIZE] = {0};
         char *fptr = filename;
-        fptr += sprintf(fptr, "hf-mf-");
+        fptr += snprintf(fptr, sizeof(filename), "hf-mf-");
         FillFileNameByUID(fptr + strlen(fptr), uid, "-key", sizeof(uid));
 
         createMfcKeyDump(filename, sectors_cnt, e_sector);
