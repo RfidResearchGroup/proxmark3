@@ -7,7 +7,8 @@ set_property(TARGET pm3rrg_rdv4_hardnested_nosimd PROPERTY POSITION_INDEPENDENT_
 
 target_include_directories(pm3rrg_rdv4_hardnested_nosimd PRIVATE
         ../../common
-        ../../include)
+        ../../include
+        ../src)
 
 ## CPU-specific code
 ## These are mostly for x86-based architectures, which is not useful for many Android devices.
@@ -34,7 +35,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(pm3rrg_rdv4_hardnested_mmx PRIVATE
             ../../common
-            ../../include)
+            ../../include
+            ../src)
 
     ## x86 / SSE2
     add_library(pm3rrg_rdv4_hardnested_sse2 OBJECT
@@ -48,7 +50,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(pm3rrg_rdv4_hardnested_sse2 PRIVATE
             ../../common
-            ../../include)
+            ../../include
+            ../src)
 
     ## x86 / AVX
     add_library(pm3rrg_rdv4_hardnested_avx OBJECT
@@ -62,7 +65,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(pm3rrg_rdv4_hardnested_avx PRIVATE
             ../../common
-            ../../include)
+            ../../include
+            ../src)
 
     ## x86 / AVX2
     add_library(pm3rrg_rdv4_hardnested_avx2 OBJECT
@@ -76,7 +80,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(pm3rrg_rdv4_hardnested_avx2 PRIVATE
             ../../common
-            ../../include)
+            ../../include
+            ../src)
 
     ## x86 / AVX512
     add_library(pm3rrg_rdv4_hardnested_avx512 OBJECT
@@ -90,7 +95,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(pm3rrg_rdv4_hardnested_avx512 PRIVATE
             ../../common
-            ../../include)
+            ../../include
+            ../src)
 
     set(SIMD_TARGETS
             $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_mmx>
