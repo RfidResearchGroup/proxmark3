@@ -298,13 +298,13 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                 PrintAndLogEx(NORMAL, "[" _BLUE_("#") "] %s", s);
             } else {
                 if (flag & FLAG_INPLACE)
-                    printf("\r");
-                printf("%s", s);
-                if (flag & FLAG_NEWLINE)
-                    printf("\r\n");
-            }
+                    PrintAndLogEx(NORMAL, "\r" NOLF);
 
-            fflush(stdout);
+                PrintAndLogEx(NORMAL, "%s" NOLF, s);
+
+                if (flag & FLAG_NEWLINE)
+                    PrintAndLogEx(NORMAL, "");
+            }
             break;
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
