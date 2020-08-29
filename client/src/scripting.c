@@ -474,14 +474,14 @@ static int l_mfDarkside(lua_State *L) {
 static int l_foobar(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
-    printf("foobar called with %d arguments", n);
+    PrintAndLogEx(INFO, "foobar called with %d arguments", n);
     lua_settop(L, 0);
-    printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
+    PrintAndLogEx(INFO, "Arguments discarded, stack now contains %d elements", lua_gettop(L));
 
     // todo: this is not used, where was it intended for?
     // PacketCommandOLD response =  {CMD_HF_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
 
-    printf("Now returning a uint64_t as a string");
+    PrintAndLogEx(INFO, "Now returning a uint64_t as a string");
     uint64_t x = 0xDEADC0DE;
     uint8_t destination[8];
     num_to_bytes(x, sizeof(x), destination);
@@ -1046,7 +1046,7 @@ static int l_T55xx_detect(lua_State *L) {
 
             sscanf(p_gb, "%u", &gb);
             useGB = (gb) ? true : false;
-            printf("p_gb size  %zu | %c \n", size, useGB ? 'Y' : 'N');
+            PrintAndLogEx(INFO, "p_gb size  %zu | %c", size, useGB ? 'Y' : 'N');
         }
         case 1: {
             const char *p_pwd = luaL_checklstring(L, 1, &size);
