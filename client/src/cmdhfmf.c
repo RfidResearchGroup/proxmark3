@@ -4340,7 +4340,12 @@ static int CmdHF14AMfCView(const char *Cmd) {
     PrintAndLogEx(INFO, "blk | data                                            | ascii");
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
     for (uint16_t i = 0; i < numblocks; i++){
-        PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 16) , 16) );
+        
+        if (mfIsSectorTrailer(blockNo)) {
+            PrintAndLogEx(INFO, "%03d | " _YELLOW_("%s")", i, sprint_hex_ascii(dump + (i * 16) , 16) );
+        } else {
+            PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 16) , 16) );
+        }
     }
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
 
