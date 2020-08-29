@@ -709,16 +709,17 @@ static int CmdLegicWrbl(const char *Cmd) {
         char *answer = readline(confirm);
         overwrite = (answer[0] == 'y' || answer[0] == 'Y');
 #else
-        printf("%s", confirm);
+        PrintAndLogEx(NORMAL, "%s" NOLF, confirm);
         char *answer = NULL;
         size_t anslen = 0;
         if (getline(&answer, &anslen, stdin) > 0) {
             overwrite = (answer[0] == 'y' || answer[0] == 'Y');
         }
+        PrintAndLogEx(NORMAL, "");
 #endif
         free(answer);
-        if (!overwrite) {
-            PrintAndLogEx(NORMAL, "command cancelled");
+        if (overwrite == false) {
+            PrintAndLogEx(WARNING, "command cancelled");
             return PM3_EOPABORTED;
         }
     }
@@ -731,18 +732,16 @@ static int CmdLegicWrbl(const char *Cmd) {
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, len, IV, data, len);
 
-
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         ++timeout;
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
             return PM3_ETIMEOUT;
         }
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 
     uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK) {
@@ -846,8 +845,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         ++timeout;
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL,  "." NOLF);
         if (timeout > 14) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
             return PM3_ETIMEOUT;
@@ -990,14 +988,13 @@ static int CmdLegicDump(const char *Cmd) {
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         ++timeout;
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
             return PM3_ETIMEOUT;
         }
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 
     uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK) {
@@ -1025,7 +1022,7 @@ static int CmdLegicDump(const char *Cmd) {
     // user supplied filename?
     if (fileNameLen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
-        fptr += sprintf(fptr, "hf-legic-");
+        fptr += snprintf(fptr, sizeof(filename), "hf-legic-");
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
 
@@ -1134,15 +1131,14 @@ static int CmdLegicRestore(const char *Cmd) {
         uint8_t timeout = 0;
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             ++timeout;
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 7) {
                 PrintAndLogEx(WARNING, "\ncommand execution time out");
                 free(data);
                 return PM3_ETIMEOUT;
             }
         }
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
 
         uint8_t isOK = resp.oldarg[0] & 0xFF;
         if (!isOK) {
@@ -1300,7 +1296,7 @@ static int CmdLegicESave(const char *Cmd) {
     // user supplied filename?
     if (fileNameLen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
-        fptr += sprintf(fptr, "hf-legic-");
+        fptr += snprintf(fptr, sizeof(filename), "hf-legic-");
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
 
@@ -1344,8 +1340,8 @@ static int CmdLegicWipe(const char *Cmd) {
     PacketResponseNG resp;
     for (size_t i = 7; i < card.cardsize; i += PM3_CMD_DATA_SIZE) {
 
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
+
         size_t len = MIN((card.cardsize - i), PM3_CMD_DATA_SIZE);
         if (len == card.cardsize - i) {
             // Disable fast mode on last packet
@@ -1357,15 +1353,14 @@ static int CmdLegicWipe(const char *Cmd) {
         uint8_t timeout = 0;
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             ++timeout;
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 7) {
                 PrintAndLogEx(WARNING, "\ncommand execution time out");
                 free(data);
                 return PM3_ETIMEOUT;
             }
         }
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(NORMAL, "");
 
         uint8_t isOK = resp.oldarg[0] & 0xFF;
         if (!isOK) {
