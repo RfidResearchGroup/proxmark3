@@ -383,7 +383,7 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 
         // success
         if (memcmp(calculated_MAC, item.mac, 4) == 0) {
-            printf("\r\n");
+            PrintAndLogEx(NORMAL, "");
             for (i = 0 ; i < numbytes_to_recover; i++) {
                 PrintAndLogEx(INFO, "%d: 0x%02x", bytes_to_recover[i], 0xFF & keytable[bytes_to_recover[i]]);
             }
@@ -393,16 +393,15 @@ int bruteforceItem(dumpdata item, uint16_t keytable[]) {
 
         brute++;
         if ((brute & 0xFFFF) == 0) {
-            printf("%3d,", (brute >> 16) & 0xFF);
+            PrintAndLogEx(NORMAL, "%3d," NOLF, (brute >> 16) & 0xFF);
             if (((brute >> 16) % 0x10) == 0)
-                printf("\n");
-            fflush(stdout);
+                PrintAndLogEx(NORMAL, "");
         }
     }
 
     int errors = PM3_SUCCESS;
 
-    if (!found) {
+    if (found == false) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(WARNING, "Failed to recover %d bytes using the following CSN", numbytes_to_recover);
         PrintAndLogEx(INFO, "CSN  %s", sprint_hex(item.csn, 8));
