@@ -909,7 +909,7 @@ static int CmdHF14BDump(const char *Cmd) {
         req[1] = blocknum;
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND,  ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
 
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
@@ -940,17 +940,16 @@ static int CmdHF14BDump(const char *Cmd) {
                 blocknum = 0xFF;
             }
 
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
         }
     }
+    PrintAndLogEx(NORMAL, "");
 
     if (blocknum != 0xFF) {
-        PrintAndLogEx(NORMAL, "\n Dump failed");
+        PrintAndLogEx(NORMAL, "Dump failed");
         goto out;
     }
 
-    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "block#   | data         | ascii");
     PrintAndLogEx(NORMAL, "---------+--------------+----------");
 
