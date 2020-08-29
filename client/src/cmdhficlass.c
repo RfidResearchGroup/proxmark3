@@ -962,11 +962,10 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
     SendCommandNG(CMD_HF_ICLASS_REPLAY, (uint8_t *)&payload, sizeof(payload));
 
     while (true) {
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
+
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             DropField();
             return PM3_EOPABORTED;
         }
@@ -975,6 +974,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
             break;
     }
 
+    PrintAndLogEx(NORMAL, "");
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "failed to communicate with card");
         return resp.status;
@@ -1189,7 +1189,7 @@ static int CmdHFiClassESave(const char *Cmd) {
 
     // user supplied filename?
     if (len < 1) {
-        fnameptr += sprintf(fnameptr, "hf-iclass-");
+        fnameptr += snprintf(fnameptr, sizeof(filename), "hf-iclass-");
         FillFileNameByUID(fnameptr, dump, "-dump", 8);
     }
 
@@ -1408,7 +1408,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
                         uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
                         char tmp[17] = {0};
-                        sprintf(tmp, "%."PRIu64, BCD2DEC(pin));
+                        snprintf(tmp, sizeof(tmp), "%."PRIu64, BCD2DEC(pin));
                         PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
                     }
                 }
@@ -1756,11 +1756,10 @@ static int CmdHFiClassDump(const char *Cmd) {
     SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
 
     while (true) {
-        printf(".");
-        fflush(stdout);
+
+        PrintAndLogEx(NORMAL, "." NOLF);
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             DropField();
             return PM3_EOPABORTED;
         }
@@ -1769,6 +1768,7 @@ static int CmdHFiClassDump(const char *Cmd) {
             break;
     }
 
+    PrintAndLogEx(NORMAL, "");
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "failed to communicate with card");
         return resp.status;
@@ -1828,11 +1828,9 @@ static int CmdHFiClassDump(const char *Cmd) {
         SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
 
         while (true) {
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
             if (kbd_enter_pressed()) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "aborted via keyboard!\n");
+                PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                 DropField();
                 return PM3_EOPABORTED;
             }
@@ -1840,7 +1838,7 @@ static int CmdHFiClassDump(const char *Cmd) {
             if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000))
                 break;
         }
-
+        PrintAndLogEx(NORMAL, "");
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "failed to communicate with card");
             goto write_dump;
@@ -2233,8 +2231,8 @@ static int CmdHFiClassRestore(const char *Cmd) {
         for (i = 0; i <= endblock - startblock; i++) {
             memcpy(p, data + (i * 12), 12);
             char *s = calloc(70, sizeof(uint8_t));
-            sprintf(s, "| %s ", sprint_hex(p, 8));
-            sprintf(s + strlen(s), "| %s", sprint_hex(p + 8, 4));
+            snprintf(s, 70, "| %s ", sprint_hex(p, 8));
+            snprintf(s + strlen(s), 70 - strlen(s), "| %s", sprint_hex(p + 8, 4));
             PrintAndLogEx(NORMAL, "  %02X  %s", i + startblock, s);
             free(s);
         }
@@ -3088,11 +3086,9 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         bool looped = false;
         while (!WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000)) {
             timeout++;
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 120) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "No response from Proxmark3. Aborting...");
+                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
                 goto out;
             }
             looped = true;
