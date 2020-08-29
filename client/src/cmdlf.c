@@ -364,11 +364,10 @@ int CmdLFCommandRead(const char *Cmd) {
     uint8_t i = 10;
     // 20sec wait loop
     while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
         i--;
     }
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
 
     if (resp.status == PM3_SUCCESS) {
         if (i) {
@@ -736,15 +735,13 @@ int CmdLFSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Bigbuf is full.");
             break;
         }
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
         payload_up.flag = 0;
     }
 
     // Disable fast mode before last command
     conn.block_after_ACK = false;
-    printf("\n");
-
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Simulating");
 
     struct p {
