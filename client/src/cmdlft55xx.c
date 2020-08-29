@@ -994,7 +994,7 @@ static int SanityOfflineCheck(bool useGraphBuffer) {
 
 static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
     char msg[80];
-    sprintf(msg, "Downlink Mode used : ");
+    snprintf(msg, sizeof(msg) ,"Downlink Mode used : ");
 
     switch (downlink_mode) {
         case  1 :
@@ -2327,7 +2327,7 @@ static int CmdT55xxDump(const char *Cmd) {
             strcpy(preferredName, "lf-t55xx");
             for (uint8_t i = 1; i <= 7; i++) {
                 if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF))
-                    sprintf(preferredName + strlen(preferredName), "-%08X", cardmem[i].blockdata);
+                    snprintf(preferredName + strlen(preferredName), sizeof(preferredName) - strlen(preferredName) , "-%08X", cardmem[i].blockdata);
                 else
                     break;
             }
@@ -2416,7 +2416,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     if (success == PM3_SUCCESS) { // Got data, so write to cards
         if (datalen == T55x7_BLOCK_COUNT * 4) { // 12 blocks * 4 bytes per block
             if (usepwd)
-                sprintf(pwdOpt, "p %08X", password);
+                snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", password);
 
             // Restore endien for writing to card
             for (blockidx = 0; blockidx < 12; blockidx++)
@@ -2433,18 +2433,20 @@ static int CmdT55xxRestore(const char *Cmd) {
 
             // write out blocks 1-7 page 0
             for (blockidx = 1; blockidx <= 7; blockidx++) {
-                sprintf(writeCmdOpt, "b %d d %08X %s", blockidx, data[blockidx], pwdOpt);
+                snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d d %08X %s", blockidx, data[blockidx], pwdOpt);
+
                 if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
                     PrintAndLogEx(WARNING, "Warning: error writing blk %d", blockidx);
             }
 
             // if password was set on the "blank" update as we may have just changed it
             if (usepwd)
-                sprintf(pwdOpt, "p %08X", data[7]);
+                snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", data[7]);
 
             // write out blocks 1-3 page 1
             for (blockidx = 9; blockidx <= 11; blockidx++) {
-                sprintf(writeCmdOpt, "b %d 1 d %08X %s", blockidx - 8, data[blockidx], pwdOpt);
+                snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d 1 d %08X %s", blockidx - 8, data[blockidx], pwdOpt);
+
                 if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
                     PrintAndLogEx(WARNING, "Warning: error writing blk %d", blockidx);
             }
@@ -2453,7 +2455,7 @@ static int CmdT55xxRestore(const char *Cmd) {
             config.downlink_mode = downlink_mode;
 
             // Write the page 0 config
-            sprintf(writeCmdOpt, "b 0 d %08X %s", data[0], pwdOpt);
+            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b 0 d %08X %s", data[0], pwdOpt);
             if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
                 PrintAndLogEx(WARNING, "Warning: error writing blk 0");
         }
@@ -3039,13 +3041,13 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
         while (!WaitForResponseTimeout(CMD_LF_T55XX_CHK_PWDS, &resp, 2000)) {
             timeout++;
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 180) {
                 PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
                 return PM3_ENODATA;
             }
         }
+        PrintAndLogEx(NORMAL, "");
         struct p {
             bool found;
             uint32_t candidate;
@@ -3178,8 +3180,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
 
     while (found == 0) {
 
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
 
         if (IsCancelled()) {
             return PM3_EOPABORTED;
