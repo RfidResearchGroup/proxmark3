@@ -12,7 +12,7 @@
 #include <stdlib.h>       // size_t
 #include <string.h>
 #include <ctype.h>        // tolower
-#include <stdio.h>        // printf
+//#include <stdio.h>        // printf
 #include "commonutil.h"   // reflect...
 #include "comms.h"        // clearCommandBuffer
 #include "cmdparser.h"    // command_t
@@ -914,13 +914,30 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
         if (c == '0')
             DemodBuffer[i] = 0;
 
-        printf("%c", c);
+        PrintAndLogEx(NORMAL, "%c" NOLF, c);
     }
 
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
 
     DemodBufferLen = len;
     free(data);
+    return PM3_SUCCESS;
+}
+
+static int CmdAnalyseFreq(const char *Cmd) {
+
+//    char cmdp = tolower(param_getchar(Cmd, 0));
+//    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_freq();
+
+    const double c = 299792458;
+    double len_125 = c / 125000;
+    double len_134 = c / 134000;
+    double len_1356 = c / 13560000;
+
+    PrintAndLogEx(INFO, "Wavelengths");
+    PrintAndLogEx(INFO, "   125 kHz has %f meters", len_125);
+    PrintAndLogEx(INFO, "   134 kHz has %f meters", len_134);
+    PrintAndLogEx(INFO, " 13.56 mHz has %f meters", len_1356);
     return PM3_SUCCESS;
 }
 
@@ -934,7 +951,8 @@ static command_t CommandTable[] = {
     {"lfsr",    CmdAnalyseLfsr,     AlwaysAvailable, "LFSR tests"},
     {"a",       CmdAnalyseA,        AlwaysAvailable, "num bits test"},
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
-    {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to demodbuffer"},
+    {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to demodbuffer"},   
+    {"freq",    CmdAnalyseFreq,     AlwaysAvailable, "Calc wave lengths"},
     {NULL, NULL, NULL, NULL}
 };
 
