@@ -11,16 +11,15 @@
 //
 
 #include "cbortools.h"
-
 #include <inttypes.h>
-
 #include "emv/emvjson.h"
 #include "util.h"
+#include "ui.h"           // PrintAndLogEx(
 #include "fidocore.h"
 
 static void indent(int nestingLevel) {
     while (nestingLevel--)
-        printf("  ");
+        PrintAndLogEx(NORMAL, "  " NOLF);
 }
 
 static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
@@ -32,14 +31,14 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
     switch (type) {
         case CborMapType:
         case CborArrayType: {
-            printf(type == CborArrayType ? "Array[" : "Map[");
+            PrintAndLogEx(NORMAL, "%s" NOLF, (type == CborArrayType) ? "Array[" : "Map[");
             break;
         }
 
         case CborIntegerType: {
             int64_t val;
             cbor_value_get_int64(it, &val);     // can't fail
-            printf("%lld", (long long)val);
+            PrintAndLogEx(NORMAL, "%lld" NOLF, (long long)val);
             break;
         }
 
@@ -50,7 +49,8 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
             *got_next = true;
             if (err)
                 return err;     // parse error
-            printf("%s", sprint_hex(buf, n));
+            
+            PrintAndLogEx(NORMAL, "%s" NOLF, sprint_hex(buf, n));
             free(buf);
             break;
         }
@@ -62,7 +62,8 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
             *got_next = true;
             if (err)
                 return err;     // parse error
-            printf("%s", buf);
+
+            PrintAndLogEx(NORMAL, "%s" NOLF, buf);
             free(buf);
             break;
         }
@@ -70,29 +71,29 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
         case CborTagType: {
             CborTag tag;
             cbor_value_get_tag(it, &tag);
-            printf("Tag(%lld)", (long long)tag);
+            PrintAndLogEx(NORMAL, "Tag(%lld)" NOLF, (long long)tag);
             break;
         }
 
         case CborSimpleType: {
             uint8_t t;
             cbor_value_get_simple_type(it, &t);
-            printf("simple(%u)", t);
+            PrintAndLogEx(NORMAL, "simple(%u)" NOLF, t);
             break;
         }
 
         case CborNullType:
-            printf("null");
+            PrintAndLogEx(NORMAL, "null" NOLF);
             break;
 
         case CborUndefinedType:
-            printf("undefined");
+            PrintAndLogEx(NORMAL, "undefined" NOLF);
             break;
 
         case CborBooleanType: {
             bool val;
             cbor_value_get_boolean(it, &val);       // can't fail
-            printf("%s", val ? "true" : "false");
+            PrintAndLogEx(NORMAL, "%s" NOLF, (val) ? "true" : "false");
             break;
         }
 
@@ -106,18 +107,18 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
                 } else {
                     cbor_value_get_double(it, &val);
                 }
-                printf("%g", val);
+                PrintAndLogEx(NORMAL, "%g" NOLF, val);
                 break;
             }
         case CborHalfFloatType: {
             uint16_t val;
             cbor_value_get_half_float(it, &val);
-            printf("__f16(%04x)", val);
+            PrintAndLogEx(NORMAL, "__f16(%04x)" NOLF, val);
             break;
         }
 
         case CborInvalidType:
-            printf("CborInvalidType!!!");
+            PrintAndLogEx(NORMAL, _RED_("CborInvalidType!!!") NOLF);
             break;
     }
 
@@ -129,7 +130,7 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
     while (!cbor_value_at_end(it)) {
         CborError err;
         CborType type = cbor_value_get_type(it);
-//printf("^%x^", type);
+
         bool got_next = false;
 
         switch (type) {
@@ -140,18 +141,23 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
                 assert(cbor_value_is_container(it));
                 if (!(isMapType && (elmCount % 2)))
                     indent(nestingLevel);
-                printf(type == CborArrayType ? "Array[\n" : "Map[\n");
+
+                PrintAndLogEx(NORMAL, "%s" NOLF, (type == CborArrayType) ? "Array[\n" : "Map[\n");
+
                 err = cbor_value_enter_container(it, &recursed);
                 if (err)
                     return err;       // parse error
+
                 err = dumprecursive(cmdCode, isResponse, &recursed, (type == CborMapType), nestingLevel + 1);
                 if (err)
                     return err;       // parse error
+
                 err = cbor_value_leave_container(it, &recursed);
                 if (err)
                     return err;       // parse error
+
                 indent(nestingLevel);
-                printf("]");
+                PrintAndLogEx(NORMAL, "]" NOLF);
                 got_next = true;
                 break;
             }
@@ -170,12 +176,13 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
                 err = dumpelm(it, &got_next, (isMapType && (elmCount % 2)) ? 0 : nestingLevel);
                 if (err)
                     return err;
+
                 if (cmdCode > 0 && nestingLevel == 1 && isMapType && !(elmCount % 2)) {
                     int64_t val;
                     cbor_value_get_int64(it, &val);
                     const char *desc = fido2GetCmdMemberDescription(cmdCode, isResponse, val);
                     if (desc)
-                        printf(" (%s)", desc);
+                        PrintAndLogEx(NORMAL, " (%s)" NOLF, desc);
                 }
                 break;
             }
@@ -187,9 +194,9 @@ static CborError dumprecursive(uint8_t cmdCode, bool isResponse, CborValue *it, 
                 return err;
         }
         if (isMapType && !(elmCount % 2)) {
-            printf(": ");
+            PrintAndLogEx(NORMAL, ": " NOLF);
         } else {
-            printf("\n");
+            PrintAndLogEx(NORMAL, "");
         }
         elmCount++;
     }
