@@ -938,8 +938,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     mf_readblock_t payload;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
-            printf(".");
-            fflush(NULL);
+            PrintAndLogEx(NORMAL, "." NOLF);
 
             payload.blockno = FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1;
             payload.keytype = 0;
@@ -958,18 +957,18 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
                     break;
                 } else if (tries == 2) { // on last try set defaults
-                    PrintAndLogEx(FAILED, "could not get access rights for sector %2d. Trying with defaults...", sectorNo);
+                    PrintAndLogEx(FAILED, "\ncould not get access rights for sector %2d. Trying with defaults...", sectorNo);
                     rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
                     rights[sectorNo][3] = 0x01;
                 }
             } else {
-                PrintAndLogEx(FAILED, "command execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
+                PrintAndLogEx(FAILED, "\ncommand execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
                 rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
                 rights[sectorNo][3] = 0x01;
             }
         }
     }
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Finished reading sector access bits");
     PrintAndLogEx(INFO, "Dumping all blocks from card...");
 
@@ -2161,8 +2160,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 // Check if the key is known
                 if (e_sector[i].foundKey[j] == 0) {
                     for (uint32_t k = 0; k < key_cnt; k++) {
-                        printf(".");
-                        fflush(stdout);
+                        PrintAndLogEx(NORMAL, "." NOLF);
+
                         if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, (keyBlock + (6 * k)), &key64) == PM3_SUCCESS) {
                             e_sector[i].Key[j] = bytes_to_num((keyBlock + (6 * k)), 6);
                             e_sector[i].foundKey[j] = 'D';
@@ -2173,8 +2172,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 }
             }
         }
-        printf("\n");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "");
     } else {
 
         uint32_t chunksize = key_cnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : key_cnt;
@@ -3014,8 +3012,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
             for (uint16_t c = 0; c < keycnt; c += max_keys) {
 
-                printf(".");
-                fflush(stdout);
+                PrintAndLogEx(NORMAL, "." NOLF);
+
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(INFO, "\naborted via keyboard!\n");
                     goto out;
@@ -3036,7 +3034,6 @@ static int CmdHF14AMfChk(const char *Cmd) {
     }
     t1 = msclock() - t1;
     PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
-
 
     // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
     if (keyType != 1) {
@@ -3225,22 +3222,22 @@ static int CmdHF14AMfSim(const char *Cmd) {
                 switch (param_get8(Cmd, cmdp + 1)) {
                     case 0:
                         flags |= FLAG_MF_MINI;
-                        sprintf(csize, "MINI");
+                        snprintf(csize, sizeof(csize), "MINI");
                         k_sectorsCount = MIFARE_MINI_MAXSECTOR;
                         break;
                     case 1:
                         flags |= FLAG_MF_1K;
-                        sprintf(csize, "1K");
+                        snprintf(csize, sizeof(csize), "1K");
                         k_sectorsCount = MIFARE_1K_MAXSECTOR;
                         break;
                     case 2:
                         flags |= FLAG_MF_2K;
-                        sprintf(csize, "2K with RATS");
+                        snprintf(csize, sizeof(csize), "2K with RATS");
                         k_sectorsCount = MIFARE_2K_MAXSECTOR;
                         break;
                     case 4:
                         flags |= FLAG_MF_4K;
-                        sprintf(csize, "4K");
+                        snprintf(csize, sizeof(csize), "4K");
                         k_sectorsCount = MIFARE_4K_MAXSECTOR;
                         break;
                     default:
@@ -3276,15 +3273,15 @@ static int CmdHF14AMfSim(const char *Cmd) {
                 switch (uidlen) {
                     case 10:
                         flags |= FLAG_10B_UID_IN_DATA;
-                        sprintf(uidsize, "10 byte");
+                        snprintf(uidsize, sizeof(uidsize), "10 byte");
                         break;
                     case 7:
                         flags |= FLAG_7B_UID_IN_DATA;
-                        sprintf(uidsize, "7 byte");
+                        snprintf(uidsize, sizeof(uidsize), "7 byte");
                         break;
                     case 4:
                         flags |= FLAG_4B_UID_IN_DATA;
-                        sprintf(uidsize, "4 byte");
+                        snprintf(uidsize, sizeof(uidsize), "4 byte");
                         break;
                     default:
                         return usage_hf14_mfsim();
@@ -3592,8 +3589,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
             free(data);
             return PM3_ESOFT;
         }
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
 
         blockNum++;
         counter += blockWidth;
@@ -3663,7 +3659,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
 
     // user supplied filename?
     if (len < 1) {
-        fnameptr += sprintf(fnameptr, "hf-mf-");
+        fnameptr += snprintf(fnameptr, sizeof(filename), "hf-mf-");
         FillFileNameByUID(fnameptr, dump, "-dump", 4);
     }
 
@@ -3968,8 +3964,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
                 PrintAndLogEx(WARNING, "Cant set magic card block: %d", blockNum);
                 return PM3_ESOFT;
             }
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
         }
         PrintAndLogEx(NORMAL, "\n");
         return PM3_SUCCESS;
@@ -4030,8 +4025,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
         datalen -= 16;
 
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
         blockNum++;
 
         // magic card type - mifare 1K
@@ -4225,7 +4219,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     }
 
     if (useuid) {
-        fnameptr += sprintf(fnameptr, "hf-mf-");
+        fnameptr += snprintf(fnameptr, sizeof(filename), "hf-mf-");
         FillFileNameByUID(fnameptr, card.uid, "-dump", card.uidlen);
     }
 
@@ -4241,8 +4235,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
             if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
             }
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
         }
         PrintAndLogEx(NORMAL, "\n");
         PrintAndLogEx(SUCCESS, "uploaded %d bytes to emulator memory", bytes);
