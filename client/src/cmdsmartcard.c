@@ -885,7 +885,7 @@ static void smart_brute_prim(void) {
 static int smart_brute_sfi(bool decodeTLV) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-    if (!buf)
+    if (buf == NULL)
         return 1;
 
     int len;
@@ -895,8 +895,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
     for (uint8_t sfi = 1; sfi <= 31; sfi++) {
 
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
 
         for (uint16_t rec = 1; rec <= 255; rec++) {
 
@@ -1024,8 +1023,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     for (int i = 0; i < json_array_size(root); i++) {
 
-        printf("+");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "+" NOLF);
 
         if (caid)
             free(caid);
@@ -1033,21 +1031,21 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         json_t *data, *jaid;
 
         data = json_array_get(root, i);
-        if (!json_is_object(data)) {
-            PrintAndLogEx(ERR, "data %d is not an object\n", i + 1);
+        if (json_is_object(data) == false) {
+            PrintAndLogEx(ERR, "\ndata %d is not an object\n", i + 1);
             json_decref(root);
             return PM3_ESOFT;
         }
 
         jaid = json_object_get(data, "AID");
-        if (!json_is_string(jaid)) {
-            PrintAndLogEx(ERR, "AID data [%d] is not a string", i + 1);
+        if (json_is_string(jaid) == false) {
+            PrintAndLogEx(ERR, "\nAID data [%d] is not a string", i + 1);
             json_decref(root);
             return PM3_ESOFT;
         }
 
         const char *aid = json_string_value(jaid);
-        if (!aid)
+        if (aid == false)
             continue;
 
         size_t aidlen = strlen(aid);
@@ -1069,7 +1067,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
         json_t *jvendor, *jname;
         jvendor = json_object_get(data, "Vendor");
-        if (!json_is_string(jvendor)) {
+        if (json_is_string(jvendor) == false) {
             PrintAndLogEx(ERR, "Vendor data [%d] is not a string", i + 1);
             continue;
         }
@@ -1079,7 +1077,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
             continue;
 
         jname = json_object_get(data, "Name");
-        if (!json_is_string(jname)) {
+        if (json_is_string(jname) == false) {
             PrintAndLogEx(ERR, "Name data [%d] is not a string", i + 1);
             continue;
         }
