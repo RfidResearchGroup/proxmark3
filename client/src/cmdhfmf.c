@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
-
 #include <ctype.h>
 
 #include "cmdparser.h"    // command_t
@@ -465,6 +464,18 @@ static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave u 1"));
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave e 1"));
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mf csave 4 o filename"));
+    return PM3_SUCCESS;
+}
+static int usage_hf14_cview(void) {
+    PrintAndLogEx(NORMAL, "View `magic Chinese` card ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hf mf cview [h] [card memory]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h             this help");
+    PrintAndLogEx(NORMAL, "       card memory   0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mf cview 1"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_nack(void) {
@@ -4248,6 +4259,93 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfCView(const char *Cmd) {
+
+    bool errors = false;
+    int flags;
+    uint8_t numblocks = 0, cmdp = 0;
+    uint16_t bytes = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        char ctmp = tolower(param_getchar(Cmd, cmdp));
+        switch (ctmp) {
+            case 'h':
+                return usage_hf14_cview();
+            case '0':
+            case '1':
+            case '2':
+            case '4':
+                numblocks = NumOfBlocks(ctmp);
+                bytes =  numblocks * MFBLOCK_SIZE;
+                PrintAndLogEx(SUCCESS, "View magic mifare %cK", ctmp);
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_hf14_cview();
+
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (!dump) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // Select card to get UID/UIDLEN information
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        free(dump);
+        return PM3_ESOFT;
+    }
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        free(dump);
+        return select_status;
+    }
+
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    flags = MAGIC_INIT + MAGIC_WUPC;
+    for (uint16_t i = 0; i < numblocks; i++) {
+        if (i == 1) flags = 0;
+        if (i == numblocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
+
+        if (mfCGetBlock(i, dump + (i * MFBLOCK_SIZE), flags)) {
+            PrintAndLogEx(WARNING, "Cant get block: %d", i);
+            free(dump);
+            return PM3_ESOFT;
+        }
+    }
+
+    // print
+    PrintAndLogEx(INFO, "  blk | data                           | ascii");
+    PrintAndLogEx(INFO, "------+--------------------------------+----------------------");
+    for (uint16_t i = 0; i < numblocks; i++){
+        PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 16) , 16) );
+    }
+    PrintAndLogEx(INFO, "------+--------------------------------+----------------------");        
+
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 //needs nt, ar, at, Data to decrypt
 static int CmdHf14AMfDecryptBytes(const char *Cmd) {
 
@@ -4873,6 +4971,8 @@ static command_t CommandTable[] = {
     {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector (magic chinese card)"},
     {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump   (magic chinese card)"},
     {"csave",       CmdHF14AMfCSave,        IfPm3Iso14443a,  "Save dump from magic chinese card into file or emulator"},
+    {"cview",       CmdHF14AMfCView,        IfPm3Iso14443a,  "view card"},
+    
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
     {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}
