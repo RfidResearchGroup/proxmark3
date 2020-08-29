@@ -1630,27 +1630,30 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         timeout++;
-        printf(".");
+        PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             DropField();
             return PM3_EOPABORTED;
         }
-        if (timeout > 100) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        if (timeout > 10) {
+            PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
             DropField();
             return PM3_ETIMEOUT;
         }
     }
+    
+    PrintAndLogEx(NORMAL, "");
+    
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
+        PrintAndLogEx(WARNING, "Button pressed, aborted");
         return PM3_EOPABORTED;
     }
 
     uint32_t tracelen = resp.oldarg[1];
     if (tracelen == 0) {
-        PrintAndLogEx(WARNING, "\nNo trace data! Maybe not a FeliCa Lite card?");
+        PrintAndLogEx(WARNING, "No trace data! Maybe not a FeliCa Lite card?");
         return PM3_ESOFT;
     }
 
