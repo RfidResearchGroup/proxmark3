@@ -96,6 +96,7 @@ void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext
 
     for (int j = 0; j < uidlen; j++)
         sprintf(filenamePrefix + len + j * 2, "%02X", uid[j]);
+
     strcat(filenamePrefix, ext);
 }
 
@@ -176,26 +177,27 @@ void print_hex(const uint8_t *data, const size_t len) {
     if (data == NULL || len == 0) return;
 
     for (size_t i = 0; i < len; i++)
-        printf("%02x ", data[i]);
-    printf("\n");
+        PrintAndLogEx(NORMAL, "%02x " NOLF, data[i]);
+
+    PrintAndLogEx(NORMAL, "");
 }
 
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     if (data == NULL || len == 0) return;
 
     int rownum = 0;
-    printf("[%02d] | ", rownum);
+    PrintAndLogEx(NORMAL, "[%02d] | " NOLF, rownum);
     for (size_t i = 0; i < len; ++i) {
 
-        printf("%02X ", data[i]);
+        PrintAndLogEx(NORMAL, "%02X " NOLF, data[i]);
 
         // check if a line break is needed
         if (breaks > 0 && !((i + 1) % breaks) && (i + 1 < len)) {
             ++rownum;
-            printf("\n[%02d] | ", rownum);
+            PrintAndLogEx(NORMAL, "\n[%02d] | " NOLF, rownum);
         }
     }
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
 }
 
 char *sprint_hex(const uint8_t *data, const size_t len) {
@@ -229,7 +231,7 @@ char *sprint_bin_break(const uint8_t *data, const size_t len, const uint8_t brea
     if (breaks > 0 && len % breaks != 0)
         rowlen = (len + (len / breaks) > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len + (len / breaks);
 
-    //printf("(sprint_bin_break) rowlen %d\n", rowlen);
+    //PrintAndLogEx(NORMAL, "(sprint_bin_break) rowlen %d", rowlen);
 
     static char buf[MAX_BIN_BREAK_LENGTH]; // 3072 + end of line characters if broken at 8 bits
     //clear memory
@@ -267,7 +269,7 @@ void sprint_bin_break_ex(uint8_t *src, size_t srclen, char *dest , uint8_t break
     else
         rowlen = ( len+(len/breaks) > MAX_BIN_BREAK_LENGTH ) ? MAX_BIN_BREAK_LENGTH : len+(len/breaks);
 
-    printf("(sprint_bin_break) rowlen %d\n", rowlen);
+    PrintAndLogEx(NORMAL, "(sprint_bin_break) rowlen %d", rowlen);
 
     // 3072 + end of line characters if broken at 8 bits
     dest = (char *)calloc(MAX_BIN_BREAK_LENGTH, sizeof(uint8_t));
@@ -307,10 +309,13 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 
     size_t i = 0;
     size_t pos = (max_len * 3) + 2;
+
     while (i < max_len) {
+
         char c = data[i];
         if ((c < 32) || (c == 127))
             c = '.';
+
         sprintf(tmp + pos + i, "%c",  c);
         ++i;
     }
@@ -682,7 +687,7 @@ int hextobinarray(char *target, char *source) {
         else if (x >= 'A' && x <= 'F')
             x -= 'A' - 10;
         else {
-            printf("Discovered unknown character %c %d at idx %d of %s\n", x, x, (int16_t)(source - start), start);
+            PrintAndLogEx(INFO, "(hextobinarray) discovered unknown character %c %d at idx %d of %s", x, x, (int16_t)(source - start), start);
             return 0;
         }
         // output
