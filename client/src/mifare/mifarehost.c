@@ -886,7 +886,7 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
             PrintAndLogEx(INPLACE, "wipe block %d", blockNo);
 
             if (blockNo == 0) {
-                res = mfCSetBlock(blockNo, block0, NULL, (params | MAGIC_WIPE));
+                res = mfCSetBlock(blockNo, block0, NULL, params);
             } else {
                 if (mfIsSectorTrailer(blockNo))
                     res = mfCSetBlock(blockNo, blockK, NULL, params);
