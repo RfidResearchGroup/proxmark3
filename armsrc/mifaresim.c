@@ -529,11 +529,21 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     LED_D_ON();
     ResetSspClk();
 
+    int counter = 0;
     bool finished = false;
     bool button_pushed = BUTTON_PRESS();
+    while (!button_pushed && !finished) {
 
-    while (!button_pushed && !finished && !data_available()) {
         WDT_HIT();
+        
+        if (counter == 2000) {
+            if (data_available()) {
+                break;
+            }
+            counter = 0;
+        } else {
+            counter++;
+        }
 
         // find reader field
         if (cardSTATE == MFEMUL_NOFIELD) {
