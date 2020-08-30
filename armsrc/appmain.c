@@ -1806,12 +1806,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs dump : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
-            //uint32_t size = 0;
-            //rdv40_spiffs_stat((char *)filename, (uint32_t *)size,RDV40_SPIFFS_SAFETY_SAFE);
             uint32_t size = packet->oldarg[1];
-            //uint8_t buff[size];
 
             uint8_t *buff = BigBuf_malloc(size);
             rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
@@ -1836,7 +1833,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs STAT : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs STAT : %s", filename);
             int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs((char *)filename);
             if (changed) rdv40_spiffs_lazy_unmount();
@@ -1849,7 +1846,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs REMOVE : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs REMOVE : %s", filename);
             rdv40_spiffs_remove((char *) filename, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
             break;
@@ -1864,9 +1861,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
             strncpy((char *)dest, token, sizeof(dest) - 1);
-            if (DBGLEVEL > 1) {
-                Dbprintf("> Filename received as source for spiffs RENAME : %s", src);
-                Dbprintf("> Filename received as destination for spiffs RENAME : %s", dest);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received as source for spiffs RENAME : %s", src);
+                Dbprintf("Filename received as destination for spiffs RENAME : %s", dest);
             }
             rdv40_spiffs_rename((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
@@ -1882,9 +1879,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
             strncpy((char *)dest, token, sizeof(dest) - 1);
-            if (DBGLEVEL > 1) {
-                Dbprintf("> Filename received as source for spiffs COPY : %s", src);
-                Dbprintf("> Filename received as destination for spiffs COPY : %s", dest);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received as source for spiffs COPY : %s", src);
+                Dbprintf("Filename received as destination for spiffs COPY : %s", dest);
             }
             rdv40_spiffs_copy((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
@@ -1896,14 +1893,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint32_t append = packet->oldarg[0];
             uint32_t size = packet->oldarg[1];
             uint8_t *data = packet->data.asBytes;
-
-            //rdv40_spiffs_lazy_mount();
-
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
             data += SPIFFS_OBJ_NAME_LEN;
 
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+
             if (!append) {
                 rdv40_spiffs_write((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
             } else {
