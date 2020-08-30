@@ -97,6 +97,18 @@ static int usage_hf_iclass_esave(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+static int usage_hf_iclass_eview(void) {
+    PrintAndLogEx(NORMAL, "It displays emulator memory");
+    PrintAndLogEx(NORMAL, "Number of bytes to download defaults to 256. Other value is 2048\n");
+    PrintAndLogEx(NORMAL, " Usage:  hf iclass eview [s <num of bytes>] <v>");
+    PrintAndLogEx(NORMAL, "     s <bytes>    : (256|2048) number of bytes to save (default 256)");
+    PrintAndLogEx(NORMAL, "     v            : verbose output");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass eview"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass eview s 2048 v"));
+    return PM3_SUCCESS;
+}
 static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "3DES decrypt data\n");
     PrintAndLogEx(NORMAL, "This is naive implementation, it tries to decrypt every block after block 6.");
@@ -1175,7 +1187,7 @@ static int CmdHFiClassESave(const char *Cmd) {
     }
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
-    if (!dump) {
+    if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
@@ -1201,6 +1213,88 @@ static int CmdHFiClassESave(const char *Cmd) {
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass readtagfile ") "` to view dump file");
     return PM3_SUCCESS;
 }
+
+static int CmdHFiClassEView(const char *Cmd) {
+
+    uint16_t blocks = 32, bytes = 256;
+    bool errors = false, verbose = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_eview();
+            case 's':
+                bytes = param_get32ex(Cmd, cmdp + 1, 256, 10);
+
+                if (bytes > 4096) {
+                    PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
+                    bytes = 4096;
+                }
+
+                if (bytes % 8 != 0) {
+                    bytes &= 0xFFF8;
+                    PrintAndLogEx(WARNING, "Number not divided by 8, truncating to %u", bytes);
+                }
+
+                blocks = bytes / 8;
+                cmdp += 2;
+                break;
+            case 'v':
+                verbose = true;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    //Validations
+    if (errors || bytes == 0) {
+        return usage_hf_iclass_eview();
+    }
+
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+    memset(dump, 0, bytes);
+
+    PrintAndLogEx(INFO, "downloading from emulator memory");
+    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+    
+    if (verbose) {
+        print_picopass_header((picopass_hdr *) dump);
+        print_picopass_info((picopass_hdr *) dump);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    uint8_t *csn = dump;
+    PrintAndLogEx(INFO, "------+----+-------------------------+----------");
+    PrintAndLogEx(INFO, " CSN  |0x00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
+    printIclassDumpContents(dump, 1, blocks, bytes);
+    
+/*
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "----+-------------------------+---------");
+    PrintAndLogEx(INFO, "blk | data                    | ascii");
+    PrintAndLogEx(INFO, "----+-------------------------+---------");
+    for (uint16_t i = 0; i < blocks; i++){
+        PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 8) , 8) );
+    }
+    PrintAndLogEx(INFO, "----+-------------------------+---------");
+    PrintAndLogEx(NORMAL, "");
+*/  
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 
 static int CmdHFiClassDecrypt(const char *Cmd) {
 
@@ -3480,6 +3574,7 @@ static command_t CommandTable[] = {
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fn>   ] Load Picopass / iCLASS dump file into emulator memory"},
     {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "[f <fn>   ] Save emulator memory to file"},
+    {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "[options..] View emulator memory"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc diversified keys (blocks 3 & 4) to write new keys"},
