@@ -67,30 +67,33 @@ static s32_t rdv40_spiffs_llwrite(u32_t addr, u32_t size, u8_t *src) {
 }
 
 static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
-
-
     uint8_t erased = 0;
 
     if (!FlashInit()) {
         return 130;
     }
-    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
+
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
+
     uint8_t block, sector = 0;
     block = addr / RDV40_LLERASE_BLOCKSIZE;
     if (block) {
         addr = addr - (block * RDV40_LLERASE_BLOCKSIZE);
     }
-    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
+
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
+
     sector = addr / SPIFFS_CFG_LOG_BLOCK_SZ;
     Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
-    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
-    erased = Flash_Erase4k(block, sector);
 
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
+
+    erased = Flash_Erase4k(block, sector);
     Flash_CheckBusy(BUSY_TIMEOUT);
     FlashStop();
 
-    return SPIFFS_OK == erased ;
+    return (SPIFFS_OK == erased);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -252,7 +255,7 @@ static RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
             filetype = RDV40_SPIFFS_FILETYPE_SYMLINK;
         }
     }
-    if (DBGLEVEL > 1) {
+    if (DBGLEVEL >= DBG_DEBUG) {
         switch (filetype) {
             case RDV40_SPIFFS_FILETYPE_REAL:
                 Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_REAL");
@@ -472,20 +475,23 @@ int rdv40_spiffs_is_symlink(const char *s) {
 // ATTENTION : you must NOT provide the whole filename (so please do not include the .lnk extension)
 // TODO : integrate in read_function
 int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+
     RDV40_SPIFFS_SAFE_FUNCTION(
         char linkdest[SPIFFS_OBJ_NAME_LEN];
         char linkfilename[SPIFFS_OBJ_NAME_LEN];
         sprintf(linkfilename, "%s.lnk", filename);
 
-        if (DBGLEVEL > 1) Dbprintf("Linkk real filename is : " _YELLOW_("%s"), linkfilename);
+        if (DBGLEVEL >= DBG_DEBUG)
+            Dbprintf("Linkk real filename is : " _YELLOW_("%s"), linkfilename);
 
         read_from_spiffs((char *)linkfilename, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
 
-        if (DBGLEVEL > 1) Dbprintf("Symlink destination is : " _YELLOW_("%s"), linkdest);
+        if (DBGLEVEL >= DBG_DEBUG) 
+            Dbprintf("Symlink destination is : " _YELLOW_("%s"), linkdest);
 
-            read_from_spiffs((char *)linkdest, (uint8_t *)dst, size);
-        )
-        }
+        read_from_spiffs((char *)linkdest, (uint8_t *)dst, size);
+    )
+}
 
 // BEWARE ! This function is DESTRUCTIVE as it will UPDATE an existing symlink
 // Since it creates a .lnk extension file it may be minor to mistake the order of arguments
@@ -516,18 +522,18 @@ int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyL
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         RDV40SpiFFSFileType filetype = filetype_in_spiffs((char *)filename);
-    switch (filetype) {
-    case RDV40_SPIFFS_FILETYPE_REAL:
-        rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
-            break;
-        case RDV40_SPIFFS_FILETYPE_SYMLINK:
-            rdv40_spiffs_read_as_symlink((char *)filename, (uint8_t *)dst, size, level);
-            break;
-        case RDV40_SPIFFS_FILETYPE_BOTH:
-        case RDV40_SPIFFS_FILETYPE_UNKNOWN:
-        default:
-            ;
-    }
+        switch (filetype) {
+        case RDV40_SPIFFS_FILETYPE_REAL:
+            rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
+                break;
+            case RDV40_SPIFFS_FILETYPE_SYMLINK:
+                rdv40_spiffs_read_as_symlink((char *)filename, (uint8_t *)dst, size, level);
+                break;
+            case RDV40_SPIFFS_FILETYPE_BOTH:
+            case RDV40_SPIFFS_FILETYPE_UNKNOWN:
+            default:
+                ;
+        }
     )
 }
 
