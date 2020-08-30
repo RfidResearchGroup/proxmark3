@@ -1832,8 +1832,8 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     for (;;) {
         WDT_HIT();
 
-        if (check == 1000) {
-            if (BUTTON_PRESS() || data_available())
+        if (check == 2000) {
+            if (BUTTON_PRESS())
                 return 1;
             check = 0;
         }
@@ -1959,7 +1959,6 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
             b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             (void)b;
         }
-        if (BUTTON_PRESS()) break;
     }
 
     // Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
