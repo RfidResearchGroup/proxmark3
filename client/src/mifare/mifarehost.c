@@ -34,10 +34,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     bool first_run = true;
 
     // message
-    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------\n");
-    PrintAndLogEx(INFO, "executing Darkside attack. Expected execution time: 25sec on average");
-    PrintAndLogEx(INFO, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.");
-    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------\n");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "Executing darkside attack. Expected execution time: 25sec on average");
+    PrintAndLogEx(INFO, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------");
 
     while (true) {
         clearCommandBuffer();
@@ -220,7 +220,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     // time to convert the returned data.
     uint8_t curr_keys = resp.oldarg[0];
 
-    PrintAndLogEx(INFO, "\nChunk: %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
+    PrintAndLogEx(INFO, "Chunk: %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
 
     // all keys?
     if (curr_keys == sectorsCnt * 2 || lastChunk) {
@@ -537,7 +537,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [" _YELLOW_("%s") "]",
+            PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c  -- found valid key [" _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex(resultKey, 6)
@@ -545,15 +545,12 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             return -5;
         }
 
-//        if (i + 1 % 10 == 0) {
         float bruteforce_per_second = (float)(i + max_keys) / ((msclock() - start_time) / 1000.0);
-        PrintAndLogEx(INFO, "%6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
-//        }
-
+        PrintAndLogEx(INPLACE, "%6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
     }
 
 out:
-    PrintAndLogEx(SUCCESS, "target block:%3u key type: %c",
+    PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c",
                   package->block,
                   package->keytype ? 'B' : 'A'
                  );
@@ -677,6 +674,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         //flush queue
         while (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(NORMAL, "");
             free(mem);
             return PM3_EOPABORTED;
         }
@@ -696,7 +694,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             // upload to flash.
             res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6));
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "SPIFFS upload failed");
+                PrintAndLogEx(WARNING, "\nSPIFFS upload failed");
                 free(mem);
                 return res;
             }
@@ -713,6 +711,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
             num_to_bytes(key64, 6, resultKey);
 
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [" _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
@@ -720,21 +719,20 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
                          );
             return PM3_SUCCESS;
         } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+            PrintAndLogEx(NORMAL, "");
             free(mem);
             return res;
         }
 
-//        if (i%10 == 0) {
         float bruteforce_per_second = (float)(i + max_keys_chunk) / ((msclock() - start_time) / 1000.0);
-        PrintAndLogEx(INFO, "%6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
-//        }
+        PrintAndLogEx(INPLACE, "%6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
     }
 
     p_keyblock = NULL;
     free(mem);
 
 out:
-    PrintAndLogEx(SUCCESS, "target block:%3u key type: %c",
+    PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c",
                   package->block,
                   package->keytype ? 'B' : 'A'
                  );
