@@ -46,6 +46,8 @@
 #include "util.h"
 #include "ticks.h"
 #include "commonutil.h"
+#include "umm_malloc.h"
+#include "umm_malloc_cfg.h"
 
 #ifdef WITH_LCD
 #include "LCD.h"
@@ -67,12 +69,22 @@
 extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
-static bool allow_send_wtx = false;
 
+static bool allow_send_wtx = false;
 void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
         reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
     }
+}
+
+
+static void umm_test(void) {
+
+    uint8_t* dest = (uint8_t*)umm_malloc(2000);    
+    umm_free(dest);
+    dest = (uint8_t*)umm_malloc(12000);  
+    umm_info(dest, false);
+    umm_free(dest);
 }
 
 //-----------------------------------------------------------------------------
@@ -721,8 +733,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             g_reply_via_usb = false;
             break;
         }
-        // emulator
+        // device side debug mode
         case CMD_SET_DBGMODE: {
+            
+            umm_test();
+
             DBGLEVEL = packet->data.asBytes[0];
             print_debug_level();
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
@@ -2206,7 +2221,6 @@ void  __attribute__((noreturn)) AppMain(void) {
     // fall under the 2 contigous free blocks availables
     rdv40_spiffs_check();
 #endif
-
     for (;;) {
         WDT_HIT();
 
