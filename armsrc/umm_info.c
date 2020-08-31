@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include <math.h>
+//#include <math.h>
 #ifdef UMM_INFO
 
 /* ----------------------------------------------------------------------------
@@ -40,8 +40,8 @@ void *umm_info( void *ptr, bool force ) {
    */
   memset( &ummHeapInfo, 0, sizeof( ummHeapInfo ) );
 
-  DBGLOG_FORCE( force, "\n" );
-  DBGLOG_FORCE( force, "+----------+-------+--------+--------+-------+--------+--------+\n" );
+  DBGLOGS_FORCE( force, "\n" );
+  DBGLOGS_FORCE( force, "+----------+-------+--------+--------+-------+--------+--------+\n" );
   DBGLOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
       DBGLOG_32_BIT_PTR(&UMM_BLOCK(blockNo)),
       blockNo,
@@ -125,7 +125,7 @@ void *umm_info( void *ptr, bool force ) {
       UMM_NFREE(blockNo),
       UMM_PFREE(blockNo) );
 
-  DBGLOG_FORCE( force, "+----------+-------+--------+--------+-------+--------+--------+\n" );
+  DBGLOGS_FORCE( force, "+----------+-------+--------+--------+-------+--------+--------+\n" );
 
   DBGLOG_FORCE( force, "Total Entries %5i    Used Entries %5i    Free Entries %5i\n",
       ummHeapInfo.totalEntries,
@@ -137,12 +137,12 @@ void *umm_info( void *ptr, bool force ) {
       ummHeapInfo.usedBlocks,
       ummHeapInfo.freeBlocks  );
 
-  DBGLOG_FORCE( force, "+--------------------------------------------------------------+\n" );
+  DBGLOGS_FORCE( force, "+--------------------------------------------------------------+\n" );
 
   DBGLOG_FORCE( force, "Usage Metric:               %5i\n", umm_usage_metric());
   DBGLOG_FORCE( force, "Fragmentation Metric:       %5i\n", umm_fragmentation_metric());
 
-  DBGLOG_FORCE( force, "+--------------------------------------------------------------+\n" );
+  DBGLOGS_FORCE( force, "+--------------------------------------------------------------+\n" );
 
   /* Release the critical section... */
   UMM_CRITICAL_EXIT();
@@ -168,12 +168,20 @@ int umm_usage_metric( void ) {
   return (int)((ummHeapInfo.usedBlocks * 100)/(ummHeapInfo.freeBlocks));
 }
 
+static uint32_t sqrt(uint32_t x) {
+    double n=x;
+    while((n*n-x>0.0001)||(n*n-x<-0.0001)){
+        n=(n+x/n)/2;
+    }
+    return (uint32_t)n;
+}
+
 int umm_fragmentation_metric( void ) {
   DBGLOG_DEBUG( "freeBlocks %i freeBlocksSquared %i\n", ummHeapInfo.freeBlocks, ummHeapInfo.freeBlocksSquared);
   if (0 == ummHeapInfo.freeBlocks) {
       return 0;
   } else {
-      return (100 - (((uint32_t)(sqrtf(ummHeapInfo.freeBlocksSquared)) * 100)/(ummHeapInfo.freeBlocks)));
+      return (100 - ((sqrt(ummHeapInfo.freeBlocksSquared) * 100)/(ummHeapInfo.freeBlocks)));
   }
 }
 

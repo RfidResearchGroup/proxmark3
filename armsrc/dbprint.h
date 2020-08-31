@@ -14,6 +14,8 @@
 #include "common.h"
 #include "ansi.h"
 
+#define NOLF "\xff"
+
 #define Dbprintf_usb(...) {\
         bool tmpfpc = g_reply_via_fpc;\
         bool tmpusb = g_reply_via_usb;\
@@ -52,25 +54,46 @@ void print_result(const char *name, uint8_t *buf, size_t len);
 
 // Functions for umm_malloc
 // Alternatively, use https://github.com/rhempel/c-helper-macros/blob/develop/dbglog/dbglog.h
-#define DBGLOG_FORCE(...) {\
-    Dbprintf (__VA_ARGS__); \
+
+#define DBGLOGS_FORCE(force, format) {\
+    if (force) Dbprintf (format NOLF); \
     }
 
-#define DBGLOG_ERROR(...) {\
-    if (DBGLEVEL >= DBG_ERROR) Dbprintf (__VA_ARGS__); \
+#define DBGLOG_FORCE(force, format, ...) {\
+    if (force) Dbprintf (format NOLF, __VA_ARGS__); \
     }
 
-#define DBGLOG_CRITICAL(...) {\
-    if (DBGLEVEL >= DBG_ERROR) Dbprintf (__VA_ARGS__); \
+#define DBGLOGS_ERROR(format) {\
+    if (DBGLEVEL >= DBG_ERROR) Dbprintf (format NOLF); \
     }
 
-#define DBGLOG_DEBUG(...) {\
-    if (DBGLEVEL >= DBG_DEBUG) Dbprintf (__VA_ARGS__); \
+#define DBGLOG_ERROR(format, ...) {\
+    if (DBGLEVEL >= DBG_ERROR) Dbprintf (format NOLF, __VA_ARGS__); \
     }
 
-#define DBGLOG_TRACE(...) {\
-    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf (__VA_ARGS__); \
+#define DBGLOGS_CRITICAL(format) {\
+    if (DBGLEVEL >= DBG_ERROR) Dbprintf (format NOLF); \
     }
 
-#define DBGLOG_32_BIT_PTR(...) __VA_ARGS__
+#define DBGLOG_CRITICAL(format, ...) {\
+    if (DBGLEVEL >= DBG_ERROR) Dbprintf (format NOLF, __VA_ARGS__); \
+    }
+
+#define DBGLOGS_DEBUG(format) {\
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf (format NOLF); \
+    }
+
+#define DBGLOG_DEBUG(format, ...) {\
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf (format NOLF, __VA_ARGS__); \
+    }
+
+#define DBGLOGS_TRACE(format) {\
+    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf (format NOLF); \
+    }
+
+#define DBGLOG_TRACE(format, ...) {\
+    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf (format NOLF, __VA_ARGS__); \
+    }
+
+#define DBGLOG_32_BIT_PTR(ptr) (ptr)
 #endif

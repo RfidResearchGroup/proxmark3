@@ -185,7 +185,7 @@ static void umm_assimilate_up( uint16_t c ) {
      * the free list
      */
 
-    DBGLOG_DEBUG( "Assimilate up to next block, which is FREE\n" );
+    DBGLOGS_DEBUG( "Assimilate up to next block, which is FREE\n" );
 
     /* Disconnect the next block from the FREE list */
 
@@ -315,7 +315,7 @@ static void umm_free_core( void *ptr ) {
 
   if( UMM_NBLOCK(UMM_PBLOCK(c)) & UMM_FREELIST_MASK ) {
 
-    DBGLOG_DEBUG( "Assimilate down to previous block, which is FREE\n" );
+    DBGLOGS_DEBUG( "Assimilate down to previous block, which is FREE\n" );
 
     c = umm_assimilate_down(c, UMM_FREELIST_MASK);
   } else {
@@ -325,7 +325,7 @@ static void umm_free_core( void *ptr ) {
      */
     UMM_FRAGMENTATION_METRIC_ADD(c);
 
-    DBGLOG_DEBUG( "Just add to head of free list\n" );
+    DBGLOGS_DEBUG( "Just add to head of free list\n" );
 
     UMM_PFREE(UMM_NFREE(0)) = c;
     UMM_NFREE(c)            = UMM_NFREE(0);
@@ -347,7 +347,7 @@ void umm_free( void *ptr ) {
   /* If we're being asked to free a NULL pointer, well that's just silly! */
 
   if( (void *)0 == ptr ) {
-    DBGLOG_DEBUG( "free a null pointer -> do nothing\n" );
+    DBGLOGS_DEBUG( "free a null pointer -> do nothing\n" );
 
     return;
   }
@@ -492,7 +492,7 @@ void *umm_malloc( size_t size ) {
    */
 
   if( 0 == size ) {
-    DBGLOG_DEBUG( "malloc a block of 0 bytes -> do nothing\n" );
+    DBGLOGS_DEBUG( "malloc a block of 0 bytes -> do nothing\n" );
 
     return( ptr );
   }
@@ -534,7 +534,7 @@ void *umm_realloc( void *ptr, size_t size ) {
    */
 
   if( ((void *)NULL == ptr) ) {
-    DBGLOG_DEBUG( "realloc the NULL pointer - call malloc()\n" );
+    DBGLOGS_DEBUG( "realloc the NULL pointer - call malloc()\n" );
 
     return( umm_malloc(size) );
   }
@@ -546,7 +546,7 @@ void *umm_realloc( void *ptr, size_t size ) {
    */
 
   if( 0 == size ) {
-    DBGLOG_DEBUG( "realloc to 0 size, just free the block\n" );
+    DBGLOGS_DEBUG( "realloc to 0 size, just free the block\n" );
 
     umm_free( ptr );
 
