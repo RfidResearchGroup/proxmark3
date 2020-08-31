@@ -72,4 +72,5 @@ void print_result(const char *name, uint8_t *buf, size_t len);
     if (DBGLEVEL >= DBG_EXTENDED) Dbprintf (__VA_ARGS__); \
     }
 
+#define DBGLOG_32_BIT_PTR(...) __VA_ARGS__
 #endif
