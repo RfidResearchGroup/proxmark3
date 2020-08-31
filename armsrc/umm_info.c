@@ -40,9 +40,9 @@ void *umm_info( void *ptr, bool force ) {
    */
   memset( &ummHeapInfo, 0, sizeof( ummHeapInfo ) );
 
-  DBGLOG_FORCE( force, "\n" );
-  DBGLOG_FORCE( force, "+----------+-------+--------+--------+-------+--------+--------+\n" );
-  DBGLOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
+  DBGLOG_FORCE( "\n" );
+  DBGLOG_FORCE( "+----------+-------+--------+--------+-------+--------+--------+\n" );
+  DBGLOG_FORCE( "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
       DBGLOG_32_BIT_PTR(&UMM_BLOCK(blockNo)),
       blockNo,
       UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
@@ -76,7 +76,7 @@ void *umm_info( void *ptr, bool force ) {
         ummHeapInfo.maxFreeContiguousBlocks = curBlocks;
       }
 
-      DBGLOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5u|NF %5i|PF %5i|\n",
+      DBGLOG_FORCE( "|0x%08x|B %5i|NB %5i|PB %5i|Z %5u|NF %5i|PF %5i|\n",
           DBGLOG_32_BIT_PTR(&UMM_BLOCK(blockNo)),
           blockNo,
           UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
@@ -98,7 +98,7 @@ void *umm_info( void *ptr, bool force ) {
       ++ummHeapInfo.usedEntries;
       ummHeapInfo.usedBlocks += curBlocks;
 
-      DBGLOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5u|                 |\n",
+      DBGLOG_FORCE( "|0x%08x|B %5i|NB %5i|PB %5i|Z %5u|                 |\n",
           DBGLOG_32_BIT_PTR(&UMM_BLOCK(blockNo)),
           blockNo,
           UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
@@ -116,7 +116,7 @@ void *umm_info( void *ptr, bool force ) {
    * ALWAYS be exactly 1 !
    */
 
-  DBGLOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
+  DBGLOG_FORCE( "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
       DBGLOG_32_BIT_PTR(&UMM_BLOCK(blockNo)),
       blockNo,
       UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
@@ -125,24 +125,24 @@ void *umm_info( void *ptr, bool force ) {
       UMM_NFREE(blockNo),
       UMM_PFREE(blockNo) );
 
-  DBGLOG_FORCE( force, "+----------+-------+--------+--------+-------+--------+--------+\n" );
+  DBGLOG_FORCE( "+----------+-------+--------+--------+-------+--------+--------+\n" );
 
-  DBGLOG_FORCE( force, "Total Entries %5i    Used Entries %5i    Free Entries %5i\n",
+  DBGLOG_FORCE( "Total Entries %5i    Used Entries %5i    Free Entries %5i\n",
       ummHeapInfo.totalEntries,
       ummHeapInfo.usedEntries,
       ummHeapInfo.freeEntries );
 
-  DBGLOG_FORCE( force, "Total Blocks  %5i    Used Blocks  %5i    Free Blocks  %5i\n",
+  DBGLOG_FORCE( "Total Blocks  %5i    Used Blocks  %5i    Free Blocks  %5i\n",
       ummHeapInfo.totalBlocks,
       ummHeapInfo.usedBlocks,
       ummHeapInfo.freeBlocks  );
 
-  DBGLOG_FORCE( force, "+--------------------------------------------------------------+\n" );
+  DBGLOG_FORCE( "+--------------------------------------------------------------+\n" );
 
-  DBGLOG_FORCE( force, "Usage Metric:               %5i\n", umm_usage_metric());
-  DBGLOG_FORCE( force, "Fragmentation Metric:       %5i\n", umm_fragmentation_metric());
+  DBGLOG_FORCE( "Usage Metric:               %5i\n", umm_usage_metric());
+  DBGLOG_FORCE( "Fragmentation Metric:       %5i\n", umm_fragmentation_metric());
 
-  DBGLOG_FORCE( force, "+--------------------------------------------------------------+\n" );
+  DBGLOG_FORCE( "+--------------------------------------------------------------+\n" );
 
   /* Release the critical section... */
   UMM_CRITICAL_EXIT();
@@ -173,7 +173,8 @@ int umm_fragmentation_metric( void ) {
   if (0 == ummHeapInfo.freeBlocks) {
       return 0;
   } else {
-      return (100 - (((uint32_t)(sqrtf(ummHeapInfo.freeBlocksSquared)) * 100)/(ummHeapInfo.freeBlocks)));
+      return 0;
+//      return (100 - (((int)(sqrtf(ummHeapInfo.freeBlocksSquared)) * 100)/(ummHeapInfo.freeBlocks)));
   }
 }
 
