@@ -310,6 +310,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
     } PACKED;
     struct kr *keyresult = (struct kr *)&resp.data.asBytes;
     if (!keyresult->found) return PM3_ESOFT;
+
     *key = bytes_to_num(keyresult->key, sizeof(keyresult->key));
     return PM3_SUCCESS;
 }
@@ -560,6 +561,7 @@ out:
     return -4;
 }
 
+
 int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey) {
 
     uint32_t uid;
@@ -608,7 +610,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     statelists[0].keyType = package->keytype;
     statelists[0].uid = uid;
 
-    memcpy(&statelists[0].nt_enc,  package->nt, sizeof(package->nt));
+    memcpy(&statelists[0].nt_enc, package->nt, sizeof(package->nt));
     memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
 
     // calc keys
@@ -691,6 +693,10 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
         // check a block of generated key candidates.
         if (IfPm3Flash()) {
+            
+            mem[3] = ((chunk >> 8) & 0xFF);
+            mem[4] = (chunk & 0xFF);
+
             // upload to flash.
             res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6));
             if (res != PM3_SUCCESS) {
@@ -698,7 +704,6 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
                 free(mem);
                 return res;
             }
-
             res = mfCheckKeys_file(destfn, &key64);
         } else {
             res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, chunk, mem, &key64);
