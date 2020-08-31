@@ -125,10 +125,7 @@ THUMBSRC = start.c \
     ticks.c \
     clocks.c \
     hfsnoop.c \
-    umm_info.c \
-    umm_integrity.c \
-    umm_malloc.c \
-    umm_poison.c
+    umm_malloc.c
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
