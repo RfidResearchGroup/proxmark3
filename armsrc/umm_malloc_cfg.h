@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define UMM_INFO
 /*
  * There are a number of defines you can set at compile time that affect how
  * the memory allocator will operate.
