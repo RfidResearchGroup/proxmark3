@@ -34,6 +34,7 @@
 #include "ticks.h"
 #include "usb_cdc.h"  // usb_poll_validate_length
 #include "spiffs.h"   // spiffs
+#include "appmain.h"  // print_stack_usage
 
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)
@@ -1108,13 +1109,10 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
 
     uint64_t ui64Key = 0;
     ui64Key = bytes_to_num(key, 6);
-
-    // variables
     uint16_t len;
-
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0, nt1, nt2;
-    uint32_t target_nt = {0x00}, target_ks = {0x00};
+    uint32_t target_nt = 0, target_ks = 0;
     uint8_t par[1] = {0x00};
     uint8_t receivedAnswer[10] = {0x00};
 
@@ -1132,7 +1130,6 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     set_tracing(true);
 
     int16_t isOK = 0;
-
     LED_C_ON();
 
     for (uint8_t retry = 0; retry < 3 && (isOK == 0); retry++) {
@@ -1152,7 +1149,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             continue;
         };
 
-        // First authenticatoin. Normal auth.
+        // First authentication. Normal auth.
         if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
             if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Auth1 error");
             retry--;
@@ -1167,9 +1164,8 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
         };
 
         nt2 = bytes_to_num(receivedAnswer, 4);
-        uint32_t nt_tmp = prng_successor(nt1, 160);
-        target_ks = nt2 ^ nt_tmp;
-        target_nt = nt_tmp;
+        target_nt = prng_successor(nt1, 160);
+        target_ks = nt2 ^ target_nt;
         isOK = 1;
 
         if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Testing nt1=%08x nt2enc=%08x nt2par=%02x  ks=%08x", nt1, nt2, par[0], target_ks);
@@ -1689,7 +1685,7 @@ OUT:
     DBGLEVEL = oldbg;
 }
 
-void MifareChkKeys(uint8_t *datain) {
+void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -1715,7 +1711,12 @@ void MifareChkKeys(uint8_t *datain) {
     bool clearTrace = datain[2];
     uint16_t key_count = (datain[3] << 8) | datain[4];
 
-    uint16_t key_mem_available = MIN((PM3_CMD_DATA_SIZE - 5), key_count * 6);
+    uint16_t key_mem_available;
+    if (reserved_mem)
+         key_mem_available = key_count * 6;
+    else
+         key_mem_available = MIN((PM3_CMD_DATA_SIZE - 5), key_count * 6);
+     
     key_count = key_mem_available / 6;
 
     datain += 5;
@@ -1793,6 +1794,8 @@ void MifareChkKeys(uint8_t *datain) {
 void MifareChkKeys_file(uint8_t *fn) {
 
 #ifdef WITH_FLASH
+    BigBuf_free();
+
     SpinOff(0);
 
     int changed = rdv40_spiffs_lazy_mount();
@@ -1807,7 +1810,7 @@ void MifareChkKeys_file(uint8_t *fn) {
 
     SpinOff(0);
 
-    MifareChkKeys(mem);
+    MifareChkKeys(mem, true);
 
     BigBuf_free();
 #endif

@@ -29,7 +29,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
 
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
 void MifareAcquireNonces(uint32_t arg0, uint32_t flags);
-void MifareChkKeys(uint8_t *datain);
+void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem);
 void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareChkKeys_file(uint8_t *fn);
 

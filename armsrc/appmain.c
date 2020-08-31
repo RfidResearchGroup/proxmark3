@@ -1248,7 +1248,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS: {
-            MifareChkKeys(packet->data.asBytes);
+            MifareChkKeys(packet->data.asBytes, false);
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS_FAST: {
