@@ -49,11 +49,9 @@
 
 #define DBGLOG_LEVEL 0
 
-//#include "dbglog/dbglog.h"
 #include "dbprint.h"
 
-extern void *UMM_MALLOC_CFG_HEAP_ADDR;
-extern uint32_t UMM_MALLOC_CFG_HEAP_SIZE;
+extern uint8_t _stack_start, __bss_end__;
 
 /* ------------------------------------------------------------------------- */
 
@@ -232,6 +230,10 @@ static uint16_t umm_assimilate_down( uint16_t c, uint16_t freemask ) {
 /* ------------------------------------------------------------------------- */
 
 void umm_init( void ) {
+    
+  void *UMM_MALLOC_CFG_HEAP_ADDR = &__bss_end__;
+  uint32_t UMM_MALLOC_CFG_HEAP_SIZE = (uint32_t)&_stack_start - (uint32_t)&__bss_end__;
+   
   /* init heap pointer and size, and memset it to 0 */
   umm_heap = (umm_block *)UMM_MALLOC_CFG_HEAP_ADDR;
   umm_numblocks = (UMM_MALLOC_CFG_HEAP_SIZE / sizeof(umm_block));
