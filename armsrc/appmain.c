@@ -83,8 +83,9 @@ static void umm_test(void) {
     umm_info(NULL, true);
     uint8_t* dest = (uint8_t*)umm_malloc(2000);    
     umm_free(dest);
+    umm_info(NULL, true);
     dest = (uint8_t*)umm_malloc(12000);  
-    umm_info(dest, true);
+    umm_info(NULL, true);
     umm_free(dest);
 }
 
