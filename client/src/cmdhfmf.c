@@ -2421,7 +2421,10 @@ noValidKeyFound:
 skipReadBKey:
                 if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
 
-                    if (prng_type && (nested_failed == false) && (has_staticnonce == false)) {
+                    if (has_staticnonce) 
+                        goto tryStaticnested;
+
+                    if (prng_type && (nested_failed == false)) {
                         uint8_t retries = 0;
                         if (verbose) {
                             PrintAndLogEx(INFO, "======================= " _YELLOW_("START NESTED ATTACK") " =======================");
@@ -2519,7 +2522,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                     }
                     
                     if (has_staticnonce) {
-
+tryStaticnested:
                        if (verbose) {
                             PrintAndLogEx(INFO, "======================= " _YELLOW_("START STATIC NESTED ATTACK") " =======================");
                             PrintAndLogEx(INFO, "sector no: %3d, target key type: %c",
