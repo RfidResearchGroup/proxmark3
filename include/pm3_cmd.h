@@ -745,6 +745,10 @@ typedef struct {
 #define PM3_EAPDU_ENCODEFAIL  -19
 // APDU responded with a failure code
 #define PM3_EAPDU_FAIL        -20
+
+// execute pm3 cmd failed               client/pm3: when one of our pm3 cmd tries and fails. oppsite from PM3_SUCCESS
+#define PM3_EFAILED           -21
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
