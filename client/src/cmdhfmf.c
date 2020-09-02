@@ -552,6 +552,26 @@ static int32_t initSectorTable(sector_t **src, int32_t items) {
     return items;
 }
 
+static void decode_print_st(uint16_t blockno, uint8_t* data) {
+    if (mfIsSectorTrailer(blockno)) {
+        PrintAndLogEx(NORMAL, "");       
+        PrintAndLogEx(NORMAL, "Sector trailer decoded:");
+        PrintAndLogEx(NORMAL, "----------------------------------------------");
+        PrintAndLogEx(NORMAL, "Key A      " _GREEN_("%s"), sprint_hex_inrow(data, 6));
+        PrintAndLogEx(NORMAL, "Key B      " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
+        PrintAndLogEx(NORMAL, "Access rights");
+
+        int bln = mfFirstBlockOfSector(mfSectorNum(blockno));
+        int blinc = (mfNumBlocksPerSector(mfSectorNum(blockno)) > 4) ? 5 : 1;
+        for (int i = 0; i < 4; i++) {
+            PrintAndLogEx(NORMAL, "  block %d%s  " _YELLOW_("%s"), bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &data[6]));
+            bln += blinc;
+        }
+        PrintAndLogEx(NORMAL, "UserData   " _YELLOW_("0x%02x"), data[9]);
+        PrintAndLogEx(NORMAL, "----------------------------------------------");
+    }
+}
+
 static int CmdHF14AMfDarkside(const char *Cmd) {
     uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
     uint64_t key = 0;
@@ -626,7 +646,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         return 1;
     }
 
-    PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
+    PrintAndLogEx(NORMAL, "--block no %d, key %c - %s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
     PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 
     uint8_t data[26];
@@ -673,7 +693,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
         return PM3_ESOFT;
     }
-    PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s ", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
+    PrintAndLogEx(NORMAL, "--block no %d, key %c - %s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
     mf_readblock_t payload;
     payload.blockno = blockNo;
@@ -694,15 +714,8 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        if (mfIsSectorTrailer(blockNo) && (data[6] || data[7] || data[8])) {
-            PrintAndLogEx(NORMAL, "Trailer decoded:");
-            int bln = mfFirstBlockOfSector(mfSectorNum(blockNo));
-            int blinc = (mfNumBlocksPerSector(mfSectorNum(blockNo)) > 4) ? 5 : 1;
-            for (int i = 0; i < 4; i++) {
-                PrintAndLogEx(NORMAL, "Access block %d%s: %s", bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &data[6]));
-                bln += blinc;
-            }
-            PrintAndLogEx(NORMAL, "UserData: %s", sprint_hex_inrow(&data[9], 1));
+        if ((data[6] || data[7] || data[8])) {    
+            decode_print_st(blockNo, data);
         }
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
@@ -743,7 +756,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
         return PM3_ESOFT;
     }
-    PrintAndLogEx(NORMAL, "--sector no:%d key type:%c key:%s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
+    PrintAndLogEx(NORMAL, "--sector no %d, key %c - %s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
@@ -756,19 +769,17 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
         if (isOK) {
-            for (int i = 0; i < (sectorNo < 32 ? 3 : 15); i++) {
-                PrintAndLogEx(NORMAL, "data   : %s", sprint_hex(data + i * 16, 16));
+            
+            uint8_t blocks = 4;
+            uint8_t start = sectorNo * 4;
+            if (sectorNo > 32) {
+                blocks = 16;
+                start = 128 + (sectorNo - 32) * 16;
             }
-            PrintAndLogEx(NORMAL, "trailer: %s", sprint_hex(data + (sectorNo < 32 ? 3 : 15) * 16, 16));
-
-            PrintAndLogEx(NORMAL, "Trailer decoded:");
-            int bln = mfFirstBlockOfSector(sectorNo);
-            int blinc = (mfNumBlocksPerSector(sectorNo) > 4) ? 5 : 1;
-            for (int i = 0; i < 4; i++) {
-                PrintAndLogEx(NORMAL, "Access block %d%s: %s", bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &(data + (sectorNo < 32 ? 3 : 15) * 16)[6]));
-                bln += blinc;
+            for (int i = 0; i < blocks; i++) {
+                PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data + (i * 16) , 16));
             }
-            PrintAndLogEx(NORMAL, "UserData: %s", sprint_hex_inrow(&(data + (sectorNo < 32 ? 3 : 15) * 16)[9], 1));
+            decode_print_st(start + blocks - 1, data + ((blocks - 1) * 16) );
         }
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
@@ -4215,19 +4226,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "data: %s", sprint_hex(data, sizeof(data)));
 
-    if (mfIsSectorTrailer(blockNo)) {
-        PrintAndLogEx(NORMAL, "Trailer decoded:");
-        PrintAndLogEx(NORMAL, "Key A: %s", sprint_hex_inrow(data, 6));
-        PrintAndLogEx(NORMAL, "Key B: %s", sprint_hex_inrow(&data[10], 6));
-        int bln = mfFirstBlockOfSector(mfSectorNum(blockNo));
-        int blinc = (mfNumBlocksPerSector(mfSectorNum(blockNo)) > 4) ? 5 : 1;
-        for (int i = 0; i < 4; i++) {
-            PrintAndLogEx(NORMAL, "Access block %d%s: %s", bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &data[6]));
-            bln += blinc;
-        }
-        PrintAndLogEx(NORMAL, "UserData: %s", sprint_hex_inrow(&data[9], 1));
-    }
-
+    decode_print_st(blockNo, data);
     return PM3_SUCCESS;
 }
 
@@ -4243,7 +4242,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "\n  # | data    |  Sector | %02d/ 0x%02X ", sector, sector);
+    PrintAndLogEx(NORMAL, "\n  # | data  - sector %02d / 0x%02X ", sector, sector);
     PrintAndLogEx(NORMAL, "----+------------------------------------------------");
     uint8_t blocks = 4;
     uint8_t start = sector * 4;
@@ -4265,6 +4264,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data, 16));
     }
+    decode_print_st(start + blocks - 1, data);
     return PM3_SUCCESS;
 }
 
