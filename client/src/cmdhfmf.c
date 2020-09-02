@@ -192,7 +192,8 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Description:");
     PrintAndLogEx(NORMAL, "      This command automates the key recovery process on MIFARE Classic cards.");
-    PrintAndLogEx(NORMAL, "      It uses the darkside, nested and hardnested attack to extract the keys and card content.");
+    PrintAndLogEx(NORMAL, "      It uses the darkside, nested, hardnested and staticnested to recover keys.");
+    PrintAndLogEx(NORMAL, "      If all keys are found, try dumping card content.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h                          this help");
