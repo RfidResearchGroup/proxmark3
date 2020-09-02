@@ -1306,19 +1306,19 @@ static int CmdHF14AMfNested(const char *Cmd) {
     if (cmdp == 'o') {
         int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
         switch (isOK) {
-            case -1 :
+            case PM3_ETIMEOUT:
                 PrintAndLogEx(ERR, "Command execute timeout\n");
                 break;
-            case -2 :
+            case PM3_EOPABORTED:
                 PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
                 break;
-            case -3 :
+            case PM3_EFAILED:
                 PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
                 break;
-            case -4 :
+            case PM3_ESOFT:
                 PrintAndLogEx(FAILED, "No valid key found");
                 break;
-            case -5 :
+            case PM3_SUCCESS:
                 key64 = bytes_to_num(keyBlock, 6);
 
                 // transfer key to the emulator
@@ -1366,7 +1366,6 @@ static int CmdHF14AMfNested(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
         int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false);
         if (res == PM3_SUCCESS) {
-            // all keys found
             PrintAndLogEx(SUCCESS, "Fast check found all keys");
             goto jumptoend;
         }
@@ -1376,7 +1375,6 @@ static int CmdHF14AMfNested(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "enter nested key recovery");
 
         // nested sectors
-//        int iterations = 0;
         bool calibrate = true;
 
         for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
@@ -1387,28 +1385,26 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
                     int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
                     switch (isOK) {
-                        case -1 :
+                        case PM3_ETIMEOUT:
                             PrintAndLogEx(ERR, "Command execute timeout\n");
                             break;
-                        case -2 :
+                        case PM3_EOPABORTED:
                             PrintAndLogEx(WARNING, "button pressed. Aborted.\n");
                             break;
-                        case -3 :
+                        case PM3_EFAILED :
                             PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
                             break;
-                        case -4 : //key not found
+                        case PM3_ESOFT:
+                            //key not found
                             calibrate = false;
-//                            iterations++;
                             continue;
-                        case -5 :
+                        case PM3_SUCCESS:
                             calibrate = false;
-//                            iterations++;
                             e_sector[sectorNo].foundKey[trgKeyType] = 1;
                             e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
                             mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
                             continue;
-
                         default :
                             PrintAndLogEx(ERR, "Unknown error.\n");
                     }
@@ -1940,6 +1936,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool slow = false;
     bool legacy_mfchk = false;
     int prng_type = PM3_EUNDEF;
+    int has_staticnonce = 2;
     bool verbose = false;
     bool has_filename = false;
     bool errors = false;
@@ -2061,33 +2058,43 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         free(e_sector);
         return prng_type;
     }
+    
+    // check if tag doesn't have static nonce
+    has_staticnonce = detect_classic_static_nonce();
 
     // print parameters
     if (verbose) {
-        PrintAndLogEx(INFO, _YELLOW_("=======================         SETTINGS        ======================="));
+        PrintAndLogEx(INFO, "======================= " _YELLOW_("SETTINGS") " =======================");
         PrintAndLogEx(INFO, " card sectors .. " _YELLOW_("%d"), sectors_cnt);
         PrintAndLogEx(INFO, " key supplied .. " _YELLOW_("%s"), know_target_key ? "True" : "False");
         PrintAndLogEx(INFO, " known sector .. " _YELLOW_("%d"), blockNo);
         PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), keyType ? 'B' : 'A');
         PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex(key, sizeof(key)));
-        PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
+
+        if (has_staticnonce)
+            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s & STATIC"), prng_type ? "WEAK" : "HARD");
+        else
+            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
+
         PrintAndLogEx(INFO, " dictionary .... " _YELLOW_("%s"), strlen(filename) ? filename : "NONE");
         PrintAndLogEx(INFO, " legacy mode ... " _YELLOW_("%s"), legacy_mfchk ? "True" : "False");
-        PrintAndLogEx(INFO, _YELLOW_("=======================         SETTINGS        ======================="));
+
+        PrintAndLogEx(INFO, "========================================================================");
     }
 
     // Start the timer
     t1 = msclock();
 
     // check the user supplied key
-    if (know_target_key == false)
+    if (know_target_key == false) {
         PrintAndLogEx(WARNING, "no known key was supplied, key recovery might fail");
-    else {
+    } else {
         if (verbose) {
-            PrintAndLogEx(INFO, _YELLOW_("======================= START  KNOWN KEY ATTACK ======================="));
+            PrintAndLogEx(INFO, "======================= " _YELLOW_("START KNOWN KEY ATTACK") " =======================");
         }
+
         if (mfCheckKeys(FirstBlockOfSector(blockNo), keyType, true, 1, key, &key64) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "target sector:%3u key type: %c -- using valid key [" _YELLOW_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(INFO, "target sector:%3u key type: %c -- using valid key [ " _YELLOW_("%s") "] (used for nested / hardnested attack)",
                           blockNo,
                           keyType ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
@@ -2139,9 +2146,14 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 }
             }
         }
-        if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP   KNOWN KEY ATTACK ======================="));
-        if (num_found_keys == sectors_cnt * 2)
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP KNOWN KEY ATTACK") " =======================");
+        }
+
+        if (num_found_keys == sectors_cnt * 2) {
             goto all_found;
+        }
     }
 
     bool load_success = true;
@@ -2150,9 +2162,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 6, &key_cnt);
         if (res != PM3_SUCCESS || key_cnt == 0 || keyBlock == NULL) {
             PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
-            if (keyBlock != NULL)
+            if (keyBlock != NULL) {
                 free(keyBlock);
-
+            }
             load_success = false;
         }
     }
@@ -2172,7 +2184,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // Use the dictionary to find sector keys on the card
-    if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= START DICTIONARY ATTACK ======================="));
+    if (verbose) PrintAndLogEx(INFO, "======================= " _YELLOW_("START DICTIONARY ATTACK") " =======================");
 
     if (legacy_mfchk) {
         // Check all the sectors
@@ -2229,7 +2241,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             lastChunk = false;
         } // end strategy
     }
-    if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP  DICTIONARY ATTACK ======================="));
+    if (verbose) PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP DICTIONARY ATTACK") " =======================");
 
 
     // Analyse the dictionary attack
@@ -2245,13 +2257,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     know_target_key = true;
                     blockNo = i;
                     keyType = j;
-                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [" _YELLOW_("%s") "] (used for nested / hardnested attack)",
+                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "] (used for nested / hardnested attack)",
                                   i,
                                   j ? 'B' : 'A',
                                   sprint_hex(tmp_key, sizeof(tmp_key))
                                  );
                 } else {
-                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [" _YELLOW_("%s") "]",
+                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "]",
                                   i,
                                   j ? 'B' : 'A',
                                   sprint_hex(tmp_key, sizeof(tmp_key))
@@ -2264,10 +2276,17 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Check if at least one sector key was found
     if (know_target_key == false) {
         // Check if the darkside attack can be used
-        if (prng_type) {
-            if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= START  DARKSIDE  ATTACK ======================="));
+        if (prng_type && has_staticnonce == false) {
+            if (verbose) {
+                PrintAndLogEx(INFO, "======================= " _YELLOW_("START DARKSIDE ATTACK") " =======================");
+            }
+
             isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
-            if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP   DARKSIDE  ATTACK ======================="));
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP DARKSIDE ATTACK") " =======================");
+            }
+
             switch (isOK) {
                 case -1 :
                     PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
@@ -2293,7 +2312,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             // Store the keys
             e_sector[blockNo].Key[keyType] = key64;
             e_sector[blockNo].foundKey[keyType] = 'S';
-            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [" _YELLOW_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "] (used for nested / hardnested attack)",
                           blockNo,
                           keyType ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
@@ -2333,7 +2352,7 @@ noValidKeyFound:
                             if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, tmp_key, &key64) == PM3_SUCCESS) {
                                 e_sector[i].Key[j] = bytes_to_num(tmp_key, 6);
                                 e_sector[i].foundKey[j] = 'R';
-                                PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [" _YELLOW_("%s") "]",
+                                PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "]",
                                               i,
                                               j ? 'B' : 'A',
                                               sprint_hex(tmp_key, sizeof(tmp_key))
@@ -2348,7 +2367,7 @@ noValidKeyFound:
                 if (current_key_type_i == 1) {
                     if (e_sector[current_sector_i].foundKey[0] && !e_sector[current_sector_i].foundKey[1]) {
                         if (verbose) {
-                            PrintAndLogEx(INFO, _YELLOW_("======================= START READ B KEY ATTACK ======================="));
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("START READ B KEY ATTACK") " =======================");
                             PrintAndLogEx(INFO, "reading  B  key: sector: %3d key type: %c",
                                           current_sector_i,
                                           current_key_type_i ? 'B' : 'A');
@@ -2375,48 +2394,61 @@ noValidKeyFound:
                             e_sector[current_sector_i].foundKey[current_key_type_i] = 'A';
                             e_sector[current_sector_i].Key[current_key_type_i] = key64;
                             num_to_bytes(key64, 6, tmp_key);
-                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [" _YELLOW_("%s") "]",
+                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "]",
                                           current_sector_i,
                                           current_key_type_i ? 'B' : 'A',
                                           sprint_hex(tmp_key, sizeof(tmp_key))
                                          );
                         } else {
-                            if (verbose) PrintAndLogEx(WARNING, "unknown  B  key: sector: %3d key type: %c (reading the B key was not possible, maybe due to insufficient access rights) ",
+                            if (verbose) {
+                                PrintAndLogEx(WARNING, "unknown  B  key: sector: %3d key type: %c",
                                                            current_sector_i,
                                                            current_key_type_i ? 'B' : 'A'
                                                           );
+                                PrintAndLogEx(INFO, " -- reading the B key was not possible, maybe due to access rights?");
+                                                          
+                            }
+                            
                         }
-                        if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP  READ B KEY ATTACK ======================="));
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP READ B KEY ATTACK") " =======================");
+                        }
                     }
                 }
 
                 // Use the nested / hardnested attack
 skipReadBKey:
                 if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
-                    if (prng_type && (! nested_failed)) {
+
+                    if (prng_type && (nested_failed == false) && (has_staticnonce == false)) {
                         uint8_t retries = 0;
                         if (verbose) {
-                            PrintAndLogEx(INFO, _YELLOW_("======================= START   NESTED   ATTACK ======================="));
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("START NESTED ATTACK") " =======================");
                             PrintAndLogEx(INFO, "sector no: %3d, target key type: %c",
                                           current_sector_i,
                                           current_key_type_i ? 'B' : 'A');
                         }
 tryNested:
                         isOK = mfnested(FirstBlockOfSector(blockNo), keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, calibrate);
+                        
                         switch (isOK) {
-                            case -1 :
+                            case PM3_ETIMEOUT: {
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
                                 free(e_sector);
                                 return PM3_ESOFT;
-                            case -2 :
+                            }
+                            case PM3_EOPABORTED: {
                                 PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
                                 free(e_sector);
-                                return PM3_ESOFT;
-                            case -3 :
+                                return PM3_EOPABORTED;
+                            }
+                            case PM3_EFAILED: {
                                 PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is probably not predictable).");
                                 PrintAndLogEx(FAILED, "Nested attack failed --> try hardnested");
                                 goto tryHardnested;
-                            case -4 : //key not found
+                            }
+                            case PM3_ESOFT: {
+                                // key not found
                                 calibrate = false;
                                 // this can happen on some old cards, it's worth trying some more before switching to slower hardnested
                                 if (retries++ < MIFARE_SECTOR_RETRY) {
@@ -2428,21 +2460,27 @@ tryNested:
                                     goto tryHardnested;
                                 }
                                 break;
-                            case -5 :
+                            }
+                            case PM3_SUCCESS: {
                                 calibrate = false;
                                 e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
                                 e_sector[current_sector_i].foundKey[current_key_type_i] = 'N';
                                 break;
-                            default :
+                            }
+                            default: {
                                 PrintAndLogEx(ERR, "unknown Error.\n");
                                 free(e_sector);
                                 return PM3_ESOFT;
+                                }
                         }
-                        if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP    NESTED   ATTACK ======================="));
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP NESTED ATTACK") " =======================");
+                        }
+
                     } else {
 tryHardnested: // If the nested attack fails then we try the hardnested attack
                         if (verbose) {
-                            PrintAndLogEx(INFO, _YELLOW_("======================= START HARDNESTED ATTACK ======================="));
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("START HARDNESTED ATTACK") " =======================");
                             PrintAndLogEx(INFO, "sector no: %3d, target key type: %c, Slow: %s",
                                           current_sector_i,
                                           current_key_type_i ? 'B' : 'A',
@@ -2453,14 +2491,17 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                         DropField();
                         if (isOK) {
                             switch (isOK) {
-                                case 1 :
+                                case 1: {
                                     PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
                                     break;
-                                case 2 :
+                                }
+                                case 2: {
                                     PrintAndLogEx(NORMAL, "\nButton pressed. Aborted.");
                                     break;
-                                default :
+                                }
+                                default: {
                                     break;
+                                }
                             }
                             free(e_sector);
                             return PM3_ESOFT;
@@ -2471,8 +2512,48 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                         e_sector[current_sector_i].Key[current_key_type_i] = foundkey;
                         e_sector[current_sector_i].foundKey[current_key_type_i] = 'H';
 
-                        if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP  HARDNESTED ATTACK ======================="));
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP HARDNESTED ATTACK") " =======================");
+                        }
                     }
+                    
+                    if (has_staticnonce) {
+
+                       if (verbose) {
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("START STATIC NESTED ATTACK") " =======================");
+                            PrintAndLogEx(INFO, "sector no: %3d, target key type: %c",
+                                          current_sector_i,
+                                          current_key_type_i ? 'B' : 'A');
+                        }
+                        
+                        isOK = mfStaticNested(blockNo, keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key);
+                        DropField();
+                        switch (isOK) {
+                            case PM3_ETIMEOUT: {
+                                PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
+                                free(e_sector);
+                                return PM3_ESOFT;
+                            }
+                            case PM3_EOPABORTED: {
+                                PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
+                                free(e_sector);
+                                return PM3_EOPABORTED;
+                            }
+                            case PM3_SUCCESS: {
+                                e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
+                                e_sector[current_sector_i].foundKey[current_key_type_i] = 'C';
+                                break;
+                            }
+                            default: {
+                                break;
+                            }
+                        }
+                        
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP STATIC NESTED ATTACK") " =======================");
+                        }
+                    }
+                    
                     // Check if the key was found
                     if (e_sector[current_sector_i].foundKey[current_key_type_i]) {
                         PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [" _YELLOW_("%s") "]",
@@ -2554,14 +2635,7 @@ all_found:
     free(e_sector);
     return PM3_SUCCESS;
 }
-/*
-static int CmdHF14AMfNestedFixed(const char *Cmd){
 
-	if (strlen(Cmd) < 3) return usage_hf14_fixednested();
-
-	return PM3_SUCCESS;
-}
-*/
 /*
 static int randInRange(int min, int max) {
     return min + (int)(rand() / (double)(RAND_MAX) * (max - min + 1));
@@ -3461,6 +3535,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                       _YELLOW_("R") ":Reused / "
                       _YELLOW_("N") ":Nested / "
                       _YELLOW_("H") ":Hardnested / "
+                      _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
                       ")"
                      );

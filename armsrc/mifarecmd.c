@@ -906,7 +906,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     set_tracing(true);
 
     // statistics on nonce distance
-    int16_t isOK = 0;
+    int16_t isOK = PM3_SUCCESS;
 #define NESTED_MAX_TRIES 12
     if (calibrate) { // calibrate: for first call only. Otherwise reuse previous calibration
         LED_B_ON();
@@ -922,7 +922,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
             // Test if the action was cancelled
             if (BUTTON_PRESS() || data_available()) {
-                isOK = -2;
+                isOK = PM3_EOPABORTED;
                 break;
             }
 
@@ -977,7 +977,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             } else {
                 unsuccessful_tries++;
                 if (unsuccessful_tries > NESTED_MAX_TRIES) { // card isn't vulnerable to nested attack (random numbers are not predictable)
-                    isOK = -3;
+                    isOK = PM3_EFAILED;
                 }
             }
         }
@@ -1003,7 +1003,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
             // Test if the action was cancelled
             if (BUTTON_PRESS() || data_available()) {
-                isOK = -2;
+                isOK = PM3_EOPABORTED;
                 break;
             }
 
@@ -1092,12 +1092,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     memcpy(payload.nt_b, &target_nt[1], 4);
     memcpy(payload.ks_b, &target_ks[1], 4);
 
-    LED_B_ON();
     reply_ng(CMD_HF_MIFARE_NESTED, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
-    LED_B_OFF();
-
-    if (DBGLEVEL >= 3) DbpString("NESTED FINISHED");
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);

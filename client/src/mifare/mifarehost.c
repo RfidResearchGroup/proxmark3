@@ -418,9 +418,6 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status != PM3_SUCCESS)
-        return PM3_ESOFT;
-
     struct p {
         int16_t isOK;
         uint8_t block;
@@ -433,8 +430,9 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     } PACKED;
     struct p *package = (struct p *)resp.data.asBytes;
 
-    // error during nested
-    if (package->isOK) return package->isOK;
+    // error during nested on device side
+    if (package->isOK != PM3_SUCCESS)
+        return package->isOK;
 
     memcpy(&uid, package->cuid, sizeof(package->cuid));
 
@@ -449,7 +447,6 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
     memcpy(&statelists[1].nt_enc,  package->nt_b, sizeof(package->nt_b));
     memcpy(&statelists[1].ks1, package->ks_b, sizeof(package->ks_b));
-
 
     // calc keys
     pthread_t thread_id[2];
@@ -543,7 +540,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
                           package->keytype ? 'B' : 'A',
                           sprint_hex(resultKey, 6)
                          );
-            return -5;
+            return PM3_SUCCESS;
         }
 
         float bruteforce_per_second = (float)(i + max_keys) / ((msclock() - start_time) / 1000.0);
@@ -558,7 +555,7 @@ out:
 
     free(statelists[0].head.slhead);
     free(statelists[1].head.slhead);
-    return -4;
+    return PM3_ESOFT;
 }
 
 
