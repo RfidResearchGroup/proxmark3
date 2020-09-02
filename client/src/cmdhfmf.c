@@ -2052,6 +2052,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    // read uid to generate a filename for the key file
+    char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+
     // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
     prng_type = detect_classic_prng();
     if (prng_type < 0) {
@@ -2582,7 +2585,6 @@ all_found:
     // Dump the keys
     PrintAndLogEx(NORMAL, "");
 
-    char *fptr = GenerateFilename("hf-mf-", "-key.bin");
     if (createMfcKeyDump(fptr, sectors_cnt, e_sector) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to save keys to file");
     }
