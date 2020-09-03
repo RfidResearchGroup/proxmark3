@@ -1964,10 +1964,13 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
         for (uint8_t blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
             if (mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
-                retval = PM3_ESOFT;
+                retval = PM3_EPARTIAL;
+                emlSetMem("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", FirstBlockOfSector(sectorNo) + blockNo, 1);
+              
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
-                break;
+                continue;
             }
+
             if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
                 emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
             } else { // sector trailer, keep the keys, set only the AC
