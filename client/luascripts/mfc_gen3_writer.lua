@@ -14,7 +14,6 @@ local read14a = require('read14a')
 --- Add support another types of dumps: BIN, JSON
 --- Maybe it will be not only as `mfc_gen3_writer`, like a universal dump manager.
 --- Add undependence from the operation system. At the moment code not working in Linux.
---- Add more chinesse backdoors RAW commands for UID changing (find RAW for the 4 byte familiar chinese card, from native it soft: http://bit.ly/39VIDsU)
 --- Hide system messages when you writing a dumps, replace it to some of like [#####----------] 40%
 
 -- iceman notes:
@@ -30,13 +29,13 @@ local read14a = require('read14a')
 -------------------------------
 ---
 --
-copyright = ''
+copyright = 'RRG Team'
 author = 'Winds'
 version = 'v1.0.0'
 desc = [[
-    The script gives you a easy way to write your *.eml dumps onto normal MFC and magic Gen3 cards.
+    This script gives you an easy way to write your *.eml dumps into normal MIFARE Classic and Magic Gen3 cards.
 
-    Works with both 4 and 7 bytes NXP MIFARE Classic 1K cards.
+	Works with both 4 and 7 bytes NXP MIFARE Classic 1K cards.
     The script also has the possibility to change UID and permanent lock uid on magic Gen3 cards.
 
     It supports the following functionality.
@@ -48,12 +47,19 @@ desc = [[
     5. Erase all data at the card and set the FF FF FF FF FF FF keys, and Access Conditions to 78778800.
 
     Script works in a wizard styled way.
+	
+	Author Youtube channel: https://yev.ooo/
+	
+	Many Thanks,
+	Best Regards
 ]]
 example = [[
     1. script run mfc_gen3_writer
 ]]
 usage = [[
+	Give script to know if you uses an Windows OS
     Select your *.eml dump from list to write to the card.
+	Follow the wizard.
 ]]
 --
 ---
@@ -63,6 +69,7 @@ usage = [[
 ---
 --
 local DEBUG = false -- the debug flag
+local dumpEML -- Find all *.EML files
 local files = {} -- Array for eml files
 local b_keys = {} -- Array for B keys
 local eml = {} -- Array for data in block 32
@@ -71,10 +78,11 @@ local tab = string.rep('-', 64)
 local empty = string.rep('0', 32) -- Writing blocks
 local default_key = 'FFFFFFFFFFFF' -- Writing blocks
 local default_key_type = '01' --KeyA: 00, KeyB: 01
-local default_key_blk = 'FFFFFFFFFFFF78778800FFFFFFFFFFFF' -- Writing blocks
+local default_key_blk = 'FFFFFFFFFFFF7C378800FFFFFFFFFFFF' -- Writing blocks
 local piswords_uid_lock = 'hf 14a raw -s -c -t 2000 90fd111100'
 local piswords_uid_change = 'hf 14a raw -s -c -t 2000 90f0cccc10'
-local cmd_wrbl = 'hf mf wrbl %d B %s %s' -- Writing blocks
+local cmd_wrbl_a = 'hf mf wrbl %d A %s %s' -- Writing blocks by A key
+local cmd_wrbl_b = 'hf mf wrbl %d B %s %s' -- Writing blocks by B key
 --
 ---
 -------------------------------
@@ -155,11 +163,11 @@ end
 ---
 --
 local function KeyAB()
-	if default_key_type == '00' then
+    if default_key_type == '00' then
     	return 'KeyA'
-	else
+    else
     	return 'KeyB'
-	end
+    end
 end
 --
 ---
@@ -200,17 +208,15 @@ end
 --
 ---
 -------------------------------
--- Check Pissword backdor
+-- Check user input A or B for blank tag (MFC)
 -------------------------------
 ---
 --
-local function checkmagic()
-    --Have no RAW ISO14443A command in appmain.c
-    cmd = Command:newNG{cmd = cmds.CMD_HF_ISO14443A_READER, data = piswords_uid_change .. GetUID()} -- sample check to pull the same UID to card and check response
-    if (getblockdata(cmd:sendNG(false)) == true) then
-        print('Magic')
-    else
-        print('Not magic')
+local function check_user_key(user_key_type)
+    if user_key_type == 'A' then
+        return cmd_wrbl_a
+    elseif user_key_type == 'B' then
+        return cmd_wrbl_b
     end
 end
 --
@@ -242,15 +248,30 @@ local function main(args)
     -------------------------------
     ---
     --
-    if string.len(GetUID()) == 14 then
-        eml_file_uid_start = 18 -- For windows with '---------- ' prefix
-        eml_file_uid_end = 31
-        eml_file_lengt = 40
+    if (utils.confirm(' Are you use a Windwos OS ?') == true) then
+        dumpEML = 'find "." "*dump.eml"'
+        if string.len(GetUID()) == 14 then
+            eml_file_uid_start = 18
+            eml_file_uid_end = 31
+            eml_file_lengt = 40
+        else
+            eml_file_uid_start = 18
+            eml_file_uid_end = 25
+            eml_file_lengt = 34
+        end
     else
-        eml_file_uid_start = 18 -- For windows with '---------- ' prefix
-        eml_file_uid_end = 25
-        eml_file_lengt = 34
+        dumpEML = "find '.' -iname '*dump.eml' -type f"
+        if string.len(GetUID()) == 14 then 
+            eml_file_uid_start = 9
+            eml_file_uid_end = 22
+            eml_file_lengt = 31
+        else
+	        eml_file_uid_start = 9
+            eml_file_uid_end = 16
+            eml_file_lengt = 25
+        end
     end
+    print(tab)
     dropfield()
     --
     ---
@@ -259,7 +280,6 @@ local function main(args)
     -------------------------------
     ---
     --
-    local dumpEML = 'find "." "*dump.eml"' -- Fixed for windows
     local p = assert(io.popen(dumpEML))
     for _ in p:lines() do
         -- The length of eml file
@@ -293,7 +313,7 @@ local function main(args)
     -------------------------------
     ---
     --
-    local dumpfile = assert(io.open('./hf-mf-' .. files[uid_no] .. '-dump.eml', 'r'))
+    local dumpfile = assert(io.open('hf-mf-' .. files[uid_no] .. '-dump.eml', 'r'))
     for _ in dumpfile:lines() do table.insert(eml, _); end
     dumpfile.close()
     --
@@ -330,7 +350,6 @@ local function main(args)
         print(' The new card UID : ' .. GetUID())
     end
     print(tab)
-    --checkmagic()
     --
     ---
     -------------------------------
@@ -351,18 +370,28 @@ local function main(args)
     	print(tab)
         if (utils.confirm(' Card is Empty. Write selected dump to card ?') == true) then
             for i = 1, #eml do
-                core.console(string.format(cmd_wrbl, (i-1), default_key, eml[i]))
+                core.console(string.format(cmd_wrbl_b, (i-1), default_key, eml[i]))
             end
         end
     else
         print(tab)
-        if (utils.confirm(' Delete ALL data and write all keys to 0x' .. default_key .. ' ?') == true) then
+        if (utils.confirm(' It this is a new blank card ? Do you wishing to change Access Conditions to using B key ' .. default_key .. ' as main ?') == true) then
+            print(tab)
+            print(' With one key type we will use, A or B ?')
+            print(tab)
+            io.write(' --> ')
+            local user_key_type = tostring(io.read())
+            print(tab)
+            print(' Enter 12 HEX chars of the key for access to card. By default ' .. default_key .. '.')
+            print(tab)
+            io.write(' --> ')
+            local user_key_input = tostring(io.read())
             wait()
             for i = 1, #eml do
                 if (i % 4 == 0) then
-                    core.console(string.format(cmd_wrbl, (i-1), b_keys[i], default_key_blk))
+                    core.console(string.format(check_user_key(user_key_type), (i-1), user_key_input, default_key_blk))
                 else
-                    core.console(string.format(cmd_wrbl, (i-1), b_keys[i], empty))
+                    core.console(string.format(check_user_key(user_key_type), (i-1), user_key_input, empty))
                 end
             end
         else
@@ -371,7 +400,19 @@ local function main(args)
                 print(tab)
                 wait()
                 for i = 1, #eml do
-                    core.console(string.format(cmd_wrbl, (i-1), b_keys[i], eml[i]))
+                    core.console(string.format(cmd_wrbl_b, (i-1), b_keys[i], eml[i]))
+                end
+            else
+                print(tab)
+                if (utils.confirm(' Delete ALL data and write all keys to 0x' .. default_key .. ' ?') == true) then
+                    wait()
+                    for i = 1, #eml do
+                        if (i % 4 == 0) then
+                            core.console(string.format(cmd_wrbl_b, (i-1), b_keys[i], default_key_blk))
+                        else
+                            core.console(string.format(cmd_wrbl_b, (i-1), b_keys[i], empty))
+                        end
+                    end
                 end
             end
         end
