@@ -1,5 +1,12 @@
 ### First things on your RDV40
+
 You will need to run these commands to make sure your rdv4 is prepared
+```
+[usb] pm3 --> script run init_rdv4
+```
+
+
+The lua script actually executes the following commands below.  These are here because of documentation, you can jump down to *Verify sim module firmware version* part.
 ```
 [usb] pm3 --> mem load f mfc_default_keys m
 [usb] pm3 --> mem load f t55xx_default_pwds t
@@ -12,6 +19,7 @@ You will need to run these commands to make sure your rdv4 is prepared
 Set all t55xx settings to defaults (will set all 4 at once)
 [usb] pm3 --> lf t55xx deviceconfig z p
 ```
+
 
 ### Verify sim module firmware version
 
