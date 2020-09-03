@@ -38,6 +38,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_14ASNIFF     | 14a sniff to flashmem                  |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
+| HF_AVEFUL       | Mifare ultralight read/simulation      |
+|                 | - Ave Ozkal                            |
++----------------------------------------------------------+
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
 | (RDV4 only)     | storing in flashmem - Bogito           |
 +----------------------------------------------------------+
@@ -59,13 +62,10 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_YOUNG        | Mifare sniff/simulation                |
 |                 | - Craig Young                          |
 +----------------------------------------------------------+
-| HF_AVEFUL       | Mifare ultralight read/simulation      |
-|                 | - Ave Ozkal                            |
-+----------------------------------------------------------+
 endef
 
 STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RWC LF_HIDBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN
-STANDALONE_MODES += HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_YOUNG HF_AVEFUL
+STANDALONE_MODES += HF_14ASNIFF HF_AVEFUL HF_BOG HF_COLIN HF_ICECLASS HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_YOUNG
 STANDALONE_MODES_REQ_SMARTCARD :=
 STANDALONE_MODES_REQ_FLASH := LF_ICEHID HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
