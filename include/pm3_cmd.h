@@ -714,7 +714,7 @@ typedef struct {
 #define PM3_ETIMEOUT           -4
 // Operation aborted (by user)          client/pm3: kbd/button pressed
 #define PM3_EOPABORTED         -5
-// Not (yet) implemented                client/pm3: TBD placeholder
+// Not (yet) implemented                client/pm3: TBD place holder
 #define PM3_ENOTIMPL           -6
 // Error while RF transmission          client/pm3: fail between pm3 & card
 #define PM3_ERFTRANS           -7
@@ -732,7 +732,7 @@ typedef struct {
 #define PM3_EFILE             -13
 // Generic TTY error
 #define PM3_ENOTTY            -14
-// Initialization error                 pm3:        error related to trying to initalize the pm3 / fpga for different operations
+// Initialization error                 pm3:        error related to trying to initialize the pm3 / fpga for different operations
 #define PM3_EINIT             -15
 // Expected a different answer error    client/pm3: error when expecting one answer and got another one
 #define PM3_EWRONGANSWER      -16
@@ -746,8 +746,10 @@ typedef struct {
 // APDU responded with a failure code
 #define PM3_EAPDU_FAIL        -20
 
-// execute pm3 cmd failed               client/pm3: when one of our pm3 cmd tries and fails. oppsite from PM3_SUCCESS
+// execute pm3 cmd failed               client/pm3: when one of our pm3 cmd tries and fails. opposite from PM3_SUCCESS
 #define PM3_EFAILED           -21
+// partial success                      client/pm3: when tring to dump a tag and fails on some blocks.  Partial dump.
+#define PM3_EPARTIAL          -22
 
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
