@@ -10,6 +10,10 @@
 
 /* Several parts of this code is based on code by Craig Young from HF_YOUNG */
 
+/* This code does not account for:
+- Cards with block counts other than 16
+- Cards with authentication (MFU EV1 etc) */
+
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
 #include "appmain.h"
@@ -34,7 +38,7 @@ void ModInfo(void) {
 
 void RunMod(void) {
     StandAloneMode();
-    Dbprintf("[=] AveUL (MF Ultralight read/emul) started");
+    Dbprintf("AveUL (MF Ultralight read/emul) started");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // the main loop for your standalone mode
@@ -88,8 +92,8 @@ void RunMod(void) {
                         read_successful = false;
                         break;
                     }
-                    // TODO: I'm not 100% on why I need to do + 14. The bin->eml results have 14 blocks of almost all 0 at start.
-                    // and the bins just don't, so I'll admit that I am a little confused, but it works, so I won't question it much.
+                    // We're skipping 14 blocks (56 bytes) here, as that "[...] has version/signature/counter data here" according to comments on dumptoemul-mfu
+                    // When converting a bin, it's almost all 0 other than one 0x0F byte, and functionality seems to be unaffected if that byte is set to 0x00.
                     emlSetMem_xt(dataout, 14 + i, 1, 4);
                     Dbhexdump(4, dataout, 0);
                 }
@@ -114,6 +118,6 @@ void RunMod(void) {
         }
     }
 
-    DbpString("[=] exiting");
+    DbpString("exiting");
     LEDsoff();
 }
