@@ -869,6 +869,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 
     int res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
     if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "fast dump reported back failure, when trying keyA");
     }
 
     // ecfill key B
@@ -878,7 +879,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
     res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
     if (res != PM3_SUCCESS) {
-
+        PrintAndLogEx(INFO, "fast dump reported back failure, when trying keyB");
     }
     return PM3_SUCCESS;
 }
