@@ -10,9 +10,9 @@
 
 /* Several parts of this code is based on code by Craig Young from HF_YOUNG */
 
-/* This code does not account for:
-- Cards with block counts other than 16
-- Cards with authentication (MFU EV1 etc) */
+/* This code does not:
+- Account for cards with authentication (MFU EV1 etc)
+- Determine if cards have block count that's not the same as the BLOCKS def */
 
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
@@ -24,6 +24,15 @@
 #include "ticks.h"  // SpinDelay
 #include "mifareutil.h"
 #include "iso14443a.h"
+
+#define BLOCKS 16
+#define SAK 0x00
+#define ATQA0 0x44
+#define ATQA1 0x00
+
+#define STATE_SEARCH 0
+#define STATE_READ 1
+#define STATE_EMUL 2
 
 typedef struct {
     uint8_t uid[10];
@@ -54,7 +63,7 @@ void RunMod(void) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
         // 0 = search, 1 = read, 2 = emul
-        int stage = 0;
+        int state = STATE_SEARCH;
 
         DbpString("Scanning...");
         for (;;) {
@@ -63,32 +72,31 @@ void RunMod(void) {
 
             if (button_pressed != BUTTON_NO_CLICK || data_available())
                 break;
-            else if (stage == 0) {
+            else if (state == STATE_SEARCH) {
                 if (!iso14443a_select_card(NULL, &card, NULL, true, 0, true)) {
                     continue;
                 } else {
-                    if (card.sak == 0x00 && card.atqa[0] == 0x44 && card.atqa[1] == 0 && card.uidlen == 7) {
+                    if (card.sak == SAK && card.atqa[0] == ATQA0 && card.atqa[1] == ATQA1 && card.uidlen == 7) {
                         DbpString("Found ultralight with UID: ");
-                        Dbhexdump(7, card.uid, 0);
-                        stage = 1;
+                        Dbhexdump(card.uidlen, card.uid, 0);
+                        state = STATE_READ;
                     }
                     else {
-                        DbpString("Found non-ultralight card, ignoring");
+                        DbpString("Found non-ultralight card, ignoring.");
                     }
                 }
             }
-            else if (stage == 1) {
+            else if (state == STATE_READ) {
                 iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
                 iso14443a_select_card(NULL, NULL, NULL, true, 0, true);
-                int i;
                 bool read_successful = true;
                 Dbprintf("Contents:");
 
-                for (i = 0; i < 16; ++i)
+                for (int i = 0; i < BLOCKS; i++)
                 {
                     uint8_t dataout[4] = {0x00};
                     if (mifare_ultra_readblock(i, dataout)) {
-                        // If there's an error reading, go back to stage 0
+                        // If there's an error reading, go back to search state
                         read_successful = false;
                         break;
                     }
@@ -99,21 +107,21 @@ void RunMod(void) {
                 }
 
                 if (read_successful) {
-                    Dbprintf("Successfully loaded into emulator memory");
-                    stage = 2;
+                    Dbprintf("Successfully loaded into emulator memory...");
+                    state = STATE_EMUL;
                 } else {
-                    Dbprintf("Read failure, going back to stage 0.");
-                    stage = 0;
+                    Dbprintf("Read failure, going back to search state.");
+                    state = STATE_SEARCH;
                 }
             }
-            else if (stage == 2) {
+            else if (state == 2) {
                 uint8_t flags = FLAG_7B_UID_IN_DATA;
 
-                Dbprintf("Starting simulation, press pm3-button to stop and go back to scan");
+                Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
                 SimulateIso14443aTag(2, flags, card.uid);
 
-                // Go back to stage 0 if user presses pm3-button
-                stage = 0;
+                // Go back to search state if user presses pm3-button
+                state = STATE_SEARCH;
             }
         }
     }
