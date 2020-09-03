@@ -47,7 +47,7 @@ void ModInfo(void) {
 
 void RunMod(void) {
     StandAloneMode();
-    Dbprintf("AveUL (MF Ultralight read/emul) started");
+    Dbprintf("AveFUL (MF Ultralight read/emul) started");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // the main loop for your standalone mode
