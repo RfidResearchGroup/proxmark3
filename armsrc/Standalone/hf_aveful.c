@@ -8,11 +8,11 @@
 // main code for HF Mifare Ultralight read/simulation by Ave Ozkal
 //-----------------------------------------------------------------------------
 
-/* Several parts of this code is based on code by Craig Young from HF_YOUNG */
+// Several parts of this code is based on code by Craig Young from HF_YOUNG
 
-/* This code does not:
-- Account for cards with authentication (MFU EV1 etc)
-- Determine if cards have block count that's not the same as the BLOCKS def */
+// This code does not:
+// - Account for cards with authentication (MFU EV1 etc)
+// - Determine if cards have block count that's not the same as the BLOCKS def
 
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
@@ -80,20 +80,17 @@ void RunMod(void) {
                         DbpString("Found ultralight with UID: ");
                         Dbhexdump(card.uidlen, card.uid, 0);
                         state = STATE_READ;
-                    }
-                    else {
+                    } else {
                         DbpString("Found non-ultralight card, ignoring.");
                     }
                 }
-            }
-            else if (state == STATE_READ) {
+            } else if (state == STATE_READ) {
                 iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
                 iso14443a_select_card(NULL, NULL, NULL, true, 0, true);
                 bool read_successful = true;
                 Dbprintf("Contents:");
 
-                for (int i = 0; i < BLOCKS; i++)
-                {
+                for (int i = 0; i < BLOCKS; i++) {
                     uint8_t dataout[4] = {0x00};
                     if (mifare_ultra_readblock(i, dataout)) {
                         // If there's an error reading, go back to search state
@@ -113,8 +110,7 @@ void RunMod(void) {
                     Dbprintf("Read failure, going back to search state.");
                     state = STATE_SEARCH;
                 }
-            }
-            else if (state == 2) {
+            } else if (state == 2) {
                 uint8_t flags = FLAG_7B_UID_IN_DATA;
 
                 Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
