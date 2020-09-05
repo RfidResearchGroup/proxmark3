@@ -2601,6 +2601,10 @@ all_found:
         PrintAndLogEx(ERR, "Failed to save keys to file");
     }
 
+    // clear emulator mem
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_EML_MEMCLR, NULL, 0);
+    
     PrintAndLogEx(SUCCESS, "transferring keys to simulator memory (Cmd Error: 04 can occur)");
 
     for (current_sector_i = 0; current_sector_i < sectors_cnt; current_sector_i++) {
