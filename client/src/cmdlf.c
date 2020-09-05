@@ -595,7 +595,7 @@ int lf_read(bool verbose, uint32_t samples) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     struct p {
-        uint8_t verbose;
+        bool verbose;
         uint32_t samples;
     } PACKED;
 
@@ -605,21 +605,19 @@ int lf_read(bool verbose, uint32_t samples) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-
     PacketResponseNG resp;
     if (g_lf_threshold_set) {
         WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
     } else {
         if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
-            PrintAndLogEx(WARNING, "command execution time out");
+            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
             return PM3_ETIMEOUT;
         }
     }
 
-    // resp.oldarg[0] is bits read not bytes read.
-    uint32_t bits = (resp.data.asDwords[0] / 8);
-    getSamples(bits, verbose);
-
+    // response is number of bits read 
+    uint32_t size = (resp.data.asDwords[0] / 8);   
+    getSamples(size, verbose);
     return PM3_SUCCESS;
 }
 
@@ -1190,14 +1188,16 @@ static bool CheckChipType(bool getDeviceData) {
 
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
+    PrintAndLogEx(INFO, "Checking for 4x05 chipset");
     if (EM4x05IsBlock0(&word)) {
-        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05/EM4x69"));
+        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05 / EM4x69"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") " commands");
         retval = true;
         goto out;
     }
 
     //check for t55xx chip...
+    PrintAndLogEx(INFO, "Checking for T55x7 chipset");
     if (tryDetectP1(true)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("T55xx"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf t55xx`") " commands");
@@ -1205,6 +1205,7 @@ static bool CheckChipType(bool getDeviceData) {
     }
 
     // check for em4x50 chips
+    PrintAndLogEx(INFO, "Checking for 4x50 chipset");
     if (detect_4x50_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50`") " commands");
@@ -1212,6 +1213,7 @@ static bool CheckChipType(bool getDeviceData) {
         goto out;
     }
 
+    PrintAndLogEx(NORMAL, "Couldn't identify a chipset");
 out:
     save_restoreGB(GRAPH_RESTORE);
     save_restoreDB(GRAPH_RESTORE);
@@ -1251,6 +1253,7 @@ int CmdLFfind(const char *Cmd) {
     if (isOnline) {
 
         if (IfPm3Hitag()) {
+            PrintAndLogEx(INFO, "check hitag");
             if (readHitagUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!");
                 return PM3_SUCCESS;
@@ -1258,6 +1261,7 @@ int CmdLFfind(const char *Cmd) {
         }
 
         if (IfPm3EM4x50()) {
+            PrintAndLogEx(INFO, "check 4x50");
             if (read_em4x50_uid() == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM4x50 ID") " found!");
                 return PM3_SUCCESS;
