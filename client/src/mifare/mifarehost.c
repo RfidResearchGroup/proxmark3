@@ -944,6 +944,48 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
     return PM3_SUCCESS;
 }
 
+int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFARE_GEN3UID, uidlen, 0, 0, uid, uidlen);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3UID, &resp, 3500)) {
+        if (resp.status == PM3_SUCCESS && oldUid) {
+            memcpy(oldUid, resp.data.asBytes, uidlen);
+        }
+        return resp.status;
+    } else {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+}
+
+int mfGen3Blk(uint8_t *block, int blockLen, uint8_t *newBlock) {
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, 16);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3BLK, &resp, 3500)) {
+        if (resp.status == PM3_SUCCESS && newBlock) {
+            memcpy(newBlock, resp.data.asBytes, 16);
+        }
+        return resp.status;
+    } else {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+}
+
+int mfGen3Freez(void) {
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_GEN3FREEZ, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3FREEZ, &resp, 3500)) {
+        return resp.status;
+    } else {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+}
+
 // SNIFFER
 // [iceman] so many global variables....
 

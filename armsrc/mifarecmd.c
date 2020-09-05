@@ -2319,6 +2319,154 @@ void OnErrorMagic(uint8_t reason) {
     OnSuccessMagic();
 }
 
+int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len) {
+    int retval = PM3_SUCCESS;
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+
+    LED_B_ON();
+    uint32_t save_iso14a_timeout = iso14a_get_timeout();
+    iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 2000); // 2 seconds timeout
+
+    ReaderTransmit(cmd, cmd_len, NULL);
+    int res = ReaderReceive(buf, par);
+    if (res == 4 || memcmp(buf, "\x90\x00\xfd\x07", 4) == 0) {
+        // timeout for card memory reset
+        SpinDelay(1000);
+    } else {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card operation not completed");
+        retval = PM3_ESOFT;
+    }
+    iso14a_set_timeout(save_iso14a_timeout);
+    LED_B_OFF();
+
+    return retval;
+}
+
+void MifareGen3UID(uint8_t uidlen, uint8_t *uid) {
+    int retval = PM3_SUCCESS;
+    uint8_t uid_cmd[5] = { 0x90, 0xfb, 0xcc, 0xcc, 0x07 };
+    uint8_t *old_uid = BigBuf_malloc(10);
+    uint8_t *cmd = BigBuf_malloc(sizeof(uid_cmd) + uidlen + 2);
+    iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_malloc(sizeof(iso14a_card_select_t));
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    if (!iso14443a_select_card(old_uid, card_info, NULL, true, 0, true)) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+    if (card_info->uidlen != uidlen) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Wrong UID length");
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    memcpy(cmd, uid_cmd, sizeof(uid_cmd));
+    memcpy(&cmd[sizeof(uid_cmd)], uid, uidlen);
+    AddCrc14A(cmd, sizeof(uid_cmd) + uidlen);
+
+    retval = DoGen3Cmd(cmd, sizeof(uid_cmd) + uidlen + 2);
+
+OUT:
+    reply_ng(CMD_HF_MIFARE_GEN3UID, retval, old_uid, uidlen);
+    // turns off
+    OnSuccessMagic();
+    BigBuf_free();
+}
+
+void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
+#define MIFARE_BLOCK_SIZE (MAX_MIFARE_FRAME_SIZE - 2)
+    int retval = PM3_SUCCESS;
+    uint8_t block_cmd[5] = { 0x90, 0xf0, 0xcc, 0xcc, 0x10 };
+    uint8_t *uid = BigBuf_malloc(10);
+    uint8_t *cmd = BigBuf_malloc(sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE);
+    iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_malloc(sizeof(iso14a_card_select_t));
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    if (!iso14443a_select_card(uid, card_info, NULL, true, 0, true)) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    bool doReselect = false;
+    if (block_len < MIFARE_BLOCK_SIZE) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, 0, &cmd[sizeof(block_cmd)], NULL, NULL) != MAX_MIFARE_FRAME_SIZE)) {
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Read manufacturer block failed");
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+        doReselect = true;
+    }
+
+    if (block_len > 0) {
+        memcpy(cmd, block_cmd, sizeof(block_cmd));
+        memcpy(&cmd[sizeof(block_cmd)], block, block_len);
+        int ofs = sizeof(block_cmd);
+        if (card_info->uidlen == 4) {
+            cmd[ofs + 4] = cmd[ofs + 0] ^ cmd[ofs + 1] ^ cmd[ofs + 2] ^ cmd[ofs + 3];
+            ofs += 5;
+        } else if (card_info->uidlen == 7) {
+            ofs += 7;
+        } else {
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Wrong Card UID length");
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+        cmd[ofs++] = card_info->sak;
+        cmd[ofs++] = card_info->atqa[0];
+        cmd[ofs++] = card_info->atqa[1];
+        AddCrc14A(cmd, sizeof(block_cmd) + MIFARE_BLOCK_SIZE);
+
+        if (doReselect) {
+            if (!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
+                if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
+                retval = PM3_ESOFT;
+                goto OUT;
+            }
+        }
+
+        retval = DoGen3Cmd(cmd, sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE);
+    }
+
+OUT:
+    reply_ng(CMD_HF_MIFARE_GEN3BLK, retval, &cmd[sizeof(block_cmd)], MIFARE_BLOCK_SIZE);
+    // turns off
+    OnSuccessMagic();
+    BigBuf_free();
+}
+
+void MifareGen3Freez(void) {
+    int retval = PM3_SUCCESS;
+    uint8_t freeze_cmd[7] = { 0x90, 0xfd, 0x11, 0x11, 0x00, 0xe7, 0x91 };
+    uint8_t *uid = BigBuf_malloc(10);
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    if (!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Card not selected");
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    retval = DoGen3Cmd(freeze_cmd, sizeof(freeze_cmd));
+
+OUT:
+    reply_ng(CMD_HF_MIFARE_GEN3FREEZ, retval, NULL, 0);
+    // turns off
+    OnSuccessMagic();
+    BigBuf_free();
+}
+
 void MifareSetMod(uint8_t *datain) {
 
     uint8_t mod = datain[0];
