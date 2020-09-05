@@ -2041,7 +2041,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, false, samples, 0);
+    DoPartialAcquisition(0, true, samples, 1000);
 
     // Turn the field off
     if (brute_mem == false) {
@@ -2492,36 +2492,37 @@ static void SendForward(uint8_t fwd_bit_count) {
 }
 
 static void EM4xLogin(uint32_t pwd) {
-    uint8_t len;
     forward_ptr = forwardLink_data;
-    len = Prepare_Cmd(FWD_CMD_LOGIN);
+    uint8_t len = Prepare_Cmd(FWD_CMD_LOGIN);
     len += Prepare_Data(pwd & 0xFFFF, pwd >> 16);
     SendForward(len);
     //WaitUS(20); // no wait for login command.
     // should receive
-    // 0000 1010 ok.
+    // 0000 1010 ok
     // 0000 0001 fail
 }
 
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
-    LED_A_ON();
-    uint8_t len;
+    StartTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    WaitMS(20);
 
-    //clear buffer now so it does not interfere with timing later
+    LED_A_ON();
+    
+    // clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
 
-    StartTicks();
     /* should we read answer from Logincommand?
     *
     * should receive
-    * 0000 1010 ok.
+    * 0000 1010 ok
     * 0000 0001 fail
     **/
     if (usepwd) EM4xLogin(pwd);
 
     forward_ptr = forwardLink_data;
-    len = Prepare_Cmd(FWD_CMD_READ);
+    uint8_t len = Prepare_Cmd(FWD_CMD_READ);
     len += Prepare_Addr(addr);
 
     SendForward(len);
@@ -2529,20 +2530,24 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
     WaitUS(400);
 
     DoPartialAcquisition(20, false, 6000, 1000);
-
+   
+    StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_READWORD, PM3_SUCCESS, NULL, 0);
-    LED_A_OFF();
+    LEDsoff();
 }
 
 void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
-    LED_A_ON();
-    uint8_t len;
-
-    //clear buffer now so it does not interfere with timing later
-    BigBuf_Clear_ext(false);
     StartTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    WaitMS(50);
+
+    LED_A_ON();
+
+    // clear buffer now so it does not interfere with timing later
+    BigBuf_Clear_ext(false);
+
     /* should we read answer from Logincommand?
     *
     * should receive
@@ -2552,20 +2557,21 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
     if (usepwd) EM4xLogin(pwd);
 
     forward_ptr = forwardLink_data;
-    len = Prepare_Cmd(FWD_CMD_WRITE);
+    uint8_t len = Prepare_Cmd(FWD_CMD_WRITE);
     len += Prepare_Addr(addr);
     len += Prepare_Data(data & 0xFFFF, data >> 16);
 
     SendForward(len);
 
-    //Wait 20ms for write to complete?
+    // Wait 20ms for write to complete?
     WaitMS(7);
-
+    
     DoPartialAcquisition(20, false, 6000, 1000);
 
+    StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
-    LED_A_OFF();
+    LEDsoff();
 }
 
 /*
@@ -2612,25 +2618,27 @@ void Cotag(uint32_t arg0) {
 
     LED_A_ON();
 
-    LFSetupFPGAForADC(LF_DIVISOR_125, true);
+    LFSetupFPGAForADC(LF_FREQ2DIV(132), true);  //132
 
     //clear buffer now so it does not interfere with timing later
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
-    //send COTAG start pulse
+    // send COTAG start pulse
+    // http://www.proxmark.org/forum/viewtopic.php?id=4455
+/*
     ON(740)  OFF(2035)
     ON(3330) OFF(2035)
     ON(740)  OFF(2035)
-    ON(1000)
-
-
-/*
+    ON(2000)
+*/
     ON(800)  OFF(2200)
     ON(3600) OFF(2200)
     ON(800)  OFF(2200)
-    ON(3400)
-*/
+    ON(2000) //    ON(3400)
+
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_FREQ2DIV(66)); // 66kHz
+    
     switch (rawsignal) {
         case 0: {
             doCotagAcquisition();
@@ -2658,7 +2666,6 @@ void Cotag(uint32_t arg0) {
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
-
 }
 
 /*
