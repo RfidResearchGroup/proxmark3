@@ -292,7 +292,36 @@ static int CmdFdxDemod(const char *Cmd) {
 }
 
 static int CmdFdxRead(const char *Cmd) {
-    lf_read(false, 10000);
+    sample_config config;
+    memset(&config, 0, sizeof(sample_config));
+    int retval = lf_getconfig(&config);
+    if (retval != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get current device LF config");
+        return retval;
+    }
+    int16_t tmp_div = config.divisor;
+    if (tmp_div != LF_DIVISOR_134) {
+        config.divisor = LF_DIVISOR_134;
+        config.verbose = false;
+        retval = lf_config(&config);
+        if (retval != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to change LF configuration");
+            return retval;
+        }
+    }
+    retval = lf_read(false, 10000);
+    if (retval != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get LF read from device");
+        return retval;
+    }
+    if (tmp_div != LF_DIVISOR_134) {
+        config.divisor = tmp_div;
+        retval = lf_config(&config);
+        if (retval != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to restore LF configuration");
+            return retval;
+        }
+    }
     return CmdFdxDemod(Cmd);
 }
 
@@ -393,7 +422,7 @@ static int CmdFdxSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,     AlwaysAvailable, "this help"},
     {"demod",   CmdFdxDemod, AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
-    {"read",    CmdFdxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
+    {"read",    CmdFdxRead,  IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
     {"clone",   CmdFdxClone, IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
     {"sim",     CmdFdxSim,   IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
