@@ -867,8 +867,13 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
-    int res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
-    if (res != PM3_SUCCESS) {
+    bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
+    if (res == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+    
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(INFO, "fast dump reported back failure w KEY A,  swapping to KEY B");
     
         // ecfill key B
@@ -877,7 +882,12 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         clearCommandBuffer();
         SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
         res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
-        if (res != PM3_SUCCESS) {
+        if (res == false) {
+            PrintAndLogEx(WARNING, "Command execute timeout");
+            return PM3_ETIMEOUT;
+        }
+        
+        if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "fast dump reported back failure w KEY B");
             PrintAndLogEx(INFO, "Dump file is " _RED_("PARTIAL") " complete");
         }
