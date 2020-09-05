@@ -756,7 +756,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_ACQ_RAW_ADC: {
             struct p {
-                uint8_t verbose;
+                bool verbose;
                 uint32_t samples;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
