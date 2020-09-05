@@ -8,10 +8,12 @@
 // Low frequency EM4x50 commands
 //-----------------------------------------------------------------------------
 
+#include "BigBuf.h"
 #include "fpgaloader.h"
 #include "ticks.h"
 #include "dbprint.h"
 #include "lfadc.h"
+#include "lfsampling.h"
 #include "commonutil.h"
 #include "em4x50.h"
 
@@ -72,18 +74,21 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_TAG_HALF_PERIOD            32
 #define EM4X50_T_TAG_THREE_QUARTER_PERIOD   48
 #define EM4X50_T_TAG_FULL_PERIOD            64
+#define EM4X50_T_TAG_THREE_HALF_PERIOD      96
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
-#define EM4X50_T_WAITING_FOR_SNGLLIW        50
+#define EM4X50_T_WAITING_FOR_SNGLLIW        100
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
+#define EM4X50_SAMPLE_CNT_MAX               3000
 
 #define EM4X50_BIT_0                        0
 #define EM4X50_BIT_1                        1
 #define EM4X50_BIT_OTHER                    2
 
+#define EM4X50_COMMAND_REQUEST              2
 #define EM4X50_COMMAND_LOGIN                0x01
 #define EM4X50_COMMAND_RESET                0x80
 #define EM4X50_COMMAND_WRITE                0x12
@@ -170,7 +175,7 @@ static void wait_timer(int timer, uint32_t period) {
 
         AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
         while (AT91C_BASE_TC0->TC_CV < period);
-
+            
     } else {
 
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
@@ -231,6 +236,62 @@ static void em4x50_setup_read(void) {
     WDT_HIT();
 }
 
+static void em4x50_setup_sim(void) {
+    
+    StopTicks();
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+    sample_config *sc = getSamplingConfig();
+    sc->decimation = 1;
+    sc->averaging = 0;
+
+    //FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
+
+    // FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+
+    // Connect the A/D to the peak-detected low-frequency path.
+    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+
+    // Now set up the SSC to get the ADC samples that are now streaming at us.
+    FpgaSetupSsc();
+
+    // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
+    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    LOW(GPIO_SSC_DOUT);
+
+    // Enable peripheral Clock for TIMER_CLOCK 0
+    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    //AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+
+    // Enable peripheral Clock for TIMER_CLOCK 1
+    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    //AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+
+    // Clear all leds
+    LEDsoff();
+
+    // Reset and enable timers
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+    // Prepare data trace
+    uint32_t bufsize = 10000;
+
+    // use malloc
+    if (g_logging) initSampleBufferEx(&bufsize, true);
+
+    lf_sample_mean();
+
+}
+
 // functions for "reader" use case
 
 static bool get_signalproperties(void) {
@@ -249,6 +310,8 @@ static bool get_signalproperties(void) {
     // wait until signal/noise > 1 (max. 32 periods)
     for (int i = 0; i < T0 * no_periods; i++) {
 
+        if (BUTTON_PRESS()) return false;
+        
         // about 2 samples per bit period
         wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
 
@@ -269,8 +332,9 @@ static bool get_signalproperties(void) {
         AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
         while (AT91C_BASE_TC0->TC_CV < T0 * 3 * EM4X50_T_TAG_FULL_PERIOD) {
 
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+            if (BUTTON_PRESS()) return false;
 
+            sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             if (sample > sample_max[i])
                 sample_max[i] = sample;
 
@@ -316,33 +380,36 @@ static uint32_t get_pulse_length(void) {
     int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
     // iterates pulse length (low -> high -> low)
-
-    volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-
-    while (sample > gLow || (timeout--)) {
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    }
+    // to avoid endless loops - quit after EM4X50_SAMPLE_CNT_MAX samples
     
-    if (timeout == 0)
-        return 0;
+    int sample_cnt = 0;
+    uint8_t sample = 0;
+
+    sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    
+    while (sample > gLow) {
+        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (++sample_cnt > EM4X50_SAMPLE_CNT_MAX)
+            return 0;
+    }
 
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
     timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
-    while (sample < gHigh || (timeout--)) {
+
+    sample_cnt = 0;
+    while (sample < gHigh) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (++sample_cnt > EM4X50_SAMPLE_CNT_MAX)
+            return 0;
     }
 
-    if (timeout == 0)
-        return 0;
-
-    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
-    while (sample > gLow || (timeout--)) {
+    sample_cnt = 0;
+    while (sample > gLow) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (++sample_cnt > EM4X50_SAMPLE_CNT_MAX)
+            return 0;
     }
-
-    if (timeout == 0)
-        return 0;
 
     return (uint32_t)AT91C_BASE_TC1->TC_CV;
 }
@@ -350,16 +417,17 @@ static uint32_t get_pulse_length(void) {
 static bool check_pulse_length(uint32_t pl, int length) {
 
     // check if pulse length <pl> corresponds to given length <length>
+    
+    if ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) &&
+        (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)))
 
-    if ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) &
-            (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)))
         return true;
     else
         return false;
 }
 
-static void em4x50_send_bit(int bit) {
-
+static void em4x50_reader_send_bit(int bit) {
+    
     // send single bit according to EM4x50 application note and datasheet
 
     // reset clock for the next bit
@@ -388,44 +456,199 @@ static void em4x50_send_bit(int bit) {
         while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
     }
 }
+/*
+static void em4x50_sim_send_bit(int bit) {
+    
+    // send single bit according to EM4x50 application note and datasheet
+    
+    // reset clock for the next bit
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
 
-static void em4x50_send_byte(uint8_t byte) {
+    if (bit == 0) {
+
+        // disable modulation (activates the field) for first half of bit period
+        LOW(GPIO_SSC_DOUT);
+        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_HALF_PERIOD);
+        
+        // enable modulation for second half of bit period
+        HIGH(GPIO_SSC_DOUT);
+        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
+
+    } else {
+        
+        // enable modulation (drop the field) for first half of bit period
+        HIGH(GPIO_SSC_DOUT);
+        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_HALF_PERIOD);
+        
+        // disable modulation for second half of bit period
+        LOW(GPIO_SSC_DOUT);
+        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
+    }
+}
+*/
+static void em4x50_reader_send_byte(uint8_t byte) {
+
+    // send byte (without parity)
+    
+    for (int i = 0; i < 8; i++)
+        em4x50_reader_send_bit((byte >> (7-i)) & 1);
+
+}
+/*
+static void em4x50_sim_send_byte(uint8_t byte) {
 
     // send byte (without parity)
 
     for (int i = 0; i < 8; i++)
-        em4x50_send_bit((byte >> (7 - i)) & 1);
+        em4x50_sim_send_bit((byte >> (7-i)) & 1);
 
 }
+*/
+static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
 
-static void em4x50_send_byte_with_parity(uint8_t byte) {
+    // send byte followed by its (equal) parity bit
+    
+    int parity = 0, bit = 0;
+    
+    for (int i = 0; i < 8; i++) {
+        bit = (byte >> (7-i)) & 1;
+        em4x50_reader_send_bit(bit);
+        parity ^= bit;
+    }
+
+    em4x50_reader_send_bit(parity);
+}
+/*
+static void em4x50_sim_send_byte_with_parity(uint8_t byte) {
 
     // send byte followed by its (equal) parity bit
 
     int parity = 0, bit = 0;
 
     for (int i = 0; i < 8; i++) {
-        bit = (byte >> (7 - i)) & 1;
-        em4x50_send_bit(bit);
+        bit = (byte >> (7-i)) & 1;
+        em4x50_sim_send_bit(bit);
         parity ^= bit;
     }
 
-    em4x50_send_bit(parity);
+    em4x50_sim_send_bit(parity);
 }
+*/
+static void em4x50_reader_send_word(const uint8_t bytes[4]) {
+    
+    // send 32 bit word with parity bits according to EM4x50 datasheet
+    
+    for (int i = 0; i < 4; i++)
+        em4x50_reader_send_byte_with_parity(bytes[i]);
+    
+    // send column parities
+    em4x50_reader_send_byte(bytes[0] ^ bytes[1] ^ bytes[2] ^ bytes[3]);
 
-static void em4x50_send_word(const uint8_t bytes[4]) {
+    // send final stop bit (always "0")
+    em4x50_reader_send_bit(0);
+}
+/*
 
+static void em4x50_sim_send_word(const uint8_t bytes[4]) {
+    
     // send 32 bit word with parity bits according to EM4x50 datasheet
 
     for (int i = 0; i < 4; i++)
-        em4x50_send_byte_with_parity(bytes[i]);
-
+        em4x50_sim_send_byte_with_parity(bytes[i]);
+    
     // send column parities
-    em4x50_send_byte(bytes[0] ^ bytes[1] ^ bytes[2] ^ bytes[3]);
+    em4x50_sim_send_byte(bytes[0] ^ bytes[1] ^ bytes[2] ^ bytes[3]);
 
     // send final stop bit (always "0")
-    em4x50_send_bit(0);
+    em4x50_sim_send_bit(0);
 }
+
+static void em4x50_sim_send_ack(void) {
+    
+    // send "acknowledge" according to EM4x50 application note and datasheet
+    
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+    HIGH(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_THREE_HALF_PERIOD);
+    HIGH(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_THREE_HALF_PERIOD);
+    HIGH(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+
+}
+
+static void em4x50_sim_send_nak(void) {
+    
+    // send "not" acknowledge" according to EM4x50 application note and datasheet
+    
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+    HIGH(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_THREE_HALF_PERIOD);
+    HIGH(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_FULL_PERIOD);
+    HIGH(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+
+}
+
+static void em4x50_sim_handle_command(void) {
+    
+    em4x50_sim_send_ack();
+    em4x50_sim_send_nak();
+    Dbprintf("");
+    
+}
+*/
+/*
+static bool em4x50_sim_detect_rm(void) {
+    
+    if (get_next_bit() == EM4X50_BIT_0)
+        if (get_next_bit() == EM4X50_BIT_0)
+            return true;
+    
+    //int periods = 0;
+    //AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    //while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD)
+    //    adc_val[periods++] = AT91C_BASE_SSC->SSC_RHR;
+
+    return false;
+}
+*/
+/*
+static void em4x50_sim_send_listen_window(void) {
+    
+    // send single listen window according to EM4x50 application note and datasheet
+    
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+
+    HIGH(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
+
+    HIGH(GPIO_SSC_DOUT);
+    if (em4x50_sim_detect_rm())
+        em4x50_sim_handle_command();
+
+    LOW(GPIO_SSC_DOUT);
+    wait_timer(0, T0 * EM4X50_T_TAG_FULL_PERIOD);
+    
+}
+*/
 
 static bool find_single_listen_window(void) {
 
@@ -491,8 +714,8 @@ static bool find_double_listen_window(bool bcommand) {
                     if (get_next_bit() == EM4X50_BIT_OTHER) {
 
                         // send RM for request mode
-                        em4x50_send_bit(0);
-                        em4x50_send_bit(0);
+                        em4x50_reader_send_bit(0);
+                        em4x50_reader_send_bit(0);
 
                         return true;
                     }
@@ -571,8 +794,8 @@ static bool check_ack(bool bliw) {
                     if (get_next_bit() == EM4X50_BIT_OTHER) {
 
                         // send RM for request mode
-                        em4x50_send_bit(0);
-                        em4x50_send_bit(0);
+                        em4x50_reader_send_bit(0);
+                        em4x50_reader_send_bit(0);
 
                         return true;
                     }
@@ -588,7 +811,7 @@ static bool check_ack(bool bliw) {
     return false;
 }
 
-static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
+static int get_word_from_bitstream(uintö8_t bits[EM4X50_TAG_WORD]) {
 
     // decodes one word by evaluating pulse lengths and previous bit;
     // word must have 45 bits in total:
@@ -621,8 +844,8 @@ static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
 
     // identify remaining bits based on pulse lengths
     // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
-    while (true) {
-
+    while (BUTTON_PRESS() == false) {
+               
         i++;
         pl = get_pulse_length();
 
@@ -670,6 +893,8 @@ static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
 
         }
     }
+    
+    return 0;
 }
 
 //==============================================================================
@@ -684,10 +909,10 @@ static bool login(uint8_t password[4]) {
     if (request_receive_mode()) {
 
         // send login command
-        em4x50_send_byte_with_parity(EM4X50_COMMAND_LOGIN);
+        em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_LOGIN);
 
         // send password
-        em4x50_send_word(password);
+        em4x50_reader_send_word(password);
 
         // check if ACK is returned
         if (check_ack(false))
@@ -706,14 +931,19 @@ static bool login(uint8_t password[4]) {
 //==============================================================================
 
 static bool reset(void) {
-
+  
     // resets EM4x50 tag (used by write function)
 
     if (request_receive_mode()) {
 
         // send login command
+<<<<<<< Updated upstream
         em4x50_send_byte_with_parity(EM4X50_COMMAND_RESET);
 
+=======
+        em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
+ 
+>>>>>>> Stashed changes
         if (check_ack(false))
             return true;
 
@@ -770,15 +1000,14 @@ static bool selective_read(uint8_t addresses[4]) {
     if (request_receive_mode()) {
 
         // send selective read command
-        em4x50_send_byte_with_parity(EM4X50_COMMAND_SELECTIVE_READ);
+        em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_SELECTIVE_READ);
 
         // send address data
-        em4x50_send_word(addresses);
+        em4x50_reader_send_word(addresses);
 
-        // look for ACK sequence
+        // look for ACK sequence -> save and verify via standard read mode
+        // (compare number of words)
         if (check_ack(false))
-
-            // save and verify via standard read mode (compare number of words)
             if (standard_read(&now))
                 if (now == (lwr - fwr + 1))
                     return true;
@@ -807,7 +1036,7 @@ void em4x50_info(em4x50_data_t *etd) {
 
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
-
+        
         if (etd->pwd_given) {
 
             // try to login with given password
@@ -845,8 +1074,7 @@ void em4x50_read(em4x50_data_t *etd) {
     em4x50_setup_read();
 
     // set gHigh and gLow
-    if (get_signalproperties() && find_em4x50_tag()) {
-
+    if (get_signalproperties()) {//} && find_em4x50_tag()) {
         if (etd->addr_given) {
 
             // selective read mode
@@ -863,12 +1091,12 @@ void em4x50_read(em4x50_data_t *etd) {
 
             // standard read mode
             bsuccess = standard_read(&now);
-
         }
     }
 
     status = (now << 2) + (bsuccess << 1) + blogin;
 
+    LOW(GPIO_SSC_DOUT);
     lf_finalize();
     reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
 }
@@ -884,13 +1112,13 @@ static bool write(uint8_t word[4], uint8_t address) {
     if (request_receive_mode()) {
 
         // send write command
-        em4x50_send_byte_with_parity(EM4X50_COMMAND_WRITE);
+        em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_WRITE);
 
         // send address data
-        em4x50_send_byte_with_parity(address);
+        em4x50_reader_send_byte_with_parity(address);
 
         // send data
-        em4x50_send_word(word);
+        em4x50_reader_send_word(word);
 
         // wait for T0 * EM4X50_T_TAG_TWA (write access time)
         wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
@@ -920,10 +1148,10 @@ static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
     if (request_receive_mode()) {
 
         // send write password command
-        em4x50_send_byte_with_parity(EM4X50_COMMAND_WRITE_PASSWORD);
+        em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_WRITE_PASSWORD);
 
         // send address data
-        em4x50_send_word(password);
+        em4x50_reader_send_word(password);
 
         // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
         wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TPP);
@@ -933,7 +1161,7 @@ static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
         if (check_ack(true)) {
 
             // send new password
-            em4x50_send_word(new_password);
+            em4x50_reader_send_word(new_password);
 
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
             wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
@@ -1089,4 +1317,546 @@ void em4x50_wipe(em4x50_data_t *etd) {
 
     lf_finalize();
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
+}
+
+static bool em4x50_sim_send_bit2(uint8_t bit) {
+    
+    uint16_t check = 0;
+
+    for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
+
+        // wait until SSC_CLK goes HIGH
+        // used as a simple detection of a reader field?
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+
+        if (bit)
+            OPEN_COIL();
+        else
+            SHORT_COIL();
+
+        check = 0;
+        
+        //wait until SSC_CLK goes LOW
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+
+        if (t == EM4X50_T_TAG_HALF_PERIOD)
+            bit ^= 1;
+
+    }
+    
+    return true;
+}
+
+static bool em4x50_sim_send_byte2(uint8_t byte) {
+
+    // send byte
+    for (int i = 0; i < 8; i++)
+        if (!em4x50_sim_send_bit2((byte >> (7 - i)) & 1))
+            return false;
+    
+    return true;
+
+}
+
+static bool em4x50_sim_send_byte_with_parity2(uint8_t byte) {
+
+    uint8_t parity = 0x0;
+    
+    // send byte with parity (even)
+    for (int i = 0; i < 8; i++)
+        parity ^= (byte >> i) & 1;
+    
+    if (!em4x50_sim_send_byte2(byte))
+        return false;;
+    
+    if (!em4x50_sim_send_bit2(parity))
+        return false;
+    
+    return true;
+}
+
+static bool em4x50_sim_send_word2(uint8_t *word) {
+
+    uint8_t cparity = 0x00;
+    
+    // 4 bytes each with even row parity bit
+    for (int i = 0; i < 4; i++)
+        if (!em4x50_sim_send_byte_with_parity2(word[i]))
+            return false;
+    
+    // column parity
+    for (int i = 0; i < 8; i++) {
+        cparity <<= 1;
+        for (int j = 0; j < 4; j++) {
+            cparity ^= (word[j] >> i) & 1;
+        }
+    }
+    if (!em4x50_sim_send_byte2(cparity))
+        return false;
+    
+    // stop bit
+    if (!em4x50_sim_send_bit2(0))
+        return false;
+    
+    return true;
+}
+
+bool em4x50_sim_send_word3(uint32_t word) {
+
+    uint8_t cparity = 0x00;
+    
+    // 4 bytes each with even row parity bit
+    for (int i = 0; i < 4; i++)
+        if (!em4x50_sim_send_byte_with_parity2( (word >> ((3 - i) * 8)) & 0xFF))
+            return false;
+
+    // column parity
+    for (int i = 0; i < 8; i++) {
+        cparity <<= 1;
+        for (int j = 0; j < 4; j++) {
+            cparity ^= (((word >> ((3 - j) * 8)) & 0xFF) >> (7 - i)) & 1;
+        }
+    }
+    if (!em4x50_sim_send_byte2(cparity))
+        return false;
+    
+    // stop bit
+    if (!em4x50_sim_send_bit2(0))
+        return false;
+
+    return true;
+}
+
+bool em4x50_sim_send_listen_window2(void) {
+
+    //int i = 0;
+    uint16_t check = 0;
+    //uint8_t test[100] = {0};
+    
+    for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
+
+        // wait until SSC_CLK goes HIGH
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+        
+        if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD) {
+            SHORT_COIL();
+        } else if (t >= 3 * EM4X50_T_TAG_FULL_PERIOD) {
+            OPEN_COIL();
+        } else if (t >= EM4X50_T_TAG_FULL_PERIOD) {
+            SHORT_COIL();
+        } else if (t >= EM4X50_T_TAG_HALF_PERIOD) {
+            OPEN_COIL();
+        } else {
+            SHORT_COIL();
+        }
+
+        check = 0;
+        
+        //wait until SSC_CLK goes LOW
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+    }
+
+    return true;
+}
+
+static bool em4x50_sim_send_listen_window3(void) {
+
+    int t = 0;
+    int i = 0;
+    uint16_t check = 0;
+    uint8_t test[100] = {0};
+    
+    while (t < 5 * EM4X50_T_TAG_FULL_PERIOD) {
+
+        // wait until SSC_CLK goes HIGH
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+        
+        if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD) {
+            SHORT_COIL();
+        } else if (t >= 3 * EM4X50_T_TAG_FULL_PERIOD) {
+            OPEN_COIL();
+
+            i = 0;
+
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+            
+            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+            while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD) {
+
+                if (i == 0) {
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+                    FpgaSetupSsc();
+                    //SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+                }
+
+                if (i < 100)
+                    test[i++] = AT91C_BASE_SSC->SSC_RHR;
+            
+            }
+
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+            
+            t = 4 * EM4X50_T_TAG_FULL_PERIOD - 1;
+
+        } else if (t >= EM4X50_T_TAG_FULL_PERIOD) {
+            SHORT_COIL();
+        } else if (t >= EM4X50_T_TAG_HALF_PERIOD) {
+            OPEN_COIL();
+        } else {
+            SHORT_COIL();
+        }
+
+        t++;
+        check = 0;
+        
+        //wait until SSC_CLK goes LOW
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+    }
+    for (i = 0; i < 100; i++)
+        Dbprintf("value[%i] = %i", i, test[i]);
+
+    return true;
+}
+
+/*
+static void em4x50_sim_send_word3(uint8_t *word) {
+    
+    uint8_t rparity = 0x00, cparity = 0x00;
+    uint64_t word_with_parities = { 0x00 };
+    
+    // bytes + row parities
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 8; j++) {
+            word_with_parities += (word[i] >> j) & 1;
+            word_with_parities <<= 1;
+            rparity ^= (word[i] >> j) & 1;
+        }
+        word_with_parities += rparity & 1;
+        word_with_parities <<= 1;
+    }
+
+    // column parities
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 4; j++) {
+            cparity ^= (word[j] >> i) & 1;
+        }
+        word_with_parities += cparity;
+        word_with_parities <<= 1;
+        cparity = 0;
+    }
+    
+    // stop bit
+    word_with_parities += 0;
+            
+    // send total word
+    for (int i = 0; i < EM4X50_TAG_WORD; i++)
+        em4x50_sim_send_bit2((word_with_parities >> (EM4X50_TAG_WORD-1 - i)) & 1);
+    
+}
+*/
+ 
+/*
+static void simlf(uint8_t *buf, int period) {
+    
+    int i = 0, count = 0;
+    int clock1 = 32, clock2 = 64;
+    uint16_t check = 0;
+
+    for (;;) {
+
+        // wait until SSC_CLK goes HIGH
+        // used as a simple detection of a reader field?
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return;
+                check = 0;
+            }
+            ++check;
+        }
+        
+        if (buf[i])
+            OPEN_COIL();
+        else
+            SHORT_COIL();
+
+        check = 0;
+         
+        //wait until SSC_CLK goes LOW
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return;
+                check = 0;
+            }
+            ++check;
+        }
+        
+        if (count == EM4X50_T_TAG_HALF_PERIOD) {
+            buf[i] ^= 1;
+        } else if (count == EM4X50_T_TAG_FULL_PERIOD) {
+            buf[i] ^= 1;
+            count = 0;
+            i++;
+            if (i == period) {
+                i = 0;
+            }
+        }
+        count++;
+    }
+}
+*/
+
+void em4x50_sim(em4x50_data_t *etd) {
+    
+    bool bsuccess = false;
+
+    //init_tag();
+    //em4x50_setup_sim();
+
+    //FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    
+    //StartTicks();
+
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_MAJOR_MODE_LF_ADC );
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+    //WaitMS(20);
+
+    //FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
+
+    //AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
+    //AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    //AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+ 
+    // from hitag2
+    //SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    //FpgaSetupSsc();
+    //AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    //AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    //LOW(GPIO_SSC_DOUT);
+    //AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    // works!
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
+    // does not really work
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_MAJOR_MODE_LF_ADC );
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    // does not work!
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
+
+    //AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
+    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    //AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
+    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
+    
+    uint8_t word1[4] = {0x27, 0xfc, 0x42, 0x40};
+    uint8_t word2[4] = {0x12, 0x34, 0x56, 0x78};
+
+    bsuccess = em4x50_sim_send_listen_window3();
+    while (bsuccess) {
+
+        bsuccess = em4x50_sim_send_listen_window3()
+                 & em4x50_sim_send_word2(word1)
+                 & em4x50_sim_send_listen_window3()
+                 & em4x50_sim_send_word2(word2)
+                 & em4x50_sim_send_listen_window3();
+    }
+
+    /*
+    WDT_HIT();
+    while (BUTTON_PRESS() == false) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            for (int i = 0; i < 10; i++) {
+                
+                HIGH(GPIO_SSC_DOUT);
+                lf_wait_periods(32);
+                Dbprintf("High");
+
+                LOW(GPIO_SSC_DOUT);
+                lf_wait_periods(32);
+                Dbprintf("Low");
+            }
+            Dbprintf("geht");
+        } else {
+            Dbprintf("Mist");
+        }
+    }
+    */
+
+    /*
+    volatile uint8_t adc_val[2000] = {0};
+
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+    //SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    //FpgaSetupSsc();
+    
+    while (BUTTON_PRESS() == false) {
+
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
+            for (int i = 0; i < 2000; i++)
+                adc_val[i] = AT91C_BASE_SSC->SSC_RHR;
+    }
+
+    for (int i = 0; i < 2000; i++)
+        Dbprintf("adc_val = %i", adc_val[i]);
+*/
+    
+    lf_finalize();
+    reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
+}
+
+void em4x50_test(em4x50_data_t *etd) {
+    
+    DBGLEVEL = DBG_DEBUG;
+    
+    bool bsuccess = false;
+    
+    em4x50_setup_sim();
+    
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    //FpgaSetupSsc();
+    //AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+
+    if (etd->carrier == 1) {
+        
+        LED_A_ON();
+        LOW(GPIO_SSC_DOUT);
+        if (DBGLEVEL >= DBG_DEBUG)
+            Dbprintf("carrier on");
+    
+    } else if (etd->carrier == 0) {
+    
+        LED_A_OFF();
+        HIGH(GPIO_SSC_DOUT);
+    
+        if (DBGLEVEL >= DBG_DEBUG)
+            Dbprintf("carrier off");
+
+    } else {
+        
+        LED_B_ON();
+
+        LOW(GPIO_SSC_DOUT);
+
+        while (BUTTON_PRESS() == false) {
+
+            for (int i = 0; i < 10; i++)
+                wait_timer(0, T0 * EM4X50_T_TAG_FULL_PERIOD);
+
+            LED_C_ON();
+
+            // send selective read command
+            em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_SELECTIVE_READ);
+            em4x50_reader_send_bit(0);
+            em4x50_reader_send_bit(0);
+            em4x50_reader_send_byte_with_parity(etd->byte);
+
+            LED_C_OFF();
+
+        }
+        
+        LED_B_OFF();
+        
+        lf_finalize();
+    }
+    
+    bsuccess = true;
+
+    reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
+}
+
+int em4x50_standalone_read(uint64_t *words) {
+    
+    int now = 0;
+    uint8_t bits[EM4X50_TAG_WORD];
+    
+    em4x50_setup_read();
+
+    if (get_signalproperties() && find_em4x50_tag()) {
+
+        if (find_double_listen_window(false)) {
+
+            memset(bits, 0, sizeof(bits));
+
+            while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD) {
+
+                words[now] = 0;
+               
+                for (int i = 0; i < EM4X50_TAG_WORD; i++) {
+                    words[now] <<= 1;
+                    words[now] += bits[i] & 1;
+                }
+
+                now++;
+            }
+        }
+    }
+
+    return now;
 }

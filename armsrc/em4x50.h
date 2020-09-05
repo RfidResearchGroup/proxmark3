@@ -17,10 +17,16 @@ typedef struct {
     uint8_t sectors[34][7];
 } em4x50_tag_t;
 
+int em4x50_standalone_read(uint64_t *words);
+bool em4x50_sim_send_listen_window2(void);
+bool em4x50_sim_send_word3(uint32_t word);
+
 void em4x50_info(em4x50_data_t *etd);
 void em4x50_write(em4x50_data_t *etd);
 void em4x50_write_password(em4x50_data_t *etd);
 void em4x50_read(em4x50_data_t *etd);
 void em4x50_wipe(em4x50_data_t *etd);
+void em4x50_sim(em4x50_data_t *etd);
+void em4x50_test(em4x50_data_t *etd);
 
 #endif /* EM4X50_H */
