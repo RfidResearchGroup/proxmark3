@@ -1965,9 +1965,6 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         for (uint8_t blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
             if (mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
                 retval = PM3_EPARTIAL;
-                
-                memset(dataoutbuf2, 0, sizeof(dataoutbuf2));
-                emlSetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
               
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
                 continue;
