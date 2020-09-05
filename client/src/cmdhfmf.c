@@ -879,7 +879,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "fast dump reported back failure w KEY B");
-            PrintAndLogEx(INFO, "Dump file is " _RED_("PARTIAL") "complete");
+            PrintAndLogEx(INFO, "Dump file is " _RED_("PARTIAL") " complete");
         }
     }
     return PM3_SUCCESS;
