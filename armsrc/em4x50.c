@@ -90,6 +90,7 @@ static em4x50_tag_t tag = {
 #define EM4X50_COMMAND_WRITE_PASSWORD       0x11
 #define EM4X50_COMMAND_SELECTIVE_READ       0x0A
 
+#define EM4X50_COMMAND_TIMEOUT              5000
 #define FPGA_TIMER_0                        0
 
 int gHigh = 0;
@@ -412,13 +413,13 @@ static void em4x50_send_word(const uint8_t bytes[4]) {
     em4x50_send_bit(0);
 }
 
-static bool find_single_listen_window(void) {
+static bool find_single_listen_window(int16_t timeout) {
 
     // find single listen window
 
     int cnt_pulses = 0;
 
-    while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW) {
+    while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW && timeout--) {
 
         // identification of listen window is done via evaluation of
         // pulse lengths
@@ -440,7 +441,7 @@ static bool find_single_listen_window(void) {
     return false;
 }
 
-static bool find_double_listen_window(bool bcommand) {
+static bool find_double_listen_window(bool bcommand, int16_t timeout) {
 
     // find two successive listen windows that indicate the beginning of
     // data transmission
@@ -450,7 +451,7 @@ static bool find_double_listen_window(bool bcommand) {
 
     int cnt_pulses = 0;
 
-    while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
+    while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW && timeout--) {
 
         // identification of listen window is done via evaluation of
         // pulse lengths
@@ -507,7 +508,7 @@ static bool find_em4x50_tag(void) {
     // function is used to check wether a tag on the proxmark is an
     // EM4x50 tag or not -> speed up "lf search" process
 
-    return (find_single_listen_window());
+    return (find_single_listen_window(EM4X50_COMMAND_TIMEOUT));
 
 }
 
@@ -519,7 +520,7 @@ static bool request_receive_mode(void) {
 
     bool bcommand = true;
 
-    return find_double_listen_window(bcommand);
+    return find_double_listen_window(bcommand, EM4X50_COMMAND_TIMEOUT);
 }
 
 static bool check_ack(bool bliw) {
@@ -725,7 +726,7 @@ static bool standard_read(int *now) {
     uint8_t bits[EM4X50_TAG_WORD] = {0};
 
     // start with the identification of two succsessive listening windows
-    if (find_double_listen_window(false)) {
+    if (find_double_listen_window(false, EM4X50_COMMAND_TIMEOUT)) {
 
         // read and save words until following double listen window is detected
         while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD)
