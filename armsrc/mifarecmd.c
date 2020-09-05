@@ -1970,6 +1970,10 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
                 continue;
             }
 
+            if (memcmp(dataoutbuf, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16) == 0) {
+                continue;
+            }
+
             if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
                 emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
             } else { // sector trailer, keep the keys, set only the AC
