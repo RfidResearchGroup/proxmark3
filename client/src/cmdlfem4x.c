@@ -691,7 +691,7 @@ static bool downloadSamplesEM(void) {
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
     uint8_t got[6000];
     if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+        PrintAndLogEx(WARNING, "(downloadSamplesEM) command execution time out");
         return false;
     }
 
@@ -855,6 +855,7 @@ static int demodEM4x05resp(uint32_t *word) {
 }
 
 //////////////// 4205 / 4305 commands
+#include "util_posix.h"  // msclock
 static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
 
     struct {
@@ -870,14 +871,14 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X_READWORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X_READWORD, &resp, 2500)) {
-        PrintAndLogEx(DEBUG, "timeout while waiting for reply.");
+    if (!WaitForResponseTimeout(CMD_LF_EM4X_READWORD, &resp, 10000)) {
+        PrintAndLogEx(WARNING, "(EM4x05ReadWord_ext) timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-    if (!downloadSamplesEM()) {
+ 
+    if (downloadSamplesEM() == false) {
         return PM3_ESOFT;
     }
-
     return demodEM4x05resp(word);
 }
 
