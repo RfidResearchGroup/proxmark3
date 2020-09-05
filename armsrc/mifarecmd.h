@@ -44,6 +44,11 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);
 void MifareCIdent(void);  // is "magic chinese" card?
 void MifareHasStaticNonce(void);  // Has the tag a static nonce?
 
+int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len);
+void MifareGen3UID(uint8_t uidlen, uint8_t *uid); // Gen 3 magic card set UID without manufacturer block
+void MifareGen3Blk(uint8_t block_len, uint8_t *block); // Gen 3 magic card overwrite manufacturer block
+void MifareGen3Freez(void); // Gen 3 magic card lock further UID changes
+
 void MifareSetMod(uint8_t *datain);
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);
 

@@ -1318,6 +1318,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareCIdent();
             break;
         }
+        // Gen 3 magic cards
+        case CMD_HF_MIFARE_GEN3UID: {
+            MifareGen3UID(packet->oldarg[0], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_MIFARE_GEN3BLK: {
+            MifareGen3Blk(packet->oldarg[0], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_MIFARE_GEN3FREEZ: {
+            MifareGen3Freez();
+            break;
+        }
         // mifare sniffer
 //        case CMD_HF_MIFARE_SNIFF: {
 //            SniffMifare(packet->oldarg[0]);

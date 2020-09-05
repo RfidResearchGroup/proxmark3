@@ -648,6 +648,11 @@ typedef struct {
 //For Atmel CryptoRF
 #define CMD_HF_CRYPTORF_SIM                                               0x0820
 
+// Gen 3 magic cards
+#define CMD_HF_MIFARE_GEN3UID                                             0x0850
+#define CMD_HF_MIFARE_GEN3BLK                                             0x0851
+#define CMD_HF_MIFARE_GEN3FREEZ                                           0x0852
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags
