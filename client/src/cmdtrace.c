@@ -245,6 +245,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443A:
             case MFDES:
             case LTO:
+            case ISO_7816_4:
                 crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case THINFILM:
@@ -260,7 +261,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
             case PROTO_CRYPTORF:
-            case ISO_7816_4:
             case PROTO_HITAG1:
             case PROTO_HITAG2:
             case PROTO_HITAGS:
@@ -413,6 +413,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 annotateTopaz(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_7816_4:
+                annotateIso14443a(explanation, sizeof(explanation), frame, data_len);
                 annotateIso7816(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_15693:
