@@ -85,7 +85,6 @@ static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t act
     }
 }
 
-
 static bool IsDataAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action) {
 
     uint8_t sector_trailer[16];
@@ -243,7 +242,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_
                 rSAK[0] = block0[7];
                 memcpy(rATQA, &block0[8], sizeof(rATQA));
             } else {
-                Dbprintf("[-] ERROR: Invalid dump. UID/SAK/ATQA not found");
+                Dbprintf("ERROR: " _RED_("Invalid dump. UID/SAK/ATQA not found"));
                 return false;
             }
         }
@@ -342,7 +341,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_
         // Correct uid size bits in ATQA
         rATQA[0] = (rATQA[0] & 0x3f) | 0x80; // triple size uid
     } else {
-        Dbprintf("[-] ERROR: UID size not defined");
+        Dbprintf("ERROR: " _RED_("UID size not defined"));
         return false;
     }
     if (flags & FLAG_FORCED_ATQA) {
