@@ -15,6 +15,9 @@ ISO14443A (usually NFC tags)
     95 20 = Anticollision of cascade level2
     95 70 = Select of cascade level2
     50 00 = Halt (usage: 5000+2bytes ISO14443A-CRC - no answer from card)
+    
+    E0 = RATS
+    D0 = PPS
 Mifare
     60 = Authenticate with KeyA
     61 = Authenticate with KeyB
@@ -148,6 +151,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443A_CMD_WRITEBLOCK    0xA0
 #define ISO14443A_CMD_HALT          0x50
 #define ISO14443A_CMD_RATS          0xE0
+#define ISO14443A_CMD_PPS           0xD0
 #define ISO14443A_CMD_NXP_DESELECT  0xC2
 
 #define MIFARE_SELECT_CT            0x88
