@@ -84,8 +84,7 @@ static int usage_hf_tune(void) {
     return PM3_SUCCESS;
 }
 
-#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          ")
-#define PROMPT_EMPTYLINE PrintAndLogEx(NORMAL, "\r                                         ");
+#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          \r")
 
 int CmdHFSearch(const char *Cmd) {
 
@@ -189,7 +188,6 @@ int CmdHFSearch(const char *Cmd) {
     */
 
     PROMPT_CLEARLINE;
-    PROMPT_EMPTYLINE;
     if (res != PM3_SUCCESS) {
 
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
