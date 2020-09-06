@@ -2041,7 +2041,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, true, samples, 1000);
+    DoPartialAcquisition(0, false, samples, 1000);
 
     // Turn the field off
     if (brute_mem == false) {
