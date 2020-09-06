@@ -15,7 +15,7 @@ There are two ways to install, build and use Proxmark3 on Windows:
 ## Driver Installation
 
 Install required drivers for your Windows installation. You may need admin privileges to do this.  
-Step by step guides are online such as [RiscCorps](https://store.ryscc.com/blogs/news/how-to-install-a-proxmark3-driver-on-windows-10).
+Step by step guides are online such as [RyscCorps](https://store.ryscc.com/blogs/news/how-to-install-a-proxmark3-driver-on-windows-10).
 
 ## Download / clone ProxSpace repo
 
