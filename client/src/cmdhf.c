@@ -189,13 +189,13 @@ int CmdHFSearch(const char *Cmd) {
     */
 
     PROMPT_CLEARLINE;
+    PROMPT_EMPTYLINE;
     if (res != PM3_SUCCESS) {
 
-        PrintAndLogEx(INPLACE, _RED_("No known/supported 13.56 MHz tags found"));
+        PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         res = PM3_ESOFT;
     }
 
-    PROMPT_EMPTYLINE;
     return res;
 }
 
