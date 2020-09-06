@@ -145,7 +145,7 @@ static int usage_legic_eload(void) {
     PrintAndLogEx(NORMAL, "      f <filename>    : filename w/o .bin to load");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic eload 2 myfile"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic eload 2 f myfile"));
     return PM3_SUCCESS;
 }
 static int usage_legic_esave(void) {
@@ -582,13 +582,39 @@ static int CmdLegicRdbl(const char *Cmd) {
 }
 
 static int CmdLegicSim(const char *Cmd) {
+
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
 
-    uint64_t id = 1;
-    sscanf(Cmd, " %" SCNi64, &id);
+    struct {
+        uint8_t tagtype;
+        bool send_reply;
+    } PACKED payload;
+	
+    payload.send_reply = true;
+    payload.tagtype = param_get8ex(Cmd, 0, 1, 10);
+	if (payload.tagtype > 2 ) {
+		 return usage_legic_sim();
+	}
+	
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_LEGIC_SIMULATE, id, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HF_LEGIC_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+		
+        if (WaitForResponseTimeout(CMD_HF_LEGIC_SIMULATE, &resp, 1500)) {
+			break;
+		}
+
+	}
+	if (keypress)
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+	   
+    PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
 

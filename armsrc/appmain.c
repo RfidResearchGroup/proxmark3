@@ -1065,7 +1065,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_LEGICRF
         case CMD_HF_LEGIC_SIMULATE: {
-            LegicRfSimulate(packet->oldarg[0]);
+			struct p {
+				uint8_t tagtype;
+				bool send_reply;
+			} PACKED;
+			struct p *payload = (struct p *) packet->data.asBytes;
+            LegicRfSimulate(payload->tagtype, payload->send_reply);
             break;
         }
         case CMD_HF_LEGIC_WRITER: {
