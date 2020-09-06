@@ -122,6 +122,47 @@ static uint32_t LastProxToAirDuration;
 #define SEC_Y 0x00
 #define SEC_Z 0xc0
 
+/*
+Default HF 14a config is set to:
+    forceanticol = false
+    obeybadbcc = false
+    forcecl2 = 0 (auto)
+    forcecl3 = 0 (auto)
+*/
+static hf14a_config hf14aconfig = { 0, 0, 0, 0 } ;
+
+void printHf14aConfig(void) {
+    DbpString(_CYAN_("HF 14a config"));
+    Dbprintf("[a] Force std anticol.....%s", (hf14aconfig.forceanticol) ? _RED_("Yes") " (even if bad ATQA)" : _GREEN_("No"));
+    Dbprintf("[b] Force obey bad BCC....%s", (hf14aconfig.obeybadbcc) ? _RED_("Yes") : _GREEN_("No"));
+    Dbprintf("[2] Force CL2 override ...%s%s%s", (hf14aconfig.forcecl2==0) ? _GREEN_("No") : "", (hf14aconfig.forcecl2==1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2==-1) ? _RED_("Yes: Always skip CL2") : "");
+    Dbprintf("[3] Force CL3 override ...%s%s%s", (hf14aconfig.forcecl3==0) ? _GREEN_("No") : "", (hf14aconfig.forcecl3==1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3==-1) ? _RED_("Yes: Always skip CL3") : "");
+}
+
+/**
+ * Called from the USB-handler to set the 14a configuration
+ * The 14a config is used for card selection sequence.
+ *
+ * Values set to '-1' implies no change
+ * @brief setSamplingConfig
+ * @param sc
+ */
+void setHf14aConfig(hf14a_config *hc) {
+
+    if (hc->forceanticol > -1)
+        hf14aconfig.forceanticol = (hc->forceanticol > 0) ? 1 : 0;
+    if (hc->obeybadbcc > -1)
+        hf14aconfig.obeybadbcc = (hc->obeybadbcc > 0) ? 1 : 0;
+    if ((hc->forcecl2 >= -1) && (hc->forcecl2 <= 1))
+        hf14aconfig.forcecl2 = hc->forcecl2;
+    if ((hc->forcecl3 >= -1) && (hc->forcecl3 <= 1))
+        hf14aconfig.forcecl3 = hc->forcecl3;
+}
+
+hf14a_config *getHf14aConfig(void) {
+    return &hf14aconfig;
+}
+
 void iso14a_set_trigger(bool enable) {
     g_trigger = enable;
 }
@@ -2335,7 +2376,8 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
     uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
     uint8_t resp_par[MAX_PARITY_SIZE] = {0};
 
-    uint8_t sak = 0x04; // cascade uid
+    uint8_t sak; // cascade uid
+    bool do_cascade = 1;
     int cascade_level = 0;
 
     if (p_card) {
@@ -2359,17 +2401,19 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
             memset(uid_ptr, 0, 10);
     }
 
-    // check for proprietary anticollision:
-    if ((resp[0] & 0x1F) == 0) return 3;
+    if ( ! hf14aconfig.forceanticol ) {
+        // check for proprietary anticollision:
+        if ((resp[0] & 0x1F) == 0) return 3;
+    }
 
     // OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
     // which case we need to make a cascade 2 request and select - this is a long UID
     // While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
-    for (; sak & 0x04; cascade_level++) {
+    for (; do_cascade; cascade_level++) {
         // SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
         uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
         uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        uint8_t uid_resp[4] = {0};
+        uint8_t uid_resp[5] = {0}; // UID + original BCC
         sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
 
         if (anticollision) {
@@ -2378,7 +2422,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
             if (!ReaderReceive(resp, resp_par)) return 0;
 
             if (Demod.collisionPos) {            // we had a collision and need to construct the UID bit by bit
-                memset(uid_resp, 0, 4);
+                memset(uid_resp, 0, 5);
                 uint16_t uid_resp_bits = 0;
                 uint16_t collision_answer_offset = 0;
                 // anti-collision-loop:
@@ -2390,7 +2434,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                     }
                     uid_resp[uid_resp_bits / 8] |= 1 << (uid_resp_bits % 8);                  // next time select the card(s) with a 1 in the collision position
                     uid_resp_bits++;
-                    // construct anticollosion command:
+                    // construct anticollision command:
                     sel_uid[1] = ((2 + uid_resp_bits / 8) << 4) | (uid_resp_bits & 0x07);     // length of data in bytes and bits
                     for (uint16_t i = 0; i <= uid_resp_bits / 8; i++) {
                         sel_uid[2 + i] = uid_resp[i];
@@ -2406,7 +2450,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                 }
 
             } else {        // no collision, use the response to SELECT_ALL as current uid
-                memcpy(uid_resp, resp, 4);
+                memcpy(uid_resp, resp, 5); // UID + original BCC
             }
 
         } else {
@@ -2425,8 +2469,22 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 
         // Construct SELECT UID command
         sel_uid[1] = 0x70;                                              // transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
-        memcpy(sel_uid + 2, uid_resp, 4);                               // the UID received during anticollision, or the provided UID
-        sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate and add BCC
+
+        if (anticollision) {
+            memcpy(sel_uid + 2, uid_resp, 5);                               // the UID received during anticollision with original BCC
+            uint8_t bcc = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate BCC
+            if (sel_uid[6] != bcc) {
+                Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x. Will use " NOLF, cascade_level, sel_uid[6], bcc);
+                if (! hf14aconfig.obeybadbcc) {
+                    sel_uid[6] = bcc;
+                }
+                Dbprintf("0x%02x", sel_uid[6]);
+            }
+        } else {
+            memcpy(sel_uid + 2, uid_resp, 4);                               // the provided UID
+            sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate and add BCC
+        }
+
         AddCrc14A(sel_uid, 7);                                          // calculate and add CRC
         ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
 
@@ -2436,7 +2494,21 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         sak = resp[0];
 
         // Test if more parts of the uid are coming
-        if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
+        do_cascade = (((sak & 0x04) /* && uid_resp[0] == 0x88 */) > 0);
+        if (cascade_level==0) {
+            if (hf14aconfig.forcecl2==-1) {
+                do_cascade = false;
+            } else if (hf14aconfig.forcecl2==1) {
+                do_cascade = true;
+            } // else 0==auto
+        } else if (cascade_level==1) {
+            if (hf14aconfig.forcecl3==-1) {
+                do_cascade = false;
+            } else if (hf14aconfig.forcecl3==1) {
+                do_cascade = true;
+            } // else 0==auto
+        }
+        if (do_cascade) {
             // Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
             // http://www.nxp.com/documents/application_note/AN10927.pdf
             uid_resp[0] = uid_resp[1];
@@ -2458,7 +2530,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         p_card->sak = sak;
     }
 
-    // PICC compilant with iso14443a-4 ---> (SAK & 0x20 != 0)
+    // PICC compliant with iso14443a-4 ---> (SAK & 0x20 != 0)
     if ((sak & 0x20) == 0) return 2;
 
     // RATS, Request for answer to select

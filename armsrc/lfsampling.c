@@ -36,7 +36,7 @@ static BitstreamOut data = {0, 0, 0};
 // internal struct to keep track of samples gathered
 static sampling_t samples = {0, 0, 0, 0};
 
-void printConfig(void) {
+void printLFConfig(void) {
     uint32_t d = config.divisor;
     DbpString(_CYAN_("LF Sampling config"));
     Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")" )", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
@@ -97,7 +97,7 @@ void setSamplingConfig(sample_config *sc) {
         config.samples_to_skip = sc->samples_to_skip;
 
     if (sc->verbose)
-        printConfig();
+        printLFConfig();
 }
 
 sample_config *getSamplingConfig(void) {
@@ -376,7 +376,7 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
 
 static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
     if (verbose)
-        printConfig();
+        printLFConfig();
 
     LFSetupFPGAForADC(config.divisor, reader_field);
     uint32_t ret = DoAcquisition_config(verbose, sample_size);

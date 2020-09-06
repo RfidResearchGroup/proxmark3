@@ -122,6 +122,14 @@ typedef struct {
     bool verbose;
 } PACKED sample_config;
 
+// A struct used to send hf14a-configs over USB
+typedef struct {
+    int8_t forceanticol; // bool but also -1 if to be ignored
+    int8_t obeybadbcc;   // bool but also -1 if to be ignored
+    int8_t forcecl2;     // 0:auto 1:force executing CL2 -1:force skipping CL2
+    int8_t forcecl3;     // 0:auto 1:force executing CL3 -1:force skipping CL3
+} PACKED hf14a_config;
+
 // Tracelog Header struct
 typedef struct {
     uint32_t timestamp;
@@ -568,6 +576,11 @@ typedef struct {
 //temp
 #define CMD_HF_FELICALITE_DUMP                                            0x03AA
 #define CMD_HF_FELICALITE_SIMULATE                                        0x03AB
+
+// For 14a config
+#define CMD_HF_ISO14443A_PRINT_CONFIG                                     0x03B0
+#define CMD_HF_ISO14443A_GET_CONFIG                                       0x03B1
+#define CMD_HF_ISO14443A_SET_CONFIG                                       0x03B2
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400

@@ -355,8 +355,11 @@ static void SendStatus(void) {
     I2C_print_status();
 #endif
 #ifdef WITH_LF
-    printConfig();      // LF Sampling config
+    printLFConfig();      // LF Sampling config
     printT55xxConfig(); // LF T55XX Config
+#endif
+#ifdef WITH_ISO14443a
+    printHf14aConfig();   // HF 14a config
 #endif
     printConnSpeed();
     DbpString(_CYAN_("Various"));
@@ -739,7 +742,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SAMPLING_PRINT_CONFIG: {
-            printConfig();
+            printLFConfig();
             break;
         }
         case CMD_LF_SAMPLING_GET_CONFIG: {
@@ -1058,8 +1061,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t uid[8];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-			SetTag15693Uid(payload->uid);
-			break;
+            SetTag15693Uid(payload->uid);
+            break;
         }
 #endif
 
@@ -1145,6 +1148,21 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
 
 #ifdef WITH_ISO14443a
+        case CMD_HF_ISO14443A_PRINT_CONFIG: {
+            printHf14aConfig();
+            break;
+        }
+        case CMD_HF_ISO14443A_GET_CONFIG: {
+            hf14a_config *hf14aconfig = getHf14aConfig();
+            reply_ng(CMD_HF_ISO14443A_GET_CONFIG, PM3_SUCCESS, (uint8_t *)hf14aconfig, sizeof(hf14a_config));
+            break;
+        }
+        case CMD_HF_ISO14443A_SET_CONFIG: {
+            hf14a_config c;
+            memcpy(&c, packet->data.asBytes, sizeof(hf14a_config));
+            setHf14aConfig(&c);
+            break;
+        }
         case CMD_HF_ISO14443A_SNIFF: {
             SniffIso14443a(packet->data.asBytes[0]);
             reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);

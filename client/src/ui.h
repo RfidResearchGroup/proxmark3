@@ -22,7 +22,6 @@ extern "C" {
 #define _USE_MATH_DEFINES
 
 typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
-#define NOLF "\xff"
 typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
 typedef enum clientdebugLevel {cdbOFF, cdbSIMPLE, cdbFULL} clientdebugLevel_t;
 // typedef enum devicedebugLevel {ddbOFF, ddbERROR, ddbINFO, ddbDEBUG, ddbEXTENDED} devicedebugLevel_t;

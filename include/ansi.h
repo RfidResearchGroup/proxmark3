@@ -1,6 +1,9 @@
 #ifndef __ANSI_H
 #define __ANSI_H
 
+// Not ANSI but dirty trick to specify we don't want a \n
+#define NOLF "\xff"
+
 #define AEND  "\x1b[0m"
 
 #define _BLUE_(s) "\x1b[34m" s AEND
