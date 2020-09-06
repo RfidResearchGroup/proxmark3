@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Mikron JSC Russia Ultralight EV1 41 pages tag type support (@McEloff)
+ - Add test for Ultralight gen2 magic 'hf search' (@McEloff)
+ - Add test for Ultralight EV1 gen2 magic 'hf search' (@McEloff)
  - Added `hf mf gen3*`magic gen 3 card operations (@McEloff)
  - Readded verichip command which seems missing (@iceman1001)
  - Fix missing t55x7 config block detection (@iceman1001)

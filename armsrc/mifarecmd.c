@@ -2248,6 +2248,16 @@ void MifareCIdent(void) {
         if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
             isGen = MAGIC_GEN_2;
         }
+	    // test for Ultralight magic gen2
+        if (memcmp(buf, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
+            isGen = MAGIC_GEN_2;
+            goto OUT;
+        }
+	    // test for Ultralight EV1 magic gen2
+        if (memcmp(buf, "\x85\x00\x00\xA0\x00\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x41\xDF", 18) == 0) {
+            isGen = MAGIC_GEN_2;
+            goto OUT;
+        }
     };
 
 OUT:
