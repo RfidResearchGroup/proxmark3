@@ -215,6 +215,9 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case ISO14443A_CMD_RATS:
             snprintf(exp, size, "RATS");
             break;
+        case ISO14443A_CMD_PPS:
+            snprintf(exp, size, "PPS");
+            break;
         case ISO14443A_CMD_OPTS:
             snprintf(exp, size, "OPTIONAL TIMESLOT");
             break;
@@ -608,6 +611,10 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
 // iso 7816-3
 void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+   if (cmdsize < 2)
+       return;
+
     // S-block
     if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
         switch ((cmd[0] & 0x3f)) {
@@ -715,7 +722,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 snprintf(exp, size, "GET RESPONSE");
                 break;
             default:
-                snprintf(exp, size, "?");
+                //snprintf(exp, size, "?");
                 break;
         }
     }
