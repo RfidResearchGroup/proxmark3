@@ -372,7 +372,7 @@ int CmdLFCommandRead(const char *Cmd) {
     if (resp.status == PM3_SUCCESS) {
         if (i) {
             PrintAndLogEx(SUCCESS, "downloading response signal data");
-            getSamples(0, true);
+            getSamples(0, false);
             return PM3_SUCCESS;
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
