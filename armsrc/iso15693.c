@@ -1715,7 +1715,6 @@ void SimTagIso15693(uint8_t *uid) {
         uint32_t reader_eof_time = 0;
         int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
         if (cmd_len < 0) {
-            Dbprintf("button pressed, exiting");
             button_pressed = true;
             exit_loop = true;
             break;
