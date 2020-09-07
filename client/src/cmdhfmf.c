@@ -4334,7 +4334,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     bool fillEmulator = false;
     bool errors = false, hasname = false, useuid = false;
     int i, len, flags;
-    uint8_t numblocks = 0, cmdp = 0;
+    uint16_t numblocks = 0, cmdp = 0;
     uint16_t bytes = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -4464,7 +4464,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     int flags;
     char ctmp = '1';
     uint8_t cmdp = 0;
-    uint8_t numblocks = NumOfBlocks(ctmp);
+    uint16_t numblocks = NumOfBlocks(ctmp);
     uint16_t bytes = numblocks * MFBLOCK_SIZE;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
