@@ -986,9 +986,6 @@ int mfGen3Freez(void) {
     }
 }
 
-// SNIFFER
-// [iceman] so many global variables....
-
 // variables
 uint32_t cuid = 0;    // uid part used for crypto1.
 
