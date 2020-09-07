@@ -176,6 +176,7 @@ static int usage_hf_14a_config(void) {
     PrintAndLogEx(NORMAL, "       b 0|1|2           BCC:                 0=follow standard 1=use fixed BCC   2=use card BCC");
     PrintAndLogEx(NORMAL, "       2 0|1|2           SAK<>CL2:            0=follow standard 1=execute CL2     2=skip CL2");
     PrintAndLogEx(NORMAL, "       3 0|1|2           SAK<>CL3:            0=follow standard 1=execute CL3     2=skip CL3");
+    PrintAndLogEx(NORMAL, "       r 0|1|2           SAK<>ATS:            0=follow standard 1=execute RATS    2=skip RATS");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config       ")"     Print current configuration");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1   ")"     Force execution of anticollision");
@@ -294,7 +295,8 @@ static int CmdHf14AConfig(const char *Cmd) {
         .forceanticol = -1,
         .forcebcc = -1,
         .forcecl2 = -1,
-        .forcecl3 = -1
+        .forcecl3 = -1,
+        .forcerats = -1
     };
 
     bool errors = false;
@@ -367,6 +369,24 @@ static int CmdHf14AConfig(const char *Cmd) {
                         break;
                     case '2':
                         config.forcecl3 = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
+                cmdp += 2;
+                break;
+            case 'r':
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcerats = 0;
+                        break;
+                    case '1':
+                        config.forcerats = 1;
+                        break;
+                    case '2':
+                        config.forcerats = 2;
                         break;
                     default:
                         PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));

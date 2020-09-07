@@ -128,6 +128,7 @@ typedef struct {
     int8_t forcebcc;     // 0:expect valid BCC 1:force using computed BCC 2:force using card BCC
     int8_t forcecl2;     // 0:auto 1:force executing CL2 2:force skipping CL2
     int8_t forcecl3;     // 0:auto 1:force executing CL3 2:force skipping CL3
+    int8_t forcerats;    // 0:auto 1:force executing RATS 2:force skipping RATS
 } PACKED hf14a_config;
 
 // Tracelog Header struct

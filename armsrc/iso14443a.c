@@ -128,8 +128,9 @@ Default HF 14a config is set to:
     forcebcc = 0 (expect valid BCC)
     forcecl2 = 0 (auto)
     forcecl3 = 0 (auto)
+    forcerats = 0 (auto)
 */
-static hf14a_config hf14aconfig = { 0, 0, 0, 0 } ;
+static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
@@ -137,6 +138,7 @@ void printHf14aConfig(void) {
     Dbprintf("[b] BCC override..........%s%s%s", (hf14aconfig.forcebcc == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcebcc == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcebcc == 2) ? _RED_("Yes: Always use card BCC") : "");
     Dbprintf("[2] CL2 override..........%s%s%s", (hf14aconfig.forcecl2 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl2 == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2 == 2) ? _RED_("Yes: Always skip CL2") : "");
     Dbprintf("[3] CL3 override..........%s%s%s", (hf14aconfig.forcecl3 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl3 == 1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3 == 2) ? _RED_("Yes: Always skip CL3") : "");
+    Dbprintf("[r] RATS override.........%s%s%s", (hf14aconfig.forcerats == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcerats == 1) ? _RED_("Yes: Always do RATS") : "", (hf14aconfig.forcerats == 2) ? _RED_("Yes: Always skip RATS") : "");
 }
 
 /**
@@ -157,6 +159,8 @@ void setHf14aConfig(hf14a_config *hc) {
         hf14aconfig.forcecl2 = hc->forcecl2;
     if ((hc->forcecl3 >= 0) && (hc->forcecl3 <= 2))
         hf14aconfig.forcecl3 = hc->forcecl3;
+    if ((hc->forcerats >= 0) && (hc->forcerats <= 2))
+        hf14aconfig.forcerats = hc->forcerats;
 }
 
 hf14a_config *getHf14aConfig(void) {
@@ -2539,8 +2543,12 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         p_card->sak = sak;
     }
 
-    // PICC compliant with iso14443a-4 ---> (SAK & 0x20 != 0)
-    if ((sak & 0x20) == 0) return 2;
+    if (hf14aconfig.forcerats == 0) {
+        // PICC compliant with iso14443a-4 ---> (SAK & 0x20 != 0)
+        if ((sak & 0x20) == 0) return 2;
+    } else if (hf14aconfig.forcerats == 2) {
+        return 2;
+    } // else force RATS
 
     // RATS, Request for answer to select
     if (!no_rats) {
