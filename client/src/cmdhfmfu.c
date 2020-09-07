@@ -123,7 +123,7 @@ static int usage_hf_mfu_wrbl(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mfu wrbl b <block number> d <data> k <key> l\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  b <no>   : block to write");
-    PrintAndLogEx(NORMAL, "  d <data> : block data - (8 hex symbols)");
+    PrintAndLogEx(NORMAL, "  d <data> : block data - (8 or 32 hex symbols, 32 hex symbols will do a compatibility write)");
     PrintAndLogEx(NORMAL, "  k <key>  : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l        : (optional) swap entered key's endianness");
     PrintAndLogEx(NORMAL, "");
@@ -1580,9 +1580,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     clearCommandBuffer();
     if (datalen == 16) {
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL_COMPAT, blockNo, keytype, 0, cmddata, datalen);
-    }
-    else
-    {
+    } else {
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
     }
     PacketResponseNG resp;
