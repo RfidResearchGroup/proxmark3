@@ -124,10 +124,10 @@ typedef struct {
 
 // A struct used to send hf14a-configs over USB
 typedef struct {
-    int8_t forceanticol; // bool but also -1 if to be ignored
-    int8_t obeybadbcc;   // bool but also -1 if to be ignored
-    int8_t forcecl2;     // 0:auto 1:force executing CL2 -1:force skipping CL2
-    int8_t forcecl3;     // 0:auto 1:force executing CL3 -1:force skipping CL3
+    int8_t forceanticol; // 0:auto 1:force executing anticol 2:force skipping anticol
+    int8_t forcebcc;     // 0:expect valid BCC 1:force using computed BCC 2:force using card BCC
+    int8_t forcecl2;     // 0:auto 1:force executing CL2 2:force skipping CL2
+    int8_t forcecl3;     // 0:auto 1:force executing CL3 2:force skipping CL3
 } PACKED hf14a_config;
 
 // Tracelog Header struct

@@ -169,19 +169,19 @@ static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int usage_hf_14a_config(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14a config [a 0|1] [b 0|1]");
+    PrintAndLogEx(NORMAL, "Usage: hf 14a config [a 0|1|2] [b 0|1|2] [2 0|1|2] [3 0|1|2]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                 This help");
-    PrintAndLogEx(NORMAL, "       a 0|1             Force standard anticollision sequence even if ATQA tells not to do it");
-    PrintAndLogEx(NORMAL, "       b 0|1             Obey bad BCC in anticollision sequence");
-    PrintAndLogEx(NORMAL, "       2 0|1|-1          Override CL2 decision: 0=auto, 1=always perform CL2, -1=never perform CL2");
-    PrintAndLogEx(NORMAL, "       3 0|1|-1          Override CL3 decision: 0=auto, 1=always perform CL3, -1=never perform CL3");
+    PrintAndLogEx(NORMAL, "       a 0|1|2           ATQA<>anticollision: 0=follow standard 1=execute anticol 2=skip anticol");
+    PrintAndLogEx(NORMAL, "       b 0|1|2           BCC:                 0=follow standard 1=use fixed BCC   2=use card BCC");
+    PrintAndLogEx(NORMAL, "       2 0|1|2           SAK<>CL2:            0=follow standard 1=execute CL2     2=skip CL2");
+    PrintAndLogEx(NORMAL, "       3 0|1|2           SAK<>CL3:            0=follow standard 1=execute CL3     2=skip CL3");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config       ")"     Print current configuration");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a     ")"     Force standard anticollision");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1   ")"     Force execution of anticollision");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0   ")"     Restore ATQA interpretation");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b     ")"     Force obey bad BCC in anticollision");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 0   ")"     Restore BCC computation in anticollision");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 1   ")"     Force fix of bad BCC in anticollision");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 0   ")"     Restore BCC check");
     return PM3_SUCCESS;
 }
 
@@ -292,41 +292,86 @@ static int CmdHf14AConfig(const char *Cmd) {
 
     hf14a_config config = {
         .forceanticol = -1,
-        .obeybadbcc = -1,
-        .forcecl2 = -2,
-        .forcecl3 = -2
+        .forcebcc = -1,
+        .forcecl2 = -1,
+        .forcecl3 = -1
     };
 
     bool errors = false;
-    char cl[3] = {0};
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (param_getchar(Cmd, cmdp)) {
             case 'h':
                 return usage_hf_14a_config();
             case 'a':
-                config.forceanticol = (param_getchar(Cmd, cmdp + 1) == '1');
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forceanticol = 0;
+                        break;
+                    case '1':
+                        config.forceanticol = 1;
+                        break;
+                    case '2':
+                        config.forceanticol = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
                 cmdp += 2;
                 break;
             case 'b':
-                config.obeybadbcc = (param_getchar(Cmd, cmdp + 1) == '1');
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcebcc = 0;
+                        break;
+                    case '1':
+                        config.forcebcc = 1;
+                        break;
+                    case '2':
+                        config.forcebcc = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
                 cmdp += 2;
                 break;
             case '2':
-                param_getstr(Cmd, cmdp + 1, cl, sizeof(cl));
-                if (strcmp(cl, "-1") == 0) {
-                    config.forcecl2 = -1;
-                } else {
-                    config.forcecl2 = strcmp(cl, "1") == 0;
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcecl2 = 0;
+                        break;
+                    case '1':
+                        config.forcecl2 = 1;
+                        break;
+                    case '2':
+                        config.forcecl2 = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
                 }
                 cmdp += 2;
                 break;
             case '3':
-                param_getstr(Cmd, cmdp + 1, cl, sizeof(cl));
-                if (strcmp(cl, "-1") == 0) {
-                    config.forcecl3 = -1;
-                } else {
-                    config.forcecl3 = strcmp(cl, "1") == 0;
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcecl3 = 0;
+                        break;
+                    case '1':
+                        config.forcecl3 = 1;
+                        break;
+                    case '2':
+                        config.forcecl3 = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
                 }
                 cmdp += 2;
                 break;

@@ -124,8 +124,8 @@ static uint32_t LastProxToAirDuration;
 
 /*
 Default HF 14a config is set to:
-    forceanticol = false
-    obeybadbcc = false
+    forceanticol = 0 (auto)
+    forcebcc = 0 (expect valid BCC)
     forcecl2 = 0 (auto)
     forcecl3 = 0 (auto)
 */
@@ -133,10 +133,10 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0 } ;
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("[a] Force std anticol.....%s", (hf14aconfig.forceanticol) ? _RED_("Yes") " (even if bad ATQA)" : _GREEN_("No"));
-    Dbprintf("[b] Force obey bad BCC....%s", (hf14aconfig.obeybadbcc) ? _RED_("Yes") : _GREEN_("No"));
-    Dbprintf("[2] Force CL2 override ...%s%s%s", (hf14aconfig.forcecl2==0) ? _GREEN_("No") : "", (hf14aconfig.forcecl2==1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2==-1) ? _RED_("Yes: Always skip CL2") : "");
-    Dbprintf("[3] Force CL3 override ...%s%s%s", (hf14aconfig.forcecl3==0) ? _GREEN_("No") : "", (hf14aconfig.forcecl3==1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3==-1) ? _RED_("Yes: Always skip CL3") : "");
+    Dbprintf("[a] Anticol override......%s%s%s", (hf14aconfig.forceanticol==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forceanticol==1) ? _RED_("Yes: Always do anticol") : "", (hf14aconfig.forceanticol==2) ? _RED_("Yes: Always skip anticol") : "");
+    Dbprintf("[b] BCC override..........%s%s%s", (hf14aconfig.forcebcc==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcebcc==1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcebcc==2) ? _RED_("Yes: Always use card BCC") : "");
+    Dbprintf("[2] CL2 override..........%s%s%s", (hf14aconfig.forcecl2==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl2==1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2==2) ? _RED_("Yes: Always skip CL2") : "");
+    Dbprintf("[3] CL3 override..........%s%s%s", (hf14aconfig.forcecl3==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl3==1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3==2) ? _RED_("Yes: Always skip CL3") : "");
 }
 
 /**
@@ -149,13 +149,13 @@ void printHf14aConfig(void) {
  */
 void setHf14aConfig(hf14a_config *hc) {
 
-    if (hc->forceanticol > -1)
-        hf14aconfig.forceanticol = (hc->forceanticol > 0) ? 1 : 0;
-    if (hc->obeybadbcc > -1)
-        hf14aconfig.obeybadbcc = (hc->obeybadbcc > 0) ? 1 : 0;
-    if ((hc->forcecl2 >= -1) && (hc->forcecl2 <= 1))
+    if ((hc->forceanticol >= 0) && (hc->forceanticol <= 2))
+        hf14aconfig.forceanticol = hc->forceanticol;
+    if ((hc->forcebcc >= 0) && (hc->forcebcc <= 2))
+        hf14aconfig.forcebcc = hc->forcebcc;
+    if ((hc->forcecl2 >= 0) && (hc->forcecl2 <= 2))
         hf14aconfig.forcecl2 = hc->forcecl2;
-    if ((hc->forcecl3 >= -1) && (hc->forcecl3 <= 1))
+    if ((hc->forcecl3 >= 0) && (hc->forcecl3 <= 2))
         hf14aconfig.forcecl3 = hc->forcecl3;
 }
 
@@ -2401,10 +2401,12 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
             memset(uid_ptr, 0, 10);
     }
 
-    if ( ! hf14aconfig.forceanticol ) {
+    if ( hf14aconfig.forceanticol == 0 ) {
         // check for proprietary anticollision:
         if ((resp[0] & 0x1F) == 0) return 3;
-    }
+    } else if ( hf14aconfig.forceanticol == 2 ) {
+        return 3; // force skipping anticol
+    } // else force executing
 
     // OK we will select at least at cascade 1, lets see if first byte of UID was 0x88 in
     // which case we need to make a cascade 2 request and select - this is a long UID
@@ -2419,8 +2421,10 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         if (anticollision) {
             // SELECT_ALL
             ReaderTransmit(sel_all, sizeof(sel_all), NULL);
-            if (!ReaderReceive(resp, resp_par)) return 0;
-
+            if (!ReaderReceive(resp, resp_par)) {
+                Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
+                return 0;
+            }
             if (Demod.collisionPos) {            // we had a collision and need to construct the UID bit by bit
                 memset(uid_resp, 0, 5);
                 uint16_t uid_resp_bits = 0;
@@ -2474,11 +2478,14 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
             memcpy(sel_uid + 2, uid_resp, 5);                               // the UID received during anticollision with original BCC
             uint8_t bcc = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate BCC
             if (sel_uid[6] != bcc) {
-                Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x. Will use " NOLF, cascade_level, sel_uid[6], bcc);
-                if (! hf14aconfig.obeybadbcc) {
+                Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x", cascade_level, sel_uid[6], bcc);
+                if (hf14aconfig.forcebcc==0) {
+                    Dbprintf("Aborting");
+                    return 0;
+                } else if (hf14aconfig.forcebcc==1) {
                     sel_uid[6] = bcc;
-                }
-                Dbprintf("0x%02x", sel_uid[6]);
+                } // else use card BCC
+                Dbprintf("Using BCC=" _YELLOW_("0x%02x") " to perform anticollision", sel_uid[6]);
             }
         } else {
             memcpy(sel_uid + 2, uid_resp, 4);                               // the provided UID
@@ -2489,20 +2496,22 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
 
         // Receive the SAK
-        if (!ReaderReceive(resp, resp_par)) return 0;
-
+        if (!ReaderReceive(resp, resp_par)) {
+            Dbprintf("Card didn't answer to select");
+            return 0;
+        }
         sak = resp[0];
 
         // Test if more parts of the uid are coming
         do_cascade = (((sak & 0x04) /* && uid_resp[0] == 0x88 */) > 0);
         if (cascade_level==0) {
-            if (hf14aconfig.forcecl2==-1) {
+            if (hf14aconfig.forcecl2==2) {
                 do_cascade = false;
             } else if (hf14aconfig.forcecl2==1) {
                 do_cascade = true;
             } // else 0==auto
         } else if (cascade_level==1) {
-            if (hf14aconfig.forcecl3==-1) {
+            if (hf14aconfig.forcecl3==2) {
                 do_cascade = false;
             } else if (hf14aconfig.forcecl3==1) {
                 do_cascade = true;
