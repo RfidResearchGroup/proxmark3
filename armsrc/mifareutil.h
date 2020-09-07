@@ -73,7 +73,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack);
 int mifare_ultra_auth(uint8_t *keybytes);
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData);
-//int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData);
+int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_halt(void);
 

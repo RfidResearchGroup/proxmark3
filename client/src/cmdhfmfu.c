@@ -1474,8 +1474,9 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     uint8_t cmdp = 0;
     uint8_t keylen = 0;
-    uint8_t blockdata[20] = {0x00};
+    uint8_t blockdata[16] = {0x00};
     uint8_t data[16] = {0x00};
+    uint8_t datalen = 4;
     uint8_t authenticationkey[16] = {0x00};
     uint8_t *authKeyPtr = authenticationkey;
 
@@ -1517,9 +1518,13 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
                 break;
             case 'd':
                 if (param_gethex(Cmd, cmdp + 1, blockdata, 8)) {
-                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
-                    errors = true;
-                    break;
+                    if (param_gethex(Cmd, cmdp + 1, blockdata, 32)) {
+                        PrintAndLogEx(WARNING, "Block data must include 8 or 32 HEX symbols");
+                        errors = true;
+                        break;
+                    } else {
+                        datalen = 16;
+                    }
                 }
                 cmdp += 2;
                 break;
@@ -1559,9 +1564,8 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(blockdata, 4));
 
     //Send write Block
-    uint8_t cmddata[20];
-    memcpy(cmddata, blockdata, 4);
-    uint8_t datalen = 4;
+    uint8_t cmddata[32];
+    memcpy(cmddata, blockdata, datalen);
     uint8_t keytype = 0;
     if (hasAuthKey) {
         keytype = 1;
@@ -1574,7 +1578,13 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
+    if (datalen == 16) {
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL_COMPAT, blockNo, keytype, 0, cmddata, datalen);
+    }
+    else
+    {
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
+    }
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
