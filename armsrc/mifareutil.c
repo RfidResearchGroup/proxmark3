@@ -613,7 +613,7 @@ void emlClearMem(void) {
     memset(emCARD, 0, CARD_MEMORY_SIZE);
 
     // fill sectors trailer data
-    for (uint16_t b = 3; b <= MIFARE_4K_MAXBLOCK; ((b <= MIFARE_2K_MAXBLOCK) ? (b += 4) : (b += 16)))
+    for (uint16_t b = 3; b <= MIFARE_4K_MAXBLOCK; ((b < MIFARE_2K_MAXBLOCK - 4) ? (b += 4) : (b += 16)))
         emlSetMem((uint8_t *)trailer, b, 1);
 
     // uid
