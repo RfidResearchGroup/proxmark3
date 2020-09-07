@@ -444,47 +444,6 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     set_tracing(false);
 }
 
-/* // Command not needed but left for future testing
-void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
-{
-    uint8_t blockNo = arg0;
-    uint8_t blockdata[16] = {0x00};
-
-    memcpy(blockdata, datain, 16);
-
-    uint8_t uid[10] = {0x00};
-
-    LED_A_ON(); LED_B_OFF(); LED_C_OFF();
-
-    clear_trace();
-    set_tracing(true);
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
-    if(!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
-        if (DBGLEVEL >= DBG_ERROR)   Dbprintf("Can't select card");
-        OnError(0);
-        return;
-    };
-
-    if(mifare_ultra_writeblock_compat(blockNo, blockdata)) {
-        if (DBGLEVEL >= DBG_ERROR)   Dbprintf("Write block error");
-        OnError(0);
-        return; };
-
-    if(mifare_ultra_halt()) {
-        if (DBGLEVEL >= DBG_ERROR)   Dbprintf("Halt error");
-        OnError(0);
-        return;
-    };
-
-    if (DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
-
-    reply_mix(CMD_ACK,1,0,0,0,0);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
-}
-*/
-
 // Arg0   : Block to write to.
 // Arg1   : 0 = use no authentication.
 //          1 = use 0x1A authentication.
