@@ -101,7 +101,7 @@ int gLow = 0;
 static void init_tag(void) {
 
     // iceman: memset(tag.sectors, 0x00, sizeof));
-    
+
     // initialize global tag structure
     for (int i = 0; i < 34; i++)
         for (int j = 0; j < 7; j++)
@@ -324,7 +324,7 @@ static uint32_t get_pulse_length(void) {
     while (sample > gLow && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     }
-    
+
     if (timeout == 0)
         return 0;
 
@@ -346,7 +346,7 @@ static uint32_t get_pulse_length(void) {
     if (timeout == 0)
         return 0;
 
-    return (uint32_t)AT91C_BASE_TC1->TC_CV;    
+    return (uint32_t)AT91C_BASE_TC1->TC_CV;
 
 }
 
@@ -836,7 +836,7 @@ void em4x50_read(em4x50_data_t *etd) {
 
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
-        
+
         if (etd->addr_given) {
 
             // selective read mode

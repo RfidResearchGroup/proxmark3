@@ -1643,9 +1643,9 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
     }
-    
+
     PrintAndLogEx(NORMAL, "");
-    
+
     if (resp.oldarg[0] == 0) {
         PrintAndLogEx(WARNING, "Button pressed, aborted");
         return PM3_EOPABORTED;

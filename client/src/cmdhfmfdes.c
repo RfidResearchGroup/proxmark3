@@ -4395,7 +4395,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         if (pattern2b && startPattern < 0x10000) {
             if (verbose == false)
                 PrintAndLogEx(NORMAL, "p" NOLF);
-            
+
             aeskeyListLen = 0;
             deskeyListLen = 0;
             k3kkeyListLen = 0;

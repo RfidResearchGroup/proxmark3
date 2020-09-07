@@ -534,7 +534,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     while (!button_pushed && !finished) {
 
         WDT_HIT();
-        
+
         if (counter == 2000) {
             if (data_available()) {
                 break;

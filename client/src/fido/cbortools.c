@@ -49,7 +49,7 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
             *got_next = true;
             if (err)
                 return err;     // parse error
-            
+
             PrintAndLogEx(NORMAL, "%s" NOLF, sprint_hex(buf, n));
             free(buf);
             break;

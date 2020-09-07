@@ -15,7 +15,7 @@ ISO14443A (usually NFC tags)
     95 20 = Anticollision of cascade level2
     95 70 = Select of cascade level2
     50 00 = Halt (usage: 5000+2bytes ISO14443A-CRC - no answer from card)
-    
+
     E0 = RATS
     D0 = PPS
 Mifare

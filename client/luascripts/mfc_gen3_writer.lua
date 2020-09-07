@@ -47,9 +47,9 @@ desc = [[
     5. Erase all data at the card and set the FF FF FF FF FF FF keys, and Access Conditions to 78778800.
 
     Script works in a wizard styled way.
-	
+
 	Author Youtube channel: https://yev.ooo/
-	
+
 	Many Thanks,
 	Best Regards
 ]]
@@ -261,7 +261,7 @@ local function main(args)
         end
     else
         dumpEML = "find '.' -iname '*dump.eml' -type f"
-        if string.len(GetUID()) == 14 then 
+        if string.len(GetUID()) == 14 then
             eml_file_uid_start = 9
             eml_file_uid_end = 22
             eml_file_lengt = 31

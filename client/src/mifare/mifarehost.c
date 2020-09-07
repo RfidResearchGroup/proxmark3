@@ -690,7 +690,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
         // check a block of generated key candidates.
         if (IfPm3Flash()) {
-            
+
             mem[3] = ((chunk >> 8) & 0xFF);
             mem[4] = (chunk & 0xFF);
 
@@ -915,7 +915,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, 16);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 3500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
         if (uid != NULL)
             memcpy(uid, resp.data.asBytes, 4);
@@ -1078,7 +1078,7 @@ int detect_classic_nackbug(bool verbose) {
         PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
 
     while (true) {
-        
+
         PrintAndLogEx(NORMAL, "." NOLF);
         if (kbd_enter_pressed()) {
             return PM3_EOPABORTED;

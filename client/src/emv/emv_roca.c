@@ -71,7 +71,7 @@ static mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
     if (X->n == 1 && X->s > 0) {
         return X->p[0];
     }
-    
+
     PrintAndLogEx(WARNING, "ZERRRRO!!!\n");
     return 0;
 }

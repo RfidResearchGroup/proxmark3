@@ -615,8 +615,8 @@ int lf_read(bool verbose, uint32_t samples) {
         }
     }
 
-    // response is number of bits read 
-    uint32_t size = (resp.data.asDwords[0] / 8);   
+    // response is number of bits read
+    uint32_t size = (resp.data.asDwords[0] / 8);
     getSamples(size, verbose);
     return PM3_SUCCESS;
 }
