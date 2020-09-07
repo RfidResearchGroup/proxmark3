@@ -630,7 +630,7 @@ static int CmdEM410xWrite(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Writing " _YELLOW_("%s") " tag with UID 0x%010" PRIx64 " (clock rate: %d)", (card==1) ? "T55x7" : "Q5/T5555", id, clock1);
+    PrintAndLogEx(SUCCESS, "Writing " _YELLOW_("%s") " tag with UID 0x%010" PRIx64 " (clock rate: %d)", (card == 1) ? "T55x7" : "Q5/T5555", id, clock1);
     // NOTE: We really should pass the clock in as a separate argument, but to
     //   provide for backwards-compatibility for older firmware, and to avoid
     //   having to add another argument to CMD_LF_EM410X_WRITE, we just store
@@ -875,7 +875,7 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
         PrintAndLogEx(WARNING, "(EM4x05ReadWord_ext) timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
- 
+
     if (downloadSamplesEM() == false) {
         return PM3_ESOFT;
     }

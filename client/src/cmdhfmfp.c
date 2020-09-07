@@ -144,7 +144,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV2;
 
     // DESFire EV3
-    if (major == 0x33 &&  minor == 0x00 )
+    if (major == 0x33 &&  minor == 0x00)
         return DESFIRE_EV3;
 
     // DESFire Light
@@ -1023,7 +1023,7 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                         PrintAndLogEx(ERR, "\nExchange error. Aborted.");
                     else
                         PrintAndLogEx(NORMAL, "E" NOLF);
-                    
+
                     DropField();
                     return PM3_ECARDEXCHANGE;
                 }

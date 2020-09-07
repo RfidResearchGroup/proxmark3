@@ -43,9 +43,9 @@ static void calc_score(uint8_t *csn, uint8_t *k) {
 
     if (score >= 2 && badscore < 2) {
         PrintAndLogEx(NORMAL, "CSN\t%02x%02x%02x%02x%02x%02x%02x%02x\t%02x %02x %02x %02x %02x %02x %02x %02x\t" NOLF
-               , csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]
-               , k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7]
-              );
+                      , csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]
+                      , k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7]
+                     );
 
         for (i = 0 ; i < score; i++) {
             PrintAndLogEx(NORMAL, "%d," NOLF, uniq_vals[i]);

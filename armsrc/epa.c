@@ -229,7 +229,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
                             sizeof(apdu_select_binary_cardaccess),
                             response_apdu,
                             sizeof(response_apdu)
-                            );
+                           );
 
     if (rapdu_length < 6
             || response_apdu[rapdu_length - 4] != 0x90
@@ -243,7 +243,7 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
                             sizeof(apdu_read_binary),
                             response_apdu,
                             sizeof(response_apdu)
-                            );
+                           );
 
     if (rapdu_length <= 6
             || response_apdu[rapdu_length - 4] != 0x90
@@ -325,11 +325,11 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
 
     // now get the nonce
     uint8_t nonce[256] = {0};
-    
+
     struct p {
         uint32_t m;
     } PACKED;
-    struct p *packet = (struct p*)c->data.asBytes;
+    struct p *packet = (struct p *)c->data.asBytes;
 
     func_return = EPA_PACE_Get_Nonce(packet->m, nonce);
     // check if the command succeeded
@@ -359,7 +359,7 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
 
     // copy the constant part
     memcpy(apdu, apdu_general_authenticate_pace_get_nonce, sizeof(apdu_general_authenticate_pace_get_nonce));
-    
+
     // append Le (requested length + 2 due to tag/length taking 2 bytes) in RAPDU
     apdu[sizeof(apdu_general_authenticate_pace_get_nonce)] = requested_length + 4;
 
@@ -444,8 +444,8 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
     // check if the command succeeded
     if (send_return != 6)
 //            && response_apdu[send_return - 4] != 0x90
-//            || response_apdu[send_return - 3] != 0x00) 
-            {
+//            || response_apdu[send_return - 3] != 0x00)
+    {
         return 1;
     }
     return 0;
@@ -500,7 +500,7 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
                                apdu_lengths_replay[i],
                                response_apdu,
                                sizeof(response_apdu)
-                               );
+                              );
         timings[i] = GetCountUS();
         // every step but the last one should succeed
         if (i < ARRAYLEN(apdu_lengths_replay) - 1

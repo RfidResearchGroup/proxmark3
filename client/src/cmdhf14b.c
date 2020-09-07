@@ -114,7 +114,7 @@ static int usage_hf_14b_dump(void) {
                   "Example:\n"
                   _YELLOW_("\thf 14b dump f\n")
                   _YELLOW_("\thf 14b dump 2 f mydump")
-                  );
+                 );
     return 0;
 }
 
@@ -752,7 +752,7 @@ static int CmdHF14BReadSri(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_SRI_READ, blocks, 0, 0, NULL, 0);
-    
+
     // iceman:  should download read data and print in client.
     return PM3_SUCCESS;
 }

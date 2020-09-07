@@ -133,10 +133,10 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0 } ;
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("[a] Anticol override......%s%s%s", (hf14aconfig.forceanticol==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forceanticol==1) ? _RED_("Yes: Always do anticol") : "", (hf14aconfig.forceanticol==2) ? _RED_("Yes: Always skip anticol") : "");
-    Dbprintf("[b] BCC override..........%s%s%s", (hf14aconfig.forcebcc==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcebcc==1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcebcc==2) ? _RED_("Yes: Always use card BCC") : "");
-    Dbprintf("[2] CL2 override..........%s%s%s", (hf14aconfig.forcecl2==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl2==1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2==2) ? _RED_("Yes: Always skip CL2") : "");
-    Dbprintf("[3] CL3 override..........%s%s%s", (hf14aconfig.forcecl3==0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl3==1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3==2) ? _RED_("Yes: Always skip CL3") : "");
+    Dbprintf("[a] Anticol override......%s%s%s", (hf14aconfig.forceanticol == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forceanticol == 1) ? _RED_("Yes: Always do anticol") : "", (hf14aconfig.forceanticol == 2) ? _RED_("Yes: Always skip anticol") : "");
+    Dbprintf("[b] BCC override..........%s%s%s", (hf14aconfig.forcebcc == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcebcc == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcebcc == 2) ? _RED_("Yes: Always use card BCC") : "");
+    Dbprintf("[2] CL2 override..........%s%s%s", (hf14aconfig.forcecl2 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl2 == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2 == 2) ? _RED_("Yes: Always skip CL2") : "");
+    Dbprintf("[3] CL3 override..........%s%s%s", (hf14aconfig.forcecl3 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl3 == 1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3 == 2) ? _RED_("Yes: Always skip CL3") : "");
 }
 
 /**
@@ -2401,10 +2401,10 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
             memset(uid_ptr, 0, 10);
     }
 
-    if ( hf14aconfig.forceanticol == 0 ) {
+    if (hf14aconfig.forceanticol == 0) {
         // check for proprietary anticollision:
         if ((resp[0] & 0x1F) == 0) return 3;
-    } else if ( hf14aconfig.forceanticol == 2 ) {
+    } else if (hf14aconfig.forceanticol == 2) {
         return 3; // force skipping anticol
     } // else force executing
 
@@ -2479,10 +2479,10 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
             uint8_t bcc = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate BCC
             if (sel_uid[6] != bcc) {
                 Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x", cascade_level, sel_uid[6], bcc);
-                if (hf14aconfig.forcebcc==0) {
+                if (hf14aconfig.forcebcc == 0) {
                     Dbprintf("Aborting");
                     return 0;
-                } else if (hf14aconfig.forcebcc==1) {
+                } else if (hf14aconfig.forcebcc == 1) {
                     sel_uid[6] = bcc;
                 } // else use card BCC
                 Dbprintf("Using BCC=" _YELLOW_("0x%02x") " to perform anticollision", sel_uid[6]);
@@ -2504,16 +2504,16 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 
         // Test if more parts of the uid are coming
         do_cascade = (((sak & 0x04) /* && uid_resp[0] == 0x88 */) > 0);
-        if (cascade_level==0) {
-            if (hf14aconfig.forcecl2==2) {
+        if (cascade_level == 0) {
+            if (hf14aconfig.forcecl2 == 2) {
                 do_cascade = false;
-            } else if (hf14aconfig.forcecl2==1) {
+            } else if (hf14aconfig.forcecl2 == 1) {
                 do_cascade = true;
             } // else 0==auto
-        } else if (cascade_level==1) {
-            if (hf14aconfig.forcecl3==2) {
+        } else if (cascade_level == 1) {
+            if (hf14aconfig.forcecl3 == 2) {
                 do_cascade = false;
-            } else if (hf14aconfig.forcecl3==1) {
+            } else if (hf14aconfig.forcecl3 == 1) {
                 do_cascade = true;
             } // else 0==auto
         }

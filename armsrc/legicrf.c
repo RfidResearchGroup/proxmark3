@@ -101,27 +101,27 @@ static uint16_t rx_frame_from_fpga(void) {
 //
 // Note: inlining this function would fail with -Os
 static bool rx_bit(void) {
-	int32_t sum_cq = 0;
-	int32_t sum_ci = 0;
+    int32_t sum_cq = 0;
+    int32_t sum_ci = 0;
 
-	// skip first 5 I/Q pairs
-	for(size_t i = 0; i<5; ++i) {
-		(void)rx_frame_from_fpga();
-	}
+    // skip first 5 I/Q pairs
+    for (size_t i = 0; i < 5; ++i) {
+        (void)rx_frame_from_fpga();
+    }
 
-	// sample next 8 I/Q pairs
-	for (uint8_t i = 0; i < 8; ++i) {
-		uint16_t iq = rx_frame_from_fpga();
-		int8_t ci = (int8_t)(iq >> 8);
-		int8_t cq = (int8_t)(iq & 0xff);
-		sum_ci += ci;
-		sum_cq += cq;
-	}
+    // sample next 8 I/Q pairs
+    for (uint8_t i = 0; i < 8; ++i) {
+        uint16_t iq = rx_frame_from_fpga();
+        int8_t ci = (int8_t)(iq >> 8);
+        int8_t cq = (int8_t)(iq & 0xff);
+        sum_ci += ci;
+        sum_cq += cq;
+    }
 
-	// calculate power
-	int32_t power = (MAX(ABS(sum_ci), ABS(sum_cq)) + (MIN(ABS(sum_ci), ABS(sum_cq)) >> 1));
+    // calculate power
+    int32_t power = (MAX(ABS(sum_ci), ABS(sum_cq)) + (MIN(ABS(sum_ci), ABS(sum_cq)) >> 1));
 
-  // compare average (power / 8) to threshold
+    // compare average (power / 8) to threshold
     return ((power >> 3) > INPUT_THRESHOLD);
 }
 
@@ -136,12 +136,12 @@ static bool rx_bit(void) {
 
 static void tx_bit(bool bit) {
     // insert pause
-  HIGH(GPIO_SSC_DOUT);
+    HIGH(GPIO_SSC_DOUT);
     last_frame_end += RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
 
-  // return to carrier on, wait for bit periode to end
-  LOW(GPIO_SSC_DOUT);
+    // return to carrier on, wait for bit periode to end
+    LOW(GPIO_SSC_DOUT);
     last_frame_end += (bit ? RWD_TIME_1 : RWD_TIME_0) - RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
 }

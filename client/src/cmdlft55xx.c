@@ -994,7 +994,7 @@ static int SanityOfflineCheck(bool useGraphBuffer) {
 
 static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
     char msg[80];
-    snprintf(msg, sizeof(msg) ,"Downlink Mode used : ");
+    snprintf(msg, sizeof(msg), "Downlink Mode used : ");
 
     switch (downlink_mode) {
         case  1 :
@@ -1075,7 +1075,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                         continue;
 
                     found = true;
-    
+
                     break;
                 }
             } else {
@@ -2327,7 +2327,7 @@ static int CmdT55xxDump(const char *Cmd) {
             strcpy(preferredName, "lf-t55xx");
             for (uint8_t i = 1; i <= 7; i++) {
                 if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF))
-                    snprintf(preferredName + strlen(preferredName), sizeof(preferredName) - strlen(preferredName) , "-%08X", cardmem[i].blockdata);
+                    snprintf(preferredName + strlen(preferredName), sizeof(preferredName) - strlen(preferredName), "-%08X", cardmem[i].blockdata);
                 else
                     break;
             }
@@ -3052,7 +3052,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             bool found;
             uint32_t candidate;
         } PACKED;
-        struct p* packet = (struct p*)resp.data.asBytes;
+        struct p *packet = (struct p *)resp.data.asBytes;
 
         if (packet->found) {
             PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX32) " ]", packet->candidate);
@@ -3224,7 +3224,7 @@ uint8_t tryOnePassword(uint32_t password, uint8_t downlink_mode) {
         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, dl_mode)) {
             //  if (getSignalProperties()->isnoise == false) {
             //  } else {
-            if (tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0 ,password)) {
+            if (tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, password)) {
                 return 1 + (dl_mode << 1);
             }
             //  }

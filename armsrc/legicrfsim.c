@@ -459,30 +459,30 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
     // configure ARM and FPGA
     init_tag();
 
-	int res = PM3_SUCCESS;
+    int res = PM3_SUCCESS;
     // verify command line input
     if (init_card(tagtype, &card) != PM3_SUCCESS) {
         DbpString("Unknown tagtype to simulate");
-		res = PM3_ESOFT;
+        res = PM3_ESOFT;
         goto OUT;
     }
 
-	uint16_t counter = 0;
+    uint16_t counter = 0;
     LED_A_ON();
 
     Dbprintf("Legic Prime, simulating uid: %02X%02X%02X%02X", legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
-	
+
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
-		
-		if (counter >= 2000) {
-			 if (data_available()) {
-				 res = PM3_EOPABORTED;
-				 break;
-			 }
-			 counter = 0;
-		}
-		counter++;
+
+        if (counter >= 2000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            counter = 0;
+        }
+        counter++;
 
         // wait for carrier, restart after timeout
         if (wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD) == false) {
@@ -511,9 +511,9 @@ OUT:
 
     switch_off();
     StopTicks();
-	
-	if (send_reply)
-		reply_ng(CMD_HF_LEGIC_SIMULATE, res, NULL, 0);
-	
-	BigBuf_free_keep_EM();
+
+    if (send_reply)
+        reply_ng(CMD_HF_LEGIC_SIMULATE, res, NULL, 0);
+
+    BigBuf_free_keep_EM();
 }

@@ -1068,11 +1068,11 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_LEGICRF
         case CMD_HF_LEGIC_SIMULATE: {
-			struct p {
-				uint8_t tagtype;
-				bool send_reply;
-			} PACKED;
-			struct p *payload = (struct p *) packet->data.asBytes;
+            struct p {
+                uint8_t tagtype;
+                bool send_reply;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
             LegicRfSimulate(payload->tagtype, payload->send_reply);
             break;
         }

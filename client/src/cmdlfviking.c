@@ -115,10 +115,10 @@ static int CmdVikingClone(const char *Cmd) {
     num_to_bytes(rawID, 8, &payload.blocks[0]);
 
     PrintAndLogEx(INFO, "Preparing to clone Viking tag on " _YELLOW_("%s") " - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s")
-            , (Q5) ? "Q5/T5555" : "T55x7"
-            , id
-            ,  sprint_hex(payload.blocks, sizeof(payload.blocks))
-            );
+                  , (Q5) ? "Q5/T5555" : "T55x7"
+                  , id
+                  ,  sprint_hex(payload.blocks, sizeof(payload.blocks))
+                 );
 
     clearCommandBuffer();
 

@@ -1199,11 +1199,11 @@ static int l_cwd(lua_State *L) {
 
 // ref:  https://github.com/RfidResearchGroup/proxmark3/issues/891
 // redirect LUA's print to Proxmark3 PrintAndLogEx
-static int l_printandlogex(lua_State* L) {
+static int l_printandlogex(lua_State *L) {
 
     int n = lua_gettop(L);
     for (int i = 1; i <= n; i++) {
-        if (lua_isstring(L, i)) {          
+        if (lua_isstring(L, i)) {
             PrintAndLogEx(NORMAL, "%s", lua_tostring(L, i));
         }
     }
@@ -1293,7 +1293,7 @@ int set_pm3_libraries(lua_State *L) {
 
     // remove the global environment table from the stack
     lua_pop(L, 1);
-    
+
     // print redirect here
     lua_register(L, "print", l_printandlogex);
 

@@ -388,7 +388,7 @@ static int cmp_uint32(const void *a, const void *b) {
         return mx > my;
 }
 
-bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t* rmac, uint8_t* tmac, uint8_t* key) {
+bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key) {
 
     iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
     if (prekey == false) {
@@ -399,14 +399,14 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t* rmac, uint8_t* 
     memcpy(ccnr, epurse, 8);
     memcpy(ccnr + 8, rmac, 4);
 
-    GenerateMacKeyFrom(csn, ccnr, false, false, (uint8_t*)iClass_Key_Table, ICLASS_KEYS_MAX, prekey);
+    GenerateMacKeyFrom(csn, ccnr, false, false, (uint8_t *)iClass_Key_Table, ICLASS_KEYS_MAX, prekey);
     qsort(prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
 
     iclass_prekey_t lookup;
     memcpy(lookup.mac, tmac, 4);
 
     // binsearch
-    iclass_prekey_t * item = (iclass_prekey_t *) bsearch(&lookup, prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
+    iclass_prekey_t *item = (iclass_prekey_t *) bsearch(&lookup, prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
     if (item != NULL) {
         memcpy(key, item->key, 8);
         return true;
@@ -1268,7 +1268,7 @@ static int CmdHFiClassEView(const char *Cmd) {
         free(dump);
         return PM3_ETIMEOUT;
     }
-    
+
     if (verbose) {
         print_picopass_header((picopass_hdr *) dump);
         print_picopass_info((picopass_hdr *) dump);
@@ -1279,18 +1279,18 @@ static int CmdHFiClassEView(const char *Cmd) {
     PrintAndLogEx(INFO, "------+----+-------------------------+----------");
     PrintAndLogEx(INFO, " CSN  |0x00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, 1, blocks, bytes);
-    
-/*
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "----+-------------------------+---------");
-    PrintAndLogEx(INFO, "blk | data                    | ascii");
-    PrintAndLogEx(INFO, "----+-------------------------+---------");
-    for (uint16_t i = 0; i < blocks; i++){
-        PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 8) , 8) );
-    }
-    PrintAndLogEx(INFO, "----+-------------------------+---------");
-    PrintAndLogEx(NORMAL, "");
-*/  
+
+    /*
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "----+-------------------------+---------");
+        PrintAndLogEx(INFO, "blk | data                    | ascii");
+        PrintAndLogEx(INFO, "----+-------------------------+---------");
+        for (uint16_t i = 0; i < blocks; i++){
+            PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 8) , 8) );
+        }
+        PrintAndLogEx(INFO, "----+-------------------------+---------");
+        PrintAndLogEx(NORMAL, "");
+    */
     free(dump);
     return PM3_SUCCESS;
 }
@@ -2247,7 +2247,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
     if (startblock < 5) {
         PrintAndLogEx(WARNING, "you cannot write key blocks this way. yet... make your start block > 4");
-        return PM3_EINVARG; 
+        return PM3_EINVARG;
     }
 
     int total_bytes = (((endblock - startblock) + 1) * 12);

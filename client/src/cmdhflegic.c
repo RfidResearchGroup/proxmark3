@@ -590,13 +590,13 @@ static int CmdLegicSim(const char *Cmd) {
         uint8_t tagtype;
         bool send_reply;
     } PACKED payload;
-	
+
     payload.send_reply = true;
     payload.tagtype = param_get8ex(Cmd, 0, 1, 10);
-	if (payload.tagtype > 2 ) {
-		 return usage_legic_sim();
-	}
-	
+    if (payload.tagtype > 2) {
+        return usage_legic_sim();
+    }
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_LEGIC_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
@@ -605,15 +605,15 @@ static int CmdLegicSim(const char *Cmd) {
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
         keypress = kbd_enter_pressed();
-		
-        if (WaitForResponseTimeout(CMD_HF_LEGIC_SIMULATE, &resp, 1500)) {
-			break;
-		}
 
-	}
-	if (keypress)
+        if (WaitForResponseTimeout(CMD_HF_LEGIC_SIMULATE, &resp, 1500)) {
+            break;
+        }
+
+    }
+    if (keypress)
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-	   
+
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }

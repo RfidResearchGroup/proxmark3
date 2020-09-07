@@ -404,7 +404,7 @@ static int CmdLfNedapGen(const char *Cmd) {
                 break;
             case 'q':
                 cmdp++;
-                break;            
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -467,13 +467,13 @@ static int CmdLFNedapClone(const char *Cmd) {
     }
     bool q5 = (strstr(Cmd, "q") != NULL);
     if (q5) {
-         if (DemodBufferLen == 64) {
+        if (DemodBufferLen == 64) {
             blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
-         } else {
+        } else {
             blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 4 << T5555_MAXBLOCK_SHIFT;
-         }
-    }     
- 
+        }
+    }
+
     for (uint8_t i = 1; i < max ; i++) {
         blocks[i] = bytebits_to_byte(DemodBuffer + ((i - 1) * 32), 32);
     }

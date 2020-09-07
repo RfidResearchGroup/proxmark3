@@ -420,7 +420,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
                 0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
             }
         };
-    */ 
+    */
     uint8_t i;
     bool is_valid = false;
     for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
@@ -526,7 +526,7 @@ static bool getUID(bool loop, uint8_t *buf) {
 
             int resplen = resp.oldarg[0];
             if (resplen >= 12 && CheckCrc15(resp.data.asBytes, 12)) {
-                
+
                 if (buf)
                     memcpy(buf, resp.data.asBytes + 2, 8);
 
@@ -990,7 +990,7 @@ static int CmdHF15Sniff(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO15693_SNIFF, NULL, 0);
 
     WaitForResponse(CMD_HF_ISO15693_SNIFF, &resp);
-    
+
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
@@ -1024,7 +1024,7 @@ static int CmdHF15Sim(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     WaitForResponse(CMD_HF_ISO15693_SIMULATE, &resp);
     return PM3_SUCCESS;
 }
@@ -1358,7 +1358,7 @@ static int CmdHF15Raw(const char *Cmd) {
     }
 
     PacketResponseNG resp;
-    clearCommandBuffer();    
+    clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO15693_COMMAND, datalen, fast, reply, data, datalen);
 
     if (reply) {
@@ -1442,7 +1442,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     }
 
     uint8_t *data = resp.data.asBytes;
-    
+
     if (CheckCrc15(data, status) == false) {
         PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
         return PM3_ESOFT;
@@ -1741,7 +1741,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
     free(data);
     PrintAndLogEx(INFO, "done");
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump") "` to read your card to verify" );
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump") "` to read your card to verify");
     return PM3_SUCCESS;
 }
 
@@ -1779,10 +1779,10 @@ static int CmdHF15CSetUID(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "updating tag uid...");
-    
+
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_CSETUID, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_ISO15693_CSETUID, (uint8_t *)&payload, sizeof(payload));
 
     if (WaitForResponseTimeout(CMD_HF_ISO15693_CSETUID, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
@@ -1799,10 +1799,10 @@ static int CmdHF15CSetUID(const char *Cmd) {
     uint8_t revuid[8] = {0};
     uint8_t i = 0;
     while (i < sizeof(revuid)) {
-        revuid[i] = carduid[7-i];
+        revuid[i] = carduid[7 - i];
         i++;
     }
-    
+
     if (memcmp(revuid, payload.uid, 8) != 0) {
         PrintAndLogEx(FAILED, "setting new UID (" _RED_("failed") ")");
         return PM3_ESOFT;

@@ -286,7 +286,7 @@ static int CmdKeriClone(const char *Cmd) {
     // Prepare and write to card
     // 3 LSB is ONE
     uint64_t data = ((uint64_t)internalid << 3) + 7;
-    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), (q5) ? "Q5/T5555" : "T55x7",internalid);
+    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), (q5) ? "Q5/T5555" : "T55x7", internalid);
 
     blocks[1] = data >> 32;
     blocks[2] = data & 0xFFFFFFFF;
@@ -366,7 +366,7 @@ int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
     uint8_t preamble[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
     // sanity check.
-    if (*size < sizeof(preamble) ) return -1;
+    if (*size < sizeof(preamble)) return -1;
 
     size_t startIdx = 0;
     size_t found_size = *size;

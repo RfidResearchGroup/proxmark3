@@ -26,16 +26,16 @@ static int CmdHelp(const char *Cmd);
 
 static int usage_epa_collect(void) {
     PrintAndLogEx(NORMAL, "Tries to collect nonces when doing part of PACE protocol.\n"
-                "\n"
-                "Usage:  hf epa cnonces <m> <n> <d>\n"
-                "Options:\n"
-                "\t<m>      nonce size\n"
-                "\t<n>      number of nonces to collect\n"
-                "\t<d>      delay between\n"
-                "\n"
-                "Example:\n"
-                _YELLOW_("\thf epa cnonces 4 4 1")
-            );
+                  "\n"
+                  "Usage:  hf epa cnonces <m> <n> <d>\n"
+                  "Options:\n"
+                  "\t<m>      nonce size\n"
+                  "\t<n>      number of nonces to collect\n"
+                  "\t<d>      delay between\n"
+                  "\n"
+                  "Example:\n"
+                  _YELLOW_("\thf epa cnonces 4 4 1")
+                 );
     return PM3_SUCCESS;
 }
 
@@ -60,18 +60,18 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Collecting %u %u byte nonces", n, m);
     PrintAndLogEx(SUCCESS, "Start: %" PRIu64, msclock() / 1000);
-    
+
     struct p {
         uint32_t m;
     } PACKED payload;
     payload.m = m;
-    
+
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
 
         PacketResponseNG resp;
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_EPA_COLLECT_NONCE, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_EPA_COLLECT_NONCE, (uint8_t *)&payload, sizeof(payload));
 
         WaitForResponse(CMD_HF_EPA_COLLECT_NONCE, &resp);
 
@@ -92,7 +92,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
             sleep(d);
         }
     }
-    
+
     PrintAndLogEx(SUCCESS, "End: %" PRIu64, msclock() / 1000);
     return PM3_SUCCESS;
 }

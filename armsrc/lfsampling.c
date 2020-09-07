@@ -303,14 +303,14 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
             if (trigger_hit == false) {
-            if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
-                if (cancel_after > 0) {
-                    cancel_counter++;
-                    if (cancel_after == cancel_counter)
-                        break;
+                if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
+                    if (cancel_after > 0) {
+                        cancel_counter++;
+                        if (cancel_after == cancel_counter)
+                            break;
+                    }
+                    continue;
                 }
-                continue;
-            }
             }
 
             trigger_hit = true;
@@ -539,12 +539,12 @@ void doCotagAcquisition(void) {
             }
 
             ++i;
-                if (sample > COTAG_ONE_THRESHOLD) {
-                    dest[i] = 255;
-                } else if (sample < COTAG_ZERO_THRESHOLD) {
-                    dest[i] = 0;
-                } else {
-                    dest[i] = dest[i - 1];
+            if (sample > COTAG_ONE_THRESHOLD) {
+                dest[i] = 255;
+            } else if (sample < COTAG_ZERO_THRESHOLD) {
+                dest[i] = 0;
+            } else {
+                dest[i] = dest[i - 1];
             }
         }
     }
@@ -558,7 +558,7 @@ uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen) {
 
     if (dest == NULL)
         return 0;
-   
+
     dest[0] = 0;
 
     bool firsthigh = false, firstlow = false;

@@ -41,5 +41,5 @@ void PrintPreCalcMac(uint8_t *keys, uint32_t keycnt, iclass_premac_t *pre_list);
 void PrintPreCalc(iclass_prekey_t *list, uint32_t itemcnt);
 
 uint8_t get_pagemap(const picopass_hdr *hdr);
-bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t* rmac, uint8_t* tmac, uint8_t* key);
+bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key);
 #endif

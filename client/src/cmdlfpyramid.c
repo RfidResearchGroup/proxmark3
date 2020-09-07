@@ -253,7 +253,7 @@ static int CmdPyramidClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to " _YELLOW_("%s") "  with Facility Code: %u, Card Number: %u", (q5) ? "Q5/T5555" : "T55x7" , facilitycode, cardnumber);
+    PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to " _YELLOW_("%s") "  with Facility Code: %u, Card Number: %u", (q5) ? "Q5/T5555" : "T55x7", facilitycode, cardnumber);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
