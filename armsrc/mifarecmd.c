@@ -2062,6 +2062,12 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
                 errormsg = MAGIC_WIPE;
                 break;
             }
+			
+			uint32_t old_timeout = iso14a_get_timeout();
+			
+			// 2000 ms timeout
+			// 13560000 / 1000 / (8 * 16) * timeout
+			iso14a_set_timeout(21190);
 
             ReaderTransmit(wipeC, sizeof(wipeC), NULL);
             if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
@@ -2069,6 +2075,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
                 errormsg = MAGIC_WIPE;
                 break;
             }
+			iso14a_set_timeout(old_timeout);
 
             mifare_classic_halt_ex(NULL);
         }
