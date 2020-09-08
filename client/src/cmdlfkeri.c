@@ -28,21 +28,21 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_keri_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 or Q5/T5555 tag\n");
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
-    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] c <cardid> [Q5]");
+    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] [c <cardnumber>] <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h            : This help");
     PrintAndLogEx(NORMAL, "      <id>         : Keri Internal ID");
-    PrintAndLogEx(NORMAL, "      <Q5>         : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "      <Q5>         : specify writing to Q5/T5555 tag");
     // New format
-    PrintAndLogEx(NORMAL, "      <t> [m|i]    : Type. m - MS, i - Internal ID");
+    PrintAndLogEx(NORMAL, "      <t> [m|i]    : Type m - MS, i - Internal ID");
     PrintAndLogEx(NORMAL, "      <f> <fc>     : Facility Code");
     PrintAndLogEx(NORMAL, "      <c> <cn>     : Card Number");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone 112233"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone type ms fc 6 cn 12345"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone t i fc 6 cn 12345"));
     PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone t m f 6 c 12345"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -212,8 +212,6 @@ int demodKeri(void) {
     return PM3_SUCCESS;
 }
 
-
-
 static int CmdKeriRead(const char *Cmd) {
     lf_read(false, 10000);
     return CmdKeriDemod(Cmd);
@@ -221,6 +219,7 @@ static int CmdKeriRead(const char *Cmd) {
 
 static int CmdKeriClone(const char *Cmd) {
 
+    bool q5 = false;
     uint8_t cmdidx = 0;
     char keritype = 'i'; // default to internalid
     uint32_t fc = 0;
@@ -263,11 +262,8 @@ static int CmdKeriClone(const char *Cmd) {
                 cmdidx += 2;
                 break;
             case 'q': // q5
-                blocks[0] =
-                    T5555_MODULATION_PSK1 |
-                    T5555_SET_BITRATE(128) |
-                    T5555_PSK_RF_2 |
-                    2 << T5555_MAXBLOCK_SHIFT;
+                blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
+                q5 = true;
                 cmdidx++;
                 break;
             default:
@@ -290,7 +286,7 @@ static int CmdKeriClone(const char *Cmd) {
     // Prepare and write to card
     // 3 LSB is ONE
     uint64_t data = ((uint64_t)internalid << 3) + 7;
-    PrintAndLogEx(INFO, "Preparing to clone KERI to T55x7 with Internal Id: %" PRIx32, internalid);
+    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), (q5) ? "Q5/T5555" : "T55x7", internalid);
 
     blocks[1] = data >> 32;
     blocks[2] = data & 0xFFFFFFFF;
@@ -348,7 +344,7 @@ static command_t CommandTable[] = {
     {"help",  CmdHelp,      AlwaysAvailable, "This help"},
     {"demod", CmdKeriDemod, AlwaysAvailable, "Demodulate an KERI tag from the GraphBuffer"},
     {"read",  CmdKeriRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdKeriClone, IfPm3Lf,         "clone KERI tag to T55x7 (or to q5/T5555)"},
+    {"clone", CmdKeriClone, IfPm3Lf,         "clone KERI tag to T55x7 or Q5/T5555"},
     {"sim",   CmdKeriSim,   IfPm3Lf,         "simulate KERI tag"},
     {NULL, NULL, NULL, NULL}
 };
@@ -370,21 +366,25 @@ int detectKeri(uint8_t *dest, size_t *size, bool *invert) {
     uint8_t preamble[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
     // sanity check.
-    if (*size < sizeof(preamble) + 100) return -1;
+    if (*size < sizeof(preamble)) return -1;
 
     size_t startIdx = 0;
+    size_t found_size = *size;
 
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) {
+    if (!preambleSearch(dest, preamble, sizeof(preamble), &found_size, &startIdx)) {
 
+        found_size = *size;
         // if didn't find preamble try again inverting
         uint8_t preamble_i[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
-        if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx))
+        if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), &found_size, &startIdx))
             return -2;
 
         *invert ^= 1;
     }
 
-    if (*size < 64) return -3; //wrong demoded size
+    if (found_size < 64) return -3; //wrong demoded size
+
+    *size = found_size;
 
     return (int)startIdx;
 }

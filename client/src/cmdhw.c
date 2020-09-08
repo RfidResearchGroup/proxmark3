@@ -696,7 +696,7 @@ void pm3_version(bool verbose, bool oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
         char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
         FormatVersionInformation(temp, sizeof(temp), "Client: ", &version_information);
-        printf("%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
+        PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n", temp);
         return;
     }
 
@@ -705,7 +705,6 @@ void pm3_version(bool verbose, bool oneliner) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-
     SendCommandNG(CMD_VERSION, NULL, 0);
 
     if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {

@@ -90,6 +90,7 @@ static em4x50_tag_t tag = {
 #define EM4X50_COMMAND_WRITE_PASSWORD       0x11
 #define EM4X50_COMMAND_SELECTIVE_READ       0x0A
 
+#define EM4X50_COMMAND_TIMEOUT              5000
 #define FPGA_TIMER_0                        0
 
 int gHigh = 0;
@@ -98,6 +99,8 @@ int gLow = 0;
 // auxiliary functions
 
 static void init_tag(void) {
+
+    // iceman: memset(tag.sectors, 0x00, sizeof));
 
     // initialize global tag structure
     for (int i = 0; i < 34; i++)
@@ -185,10 +188,9 @@ static void em4x50_setup_read(void) {
 
     // 50ms for the resonant antenna to settle.
     SpinDelay(50);
+
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
-    // start a 1.5ticks is 1us
-    StartTicks();
 
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
@@ -255,10 +257,9 @@ static bool get_signalproperties(void) {
             signal_found = true;
             break;
         }
-
     }
 
-    if (!signal_found)
+    if (signal_found == false)
         return false;
 
     // calculate mean maximum value of 32 periods, each period has a length of
@@ -312,35 +313,46 @@ static int get_next_bit(void) {
 
 static uint32_t get_pulse_length(void) {
 
+//    Dbprintf( _CYAN_("4x50 get_pulse_length A") );
+
+    int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+
     // iterates pulse length (low -> high -> low)
 
-    uint8_t sample = 0;
+    volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-
-    while (sample > gLow)
+    while (sample > gLow && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    }
+
+    if (timeout == 0)
+        return 0;
 
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
-    while (sample < gHigh)
+    while (sample < gHigh && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    }
 
-    while (sample > gLow)
+    if (timeout == 0)
+        return 0;
+
+    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    while (sample > gLow && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    }
+
+    if (timeout == 0)
+        return 0;
 
     return (uint32_t)AT91C_BASE_TC1->TC_CV;
+
 }
 
 static bool check_pulse_length(uint32_t pl, int length) {
-
     // check if pulse length <pl> corresponds to given length <length>
-
-    if ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) &
-            (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)))
-        return true;
-    else
-        return false;
+    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) & (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
 }
 
 static void em4x50_send_bit(int bit) {
@@ -428,13 +440,9 @@ static bool find_single_listen_window(void) {
 
                 // listen window found
                 return true;
-
             }
-        } else {
-
-            cnt_pulses++;
-
         }
+        cnt_pulses++;
     }
 
     return false;
@@ -494,7 +502,6 @@ static bool find_double_listen_window(bool bcommand) {
                     return true;
                 }
             }
-        } else {
             cnt_pulses++;
         }
     }
@@ -506,9 +513,7 @@ static bool find_em4x50_tag(void) {
 
     // function is used to check wether a tag on the proxmark is an
     // EM4x50 tag or not -> speed up "lf search" process
-
-    return (find_single_listen_window());
-
+    return find_single_listen_window();
 }
 
 static bool request_receive_mode(void) {
@@ -516,9 +521,7 @@ static bool request_receive_mode(void) {
     // To issue a command we have to find a listen window first.
     // Because identification and sychronization at the same time is not
     // possible when using pulse lengths a double listen window is used.
-
     bool bcommand = true;
-
     return find_double_listen_window(bcommand);
 }
 

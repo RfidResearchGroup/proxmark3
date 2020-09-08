@@ -9,18 +9,21 @@
 
 #include "cmdlfnedap.h"
 
+#define _GNU_SOURCE
 #include <string.h>
 
 #include <ctype.h>
 #include <stdlib.h>
+
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "crc16.h"
-#include "cmdlft55xx.h" // verifywrite
+#include "cmdlft55xx.h"   // verify write
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
+#include "protocols.h"
 
 #define FIXED_71    0x71
 #define FIXED_40    0x40
@@ -47,16 +50,16 @@ static int usage_lf_nedap_gen(void) {
 }
 
 static int usage_lf_nedap_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Nedap tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Nedap tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf nedap clone [h] [s <subtype>] c <code> i <id> [l]");
+    PrintAndLogEx(NORMAL, "Usage: lf nedap clone [h] [s <subtype>] c <code> i <id> [l] <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               : This help");
     PrintAndLogEx(NORMAL, "      s <subtype>     : optional, default=5");
     PrintAndLogEx(NORMAL, "      c <code>        : customerCode");
     PrintAndLogEx(NORMAL, "      i <id>          : ID  (max 99999)");
     PrintAndLogEx(NORMAL, "      l               : optional - long (128), default to short (64)");
-//  PrintAndLogEx(NORMAL, "      Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
+    PrintAndLogEx(NORMAL, "      Q5              : optional - specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf nedap clone s 1 c 123 i 12345"));
@@ -399,6 +402,9 @@ static int CmdLfNedapGen(const char *Cmd) {
                 isLong = true;
                 cmdp++;
                 break;
+            case 'q':
+                cmdp++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -449,14 +455,8 @@ static int CmdLFNedapClone(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    //CmdPrintDemodBuff("x");
-
-// What we had before in commented code:
     //NEDAP - compat mode, ASK/DIphase, data rate 64, 4 data blocks
     // DI-phase (CDP) T55x7_MODULATION_DIPHASE
-//    blocks[0] = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 7 << T55x7_MAXBLOCK_SHIFT;
-//    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-//        blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 7 <<T5555_MAXBLOCK_SHIFT;
 
     if (DemodBufferLen == 64) {
         max = 3;
@@ -465,12 +465,20 @@ static int CmdLFNedapClone(const char *Cmd) {
         max = 5;
         blocks[0] = T55X7_NEDAP_128_CONFIG_BLOCK;
     }
+    bool q5 = (strstr(Cmd, "q") != NULL);
+    if (q5) {
+        if (DemodBufferLen == 64) {
+            blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
+        } else {
+            blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 4 << T5555_MAXBLOCK_SHIFT;
+        }
+    }
 
     for (uint8_t i = 1; i < max ; i++) {
         blocks[i] = bytebits_to_byte(DemodBuffer + ((i - 1) * 32), 32);
     }
 
-    PrintAndLogEx(SUCCESS, "Preparing to clone NEDAP to T55x7");
+    PrintAndLogEx(SUCCESS, "Preparing to clone NEDAP to " _YELLOW_("%s") " tag", (q5) ? "Q5/T5555" : "T55x7");
     print_blocks(blocks, max);
 
     int res = clone_t55xx_tag(blocks, max);
@@ -531,7 +539,7 @@ static command_t CommandTable[] = {
     {"demod",    CmdLFNedapDemod, AlwaysAvailable, "Demodulate Nedap tag from the GraphBuffer"},
     {"generate", CmdLfNedapGen,   AlwaysAvailable, "Generate Nedap bitstream in DemodBuffer"},
     {"read",     CmdLFNedapRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",    CmdLFNedapClone, IfPm3Lf,         "Clone Nedap tag to T55x7"},
+    {"clone",    CmdLFNedapClone, IfPm3Lf,         "Clone Nedap tag to T55x7 or Q5/T5555"},
     {"sim",      CmdLFNedapSim,   IfPm3Lf,         "Simulate Nedap tag"},
     {NULL, NULL, NULL, NULL}
 };

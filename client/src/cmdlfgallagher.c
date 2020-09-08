@@ -103,9 +103,9 @@ static int CmdGallagherDemod(const char *Cmd) {
     for (int i = 0, pos = 0; i < ARRAYLEN(arr); i++) {
         pos = (i * 8) + i;
         arr[i] = bytebits_to_byte(DemodBuffer + pos, 8);
-        printf("%d -", pos);
+        PrintAndLogEx(NORMAL, "%d -" NOLF, pos);
     }
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
 
     // crc
     uint8_t crc = bytebits_to_byte(DemodBuffer + 72, 8);

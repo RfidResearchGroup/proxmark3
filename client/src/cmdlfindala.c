@@ -557,7 +557,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala clone",
-                  "clone INDALA tag to T55x7 (or to q5/T5555)",
+                  "clone INDALA UID to T55x7 or Q5/T5555 tag",
                   "Examples:\n"
                   _YELLOW_("\tlf indala clone --heden 888\n")
                   _YELLOW_("\tlf indala clone --fc 123 --cn 1337\n")
@@ -566,11 +566,11 @@ static int CmdIndalaClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("lL", "long",   "optional - long UID 224 bits"),
-        arg_int0("cC", "heden",  "<decimal>", "Cardnumber for Heden 2L format"),
-        arg_strx0("rR", "raw",   "<hex>", "raw bytes"),
-        arg_lit0("qQ", "Q5",     "optional - specify write to Q5 (t5555 instead of t55x7)"),
-        arg_int0("", "fc",       "<decimal>", "Facility Code (26 bit format)"),
+        arg_lit0("lL", "long",  "optional - long UID 224 bits"),
+        arg_int0("cC", "heden", "<decimal>", "Cardnumber for Heden 2L format"),
+        arg_strx0("rR", "raw",  "<hex>", "raw bytes"),
+        arg_lit0("qQ", "Q5",    "optional - specify writing to Q5/T5555 tag"),
+        arg_int0("", "fc",      "<decimal>", "Facility Code (26 bit format)"),
         arg_int0("", "cn",      "<decimal>", "Cardnumber (26 bit format)"),
         arg_param_end
     };
@@ -604,7 +604,7 @@ static int CmdIndalaClone(const char *Cmd) {
         PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
 
         if (is_t5555)
-            blocks[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
+            blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
         else
             blocks[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
 
@@ -656,7 +656,7 @@ static int CmdIndalaClone(const char *Cmd) {
         PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
 
         if (is_t5555)
-            blocks[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);
+            blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);
         else
             blocks[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
 
@@ -677,7 +677,7 @@ static command_t CommandTable[] = {
     {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an indala tag (PSK1) from GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"read",     CmdIndalaRead,      IfPm3Lf,         "read an Indala Prox tag from the antenna"},
-    {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala tag to T55x7"},
+    {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala tag to T55x7 or Q5/T5555"},
     {"sim",      CmdIndalaSim,       IfPm3Lf,         "simulate Indala tag"},
     {NULL, NULL, NULL, NULL}
 };

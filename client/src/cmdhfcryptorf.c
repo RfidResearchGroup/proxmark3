@@ -59,7 +59,7 @@ static int usage_hf_cryptorf_sniff(void) {
 }
 static int usage_hf_cryptorf_sim(void) {
     PrintAndLogEx(NORMAL, "Emulating CryptoRF tag with emulator memory\n"
-            "Usage: hf cryptorf sim [h] \n"
+                  "Usage: hf cryptorf sim [h] \n"
                   "Options:\n"
                   "    h    this help\n"
                   "\n"

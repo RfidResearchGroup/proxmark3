@@ -168,6 +168,24 @@ const char *getTagInfo(uint8_t uid) {
 static uint16_t frameLength = 0;
 uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
+static int usage_hf_14a_config(void) {
+    PrintAndLogEx(NORMAL, "Usage: hf 14a config [a 0|1|2] [b 0|1|2] [2 0|1|2] [3 0|1|2]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h                 This help");
+    PrintAndLogEx(NORMAL, "       a 0|1|2           ATQA<>anticollision: 0=follow standard 1=execute anticol 2=skip anticol");
+    PrintAndLogEx(NORMAL, "       b 0|1|2           BCC:                 0=follow standard 1=use fixed BCC   2=use card BCC");
+    PrintAndLogEx(NORMAL, "       2 0|1|2           SAK<>CL2:            0=follow standard 1=execute CL2     2=skip CL2");
+    PrintAndLogEx(NORMAL, "       3 0|1|2           SAK<>CL3:            0=follow standard 1=execute CL3     2=skip CL3");
+    PrintAndLogEx(NORMAL, "       r 0|1|2           SAK<>ATS:            0=follow standard 1=execute RATS    2=skip RATS");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config       ")"     Print current configuration");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1   ")"     Force execution of anticollision");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0   ")"     Restore ATQA interpretation");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 1   ")"     Force fix of bad BCC in anticollision");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 0   ")"     Restore BCC check");
+    return PM3_SUCCESS;
+}
+
 static int usage_hf_14a_sim(void) {
 //  PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
     PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
@@ -232,6 +250,162 @@ static int CmdHF14AList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("14a");
     return 0;
+}
+
+int hf14a_getconfig(hf14a_config *config) {
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    if (config == NULL)
+        return PM3_EINVARG;
+
+    clearCommandBuffer();
+
+    SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    memcpy(config, resp.data.asBytes, sizeof(hf14a_config));
+    return PM3_SUCCESS;
+}
+
+int hf14a_setconfig(hf14a_config *config) {
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    clearCommandBuffer();
+    if (config != NULL)
+        SendCommandNG(CMD_HF_ISO14443A_SET_CONFIG, (uint8_t *)config, sizeof(hf14a_config));
+    else
+        SendCommandNG(CMD_HF_ISO14443A_PRINT_CONFIG, NULL, 0);
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHf14AConfig(const char *Cmd) {
+
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    // if called with no params, just print the device config
+    if (strlen(Cmd) == 0) {
+        return hf14a_setconfig(NULL);
+    }
+
+    hf14a_config config = {
+        .forceanticol = -1,
+        .forcebcc = -1,
+        .forcecl2 = -1,
+        .forcecl3 = -1,
+        .forcerats = -1
+    };
+
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (param_getchar(Cmd, cmdp)) {
+            case 'h':
+                return usage_hf_14a_config();
+            case 'a':
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forceanticol = 0;
+                        break;
+                    case '1':
+                        config.forceanticol = 1;
+                        break;
+                    case '2':
+                        config.forceanticol = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
+                cmdp += 2;
+                break;
+            case 'b':
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcebcc = 0;
+                        break;
+                    case '1':
+                        config.forcebcc = 1;
+                        break;
+                    case '2':
+                        config.forcebcc = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
+                cmdp += 2;
+                break;
+            case '2':
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcecl2 = 0;
+                        break;
+                    case '1':
+                        config.forcecl2 = 1;
+                        break;
+                    case '2':
+                        config.forcecl2 = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
+                cmdp += 2;
+                break;
+            case '3':
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcecl3 = 0;
+                        break;
+                    case '1':
+                        config.forcecl3 = 1;
+                        break;
+                    case '2':
+                        config.forcecl3 = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
+                cmdp += 2;
+                break;
+            case 'r':
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        config.forcerats = 0;
+                        break;
+                    case '1':
+                        config.forcerats = 1;
+                        break;
+                    case '2':
+                        config.forcerats = 2;
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown value '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = 1;
+                        break;
+                }
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = 1;
+                break;
+        }
+    }
+
+    // validations
+    if (errors) return usage_hf_14a_config();
+
+    return hf14a_setconfig(&config);
 }
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
@@ -1241,6 +1415,7 @@ static command_t CommandTable[] = {
     {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
+    {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
     {NULL, NULL, NULL, NULL}
 };
 

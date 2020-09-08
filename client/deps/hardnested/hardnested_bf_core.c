@@ -59,7 +59,7 @@ THE SOFTWARE.
 #include <string.h>
 #include "crapto1/crapto1.h"
 #include "parity.h"
-//#include "util.h"
+#include "ui.h"             // PrintAndLogEx
 //#include "common.h"
 
 // bitslice type
@@ -238,18 +238,18 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
     // bitslice all the even states
     bitslice_t **restrict bitsliced_even_states = (bitslice_t **)malloc(((p->len[EVEN_STATE] - 1) / MAX_BITSLICES + 1) * sizeof(bitslice_t *));
     if (bitsliced_even_states == NULL) {
-        printf("Out of memory error in brute_force. Aborting...");
+        PrintAndLogEx(WARNING, "Out of memory error in brute_force. Aborting...");
         exit(4);
     }
     bitslice_value_t *restrict bitsliced_even_feedback = malloc_bitslice(((p->len[EVEN_STATE] - 1) / MAX_BITSLICES + 1) * sizeof(bitslice_value_t));
     if (bitsliced_even_feedback == NULL) {
-        printf("Out of memory error in brute_force. Aborting...");
+        PrintAndLogEx(WARNING, "Out of memory error in brute_force. Aborting...");
         exit(4);
     }
     for (uint32_t *restrict p_even = p->states[EVEN_STATE]; p_even < p_even_end; p_even += MAX_BITSLICES) {
         bitslice_t *restrict lstate_p = malloc_bitslice(STATE_SIZE / 2 * sizeof(bitslice_t));
         if (lstate_p == NULL) {
-            printf("Out of memory error in brute_force. Aborting... \n");
+            PrintAndLogEx(WARNING, "Out of memory error in brute_force. Aborting... \n");
             exit(4);
         }
         memset(lstate_p, 0x00, STATE_SIZE / 2 * sizeof(bitslice_t)); // zero even bits
@@ -265,8 +265,8 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
 #ifdef DEBUG_KEY_ELIMINATION
             if (known_target_key != -1 && e == test_state[EVEN_STATE]) {
                 bucket_contains_test_key[bitsliced_blocks] = true;
-                // printf("bucket %d contains test key even state\n", bitsliced_blocks);
-                // printf("in slice %d\n", slice_idx);
+                // PrintAndLogEx(INFO, "bucket %d contains test key even state", bitsliced_blocks);
+                // PrintAndLogEx(INFO, "in slice %d", slice_idx);
             }
 #endif
             for (uint32_t bit_idx = 0; bit_idx < STATE_SIZE / 2; bit_idx++, e >>= 1) {
@@ -336,8 +336,8 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
 
 #ifdef DEBUG_KEY_ELIMINATION
             // if (known_target_key != -1 && bucket_contains_test_key[block_idx] && *p_odd == test_state[ODD_STATE]) {
-            // printf("Now testing known target key.\n");
-            // printf("block_idx = %d/%d\n", block_idx, bitsliced_blocks);
+            // PrintAndLogEx(INFO, "Now testing known target key.");
+            // PrintAndLogEx(INFO, "block_idx = %d/%d", block_idx, bitsliced_blocks);
             // }
 #endif
             // add the even state bits
@@ -444,8 +444,8 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
 #endif
 #ifdef DEBUG_KEY_ELIMINATION
                             if (known_target_key != -1 && bucket_contains_test_key[block_idx] && *p_odd == test_state[ODD_STATE]) {
-                                printf("Known target key eliminated in brute_force.\n");
-                                printf("block_idx = %d/%d, nonce = %d/%d\n", block_idx, bitsliced_blocks, tests, nonces_to_bruteforce);
+                                PrintAndLogEx(INFO, "Known target key eliminated in brute_force.");
+                                PrintAndLogEx(INFO, "block_idx = %d/%d, nonce = %d/%d", block_idx, bitsliced_blocks, tests, nonces_to_bruteforce);
                             }
 #endif
                             goto stop_tests;
@@ -495,15 +495,15 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
                         }
 #ifdef DEBUG_KEY_ELIMINATION
                         if (known_target_key != -1 && *p_even_test == test_state[EVEN_STATE] && *p_odd == test_state[ODD_STATE]) {
-                            printf("Known target key eliminated in brute_force verification.\n");
-                            printf("block_idx = %d/%d\n", block_idx, bitsliced_blocks);
+                            PrintAndLogEx(INFO, "Known target key eliminated in brute_force verification.");
+                            PrintAndLogEx(INFO, "block_idx = %d/%d", block_idx, bitsliced_blocks);
                         }
 #endif
                     }
 #ifdef DEBUG_KEY_ELIMINATION
                     if (known_target_key != -1 && *p_even_test == test_state[EVEN_STATE] && *p_odd == test_state[ODD_STATE]) {
-                        printf("Known target key eliminated in brute_force (results_bit == 0).\n");
-                        printf("block_idx = %d/%d\n", block_idx, bitsliced_blocks);
+                        PrintAndLogEx(INFO, "Known target key eliminated in brute_force (results_bit == 0).");
+                        PrintAndLogEx(INFO, "block_idx = %d/%d", block_idx, bitsliced_blocks);
                     }
 #endif
                     results64 >>= 1;
@@ -533,7 +533,7 @@ out:
 
 #if defined (DEBUG_BRUTE_FORCE)
     for (uint32_t i = 0; i < MAX_ELIMINATION_STEP; i++) {
-        printf("Eliminated after %2u test_bytes: %5.2f%%\n", i + 1, (float)keys_eliminated[i] / bucket_states_tested * 100);
+        PrintAndLogEx(INFO, "Eliminated after %2u test_bytes: %5.2f%%", i + 1, (float)keys_eliminated[i] / bucket_states_tested * 100);
     }
 #endif
     return key;

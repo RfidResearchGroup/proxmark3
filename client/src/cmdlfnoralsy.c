@@ -26,13 +26,13 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_noralsy_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Noralsy tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Noralsy tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf noralsy clone [h] <card id> <year> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h          : This help");
     PrintAndLogEx(NORMAL, "      <card id>  : Noralsy card ID");
     PrintAndLogEx(NORMAL, "      <year>     : Tag allocation year");
-    PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "      <Q5>       : specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf noralsy clone 112233"));
@@ -150,8 +150,9 @@ static int CmdNoralsyClone(const char *Cmd) {
     year = param_get32ex(Cmd, 1, 2000, 10);
 
     //Q5
-    if (tolower(param_getchar(Cmd, 2) == 'q'))
-        blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+    bool q5 = tolower(param_getchar(Cmd, 2) == 'q');
+    if (q5)
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     uint8_t *bits = calloc(96, sizeof(uint8_t));
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
@@ -166,7 +167,7 @@ static int CmdNoralsyClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
+    PrintAndLogEx(INFO, "Preparing to clone Noralsy to " _YELLOW_("%s") " with CardId: %u", (q5) ? "Q5/T5555" : "T55x7", id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -222,7 +223,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdNoralsyDemod, AlwaysAvailable, "Demodulate an Noralsy tag from the GraphBuffer"},
     {"read",    CmdNoralsyRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdNoralsyClone, IfPm3Lf,         "clone Noralsy tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdNoralsyClone, IfPm3Lf,         "clone Noralsy tag to T55x7 or Q5/T5555"},
     {"sim",     CmdNoralsySim,   IfPm3Lf,         "simulate Noralsy tag"},
     {NULL, NULL, NULL, NULL}
 };

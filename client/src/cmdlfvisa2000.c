@@ -33,15 +33,16 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_visa2k_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Visa2000 tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Visa2000 tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf visa2000 clone [h] <card ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h          : This help");
     PrintAndLogEx(NORMAL, "      <card ID>  : Visa2k card ID");
-    PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "      <Q5>       : specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf visa2000 clone 112233"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf visa2000 clone 112233 q5") "      -- encode for Q5/T5555");
     return PM3_SUCCESS;
 }
 
@@ -177,13 +178,14 @@ static int CmdVisa2kClone(const char *Cmd) {
     id = param_get32ex(Cmd, 0, 0, 10);
 
     //Q5
-    if (tolower(param_getchar(Cmd, 1)) == 'q')
-        blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+    bool q5 = tolower(param_getchar(Cmd, 1)) == 'q';
+    if (q5)
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     blocks[2] = id;
     blocks[3] = (visa_parity(id) << 4) | visa_chksum(id);
 
-    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %"PRIu64, id);
+    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to " _YELLOW_("%s") " with CardId: %"PRIu64, (q5) ? "Q5/T5555" : "T55x7", id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -233,7 +235,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"demod",   CmdVisa2kDemod, AlwaysAvailable, "demodulate an VISA2000 tag from the GraphBuffer"},
     {"read",    CmdVisa2kRead,  IfPm3Lf,         "attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdVisa2kClone, IfPm3Lf,         "clone Visa2000 tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdVisa2kClone, IfPm3Lf,         "clone Visa2000 tag to T55x7 or Q5/T5555"},
     {"sim",     CmdVisa2kSim,   IfPm3Lf,         "simulate Visa2000 tag"},
     {NULL, NULL, NULL, NULL}
 };

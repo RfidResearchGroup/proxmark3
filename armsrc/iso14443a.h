@@ -96,6 +96,9 @@ typedef struct {
 # define CheckCrc14A(data, len) check_crc(CRC_14443_A, (data), (len))
 #endif
 
+void printHf14aConfig(void);
+void setHf14aConfig(hf14a_config *hc);
+hf14a_config *getHf14aConfig(void);
 void iso14a_set_timeout(uint32_t timeout);
 uint32_t iso14a_get_timeout(void);
 

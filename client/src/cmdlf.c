@@ -364,16 +364,15 @@ int CmdLFCommandRead(const char *Cmd) {
     uint8_t i = 10;
     // 20sec wait loop
     while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
         i--;
     }
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
 
     if (resp.status == PM3_SUCCESS) {
         if (i) {
             PrintAndLogEx(SUCCESS, "downloading response signal data");
-            getSamples(0, true);
+            getSamples(0, false);
             return PM3_SUCCESS;
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -596,7 +595,7 @@ int lf_read(bool verbose, uint32_t samples) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     struct p {
-        uint8_t verbose;
+        bool verbose;
         uint32_t samples;
     } PACKED;
 
@@ -606,21 +605,19 @@ int lf_read(bool verbose, uint32_t samples) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-
     PacketResponseNG resp;
     if (g_lf_threshold_set) {
         WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
     } else {
         if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
-            PrintAndLogEx(WARNING, "command execution time out");
+            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
             return PM3_ETIMEOUT;
         }
     }
 
-    // resp.oldarg[0] is bits read not bytes read.
-    uint32_t bits = (resp.data.asDwords[0] / 8);
-    getSamples(bits, verbose);
-
+    // response is number of bits read
+    uint32_t size = (resp.data.asDwords[0] / 8);
+    getSamples(size, verbose);
     return PM3_SUCCESS;
 }
 
@@ -736,15 +733,13 @@ int CmdLFSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Bigbuf is full.");
             break;
         }
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
         payload_up.flag = 0;
     }
 
     // Disable fast mode before last command
     conn.block_after_ACK = false;
-    printf("\n");
-
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Simulating");
 
     struct p {
@@ -1194,7 +1189,7 @@ static bool CheckChipType(bool getDeviceData) {
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
     if (EM4x05IsBlock0(&word)) {
-        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05/EM4x69"));
+        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05 / EM4x69"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") " commands");
         retval = true;
         goto out;
@@ -1215,6 +1210,7 @@ static bool CheckChipType(bool getDeviceData) {
         goto out;
     }
 
+    PrintAndLogEx(NORMAL, "Couldn't identify a chipset");
 out:
     save_restoreGB(GRAPH_RESTORE);
     save_restoreDB(GRAPH_RESTORE);
@@ -1242,6 +1238,7 @@ int CmdLFfind(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
     PrintAndLogEx(INFO, "if it finds something that looks like a tag");
     PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") " possible");
@@ -1270,49 +1267,50 @@ int CmdLFfind(const char *Cmd) {
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
 
+            PrintAndLogEx(INPLACE, "Searching for MOTOROLA tag...");
             if (readMotorolaUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") " found!");
                 return PM3_SUCCESS;
             }
 
             if (readCOTAGUid()) {
+                PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
                 return PM3_SUCCESS;
             }
 
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, _RED_("No data found!"));
             PrintAndLogEx(INFO, "Signal looks like noise. Maybe not an LF tag?");
+            PrintAndLogEx(NORMAL, "");
             return PM3_ESOFT;
         }
     }
 
-    if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
-    if (demodHID() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
-    if (demodAWID() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
-    if (demodIOProx() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
-    if (demodParadox() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
-    if (demodNexWatch() == PM3_SUCCESS)        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
-    if (demodIndala() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
+    if (demodVisa2k() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
+    if (demodHID() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
+    if (demodAWID() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
+    if (demodIOProx() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
+    if (demodParadox() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+    if (demodNexWatch() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
+    if (demodIndala() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
+    if (demodEM410x() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
+    if (demodFDX() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
+    if (demodGuard() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
+    if (demodIdteck() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
+    if (demodJablotron() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
+    if (demodNedap() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
+    if (demodNoralsy() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
+    if (demodKeri() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
+    if (demodPac() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
+    if (demodPresco() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
+    if (demodPyramid() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
+    if (demodSecurakey() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
+    if (demodViking() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
+    if (demodGallagher() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
 
-    if (demodEM410x() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
-    if (demodFDX() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
-    if (demodGuard() == PM3_SUCCESS)           { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
-    if (demodIdteck() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
-
-    if (demodJablotron() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
-    if (demodNedap() == PM3_SUCCESS)           { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
-    if (demodNoralsy() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
-    if (demodKeri() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
-    if (demodPac() == PM3_SUCCESS)             { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
-
-    if (demodPresco() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
-    if (demodPyramid() == PM3_SUCCESS)         { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
-    if (demodSecurakey() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
-    if (demodViking() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
-    if (demodGallagher() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
-
-//    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
-    //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
+//    if (demodTI() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
+//    if (demodFermax() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
 
     PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
 

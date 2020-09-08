@@ -474,14 +474,14 @@ static int l_mfDarkside(lua_State *L) {
 static int l_foobar(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
-    printf("foobar called with %d arguments", n);
+    PrintAndLogEx(INFO, "foobar called with %d arguments", n);
     lua_settop(L, 0);
-    printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
+    PrintAndLogEx(INFO, "Arguments discarded, stack now contains %d elements", lua_gettop(L));
 
     // todo: this is not used, where was it intended for?
     // PacketCommandOLD response =  {CMD_HF_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
 
-    printf("Now returning a uint64_t as a string");
+    PrintAndLogEx(INFO, "Now returning a uint64_t as a string");
     uint64_t x = 0xDEADC0DE;
     uint8_t destination[8];
     num_to_bytes(x, sizeof(x), destination);
@@ -1046,7 +1046,7 @@ static int l_T55xx_detect(lua_State *L) {
 
             sscanf(p_gb, "%u", &gb);
             useGB = (gb) ? true : false;
-            printf("p_gb size  %zu | %c \n", size, useGB ? 'Y' : 'N');
+            PrintAndLogEx(INFO, "p_gb size  %zu | %c", size, useGB ? 'Y' : 'N');
         }
         case 1: {
             const char *p_pwd = luaL_checklstring(L, 1, &size);
@@ -1129,9 +1129,7 @@ static int l_remark(lua_State *L) {
     }
 
     size_t size;
-    // data
     const char *s = luaL_checklstring(L, 1, &size);
-
     int res = CmdRem(s);
     lua_pushinteger(L, res);
     return 1;
@@ -1197,6 +1195,19 @@ static int l_cwd(lua_State *L) {
     lua_pushstring(L, cwd);
     free(cwd);
     return 1;
+}
+
+// ref:  https://github.com/RfidResearchGroup/proxmark3/issues/891
+// redirect LUA's print to Proxmark3 PrintAndLogEx
+static int l_printandlogex(lua_State *L) {
+
+    int n = lua_gettop(L);
+    for (int i = 1; i <= n; i++) {
+        if (lua_isstring(L, i)) {
+            PrintAndLogEx(NORMAL, "%s", lua_tostring(L, i));
+        }
+    }
+    return 0;
 }
 
 /**
@@ -1269,21 +1280,24 @@ int set_pm3_libraries(lua_State *L) {
 
     lua_pushglobaltable(L);
     // Core library is in this table. Contains '
-    //this is 'pm3' table
+    // this is 'pm3' table
     lua_newtable(L);
 
-    //Put the function into the hash table.
+    // put the function into the hash table.
     for (int i = 0; libs[i].name; i++) {
         lua_pushcfunction(L, libs[i].func);
         lua_setfield(L, -2, libs[i].name);//set the name, pop stack
     }
-    //Name of 'core'
+    // Name of 'core'
     lua_setfield(L, -2, "core");
 
-    //-- remove the global environment table from the stack
+    // remove the global environment table from the stack
     lua_pop(L, 1);
 
-    //--add to the LUA_PATH (package.path in lua)
+    // print redirect here
+    lua_register(L, "print", l_printandlogex);
+
+    // add to the LUA_PATH (package.path in lua)
     // so we can load scripts from various places:
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {

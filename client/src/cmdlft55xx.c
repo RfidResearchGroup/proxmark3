@@ -86,7 +86,7 @@ static int usage_t55xx_config(void) {
     PrintAndLogEx(NORMAL, "     d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  - Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
     PrintAndLogEx(NORMAL, "     i [0/1]                          - Set/reset data signal inversion");
     PrintAndLogEx(NORMAL, "     o [offset]                       - Set offset, where data should start decode in bitstream");
-    PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as T5555 ( Q5 ) chip instead of T55x7");
+    PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as Q5/T5555 chip instead of T55x7");
     PrintAndLogEx(NORMAL, "     ST [0/1]                         - Set/reset Sequence Terminator on");
     PrintAndLogEx(NORMAL, ""); // layout is a little differnet, so seperate until a better fix
     print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
@@ -311,11 +311,11 @@ static int usage_t55xx_wipe(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h               - this help");
     PrintAndLogEx(NORMAL, "     c <block0>      - set configuration from a block0");
-    PrintAndLogEx(NORMAL, "     q               - indicates to use T5555 ( Q5 ) default configuration block");
+    PrintAndLogEx(NORMAL, "     q               - indicates to use Q5/T5555 default configuration block");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe") "      -  wipes a T55x7 tag,    config block 0x000880E0");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe q") "    -  wipes a T5555 ( Q5 ) tag, config block 0x6001F004");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe q") "    -  wipes a Q5/T5555 tag, config block 0x6001F004");
     return PM3_SUCCESS;
 }
 static int usage_t55xx_deviceconfig(void) {
@@ -829,7 +829,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     return printConfiguration(config);
 }
 int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode) {
-    return T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, true);
+    return T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, false);
 }
 
 int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, bool verbose) {
@@ -994,7 +994,7 @@ static int SanityOfflineCheck(bool useGraphBuffer) {
 
 static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
     char msg[80];
-    sprintf(msg, "Downlink Mode used : ");
+    snprintf(msg, sizeof(msg), "Downlink Mode used : ");
 
     switch (downlink_mode) {
         case  1 :
@@ -1075,7 +1075,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                         continue;
 
                     found = true;
-    
+
                     break;
                 }
             } else {
@@ -1587,7 +1587,7 @@ int special(const char *Cmd) {
 }
 
 int printConfiguration(t55xx_conf_block_t b) {
-    PrintAndLogEx(INFO, "     Chip Type      : " _GREEN_("%s"), (b.Q5) ? "T5555 ( Q5 )" : "T55x7");
+    PrintAndLogEx(INFO, "     Chip Type      : " _GREEN_("%s"), (b.Q5) ? "Q5/T5555" : "T55x7");
     PrintAndLogEx(INFO, "     Modulation     : " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
     PrintAndLogEx(INFO, "     Bit Rate       : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
     PrintAndLogEx(INFO, "     Inverted       : %s", (b.inverted) ? _GREEN_("Yes") : "No");
@@ -1864,7 +1864,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         si += 9;
 
         if (hdr != 0x1FF) {
-            PrintAndLogEx(FAILED, "Invalid T555 ( Q5 ) Trace data header (expected 0x1FF, found %X)", hdr);
+            PrintAndLogEx(FAILED, "Invalid Q5/T5555 Trace data header (expected 0x1FF, found %X)", hdr);
             return PM3_ESOFT;
         }
 
@@ -1955,7 +1955,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 }
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
-    PrintAndLogEx(NORMAL, "-- T55x7 Trace Information ----------------------------------");
+    PrintAndLogEx(NORMAL, "--- " _CYAN_("T55x7 Trace Information") " ----------------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, " ACL Allocation class (ISO/IEC 15963-1)  : 0x%02X (%d)", data.acl, data.acl);
     PrintAndLogEx(NORMAL, " MFC Manufacturer ID (ISO/IEC 7816-6)    : 0x%02X (%d) - %s", data.mfc, data.mfc, getTagInfo(data.mfc));
@@ -2002,7 +2002,7 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
 }
 
 void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
-    PrintAndLogEx(NORMAL, "-- T5555 ( Q5 ) Trace Information ---------------------------");
+    PrintAndLogEx(NORMAL, "--- " _CYAN_("Q5/T5555 Trace Information") " ---------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, " ICR IC Revision  : %d", data.icr);
     PrintAndLogEx(NORMAL, "     Lot          : %c%d", data.lotidc, data.lotid);
@@ -2327,7 +2327,7 @@ static int CmdT55xxDump(const char *Cmd) {
             strcpy(preferredName, "lf-t55xx");
             for (uint8_t i = 1; i <= 7; i++) {
                 if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF))
-                    sprintf(preferredName + strlen(preferredName), "-%08X", cardmem[i].blockdata);
+                    snprintf(preferredName + strlen(preferredName), sizeof(preferredName) - strlen(preferredName), "-%08X", cardmem[i].blockdata);
                 else
                     break;
             }
@@ -2416,7 +2416,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     if (success == PM3_SUCCESS) { // Got data, so write to cards
         if (datalen == T55x7_BLOCK_COUNT * 4) { // 12 blocks * 4 bytes per block
             if (usepwd)
-                sprintf(pwdOpt, "p %08X", password);
+                snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", password);
 
             // Restore endien for writing to card
             for (blockidx = 0; blockidx < 12; blockidx++)
@@ -2433,18 +2433,20 @@ static int CmdT55xxRestore(const char *Cmd) {
 
             // write out blocks 1-7 page 0
             for (blockidx = 1; blockidx <= 7; blockidx++) {
-                sprintf(writeCmdOpt, "b %d d %08X %s", blockidx, data[blockidx], pwdOpt);
+                snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d d %08X %s", blockidx, data[blockidx], pwdOpt);
+
                 if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
                     PrintAndLogEx(WARNING, "Warning: error writing blk %d", blockidx);
             }
 
             // if password was set on the "blank" update as we may have just changed it
             if (usepwd)
-                sprintf(pwdOpt, "p %08X", data[7]);
+                snprintf(pwdOpt, sizeof(pwdOpt), "p %08X", data[7]);
 
             // write out blocks 1-3 page 1
             for (blockidx = 9; blockidx <= 11; blockidx++) {
-                sprintf(writeCmdOpt, "b %d 1 d %08X %s", blockidx - 8, data[blockidx], pwdOpt);
+                snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b %d 1 d %08X %s", blockidx - 8, data[blockidx], pwdOpt);
+
                 if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
                     PrintAndLogEx(WARNING, "Warning: error writing blk %d", blockidx);
             }
@@ -2453,7 +2455,7 @@ static int CmdT55xxRestore(const char *Cmd) {
             config.downlink_mode = downlink_mode;
 
             // Write the page 0 config
-            sprintf(writeCmdOpt, "b 0 d %08X %s", data[0], pwdOpt);
+            snprintf(writeCmdOpt, sizeof(writeCmdOpt), "b 0 d %08X %s", data[0], pwdOpt);
             if (CmdT55xxWriteBlock(writeCmdOpt) != PM3_SUCCESS)
                 PrintAndLogEx(WARNING, "Warning: error writing blk 0");
         }
@@ -2811,7 +2813,7 @@ static void t55x7_create_config_block(int tagtype) {
             snprintf(retStr, sizeof(buf), "%08X - T55X7 Raw", T55X7_RAW_CONFIG_BLOCK);
             break;
         case 2:
-            snprintf(retStr, sizeof(buf), "%08X - T5555 ( Q5 ) Default", T5555_DEFAULT_CONFIG_BLOCK);
+            snprintf(retStr, sizeof(buf), "%08X - Q5/T5555 Default", T5555_DEFAULT_CONFIG_BLOCK);
             break;
         default:
             break;
@@ -2916,7 +2918,7 @@ static int CmdT55xxWipe(const char *Cmd) {
     if (errors) return usage_t55xx_wipe();
 
 
-    PrintAndLogEx(INFO, "\nBegin wiping %s", (Q5) ? "T5555 ( Q5 ) tag" : "T55x7 tag");
+    PrintAndLogEx(INFO, "\nBegin wiping " _YELLOW_("%s")" tag", (Q5) ? "Q5/T5555" : "T55x7");
 
     // default config blocks.
     if (gotconf == false) {
@@ -3039,18 +3041,18 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
         while (!WaitForResponseTimeout(CMD_LF_T55XX_CHK_PWDS, &resp, 2000)) {
             timeout++;
-            printf(".");
-            fflush(stdout);
+            PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 180) {
                 PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
                 return PM3_ENODATA;
             }
         }
+        PrintAndLogEx(NORMAL, "");
         struct p {
             bool found;
             uint32_t candidate;
         } PACKED;
-        struct p* packet = (struct p*)resp.data.asBytes;
+        struct p *packet = (struct p *)resp.data.asBytes;
 
         if (packet->found) {
             PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX32) " ]", packet->candidate);
@@ -3178,8 +3180,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
 
     while (found == 0) {
 
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
 
         if (IsCancelled()) {
             return PM3_EOPABORTED;
@@ -3223,7 +3224,7 @@ uint8_t tryOnePassword(uint32_t password, uint8_t downlink_mode) {
         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, dl_mode)) {
             //  if (getSignalProperties()->isnoise == false) {
             //  } else {
-            if (tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0 ,password)) {
+            if (tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, password)) {
                 return 1 + (dl_mode << 1);
             }
             //  }

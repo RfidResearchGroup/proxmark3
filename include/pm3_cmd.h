@@ -122,6 +122,15 @@ typedef struct {
     bool verbose;
 } PACKED sample_config;
 
+// A struct used to send hf14a-configs over USB
+typedef struct {
+    int8_t forceanticol; // 0:auto 1:force executing anticol 2:force skipping anticol
+    int8_t forcebcc;     // 0:expect valid BCC 1:force using computed BCC 2:force using card BCC
+    int8_t forcecl2;     // 0:auto 1:force executing CL2 2:force skipping CL2
+    int8_t forcecl3;     // 0:auto 1:force executing CL3 2:force skipping CL3
+    int8_t forcerats;    // 0:auto 1:force executing RATS 2:force skipping RATS
+} PACKED hf14a_config;
+
 // Tracelog Header struct
 typedef struct {
     uint32_t timestamp;
@@ -569,6 +578,11 @@ typedef struct {
 #define CMD_HF_FELICALITE_DUMP                                            0x03AA
 #define CMD_HF_FELICALITE_SIMULATE                                        0x03AB
 
+// For 14a config
+#define CMD_HF_ISO14443A_PRINT_CONFIG                                     0x03B0
+#define CMD_HF_ISO14443A_GET_CONFIG                                       0x03B1
+#define CMD_HF_ISO14443A_SET_CONFIG                                       0x03B2
+
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
 #define CMD_MEASURE_ANTENNA_TUNING_HF                                     0x0401
@@ -604,6 +618,7 @@ typedef struct {
 #define CMD_HF_MIFAREU_READCARD                                           0x0721
 #define CMD_HF_MIFARE_WRITEBL                                             0x0622
 #define CMD_HF_MIFAREU_WRITEBL                                            0x0722
+#define CMD_HF_MIFAREU_WRITEBL_COMPAT                                     0x0723
 
 #define CMD_HF_MIFARE_CHKKEYS                                             0x0623
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
@@ -647,6 +662,11 @@ typedef struct {
 
 //For Atmel CryptoRF
 #define CMD_HF_CRYPTORF_SIM                                               0x0820
+
+// Gen 3 magic cards
+#define CMD_HF_MIFARE_GEN3UID                                             0x0850
+#define CMD_HF_MIFARE_GEN3BLK                                             0x0851
+#define CMD_HF_MIFARE_GEN3FREEZ                                           0x0852
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
@@ -714,7 +734,7 @@ typedef struct {
 #define PM3_ETIMEOUT           -4
 // Operation aborted (by user)          client/pm3: kbd/button pressed
 #define PM3_EOPABORTED         -5
-// Not (yet) implemented                client/pm3: TBD placeholder
+// Not (yet) implemented                client/pm3: TBD place holder
 #define PM3_ENOTIMPL           -6
 // Error while RF transmission          client/pm3: fail between pm3 & card
 #define PM3_ERFTRANS           -7
@@ -732,7 +752,7 @@ typedef struct {
 #define PM3_EFILE             -13
 // Generic TTY error
 #define PM3_ENOTTY            -14
-// Initialization error                 pm3:        error related to trying to initalize the pm3 / fpga for different operations
+// Initialization error                 pm3:        error related to trying to initialize the pm3 / fpga for different operations
 #define PM3_EINIT             -15
 // Expected a different answer error    client/pm3: error when expecting one answer and got another one
 #define PM3_EWRONGANSWER      -16
@@ -745,6 +765,12 @@ typedef struct {
 #define PM3_EAPDU_ENCODEFAIL  -19
 // APDU responded with a failure code
 #define PM3_EAPDU_FAIL        -20
+
+// execute pm3 cmd failed               client/pm3: when one of our pm3 cmd tries and fails. opposite from PM3_SUCCESS
+#define PM3_EFAILED           -21
+// partial success                      client/pm3: when tring to dump a tag and fails on some blocks.  Partial dump.
+#define PM3_EPARTIAL          -22
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

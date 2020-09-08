@@ -108,7 +108,7 @@ static void showBanner(void) {
 #endif
 //    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
 //    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
-//    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
+//    PrintAndLogEx(NORMAL, "\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     PrintAndLogEx(NORMAL, "");
     fflush(stdout);
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
@@ -678,55 +678,8 @@ finish2:
     return ret;
 }
 
-// Check if windows AnsiColor Support is enabled in the registery
-// [HKEY_CURRENT_USER\Console]
-//     "VirtualTerminalLevel"=dword:00000001
-// 2nd Key needs to be enabled...  This key takes the console out of legacy mode.
-// [HKEY_CURRENT_USER\Console]
-//     "ForceV2"=dword:00000001
-
 #if defined(_WIN32)
 static bool DetectWindowsAnsiSupport(void) {
-    HKEY hKey = NULL;
-    bool virtualTerminalLevelSet = false;
-    bool forceV2Set = false;
-
-    if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
-        DWORD dwType = REG_SZ;
-        BYTE KeyValue[sizeof(dwType)];
-        DWORD len = sizeof(KeyValue);
-
-        if (RegQueryValueEx(hKey, "VirtualTerminalLevel", NULL, &dwType, KeyValue, &len) != ERROR_FILE_NOT_FOUND) {
-            uint8_t i;
-            uint32_t Data = 0;
-            for (i = 0; i < 4; i++)
-                Data += KeyValue[i] << (8 * i);
-
-            if (Data == 1) { // Reg key is set to 1, Ansi Color Enabled
-                virtualTerminalLevelSet = true;
-            }
-        }
-        RegCloseKey(hKey);
-    }
-
-    if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
-        DWORD dwType = REG_SZ;
-        BYTE KeyValue[sizeof(dwType)];
-        DWORD len = sizeof(KeyValue);
-
-        if (RegQueryValueEx(hKey, "ForceV2", NULL, &dwType, KeyValue, &len) != ERROR_FILE_NOT_FOUND) {
-            uint8_t i;
-            uint32_t Data = 0;
-            for (i = 0; i < 4; i++)
-                Data += KeyValue[i] << (8 * i);
-
-            if (Data == 1) { // Reg key is set to 1, Not using legacy Mode.
-                forceV2Set = true;
-            }
-        }
-        RegCloseKey(hKey);
-    }
-
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
@@ -735,10 +688,8 @@ static bool DetectWindowsAnsiSupport(void) {
     DWORD dwMode = 0;
     GetConsoleMode(hOut, &dwMode);
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hOut, dwMode);
 
-    // If both VirtualTerminalLevel and ForceV2 is set, AnsiColor should work
-    return virtualTerminalLevelSet && forceV2Set;
+    return SetConsoleMode(hOut, dwMode) ? true : false;
 }
 #endif
 

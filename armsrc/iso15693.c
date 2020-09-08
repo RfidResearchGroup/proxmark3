@@ -84,7 +84,7 @@
 #define ISO15693_READER_TIMEOUT            330  // 330/212kHz = 1558us
 #define ISO15693_READER_TIMEOUT_WRITE      4700 // 4700/212kHz = 22ms, nominal 20ms
 
-// iceman: This defines below exists in the header file,  just here for my easy reading 
+// iceman: This defines below exists in the header file,  just here for my easy reading
 // Delays in SSP_CLK ticks.
 // SSP_CLK runs at 13,56MHz / 32 = 423.75kHz when simulating a tag
 //#define DELAY_ISO15693_VCD_TO_VICC_SIM     132  // 132/423.75kHz = 311.5us from end of command EOF to start of tag response
@@ -700,7 +700,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
-                                
+
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
                     DbpString("stopped");
@@ -725,7 +725,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
         // timeout
         if (samples > timeout && dt->state < STATE_TAG_RECEIVING_DATA) {
-            ret = -3;   
+            ret = -3;
             break;
         }
 
@@ -1715,7 +1715,6 @@ void SimTagIso15693(uint8_t *uid) {
         uint32_t reader_eof_time = 0;
         int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
         if (cmd_len < 0) {
-            Dbprintf("button pressed, exiting");
             button_pressed = true;
             exit_loop = true;
             break;
@@ -1736,7 +1735,7 @@ void SimTagIso15693(uint8_t *uid) {
 
     if (button_pressed)
         DbpString("button pressed");
-    
+
     reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_SUCCESS, NULL, 0);
 }
 
@@ -1881,7 +1880,7 @@ SLIx functions from official master forks.
 void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 
     LED_A_ON();
-   
+
 	uint8_t cmd_inventory[]  = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_INVENTORY | ISO15693_REQINV_SLOT1, 0x01, 0x00, 0x00, 0x00 };
 	uint8_t cmd_get_rnd[]    = {ISO15693_REQ_DATARATE_HIGH, 0xB2, 0x04, 0x00, 0x00 };
 	uint8_t cmd_set_pass[]   = {ISO15693_REQ_DATARATE_HIGH, 0xB3, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -1893,7 +1892,7 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 	uint32_t start_time = 0;
 	bool done = false;
 
-	// setup 'get random number' command 
+	// setup 'get random number' command
 	crc = Iso15693Crc(cmd_get_rnd, 3);
 	cmd_get_rnd[3] = crc & 0xff;
 	cmd_get_rnd[4] = crc >> 8;
@@ -1901,7 +1900,7 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 	Dbprintf("LockPass: Press button lock password, long-press to terminate.");
 
 	while (!done) {
-        
+
 		LED_D_ON();
 		switch(BUTTON_HELD(1000)) {
 			case BUTTON_SINGLE_CLICK:
@@ -2033,7 +2032,7 @@ void SetTag15693Uid(uint8_t *uid) {
         SendDataTag(cmd[i], sizeof(cmd[i]), i == 0 ? true : false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, &eof_time);
         start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
     }
-    
+
     reply_ng(CMD_HF_ISO15693_CSETUID, PM3_SUCCESS, NULL, 0);
     switch_off();
 }

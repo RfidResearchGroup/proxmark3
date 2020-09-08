@@ -56,7 +56,7 @@ static void usart_fill_rxfifo(void) {
             rxfifo_free = us_rxfifo_low - us_rxfifo_high;
         else
             rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
-    
+
         uint16_t available = USART_BUFFLEN - usart_cur_inbuf_off;
 
         if (available <= rxfifo_free) {

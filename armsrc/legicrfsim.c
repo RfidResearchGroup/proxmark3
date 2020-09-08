@@ -15,7 +15,7 @@
 #include "crc.h"                /* legic crc-4 */
 #include "legic_prng.h"         /* legic PRNG impl */
 #include "legic.h"              /* legic_card_select_t struct */
-
+#include "cmd.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
 #include "fpgaloader.h"
@@ -295,9 +295,9 @@ static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
             p_card->cmdsize = 0;
             p_card->addrsize = 0;
             p_card->cardsize = 0;
-            return 2;
+            return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void init_tag(void) {
@@ -455,23 +455,37 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
 // Only this function is public / called from appmain.c
 //-----------------------------------------------------------------------------
 
-void LegicRfSimulate(uint8_t cardtype) {
+void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
     // configure ARM and FPGA
     init_tag();
 
+    int res = PM3_SUCCESS;
     // verify command line input
-    if (init_card(cardtype, &card) != 0) {
-        DbpString("[!] Unknown tagtype.");
+    if (init_card(tagtype, &card) != PM3_SUCCESS) {
+        DbpString("Unknown tagtype to simulate");
+        res = PM3_ESOFT;
         goto OUT;
     }
 
+    uint16_t counter = 0;
     LED_A_ON();
-    DbpString("[=] Starting Legic emulator, press " _YELLOW_("button") " to end");
-    while (!BUTTON_PRESS() && !data_available()) {
+
+    Dbprintf("Legic Prime, simulating uid: %02X%02X%02X%02X", legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
+
+    while (BUTTON_PRESS() == false) {
         WDT_HIT();
 
+        if (counter >= 2000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                break;
+            }
+            counter = 0;
+        }
+        counter++;
+
         // wait for carrier, restart after timeout
-        if (!wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD)) {
+        if (wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD) == false) {
             continue;
         }
 
@@ -481,13 +495,25 @@ void LegicRfSimulate(uint8_t cardtype) {
         }
 
         // conection is established, process commands until one fails
-        while (!connected_phase(&card)) {
+        while (connected_phase(&card) == false) {
             WDT_HIT();
         }
     }
 
 OUT:
-    DbpString("[=] Sim stopped");
+
+    if (DBGLEVEL >= DBG_ERROR) {
+        Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", get_tracing(), BigBuf_get_traceLen());
+    }
+
+    if (res == PM3_EOPABORTED)
+        DbpString("aborted by user");
+
     switch_off();
     StopTicks();
+
+    if (send_reply)
+        reply_ng(CMD_HF_LEGIC_SIMULATE, res, NULL, 0);
+
+    BigBuf_free_keep_EM();
 }

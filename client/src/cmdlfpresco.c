@@ -27,13 +27,13 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_presco_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> c <hex-ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h             : this help");
     PrintAndLogEx(NORMAL, "  d <Card-ID>   : 9 digit presco card ID");
     PrintAndLogEx(NORMAL, "  c <hex-ID>    : 8 digit hex card number");
-    PrintAndLogEx(NORMAL, "  <Q5>          : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "  <Q5>          : specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf presco clone d 123456789"));
@@ -116,7 +116,7 @@ static int CmdPrescoClone(const char *Cmd) {
     if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == PM3_EINVARG) return usage_lf_presco_clone();
 
     if (Q5)
-        blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT | T5555_ST_TERMINATOR;
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT | T5555_ST_TERMINATOR;
 
     if ((sitecode & 0xFF) != sitecode) {
         sitecode &= 0xFF;
@@ -133,7 +133,7 @@ static int CmdPrescoClone(const char *Cmd) {
     blocks[3] = 0x00000000;
     blocks[4] = fullcode;
 
-    PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
+    PrintAndLogEx(INFO, "Preparing to clone Presco to " _YELLOW_("%s") " with SiteCode: %u, UserCode: %u, FullCode: %08x", (Q5) ? "Q5/T5555" : "T55x7", sitecode, usercode, fullcode);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -179,7 +179,7 @@ static int CmdPrescoSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"read",    CmdPrescoRead,  IfPm3Lf,         "Attempt to read and Extract tag data"},
-    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag to T55x7 or Q5/T5555"},
     {"sim",     CmdPrescoSim,   IfPm3Lf,         "simulate presco tag"},
     {NULL, NULL, NULL, NULL}
 };

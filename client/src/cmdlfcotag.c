@@ -92,19 +92,18 @@ static int CmdCOTAGRead(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_COTAG_READ, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_LF_COTAG_READ, (uint8_t *)&payload, sizeof(payload));
 
     uint8_t timeout = 3;
     while (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 2000)) {
         timeout--;
-        printf(".");
-        fflush(stdout);
-
+        PrintAndLogEx(NORMAL, "." NOLF);
         if (timeout == 0) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
     }
+
     if (timeout != 3)
         PrintAndLogEx(NORMAL, "");
 

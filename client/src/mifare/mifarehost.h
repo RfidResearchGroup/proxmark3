@@ -80,6 +80,10 @@ int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak);
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params);
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
 
+int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid);
+int mfGen3Blk(uint8_t *block, int blockLen, uint8_t *newBlock);
+int mfGen3Freez(void);
+
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 
 int detect_classic_prng(void);

@@ -27,15 +27,16 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_guard_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Guardall tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Guardall tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
     PrintAndLogEx(NORMAL, "Currently work only on 26bit");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number>");
+    PrintAndLogEx(NORMAL, "Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");
-    PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
-    PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
+    PrintAndLogEx(NORMAL, "           <format>    : format length 26|32|36|40");
+    PrintAndLogEx(NORMAL, "    <Facility-Code>    : 8-bit value facility code");
+    PrintAndLogEx(NORMAL, "      <Card Number>    : 16-bit value card number");
+    PrintAndLogEx(NORMAL, "               <Q5>    : Specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf gprox clone 26 123 11223"));
@@ -175,8 +176,9 @@ static int CmdGuardClone(const char *Cmd) {
     }
 
     // Q5
-    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
+    bool q5 = tolower(param_getchar(Cmd, 3)) == 'q';
+    if (q5)
+        blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
 
     blocks[1] = bytebits_to_byte(bs, 32);
     blocks[2] = bytebits_to_byte(bs + 32, 32);
@@ -184,7 +186,7 @@ static int CmdGuardClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: %u, Card Number: %u", (q5) ? "Q5/T5555" : "T55x7", facilitycode, cardnumber);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -241,7 +243,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdGuardDemod,  AlwaysAvailable, "demodulate a G Prox II tag from the GraphBuffer"},
     {"read",    CmdGuardRead,   IfPm3Lf,         "attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdGuardClone,  IfPm3Lf,         "clone Guardall tag to T55x7"},
+    {"clone",   CmdGuardClone,  IfPm3Lf,         "clone Guardall tag to T55x7 or Q5/T5555"},
     {"sim",     CmdGuardSim,    IfPm3Lf,         "simulate Guardall tag"},
     {NULL, NULL, NULL, NULL}
 };

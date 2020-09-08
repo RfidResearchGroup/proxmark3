@@ -64,11 +64,11 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 //-----------------------------------------------------------------------------
 // I/O interface abstraction (FPGA -> ARM)
 //-----------------------------------------------------------------------------
-static uint8_t rx_byte_from_fpga(void) {
+static uint16_t rx_frame_from_fpga(void) {
     for (;;) {
         WDT_HIT();
 
-        // wait for byte be become available in rx holding register
+        // wait for frame be become available in rx holding register
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             return AT91C_BASE_SSC->SSC_RHR;
         }
@@ -76,48 +76,53 @@ static uint8_t rx_byte_from_fpga(void) {
 }
 
 //-----------------------------------------------------------------------------
-// Demodulation
+// Demodulation (Reader)
 //-----------------------------------------------------------------------------
 
-// Returns am aproximated power measurement
+// Returns a demedulated bit
 //
-// The FPGA running on the xcorrelation kernel samples the subcarrier at ~3 MHz.
-// The kernel was initialy designed to receive BSPK/2-PSK. Hance, it reports an
-// I/Q pair every 18.9us (8 bits i and 8 bits q).
+// The FPGA running xcorrelation samples the subcarrier at ~13.56 MHz. The mode
+// was initialy designed to receive BSPK/2-PSK. Hance, it reports an I/Q pair
+// every 4.7us (8 bits i and 8 bits q).
 //
 // The subcarrier amplitude can be calculated using Pythagoras sqrt(i^2 + q^2).
 // To reduce CPU time the amplitude is approximated by using linear functions:
 //   am = MAX(ABS(i),ABS(q)) + 1/2*MIN(ABS(i),ABSq))
 //
-// Note: The SSC receiver is never synchronized the calculation may be performed
-// on a i/q pair from two subsequent correlations, but does not matter.
-// Note: inlining this function would fail with -Os
-static int32_t sample_power(void) {
-    int32_t q = (int8_t)rx_byte_from_fpga();
-    q = ABS(q);
-    int32_t i = (int8_t)rx_byte_from_fpga();
-    i = ABS(i);
-
-    return MAX(i, q) + (MIN(i, q) >> 1);
-}
-
-// Returns a demedulated bit
+// The bit time is 99.1us (21 I/Q pairs). The receiver skips the first 5 samples
+// and averages the next (most stable) 8 samples. The final 8 samples are dropped
+// also.
 //
-// An aproximated power measurement is available every 18.9us. The bit time
-// is 100us. The code samples 5 times and uses the last (most stable) sample.
+// The demodulated should be alligned to the bit period by the caller. This is
+// done in rx_bit and rx_ack.
 //
 // Note: The demodulator would be drifting (18.9us * 5 != 100us), rx_frame
 // has a delay loop that aligns rx_bit calls to the TAG tx timeslots.
-
+//
 // Note: inlining this function would fail with -Os
 static bool rx_bit(void) {
-    int32_t power;
+    int32_t sum_cq = 0;
+    int32_t sum_ci = 0;
 
+    // skip first 5 I/Q pairs
     for (size_t i = 0; i < 5; ++i) {
-        power = sample_power();
+        (void)rx_frame_from_fpga();
     }
 
-    return (power > INPUT_THRESHOLD);
+    // sample next 8 I/Q pairs
+    for (uint8_t i = 0; i < 8; ++i) {
+        uint16_t iq = rx_frame_from_fpga();
+        int8_t ci = (int8_t)(iq >> 8);
+        int8_t cq = (int8_t)(iq & 0xff);
+        sum_ci += ci;
+        sum_cq += cq;
+    }
+
+    // calculate power
+    int32_t power = (MAX(ABS(sum_ci), ABS(sum_cq)) + (MIN(ABS(sum_ci), ABS(sum_cq)) >> 1));
+
+    // compare average (power / 8) to threshold
+    return ((power >> 3) > INPUT_THRESHOLD);
 }
 
 //-----------------------------------------------------------------------------
@@ -131,18 +136,18 @@ static bool rx_bit(void) {
 
 static void tx_bit(bool bit) {
     // insert pause
-    LOW(GPIO_SSC_DOUT);
+    HIGH(GPIO_SSC_DOUT);
     last_frame_end += RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
-    HIGH(GPIO_SSC_DOUT);
 
-    // return to high, wait for bit periode to end
+    // return to carrier on, wait for bit periode to end
+    LOW(GPIO_SSC_DOUT);
     last_frame_end += (bit ? RWD_TIME_1 : RWD_TIME_0) - RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
 }
 
 //-----------------------------------------------------------------------------
-// Frame Handling
+// Frame Handling (Reader)
 //
 // The LEGIC RF protocol from card to reader does not include explicit frame
 // start/stop information or length information. The reader must know beforehand
@@ -169,10 +174,10 @@ static void tx_frame(uint32_t frame, uint8_t len) {
     };
 
     // add pause to mark end of the frame
-    LOW(GPIO_SSC_DOUT);
+    HIGH(GPIO_SSC_DOUT);
     last_frame_end += RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
-    HIGH(GPIO_SSC_DOUT);
+    LOW(GPIO_SSC_DOUT);
 
     // log
     uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1), BYTEx(frame, 2)};
@@ -267,12 +272,12 @@ static int init_card(uint8_t cardtype, legic_card_select_t *p_card) {
             p_card->cmdsize = 0;
             p_card->addrsize = 0;
             p_card->cardsize = 0;
-            return 2;
+            return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
-static void init_reader(bool clear_mem) {
+static void init_reader(void) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_212_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
@@ -285,7 +290,7 @@ static void init_reader(bool clear_mem) {
     // re-claim GPIO_SSC_DOUT as GPIO and enable output
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    HIGH(GPIO_SSC_DOUT);
+    LOW(GPIO_SSC_DOUT);
 
     // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
     legic_mem = BigBuf_get_EM_addr();
@@ -406,11 +411,11 @@ legic_card_select_t *getLegicCardInfo(void) {
 
 void LegicRfInfo(void) {
     // configure ARM and FPGA
-    init_reader(false);
+    init_reader();
 
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(0x01);
-    if (init_card(card_type, &card) != 0) {
+    if (init_card(card_type, &card) != PM3_SUCCESS) {
         reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
@@ -446,11 +451,11 @@ int LegicRfReaderEx(uint16_t offset, uint16_t len, uint8_t iv) {
     int res = PM3_SUCCESS;
 
     // configure ARM and FPGA
-    init_reader(false);
+    init_reader();
 
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(iv);
-    if (init_card(card_type, &card) != 0) {
+    if (init_card(card_type, &card) != PM3_SUCCESS) {
         res = PM3_ESOFT;
         goto OUT;
     }
@@ -481,11 +486,11 @@ OUT:
 
 void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     // configure ARM and FPGA
-    init_reader(false);
+    init_reader();
 
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(iv);
-    if (init_card(card_type, &card) != 0) {
+    if (init_card(card_type, &card) != PM3_SUCCESS) {
         reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
@@ -518,7 +523,7 @@ OUT:
 
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
     // configure ARM and FPGA
-    init_reader(false);
+    init_reader();
 
     // uid is not writeable
     if (offset <= WRITE_LOWERLIMIT) {
@@ -528,7 +533,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(iv);
-    if (init_card(card_type, &card) != 0) {
+    if (init_card(card_type, &card) != PM3_SUCCESS) {
         reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
@@ -539,8 +544,8 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
     }
 
     // write in reverse order, only then is DCF (decremental field) writable
-    while (len-- > 0 && !BUTTON_PRESS()) {
-        if (!write_byte(len + offset, data[len], card.addrsize)) {
+    while (len-- > 0 && BUTTON_PRESS() == false) {
+        if (write_byte(len + offset, data[len], card.addrsize) == false) {
             Dbprintf("operation failed | %02X | %02X | %02X", len + offset, len, data[len]);
             reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
             goto OUT;

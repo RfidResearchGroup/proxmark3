@@ -215,6 +215,9 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case ISO14443A_CMD_RATS:
             snprintf(exp, size, "RATS");
             break;
+        case ISO14443A_CMD_PPS:
+            snprintf(exp, size, "PPS");
+            break;
         case ISO14443A_CMD_OPTS:
             snprintf(exp, size, "OPTIONAL TIMESLOT");
             break;
@@ -336,7 +339,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
     static uint8_t rmac[4];
     static uint8_t tmac[4];
 
-    if ( isResponse == false )  {
+    if (isResponse == false)  {
         uint8_t c = cmd[0] & 0x0F;
         uint8_t parity = 0;
         for (uint8_t i = 0; i < 7; i++) {
@@ -406,17 +409,17 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
         }
 
     } else {
-        
+
         if (curr_state == PICO_SELECT) {
             memcpy(csn, cmd, 8);
             curr_state = PICO_NONE;
         } else if (curr_state == PICO_AUTH_EPURSE) {
             memcpy(epurse, cmd, 8);
-        } else if ( curr_state == PICO_AUTH_MACS) {
+        } else if (curr_state == PICO_AUTH_MACS) {
 
             uint8_t key[8];
             if (check_known_default(csn, epurse, rmac, tmac, key)) {
-                snprintf(exp, size, "( " _GREEN_("%s") ")", sprint_hex(key, 8) );
+                snprintf(exp, size, "( " _GREEN_("%s") ")", sprint_hex(key, 8));
             }
             curr_state = PICO_NONE;
         }
@@ -435,11 +438,11 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 snprintf(exp, size, "STAY_QUIET");
                 return;
             case ISO15693_READBLOCK: {
-                
+
                 uint8_t block = 0;
                 if (cmdsize == 13)
                     block = cmd[10];
-                
+
                 snprintf(exp, size, "READBLOCK(%d)", block);
                 return;
             }
@@ -557,7 +560,7 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
         if (cmd[1] > ISO15693_STAYQUIET && cmd[1] < ISO15693_READBLOCK) snprintf(exp, size, "Mandatory RFU");
         else if (cmd[1] > ISO15693_READ_MULTI_SECSTATUS && cmd[1] <= 0x9F) snprintf(exp, size, "Optional RFU");
-    //    else if (cmd[1] >= 0xA0 && cmd[1] <= 0xDF) snprintf(exp, size, "Cust IC MFG dependent");
+        //    else if (cmd[1] >= 0xA0 && cmd[1] <= 0xDF) snprintf(exp, size, "Cust IC MFG dependent");
         else if (cmd[1] > ISO15693_READ_SIGNATURE && cmd[1] <= 0xDF) snprintf(exp, size, "Cust IC MFG dependent");
         else if (cmd[1] >= 0xE0) snprintf(exp, size, "Proprietary IC MFG dependent");
         else
@@ -608,6 +611,10 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
 // iso 7816-3
 void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    if (cmdsize < 2)
+        return;
+
     // S-block
     if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
         switch ((cmd[0] & 0x3f)) {
@@ -715,7 +722,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 snprintf(exp, size, "GET RESPONSE");
                 break;
             default:
-                snprintf(exp, size, "?");
+                //snprintf(exp, size, "?");
                 break;
         }
     }
@@ -992,13 +999,13 @@ void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         case CRYPTORF_DESELECT:
             snprintf(exp, size, "DESELECT");
-            break;  
+            break;
         case CRYPTORF_IDLE:
             snprintf(exp, size, "IDLE");
-            break;              
+            break;
         case CRYPTORF_CHECK_PASSWORD:
             snprintf(exp, size, "CHECK PWD");
-            break;  
+            break;
         default:
             snprintf(exp, size, "?");
             break;

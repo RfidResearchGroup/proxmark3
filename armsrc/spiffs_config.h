@@ -58,8 +58,6 @@ typedef uint8_t u8_t;
 #define SPIFFS_API_DBGF(str) SPIFFS_API_DBG(str,NULL)
 #endif
 
-
-
 // Defines spiffs debug print formatters
 // some general signed number
 #ifndef _SPIPRIi

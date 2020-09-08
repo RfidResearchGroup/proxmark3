@@ -333,7 +333,7 @@ void hash0(uint64_t c, uint8_t k[8]) {
         uint8_t p_i = p >> i & 0x1;
 
         if (k[i]) { // yi = 1
-            //printf("k[%d] +1\n", i);
+            // PrintAndLogEx(NORMAL, "k[%d] + 1", i);
             k[i] |= ~zTilde_i & 0x7E;
             k[i] |= p_i & 1;
             k[i] += 1;
@@ -399,7 +399,7 @@ static void testPermute(void) {
     permute(&p_in, x, 0, 4, &out);
 
     uint64_t permuted = x_bytes_to_num(outbuffer, 8);
-    //printf("zTilde 0x%"PRIX64"\n", zTilde);
+    // PrintAndLogEx(NORMAL, "zTilde 0x%"PRIX64, zTilde);
     permuted >>= 16;
 
     uint8_t res[8] = { getSixBitByte(permuted, 0),
@@ -694,28 +694,21 @@ int doKeyTests(void) {
 
 /**
 
-void checkParity2(uint8_t* key)
-{
+void checkParity2(uint8_t* key) {
 
     uint8_t stored_parity = key[7];
-    printf("Parity byte: 0x%02x\n", stored_parity);
-    int i;
-    int byte;
-    int fails =0;
+    PrintAndLogEx(NORMAL, "Parity byte: 0x%02x", stored_parity);
+    int i, byte, fails = 0;
     BitstreamIn bits = {key, 56, 0};
-
     bool parity = 0;
 
-    for(i =0 ; i  < 56; i++)
-    {
+    for (i = 0; i  < 56; i++) {
 
-        if ( i > 0 && i % 7 == 0)
-        {
+        if ( i > 0 && i % 7 == 0){
             parity = !parity;
             bool pbit = stored_parity & (0x80 >> (byte));
-            if(parity != pbit)
-            {
-                printf("parity2 fail byte %d, should be %d, was %d\n", (i / 7), parity, pbit);
+            if (parity != pbit) {
+                PrintAndLogEx(NORMAL, "parity2 fail byte %d, should be %d, was %d", (i / 7), parity, pbit);
                 fails++;
             }
             parity =0 ;
@@ -723,35 +716,32 @@ void checkParity2(uint8_t* key)
         }
         parity = parity ^ headBit(&bits);
     }
-    if(fails)
-    {
-        printf("parity2 fails: %d\n", fails);
-    }else
-    {
-        printf("Key syntax is with parity bits grouped in the last byte!\n");
+    if (fails) {
+        PrintAndLogEx(FAILED, "parity2 fails: %d", fails);
+    } else {
+        PrintAndLogEx(INFO, "Key syntax is with parity bits grouped in the last byte!");
     }
 }
-void modifyKey_put_parity_last(uint8_t * key, uint8_t* output)
-{
+
+void modifyKey_put_parity_last(uint8_t * key, uint8_t* output) {
+
     uint8_t paritybits = 0;
     bool parity =0;
-    BitstreamOut out = { output, 0,0};
+    BitstreamOut out = { output, 0, 0};
     unsigned int bbyte, bbit;
-    for(bbyte=0; bbyte <8 ; bbyte++ )
-    {
-        for(bbit =0 ; bbit< 7 ; bbit++)
-        {
-            bool bit = *(key+bbyte) & (1 << (7-bbit));
-            pushBit(&out,bit);
+    for (bbyte = 0; bbyte <8; bbyte++ ) {
+        for(bbit = 0; bbit < 7; bbit++) {
+            bool bit = *(key + bbyte) & (1 << (7 - bbit));
+            pushBit(&out, bit);
             parity ^= bit;
         }
-        bool paritybit = *(key+bbyte) & 1;
-        paritybits |= paritybit << (7-bbyte);
+        bool paritybit = *(key + bbyte) & 1;
+        paritybits |= paritybit << (7 - bbyte);
         parity = 0;
 
     }
     output[7] = paritybits;
-    printf("Parity byte: %02x\n", paritybits);
+    PrintAndLogEx(INFO, "Parity byte: %02x", paritybits);
 }
 
  * @brief Modifies a key with parity bits last, so that it is formed with parity
@@ -759,25 +749,24 @@ void modifyKey_put_parity_last(uint8_t * key, uint8_t* output)
  * @param key
  * @param output
 
-void modifyKey_put_parity_allover(uint8_t * key, uint8_t* output)
-{
+void modifyKey_put_parity_allover(uint8_t * key, uint8_t* output) {
     bool parity =0;
-    BitstreamOut out = { output, 0,0};
-    BitstreamIn in = {key, 0,0};
+    BitstreamOut out = {output, 0, 0};
+    BitstreamIn in = {key, 0, 0};
     unsigned int bbyte, bbit;
-    for(bbit =0 ; bbit < 56 ; bbit++) {
-        if( bbit > 0 && bbit % 7 == 0) {
-            pushBit(&out,!parity);
+    for (bbit = 0; bbit < 56; bbit++) {
+        if (bbit > 0 && bbit % 7 == 0) {
+            pushBit(&out, !parity);
             parity = 0;
         }
         bool bit = headBit(&in);
-        pushBit(&out,bit );
+        pushBit(&out, bit);
         parity ^= bit;
     }
     pushBit(&out, !parity);
 
-    if( des_key_check_key_parity(output))
-        printf("modifyKey_put_parity_allover fail, DES key invalid parity!");
+    if (des_key_check_key_parity(output))
+        PrintAndLogEx(FAILED, "modifyKey_put_parity_allover fail, DES key invalid parity!");
 }
 */
 

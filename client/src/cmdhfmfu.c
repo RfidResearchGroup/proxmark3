@@ -123,7 +123,7 @@ static int usage_hf_mfu_wrbl(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mfu wrbl b <block number> d <data> k <key> l\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  b <no>   : block to write");
-    PrintAndLogEx(NORMAL, "  d <data> : block data - (8 hex symbols)");
+    PrintAndLogEx(NORMAL, "  d <data> : block data - (8 or 32 hex symbols, 32 hex symbols will do a compatibility write)");
     PrintAndLogEx(NORMAL, "  k <key>  : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l        : (optional) swap entered key's endianness");
     PrintAndLogEx(NORMAL, "");
@@ -1096,6 +1096,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0B", 7) == 0) { tagtype = UL_EV1_48; break; }
                 else if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; }
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; }
+                else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; } // Mikron JSC Russia EV1 41 pages tag
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = NTAG_210; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0E", 7) == 0) { tagtype = NTAG_212; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; }
@@ -1473,8 +1474,9 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     uint8_t cmdp = 0;
     uint8_t keylen = 0;
-    uint8_t blockdata[20] = {0x00};
+    uint8_t blockdata[16] = {0x00};
     uint8_t data[16] = {0x00};
+    uint8_t datalen = 4;
     uint8_t authenticationkey[16] = {0x00};
     uint8_t *authKeyPtr = authenticationkey;
 
@@ -1516,9 +1518,13 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
                 break;
             case 'd':
                 if (param_gethex(Cmd, cmdp + 1, blockdata, 8)) {
-                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
-                    errors = true;
-                    break;
+                    if (param_gethex(Cmd, cmdp + 1, blockdata, 32)) {
+                        PrintAndLogEx(WARNING, "Block data must include 8 or 32 HEX symbols");
+                        errors = true;
+                        break;
+                    } else {
+                        datalen = 16;
+                    }
                 }
                 cmdp += 2;
                 break;
@@ -1558,9 +1564,8 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(blockdata, 4));
 
     //Send write Block
-    uint8_t cmddata[20];
-    memcpy(cmddata, blockdata, 4);
-    uint8_t datalen = 4;
+    uint8_t cmddata[32];
+    memcpy(cmddata, blockdata, datalen);
     uint8_t keytype = 0;
     if (hasAuthKey) {
         keytype = 1;
@@ -1573,7 +1578,11 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
+    if (datalen == 16) {
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL_COMPAT, blockNo, keytype, 0, cmddata, datalen);
+    } else {
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
+    }
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -1982,7 +1991,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     // not ul_c and not std ul then attempt to collect info like
     //  VERSION, SIGNATURE, COUNTERS, TEARING, PACK,
-    if (!(tagtype & UL_C || tagtype & UL)) {
+    if (!(tagtype & UL_C || tagtype & UL || tagtype & MY_D_MOVE || tagtype & MY_D_MOVE_LEAN)) {
         //attempt to read pack
         uint8_t get_pack[] = {0, 0};
         if (ul_auth_select(&card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack)) != PM3_SUCCESS) {
@@ -2306,8 +2315,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
         wait4response(b);
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
     }
     PrintAndLogEx(NORMAL, "\n");
 

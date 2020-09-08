@@ -245,6 +245,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443A:
             case MFDES:
             case LTO:
+            case ISO_7816_4:
                 crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case THINFILM:
@@ -260,7 +261,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
             case PROTO_CRYPTORF:
-            case ISO_7816_4:
             case PROTO_HITAG1:
             case PROTO_HITAG2:
             case PROTO_HITAGS:
@@ -334,10 +334,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     // Draw the CRC column
     const char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
 
-	// mark short bytes (less than 8 Bit + Parity)
-	if (protocol == ISO_14443A ||
-        protocol == PROTO_MIFARE || 
-        protocol == THINFILM) {
+    // mark short bytes (less than 8 Bit + Parity)
+    if (protocol == ISO_14443A ||
+            protocol == PROTO_MIFARE ||
+            protocol == THINFILM) {
 
         // approximated with 128 * (9 * data_len);
         uint16_t bitime = 1056 + 32;
@@ -346,17 +346,17 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
             uint8_t m = 7;
             while (m > 0) {
-                bitime -= 128;               
-                if ( duration > bitime) {
+                bitime -= 128;
+                if (duration > bitime) {
                     break;
-                } 
+                }
                 m--;
             }
-            line[(data_len-1)/16][((data_len-1)%16) * 4 + 2] = '(';
-			line[(data_len-1)/16][((data_len-1)%16) * 4 + 3] = m + 0x30; 
-            line[(data_len-1)/16][((data_len-1)%16) * 4 + 4] = ')';
-		}
-	}
+            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 2] = '(';
+            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 3] = m + 0x30;
+            line[(data_len - 1) / 16][((data_len - 1) % 16) * 4 + 4] = ')';
+        }
+    }
 
 
     uint32_t previous_end_of_transmission_timestamp = 0;
@@ -388,8 +388,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
         case ICLASS:
-                annotateIclass(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
-                break;
+            annotateIclass(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
         default:
             break;
     }
@@ -413,6 +413,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 annotateTopaz(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_7816_4:
+                annotateIso14443a(explanation, sizeof(explanation), frame, data_len);
                 annotateIso7816(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_15693:

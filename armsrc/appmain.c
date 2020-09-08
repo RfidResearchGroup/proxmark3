@@ -355,8 +355,11 @@ static void SendStatus(void) {
     I2C_print_status();
 #endif
 #ifdef WITH_LF
-    printConfig();      // LF Sampling config
+    printLFConfig();      // LF Sampling config
     printT55xxConfig(); // LF T55XX Config
+#endif
+#ifdef WITH_ISO14443a
+    printHf14aConfig();   // HF 14a config
 #endif
     printConnSpeed();
     DbpString(_CYAN_("Various"));
@@ -739,7 +742,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SAMPLING_PRINT_CONFIG: {
-            printConfig();
+            printLFConfig();
             break;
         }
         case CMD_LF_SAMPLING_GET_CONFIG: {
@@ -756,7 +759,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_ACQ_RAW_ADC: {
             struct p {
-                uint8_t verbose;
+                bool verbose;
                 uint32_t samples;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
@@ -1058,14 +1061,19 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t uid[8];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-			SetTag15693Uid(payload->uid);
-			break;
+            SetTag15693Uid(payload->uid);
+            break;
         }
 #endif
 
 #ifdef WITH_LEGICRF
         case CMD_HF_LEGIC_SIMULATE: {
-            LegicRfSimulate(packet->oldarg[0]);
+            struct p {
+                uint8_t tagtype;
+                bool send_reply;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            LegicRfSimulate(payload->tagtype, payload->send_reply);
             break;
         }
         case CMD_HF_LEGIC_WRITER: {
@@ -1140,6 +1148,21 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
 
 #ifdef WITH_ISO14443a
+        case CMD_HF_ISO14443A_PRINT_CONFIG: {
+            printHf14aConfig();
+            break;
+        }
+        case CMD_HF_ISO14443A_GET_CONFIG: {
+            hf14a_config *hf14aconfig = getHf14aConfig();
+            reply_ng(CMD_HF_ISO14443A_GET_CONFIG, PM3_SUCCESS, (uint8_t *)hf14aconfig, sizeof(hf14a_config));
+            break;
+        }
+        case CMD_HF_ISO14443A_SET_CONFIG: {
+            hf14a_config c;
+            memcpy(&c, packet->data.asBytes, sizeof(hf14a_config));
+            setHf14aConfig(&c);
+            break;
+        }
         case CMD_HF_ISO14443A_SNIFF: {
             SniffIso14443a(packet->data.asBytes[0]);
             reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
@@ -1214,6 +1237,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareUWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
+        case CMD_HF_MIFAREU_WRITEBL_COMPAT: {
+            MifareUWriteBlockCompat(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            break;
+        }
         case CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES: {
             MifareAcquireEncryptedNonces(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
@@ -1248,7 +1275,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS: {
-            MifareChkKeys(packet->data.asBytes);
+            MifareChkKeys(packet->data.asBytes, false);
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS_FAST: {
@@ -1316,6 +1343,19 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_CIDENT: {
             MifareCIdent();
+            break;
+        }
+        // Gen 3 magic cards
+        case CMD_HF_MIFARE_GEN3UID: {
+            MifareGen3UID(packet->oldarg[0], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_MIFARE_GEN3BLK: {
+            MifareGen3Blk(packet->oldarg[0], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_MIFARE_GEN3FREEZ: {
+            MifareGen3Freez();
             break;
         }
         // mifare sniffer
@@ -1806,12 +1846,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs dump : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
-            //uint32_t size = 0;
-            //rdv40_spiffs_stat((char *)filename, (uint32_t *)size,RDV40_SPIFFS_SAFETY_SAFE);
             uint32_t size = packet->oldarg[1];
-            //uint8_t buff[size];
 
             uint8_t *buff = BigBuf_malloc(size);
             rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
@@ -1836,7 +1873,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs STAT : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs STAT : %s", filename);
             int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs((char *)filename);
             if (changed) rdv40_spiffs_lazy_unmount();
@@ -1849,7 +1886,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs REMOVE : %s", filename);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Filename received for spiffs REMOVE : %s", filename);
             rdv40_spiffs_remove((char *) filename, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
             break;
@@ -1864,9 +1901,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
             strncpy((char *)dest, token, sizeof(dest) - 1);
-            if (DBGLEVEL > 1) {
-                Dbprintf("> Filename received as source for spiffs RENAME : %s", src);
-                Dbprintf("> Filename received as destination for spiffs RENAME : %s", dest);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received as source for spiffs RENAME : %s", src);
+                Dbprintf("Filename received as destination for spiffs RENAME : %s", dest);
             }
             rdv40_spiffs_rename((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
@@ -1882,9 +1919,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
             strncpy((char *)dest, token, sizeof(dest) - 1);
-            if (DBGLEVEL > 1) {
-                Dbprintf("> Filename received as source for spiffs COPY : %s", src);
-                Dbprintf("> Filename received as destination for spiffs COPY : %s", dest);
+            if (DBGLEVEL >= DBG_DEBUG) {
+                Dbprintf("Filename received as source for spiffs COPY : %s", src);
+                Dbprintf("Filename received as destination for spiffs COPY : %s", dest);
             }
             rdv40_spiffs_copy((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
@@ -1896,14 +1933,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint32_t append = packet->oldarg[0];
             uint32_t size = packet->oldarg[1];
             uint8_t *data = packet->data.asBytes;
-
-            //rdv40_spiffs_lazy_mount();
-
             uint8_t *pfilename = packet->data.asBytes;
             memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
             data += SPIFFS_OBJ_NAME_LEN;
 
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+
             if (!append) {
                 rdv40_spiffs_write((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
             } else {

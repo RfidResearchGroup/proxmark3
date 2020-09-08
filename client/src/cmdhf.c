@@ -84,7 +84,7 @@ static int usage_hf_tune(void) {
     return PM3_SUCCESS;
 }
 
-#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          ")
+#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          \r")
 
 int CmdHFSearch(const char *Cmd) {
 
@@ -166,16 +166,16 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-/*
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
-    if (IfPm3Felica()) {
-        if (readFelicaUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-            res = PM3_SUCCESS;
+    /*
+        PROMPT_CLEARLINE;
+        PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+        if (IfPm3Felica()) {
+            if (readFelicaUid(false) == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+                res = PM3_SUCCESS;
+            }
         }
-    }
-*/
+    */
     /*
         PROMPT_CLEARLINE;
         PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
@@ -190,10 +190,10 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
 
-        PrintAndLogEx(INPLACE, _RED_("No known/supported 13.56 MHz tags found"));
+        PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         res = PM3_ESOFT;
     }
-    printf("\n");
+
     return res;
 }
 

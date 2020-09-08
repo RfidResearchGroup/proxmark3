@@ -429,18 +429,18 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         }
         case jsfIclass: {
             JsonSaveStr(root, "FileType", "iclass");
-            
+
             picopass_hdr *hdr = (picopass_hdr *)data;
             JsonSaveBufAsHexCompact(root, "$.Card.CSN", hdr->csn, sizeof(hdr->csn));
-            JsonSaveBufAsHexCompact(root, "$.Card.Configuration",(uint8_t *)&hdr->conf, sizeof(hdr->conf));
+            JsonSaveBufAsHexCompact(root, "$.Card.Configuration", (uint8_t *)&hdr->conf, sizeof(hdr->conf));
 
             uint8_t pagemap = get_pagemap(hdr);
             if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
                 picopass_ns_hdr *ns_hdr = (picopass_ns_hdr *)data;
                 JsonSaveBufAsHexCompact(root, "$.Card.AIA", ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area));
-            } else {                
+            } else {
                 JsonSaveBufAsHexCompact(root, "$.Card.Epurse", hdr->epurse, sizeof(hdr->epurse));
-                JsonSaveBufAsHexCompact(root, "$.Card.Kd",hdr->key_d, sizeof(hdr->key_d));
+                JsonSaveBufAsHexCompact(root, "$.Card.Kd", hdr->key_d, sizeof(hdr->key_d));
                 JsonSaveBufAsHexCompact(root, "$.Card.Kc", hdr->key_c, sizeof(hdr->key_c));
                 JsonSaveBufAsHexCompact(root, "$.Card.AIA", hdr->app_issuer_area, sizeof(hdr->app_issuer_area));
             }
@@ -1483,9 +1483,9 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
         char tmp_fullpath[1024] = {0};
         strncat(tmp_fullpath, path, sizeof(tmp_fullpath) - 1);
         strncat(tmp_fullpath, namelist[i]->d_name, strlen(tmp_fullpath) - 1);
-   
+
         if (is_directory(tmp_fullpath)) {
-            
+
             char newpath[1024];
             if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
                 continue;
@@ -1496,9 +1496,9 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
 
             filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
         } else {
-            
+
             if ((ext == NULL) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
-                
+
                 for (uint8_t j = 0; j < indent + 1; j++) {
                     PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
                 }
