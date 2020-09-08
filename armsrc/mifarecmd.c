@@ -2347,7 +2347,7 @@ int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len) {
 
     ReaderTransmit(cmd, cmd_len, NULL);
     int res = ReaderReceive(buf, par);
-    if (res == 4 || memcmp(buf, "\x90\x00\xfd\x07", 4) == 0) {
+    if (res == 4 && memcmp(buf, "\x90\x00\xfd\x07", 4) == 0) {
         // timeout for card memory reset
         SpinDelay(1000);
     } else {
