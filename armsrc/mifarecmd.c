@@ -444,47 +444,6 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     set_tracing(false);
 }
 
-/* // Command not needed but left for future testing
-void MifareUWriteBlockCompat(uint8_t arg0, uint8_t *datain)
-{
-    uint8_t blockNo = arg0;
-    uint8_t blockdata[16] = {0x00};
-
-    memcpy(blockdata, datain, 16);
-
-    uint8_t uid[10] = {0x00};
-
-    LED_A_ON(); LED_B_OFF(); LED_C_OFF();
-
-    clear_trace();
-    set_tracing(true);
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
-    if(!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
-        if (DBGLEVEL >= DBG_ERROR)   Dbprintf("Can't select card");
-        OnError(0);
-        return;
-    };
-
-    if(mifare_ultra_writeblock_compat(blockNo, blockdata)) {
-        if (DBGLEVEL >= DBG_ERROR)   Dbprintf("Write block error");
-        OnError(0);
-        return; };
-
-    if(mifare_ultra_halt()) {
-        if (DBGLEVEL >= DBG_ERROR)   Dbprintf("Halt error");
-        OnError(0);
-        return;
-    };
-
-    if (DBGLEVEL >= 2)   DbpString("WRITE BLOCK FINISHED");
-
-    reply_mix(CMD_ACK,1,0,0,0,0);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
-}
-*/
-
 // Arg0   : Block to write to.
 // Arg1   : 0 = use no authentication.
 //          1 = use 0x1A authentication.
@@ -535,6 +494,75 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     }
 
     if (mifare_ultra_writeblock(blockNo, blockdata)) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Write block error");
+        OnError(0);
+        return;
+    };
+
+    if (mifare_ultra_halt()) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Halt error");
+        OnError(0);
+        return;
+    };
+
+    if (DBGLEVEL >= 2) DbpString("WRITE BLOCK FINISHED");
+
+    reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    set_tracing(false);
+}
+
+// Arg0   : Block to write to.
+// Arg1   : 0 = use no authentication.
+//          1 = use 0x1A authentication.
+//          2 = use 0x1B authentication.
+// datain : 16 first bytes is data to be written.
+//        : 4/16 next bytes is authentication key.
+void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
+    uint8_t blockNo = arg0;
+    bool useKey = (arg1 == 1); //UL_C
+    bool usePwd = (arg1 == 2); //UL_EV1/NTAG
+    uint8_t blockdata[16] = {0x00};
+
+    memcpy(blockdata, datain, 16);
+
+    LEDsoff();
+    LED_A_ON();
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    clear_trace();
+    set_tracing(true);
+
+    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
+        OnError(0);
+        return;
+    };
+
+    // UL-C authentication
+    if (useKey) {
+        uint8_t key[16] = {0x00};
+        memcpy(key, datain + 16, sizeof(key));
+
+        if (!mifare_ultra_auth(key)) {
+            OnError(1);
+            return;
+        }
+    }
+
+    // UL-EV1 / NTAG authentication
+    if (usePwd) {
+        uint8_t pwd[4] = {0x00};
+        memcpy(pwd, datain + 16, 4);
+        uint8_t pack[4] = {0, 0, 0, 0};
+        if (!mifare_ul_ev1_auth(pwd, pack)) {
+            OnError(1);
+            return;
+        }
+    }
+
+    if (mifare_ultra_writeblock_compat(blockNo, blockdata)) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Write block error");
         OnError(0);
         return;

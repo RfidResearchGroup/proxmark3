@@ -446,37 +446,37 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     return 0;
 }
 
-/* // command not needed, but left for future testing
 int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
-    uint16_t len;
-    uint8_t par[3] = {0};  // enough for 18 parity bits
-    uint8_t d_block[18] = {0x00};
-    uint8_t receivedAnswer[MAX_FRAME_SIZE];
-    uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
+    // variables
+    uint16_t len = 0;
+
+    uint8_t d_block[18];
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
-    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
         if (DBGLEVEL >= DBG_ERROR)
-            Dbprintf("Cmd Addr Error: %02x", receivedAnswer[0]);
+            Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
         return 1;
     }
 
     memcpy(d_block, blockData, 16);
     AddCrc14A(d_block, 16);
 
-    ReaderTransmitPar(d_block, sizeof(d_block), par, NULL);
+    ReaderTransmit(d_block, sizeof(d_block), NULL);
 
+    // Receive the response
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
-    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
         if (DBGLEVEL >= DBG_ERROR)
-            Dbprintf("Cmd Data Error: %02x %d", receivedAnswer[0],len);
+            Dbprintf("Cmd Send Data Error: %02x %d", receivedAnswer[0], len);
         return 2;
     }
     return 0;
 }
-*/
 
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
