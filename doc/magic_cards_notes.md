@@ -4,25 +4,25 @@ This document is based mostly on information posted on http://www.proxmark.org/f
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
-  * [MIFARE Classic Gen2 aka CUID](#mifare-classic-gen2-aka-cuid)
-  * [MIFARE Classic Gen2, FUID version](#mifare-classic-gen2--fuid-version)
-  * [MIFARE Classic Gen2, UFUID version](#mifare-classic-gen2--ufuid-version)
+  * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
+  * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite--fuid-version-aka-1-write)
+  * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite--ufuid-version)
   * [MIFARE Classic, other versions](#mifare-classic--other-versions)
-  * [MIFARE Classic Gen3](#mifare-classic-gen3)
+  * [MIFARE Classic APDU](#mifare-classic-apdu)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
   * [MIFARE Ultralight Gen1A](#mifare-ultralight-gen1a)
-  * [MIFARE Ultralight Gen2](#mifare-ultralight-gen2)
-  * [MIFARE Ultralight EV1 Gen2](#mifare-ultralight-ev1-gen2)
+  * [MIFARE Ultralight DirectWrite](#mifare-ultralight-directwrite)
+  * [MIFARE Ultralight EV1 DirectWrite](#mifare-ultralight-ev1-directwrite)
   * [MIFARE Ultralight C Gen1A](#mifare-ultralight-c-gen1a)
-  * [MIFARE Ultralight C Gen2](#mifare-ultralight-c-gen2)
+  * [MIFARE Ultralight C DirectWrite](#mifare-ultralight-c-directwrite)
 - [NTAG](#ntag)
-  * [NTAG213 Gen2](#ntag213-gen2)
+  * [NTAG213 DirectWrite](#ntag213-directwrite)
   * [NTAG21x](#ntag21x)
 - [DESFire](#desfire)
-  * [DESFire "Gen3", 7b UID](#desfire--gen3---7b-uid)
-  * [DESFire "Gen3", 4b UID](#desfire--gen3---4b-uid)
+  * ["DESFire" APDU, 7b UID](#-desfire--apdu--7b-uid)
+  * ["DESFire" APDU, 4b UID](#-desfire--apdu--4b-uid)
 - [ISO14443B](#iso14443b)
   * [ISO14443B magic](#iso14443b-magic)
 - [ISO15693](#iso15693)
@@ -97,7 +97,7 @@ script run remagic
 
 Similar to Gen1A, but supports only commands 40/43
 
-## MIFARE Classic Gen2 aka CUID
+## MIFARE Classic DirectWrite aka Gen2 aka CUID
 
 ### Magic commands
 
@@ -137,15 +137,15 @@ hf 14a config a 1 b 2 2 2 3 2 r 2
 hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869
 hf 14a config a 0 b 0 2 0 3 0 r 0
 ```
-## MIFARE Classic Gen2, FUID version
+## MIFARE Classic DirectWrite, FUID version aka 1-write
 
-Same as MIFARE Classic Gen2, but block0 can be written only once.
+Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
 Initial UID is AA55C396
 
-## MIFARE Classic Gen2, UFUID version
+## MIFARE Classic DirectWrite, UFUID version
 
-Same as MIFARE Classic Gen2, but block0 can be locked with special command.
+Same as MIFARE Classic DirectWrite, but block0 can be locked with special command.
 
 ### Proxmark3 commands
 
@@ -213,9 +213,9 @@ hf 14a raw -s -c 90fd11100
 
 ## MIFARE Classic Super
 
-It behaves like Gen2 but records reader auth attempts.
+It behaves like DirectWrite but records reader auth attempts.
 
-To change UID: same commands as for MFC Gen2
+To change UID: same commands as for MFC DirectWrite
 
 To do reader-only attack: at least two versions exist.
 
@@ -269,7 +269,7 @@ hf 14a config h
 script run remagic -u
 ```
 
-## MIFARE Ultralight Gen2
+## MIFARE Ultralight DirectWrite
 
 ### Characteristics
 
@@ -307,23 +307,23 @@ When "soft-bricked" (by writing invalid data in block0), these ones may help:
 hf 14a config h
 ```
 
-## MIFARE Ultralight EV1 Gen2
+## MIFARE Ultralight EV1 DirectWrite
 
-Same commands as for MFUL Gen2
+Same commands as for MFUL DirectWrite
 
 ## MIFARE Ultralight C Gen1A
 
 Same commands as for MFUL Gen1A
 
-## MIFARE Ultralight C Gen2
+## MIFARE Ultralight C DirectWrite
 
-Same commands as for MFUL Gen2
+Same commands as for MFUL DirectWrite
 
 # NTAG
 
-## NTAG213 Gen2
+## NTAG213 DirectWrite
 
-Same commands as for MFUL Gen2
+Same commands as for MFUL DirectWrite
 
 ## NTAG21x
 
@@ -341,7 +341,7 @@ script run mfu_magic -h
 
 # DESFire
 
-## DESFire "Gen3", 7b UID
+## "DESFire" APDU, 7b UID
 
 ### Magic commands
 
@@ -374,7 +374,7 @@ hf 14a apdu -s 00ab00000704112233445566
 4a0100
 420200ab00000704112233445566
 ```
-## DESFire "Gen3", 4b UID
+## "DESFire" APDU, 4b UID
 
 ### Magic commands
 
