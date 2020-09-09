@@ -1152,7 +1152,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
 }
 
 // --- GET SIGNATURE
-static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, nxp_cardtype_t card_type) {
+static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len, nxp_cardtype_t card_type) {
     (void)card_type;
 
     if (uid == NULL) {
@@ -1185,7 +1185,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         uint8_t key[PUBLIC_DESFIRE_ECDA_KEYLEN];
         param_gethex_to_eol(nxp_desfire_public_keys[i].value, 0, key, PUBLIC_DESFIRE_ECDA_KEYLEN, &dl);
 
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, 7, signature, signature_len, false);
+        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
         is_valid = (res == 0);
         if (is_valid)
             break;
@@ -3228,7 +3228,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500)) {
+    if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -3237,6 +3237,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     struct p {
         uint8_t isOK;
         uint8_t uid[7];
+        uint8_t uidlen;
         uint8_t versionHW[7];
         uint8_t versionSW[7];
         uint8_t details[14];
@@ -3269,7 +3270,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, sizeof(package->uid)));
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, package->uidlen));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
     PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), package->details[12], package->details[13]);
     PrintAndLogEx(NORMAL, "");
@@ -3319,7 +3320,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
         if (handler_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
-            desfire_print_signature(package->uid, signature, signature_len, cardtype);
+            desfire_print_signature(package->uid, package->uidlen, signature, signature_len, cardtype);
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
