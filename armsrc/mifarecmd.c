@@ -2279,7 +2279,7 @@ void MifareCIdent(void) {
         if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
 
             // super card ident
-            uint8_t super[] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10};
+            uint8_t super[] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
             ReaderTransmit(super, sizeof(super), NULL);
             res = ReaderReceive(buf, par);
             if (res == 22) {
