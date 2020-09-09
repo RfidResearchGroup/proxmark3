@@ -1184,6 +1184,9 @@ int detect_classic_magic(void) {
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
             break;
+        case MAGIC_SUPER:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
+            break;
         default:
             break;
     }

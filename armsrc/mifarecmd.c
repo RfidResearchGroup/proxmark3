@@ -2308,6 +2308,15 @@ void MifareCIdent(void) {
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
+        
+        // super card ident
+        uint8_t super[] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10};
+        ReaderTransmit(super, sizeof(super), NULL);
+        res = ReaderReceive(buf, par);
+        if (res == 22) {
+            isGen = MAGIC_SUPER;
+            goto OUT;            
+        }
     };
 
 OUT:

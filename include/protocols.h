@@ -219,6 +219,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_GEN_1B 2
 #define MAGIC_GEN_2  4
 #define MAGIC_GEN_UNFUSED 5
+#define MAGIC_SUPER  6
 /**
 06 00 = INITIATE
 0E xx = SELECT ID (xx = Chip-ID)
