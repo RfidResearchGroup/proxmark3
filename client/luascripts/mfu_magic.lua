@@ -191,7 +191,7 @@ local function read_config()
 	end
 
 	print('Magic NTAG 21* Configuration')
-	print(' - Type    ', typestr, '(geniune cardtype)')
+	print(' - Type    ', typestr, '(genuine cardtype)')
 	print(' - Password', pwd)
 	print(' - Pack    ', pack)
 	print(' - Version ', version)
