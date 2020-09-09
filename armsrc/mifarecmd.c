@@ -2277,6 +2277,16 @@ void MifareCIdent(void) {
         ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
         if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
+
+            // super card ident
+            uint8_t super[] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10};
+            ReaderTransmit(super, sizeof(super), NULL);
+            res = ReaderReceive(buf, par);
+            if (res == 22) {
+                isGen = MAGIC_SUPER;
+                goto OUT;            
+            }
+
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
@@ -2308,15 +2318,8 @@ void MifareCIdent(void) {
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
-        
-        // super card ident
-        uint8_t super[] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10};
-        ReaderTransmit(super, sizeof(super), NULL);
-        res = ReaderReceive(buf, par);
-        if (res == 22) {
-            isGen = MAGIC_SUPER;
-            goto OUT;            
-        }
+      
+
     };
 
 OUT:
