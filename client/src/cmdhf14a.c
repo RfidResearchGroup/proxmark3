@@ -201,6 +201,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "            7 = AMIIBO (NTAG 215),  pack 0x8080");
     PrintAndLogEx(NORMAL, "            8 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
+    PrintAndLogEx(NORMAL, "           10 = JCOP 31/41 Rothult");
 //  PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
     PrintAndLogEx(NORMAL, "    u     : 4, 7 byte UID");
     PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
