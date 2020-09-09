@@ -148,13 +148,6 @@ void MifareDesfireGetInformation(void) {
         return;
     }
 
-    if (card.uidlen != 7) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Wrong UID size. Expected 7byte got %d", card.uidlen);
-        payload.isOK = 2;  // 2 == WRONG UID
-        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
-        switch_off();
-        return;
-    }
     // add uid.
     memcpy(payload.uid, card.uid, sizeof(payload.uid));
 
