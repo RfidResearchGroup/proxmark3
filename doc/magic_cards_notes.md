@@ -8,7 +8,7 @@ This document is based mostly on information posted on http://www.proxmark.org/f
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite--fuid-version-aka-1-write)
   * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite--ufuid-version)
   * [MIFARE Classic, other versions](#mifare-classic--other-versions)
-  * [MIFARE Classic APDU](#mifare-classic-apdu)
+  * [MIFARE Classic APDU aka Gen3](#mifare-classic-apdu-aka-gen3)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
@@ -163,7 +163,7 @@ hf 14a raw       -c   85000000000000000000000000000008
 
 Some cards exhibit a specific SAK=28 ??
 
-## MIFARE Classic Gen3
+## MIFARE Classic APDU aka Gen3
 
 ### Magic commands
 
