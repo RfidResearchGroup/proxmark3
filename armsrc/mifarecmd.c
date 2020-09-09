@@ -2303,6 +2303,11 @@ void MifareCIdent(void) {
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
+        // test for NTAG213 magic gen2
+        if (memcmp(buf, "\x85\x00\x00\xA0\x00\x00\x0A\xA5\x00\x04\x04\x02\x01\x00\x0F\x03\x79\x0C", 18) == 0) {
+            isGen = MAGIC_GEN_2;
+            goto OUT;
+        }
     };
 
 OUT:
