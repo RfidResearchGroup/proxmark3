@@ -1,3 +1,4 @@
+# Notes on Magic Cards, aka UID changeable
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=35372#p35372
 
 - [MIFARE Classic](#mifare-classic)
