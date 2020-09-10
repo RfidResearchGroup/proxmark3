@@ -1,6 +1,9 @@
 # Notes on Magic Cards, aka UID changeable
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=35372#p35372
 
+Useful docs:
+* [AN10833 MIFARE Type Identification Procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
+
 - [MIFARE Classic](#mifare-classic)
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
@@ -36,7 +39,7 @@ Referred as M1, S50 (1k), S70 (4k)
 
 ## MIFARE Classic block0
 
-UID 4b:
+UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
 
 ```
 11223344440804006263646566676869
@@ -53,7 +56,14 @@ Computing BCC on UID 11223344: `hf analyse lcr 11223344` = `44`
 
 UID 7b:
 
-**todo**
+```
+04112233445566884400c82000000000
+^^                               Manufacturer byte
+^^^^^^^^^^^^^^                   UID
+              ^^                 SAK(*)??
+                ^^^^             ATQA??
+                    ^^^^^^^^^^^^ Manufacturer data
+```
 
 ## MIFARE Classic Gen1A aka UID
 
