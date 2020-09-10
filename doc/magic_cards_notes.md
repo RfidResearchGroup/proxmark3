@@ -57,6 +57,14 @@ UID 7b:
 
 ## MIFARE Classic Gen1A aka UID
 
+### Identify
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 1a
+```
+
 ### Magic commands
 
 raw commands 40/41/43
@@ -98,7 +106,23 @@ script run remagic
 
 Similar to Gen1A, but supports only commands 40/43
 
+### Identify
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 1b
+```
+
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
+
+### Identify
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 2 / CUID
+```
 
 ### Magic commands
 
@@ -144,9 +168,23 @@ Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
 Initial UID is AA55C396
 
+### Identify
+
+Only possible before personalisation.
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Write Once / FUID
+```
+
 ## MIFARE Classic DirectWrite, UFUID version
 
 Same as MIFARE Classic DirectWrite, but block0 can be locked with special command.
+
+### Identify
+
+**TODO**
 
 ### Proxmark3 commands
 
@@ -160,11 +198,16 @@ hf 14a raw       -c   85000000000000000000000000000008
 
 ## MIFARE Classic, other versions
 
-**todo** ZXUID, EUID, ICUID ?
+**TODO**
 
-Some cards exhibit a specific SAK=28 ??
+* ZXUID, EUID, ICUID ?
+* Some cards exhibit a specific SAK=28 ??
 
 ## MIFARE Classic APDU aka Gen3
+
+### Identify
+
+**TODO**
 
 ### Magic commands
 
@@ -220,8 +263,18 @@ To change UID: same commands as for MFC DirectWrite
 
 To do reader-only attack: at least two versions exist.
 
-* https://github.com/nfc-tools/nfc-supercard for card with ATS: 0978009102DABC1910F005
-* https://github.com/netscylla/super-card/blob/master/libnfc-1.7.1/utils/nfc-super.c for ??
+* type 1: https://github.com/nfc-tools/nfc-supercard for card with ATS: 0978009102DABC1910F005
+* type 2: https://github.com/netscylla/super-card/blob/master/libnfc-1.7.1/utils/nfc-super.c for ??
+
+### Identify
+
+Only type 1 at the moment:
+
+```
+hf 14a info
+...
+[+] Magic capabilities : super card
+```
 
 # MIFARE Ultralight
 
@@ -243,11 +296,15 @@ Int is internal, typically 0x48
 
 ## MIFARE Ultralight Gen1A
 
+### Identify
+
+**TODO**
+
 ### Characteristics
 
 #### Magic commands
 
-**todo**
+**TOOD**
 
 #### UID
 
@@ -272,11 +329,15 @@ script run remagic -u
 
 ## MIFARE Ultralight DirectWrite
 
+### Identify
+
+**TODO**
+
 ### Characteristics
 
 #### Magic commands
 
-**todo**
+**TODO**
 
 #### UID
 
@@ -322,11 +383,19 @@ Same commands as for MFUL DirectWrite
 
 # NTAG
 
+### Identify
+
+**TODO**
+
 ## NTAG213 DirectWrite
 
 Same commands as for MFUL DirectWrite
 
 ## NTAG21x
+
+### Identify
+
+**TODO**
 
 ### Characteristics
 
@@ -343,6 +412,10 @@ script run mfu_magic -h
 # DESFire
 
 ## "DESFire" APDU, 7b UID
+
+### Identify
+
+**TODO**
 
 ### Magic commands
 
@@ -435,6 +508,10 @@ Some vendor allow to specify an ID (PUPI) when ordering a card.
 # ISO15693
 
 ## ISO15693 magic
+
+### Identify
+
+**TODO**
 
 ### Proxmark3 commands
 
