@@ -405,7 +405,11 @@ Same commands as for MFUL DirectWrite
 
 ### Identify
 
-**TODO**
+```
+hf 14a info
+...
+[+] Magic capabilities : NTAG21x
+```
 
 ### Characteristics
 
