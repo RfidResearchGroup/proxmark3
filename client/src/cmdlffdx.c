@@ -392,11 +392,11 @@ static int CmdFdxClone(const char *Cmd) {
     
     verify_values(&national_code, &country_code, &extended, &is_animal);
 
-    PrintAndLogEx(INFO, "      Country code %u", country_code);
-    PrintAndLogEx(INFO, "     National code %u", national_code);
+    PrintAndLogEx(INFO, "      Country code %"PRIu32, country_code);
+    PrintAndLogEx(INFO, "     National code %"PRIu64, national_code);
     PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y':'N');
     PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y':'N');
-    PrintAndLogEx(INFO, "     Extended data 0x%X", extended);
+    PrintAndLogEx(INFO, "     Extended data 0x%"PRIX32, extended);
     PrintAndLogEx(INFO, "               RFU 0");
 
     uint8_t *bits = calloc(128, sizeof(uint8_t));
@@ -472,11 +472,11 @@ static int CmdFdxSim(const char *Cmd) {
     
     verify_values(&national_code, &country_code, &extended, &is_animal);
 
-    PrintAndLogEx(INFO, "      Country code %u", country_code);
-    PrintAndLogEx(INFO, "     National code %u", national_code);
+    PrintAndLogEx(INFO, "      Country code %"PRIu32, country_code);
+    PrintAndLogEx(INFO, "     National code %"PRIu64, national_code);
     PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y':'N');
     PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y':'N');
-    PrintAndLogEx(INFO, "     Extended data 0x%X", extended);
+    PrintAndLogEx(INFO, "     Extended data 0x%"PRIX32, extended);
     PrintAndLogEx(INFO, "               RFU 0");
 
     PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _GREEN_("%04u-%"PRIu64), country_code, national_code);
