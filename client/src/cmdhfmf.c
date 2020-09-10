@@ -2163,7 +2163,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
 
         if (mfCheckKeys(FirstBlockOfSector(blockNo), keyType, true, 1, key, &key64) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "target sector:%3u key type: %c -- using valid key [ " _YELLOW_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(INFO, "target sector:%3u key type: %c -- using valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
                           blockNo,
                           keyType ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
@@ -2198,13 +2198,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                             know_target_key = true;
                             blockNo = i;
                             keyType = j;
-                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key ["_YELLOW_("%s") "] (used for nested / hardnested attack)",
+                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
                                           i,
                                           j ? 'B' : 'A',
                                           sprint_hex(key, sizeof(key))
                                          );
                         } else {
-                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key ["_YELLOW_("%s") "]",
+                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "]",
                                           i,
                                           j ? 'B' : 'A',
                                           sprint_hex(key, sizeof(key))
@@ -2214,10 +2214,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     }
                 }
             }
-        }
-
-        if (verbose) {
-            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP KNOWN KEY ATTACK") " =======================");
         }
 
         if (num_found_keys == sectors_cnt * 2) {
@@ -2310,8 +2306,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             lastChunk = false;
         } // end strategy
     }
-    if (verbose) PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP DICTIONARY ATTACK") " =======================");
-
 
     // Analyse the dictionary attack
     for (int i = 0; i < sectors_cnt; i++) {
@@ -2326,13 +2320,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     know_target_key = true;
                     blockNo = i;
                     keyType = j;
-                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "] (used for nested / hardnested attack)",
+                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
                                   i,
                                   j ? 'B' : 'A',
                                   sprint_hex(tmp_key, sizeof(tmp_key))
                                  );
                 } else {
-                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "]",
+                    PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "]",
                                   i,
                                   j ? 'B' : 'A',
                                   sprint_hex(tmp_key, sizeof(tmp_key))
@@ -2351,10 +2345,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             }
 
             isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
-
-            if (verbose) {
-                PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP DARKSIDE ATTACK") " =======================");
-            }
 
             switch (isOK) {
                 case -1 :
@@ -2381,7 +2371,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             // Store the keys
             e_sector[blockNo].Key[keyType] = key64;
             e_sector[blockNo].foundKey[keyType] = 'S';
-            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
                           blockNo,
                           keyType ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
@@ -2421,7 +2411,7 @@ noValidKeyFound:
                             if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, tmp_key, &key64) == PM3_SUCCESS) {
                                 e_sector[i].Key[j] = bytes_to_num(tmp_key, 6);
                                 e_sector[i].foundKey[j] = 'R';
-                                PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "]",
+                                PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "]",
                                               i,
                                               j ? 'B' : 'A',
                                               sprint_hex(tmp_key, sizeof(tmp_key))
@@ -2463,7 +2453,7 @@ noValidKeyFound:
                             e_sector[current_sector_i].foundKey[current_key_type_i] = 'A';
                             e_sector[current_sector_i].Key[current_key_type_i] = key64;
                             num_to_bytes(key64, 6, tmp_key);
-                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _YELLOW_("%s") "]",
+                            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "]",
                                           current_sector_i,
                                           current_key_type_i ? 'B' : 'A',
                                           sprint_hex(tmp_key, sizeof(tmp_key))
@@ -2478,9 +2468,6 @@ noValidKeyFound:
 
                             }
 
-                        }
-                        if (verbose) {
-                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP READ B KEY ATTACK") " =======================");
                         }
                     }
                 }
@@ -2545,9 +2532,6 @@ tryNested:
                                 return PM3_ESOFT;
                             }
                         }
-                        if (verbose) {
-                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP NESTED ATTACK") " =======================");
-                        }
 
                     } else {
 tryHardnested: // If the nested attack fails then we try the hardnested attack
@@ -2583,10 +2567,6 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                         num_to_bytes(foundkey, 6, tmp_key);
                         e_sector[current_sector_i].Key[current_key_type_i] = foundkey;
                         e_sector[current_sector_i].foundKey[current_key_type_i] = 'H';
-
-                        if (verbose) {
-                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP HARDNESTED ATTACK") " =======================");
-                        }
                     }
 
                     if (has_staticnonce) {
@@ -2620,15 +2600,11 @@ tryStaticnested:
                                 break;
                             }
                         }
-
-                        if (verbose) {
-                            PrintAndLogEx(INFO, "======================= " _YELLOW_("STOP STATIC NESTED ATTACK") " =======================");
-                        }
                     }
 
                     // Check if the key was found
                     if (e_sector[current_sector_i].foundKey[current_key_type_i]) {
-                        PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [" _YELLOW_("%s") "]",
+                        PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "]",
                                       current_sector_i,
                                       current_key_type_i ? 'B' : 'A',
                                       sprint_hex(tmp_key, sizeof(tmp_key))
