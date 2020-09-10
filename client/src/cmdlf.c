@@ -1200,6 +1200,7 @@ static bool CheckChipType(bool getDeviceData) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("T55xx"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf t55xx`") " commands");
         retval = true;
+        goto out;
     }
 
     // check for em4x50 chips
