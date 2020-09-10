@@ -1187,6 +1187,9 @@ int detect_classic_magic(void) {
         case MAGIC_SUPER:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
             break;
+        case MAGIC_NTAG21X:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
+            break;
         default:
             break;
     }

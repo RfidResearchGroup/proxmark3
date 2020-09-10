@@ -2242,6 +2242,7 @@ void MifareCIdent(void) {
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
+    uint8_t rdbl[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2319,7 +2320,18 @@ void MifareCIdent(void) {
             goto OUT;
         }
       
-
+        // magic ntag test
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        SpinDelay(40);
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+        if (res == 2) {
+            ReaderTransmit(rdbl, sizeof(rdbl), NULL);
+            res = ReaderReceive(buf, par);
+            if (res == 18) {
+                isGen = MAGIC_NTAG21X;
+            }
+        }
     };
 
 OUT:
