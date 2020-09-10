@@ -77,20 +77,65 @@ hf 14a info
 
 ### Magic commands
 
-raw commands 40/41/43
-
-**TODO** details, differences in global wipe command?
+* Wipe: `40(7)`, `41` (use 2000ms timeout)
+* Read: `40(7)`, `43`, `30xx`+crc
+* Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ### Characteristics
 
 * UID: Only 4b versions
 * ATQA:
-  * all(?) cards play blindly the block0 ATQA bytes
+  * all cards play blindly the block0 ATQA bytes, beware!
 * SAK:
-  * some cards play blindly the block0 SAK byte
+  * some cards play blindly the block0 SAK byte, beware!
   * some cards use a fix "08" in anticollision, no matter the block0
+  * some cards use a fix "08" in anticollision, unless SAK in block0 has most significant bit "80" set, in which case SAK="88"
 * BCC:
+  * all cards play blindly the block0 BCC bytes, beware!
 * ATS:
+  * no card with ATS
+
+#### MIFARE Classic Gen1A flavour 1
+
+* SAK: play blindly the block0 SAK byte, beware!
+* PRNG: static 01200145
+* Wipe: filled with 0xFF
+
+#### MIFARE Classic Gen1A flavour 2
+
+* SAK: play blindly the block0 SAK byte, beware!
+* PRNG: static 01200145
+* Wipe: filled with 0x00
+
+#### MIFARE Classic Gen1A flavour 3
+
+* SAK: 08
+* PRNG: static 01200145
+* Wipe: filled with 0xFF
+
+#### MIFARE Classic Gen1A flavour 4
+
+* SAK: 08
+* PRNG: weak
+* Wipe: timeout, no wipe
+
+#### MIFARE Classic Gen1A flavour 5
+
+* SAK: 08
+* PRNG: weak
+* Wipe: reply ok but no wipe performed
+
+#### MIFARE Classic Gen1A flavour 6
+
+* SAK: 08 or 88 if block0_SAK most significant bit is set
+* PRNG: weak
+* Wipe: timeout, no wipe
+
+#### MIFARE Classic Gen1A flavour 7
+
+* SAK: 08 or 88 if block0_SAK most significant bit is set
+* PRNG: weak
+* Wipe: filled with 0x00
 
 ### Proxmark3 commands
 
@@ -108,8 +153,34 @@ hf mf cview
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
+hf mf csetblk 0 11223344440804006263646566676869
+```
+```
 hf 14a config h
+```
+```
 script run remagic
+```
+
+To execute commands manually:
+```
+hf 14a raw -a -p -b 7       40
+hf 14a raw    -p            43
+hf 14a raw    -p -c         A000
+hf 14a raw       -c -t 1000 11223344440804006263646566676869
+```
+wipe:
+```
+hf 14a raw -a -p -b 7       40
+hf 14a raw -t 1000          41
+```
+
+### libnfc commands
+
+```
+nfc-mfsetuid
+nfc-mfclassic R a u mydump
+nfc-mfclassic W a u mydump
 ```
 
 ## MIFARE Classic Gen1B
@@ -123,6 +194,11 @@ hf 14a info
 ...
 [+] Magic capabilities : Gen 1b
 ```
+
+### Magic commands
+
+* Read: `40(7)`, `30xx`
+* Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
 
@@ -379,6 +455,17 @@ When "soft-bricked" (by writing invalid data in block0), these ones may help:
 hf 14a config h
 ```
 
+### libnfc commands
+
+```
+nfc-mfultralight -h
+```
+See `--uid` and `--full`
+
+### Android
+
+* MIFARE++ Ultralight
+
 ## MIFARE Ultralight EV1 DirectWrite
 
 Same commands as for MFUL DirectWrite
@@ -456,9 +543,10 @@ or equivalently
 hf 14a apdu -s 00ab00000704112233445566
 ```
 
-### pn53x-tamashell commands
+### libnfc commands
 
 ```
+pn53x-tamashell
 4a0100
 420200ab00000704112233445566
 ```
