@@ -185,7 +185,7 @@ nfc-mfclassic W a u mydump
 
 ## MIFARE Classic Gen1B
 
-Similar to Gen1A, but supports only commands 40/43
+Similar to Gen1A, but supports directly read/write after command 40
 
 ### Identify
 
