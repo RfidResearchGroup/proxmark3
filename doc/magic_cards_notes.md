@@ -211,6 +211,8 @@ hf 14a info
 [+] Magic capabilities : Gen 2 / CUID
 ```
 
+Not all Gen2 cards can be identified with `hf 14a info`, only those replying to RATS.
+
 ### Magic commands
 
 Android compatible
@@ -221,14 +223,56 @@ Android compatible
 
 * UID: 4b and 7b versions
 * ATQA:
+  * some cards play blindly the block0 ATQA bytes, beware!
+  * some cards use a fix ATQA in anticollision, no matter the block0. Including all 7b.
 * SAK:
+  * some cards play blindly the block0 SAK byte, beware!
+  * some cards use a fix "08" or "18" in anticollision, no matter the block0. Including all 7b.
 * BCC:
+  * some cards play blindly the block0 BCC bytes, beware!
+  * some cards compute a proper BCC in anticollision. Including all 7b.
 * ATS:
+  * some cards don't reply to RATS
+  * some reply with 0978009102DABC1910F005
 
-**todo**
+#### MIFARE Classic DirectWrite flavour 1
 
-* some card will die if invalid block0! (or can be recovered with anticol...? "hf 14a config a 1 b 1 ..." then "hf mf wrbl 0 ...")
-* some card have always correct anticol no matter block0, e.g. ATS=0948009102DABC1910F005
+* UID 4b
+* ATQA: play blindly the block0 ATQA bytes, beware!
+* SAK: play blindly the block0 SAK byte, beware!
+* BCC: play blindly the block0 BCC bytes, beware!
+* ATS: no
+* PRNG: weak
+
+F1 ATQAwarn SAKxx
+BCCwarn Pweak
+
+#### MIFARE Classic DirectWrite flavour 2
+
+* UID 4b
+* ATQA: fixed
+* SAK: fixed
+* BCC: computed
+* ATS: 0978009102DABC1910F005
+* PRNG: weak
+
+#### MIFARE Classic DirectWrite flavour 3
+
+* UID 4b
+* ATQA: play blindly the block0 ATQA bytes, beware!
+* SAK: fixed
+* BCC: play blindly the block0 BCC bytes, beware!
+* ATS: no
+* PRNG: weak
+
+#### MIFARE Classic DirectWrite flavour 4
+
+* UID 7b
+* ATQA: fixed
+* SAK: fixed
+* BCC: computed
+* ATS: 0978009102DABC1910F005
+* PRNG: static 00000000
 
 ### Proxmark3 commands
 
@@ -305,17 +349,19 @@ Android compatible
 ```
 cla  ins p1  p2  len
  90  F0  CC  CC  10 <block0>  - write block 0
- 90  FB  CC  CC  07 <uid>     - write uid separated instead of block 0
- 90  FD  11  11  00           - lock uid permanently
+ 90  FB  CC  CC  07 <uid>     - change uid (independently of block0 data)
+ 90  FD  11  11  00           - lock permanently
 ```
+It seems the length byte gets ignored anyway.
+
+Note: it seems some cards only accept the "change UID" command.
 
 ### Characteristics
 
 * UID: 4b and 7b versions
-* ATQA:
-* SAK:
-* BCC:
-* ATS:
+* ATQA/SAK: fixed
+* BCC: auto
+* ATS: none
 
 ### Proxmark3 commands
 
@@ -324,7 +370,7 @@ cla  ins p1  p2  len
 hf mf gen3uid
 # write block0:
 hf mf gen3blk
-# lock block0 forever:
+# lock (uid/block0?) forever:
 hf mf gen3freez
 ```
 See also
@@ -338,7 +384,7 @@ Equivalent:
 hf 14a raw -s -c  -t 2000  90FBCCCC07 11223344556677
 # write block0:
 hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
-# lock block0 forever:
+# lock (uid/block0?) forever:
 hf 14a raw -s -c 90FD111100
 ```
 
