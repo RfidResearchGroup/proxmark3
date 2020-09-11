@@ -48,7 +48,7 @@ UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
           ^^                     SAK(*)
             ^^^^                 ATQA
                 ^^^^^^^^^^^^^^^^ Manufacturer data
-(*) some cards have on purpose a different SAK in their anticollision and in block0
+(*) some cards have a different SAK in their anticollision and in block0: +0x80 in the block0 (e.g. 08->88, 18->98)
 ```
 
  
@@ -60,9 +60,10 @@ UID 7b:
 04112233445566884400c82000000000
 ^^                               Manufacturer byte
 ^^^^^^^^^^^^^^                   UID
-              ^^                 SAK(*)??
-                ^^^^             ATQA??
+              ^^                 SAK(*)
+                ^^^^             ATQA
                     ^^^^^^^^^^^^ Manufacturer data
+(*) all? cards have a different SAK in their anticollision and in block0: +0x80 in the block0 (e.g. 08->88, 18->98)
 ```
 
 ## MIFARE Classic Gen1A aka UID
