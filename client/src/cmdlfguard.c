@@ -356,7 +356,7 @@ int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
         rawbytes[i + 4] = bytebits_to_byte(pre + (i * 8), 8);
 
     PrintAndLogEx(DEBUG, " WIE | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
-    
+
     // XOR (only works on wiegand stuff)
     for (i = 1; i < sizeof(rawbytes); ++i)
         rawbytes[i] ^= xorKey ;

@@ -2287,7 +2287,7 @@ void MifareCIdent(void) {
             res = ReaderReceive(buf, par);
             if (res == 22) {
                 isGen = MAGIC_SUPER;
-                goto OUT;            
+                goto OUT;
             }
 
             isGen = MAGIC_GEN_2;
@@ -2322,7 +2322,7 @@ void MifareCIdent(void) {
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
-      
+
         // magic ntag test
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         SpinDelay(40);
@@ -2369,7 +2369,7 @@ void MifareHasStaticNonce(void) {
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
-        
+
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     uint8_t counter = 0;

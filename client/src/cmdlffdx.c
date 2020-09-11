@@ -232,7 +232,7 @@ int demodFDX(void) {
     setDemodBuff(DemodBuffer, 128, preambleIndex);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
 
-    
+
     // remove marker bits (1's every 9th digit after preamble) (pType = 2)
     size = removeParity(DemodBuffer, 11, 9, 2, 117);
     if (size != 104) {
@@ -246,21 +246,21 @@ int demodFDX(void) {
 
     offset = 38;
     uint16_t countryCode = bytebits_to_byteLSBF(DemodBuffer + offset, 10);
-        
+
     offset += 10;
     uint8_t dataBlockBit = DemodBuffer[offset];
-        
+
     offset++;
     uint32_t reservedCode = bytebits_to_byteLSBF(DemodBuffer + offset, 14);
-    
+
     offset += 14;
     uint8_t animalBit = DemodBuffer[offset];
-    
+
     offset++;
     uint16_t crc = bytebits_to_byteLSBF(DemodBuffer + offset, 16);
-    
+
     offset += 16;
-    uint32_t extended = bytebits_to_byteLSBF(DemodBuffer + offset, 24);    
+    uint32_t extended = bytebits_to_byteLSBF(DemodBuffer + offset, 24);
 
     uint64_t rawid = (uint64_t)(bytebits_to_byte(DemodBuffer, 32)) << 32 | bytebits_to_byte(DemodBuffer + 32, 32);
     uint8_t raw[8];
@@ -389,13 +389,13 @@ static int CmdFdxClone(const char *Cmd) {
         }
     }
     if (errors || strlen(Cmd) == 0) return usage_lf_fdx_clone();
-    
+
     verify_values(&national_code, &country_code, &extended, &is_animal);
 
     PrintAndLogEx(INFO, "      Country code %"PRIu32, country_code);
     PrintAndLogEx(INFO, "     National code %"PRIu64, national_code);
-    PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y':'N');
-    PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y':'N');
+    PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y' : 'N');
+    PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y' : 'N');
     PrintAndLogEx(INFO, "     Extended data 0x%"PRIX32, extended);
     PrintAndLogEx(INFO, "               RFU 0");
 
@@ -469,13 +469,13 @@ static int CmdFdxSim(const char *Cmd) {
         }
     }
     if (errors) return usage_lf_fdx_sim();
-    
+
     verify_values(&national_code, &country_code, &extended, &is_animal);
 
     PrintAndLogEx(INFO, "      Country code %"PRIu32, country_code);
     PrintAndLogEx(INFO, "     National code %"PRIu64, national_code);
-    PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y':'N');
-    PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y':'N');
+    PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y' : 'N');
+    PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y' : 'N');
     PrintAndLogEx(INFO, "     Extended data 0x%"PRIX32, extended);
     PrintAndLogEx(INFO, "               RFU 0");
 

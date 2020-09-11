@@ -1077,7 +1077,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
             sak = 0x00;
         }
         break;
-        
+
         default: {
             if (DBGLEVEL >= DBG_ERROR) Dbprintf("Error: unknown tagtype (%d)", tagType);
             return false;
@@ -1131,16 +1131,16 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
     // Calculate BCC for the first 4 bytes of the UID.
     rUIDc1[4] = rUIDc1[0] ^ rUIDc1[1] ^ rUIDc1[2] ^ rUIDc1[3];
 
-    
+
     if (tagType == 10) {
         rSAKc1[0] = 0x04;
         rSAKc2[0] = 0x20;
-    } else {        
+    } else {
         rSAKc1[0] = sak;
         rSAKc2[0] = sak & 0xFB;
     }
 
-    // crc 
+    // crc
     AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
     AddCrc14A(rSAKc2, sizeof(rSAKc2) - 2);
 
@@ -1151,7 +1151,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
     AddCrc14A(rRATS, sizeof(rRATS) - 2);
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
-    
+
 #define TAG_RESPONSE_COUNT 9
     static tag_response_info_t responses_init[TAG_RESPONSE_COUNT] = {
         { .response = rATQA,      .response_n = sizeof(rATQA)     },  // Answer to request - respond with card type
@@ -1257,7 +1257,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     iso14a_set_timeout(201400); // 106 * 19ms default
-    
+
     int len = 0;
 
     // To control where we are in the protocol
@@ -1283,19 +1283,19 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 
     // compatible write block number
     uint8_t wrblock = 0;
-    
+
     bool odd_reply = true;
 
     clear_trace();
     set_tracing(true);
     LED_A_ON();
-    
+
     // main loop
     for (;;) {
         WDT_HIT();
 
         tag_response_info_t *p_response = NULL;
-        
+
         // Clean receive command buffer
         if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
             Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
@@ -1580,17 +1580,17 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
             AddCrc14A(cmd, sizeof(cmd) - 2);
             EmSendCmd(cmd, sizeof(cmd));
             p_response = NULL;
-            
+
         } else {
 
             // clear old dynamic responses
             dynamic_response_info.response_n = 0;
             dynamic_response_info.modulation_n = 0;
-            
+
             // ST25TA512B  IKEA Rothult
             if (tagType == 10)  {
                 // we replay 90 00 for all commands but the read bin and we deny the verify cmd.
-                
+
                 if (memcmp("\x02\xa2\xb0\x00\x00\x1d\x51\x69", receivedCmd, 8) == 0) {
                     dynamic_response_info.response[0] = receivedCmd[0];
                     memcpy(dynamic_response_info.response + 1, "\x00\x1b\xd1\x01\x17\x54\x02\x7a\x68\xa2\x34\xcb\xd0\xe2\x03\xc7\x3e\x62\x0b\xe8\xc6\x3c\x85\x2c\xc5\x31\x31\x31\x32\x90\x00", 31);
@@ -2021,11 +2021,11 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
     b = AT91C_BASE_SSC->SSC_RHR;
     (void) b;
-/*    
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY));
-    b = AT91C_BASE_SSC->SSC_THR;
-    (void) b;
-*/
+    /*
+        while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY));
+        b = AT91C_BASE_SSC->SSC_THR;
+        (void) b;
+    */
 
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
@@ -2045,12 +2045,12 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
             FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
         }
 
-/*
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
-            (void)b;
-        }
-        */
+        /*
+                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                    b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
+                    (void)b;
+                }
+                */
     }
 
     // Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:

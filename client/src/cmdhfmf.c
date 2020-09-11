@@ -995,7 +995,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
         return PM3_EFILE;
     }
-    
+
     PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyFilename);
 
     // Read keys A from file
@@ -3169,7 +3169,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "." NOLF);
                 fflush(stdout);
-            
+
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(INFO, "\naborted via keyboard!\n");
                     goto out;
@@ -3748,7 +3748,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
-            
+
         blockNum++;
         counter += blockWidth;
         datalen -= blockWidth;
@@ -4525,7 +4525,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
             free(dump);
             return PM3_ESOFT;
         }
-        
+
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
     }
