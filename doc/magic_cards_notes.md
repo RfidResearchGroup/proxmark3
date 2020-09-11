@@ -377,7 +377,7 @@ hf mf gen3uid
 # write block0:
 hf mf gen3blk
 # lock (uid/block0?) forever:
-hf mf gen3freez
+hf mf gen3freeze
 ```
 See also
 ```
