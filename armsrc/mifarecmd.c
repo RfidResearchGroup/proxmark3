@@ -2383,6 +2383,9 @@ void MifareHasStaticNonce(void) {
 
         nt = bytes_to_num(rec, 4);
 
+        // some cards with static nonce need to be reset before next query
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        LEDsoff();
         CHK_TIMEOUT();
     }
 

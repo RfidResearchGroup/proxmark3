@@ -1956,23 +1956,23 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMagic = detect_classic_magic();
 
         if (isMifareClassic) {
-            int res = detect_classic_prng();
-            if (res == 1)
-                PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
-            else if (res == 0)
-                PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
-            else
-                PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
-
-            if (do_nack_test)
-                detect_classic_nackbug(false);
-
-            res = detect_classic_static_nonce();
+            int res = detect_classic_static_nonce();
             if (res == 1)
                 PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
             if (res == 2 && verbose)
                 PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("fail"));
+            if (res != 1) { // not static
+                res = detect_classic_prng();
+                if (res == 1)
+                    PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
+                else if (res == 0)
+                    PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
+                else
+                    PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
 
+                if (do_nack_test)
+                    detect_classic_nackbug(false);
+            }
         }
     }
 
