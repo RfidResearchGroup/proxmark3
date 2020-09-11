@@ -829,7 +829,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     return printConfiguration(config);
 }
 int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode) {
-    return T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, false);
+    return T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, true);
 }
 
 int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, bool verbose) {
