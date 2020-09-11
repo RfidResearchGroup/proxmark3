@@ -344,7 +344,11 @@ hf 14a raw       -c   85000000000000000000000000000008
 
 ### Identify
 
-**TODO**
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 3 / APDU
+```
 
 ### Magic commands
 
@@ -361,6 +365,8 @@ cla  ins p1  p2  len
 It seems the length byte gets ignored anyway.
 
 Note: it seems some cards only accept the "change UID" command.
+
+It accepts direct read of block0 (and only block0) without prior auth.
 
 ### Characteristics
 

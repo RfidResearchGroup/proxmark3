@@ -1174,7 +1174,10 @@ int detect_classic_magic(void) {
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1b"));
             break;
         case MAGIC_GEN_2:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : "  _GREEN_("Gen 2 / CUID"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 2 / CUID"));
+            break;
+        case MAGIC_GEN_3:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 3 / APDU"));
             break;
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
