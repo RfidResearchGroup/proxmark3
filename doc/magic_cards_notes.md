@@ -304,9 +304,9 @@ Android compatible
 
 ```
 cla  ins p1  p2  len
- 90  F0  CC  CC  10   - write block 0
- 90  FB  CC  CC  07   - write uid separated instead of block 0
- 90  FD  11  11  00   - lock uid permanently
+ 90  F0  CC  CC  10 <block0>  - write block 0
+ 90  FB  CC  CC  07 <uid>     - write uid separated instead of block 0
+ 90  FD  11  11  00           - lock uid permanently
 ```
 
 ### Characteristics
@@ -339,7 +339,7 @@ hf 14a raw -s -c  -t 2000  90FBCCCC07 11223344556677
 # write block0:
 hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 # lock block0 forever:
-hf 14a raw -s -c 90fd11100
+hf 14a raw -s -c 90FD111100
 ```
 
 ## MIFARE Classic Super
