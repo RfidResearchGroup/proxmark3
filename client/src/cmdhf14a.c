@@ -1664,6 +1664,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 }
                 getTagLabel(card.uid[0], card.uid[1]);
                 break;
+            case 0x57: // Qualcomm
+                if (memcmp(card.uid, "WSDZ10m", 7) == 0) {
+                    isMifareClassic = false;
+                    printTag("Waveshare NFC-Powered e-Paper");
+                }
+                break;
             default:
                 getTagLabel(card.uid[0], card.uid[1]);
                 switch (card.sak) {
