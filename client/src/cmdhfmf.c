@@ -512,7 +512,7 @@ static int usage_hf14_gen3uid(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3uid 01020304050607"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_gen3blk(void) {
+static int usage_hf14_gen3block(void) {
     PrintAndLogEx(NORMAL, "Overwrite full manufacturer block for magic GEN 3 card");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hf mf gen3blk [h] [block data (up to 32 hex symbols)]");
@@ -531,15 +531,15 @@ static int usage_hf14_gen3blk(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3blk"));
     return PM3_SUCCESS;
 }
-static int usage_hf14_gen3freez(void) {
-    PrintAndLogEx(NORMAL, "Lock further UID changes. No more UID changes available after operation completed");
+static int usage_hf14_gen3freeze(void) {
+    PrintAndLogEx(NORMAL, "Perma lock further UID changes. No more UID changes available after operation completed");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf gen3freez [h] <Y>");
+    PrintAndLogEx(NORMAL, "Usage:  hf mf gen3freeze [h] <y>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h        this help");
-    PrintAndLogEx(NORMAL, "       <Y>      confirm UID locks operation");
+    PrintAndLogEx(NORMAL, "       <y>      confirm UID locks operation");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3freez Y"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf gen3freeze y"));
     return PM3_SUCCESS;
 }
 
@@ -5159,18 +5159,18 @@ static int CmdHf14AGen3UID(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHf14AGen3Blk(const char *Cmd) {
+static int CmdHf14AGen3Block(const char *Cmd) {
     uint8_t block[16] = {0x00};
     int blocklen = 0;
     uint8_t newBlock[16] = {0x00};
 
     char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf14_gen3blk();
+    if (ctmp == 'h') return usage_hf14_gen3block();
 
     if (ctmp != '\0' && param_gethex_to_eol(Cmd, 0, block, sizeof(block), &blocklen))
-        return usage_hf14_gen3blk();
+        return usage_hf14_gen3block();
 
-    int res = mfGen3Blk(block, blocklen, newBlock);
+    int res = mfGen3Block(block, blocklen, newBlock);
     if (res) {
         PrintAndLogEx(ERR, "Can't change manufacturer block data. Error=%d", res);
         return PM3_ESOFT;
@@ -5180,18 +5180,17 @@ static int CmdHf14AGen3Blk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHf14AGen3Freez(const char *Cmd) {
-    char ctmp = param_getchar(Cmd, 0);
-    if (tolower(ctmp) == 'h') return usage_hf14_gen3freez();
-    if (ctmp != 'Y') return usage_hf14_gen3freez();
+static int CmdHf14AGen3Freeze(const char *Cmd) {
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_hf14_gen3freeze();
+    if (ctmp != 'y') return usage_hf14_gen3freeze();
 
-    int res = mfGen3Freez();
+    int res = mfGen3Freeze();
     if (res) {
         PrintAndLogEx(ERR, "Can't lock UID changes. Error=%d", res);
         return PM3_ESOFT;
     }
-
-    PrintAndLogEx(SUCCESS, "Gen 3 UID locked");
+    PrintAndLogEx(SUCCESS, "MFC Gen3 UID permalocked");
     return PM3_SUCCESS;
 }
 
@@ -5232,18 +5231,18 @@ static command_t CommandTable[] = {
     {"ecfill",      CmdHF14AMfECFill,       IfPm3Iso14443a,  "Fill simulator memory with help of keys from simulator"},
     {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from simulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " -----------------------"},
-    {"csetuid",     CmdHF14AMfCSetUID,      IfPm3Iso14443a,  "Set UID     (magic chinese card)"},
+    {"csetuid",     CmdHF14AMfCSetUID,      IfPm3Iso14443a,  "Set UID"},
     {"cwipe",       CmdHF14AMfCWipe,        IfPm3Iso14443a,  "Wipe card to default UID/Sectors/Keys"},
-    {"csetblk",     CmdHF14AMfCSetBlk,      IfPm3Iso14443a,  "Write block (magic chinese card)"},
-    {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block  (magic chinese card)"},
-    {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector (magic chinese card)"},
-    {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump   (magic chinese card)"},
-    {"csave",       CmdHF14AMfCSave,        IfPm3Iso14443a,  "Save dump from magic chinese card into file or emulator"},
+    {"csetblk",     CmdHF14AMfCSetBlk,      IfPm3Iso14443a,  "Write block"},
+    {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block"},
+    {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector"},
+    {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump"},
+    {"csave",       CmdHF14AMfCSave,        IfPm3Iso14443a,  "Save dump from card into file or emulator"},
     {"cview",       CmdHF14AMfCView,        IfPm3Iso14443a,  "view card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen3") " -----------------------"},
-    {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without manufacturer block (magic gen3 card)"},
-    {"gen3blk",     CmdHf14AGen3Blk,        IfPm3Iso14443a,  "Overwrite full manufacturer block (magic gen 3 card)"},
-    {"gen3freez",   CmdHf14AGen3Freez,      IfPm3Iso14443a,  "Lock further UID changes (magic gen 3 card)"},
+    {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without manufacturer block"},
+    {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite full manufacturer block"},
+    {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock further UID changes"},
 
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
     {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},

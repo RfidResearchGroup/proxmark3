@@ -959,7 +959,7 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
     }
 }
 
-int mfGen3Blk(uint8_t *block, int blockLen, uint8_t *newBlock) {
+int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, 16);
     PacketResponseNG resp;
@@ -974,7 +974,7 @@ int mfGen3Blk(uint8_t *block, int blockLen, uint8_t *newBlock) {
     }
 }
 
-int mfGen3Freez(void) {
+int mfGen3Freeze(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_GEN3FREEZ, NULL, 0);
     PacketResponseNG resp;
