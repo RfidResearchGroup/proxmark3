@@ -1144,19 +1144,14 @@ int detect_classic_static_nonce(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_STATIC_NONCE, NULL, 0);
     PacketResponseNG resp;
-
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NONCE, &resp, 500)) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NONCE, &resp, 1000)) {
 
         if (resp.status == PM3_ESOFT)
-            return 2;
+            return NONCE_FAIL;
 
-        if (resp.data.asBytes[0] == 0)
-            return 0;
-
-        if (resp.data.asBytes[0] != 0)
-            return 1;
+        return resp.data.asBytes[0];
     }
-    return 2;
+    return NONCE_FAIL;
 }
 
 /* try to see if card responses to "chinese magic backdoor" commands. */

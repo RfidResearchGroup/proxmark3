@@ -710,6 +710,11 @@ typedef struct {
 #define MODE_EXIT_AFTER_MAC 1
 #define MODE_FULLSIM        2
 
+// Static Nonce detection
+#define NONCE_FAIL      0x01
+#define NONCE_NORMAL    0x02
+#define NONCE_STATIC    0x03
+
 // Dbprintf flags
 #define FLAG_RAWPRINT    0x00
 #define FLAG_LOG         0x01
