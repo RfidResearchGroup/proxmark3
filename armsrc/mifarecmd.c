@@ -2277,6 +2277,7 @@ void MifareCIdent(void) {
 
         ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
+        // test for some MFC gen2
         if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
 
             // super card ident
@@ -2291,6 +2292,7 @@ void MifareCIdent(void) {
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
+        // test for some MFC 7b gen2
         if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
             isGen = MAGIC_GEN_2;
         }
