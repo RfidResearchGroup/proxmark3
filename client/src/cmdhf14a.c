@@ -31,7 +31,7 @@
 bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);
-static int waitCmd(uint8_t iSelect);
+static int waitCmd(uint8_t iSelect, uint32_t timeout);
 
 static const manufactureName manufactureMapping[] = {
     // ID,  "Vendor Country"
@@ -1309,17 +1309,17 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     if (reply) {
         int res = 0;
         if (active_select)
-            res = waitCmd(1);
+            res = waitCmd(1, timeout);
         if (!res && datalen > 0)
-            waitCmd(0);
+            waitCmd(0, timeout);
     }
     return 0;
 }
 
-static int waitCmd(uint8_t iSelect) {
+static int waitCmd(uint8_t iSelect, uint32_t timeout) {
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout + 1500)) {
         uint16_t len = (resp.oldarg[0] & 0xFFFF);
         if (iSelect) {
             len = (resp.oldarg[1] & 0xFFFF);
