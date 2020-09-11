@@ -995,6 +995,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
         return PM3_EFILE;
     }
+    
+    PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyFilename);
 
     // Read keys A from file
     size_t bytes_read;
@@ -1026,6 +1028,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
             PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
 
             payload.blockno = FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1;
             payload.keytype = 0;
@@ -1357,7 +1360,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     }
 
     // check if tag doesn't have static nonce
-    if (detect_classic_static_nonce() == 1) {
+    if (detect_classic_static_nonce()) {
         PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
         PrintAndLogEx(INFO, "\t Try use " _YELLOW_("`hf mf staticnested`"));
         return PM3_EOPABORTED;
@@ -1607,8 +1610,8 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     // check if tag have static nonce
-    if (detect_classic_static_nonce() == 0) {
-        PrintAndLogEx(WARNING, "None static nonce detected. Quitting...");
+    if (detect_classic_static_nonce() == false) {
+        PrintAndLogEx(WARNING, "Normal nonce detected, or failed read of card. Quitting...");
         PrintAndLogEx(INFO, "\t Try use " _YELLOW_("`hf mf nested`"));
         return PM3_EOPABORTED;
     }
@@ -1921,7 +1924,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (!know_target_key && nonce_file_read == false) {
 
         // check if tag doesn't have static nonce
-        if (detect_classic_static_nonce() == 1) {
+        if (detect_classic_static_nonce()) {
             PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
             PrintAndLogEx(HINT, "\tTry use `" _YELLOW_("hf mf staticnested") "`");
             return PM3_EOPABORTED;
@@ -2002,7 +2005,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool slow = false;
     bool legacy_mfchk = false;
     int prng_type = PM3_EUNDEF;
-    int has_staticnonce = 2;
+    int has_staticnonce;
     bool verbose = false;
     bool has_filename = false;
     bool errors = false;
@@ -2120,16 +2123,19 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // read uid to generate a filename for the key file
     char *fptr = GenerateFilename("hf-mf-", "-key.bin");
 
-    // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
-    prng_type = detect_classic_prng();
-    if (prng_type < 0) {
-        PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error");
-        free(e_sector);
-        return prng_type;
-    }
 
     // check if tag doesn't have static nonce
     has_staticnonce = detect_classic_static_nonce();
+
+    // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
+    if (has_staticnonce == NONCE_NORMAL)  {
+        prng_type = detect_classic_prng();
+        if (prng_type < 0) {
+            PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error");
+            free(e_sector);
+            return prng_type;
+        }
+    }
 
     // print parameters
     if (verbose) {
@@ -2140,10 +2146,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), keyType ? 'B' : 'A');
         PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex(key, sizeof(key)));
 
-        if (has_staticnonce)
-            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s & STATIC"), prng_type ? "WEAK" : "HARD");
-        else
+        if (has_staticnonce == NONCE_STATIC)
+            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("STATIC"));
+        else if (has_staticnonce == NONCE_NORMAL)
             PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
+        else
+            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("Could not determine PRNG,") " " _RED_("read failed."));
 
         PrintAndLogEx(INFO, " dictionary .... " _YELLOW_("%s"), strlen(filename) ? filename : "NONE");
         PrintAndLogEx(INFO, " legacy mode ... " _YELLOW_("%s"), legacy_mfchk ? "True" : "False");
@@ -2259,6 +2267,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 if (e_sector[i].foundKey[j] == 0) {
                     for (uint32_t k = 0; k < key_cnt; k++) {
                         PrintAndLogEx(NORMAL, "." NOLF);
+                        fflush(stdout);
 
                         if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, (keyBlock + (6 * k)), &key64) == PM3_SUCCESS) {
                             e_sector[i].Key[j] = bytes_to_num((keyBlock + (6 * k)), 6);
@@ -3159,7 +3168,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
             for (uint16_t c = 0; c < keycnt; c += max_keys) {
 
                 PrintAndLogEx(NORMAL, "." NOLF);
-
+                fflush(stdout);
+            
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(INFO, "\naborted via keyboard!\n");
                     goto out;
@@ -3737,7 +3747,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
             return PM3_ESOFT;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
-
+        fflush(stdout);
+            
         blockNum++;
         counter += blockWidth;
         datalen -= blockWidth;
@@ -4162,6 +4173,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
                 return PM3_ESOFT;
             }
             PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
         }
         PrintAndLogEx(NORMAL, "\n");
         return PM3_SUCCESS;
@@ -4424,6 +4436,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
                 PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
             }
             PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
         }
         PrintAndLogEx(NORMAL, "\n");
         PrintAndLogEx(SUCCESS, "uploaded %d bytes to emulator memory", bytes);
