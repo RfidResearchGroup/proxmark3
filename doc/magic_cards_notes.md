@@ -92,7 +92,7 @@ hf 14a info
   * some cards use a fix "08" in anticollision, no matter the block0
   * some cards use a fix "08" in anticollision, unless SAK in block0 has most significant bit "80" set, in which case SAK="88"
 * BCC:
-  * all cards play blindly the block0 BCC bytes, beware!
+  * all cards play blindly the block0 BCC byte, beware!
 * ATS:
   * no card with ATS
 
@@ -229,7 +229,7 @@ Android compatible
   * some cards play blindly the block0 SAK byte, beware!
   * some cards use a fix "08" or "18" in anticollision, no matter the block0. Including all 7b.
 * BCC:
-  * some cards play blindly the block0 BCC bytes, beware!
+  * some cards play blindly the block0 BCC byte, beware!
   * some cards compute a proper BCC in anticollision. Including all 7b.
 * ATS:
   * some cards don't reply to RATS
@@ -240,12 +240,9 @@ Android compatible
 * UID 4b
 * ATQA: play blindly the block0 ATQA bytes, beware!
 * SAK: play blindly the block0 SAK byte, beware!
-* BCC: play blindly the block0 BCC bytes, beware!
+* BCC: play blindly the block0 BCC byte, beware!
 * ATS: no
 * PRNG: weak
-
-F1 ATQAwarn SAKxx
-BCCwarn Pweak
 
 #### MIFARE Classic DirectWrite flavour 2
 
@@ -261,7 +258,7 @@ BCCwarn Pweak
 * UID 4b
 * ATQA: play blindly the block0 ATQA bytes, beware!
 * SAK: fixed
-* BCC: play blindly the block0 BCC bytes, beware!
+* BCC: play blindly the block0 BCC byte, beware!
 * ATS: no
 * PRNG: weak
 
@@ -273,6 +270,15 @@ BCCwarn Pweak
 * BCC: computed
 * ATS: 0978009102DABC1910F005
 * PRNG: static 00000000
+
+#### MIFARE Classic DirectWrite flavour 5
+
+* UID 4b
+* ATQA: fixed
+* SAK: play blindly the block0 SAK byte, beware!
+* BCC: computed
+* ATS: no
+* PRNG: weak
 
 ### Proxmark3 commands
 
