@@ -133,8 +133,40 @@ static void print_st_system_info(uint8_t *d, uint8_t n) {
         PrintAndLogEx(SUCCESS, " ST reserved  ( 0x%02X )", d[2]);
     } else {
         PrintAndLogEx(SUCCESS, " GPO Config ( 0x%02X )", d[2]);
+        PrintAndLogEx(SUCCESS, "    config lock bit ( %s )", ((d[2] & 0x80) == 0x80) ? _RED_("locked") : _GREEN_("unlocked"));
+        uint8_t conf = (d[2] & 0x70) >> 4;
+        switch(conf) {
+            case 0: 
+                PrintAndLogEx(SUCCESS, "");
+                break;
+            case 1: 
+                PrintAndLogEx(SUCCESS, "Session opened");
+                break;                
+            case 2: 
+                PrintAndLogEx(SUCCESS, "WIP");
+                break;
+            case 3: 
+                PrintAndLogEx(SUCCESS, "MIP");
+                break;
+            case 4: 
+                PrintAndLogEx(SUCCESS, "Interrupt");
+                break;
+            case 5: 
+                PrintAndLogEx(SUCCESS, "State Control");
+                break;
+            case 6: 
+                PrintAndLogEx(SUCCESS, "RF Busy");
+                break;
+            case 7: 
+                PrintAndLogEx(SUCCESS, "Field Detect");
+                break;
+        }
     }
+
     PrintAndLogEx(SUCCESS, " Event counter config ( 0x%02X )", d[3]);
+    PrintAndLogEx(SUCCESS, "        config lock bit ( %s )", ((d[3] & 0x80) == 0x80) ? _RED_("locked") : _GREEN_("unlocked"));
+    PrintAndLogEx(SUCCESS, "                counter ( %s )", ((d[3] & 0x02) == 0x02) ? _RED_("enabled") : _GREEN_("disable"));
+    PrintAndLogEx(SUCCESS, "   counter increment on ( %s )", ((d[3] & 0x01) == 0x01) ? _YELLOW_("write") : _YELLOW_("read"));
 
     uint32_t counter =  (d[4] << 16 | d[5] << 8 | d[6]);
     PrintAndLogEx(SUCCESS, " 20bit counter ( 0x%05X )", counter & 0xFFFFF);
