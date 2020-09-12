@@ -41,13 +41,13 @@ static int usage_hf_st_sim(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim u 02E2007D0FCA4C"));
     return PM3_SUCCESS;
 }
-/*
-// get ST chip model (from UID) // from ST Microelectronics
-static char *get_st_chip_model(uint8_t data) {
-    static char model[20];
+
+// get ST Microelectronics chip model (from UID)
+static char *get_st_chip_model(uint8_t pc) {
+    static char model[40];
     char *s = model;
     memset(model, 0, sizeof(model));
-    switch (data) {
+    switch (pc) {
         case 0x0:
             sprintf(s, "SRIX4K (Special)");
             break;
@@ -69,13 +69,28 @@ static char *get_st_chip_model(uint8_t data) {
         case 0xC:
             sprintf(s, "SRT512");
             break;
+        case 0xE2:
+            sprintf(s, "ST25??? IKEA Rothult");
+            break;
+        case 0xE3:
+            sprintf(s, "ST25TA02KB");
+            break;
+         case 0xE4:
+            sprintf(s, "ST25TA512B");
+            break;
+        case 0xA3:
+            sprintf(s, "ST25TA02KB-P");
+            break;
+        case 0xF3:
+            sprintf(s, "ST25TA02KB-D");
+            break;
         default :
             sprintf(s, "Unknown");
             break;
     }
     return s;
 }
-
+/*
 // print UID info from SRx chips (ST Microelectronics)
 static void print_st_general_info(uint8_t *data, uint8_t len) {
     //uid = first 8 bytes in data
@@ -103,9 +118,9 @@ static void print_st_cc_info(uint8_t *d, uint8_t n) {
     PrintAndLogEx(SUCCESS, " max bytes write %u bytes ( 0x%04X )", maxw, maxw);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " NDEF file control TLV  {");
-    PrintAndLogEx(SUCCESS, "    t        ( %02X )", d[7]);
-    PrintAndLogEx(SUCCESS, "    v        ( %02X )", d[8]);
-    PrintAndLogEx(SUCCESS, "    file id  ( %02X%02X )", d[9], d[10]);
+    PrintAndLogEx(SUCCESS, "    (t) type of file  ( %02X )", d[7]);
+    PrintAndLogEx(SUCCESS, "    (v)               ( %02X )", d[8]);
+    PrintAndLogEx(SUCCESS, "    file id           ( %02X%02X )", d[9], d[10]);
     
     uint16_t maxndef = (d[11] << 8 | d[12]);
     PrintAndLogEx(SUCCESS, "    max NDEF filesize   %u bytes ( 0x%04X )", maxndef, maxndef);
@@ -173,7 +188,10 @@ static void print_st_system_info(uint8_t *d, uint8_t n) {
     
     PrintAndLogEx(SUCCESS, " Product version ( 0x%02X )", d[7]);
     
-    PrintAndLogEx(SUCCESS, " UID   " _GREEN_("%s"), sprint_hex_inrow(d + 8, 7));
+    PrintAndLogEx(SUCCESS, "          UID " _GREEN_("%s"), sprint_hex_inrow(d + 8, 7));
+    PrintAndLogEx(SUCCESS, "          MFG  0x%02X, " _YELLOW_("%s"), d[8], getTagInfo(d[8]));
+    PrintAndLogEx(SUCCESS, " Product Code  0x%02X, " _YELLOW_("%s"), d[9], get_st_chip_model(d[9]));
+    PrintAndLogEx(SUCCESS, "      Device#  " _YELLOW_("%s"), sprint_hex_inrow(d + 10, 5));    
 
     uint16_t mem =  (d[0xF] << 8 | d[0x10]);
     PrintAndLogEx(SUCCESS, " Memory Size - 1   %u bytes (" _GREEN_("0x%04X") ")", mem, mem);
@@ -205,7 +223,8 @@ int infoHF_ST(void) {
     bool keep_field_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
-    
+
+    // ---------------  Select NDEF Tag application ----------------    
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
