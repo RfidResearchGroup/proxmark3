@@ -17,7 +17,6 @@
 // Currently the largest pixel 880*528 only needs 58.08K bytes
 #define WSMAPSIZE 60000
 
-#pragma pack(1) /* Mandatory to remove any padding */
 typedef struct {
     uint8_t  B;
     uint8_t  M;
