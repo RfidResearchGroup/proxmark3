@@ -241,6 +241,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
+        ${PM3_ROOT}/client/src/cmdhfwaveshare.c
         ${PM3_ROOT}/client/src/cmdhw.c
         ${PM3_ROOT}/client/src/cmdlf.c
         ${PM3_ROOT}/client/src/cmdlfawid.c
