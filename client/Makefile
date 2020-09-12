@@ -434,6 +434,7 @@ SRCS =  aidsearch.c \
 		cmdhfmfp.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
+        cmdhfst.c \
 		cmdhw.c \
 		cmdlf.c \
 		cmdlfawid.c \
