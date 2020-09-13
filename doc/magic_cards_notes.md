@@ -186,6 +186,14 @@ hf mf cwipe -u 11223344 -a 0004 -s 08
 # MFC Gen1A 4k:
 hf mf cwipe -u 11223344 -a 0044 -s 18
 ```
+or just fixing block0:
+```
+# MFC Gen1A 1k:
+hf mf csetuid 11223344 0004 08
+# MFC Gen1A 4k:
+hf mf csetuid 11223344 0044 18
+```
+
 ```
 script run remagic
 ```
