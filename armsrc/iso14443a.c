@@ -2537,7 +2537,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                 } else if (hf14aconfig.forcebcc == 1) {
                     sel_uid[6] = bcc;
                 } // else use card BCC
-                Dbprintf("Using BCC=" _YELLOW_("0x%02x") " to perform anticollision", sel_uid[6]);
+                Dbprintf("Using BCC%d=" _YELLOW_("0x%02x") " to perform anticollision", cascade_level, sel_uid[6]);
             }
         } else {
             memcpy(sel_uid + 2, uid_resp, 4);                               // the provided UID

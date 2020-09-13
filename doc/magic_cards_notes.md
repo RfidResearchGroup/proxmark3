@@ -154,10 +154,10 @@ hf mf cview
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
-hf mf csetblk 0 11223344440804006263646566676869
-```
-```
-hf 14a config h
+# MFC Gen1A 1k:
+hf mf cwipe -u 11223344 -a 0004 -s 08
+# MFC Gen1A 4k:
+hf mf cwipe -u 11223344 -a 0044 -s 18
 ```
 ```
 script run remagic
@@ -213,6 +213,8 @@ hf 14a info
 
 Not all Gen2 cards can be identified with `hf 14a info`, only those replying to RATS.
 
+To identify the other ones, you've to try to write to block0 and see if it works...
+
 ### Magic commands
 
 Android compatible
@@ -230,10 +232,10 @@ Android compatible
   * some cards use a fix "08" or "18" in anticollision, no matter the block0. Including all 7b.
 * BCC:
   * some cards play blindly the block0 BCC byte, beware!
-  * some cards compute a proper BCC in anticollision. Including all 7b.
+  * some cards compute a proper BCC in anticollision. Including all 7b comuting their BCC0 and BCC1.
 * ATS:
   * some cards don't reply to RATS
-  * some reply with 0978009102DABC1910F005
+  * some reply with an ATS
 
 #### MIFARE Classic DirectWrite flavour 1
 
@@ -280,6 +282,13 @@ Android compatible
 * ATS: no
 * PRNG: weak
 
+#### MIFARE Classic DirectWrite flavour 6
+
+**TODO** need more info
+
+* UID 7b
+* ATS: 0D780071028849A13020150608563D
+
 ### Proxmark3 commands
 
 ```
@@ -295,9 +304,21 @@ hf 14a config h
 e.g. for 4b UID:
 
 ```
-hf 14a config a 1 b 2 2 2 3 2 r 2
-hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869
+hf 14a config a 1 b 2 2 2 r 2
+hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869 # for 1k
+hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869 # for 4k
+hf 14a config a 0 b 0 2 0 r 0
+hf 14a reader
+```
+
+e.g. for 7b UID:
+
+```
+hf 14a config a 1 b 2 2 1 3 2 r 2
+hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667 # for 1k
+hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667 # for 4k
 hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a reader
 ```
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
 
@@ -449,7 +470,7 @@ Int is internal, typically 0x48
 
 #### Magic commands
 
-**TOOD**
+**TODO**
 
 #### UID
 
@@ -476,23 +497,40 @@ script run remagic -u
 
 ### Identify
 
-**TODO**
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 2 / CUID
+```
+
+It seems so far that all MFUL DW have an ATS.
+
+### Magic commands
+
+Issue three regular MFU write commands in a row to write first three blocks.
 
 ### Characteristics
 
-#### Magic commands
+* UID: Only 7b versions
+* ATQA:
+  * all cards play fix ATQA
+* SAK:
+  * all cards play fix SAK
+* BCC:
+  * some cards play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+  * some cards compute proper BCC0 and BCC1 in anticollision
+* ATS:
+  * all cards reply with an ATS
 
-**TODO**
+#### MIFARE Ultralight DirectWrite flavour 1
 
-#### UID
+* BCC: computed
+* ATS: 0A78008102DBA0C119402AB5
 
-Only 7b versions
+#### MIFARE Ultralight DirectWrite flavour 2
 
-#### SAK, ATQA, BCC, ATS
-
-Some fix their BCC in anticol, some don't, be careful!
-
-**TODO** need more tests
+* BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+* ATS: 850000A00A000AB00000000000000000184D
 
 ### Proxmark3 commands
 
@@ -514,6 +552,14 @@ When "soft-bricked" (by writing invalid data in block0), these ones may help:
 hf 14a config h
 ```
 
+E.g.:
+```
+hf 14a config a 1 b 2 2 1 3 2 r 2
+hf mfu setuid 04112233445566
+hf 14a config a 0 b 0 2 0 3 0 r 0
+hf 14a reader
+```
+
 ### libnfc commands
 
 ```
@@ -527,25 +573,101 @@ See `--uid` and `--full`
 
 ## MIFARE Ultralight EV1 DirectWrite
 
-Same commands as for MFUL DirectWrite
-
-## MIFARE Ultralight C Gen1A
-
-Same commands as for MFUL Gen1A
-
-## MIFARE Ultralight C DirectWrite
-
-Same commands as for MFUL DirectWrite
-
-# NTAG
+Similar to MFUL DirectWrite
 
 ### Identify
 
-**TODO**
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 2 / CUID
+```
+
+### Characteristics
+
+* UID: Only 7b versions
+* ATQA:
+  * all cards play fix ATQA
+* SAK:
+  * all cards play fix SAK
+* BCC:
+  * cards play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+* ATS:
+  * all cards reply with an ATS
+
+#### MIFARE Ultralight EV1 DirectWrite flavour 1
+
+* BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+* ATS: 850000A000000AC30004030101000B0341DF
+
+#### MIFARE Ultralight EV1 DirectWrite flavour 2
+
+* BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+* ATS: 850000A00A000AC30004030101000B0316D7
+
+## MIFARE Ultralight C Gen1A
+
+Similar to MFUL Gen1A
+
+## MIFARE Ultralight C DirectWrite
+
+Similar to MFUL DirectWrite
+
+### Identify
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 2 / CUID
+```
+
+### Characteristics
+
+* UID: Only 7b versions
+* ATQA:
+  * all cards play fix ATQA
+* SAK:
+  * all cards play fix SAK
+* BCC:
+  * cards compute proper BCC0 and BCC1 in anticollision
+* ATS:
+  * all cards reply with an ATS
+
+#### MIFARE Ultralight C DirectWrite flavour 1
+
+* BCC: computed
+* ATS: 0A78008102DBA0C119402AB5
+
+# NTAG
 
 ## NTAG213 DirectWrite
 
-Same commands as for MFUL DirectWrite
+Similar to MFUL DirectWrite
+
+### Identify
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 2 / CUID
+```
+
+### Characteristics
+
+* UID: Only 7b versions
+* ATQA:
+  * all cards play fix ATQA
+* SAK:
+  * all cards play fix SAK
+* BCC:
+  * cards play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+* ATS:
+  * all cards reply with an ATS
+
+#### NTAG213 DirectWrite flavour 1
+
+* BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+* ATS: 0A78008102DBA0C119402AB5
 
 ## NTAG21x
 
