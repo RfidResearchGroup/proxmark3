@@ -147,8 +147,8 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t **b
         for (X = 0; X < Bmp_Width_Byte; X++) { // lines
             if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
                 (*black)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
-                offset++;
             }
+            offset++;
         }
     }
     return PM3_SUCCESS;
