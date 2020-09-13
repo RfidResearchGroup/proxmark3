@@ -2,7 +2,7 @@
 // Waveshare commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDHFWQVESHARE_H__
+#ifndef CMDHFWAVESHARE_H__
 #define CMDHFWAVESHARE_H__
 
 int CmdHFWaveshare(const char *Cmd);
