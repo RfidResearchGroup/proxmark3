@@ -195,14 +195,14 @@ static int read_bmp_rgb(const uint8_t *bmp, const size_t bmpsize, uint8_t **blac
         for (X = 0; X < pbmpheader->BMP_Width; X++) { // lines
             B = bmp[offset++];
             G = bmp[offset++];
-            G = bmp[offset++];
-            if (R < 30 && G < 30 && B < 30) {
+            R = bmp[offset++];
+            if (R < 128 && G < 128 && B < 128) {
                 Black_data = Black_data | (1);
             } else if (R > 190 && G < 90 && B < 90) {
                 Red_data = Red_data | (1);
             }
             count++;
-            if (count >= 8) {
+            if ((count >= 8) || (X == pbmpheader->BMP_Width - 1)) {
                 (*black)[X / 8 + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = ~Black_data;
                 (*red)[X / 8 + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = ~Red_data;
                 count = 0;
@@ -212,6 +212,8 @@ static int read_bmp_rgb(const uint8_t *bmp, const size_t bmpsize, uint8_t **blac
             Black_data = Black_data << 1;
             Red_data = Red_data << 1;
         }
+        // Skip BMP line padding
+        offset+=(((pbmpheader->BMP_Width*3/4)+1)*4)-pbmpheader->BMP_Width*3;
     }
     return PM3_SUCCESS;
 }
