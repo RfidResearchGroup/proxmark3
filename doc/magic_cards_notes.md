@@ -4,6 +4,8 @@ This document is based mostly on information posted on http://www.proxmark.org/f
 Useful docs:
 * [AN10833 MIFARE Type Identification Procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
 
+- [ISO14443A](#iso14443a)
+  * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
 - [MIFARE Classic](#mifare-classic)
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
@@ -33,6 +35,31 @@ Useful docs:
   * [ISO15693 magic](#iso15693-magic)
 
 
+# ISO14443A
+
+## Identifying broken ISO14443A magic
+
+When a magic card configuration is really messed up and the card is not labeled, it may be hard to find out which type of card it is.
+
+Here are some tips if the card doesn't react or gives error on a simple `hf 14a reader`:
+
+Let's force a 4b UID anticollision and see what happens:
+```
+hf 14a config a 1 b 2 2 2 r 2
+hf 14a reader
+```
+It it responds, we know it's a TypeA card. But maybe it's a 7b UID, so let's force a 7b UID anticollision:
+```
+hf 14a config a 1 b 2 2 1 3 2 r 2
+hf 14a reader
+```
+At this stage, you know if it's a TypeA 4b or 7b card and you can check further on this page how to reconfigure different types of cards.
+
+To restore anticollision config of the Proxmark3:
+
+```
+hf 14a config a 0 b 0 2 0 3 0 r 0
+```
 # MIFARE Classic
 
 Referred as M1, S50 (1k), S70 (4k)
