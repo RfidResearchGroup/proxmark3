@@ -223,7 +223,9 @@ static void read_black(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *black)
 }
 static void read_red(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *red) {
     for (uint8_t j = 0; j < models[model_nr].len; j++) {
-        if (model_nr == M1in54B) {
+        if (red == NULL) {
+            l[3 + j] = ~0x00;
+        } else if (model_nr == M1in54B) {
             //1.54B needs to flip the red picture data, other screens do not need to flip data
             l[3 + j] = ~red[i * models[model_nr].len + j];
         } else {
@@ -232,26 +234,43 @@ static void read_red(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *red) {
     }
 }
 
-static void transceive_blocking( uint8_t* txBuf, uint16_t txBufLen, uint8_t* rxBuf, uint16_t rxBufLen, uint16_t* actLen, uint32_t fwt ){
-    *actLen = 2;
-    (void) fwt;
-    PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, txBufLen, 0, txBuf, txBufLen);
-    WaitForResponse(CMD_ACK, &resp);
-    if (resp.oldarg[0] > rxBufLen) {
-        PrintAndLogEx(WARNING, "Received % bytes, rxBuf too small (%)", resp.oldarg[0], rxBufLen);
-        memcpy(rxBuf, resp.data.asBytes, rxBufLen);
-        *actLen = rxBufLen;
-        return;
+static int transceive_blocking( uint8_t* txBuf, uint16_t txBufLen, uint8_t* rxBuf, uint16_t rxBufLen, uint16_t* actLen, bool retransmit ){
+    uint8_t fail_num = 0;
+    if (rxBufLen < 2)
+        return PM3_EINVARG;
+    while (1) {
+        PacketResponseNG resp;
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, txBufLen, 0, txBuf, txBufLen);
+        rxBuf[0] = 1;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+            if (resp.oldarg[0] > rxBufLen) {
+                PrintAndLogEx(WARNING, "Received % bytes, rxBuf too small (%)", resp.oldarg[0], rxBufLen);
+                memcpy(rxBuf, resp.data.asBytes, rxBufLen);
+                *actLen = rxBufLen;
+                return PM3_ESOFT;
+            }
+            memcpy(rxBuf, resp.data.asBytes, resp.oldarg[0]);
+            *actLen = resp.oldarg[0];
+        }
+        if ((retransmit) && (rxBuf[0] != 0 || rxBuf[1] != 0)) {
+            fail_num++;
+            if (fail_num > 10) {
+                PROMPT_CLEARLINE;
+                PrintAndLogEx(WARNING, "Transmission failed, please try again.");
+                DropField();
+                return PM3_ESOFT;
+            }
+        } else {
+            break;
+        }
     }
-    memcpy(rxBuf, resp.data.asBytes, resp.oldarg[0]);
-    *actLen = resp.oldarg[0];
+    return PM3_SUCCESS;
 }
 
 // 1.54B Keychain
 // 1.54B does not share the common base and requires specific handling
-static int start_drawing_1in54B(uint8_t model_nr, uint8_t *black, uint8_t *red, uint8_t fail_num) {
-    uint8_t step = 5;
+static int start_drawing_1in54B(uint8_t model_nr, uint8_t *black, uint8_t *red) {
+    int ret;
     uint8_t step_5[128] = {0xcd, 0x05, 100};
     uint8_t step_4[2] = {0xcd, 0x04};
     uint8_t step_6[2] = {0xcd, 0x06};
@@ -261,99 +280,67 @@ static int start_drawing_1in54B(uint8_t model_nr, uint8_t *black, uint8_t *red, 
     if (model_nr == M1in54B) {
         step_5[2] = 100;
     }
-    while (1) {
-        if (step == 5) {
-            PrintAndLogEx(INFO, "1.54_Step9: e-paper config2 (black)");
-            if (model_nr == M1in54B) {      //1.54inch B Keychain
-                for (i = 0; i < 50; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_black(i, step_5, model_nr, black);
-                    transceive_blocking(step_5, 103, rx, 20, actrxlen, 2157 + 2048); // cd 05
-                    progress = i * 100 / 100;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                }
+    PrintAndLogEx(INFO, "1.54_Step9: e-paper config2 (black)");
+    if (model_nr == M1in54B) {      //1.54inch B Keychain
+        for (i = 0; i < 50; i++) {
+            read_black(i, step_5, model_nr, black);
+            ret = transceive_blocking(step_5, 103, rx, 20, actrxlen, true); // cd 05
+            if (ret != PM3_SUCCESS) {
+                return ret;
             }
-            PROMPT_CLEARLINE;
-            step = 6;
-        } else if (step == 6) {
-            PrintAndLogEx(INFO, "1.54_Step6: e-paper power on");
-            transceive_blocking(step_4, 2, rx, 20, actrxlen, 2157 + 2048);          //cd 04
-            step = 7;
-            if (rx[0] == 0 && rx[1] == 0) {
-                step = 7;
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please press any key to exit and try again.");
-                    step = 14;
-                    fail_num = 0;
-                    msleep(200);
-                }
-            }
-        } else if (step == 7) {
-            PrintAndLogEx(INFO, "1.54_Step7: e-paper config2 (red)");
-            if (model_nr == M1in54B) {       //1.54inch B Keychain
-                for (i = 0; i < 50; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_red(i, step_5, model_nr, red);
-                    transceive_blocking(step_5, 103, rx, 20, actrxlen, 2157 + 2048); // cd 05
-                    progress = i * 100 / 100 + 50;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                }
-            }
-            PROMPT_CLEARLINE;
-            step = 8;
-            rx[0] = 1;
-            rx[1] = 1;
-        } else if (step == 8) {
-            // Send update instructions
-            PrintAndLogEx(INFO, "1.54_Step8: EDP load to main");
-            transceive_blocking(step_6, 2, rx, 20, actrxlen, 2157 + 2048);          //cd 06
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 9;
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please press any key to exit and try again.");
-                    step = 14;
-                    fail_num = 0;
-                    msleep(200);
-                }
-            }
-        } else if (step == 9) {
-            PrintAndLogEx(INFO, "1.54_Step9");
-            return PM3_SUCCESS;
-        } else if (step == 14) {
-            return PM3_ESOFT;
+            progress = i * 100 / 100;
+            PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
         }
     }
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INFO, "1.54_Step6: e-paper power on");
+    ret = transceive_blocking(step_4, 2, rx, 20, actrxlen, true);          //cd 04
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    PrintAndLogEx(INFO, "1.54_Step7: e-paper config2 (red)");
+    if (model_nr == M1in54B) {       //1.54inch B Keychain
+        for (i = 0; i < 50; i++) {
+            read_red(i, step_5, model_nr, red);
+            ret = transceive_blocking(step_5, 103, rx, 20, actrxlen, true); // cd 05
+            if (ret != PM3_SUCCESS) {
+                return ret;
+            }
+            progress = i * 100 / 100 + 50;
+            PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
+        }
+    }
+    PROMPT_CLEARLINE;
+    // Send update instructions
+    PrintAndLogEx(INFO, "1.54_Step8: EDP load to main");
+    ret = transceive_blocking(step_6, 2, rx, 20, actrxlen, true);          //cd 06
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    PrintAndLogEx(INFO, "1.54_Step9");
+    return PM3_SUCCESS;
 }
 
 static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
-    uint8_t fail_num = 0;
-    uint8_t      step = 0, progress = 0;
-    uint8_t      step0[2] = {0xcd, 0x0d};
-    uint8_t      step1[3] = {0xcd, 0x00, 10};    //select e-paper type and reset e-paper        4:2.13inch e-Paper   7:2.9inch e-Paper  10:4.2inch e-Paper  14:7.5inch e-Paper
-    uint8_t      step2[2] = {0xcd, 0x01};      //e-paper normal mode  type：
-    uint8_t      step3[2] = {0xcd, 0x02};      //e-paper config1
-    uint8_t      step4[2] = {0xcd, 0x03};      //e-paper power on
-    uint8_t      step5[2] = {0xcd, 0x05};      //e-paper config2
-    uint8_t      step6[2] = {0xcd, 0x06};      //EDP load to main
-    uint8_t      step7[2] = {0xcd, 0x07};      //Data preparation
-    uint8_t      step8[123] = {0xcd, 0x08, 0x64};  //Data start command   2.13inch(0x10:Send 16 data at a time)    2.9inch(0x10:Send 16 data at a time)     4.2inch(0x64:Send 100 data at a time)  7.5inch(0x78:Send 120 data at a time)
-    uint8_t      step9[2] = {0xcd, 0x18};     //e-paper power on
-    uint8_t      step10[2] = {0xcd, 0x09};     //Refresh e-paper
-    uint8_t      step11[2] = {0xcd, 0x0a};     //wait for ready
-    uint8_t      step12[2] = {0xcd, 0x04};     //e-paper power off command
-    uint8_t      step13[124] = {0xcd, 0x19, 121};
-// uint8_t      step13[2]={0xcd,0x0b};     //Judge whether the power supply is turned off successfully
-// uint8_t      step14[2]={0xcd,0x0c};     //The end of the transmission
-    uint8_t      rx[20];
-    uint16_t     actrxlen[20], i = 0;
+    uint8_t progress = 0;
+    uint8_t step0[2] = {0xcd, 0x0d};
+    uint8_t step1[3] = {0xcd, 0x00, 10};    //select e-paper type and reset e-paper        4:2.13inch e-Paper   7:2.9inch e-Paper  10:4.2inch e-Paper  14:7.5inch e-Paper
+    uint8_t step2[2] = {0xcd, 0x01};      //e-paper normal mode  type：
+    uint8_t step3[2] = {0xcd, 0x02};      //e-paper config1
+    uint8_t step4[2] = {0xcd, 0x03};      //e-paper power on
+    uint8_t step5[2] = {0xcd, 0x05};      //e-paper config2
+    uint8_t step6[2] = {0xcd, 0x06};      //EDP load to main
+    uint8_t step7[2] = {0xcd, 0x07};      //Data preparation
+    uint8_t step8[123] = {0xcd, 0x08, 0x64};  //Data start command   2.13inch(0x10:Send 16 data at a time)    2.9inch(0x10:Send 16 data at a time)     4.2inch(0x64:Send 100 data at a time)  7.5inch(0x78:Send 120 data at a time)
+    uint8_t step9[2] = {0xcd, 0x18};     //e-paper power on
+    uint8_t step10[2] = {0xcd, 0x09};     //Refresh e-paper
+    uint8_t step11[2] = {0xcd, 0x0a};     //wait for ready
+    uint8_t step12[2] = {0xcd, 0x04};     //e-paper power off command
+    uint8_t step13[124] = {0xcd, 0x19, 121};
+// uint8_t step13[2]={0xcd,0x0b};     //Judge whether the power supply is turned off successfully
+// uint8_t step14[2]={0xcd,0x0c};     //The end of the transmission
+    uint8_t rx[20];
+    uint16_t actrxlen[20], i = 0;
 
 
 
@@ -386,388 +373,272 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         DropField();
         return PM3_ESOFT;
     }
-
     PrintAndLogEx(DEBUG, "model_nr = %d", model_nr);
-    while (1) {
-        if (step == 0) {
-            PrintAndLogEx(INFO, "Step0");
-            transceive_blocking(step0, 2, rx, 20, actrxlen, 2157 + 2048);  //cd 0d
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 1;
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
-                }
-            }
-        } else if (step == 1) {
-            PrintAndLogEx(INFO, "Step1: e-paper config");
-            //step1[2] screen model
-            //step8[2] nr of bytes sent at once
-            //step13[2] nr of bytes sent for the second time
-            // generally, step8 sends a black image, step13 sends a red image
-            if (model_nr == M2in13) {        //2.13inch
-                step1[2] = EPD_2IN13V2;
-                step8[2] = 16;
-                step13[2] = 0;
-            } else if (model_nr == M2in9) {  //2.9inch
-                step1[2] = EPD_2IN9;
-                step8[2] = 16;
-                step13[2] = 0;
-            } else if (model_nr == M4in2) {  //4.2inch
-                step1[2] = EPD_4IN2;
-                step8[2] = 100;
-                step13[2] = 0;
-            } else if (model_nr == M7in5) {  //7.5inch
-                step1[2] = EPD_7IN5V2;
-                step8[2] = 120;
-                step13[2] = 0;
-            } else if (model_nr == M2in7) {  //2.7inch
-                step1[2] = EPD_2IN7;
-                step8[2] = 121;
-                // Send blank data for the first time, and send other data to 0xff without processing the bottom layer
-                step13[2] = 121;
-                //Sending the second data is the real image data. If the previous 0xff is not sent, the last output image is abnormally black
-            } else if (model_nr == M2in13B) {  //2.13inch B
-                step1[2] = EPD_2IN13BC;
-                step8[2] = 106;
-                step13[2] = 106;
-            } else if (model_nr == M7in5HD) {
-                step1[2] = EPD_7IN5HD;
-                step8[2] = 120;
-                step13[2] = 0;
-            }
+    int ret;
+    PrintAndLogEx(INFO, "Step0");
+    ret = transceive_blocking(step0, 2, rx, 20, actrxlen, true);  //cd 0d
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    PrintAndLogEx(INFO, "Step1: e-paper config");
+    //step1[2] screen model
+    //step8[2] nr of bytes sent at once
+    //step13[2] nr of bytes sent for the second time
+    // generally, step8 sends a black image, step13 sends a red image
+    if (model_nr == M2in13) {        //2.13inch
+        step1[2] = EPD_2IN13V2;
+        step8[2] = 16;
+        step13[2] = 0;
+    } else if (model_nr == M2in9) {  //2.9inch
+        step1[2] = EPD_2IN9;
+        step8[2] = 16;
+        step13[2] = 0;
+    } else if (model_nr == M4in2) {  //4.2inch
+        step1[2] = EPD_4IN2;
+        step8[2] = 100;
+        step13[2] = 0;
+    } else if (model_nr == M7in5) {  //7.5inch
+        step1[2] = EPD_7IN5V2;
+        step8[2] = 120;
+        step13[2] = 0;
+    } else if (model_nr == M2in7) {  //2.7inch
+        step1[2] = EPD_2IN7;
+        step8[2] = 121;
+        // Send blank data for the first time, and send other data to 0xff without processing the bottom layer
+        step13[2] = 121;
+        //Sending the second data is the real image data. If the previous 0xff is not sent, the last output image is abnormally black
+    } else if (model_nr == M2in13B) {  //2.13inch B
+        step1[2] = EPD_2IN13BC;
+        step8[2] = 106;
+        step13[2] = 106;
+    } else if (model_nr == M7in5HD) {
+        step1[2] = EPD_7IN5HD;
+        step8[2] = 120;
+        step13[2] = 0;
+    }
 
-            if (model_nr == M1in54B) {
-                transceive_blocking(step1, 2, rx, 20, actrxlen, 2157 + 2048);  //cd 00
-            } else {
-                transceive_blocking(step1, 3, rx, 20, actrxlen, 2157 + 2048);
+    if (model_nr == M1in54B) {
+        ret = transceive_blocking(step1, 2, rx, 20, actrxlen, true);  //cd 00
+    } else {
+        ret = transceive_blocking(step1, 3, rx, 20, actrxlen, true);
+    }
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    msleep(100);
+    PrintAndLogEx(INFO, "Step2: e-paper normal mode type");
+    ret = transceive_blocking(step2, 2, rx, 20, actrxlen, true);   //cd 01
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    msleep(100);
+    PrintAndLogEx(INFO, "Step3: e-paper config1");
+    ret = transceive_blocking(step3, 2, rx, 20, actrxlen, true); //cd 02
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    msleep(200);
+    PrintAndLogEx(INFO, "Step4: e-paper power on");
+    ret = transceive_blocking(step4, 2, rx, 20, actrxlen, true); //cd 03
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    if (model_nr == M1in54B) {
+        // 1.54B Keychain handler
+        PrintAndLogEx(DEBUG, "Start_Drawing_1in54B");
+        ret = start_drawing_1in54B(model_nr, black, red);
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        //1.54B Data transfer is complete and wait for refresh
+    } else {
+        PrintAndLogEx(INFO, "Step5: e-paper config2");
+        ret = transceive_blocking(step5, 2, rx, 20, actrxlen, true);   //cd 05
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        msleep(100);
+        PrintAndLogEx(INFO, "Step6: EDP load to main") ;
+        ret = transceive_blocking(step6, 2, rx, 20, actrxlen, true); //cd 06
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        msleep(100);
+        PrintAndLogEx(INFO, "Step7: Data preparation");
+        ret = transceive_blocking(step7, 2, rx, 20, actrxlen, true); //cd 07
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        PrintAndLogEx(INFO, "Step8: Start data transfer");
+        if (model_nr == M2in13) {      //2.13inch
+            for (i = 0; i < 250; i++) {
+                read_black(i, step8, model_nr, black);
+                ret = transceive_blocking(step8, 19, rx, 20, actrxlen, true); // cd 08
+                if (ret != PM3_SUCCESS) {
+                    return ret;
+                }
+                progress = i * 100 / 250;
+                PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 2;
-                fail_num = 0;
-                msleep(100);
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
+        } else if (model_nr == M2in9) {
+            for (i = 0; i < 296; i++) {
+                read_black(i, step8, model_nr, black);
+                ret = transceive_blocking(step8, 19, rx, 20, actrxlen, true); // cd 08
+                if (ret != PM3_SUCCESS) {
+                    return ret;
                 }
+                progress = i * 100 / 296;
+                PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
-            msleep(10);
-        } else if (step == 2) {
-            PrintAndLogEx(INFO, "Step2: e-paper normal mode type");
-            transceive_blocking(step2, 2, rx, 20, actrxlen, 2157 + 2048);   //cd 01
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 3;
-                fail_num = 0;
-                msleep(100);
-            } else {
-                fail_num++;
-                if (fail_num > 50) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
+        } else if (model_nr == M4in2) {    //4.2inch
+            for (i = 0; i < 150; i++) {
+                read_black(i, step8, model_nr, black);
+                ret = transceive_blocking(step8, 103, rx, 20, actrxlen, true); // cd 08
+                if (ret != PM3_SUCCESS) {
+                    return ret;
                 }
+                progress = i * 100 / 150;
+                PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
-            msleep(100);
-        } else if (step == 3) {
-            PrintAndLogEx(INFO, "Step3: e-paper config1");
-            transceive_blocking(step3, 2, rx, 20, actrxlen, 2157 + 2048); //cd 02
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 4;
-                fail_num = 0;
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
+        } else if (model_nr == M7in5) {  //7.5inch
+            for (i = 0; i < 400; i++) {
+                read_black(i, step8, model_nr, black);
+                ret = transceive_blocking(step8, 123, rx, 20, actrxlen, true); // cd 08
+                if (ret != PM3_SUCCESS) {
+                    return ret;
                 }
+                progress = i * 100 / 400;
+                PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
+                msleep(6);
             }
-            msleep(200);
-        } else if (step == 4) {
-            PrintAndLogEx(INFO, "Step4: e-paper power on");
-            transceive_blocking(step4, 2, rx, 20, actrxlen, 2157 + 2048); //cd 03
-            if (model_nr == M1in54B) {
-                // 1.54B Keychain handler
-                PrintAndLogEx(DEBUG, "Start_Drawing_1in54B");
-                char t = start_drawing_1in54B(model_nr, black, red, fail_num);
-                if (t == 0) {
-                    step = 11;
-                    //1.54B Data transfer is complete and wait for refresh
-                } else if (t == 1) {
-                    step = 14;
-                    //1.54B Data transmission error
+        } else if (model_nr == M2in13B) {  //2.13inch B
+            for (i = 0; i < 26; i++) {
+                read_black(i, step8, model_nr, black);
+                ret = transceive_blocking(step8, 109, rx, 20, actrxlen, true); // cd 08
+                if (ret != PM3_SUCCESS) {
+                    return ret;
                 }
-                // 1.54B Keychain handler end
+                progress = i * 50 / 26;
+                PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
-            if (rx[0] == 0 && rx[1] == 0) {
-                    fail_num = 0;
-                    step = 5;
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
-                }
-            }
-        } else if (step == 5) {
-            PrintAndLogEx(INFO, "Step5: e-paper config2");
-            transceive_blocking(step5, 2, rx, 20, actrxlen, 2157 + 2048);   //cd 05
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 6;
-                fail_num = 0;
-                msleep(100);
-            } else {
-                fail_num++;
-                if (fail_num > 30) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
-                }
-            }
-            msleep(10);
-        } else if (step == 6) {
-            PrintAndLogEx(INFO, "Step6: EDP load to main") ;
-            transceive_blocking(step6, 2, rx, 20, actrxlen, 2157 + 2048); //cd 06
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 7;
-                fail_num = 0;
-                msleep(100);
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
-                }
-            }
-        } else if (step == 7) {
-            PrintAndLogEx(INFO, "Step7: Data preparation");
-            transceive_blocking(step7, 2, rx, 20, actrxlen, 2157 + 2048); //cd 07
-            if (rx[0] == 0 && rx[1] == 0) {
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 8;
-                fail_num = 0;
-            } else {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
-                }
-            }
-        } else if (step == 8) { //cd 08
-            PrintAndLogEx(INFO, "Step8: Start data transfer");
-            if (model_nr == M2in13) {      //2.13inch
-                for (i = 0; i < 250; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_black(i, step8, model_nr, black);
-                    transceive_blocking(step8, 19, rx, 20, actrxlen, 2157 + 2048);
-                    progress = i * 100 / 250;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                }
-            } else if (model_nr == M2in9) {
-                for (i = 0; i < 296; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_black(i, step8, model_nr, black);
-                    transceive_blocking(step8, 19, rx, 20, actrxlen, 2157 + 2048);
-                    progress = i * 100 / 296;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                }
-            } else if (model_nr == M4in2) {    //4.2inch
-                for (i = 0; i < 150; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_black(i, step8, model_nr, black);
-                    transceive_blocking(step8, 103, rx, 20, actrxlen, 2157 + 2048);
-                    progress = i * 100 / 150;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                }
-            } else if (model_nr == M7in5) {  //7.5inch
-                for (i = 0; i < 400; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_black(i, step8, model_nr, black);
-                    transceive_blocking(step8, 123, rx, 20, actrxlen, 2157 + 2048);
-                    progress = i * 100 / 400;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                    msleep(6);
-                }
-            } else if (model_nr == M2in13B) {  //2.13inch B
-                for (i = 0; i < 26; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_black(i, step8, model_nr, black);
-                    transceive_blocking(step8, 109, rx, 20, actrxlen, 2157 + 2048);
-                    progress = i * 50 / 26;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                }
-            } else if (model_nr == M7in5HD) {  //7.5HD
+        } else if (model_nr == M7in5HD) {  //7.5HD
 
-                for (i = 0; i < 484; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    read_black(i, step8, model_nr, black);
-                    //memset(&step8[3], 0xf0, 120);
-                    transceive_blocking(step8, 123, rx, 20, actrxlen, 2157 + 2048);
-                    progress = i * 100 / 484;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
+            for (i = 0; i < 484; i++) {
+                read_black(i, step8, model_nr, black);
+                //memset(&step8[3], 0xf0, 120);
+                ret = transceive_blocking(step8, 123, rx, 20, actrxlen, true); // cd 08
+                if (ret != PM3_SUCCESS) {
+                    return ret;
                 }
-                memset(&step8[3], 0xff, 120);
-                transceive_blocking(step8, 110 + 3, rx, 20, actrxlen, 2157 + 2048);
-
-
-            } else if (model_nr == M2in7) {   //2.7inch
-                for (i = 0; i < 48; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
-                    //read_black(i,step8, model_nr, black);
-                    memset(&step8[3], 0xFF, sizeof(step8)-3);
-                    transceive_blocking(step8, 124, rx, 20, actrxlen, 2157 + 2048);
-                    progress = i * 50 / 48;
-                    PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
-                }
+                progress = i * 100 / 484;
+                PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
-            PROMPT_CLEARLINE;
-            step = 9;
-        } else if (step == 9) {
-            PrintAndLogEx(INFO, "Step9: e-paper power on");
-            if (model_nr == M2in13 || model_nr == M2in9 || model_nr == M4in2 || model_nr == M7in5 || model_nr == M7in5HD) {
-                transceive_blocking(step9, 2, rx, 20, actrxlen, 2157 + 2048); //cd 18
-                // The black-and-white screen sending backplane is also shielded, with no effect. Except 2.7
-                if (rx[0] != 0 || rx[1] != 0) {
-                    fail_num++;
-                    if (fail_num > 10) {
-                        PrintAndLogEx(WARNING, "Update failed, please try again.");
-                        DropField();
-                        return PM3_ESOFT;
-                    }
-                } else
-                    fail_num = 0;
-
-                rx[0] = 1;
-                rx[1] = 1;
-                step = 10;
-            } else if (model_nr == M2in13B ||  model_nr == M2in7) {
-                transceive_blocking(step9, 2, rx, 20, actrxlen, 2157 + 2048); //cd 18
-                //rx[0]=1;rx[1]=1;
-                step = 19;
+            memset(&step8[3], 0xff, 120);
+            ret = transceive_blocking(step8, 110 + 3, rx, 20, actrxlen, true); // cd 08
+            if (ret != PM3_SUCCESS) {
+                return ret;
             }
-        } else if (step == 10) {
-            PrintAndLogEx(INFO, "Step10: Refresh e-paper");
-            transceive_blocking(step10, 2, rx, 20, actrxlen, 2157 + 2048); //cd 09 refresh command
-            if (rx[0] != 0 || rx[1] != 0) {
-                fail_num++;
-                if (fail_num > 10) {
-                    PrintAndLogEx(WARNING, "Update failed, please try again.");
-                    DropField();
-                    return PM3_ESOFT;
+        } else if (model_nr == M2in7) {   //2.7inch
+            for (i = 0; i < 48; i++) {
+                //read_black(i,step8, model_nr, black);
+                memset(&step8[3], 0xFF, sizeof(step8)-3);
+                ret = transceive_blocking(step8, 124, rx, 20, actrxlen, true); // cd 08
+                if (ret != PM3_SUCCESS) {
+                    return ret;
                 }
-            } else
-                fail_num = 0;
-            rx[0] = 1;
-            rx[1] = 1;
-            step = 11;
-            msleep(200);
-        } else if (step == 11) {
-            PrintAndLogEx(INFO, "Step11: Wait tag to be ready");
-            if (model_nr == M2in13B || model_nr == M1in54B) { // Black, white and red screen refresh time is longer, wait first
-                msleep(9000);
-            } else if (model_nr == M7in5HD) {
-                msleep(1000);
+                progress = i * 50 / 48;
+                PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
-            while (1) {
-                rx[0] = 1;
-                rx[1] = 1;
-                if (model_nr == M1in54B) {
-                    // send 0xcd 0x08 with 1.54B
-                    transceive_blocking(step8, 2, rx, 20, actrxlen, 2157 + 2048);
-                } else {
-                    transceive_blocking(step11, 2, rx, 20, actrxlen, 2157 + 2048);          //cd 0a
-                }
-                if (rx[0] == 0xff && rx[1] == 0) {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, "E-paper Reflash OK");
-                    fail_num = 0;
-                    step = 12;
-                    msleep(200);
-                    break;
-                } else {
-                    if (fail_num > 50) {
-                        PrintAndLogEx(WARNING, "Update failed, please try again.");
-                        DropField();
-                        return PM3_ESOFT;
-                    } else {
-                        fail_num++;
-                        PrintAndLogEx(INPLACE, "E-paper Reflashing, Waiting");
-                        msleep(100);
-                    }
-                }
+        }
+        PROMPT_CLEARLINE;
+        PrintAndLogEx(INFO, "Step9: e-paper power on");
+        if (model_nr == M2in13 || model_nr == M2in9 || model_nr == M4in2 || model_nr == M7in5 || model_nr == M7in5HD) {
+            ret = transceive_blocking(step9, 2, rx, 20, actrxlen, true); //cd 18
+            // The black-and-white screen sending backplane is also shielded, with no effect. Except 2.7
+            if (ret != PM3_SUCCESS) {
+                return ret;
             }
-
-        } else if (step == 12) {
-            PrintAndLogEx(INFO, "Step12: e-paper power off command");
-            transceive_blocking(step12, 2, rx, 20, actrxlen, 2157 + 2048);          //cd 04
-            rx[0] = 1;
-            rx[1] = 1;
-            step = 13;
-            msleep(200);
-        } else if (step == 13) {
-            PrintAndLogEx(SUCCESS, "E-paper Update OK");
-            rx[0] = 1;
-            rx[1] = 1;
-            msleep(200);
-            DropField();
-            return PM3_SUCCESS;
-        } else if (step == 19) {
+        } else if (model_nr == M2in13B ||  model_nr == M2in7) {
+            ret = transceive_blocking(step9, 2, rx, 20, actrxlen, true); //cd 18
+            if (ret != PM3_SUCCESS) {
+                return ret;
+            }
             PrintAndLogEx(INFO, "Step9b");
             if (model_nr == M2in7) {
                 for (i = 0; i < 48; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
                     read_black(i, step13, model_nr, black);
-                    transceive_blocking(step13, 124, rx, 20, actrxlen, 2157 + 2048); //CD 19
+                    ret = transceive_blocking(step13, 124, rx, 20, actrxlen, true); //CD 19
+                    if (ret != PM3_SUCCESS) {
+                        return ret;
+                    }
                     progress = i * 50 / 48 + 50;
                     PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
                 }
             } else if (model_nr == M2in13B) {
                 for (i = 0; i < 26; i++) {
-                    rx[0] = 1;
-                    rx[1] = 1;
                     read_red(i, step13, model_nr, red);
                     //memset(&step13[3], 0xfE, 106);
-                    transceive_blocking(step13, 109, rx, 20, actrxlen, 2157 + 2048);
+                    ret = transceive_blocking(step13, 109, rx, 20, actrxlen, true);
+                    if (ret != PM3_SUCCESS) {
+                        return ret;
+                    }
                     progress = i * 50 / 26 + 50;
                     PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
                 }
             }
             PROMPT_CLEARLINE;
-            rx[0] = 1;
-            rx[1] = 1;
-            step = 10;
+        }
+        PrintAndLogEx(INFO, "Step10: Refresh e-paper");
+        ret = transceive_blocking(step10, 2, rx, 20, actrxlen, true); //cd 09 refresh command
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        msleep(200);
+    }
+    PrintAndLogEx(INFO, "Step11: Wait tag to be ready");
+    if (model_nr == M2in13B || model_nr == M1in54B) { // Black, white and red screen refresh time is longer, wait first
+        msleep(9000);
+    } else if (model_nr == M7in5HD) {
+        msleep(1000);
+    }
+    uint8_t fail_num = 0;
+    while (1) {
+        if (model_nr == M1in54B) {
+            // send 0xcd 0x08 with 1.54B
+            ret = transceive_blocking(step8, 2, rx, 20, actrxlen, false);           //cd 08
+        } else {
+            ret = transceive_blocking(step11, 2, rx, 20, actrxlen, false);          //cd 0a
+        }
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        if (rx[0] == 0xff && rx[1] == 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "E-paper Reflash OK");
+            msleep(200);
+            break;
+        } else {
+            if (fail_num > 50) {
+                PrintAndLogEx(WARNING, "Update failed, please try again.");
+                DropField();
+                return PM3_ESOFT;
+            } else {
+                fail_num++;
+                PrintAndLogEx(INPLACE, "E-paper Reflashing, Waiting");
+                msleep(100);
+            }
         }
     }
+    PrintAndLogEx(INFO, "Step12: e-paper power off command");
+    ret = transceive_blocking(step12, 2, rx, 20, actrxlen, true);          //cd 04
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    msleep(200);
+    PrintAndLogEx(SUCCESS, "E-paper Update OK");
+    msleep(200);
+    DropField();
+    return PM3_SUCCESS;
 }
 
 
