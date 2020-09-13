@@ -85,7 +85,7 @@ static model_t models[] = {
     {"2.7 inch e-paper",    121, 276, 176},
     {"2.13 inch e-paper B", 106, 212, 104},
     {"1.54 inch e-paper B", 100, 200, 200},
-    {"7.5 inch e-paper HD", 120, 800, 480},
+    {"7.5 inch e-paper HD", 120, 880, 528},
 };
 
 static int CmdHelp(const char *Cmd);
