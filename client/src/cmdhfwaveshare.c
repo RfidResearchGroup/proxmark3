@@ -61,6 +61,8 @@ typedef struct {
 typedef struct model_s {
     const char *desc;
     uint8_t len; // The data sent in one time shall not be greater than 128-3
+    uint16_t width;
+    uint16_t height;
 } model_t;
 
 typedef enum {
@@ -76,14 +78,14 @@ typedef enum {
 } model_enum_t;
 
 static model_t models[] = {
-    {"2.13 inch e-paper",    16},
-    {"2.9 inch e-paper",     16},
-    {"4.2 inch e-paper",    100},
-    {"7.5 inch e-paper",    120},
-    {"2.7 inch e-paper",    121},
-    {"2.13 inch e-paper B", 106},
-    {"1.54 inch e-paper B", 100},
-    {"7.5 inch e-paper HD", 120},
+    {"2.13 inch e-paper",    16, 122, 250}, // tested
+    {"2.9 inch e-paper",     16, 128, 296},
+    {"4.2 inch e-paper",    100, 400, 300},
+    {"7.5 inch e-paper",    120, 800, 480},
+    {"2.7 inch e-paper",    121, 276, 176},
+    {"2.13 inch e-paper B", 106, 104, 212},
+    {"1.54 inch e-paper B", 100, 200, 200},
+    {"7.5 inch e-paper HD", 120, 800, 480},
 };
 
 static int CmdHelp(const char *Cmd);
@@ -104,15 +106,17 @@ static int usage_hf_waveshare_loadbmp(void) {
     return PM3_SUCCESS;
 }
 
-static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize) {
+static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uint8_t model_nr) {
     if (bmpsize < sizeof(BMP_HEADER))
         return PM3_ESOFT;
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     PrintAndLogEx(DEBUG, "colorsused = %d", pbmpheader->colorsused);
     PrintAndLogEx(DEBUG, "pbmpheader->bpp = %d", pbmpheader->bpp);
+    if ((pbmpheader->BMP_Width != models[model_nr].width) || (pbmpheader->BMP_Height != models[model_nr].height)) {
+        PrintAndLogEx(WARNING, "Invalid BMP size, expected %ix%i, got %ix%i", pbmpheader->BMP_Width, pbmpheader->BMP_Height, models[model_nr].width, models[model_nr].height);
+    }
     return pbmpheader->bpp;
 }
-
 
 static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t **black) {
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
@@ -696,7 +700,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         return PM3_EIO;
     }
 
-    int depth = picture_bit_depth(bmp, bytes_read);
+    int depth = picture_bit_depth(bmp, bytes_read, model_nr);
     if (depth == PM3_ESOFT) {
         PrintAndLogEx(ERR, "Error, BMP file is too small");
         free(bmp);
