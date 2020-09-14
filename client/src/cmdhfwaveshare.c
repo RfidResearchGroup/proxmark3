@@ -216,8 +216,8 @@ static int read_bmp_rgb(const uint8_t *bmp, const size_t bmpsize, uint8_t **blac
             Black_data = Black_data << 1;
             Red_data = Red_data << 1;
         }
-        // Skip BMP line padding
-        offset+=(((pbmpheader->BMP_Width*3/4)+1)*4)-pbmpheader->BMP_Width*3;
+        // Skip BMP line padding: we accumulate 3* %4 per line and need one more %4 as padding
+        offset += pbmpheader->BMP_Width % 4;
     }
     return PM3_SUCCESS;
 }
