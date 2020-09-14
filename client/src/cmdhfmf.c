@@ -2348,7 +2348,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Check if at least one sector key was found
     if (know_target_key == false) {
         // Check if the darkside attack can be used
-        if (prng_type && has_staticnonce == false) {
+        if (prng_type && has_staticnonce != NONCE_STATIC) {
             if (verbose) {
                 PrintAndLogEx(INFO, "======================= " _YELLOW_("START DARKSIDE ATTACK") " =======================");
             }
@@ -2485,7 +2485,7 @@ noValidKeyFound:
 skipReadBKey:
                 if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
 
-                    if (has_staticnonce)
+                    if (has_staticnonce == NONCE_STATIC)
                         goto tryStaticnested;
 
                     if (prng_type && (nested_failed == false)) {
@@ -2578,7 +2578,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                         e_sector[current_sector_i].foundKey[current_key_type_i] = 'H';
                     }
 
-                    if (has_staticnonce) {
+                    if (has_staticnonce == NONCE_STATIC) {
 tryStaticnested:
                         if (verbose) {
                             PrintAndLogEx(INFO, "======================= " _YELLOW_("START STATIC NESTED ATTACK") " =======================");
