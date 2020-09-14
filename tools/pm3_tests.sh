@@ -349,8 +349,8 @@ while true; do
       if ! CheckExecute "lf FDX-B test"         "$CLIENTBIN -c 'data load traces/homeagain1600.pm3;lf search 1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf INDALA test"        "$CLIENTBIN -c 'data load traces/indala-504278295.pm3;lf search 1'" "Indala ID found"; then break; fi
       if ! CheckExecute "lf FDX/BioThermo test" "$CLIENTBIN -c 'data load traces/lf_fdx_biothermo.pm3; lf fdx demod'" "95.2 F / 35.1 C"; then break; fi
-      if ! CheckExecute "lf GPROXII test" "$CLIENTBIN -c 'data load traces/lf_gprox_36_30_14489.pm3; lf search 1'" "Guardall G-Prox II ID found"; then break; fi
-      if ! CheckExecute "lf IDTECK test" "$CLIENTBIN -c 'data load traces/lf_idteck_4944544BAC40E069.pm3; lf search 1'" "Idteck ID found"; then break; fi
+      if ! CheckExecute "lf GPROXII test"       "$CLIENTBIN -c 'data load traces/lf_gprox_36_30_14489.pm3; lf search 1'" "Guardall G-Prox II ID found"; then break; fi
+      if ! CheckExecute "lf IDTECK test"        "$CLIENTBIN -c 'data load traces/lf_idteck_4944544BAC40E069.pm3; lf search 1'" "Idteck ID found"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
