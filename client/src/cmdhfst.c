@@ -18,6 +18,7 @@
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol
 #include "emv/apduinfo.h"  // GetAPDUCodeDescription 
+#include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
 static int CmdHelp(const char *Cmd);
@@ -30,7 +31,6 @@ static int usage_hf_st_info(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf st info"));
     return PM3_SUCCESS;
 }
-
 static int usage_hf_st_sim(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ST25TA512B tag with 7 byte UID\n");
     PrintAndLogEx(NORMAL, "Usage: hf st sim [h] u <uid> ");
@@ -38,7 +38,17 @@ static int usage_hf_st_sim(void) {
     PrintAndLogEx(NORMAL, "    h     : This help");
     PrintAndLogEx(NORMAL, "    u     : 7 byte UID");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim u 02E2007D0FCA4C"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf st sim u 02E2007D0FCA4C"));
+    return PM3_SUCCESS;
+}
+static int usage_hf_st_ndef(void) {
+    PrintAndLogEx(NORMAL, "\n Print NFC Data Exchange Format (NDEF)\n");
+    PrintAndLogEx(NORMAL, "Usage: hf st ndef [h] p <pwd> ");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "    h          : This help");
+    PrintAndLogEx(NORMAL, "    p <pwd>    : 16 byte password");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf st ndef p 82E80053D4CA5C0B656D852CC696C8A1"));
     return PM3_SUCCESS;
 }
 
@@ -334,6 +344,103 @@ static int cmd_hf_st_sim(const char *Cmd) {
     return CmdHF14ASim(param);
 }
 
+static int cmd_hf_st_ndef(const char *Cmd) {
+    char c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h' || c == 0x00) return usage_hf_st_ndef();
+
+    int pwdlen = 0;    
+    uint8_t cmdp = 0;
+    uint8_t pwd[16] = {0};
+    if (c == 'p') {
+        param_gethex_ex(Cmd, cmdp + 1, pwd, &pwdlen);
+        pwdlen >>= 1;
+        if (pwdlen != 16) {
+             return usage_hf_st_ndef();
+        }
+    }
+
+    bool activate_field = true;
+    bool keep_field_on = true;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    // ---------------  Select NDEF Tag application ----------------    
+    uint8_t aSELECT_AID[80];
+    int aSELECT_AID_n = 0;
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    if (resplen < 2)
+        return PM3_ESOFT;
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    activate_field = false;
+    keep_field_on = true;
+
+    // ---------------  NDEF file reading ----------------
+    uint8_t aSELECT_FILE_NDEF[30];
+    int aSELECT_FILE_NDEF_n = 0;
+    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);    
+    res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    // ---------------  VERIFY ----------------   
+    uint8_t aVERIFY[30];
+    int aVERIFY_n = 0;
+    param_gethex_to_eol("0020000100", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
+    res = ExchangeAPDU14a(aVERIFY, aVERIFY_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    sw = get_sw(response, resplen);
+    if (sw == 0x6300) {
+        // need to provide 16byte password
+        param_gethex_to_eol("0020000110", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
+        memcpy(aVERIFY + aVERIFY_n, pwd, pwdlen);
+        res = ExchangeAPDU14a(aVERIFY, aVERIFY_n + pwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res)
+            return res;
+
+        sw = get_sw(response, resplen);       
+        if (sw != 0x9000) {
+            PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            return PM3_ESOFT;
+        }
+    }
+   
+    keep_field_on = false;
+    uint8_t aREAD_NDEF[30];
+    int aREAD_NDEF_n = 0;
+    param_gethex_to_eol("00b000001d", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);    
+    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "ice: %s", sprint_hex_inrow(response + 2, resplen - 4));
+    NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+    return PM3_SUCCESS;
+}
+
 static int cmd_hf_st_list(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("7816");
@@ -344,6 +451,7 @@ static command_t CommandTable[] = {
     {"help", CmdHelp,         AlwaysAvailable, "This help"},
     {"info", cmd_hf_st_info,  IfPm3Iso14443a,  "Tag information"},
     {"list", cmd_hf_st_list,  AlwaysAvailable, "List ISO 14443A/7816 history"},
+    {"ndef", cmd_hf_st_ndef,  AlwaysAvailable, "read NDEF file on tag"},
     {"sim",  cmd_hf_st_sim,   IfPm3Iso14443a,  "Fake ISO 14443A/ST tag"},
     {NULL, NULL, NULL, NULL}
 };
