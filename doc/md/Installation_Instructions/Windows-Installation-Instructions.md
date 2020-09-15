@@ -76,8 +76,15 @@ If you want to run the graphical components of the Proxmark3 client, you need to
 
 Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
 
+Make sure your WSL guest OS is up-to-date first
 ```sh
 sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get auto-remove -y
+```
+
+Install dependencies
+```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
 libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev
 ```
