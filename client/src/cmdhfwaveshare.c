@@ -80,7 +80,7 @@ typedef enum {
 static model_t models[] = {
     {"2.13 inch e-paper",    16, 122, 250}, // tested
     {"2.9 inch e-paper",     16, 128, 296},
-    {"4.2 inch e-paper",    100, 400, 300},
+    {"4.2 inch e-paper",    100, 400, 300}, // tested
     {"7.5 inch e-paper",    120, 480, 800},
     {"2.7 inch e-paper",    121, 276, 176},
     {"2.13 inch e-paper B", 106, 212, 104},
