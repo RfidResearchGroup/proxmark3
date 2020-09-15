@@ -53,7 +53,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 #define RWD_TIME_PAUSE        4 /* 18.9us */
 #define RWD_TIME_1           21 /* RWD_TIME_PAUSE 18.9us off + 80.2us on = 99.1us */
 #define RWD_TIME_0           13 /* RWD_TIME_PAUSE 18.9us off + 42.4us on = 61.3us */
-#define RWD_CMD_TIMEOUT     120 /* 120 * 99.1us (arbitrary value) */
+#define RWD_CMD_TIMEOUT     400 /* 120 * 99.1us (arbitrary value) */
 #define RWD_MIN_FRAME_LEN     6 /* Shortest frame is 6 bits */
 #define RWD_MAX_FRAME_LEN    23 /* Longest frame is 23 bits */
 
@@ -68,6 +68,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 // Note: inlining this function would fail with -Os
 static bool wait_for(bool value, const uint32_t timeout) {
     while ((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
+        WDT_HIT();
         if (GetCountSspClk() > timeout) {
             return false;
         }
@@ -215,7 +216,7 @@ static int32_t rx_frame(uint8_t *len) {
     last_frame_end -= 2;
 
     // wait for first pause (start of frame)
-    for (uint8_t i = 0; true; ++i) {
+    for (uint16_t i = 0; true; ++i) {
         // increment prng every TAG_BIT_PERIOD
         last_frame_end += TAG_BIT_PERIOD;
         legic_prng_forward(1);
