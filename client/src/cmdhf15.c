@@ -381,6 +381,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
         {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
         {"MICRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+        {"Spark1 Public key", "04d64bb732c0d214e7ec580736acf847284b502c25c0f7f2fa86aace1dada4387a"},
     };
     /*
         uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
