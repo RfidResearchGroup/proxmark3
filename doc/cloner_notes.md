@@ -3,9 +3,9 @@
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=39903#p39903
 
 - [Blue and black cloners](#blue-and-black-cloners)
-- [White cloner (pre 2015)](#white-cloner-(pre-2015))
-- [White cloner (after 2016)](#white-cloner-(after-2016))
-- [White cloner (after 2016 D Quality)](#white-cloner-(after-2016-d-quality))
+- [White cloner (pre 2015)](#white-cloner-pre-2015)
+- [White cloner (after 2016)](#white-cloner-after-2016)
+- [White cloner (after 2016 D Quality)](#white-cloner-after-2016-d-quality)
 - [restore page1 data](#restore-page1-data)
 
 
