@@ -114,12 +114,12 @@ static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uin
     PrintAndLogEx(DEBUG, "colorsused = %d", pbmpheader->colorsused);
     PrintAndLogEx(DEBUG, "pbmpheader->bpp = %d", pbmpheader->bpp);
     if ((pbmpheader->BMP_Width != models[model_nr].width) || (pbmpheader->BMP_Height != models[model_nr].height)) {
-        PrintAndLogEx(WARNING, "Invalid BMP size, expected %ix%i, got %ix%i", pbmpheader->BMP_Width, pbmpheader->BMP_Height, models[model_nr].width, models[model_nr].height);
+        PrintAndLogEx(WARNING, "Invalid BMP size, expected %ix%i, got %ix%i", models[model_nr].width, models[model_nr].height, pbmpheader->BMP_Width, pbmpheader->BMP_Height);
     }
     return pbmpheader->bpp;
 }
 
-static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t **black) {
+static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **black_minus_red, uint8_t **red) {
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     // check file is bitmap
     if (pbmpheader->bpp != 1) {
@@ -143,17 +143,40 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t **b
     uint16_t Image_Width_Byte = (pbmpheader->BMP_Width % 8 == 0) ? (pbmpheader->BMP_Width / 8) : (pbmpheader->BMP_Width / 8 + 1);
     uint16_t Bmp_Width_Byte = (Image_Width_Byte % 4 == 0) ? Image_Width_Byte : ((Image_Width_Byte / 4 + 1) * 4);
 
-    *black = calloc(WSMAPSIZE, sizeof(uint8_t));
-    if (*black == NULL) {
-        return PM3_EMALLOC;
-    }
-    // Write data into RAM
-    for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
-        for (X = 0; X < Bmp_Width_Byte; X++) { // lines
-            if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
-                (*black)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
+    if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
+        // for BW+Red screens:
+        *black_minus_red = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*black_minus_red == NULL) {
+            return PM3_EMALLOC;
+        }
+        *red = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*red == NULL) {
+            free(*black_minus_red);
+            return PM3_EMALLOC;
+        }
+        // Write data into RAM
+        for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
+            for (X = 0; X < Bmp_Width_Byte; X++) { // lines
+                if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
+                    (*black_minus_red)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
+                }
+                offset++;
             }
-            offset++;
+        }
+    } else {
+        // for BW-only screens:
+        *black = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*black == NULL) {
+            return PM3_EMALLOC;
+        }
+        // Write data into RAM
+        for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
+            for (X = 0; X < Bmp_Width_Byte; X++) { // lines
+                if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
+                    (*black)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
+                }
+                offset++;
+            }
         }
     }
     return PM3_SUCCESS;
@@ -530,9 +553,7 @@ static void read_black(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *black)
 }
 static void read_red(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *red) {
     for (uint8_t j = 0; j < models[model_nr].len; j++) {
-        if (red == NULL) {
-            l[3 + j] = ~0x00;
-        } else if (model_nr == M1in54B) {
+        if (model_nr == M1in54B) {
             //1.54B needs to flip the red picture data, other screens do not need to flip data
             l[3 + j] = ~red[i * models[model_nr].len + j];
         } else {
@@ -1013,7 +1034,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         return PM3_ESOFT;
     } else if (depth == 1) {
         PrintAndLogEx(DEBUG, "BMP file is a bitmap");
-        if (read_bmp_bitmap(bmp, bytes_read, &black) != PM3_SUCCESS) {
+        if (read_bmp_bitmap(bmp, bytes_read, model_nr, &black, &black_minus_red, &red) != PM3_SUCCESS) {
             free(bmp);
             return PM3_ESOFT;
         }
@@ -1035,7 +1056,9 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
     free(bmp);
 
     start_drawing(model_nr, black, black_minus_red, red);
-    free(black);
+    if (black != NULL) {
+        free(black);
+    }
     if (black_minus_red != NULL) {
         free(black_minus_red);
     }
