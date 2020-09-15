@@ -78,24 +78,25 @@ typedef enum {
 } model_enum_t;
 
 static model_t models[] = {
-    {"2.13 inch e-paper",    16, 122, 250}, // tested
-    {"2.9 inch e-paper",     16, 296, 128},
-    {"4.2 inch e-paper",    100, 400, 300}, // tested
-    {"7.5 inch e-paper",    120, 800, 480},
-    {"2.7 inch e-paper",    121, 276, 176},
-    {"2.13 inch e-paper B", 106, 212, 104},
-    {"1.54 inch e-paper B", 100, 200, 200},
-    {"7.5 inch e-paper HD", 120, 880, 528},
+    {"2.13 inch e-paper",               16, 122, 250}, // tested
+    {"2.9  inch e-paper",               16, 296, 128},
+    {"4.2  inch e-paper",              100, 400, 300}, // tested
+    {"7.5  inch e-paper",              120, 800, 480},
+    {"2.7  inch e-paper",              121, 276, 176},
+    {"2.13 inch e-paper B (with red)", 106, 212, 104},
+    {"1.54 inch e-paper B (with red)", 100, 200, 200},
+    {"7.5  inch e-paper HD",           120, 880, 528},
 };
 
 static int CmdHelp(const char *Cmd);
 
 static int usage_hf_waveshare_loadbmp(void) {
     PrintAndLogEx(NORMAL, "Load BMP file to Waveshare NFC ePaper.");
-    PrintAndLogEx(NORMAL, "Usage:  hf waveshare loadbmp [h] f <filename[.bmp]> m <model_nr>");
+    PrintAndLogEx(NORMAL, "Usage:  hf waveshare loadbmp [h] f <filename[.bmp]> m <model_nr> [s]");
     PrintAndLogEx(NORMAL, "  Options :");
     PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename[.bmp]") " to upload to tag");
     PrintAndLogEx(NORMAL, "  m <nr>  : " _YELLOW_("model number") " of your tag");
+    PrintAndLogEx(NORMAL, "  s       : save dithered version in filename-[n].bmp, only for RGB BMP");
     for (uint8_t i=0; i< MEND; i++) {
         PrintAndLogEx(NORMAL, "  m %2i    : %s", i, models[i].desc);
     }
@@ -349,7 +350,7 @@ static void map8to1(uint8_t *colormap, uint16_t width, uint16_t height, uint8_t 
     }
 }
 
-static int read_bmp_rgb(const uint8_t *bmp, const size_t bmpsize, uint8_t **black, uint8_t **black_minus_red, uint8_t **red) {
+static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **black_minus_red, uint8_t **red, char *filename, bool save_conversions) {
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     // check file is full color
     if (pbmpheader->bpp != 24) {
@@ -397,88 +398,128 @@ static int read_bmp_rgb(const uint8_t *bmp, const size_t bmpsize, uint8_t **blac
         offset+=width%4;
     }
 
-    // for BW-only screens:
-    int16_t *chanGrey = calloc(width*height, sizeof(int16_t));
-    if (chanGrey == NULL) {
-        free(chanR);
-        free(chanG);
-        free(chanB);
-        return PM3_EMALLOC;
-    }
-    rgb_to_gray(chanR, chanG, chanB, width, height, chanGrey);
-    dither_chan_inplace(chanGrey, width, height);
+    if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
+        // for BW+Red screens:
+        uint8_t *mapBlackMinusRed = calloc(width*height, sizeof(uint8_t));
+        if (mapBlackMinusRed == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            return PM3_EMALLOC;
+        }
+        uint8_t *mapRed = calloc(width*height, sizeof(uint8_t));
+        if (mapRed == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            free(mapBlackMinusRed);
+            return PM3_EMALLOC;
+        }
+        rgb_to_gray_red_inplace(chanR, chanG, chanB, width, height);
 
-    uint8_t *mapBlack = calloc(width*height, sizeof(uint8_t));
-    if (mapBlack == NULL) {
+        uint8_t palette[] ={0x00,0x00,0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00}; // black, white, red
+        dither_rgb_inplace(chanR, chanG, chanB, width, height, palette, sizeof(palette)/3);
+
+        threshold_rgb_black_red(chanR, chanG, chanB, width, height, 128, 128, mapBlackMinusRed, mapRed);
+        if (save_conversions) {
+            // fill BMP chans
+            offset = pbmpheader->offset;
+            for (uint16_t Y=0; Y<height; Y++) {
+                for (uint16_t X=0; X<width; X++) {
+                    bmp[offset++] = chanB[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanG[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanR[X + (height - Y - 1) * width] & 0xFF;
+                }
+                // Skip line padding
+                offset+=width%4;
+            }
+            PrintAndLogEx(INFO, "Saving red+black dithered version...");
+            if (saveFile(filename, ".bmp", bmp, offset) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Could not save file " _YELLOW_("%s"), filename);
+                free(chanR);
+                free(chanG);
+                free(chanB);
+                free(mapBlackMinusRed);
+                free(mapRed);
+                return PM3_EIO;
+            }
+        }
         free(chanR);
         free(chanG);
         free(chanB);
+        *black_minus_red = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*black_minus_red == NULL) {
+            free(mapBlackMinusRed);
+            free(mapRed);
+            return PM3_EMALLOC;
+        }
+        map8to1(mapBlackMinusRed, width, height, *black_minus_red);
+        free(mapBlackMinusRed);
+        *red = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*red == NULL) {
+            free(mapRed);
+            free(*black_minus_red);
+            return PM3_EMALLOC;
+        }
+        map8to1(mapRed, width, height, *red);
+        free(mapRed);
+    } else {
+        // for BW-only screens:
+        int16_t *chanGrey = calloc(width*height, sizeof(int16_t));
+        if (chanGrey == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            return PM3_EMALLOC;
+        }
+        rgb_to_gray(chanR, chanG, chanB, width, height, chanGrey);
+        dither_chan_inplace(chanGrey, width, height);
+
+        uint8_t *mapBlack = calloc(width*height, sizeof(uint8_t));
+        if (mapBlack == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            free(chanGrey);
+            return PM3_EMALLOC;
+        }
+        threshold_chan(chanGrey, width, height, 128, mapBlack);
+
+        if (save_conversions) {
+            // fill BMP chans
+            offset = pbmpheader->offset;
+            for (uint16_t Y=0; Y<height; Y++) {
+                for (uint16_t X=0; X<width; X++) {
+                    bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                }
+                // Skip line padding
+                offset+=width%4;
+            }
+            PrintAndLogEx(INFO, "Saving black dithered version...");
+            if (saveFile(filename, ".bmp", bmp, offset) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Could not save file " _YELLOW_("%s"), filename);
+                free(chanGrey);
+                free(chanR);
+                free(chanG);
+                free(chanB);
+                free(mapBlack);
+                return PM3_EIO;
+            }
+        }
         free(chanGrey);
-        return PM3_EMALLOC;
-    }
-    threshold_chan(chanGrey, width, height, 128, mapBlack);
-    free(chanGrey);
-
-    // for BW+Red screens:
-    uint8_t *mapBlackMinusRed = calloc(width*height, sizeof(uint8_t));
-    if (mapBlackMinusRed == NULL) {
         free(chanR);
         free(chanG);
         free(chanB);
+        *black = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*black == NULL) {
+            free(mapBlack);
+            return PM3_EMALLOC;
+        }
+        map8to1(mapBlack, width, height, *black);
         free(mapBlack);
-        return PM3_EMALLOC;
     }
-    uint8_t *mapRed = calloc(width*height, sizeof(uint8_t));
-    if (mapRed == NULL) {
-        free(chanR);
-        free(chanG);
-        free(chanB);
-        free(mapBlack);
-        free(mapBlackMinusRed);
-        return PM3_EMALLOC;
-    }
-    rgb_to_gray_red_inplace(chanR, chanG, chanB, width, height);
-
-    uint8_t palette[] ={0x00,0x00,0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00}; // black, white, red
-    dither_rgb_inplace(chanR, chanG, chanB, width, height, palette, sizeof(palette)/3);
-
-    threshold_rgb_black_red(chanR, chanG, chanB, width, height, 128, 128, mapBlackMinusRed, mapRed);
-    free(chanR);
-    free(chanG);
-    free(chanB);
-
-    *black = calloc(WSMAPSIZE, sizeof(uint8_t));
-    if (*black == NULL) {
-        free(mapBlack);
-        free(mapBlackMinusRed);
-        free(mapRed);
-        return PM3_EMALLOC;
-    }
-    *black_minus_red = calloc(WSMAPSIZE, sizeof(uint8_t));
-    if (*black_minus_red == NULL) {
-        free(mapBlack);
-        free(mapBlackMinusRed);
-        free(mapRed);
-        free(*black);
-        return PM3_EMALLOC;
-    }
-    *red = calloc(WSMAPSIZE, sizeof(uint8_t));
-    if (*red == NULL) {
-        free(mapBlack);
-        free(mapBlackMinusRed);
-        free(mapRed);
-        free(*black);
-        free(*black_minus_red);
-        return PM3_EMALLOC;
-    }
-
-    map8to1(mapBlack, width, height, *black);
-    map8to1(mapBlackMinusRed, width, height, *black_minus_red);
-    map8to1(mapRed, width, height, *red);
-    free(mapBlack);
-    free(mapBlackMinusRed);
-    free(mapRed);
-    
     return PM3_SUCCESS;
 }
 
@@ -915,7 +956,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
     bool errors = false;
     size_t filenamelen = 0;
     uint8_t model_nr = 0xff;
-
+    bool save_conversions = false;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -929,6 +970,10 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
             case 'm':
                 model_nr = param_get8(Cmd, cmdp + 1);
                 cmdp += 2;
+                break;
+            case 's':
+                save_conversions = true;
+                cmdp += 1;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
@@ -974,7 +1019,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         }
     } else if (depth == 24) {
         PrintAndLogEx(DEBUG, "BMP file is a RGB");
-        if (read_bmp_rgb(bmp, bytes_read, &black, &black_minus_red, &red) != PM3_SUCCESS) {
+        if (read_bmp_rgb(bmp, bytes_read, model_nr, &black, &black_minus_red, &red, filename, save_conversions) != PM3_SUCCESS) {
             free(bmp);
             return PM3_ESOFT;
         }
