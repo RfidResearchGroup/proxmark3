@@ -436,7 +436,6 @@ static int cmd_hf_st_ndef(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "ice: %s", sprint_hex_inrow(response + 2, resplen - 4));
     NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
     return PM3_SUCCESS;
 }
