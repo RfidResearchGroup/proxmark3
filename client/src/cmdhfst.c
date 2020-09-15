@@ -79,6 +79,9 @@ static char *get_st_chip_model(uint8_t pc) {
         case 0xC:
             sprintf(s, "SRT512");
             break;
+        case 0xC4:
+            sprintf(s, "ST25TA64K");
+            break;
         case 0xE2:
             sprintf(s, "ST25??? IKEA Rothult");
             break;
