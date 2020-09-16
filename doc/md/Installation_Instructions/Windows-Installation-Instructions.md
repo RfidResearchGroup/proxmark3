@@ -17,11 +17,9 @@ There are two ways to install, build and use Proxmark3 on Windows:
 Install required drivers for your Windows installation. You may need admin privileges to do this.  
 Step by step guides are online such as [RyscCorps](https://store.ryscc.com/blogs/news/how-to-install-a-proxmark3-driver-on-windows-10).
 
-## Download / clone ProxSpace repo
+## Download ProxSpace repo
 
 Download the Gator96100 ProxSpace package from https://github.com/Gator96100/ProxSpace/releases
-
-If you prefer, you can clone it, provided that you installed Github for Windows https://desktop.github.com/.
 
 Extract 'ProxSpace' to a location path without spaces.  
 For example D:\OneDrive\Documents\GitHub is ok whereas C:\My Documents\My Projects\proxspace is not.
@@ -30,7 +28,7 @@ If you're running Windows in a Virtualbox guest, make sure not to install ProxSp
 
 ## Launch ProxSpace
 
-Run `runme.bat` or `runme64.bat` depending on your Windows architecture.
+Run `runme64.bat`.
 
 You'll get a Bash prompt and your home directory should become the ProxSpace `pm3` sub-directory.
 
@@ -76,8 +74,15 @@ If you want to run the graphical components of the Proxmark3 client, you need to
 
 Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
 
+Make sure your WSL guest OS is up-to-date first
 ```sh
 sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get auto-remove -y
+```
+
+Install dependencies
+```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
 libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev
 ```

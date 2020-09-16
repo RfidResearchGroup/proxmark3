@@ -372,7 +372,7 @@ int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_
     return res;
 }
 
-
+// take signature bytes,  converts to ASN1 signature and tries to verify
 int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *r_s, size_t r_s_len, bool hash) {
     int res;
     uint8_t signature[MBEDTLS_ECDSA_MAX_LEN];
@@ -391,10 +391,8 @@ int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, ui
     }
 
     res = ecdsa_signature_verify(curveid, key_xy, input, length, signature, signature_len, hash);
-
     mbedtls_mpi_free(&r);
     mbedtls_mpi_free(&s);
-
     return res;
 }
 

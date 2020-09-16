@@ -31,7 +31,7 @@
 bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);
-static int waitCmd(uint8_t iSelect);
+static int waitCmd(uint8_t iSelect, uint32_t timeout);
 
 static const manufactureName manufactureMapping[] = {
     // ID,  "Vendor Country"
@@ -170,19 +170,40 @@ uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int usage_hf_14a_config(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a config [a 0|1|2] [b 0|1|2] [2 0|1|2] [3 0|1|2]");
-    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "\nOptions:");
     PrintAndLogEx(NORMAL, "       h                 This help");
     PrintAndLogEx(NORMAL, "       a 0|1|2           ATQA<>anticollision: 0=follow standard 1=execute anticol 2=skip anticol");
     PrintAndLogEx(NORMAL, "       b 0|1|2           BCC:                 0=follow standard 1=use fixed BCC   2=use card BCC");
     PrintAndLogEx(NORMAL, "       2 0|1|2           SAK<>CL2:            0=follow standard 1=execute CL2     2=skip CL2");
     PrintAndLogEx(NORMAL, "       3 0|1|2           SAK<>CL3:            0=follow standard 1=execute CL3     2=skip CL3");
     PrintAndLogEx(NORMAL, "       r 0|1|2           SAK<>ATS:            0=follow standard 1=execute RATS    2=skip RATS");
-    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "\nExamples:");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config       ")"     Print current configuration");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1   ")"     Force execution of anticollision");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0   ")"     Restore ATQA interpretation");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 1   ")"     Force fix of bad BCC in anticollision");
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config b 0   ")"     Restore BCC check");
+    PrintAndLogEx(NORMAL, "\nExamples to revive Gen2/DirectWrite magic cards failing at anticollision:");
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 4b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 2 r 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344440804006263646566676869"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 r 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 4b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 2 r 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 11223344441802006263646566676869"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 r 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 1k 7b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 1 3 2 r 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566084400626364656667"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 3 0 r 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 7b UID")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 1 3 2 r 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl 0 A FFFFFFFFFFFF 04112233445566184200626364656667"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 3 0 r 0"));
+    PrintAndLogEx(NORMAL, _CYAN_("    MFUL ")"/" _CYAN_(" MFUL EV1 ")"/" _CYAN_(" MFULC")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 1 b 2 2 1 3 2 r 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf mfu setuid 04112233445566"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config a 0 b 0 2 0 3 0 r 0"));
     return PM3_SUCCESS;
 }
 
@@ -201,6 +222,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "            7 = AMIIBO (NTAG 215),  pack 0x8080");
     PrintAndLogEx(NORMAL, "            8 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
+    PrintAndLogEx(NORMAL, "           10 = JCOP 31/41 Rothult");
 //  PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
     PrintAndLogEx(NORMAL, "    u     : 4, 7 byte UID");
     PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
@@ -1308,17 +1330,17 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     if (reply) {
         int res = 0;
         if (active_select)
-            res = waitCmd(1);
+            res = waitCmd(1, timeout);
         if (!res && datalen > 0)
-            waitCmd(0);
+            waitCmd(0, timeout);
     }
     return 0;
 }
 
-static int waitCmd(uint8_t iSelect) {
+static int waitCmd(uint8_t iSelect, uint32_t timeout) {
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout + 1500)) {
         uint16_t len = (resp.oldarg[0] & 0xFFFF);
         if (iSelect) {
             len = (resp.oldarg[1] & 0xFFFF);
@@ -1663,6 +1685,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 }
                 getTagLabel(card.uid[0], card.uid[1]);
                 break;
+            case 0x57: // Qualcomm
+                if (memcmp(card.uid, "WSDZ10m", 7) == 0) {
+                    isMifareClassic = false;
+                    printTag("Waveshare NFC-Powered e-Paper");
+                }
+                break;
             default:
                 getTagLabel(card.uid[0], card.uid[1]);
                 switch (card.sak) {
@@ -1955,23 +1983,28 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMagic = detect_classic_magic();
 
         if (isMifareClassic) {
-            int res = detect_classic_prng();
-            if (res == 1)
-                PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
-            else if (res == 0)
-                PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
-            else
-                PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
 
-            if (do_nack_test)
-                detect_classic_nackbug(false);
-
-            res = detect_classic_static_nonce();
-            if (res == 1)
+            int res = detect_classic_static_nonce();
+            if (res == NONCE_STATIC)
                 PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
-            if (res == 2 && verbose)
-                PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("fail"));
 
+            if (res == NONCE_FAIL && verbose)
+                PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
+
+            if (res == NONCE_NORMAL) {
+
+                // not static
+                res = detect_classic_prng();
+                if (res == 1)
+                    PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
+                else if (res == 0)
+                    PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
+                else
+                    PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
+
+                if (do_nack_test)
+                    detect_classic_nackbug(false);
+            }
         }
     }
 

@@ -53,6 +53,7 @@ extern bool showDemod;
 #endif
 #define MAX_PRINT_BUFFER 2048
 
+#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          \r")
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetFlushAfterWrite(bool value);

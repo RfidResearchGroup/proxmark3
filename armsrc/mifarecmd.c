@@ -2242,6 +2242,8 @@ void MifareCIdent(void) {
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
+    uint8_t rdbl[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
+    uint8_t rdbl0[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2276,10 +2278,22 @@ void MifareCIdent(void) {
 
         ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
+        // test for some MFC gen2
         if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
+
+            // super card ident
+            uint8_t super[] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
+            ReaderTransmit(super, sizeof(super), NULL);
+            res = ReaderReceive(buf, par);
+            if (res == 22) {
+                isGen = MAGIC_SUPER;
+                goto OUT;
+            }
+
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
+        // test for some MFC 7b gen2
         if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
             isGen = MAGIC_GEN_2;
         }
@@ -2303,6 +2317,37 @@ void MifareCIdent(void) {
             isGen = MAGIC_GEN_2;
             goto OUT;
         }
+        // test for NTAG213 magic gen2
+        if (memcmp(buf, "\x85\x00\x00\xA0\x00\x00\x0A\xA5\x00\x04\x04\x02\x01\x00\x0F\x03\x79\x0C", 18) == 0) {
+            isGen = MAGIC_GEN_2;
+            goto OUT;
+        }
+
+        // magic ntag test
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        SpinDelay(40);
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+        if (res == 2) {
+            ReaderTransmit(rdbl, sizeof(rdbl), NULL);
+            res = ReaderReceive(buf, par);
+            if (res == 18) {
+                isGen = MAGIC_NTAG21X;
+            }
+        }
+
+        // magic MFC Gen3 test
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        SpinDelay(40);
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+        if (res == 2) {
+            ReaderTransmit(rdbl0, sizeof(rdbl0), NULL);
+            res = ReaderReceive(buf, par);
+            if (res == 18) {
+                isGen = MAGIC_GEN_3;
+            }
+        }
     };
 
 OUT:
@@ -2317,29 +2362,29 @@ OUT:
 void MifareHasStaticNonce(void) {
 
     // variables
-    int retval = PM3_SUCCESS, len;
-
-    uint32_t nt = 0 ;
-    uint8_t rec[1] = {0x00};
-    uint8_t recpar[1] = {0x00};
+    int retval = PM3_SUCCESS;
+    uint32_t nt = 0;
     uint8_t *uid = BigBuf_malloc(10);
-    uint8_t data[1] = {0x00};
-
+    uint8_t data[1] = { NONCE_FAIL };
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
-    iso14a_card_select_t card_info;
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-    for (int i = 0; i < 3; i++) {
+    uint8_t counter = 0;
+    for (uint8_t i = 0; i < 3; i++) {
+
+        iso14a_card_select_t card_info;
         if (!iso14443a_select_card(uid, &card_info, NULL, true, 0, true)) {
             retval = PM3_ESOFT;
             goto OUT;
         }
 
+        uint8_t rec[1] = {0x00};
+        uint8_t recpar[1] = {0x00};
         // Transmit MIFARE_CLASSIC_AUTH 0x60, block 0
-        len = mifare_sendcmd_short(pcs, false, MIFARE_AUTH_KEYA, 0, rec, recpar, NULL);
+        int len = mifare_sendcmd_short(pcs, false, MIFARE_AUTH_KEYA, 0, rec, recpar, NULL);
         if (len != 4) {
             retval = PM3_ESOFT;
             goto OUT;
@@ -2347,12 +2392,22 @@ void MifareHasStaticNonce(void) {
 
         // Save the tag nonce (nt)
         if (nt == bytes_to_num(rec, 4)) {
-            data[0]++;
+            counter++;
         }
 
         nt = bytes_to_num(rec, 4);
 
+        // some cards with static nonce need to be reset before next query
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        LEDsoff();
         CHK_TIMEOUT();
+    }
+
+    if (counter) {
+        Dbprintf("%u static nonce %08x", data[0], nt);
+        data[0] = NONCE_STATIC;
+    } else {
+        data[0] = NONCE_NORMAL;
     }
 
 OUT:

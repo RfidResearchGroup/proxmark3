@@ -13,6 +13,8 @@ indala-504278295.pm3: PSK 26 bit indala
 homeagain.pm3: HomeAgain animal (cat) tag - ID 985121004515220
 homeagain1600.pm3: HomeAgain animal (cat) tag - ID 985121004515220
 keri.pm3: Keri PSK-3 Key Ring tag (back of tag: 1460 3411)
+lf_gprox_36_30_14489.pm3: G-Prox-II FC: 30 Card: 3949,  Format 36b  ASK/BIPHASE
+lf_idteck_4944544BAC40E069.pm3:  IDTECK raw 4944544BAC40E069 , PSK
 Transit999-best.pm3: Transit 999 format (UID 99531670)
 ATA5577-HIDemu-FC1-C9.pm3: ata5577 in hid prox 26 bit emulation facility code:1 card#:9
 AWID-15-259.pm3: AWID FSK RF/50 FC: 15 Card: 259 

@@ -442,13 +442,19 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 uint8_t block = 0;
                 if (cmdsize == 13)
                     block = cmd[10];
+                else if (cmdsize == 5)
+                    block = cmd[2];
 
                 snprintf(exp, size, "READBLOCK(%d)", block);
                 return;
             }
-            case ISO15693_WRITEBLOCK:
-                snprintf(exp, size, "WRITEBLOCK");
+            case ISO15693_WRITEBLOCK: {
+                uint8_t block = 0;
+                if (cmdsize == 9)
+                    block = cmd[2];
+                snprintf(exp, size, "WRITEBLOCK(%d)", block);
                 return;
+            }
             case ISO15693_LOCKBLOCK:
                 snprintf(exp, size, "LOCKBLOCK");
                 return;

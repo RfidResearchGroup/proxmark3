@@ -759,8 +759,8 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_ACQ_RAW_ADC: {
             struct p {
-                bool verbose;
-                uint32_t samples;
+                uint32_t samples : 31;
+                bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             uint32_t bits = SampleLF(payload->verbose, payload->samples);
@@ -772,9 +772,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t delay;
                 uint16_t ones;
                 uint16_t zeros;
+                uint32_t samples : 31;
+                bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            ModThenAcquireRawAdcSamples125k(payload->delay, payload->zeros, payload->ones, packet->data.asBytes + 8);
+            ModThenAcquireRawAdcSamples125k(payload->delay, payload->zeros, payload->ones, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples);
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {

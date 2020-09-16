@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Add `hf 14a config` to deal with badly configured cards: invalid ATQA/BCC/SAK (@doegox)"
+ - Add options to `lf read` and `lf cmdread` (@doegox)
+ - Change options of `lf read` to match `lf cmdread`, this affects historical `d` and `s` options (@doegox)
+ - Add `hf waveshare` to upload picture to Waveshare NFC-Powered e-Paper (@doegox)
+ - Add `hf 14a config` to deal with badly configured cards: invalid ATQA/BCC/SAK (@doegox)
  - Mikron JSC Russia Ultralight EV1 41 pages tag type support (@McEloff)
  - Add test for Ultralight gen2 magic 'hf search' (@McEloff)
  - Add test for Ultralight EV1 gen2 magic 'hf search' (@McEloff)
@@ -101,7 +104,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change appveyor verbose (@doegox)
  - Change `lf nexwatch demod` - now detects type, and show parity /chksum (@iceman1001)
  - Change `lfsampling` - interruptible only when logging not yet triggered (@doegox)
- - Change `lf keri demod - more leanient when it comes to bits (@iceman1001)
+ - Change `lf keri demod` - more leanient when it comes to bits (@iceman1001)
  - fix, proper filtering of RL markers (@doegox)
  - Change, clean deps [compiler trials] (@doegox)
  - Change, remove c99 restrictions [compiler trials] (@doegox)

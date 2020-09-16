@@ -117,8 +117,10 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdhfmfp.c
         ${PM3_ROOT}/client/src/cmdhfmfu.c
+        ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
+        ${PM3_ROOT}/client/src/cmdhfwaveshare.c
         ${PM3_ROOT}/client/src/cmdhw.c
         ${PM3_ROOT}/client/src/cmdlf.c
         ${PM3_ROOT}/client/src/cmdlfawid.c

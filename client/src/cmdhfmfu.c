@@ -2540,6 +2540,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    PrintAndLogEx(INFO, "Please ignore possible transient BCC warnings");
     // read block2.
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
@@ -2551,6 +2552,21 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     // save old block2.
     uint8_t oldblock2[4] = {0x00};
     memcpy(resp.data.asBytes, oldblock2, 4);
+
+    // Enforce bad BCC handling temporarily as BCC will be wrong between
+    // block 1 write and block2 write
+    hf14a_config config;
+    SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    memcpy(&config, resp.data.asBytes, sizeof(hf14a_config));
+    int8_t oldconfig_bcc = config.forcebcc;
+    if (oldconfig_bcc != 2) {
+        config.forcebcc = 2;
+        SendCommandNG(CMD_HF_ISO14443A_SET_CONFIG, (uint8_t *)&config, sizeof(hf14a_config));
+    }
 
     // block 0.
     uint8_t data[4];
@@ -2587,6 +2603,12 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
+    }
+
+    // restore BCC config
+    if (oldconfig_bcc != 2) {
+        config.forcebcc = oldconfig_bcc;
+        SendCommandNG(CMD_HF_ISO14443A_SET_CONFIG, (uint8_t *)&config, sizeof(hf14a_config));
     }
     return PM3_SUCCESS;
 }

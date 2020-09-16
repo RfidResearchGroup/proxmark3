@@ -1,6 +1,13 @@
 version: 3.0.1.{build}
 image: Visual Studio 2019
-clone_folder: C:\ProxSpace\pm3
+clone_folder: C:\ProxSpace\pm3\proxmark
+environment:
+  proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
+  proxspace_zip_file: \proxspace.zip
+  proxspace_zip_folder_name: ProxSpace-*
+  proxspace_path: \ProxSpace
+  proxspace_home_path: \ProxSpace\pm3
+
 init:
 - ps: >-
     $psversiontable
@@ -25,42 +32,79 @@ init:
     # iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 clone_script:
 - ps: >-
+    
+    Function ExecUpdate($Text, $firstStart) {
+        Write-Host "$Text" -NoNewLine 
+        Start-Process "cmd.exe"  "/c ""cd /D $env:proxspace_path && call msys2\ps\setup.cmd && msys2\msys2_shell.cmd -mingw64 -defterm -no-start -c ""exit"""""
+        $StartTime=[System.Environment]::TickCount
+        Start-Sleep -s 10
+        while($true) {
+            $cmdprocess = Get-Process "cmd" -ErrorAction SilentlyContinue
+            
+            if (!$cmdprocess -Or $cmdprocess.HasExited) {
+                Write-Host "[ OK ]" -ForegroundColor Green
+                break
+            }
+            
+            if ($firstStart -And (Test-Path "$env:proxspace_path\msys2\etc\pacman.conf.pacnew")) {
+                Start-Sleep -s 5
+                $tmp = $cmdprocess.CloseMainWindow()
+                Start-Sleep -s 5
+                Stop-Process -Name "cmd" -Force -ErrorAction SilentlyContinue
+                Write-Host "Exit by pacman.conf" -ForegroundColor Green
+                break           
+            }
+            
+            if ([System.Environment]::TickCount-$StartTime -gt 1000000) {
+                Write-host "Exit by timeout" -ForegroundColor Yellow
+                break
+            }
+            
+            Start-Sleep -s 1
+        }
+    }
+    
     Write-Host "Removing ProxSpace..." -NoNewLine
     
     $CloneTime=[System.Environment]::TickCount
-
+    
     cd \
 
-    Remove-Item -Recurse -Force -Path c:\ProxSpace\*
+    Remove-Item -Recurse -Force -Path $env:proxspace_path
 
     Write-Host "[ OK ]" -ForegroundColor Green
 
-
-    Write-Host "Git clone ProxSpace..." -NoNewLine
-
-    git clone -q https://github.com/Gator96100/ProxSpace c:\ProxSpace
-
-    Write-Host "[ OK ]" -ForegroundColor Green
-
-
-    if(!(Test-Path -Path C:\ProxSpace\pm3)){
-
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\pm3
-
-    }    
+    Write-Host "Download ProxSpace..." -NoNewLine
     
-    Write-Host "Removing pm3 dir..." -NoNewLine
-
-    Remove-Item -Recurse -Force -Path c:\ProxSpace\pm3\*
-
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    
+    Invoke-WebRequest "$env:proxspace_url" -outfile "$env:proxspace_zip_file"
+    
     Write-Host "[ OK ]" -ForegroundColor Green
-
-    Write-Host "Removing ps startup_check.sh ..." -NoNewLine
-
-    Remove-Item -Recurse -Force -Path c:\ProxSpace\msys2\ps\startup_checks.sh
-
+    
+    Write-Host "Extracting ProxSpace..." -NoNewLine
+    
+    Expand-Archive -LiteralPath "$env:proxspace_zip_file" -DestinationPath "\"
+    
+    Remove-Item "$env:proxspace_zip_file"
+    
     Write-Host "[ OK ]" -ForegroundColor Green
+    
+    Write-Host "Renaming ProxSpace folder..." -NoNewLine
+    
+    Get-ChildItem -Path "\$env:proxspace_zip_folder_name" | Rename-Item -NewName (Split-Path $env:proxspace_path -Leaf)
+    
+    Write-Host "[ OK ]" -ForegroundColor Gree 
 
+    ExecUpdate "Initial msys2 startup..." $true
+    
+    ExecUpdate "Installing required packages..." $false
+    
+    
+    $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
+    
+    Write-Host "ProxSpace version: $psversion" -ForegroundColor Yellow
+    
     Write-Host "Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." -NoNewLine
 
     if(-not $env:appveyor_pull_request_number) {
@@ -73,134 +117,45 @@ clone_script:
         git fetch -q origin +refs/pull/$env:appveyor_pull_request_number/merge:
         git checkout -qf FETCH_HEAD
     }
-
+    
     Write-Host "[ OK ]" -ForegroundColor Green
-
-
-    Write-Host "Fill msys2\etc\fstab file..." -NoNewLine
-
-    New-Item c:\ProxSpace\msys2\etc\fstab -type file -force -value "# For a description of the file format, see the Users Guide`n# http://cygwin.com/cygwin-ug-net/using.html#mount-table`nnone / cygdrive binary,posix=0,noacl,user 0 0 `nC:\ProxSpace\pm3 /pm3 ntfs noacl 0 0 `nC:\ProxSpace\gcc-arm-none-eabi /gcc-arm-none-eabi ntfs noacl 0 0 `n"
-
-    Write-Host "[ OK ]" -ForegroundColor Green
-
-
-    Write-Host "Update msys2 packages..."
-
-    $env:Path = "C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;$env:Path"
-    
-    Function ExecUpdate($Name, $Cmd, $ErrorLine) {
-
-        Write-Host "Exec [$Name]...  " -NoNewLine 
-        #--- begin Job
-        
-        $Job = Start-Job -Name "$Name" -ScriptBlock {
-          $env:Path = "C:\ProxSpace\msys\bin;$env:Path"
-          Set-Location $using:PWD
-
-          $sb=[scriptblock]::Create("$using:Cmd")
-          #execute scriptblock
-          $Cond=&$sb
-
-          return $Cond
-        }
-
-        #--- end Job
-
-        $JobTime=[System.Environment]::TickCount
-        while($true) {
-          Try {
-            $Res = Receive-Job -Job $Job -Keep 2>&1 6>&1
-          }
-          Catch {
-            $Res = ""
-            Write-host "error in Receive-Job"
-          }
-          
-          if ($Res -is "String" -and $Res -like "*$ErrorLine*"){
-            Write-host "Exit by stop phrase" -ForegroundColor Green
-            break
-          }
-
-          if ($Res -is [Object]){
-            [bool]$needexit = $false
-            ForEach($line in $Res){
-              if ($line -like "*$ErrorLine*"){
-                Write-host "Exit by stop phrase [obj]" -ForegroundColor Green
-                $needexit = $true
-                break
-              }
-            }
-            if ($needexit) {
-              break
-            }
-          }
-
-          if(Wait-Job $Job -Timeout 5){
-            Write-host "Exit by end job" -ForegroundColor Green
-            break
-          }
-
-          if ([System.Environment]::TickCount-$JobTime -gt 1000000) {
-            Write-host "Exit by timeout" -ForegroundColor Yellow
-            break
-          }
-        }
-
-        Remove-Job -Force $Job
-    }
-    
-    cd C:\ProxSpace\
-    
-    C:\ProxSpace\msys2\ps\setup.cmd
-
-    ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
- 
-    ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
     
     Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$CloneTime) / 1000) sec" -Category Information
     
-    Write-Host "Update " -NoNewLine
-    
-    Write-Host "[ OK ]" -ForegroundColor Green
+
 install:
 build_script:
 - ps: >-
-    $env:Path="C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;c:\Python38;c:\Python38\Scripts;$env:Path"
 
-    $env:MINGW_HOME="C:\ProxSpace\msys2\mingw32"
+    $pmfolder = Split-Path $env:appveyor_build_folder -Leaf
+    
+    Function ExecMinGWCmd($Cmd) {
+        cd $env:proxspace_path
+        msys2\msys2_shell.cmd -mingw64 -defterm -no-start -c "cd $pmfolder && $Cmd"
+    }
 
-    $env:MSYS_HOME="C:\ProxSpace\msys2"
-
-    $env:MSYSTEM="MINGW32"
-
-    $env:MINGW_PREFIX="/mingw32"
-
-    $env:SHELL="/bin/bash"
-
-    $env:MSYSTEM_CHOST="i686-w64-mingw32"
-
-    cd C:\ProxSpace\pm3
-
+    
     Write-Host "---------- make ----------" -ForegroundColor Yellow
     
-    $TestTime=[System.Environment]::TickCount
-
+    $TestTime=[System.Environment]::TickCount  
+    
     #make
-
-    bash -c -i 'echo $PATH;pwd;make clean;make V=1'
-
+    
+    cd $env:proxspace_path
+    
+    msys2\ps\setup.cmd
+    
+    ExecMinGWCmd "make clean;make V=1"
 
     #some checks
 
-    if(!(Test-Path C:\ProxSpace\pm3\client\proxmark3.exe)){
+    if(!(Test-Path "$env:proxspace_home_path\$pmfolder\client\proxmark3.exe")){
 
     throw "Main file proxmark3.exe not exists."
 
     }
 
-    cd c:\ProxSpace\pm3
-
-    bash -c -i 'make check'
+    ExecMinGWCmd 'make check'
 
     $testspass = ($LASTEXITCODE -eq 0)
     
@@ -219,11 +174,9 @@ build_script:
     
     $TestTime=[System.Environment]::TickCount
 
-    bash -c -i 'pwd;make clean;make PLATFORM_EXTRAS=BTADDON'
+    ExecMinGWCmd 'make clean;make V=1 PLATFORM_EXTRAS=BTADDON'
 
-    cd c:\ProxSpace\pm3
-
-    bash -c -i 'make check'
+    ExecMinGWCmd 'make check'
 
     $testspass = ($LASTEXITCODE -eq 0)
 
@@ -239,19 +192,17 @@ build_script:
     
     Write-Host "---------- make clean ----------" -ForegroundColor Yellow
     
-    bash -c -i 'make clean'
+    ExecMinGWCmd 'make clean'
     
     Write-Host "---------- cmake ----------" -ForegroundColor Yellow
     
     $TestTime=[System.Environment]::TickCount
-
-    cmd.exe /c 'C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start -c "mkdir -p client/build; cd client/build; cmake -G""MSYS Makefiles"" ..; make VERBOSE=1;"'
+    
+    ExecMinGWCmd 'mkdir -p client/build; cd client/build; cmake -G""MSYS Makefiles"" ..; make VERBOSE=1;'
     
     Write-Host "---------- cmake tests ----------" -ForegroundColor Yellow
 
-    cd c:\ProxSpace\pm3
-
-    bash -c -i './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
+    ExecMinGWCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
     
     $testspass = ($LASTEXITCODE -eq 0)
 

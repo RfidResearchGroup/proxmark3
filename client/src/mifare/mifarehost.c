@@ -535,7 +535,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c  -- found valid key [" _YELLOW_("%s") "]",
+            PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex(resultKey, 6)
@@ -714,7 +714,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             num_to_bytes(key64, 6, resultKey);
 
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [" _YELLOW_("%s") "]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex(resultKey, 6)
@@ -959,7 +959,7 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
     }
 }
 
-int mfGen3Blk(uint8_t *block, int blockLen, uint8_t *newBlock) {
+int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, 16);
     PacketResponseNG resp;
@@ -974,7 +974,7 @@ int mfGen3Blk(uint8_t *block, int blockLen, uint8_t *newBlock) {
     }
 }
 
-int mfGen3Freez(void) {
+int mfGen3Freeze(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_GEN3FREEZ, NULL, 0);
     PacketResponseNG resp;
@@ -1144,19 +1144,14 @@ int detect_classic_static_nonce(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_STATIC_NONCE, NULL, 0);
     PacketResponseNG resp;
-
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NONCE, &resp, 500)) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NONCE, &resp, 1000)) {
 
         if (resp.status == PM3_ESOFT)
-            return 2;
+            return NONCE_FAIL;
 
-        if (resp.data.asBytes[0] == 0)
-            return 0;
-
-        if (resp.data.asBytes[0] != 0)
-            return 1;
+        return resp.data.asBytes[0];
     }
-    return 2;
+    return NONCE_FAIL;
 }
 
 /* try to see if card responses to "chinese magic backdoor" commands. */
@@ -1179,10 +1174,19 @@ int detect_classic_magic(void) {
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1b"));
             break;
         case MAGIC_GEN_2:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : "  _GREEN_("Gen 2 / CUID"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 2 / CUID"));
+            break;
+        case MAGIC_GEN_3:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 3 / APDU"));
             break;
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
+            break;
+        case MAGIC_SUPER:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
+            break;
+        case MAGIC_NTAG21X:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
             break;
         default:
             break;

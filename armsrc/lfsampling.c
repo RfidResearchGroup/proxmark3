@@ -329,7 +329,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     if (verbose) {
         if (checked == -1) {
             Dbprintf("lf sampling aborted");
-        } else if (cancel_counter == cancel_after) {
+        } else if ((cancel_counter == cancel_after) && (cancel_after > 0)){
             Dbprintf("lf sampling cancelled after %u", cancel_counter);
         }
 
