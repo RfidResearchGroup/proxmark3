@@ -119,7 +119,7 @@ static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uin
     return pbmpheader->bpp;
 }
 
-static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **black_minus_red, uint8_t **red) {
+static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red) {
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     // check file is bitmap
     if (pbmpheader->bpp != 1) {
@@ -143,40 +143,25 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t mod
     uint16_t Image_Width_Byte = (pbmpheader->BMP_Width % 8 == 0) ? (pbmpheader->BMP_Width / 8) : (pbmpheader->BMP_Width / 8 + 1);
     uint16_t Bmp_Width_Byte = (Image_Width_Byte % 4 == 0) ? Image_Width_Byte : ((Image_Width_Byte / 4 + 1) * 4);
 
+    *black = calloc(WSMAPSIZE, sizeof(uint8_t));
+    if (*black == NULL) {
+        return PM3_EMALLOC;
+    }
+    // Write data into RAM
+    for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
+        for (X = 0; X < Bmp_Width_Byte; X++) { // lines
+            if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
+                (*black)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
+            }
+            offset++;
+        }
+    }
     if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
         // for BW+Red screens:
-        *black_minus_red = calloc(WSMAPSIZE, sizeof(uint8_t));
-        if (*black_minus_red == NULL) {
-            return PM3_EMALLOC;
-        }
         *red = calloc(WSMAPSIZE, sizeof(uint8_t));
         if (*red == NULL) {
-            free(*black_minus_red);
+            free(*black);
             return PM3_EMALLOC;
-        }
-        // Write data into RAM
-        for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
-            for (X = 0; X < Bmp_Width_Byte; X++) { // lines
-                if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
-                    (*black_minus_red)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
-                }
-                offset++;
-            }
-        }
-    } else {
-        // for BW-only screens:
-        *black = calloc(WSMAPSIZE, sizeof(uint8_t));
-        if (*black == NULL) {
-            return PM3_EMALLOC;
-        }
-        // Write data into RAM
-        for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
-            for (X = 0; X < Bmp_Width_Byte; X++) { // lines
-                if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
-                    (*black)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
-                }
-                offset++;
-            }
         }
     }
     return PM3_SUCCESS;
@@ -373,7 +358,7 @@ static void map8to1(uint8_t *colormap, uint16_t width, uint16_t height, uint8_t 
     }
 }
 
-static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **black_minus_red, uint8_t **red, char *filename, bool save_conversions) {
+static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red, char *filename, bool save_conversions) {
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     // check file is full color
     if (pbmpheader->bpp != 24) {
@@ -423,8 +408,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
 
     if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
         // for BW+Red screens:
-        uint8_t *mapBlackMinusRed = calloc(width*height, sizeof(uint8_t));
-        if (mapBlackMinusRed == NULL) {
+        uint8_t *mapBlack = calloc(width*height, sizeof(uint8_t));
+        if (mapBlack == NULL) {
             free(chanR);
             free(chanG);
             free(chanB);
@@ -435,7 +420,7 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
             free(chanR);
             free(chanG);
             free(chanB);
-            free(mapBlackMinusRed);
+            free(mapBlack);
             return PM3_EMALLOC;
         }
         rgb_to_gray_red_inplace(chanR, chanG, chanB, width, height);
@@ -443,7 +428,7 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         uint8_t palette[] ={0x00,0x00,0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00}; // black, white, red
         dither_rgb_inplace(chanR, chanG, chanB, width, height, palette, sizeof(palette)/3);
 
-        threshold_rgb_black_red(chanR, chanG, chanB, width, height, 128, 128, mapBlackMinusRed, mapRed);
+        threshold_rgb_black_red(chanR, chanG, chanB, width, height, 128, 128, mapBlack, mapRed);
         if (save_conversions) {
             // fill BMP chans
             offset = pbmpheader->offset;
@@ -462,7 +447,7 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
                 free(chanR);
                 free(chanG);
                 free(chanB);
-                free(mapBlackMinusRed);
+                free(mapBlack);
                 free(mapRed);
                 return PM3_EIO;
             }
@@ -470,18 +455,18 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         free(chanR);
         free(chanG);
         free(chanB);
-        *black_minus_red = calloc(WSMAPSIZE, sizeof(uint8_t));
-        if (*black_minus_red == NULL) {
-            free(mapBlackMinusRed);
+        *black = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*black == NULL) {
+            free(mapBlack);
             free(mapRed);
             return PM3_EMALLOC;
         }
-        map8to1(mapBlackMinusRed, width, height, *black_minus_red);
-        free(mapBlackMinusRed);
+        map8to1(mapBlack, width, height, *black);
+        free(mapBlack);
         *red = calloc(WSMAPSIZE, sizeof(uint8_t));
         if (*red == NULL) {
             free(mapRed);
-            free(*black_minus_red);
+            free(*black);
             return PM3_EMALLOC;
         }
         map8to1(mapRed, width, height, *red);
@@ -649,7 +634,7 @@ static int start_drawing_1in54B(uint8_t model_nr, uint8_t *black, uint8_t *red) 
     return PM3_SUCCESS;
 }
 
-static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *black_minus_red, uint8_t *red) {
+static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     uint8_t progress = 0;
     uint8_t step0[2] = {0xcd, 0x0d};
     uint8_t step1[3] = {0xcd, 0x00, 10};    //select e-paper type and reset e-paper        4:2.13inch e-Paper   7:2.9inch e-Paper  10:4.2inch e-Paper  14:7.5inch e-Paper
@@ -774,7 +759,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *black_minus_
     if (model_nr == M1in54B) {
         // 1.54B Keychain handler
         PrintAndLogEx(DEBUG, "Start_Drawing_1in54B");
-        ret = start_drawing_1in54B(model_nr, black_minus_red, red);
+        ret = start_drawing_1in54B(model_nr, black, red);
         if (ret != PM3_SUCCESS) {
             return ret;
         }
@@ -841,7 +826,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *black_minus_
             }
         } else if (model_nr == M2in13B) {  //2.13inch B
             for (i = 0; i < 26; i++) {
-                read_black(i, step8, model_nr, black_minus_red);
+                read_black(i, step8, model_nr, black);
                 ret = transceive_blocking(step8, 109, rx, 20, actrxlen, true); // cd 08
                 if (ret != PM3_SUCCESS) {
                     return ret;
@@ -1019,7 +1004,6 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
 
     uint8_t *bmp = NULL;
     uint8_t *black = NULL;
-    uint8_t *black_minus_red = NULL;
     uint8_t *red = NULL;
     size_t bytes_read = 0;
     if (loadFile_safe(filename, ".bmp", (void **)&bmp, &bytes_read) != PM3_SUCCESS) {
@@ -1034,13 +1018,13 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         return PM3_ESOFT;
     } else if (depth == 1) {
         PrintAndLogEx(DEBUG, "BMP file is a bitmap");
-        if (read_bmp_bitmap(bmp, bytes_read, model_nr, &black, &black_minus_red, &red) != PM3_SUCCESS) {
+        if (read_bmp_bitmap(bmp, bytes_read, model_nr, &black, &red) != PM3_SUCCESS) {
             free(bmp);
             return PM3_ESOFT;
         }
     } else if (depth == 24) {
         PrintAndLogEx(DEBUG, "BMP file is a RGB");
-        if (read_bmp_rgb(bmp, bytes_read, model_nr, &black, &black_minus_red, &red, filename, save_conversions) != PM3_SUCCESS) {
+        if (read_bmp_rgb(bmp, bytes_read, model_nr, &black, &red, filename, save_conversions) != PM3_SUCCESS) {
             free(bmp);
             return PM3_ESOFT;
         }
@@ -1055,14 +1039,9 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
     }
     free(bmp);
 
-    start_drawing(model_nr, black, black_minus_red, red);
-    if (black != NULL) {
-        free(black);
-    }
-    if (black_minus_red != NULL) {
-        free(black_minus_red);
-    }
-    if (red != NULL) {
+    start_drawing(model_nr, black, red);
+    free(black);
+    if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
         free(red);
     }
     return PM3_SUCCESS;
