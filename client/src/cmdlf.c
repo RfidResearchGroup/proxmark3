@@ -77,14 +77,16 @@ static int usage_lf_cmdread(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_read(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
+    PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples] [c]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
     PrintAndLogEx(NORMAL, "       d #samples   # samples to collect (optional)");
     PrintAndLogEx(NORMAL, "       s            silent");
+    PrintAndLogEx(NORMAL, "       c            run continuously until a key is pressed");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf read s d 12000     - collects 12000 samples silent");
+    PrintAndLogEx(NORMAL, "         lf read d 3000 s c    - to be used with 'data plot' for live oscillo style");
     PrintAndLogEx(NORMAL, "         lf read");
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
@@ -627,6 +629,7 @@ int CmdLFRead(const char *Cmd) {
 
     bool errors = false;
     bool verbose = true;
+    bool continuous = false;
     uint32_t samples = 0;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -641,6 +644,10 @@ int CmdLFRead(const char *Cmd) {
                 verbose = false;
                 cmdp++;
                 break;
+            case 'c':
+                continuous = true;
+                cmdp++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -650,8 +657,17 @@ int CmdLFRead(const char *Cmd) {
 
     //Validations
     if (errors) return usage_lf_read();
-
-    return lf_read(verbose, samples);
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    }
+    int ret = PM3_SUCCESS;
+    do {
+        ret = lf_read(verbose, samples);
+        if (kbd_enter_pressed()) {
+            break;
+        }
+    } while (continuous);
+    return ret;
 }
 
 int CmdLFSniff(const char *Cmd) {
