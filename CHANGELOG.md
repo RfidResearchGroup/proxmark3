@@ -104,7 +104,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change appveyor verbose (@doegox)
  - Change `lf nexwatch demod` - now detects type, and show parity /chksum (@iceman1001)
  - Change `lfsampling` - interruptible only when logging not yet triggered (@doegox)
- - Change `lf keri demod - more leanient when it comes to bits (@iceman1001)
+ - Change `lf keri demod` - more leanient when it comes to bits (@iceman1001)
  - fix, proper filtering of RL markers (@doegox)
  - Change, clean deps [compiler trials] (@doegox)
  - Change, remove c99 restrictions [compiler trials] (@doegox)
