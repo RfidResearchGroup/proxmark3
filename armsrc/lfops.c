@@ -383,7 +383,7 @@ void loadT55xxConfig(void) {
  * @param period_1
  * @param command (in binary char array)
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command) {
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command, bool verbose, uint32_t samples) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -475,7 +475,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // now do the read
-    DoAcquisition_config(true, 0);
+    DoAcquisition_config(verbose, samples);
 
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

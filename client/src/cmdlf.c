@@ -61,33 +61,43 @@ static bool g_lf_threshold_set = false;
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_cmdread(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes>");
+    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [q] [s #samples] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
     PrintAndLogEx(NORMAL, "       d <delay>     delay OFF period, (0 for bitbang mode) (decimal)");
     PrintAndLogEx(NORMAL, "       z <zero>      ZERO time period (decimal)");
     PrintAndLogEx(NORMAL, "       o <one>       ONE time period (decimal)");
     PrintAndLogEx(NORMAL, "       c <cmd>       Command bytes (in ones and zeros)");
+    PrintAndLogEx(NORMAL, "       q            silent (optional)");
+    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
+    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in microseconds (us)"));
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
+    PrintAndLogEx(NORMAL, "- probing for HT2:");
+    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 c 011000");
+    PrintAndLogEx(NORMAL, "- probing for HT2, oscilloscope style:");
+    PrintAndLogEx(NORMAL, "      data plot");
+    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 c 011000 q s 2000 @");
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
 }
 static int usage_lf_read(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples] [c]");
+    PrintAndLogEx(NORMAL, "Usage: lf read [h] [q] [s #samples] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       d #samples   # samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       s            silent");
-    PrintAndLogEx(NORMAL, "       c            run continuously until a key is pressed");
+    PrintAndLogEx(NORMAL, "       q            silent (optional)");
+    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
+    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf read s d 12000     - collects 12000 samples silent");
-    PrintAndLogEx(NORMAL, "         lf read d 3000 s c    - to be used with 'data plot' for live oscillo style");
-    PrintAndLogEx(NORMAL, "         lf read");
+    PrintAndLogEx(NORMAL, "      lf read");
+    PrintAndLogEx(NORMAL, "- collecting quietly 12000 samples:");
+    PrintAndLogEx(NORMAL, "      lf read q s 12000     - ");
+    PrintAndLogEx(NORMAL, "- oscilloscope style:");
+    PrintAndLogEx(NORMAL, "      data plot");
+    PrintAndLogEx(NORMAL, "      lf read q s 3000 @");
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
@@ -309,14 +319,22 @@ int CmdLFCommandRead(const char *Cmd) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     bool errors = false;
+    bool verbose = true;
+    bool continuous = false;
+    uint32_t samples = 0;
     uint16_t datalen = 0;
 
+    uint8_t payload_header_size = 12;
     struct p {
         uint32_t delay;
         uint16_t ones;
         uint16_t zeros;
-        uint8_t data[PM3_CMD_DATA_SIZE - 8];
+        uint32_t samples : 31;
+        bool     verbose : 1;
+        uint8_t data[PM3_CMD_DATA_SIZE - payload_header_size];
     } PACKED payload;
+    payload.samples = samples;
+    payload.verbose = verbose;
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -339,6 +357,20 @@ int CmdLFCommandRead(const char *Cmd) {
                 payload.ones = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
                 break;
+            case 's':
+                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                payload.samples = samples;
+                cmdp += 2;
+                break;
+            case 'q':
+                verbose = false;
+                payload.verbose = verbose;
+                cmdp++;
+                break;
+            case '@':
+                continuous = true;
+                cmdp++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -356,33 +388,51 @@ int CmdLFCommandRead(const char *Cmd) {
 
     //Validations
     if (errors || cmdp == 0)  return usage_lf_cmdread();
-
-    PrintAndLogEx(SUCCESS, "sending");
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, 8 + datalen);
-
-    PacketResponseNG resp;
-
-    uint8_t i = 10;
-    // 20sec wait loop
-    while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
-        PrintAndLogEx(NORMAL, "." NOLF);
-        i--;
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
-    PrintAndLogEx(NORMAL, "");
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Sending command...");
+    }
 
-    if (resp.status == PM3_SUCCESS) {
-        if (i) {
-            PrintAndLogEx(SUCCESS, "downloading response signal data");
-            getSamples(0, false);
-            return PM3_SUCCESS;
-        } else {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            return PM3_ETIMEOUT;
+    int ret = PM3_SUCCESS;
+    do {
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, payload_header_size + datalen);
+
+        PacketResponseNG resp;
+
+        uint8_t i = 10;
+        // 20sec wait loop
+        while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
+            if (verbose) {
+                PrintAndLogEx(NORMAL, "." NOLF);
+            }
+            i--;
         }
-    }
-    PrintAndLogEx(WARNING, "command failed.");
-    return PM3_ESOFT;
+        if (verbose) {
+            PrintAndLogEx(NORMAL, "");
+        }
+        if (resp.status == PM3_SUCCESS) {
+            if (i) {
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "downloading response signal data");
+                }
+                getSamples(samples, false);
+                ret = PM3_SUCCESS;
+            } else {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                return PM3_ETIMEOUT;
+            }
+        } else {
+            PrintAndLogEx(WARNING, "command failed.");
+            return PM3_ESOFT;
+        }
+        if (kbd_enter_pressed()) {
+            break;
+        }
+    } while (continuous);
+    return ret;
 }
 
 int CmdFlexdemod(const char *Cmd) {
@@ -597,8 +647,8 @@ int lf_read(bool verbose, uint32_t samples) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     struct p {
-        bool verbose;
-        uint32_t samples;
+        uint32_t samples : 31;
+        bool     verbose : 1;
     } PACKED;
 
     struct p payload;
@@ -636,15 +686,15 @@ int CmdLFRead(const char *Cmd) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lf_read();
-            case 'd':
+            case 's':
                 samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
-            case 's':
+            case 'q':
                 verbose = false;
                 cmdp++;
                 break;
-            case 'c':
+            case '@':
                 continuous = true;
                 cmdp++;
                 break;

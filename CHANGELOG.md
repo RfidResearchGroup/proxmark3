@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Add option for continuous mode to `lf read`, try e.g. `data plot` then `lf read d 3000 s c` (@doegox)
+ - Add options to `lf read` and `lf cmdread` (@doegox)
+ - Change options of `lf read` to match `lf cmdread`, this affects historical `d` and `s` options (@doegox)
  - Add `hf waveshare` to upload picture to Waveshare NFC-Powered e-Paper (@doegox)
  - Add `hf 14a config` to deal with badly configured cards: invalid ATQA/BCC/SAK (@doegox)
  - Mikron JSC Russia Ultralight EV1 41 pages tag type support (@McEloff)
