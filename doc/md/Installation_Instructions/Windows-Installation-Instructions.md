@@ -66,11 +66,13 @@ Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmar
 
 # Installing on Windows with WSL 1
 
-WSL 1 requires to run on Windows 10 version 1709 or above. Previous versions didn't have support for COM ports.
+WSL 1 requires to run on Windows 10 version 1709 or above. Previous windows versions didn't have support for COM ports.
 
+### stay away from WSL 2
 *Microsoft introduced WSL 2 starting on Windows 10 version 2004 with Hyper-V powering its virtualization; As of 2020-08-13, WSL 2 does not support USB and Serial.*
 
-Install WSL 1 with e.g. the standard Ubuntu. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions!
+### 
+Install WSL 1 with e.g. the standard Ubuntu. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions! When they recommend you to restart, you must restart.
 
 For WSL configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
 
@@ -80,9 +82,14 @@ Make sure your WSL can launch Windows processes to get the `pm3` scripts working
 
 If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](https://sourceforge.net/projects/xming/) and launch it, e.g. by executing XLaunch.
 
+## Window terminal Installation
+Microsoft has recent released a new terminal for their OS.  It is much better experience than old `cmd.exe` so we strongly recommend installing it.
+It is also open sourced, ref [terminal](https://github.com/microsoft/terminal). You can download and install from here: [windows terminal](https://aka.ms/terminal)
+
+
 ## Dependencies
 
-Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
+Enter WSL prompt (`wsl` or `start windows terminal`)  and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
 
 Make sure your WSL guest OS is up-to-date first
 ```sh
@@ -96,7 +103,7 @@ Install dependencies
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
 libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev
 ```
-
+_note_
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
 
 ## Clone the RRG/Iceman repository
@@ -107,13 +114,13 @@ git clone https://github.com/RfidResearchGroup/proxmark3.git
 
 ## Compile and use the project
 
-To use the compiled client, the only difference is that the Proxmark3 port is translated from your `comX` port where "X" is the com port number assigned to proxmark3 under Windows, to a `/dev/ttySX`, so commands become:
+To use the compiled client, the only difference is that the Proxmark3 port is translated from your `comX` port where **"X"** is the com port number assigned to proxmark3 under Windows, to a `/dev/ttySX`, so commands become:
 
 ```sh
 proxmark3 /dev/ttyACM0  =>  proxmark3 /dev/ttySX
 ```
 
-Depending on the Windows version, you might need to give permission to the current user to access `/dev/ttySX`: (change X to your port number)
+Depending on the Windows version, you might need to give permission to the current user to access `/dev/ttySX`: (change **X** to your port number)
 
 ```sh
 ls -al /dev/ttySX
