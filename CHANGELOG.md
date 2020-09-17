@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add lf t55xx sniff to allow extracting commands and passwords used be cloners. (@mwalker33)
  - Add options to `lf read` and `lf cmdread` (@doegox)
  - Change options of `lf read` to match `lf cmdread`, this affects historical `d` and `s` options (@doegox)
  - Add `hf waveshare` to upload picture to Waveshare NFC-Powered e-Paper (@doegox)
