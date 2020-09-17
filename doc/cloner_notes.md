@@ -7,6 +7,7 @@ This document is based mostly on information posted on http://www.proxmark.org/f
 - [White cloner (after 2016)](#white-cloner-after-2016)
 - [White cloner (after 2016 D Quality)](#white-cloner-after-2016-d-quality)
 - [restore page1 data](#restore-page1-data)
+- [Sniffing the comms](#sniffing-the-comms)
 
 
 # Blue and black cloners
@@ -60,4 +61,11 @@ Standard password is normally (for T55xx):  AA55BBBB
 ```
 lf t55xx write b 1 d E0150A48 1
 If t55xx write b 2 d 2D782308 1
+```
+
+# Sniffing the comms
+The T55x7 protocol uses a pwm based protocol for writing to tags.  In order to make decoding easier when doing lf sniffing try the new command as seen below instead
+
+```
+lf t55xx sniff
 ```
