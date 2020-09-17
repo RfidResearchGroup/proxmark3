@@ -324,7 +324,7 @@ int CmdLFCommandRead(const char *Cmd) {
     uint32_t samples = 0;
     uint16_t datalen = 0;
 
-    uint8_t payload_header_size = 12;
+    const uint8_t payload_header_size = 12;
     struct p {
         uint32_t delay;
         uint16_t ones;
