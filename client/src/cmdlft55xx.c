@@ -401,17 +401,17 @@ static int usage_t55xx_clonehelp(void) {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_sniff(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx sniff [w <width 0> <width 1>] [l <min level>] [b] [h]");
+    PrintAndLogEx(NORMAL, "Usage:  lf t55xx sniff [w <width 0> <width 1>] [l <min level>] [s <level>] [1] [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     w <0> <1>       - Set samples width for 0 and 1 matching (default auto detect)");
-    PrintAndLogEx(NORMAL, "     l <level>       - Set minimum signal level (default 20)");
-    PrintAndLogEx(NORMAL, "     b               - Extract from current sample buffer (default will get new samples)");
+    PrintAndLogEx(NORMAL, "     s <level>       - Set minimum signal level (default 20)");
+    PrintAndLogEx(NORMAL, "     1               - Extract from current sample buffer (default will get new samples)");
     PrintAndLogEx(NORMAL, "     h               - This help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff b"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff w 7 14 b"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff 1"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff w 7 14 1"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -3777,7 +3777,7 @@ static int CmdT55xxSniff(const char *Cmd) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_t55xx_sniff();
-            case 'b':
+            case '1':
                 sampleData = false;
                 cmdp ++;
                 break;
@@ -3793,7 +3793,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                     return usage_t55xx_sniff();
                 }
                 break;
-            case 'l': 
+            case 's': 
                 minLevel = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
