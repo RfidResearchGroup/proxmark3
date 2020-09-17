@@ -22,7 +22,17 @@ Step by step guides are online such as [RyscCorps](https://store.ryscc.com/blogs
 Download the Gator96100 ProxSpace package from https://github.com/Gator96100/ProxSpace/releases
 
 Extract 'ProxSpace' to a location path without spaces.  
-For example D:\OneDrive\Documents\GitHub is ok whereas C:\My Documents\My Projects\proxspace is not.
+
+Good example 
+```
+D:\OneDrive\Documents\GitHub
+``` 
+
+Bad example
+```
+C:\My Documents\My Projects\proxspace
+                  ^
+```
 
 If you're running Windows in a Virtualbox guest, make sure not to install ProxSpace on a vbox shared drive. (It's ok later to move the `/pm3` subfolder to a shared drive and edit the `*.bat`)
 
