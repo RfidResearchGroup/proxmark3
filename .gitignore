@@ -32,6 +32,7 @@ version.c
 *.swp
 *.json.bak
 *.pyc
+*.bmp
 
 # new build file for add-ons.
 Makefile.platform
