@@ -1431,13 +1431,14 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
     // init as reader
     lf_init(true, false);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     uint8_t tag_modulation;
     size_t max_nrzs = (8 * HITAG_FRAME_LEN + 5) * 2; // up to 2 nrzs per bit
     uint8_t nrz_samples[max_nrzs];
+    bool turn_on = true;
     size_t nrzs = 0;
     int16_t checked = 0;
-
     uint32_t signal_size = 10000;
 
     while (bStop == false && BUTTON_PRESS() == false) {
@@ -1497,6 +1498,11 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 DBG Dbprintf("Error, unknown function: %d", htf);
                 goto out;
             }
+        }
+        
+        if (turn_on) {
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+            turn_on = false;
         }
 
         // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
