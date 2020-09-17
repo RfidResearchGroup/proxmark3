@@ -64,8 +64,17 @@ If t55xx write b 2 d 2D782308 1
 ```
 
 # Sniffing the comms
-The T55x7 protocol uses a pwm based protocol for writing to tags.  In order to make decoding easier when doing lf sniffing try the new command as seen below instead
+The T55x7 protocol uses a pwm based protocol for writing to tags.  In order to make decoding easier try the new command as seen below instead. It will try to extract the data written.
 
 ```
+lf config s <x bytes>
 lf t55xx sniff
+
+-- if you have a save trace from before, try
+data load xxxxxxx.pm3
+lf t55xx sniff b
 ```
+
+It uses the existing `lf sniff` command to collect the data, so setting that first as per normal sniffing is recommended. Once you have a sniff, you can "re-sniff" from the stored sniffed data and try different settings, if you think the data is not clean.
+
+As normal, the cloner may write data past the end of the 40K sample buffer. So using the `lf config s <x bytes>` then re-run the sniff to see if there is more data.
