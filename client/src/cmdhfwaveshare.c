@@ -364,31 +364,36 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
     if (pbmpheader->bpp != 24) {
         return PM3_ESOFT;
     }
+
     if (pbmpheader->B == 'M' || pbmpheader->M == 'B') { //0x4d42
         PrintAndLogEx(WARNING, "The file is not a BMP!");
         return PM3_ESOFT;
     }
+
     PrintAndLogEx(DEBUG, "file size =  %d", pbmpheader->fsize);
     PrintAndLogEx(DEBUG, "file offset =  %d", pbmpheader->offset);
     if (pbmpheader->fsize > bmpsize) {
         PrintAndLogEx(WARNING, "The file is truncated!");
         return PM3_ESOFT;
     }
+
     // Get BMP file data pointer
     uint32_t offset = pbmpheader->offset;
     uint16_t width = pbmpheader->BMP_Width;
     uint16_t height = pbmpheader->BMP_Height;
 
-    int16_t *chanR = calloc(width*height, sizeof(int16_t));
+    int16_t *chanR = calloc(width * height, sizeof(int16_t));
     if (chanR == NULL) {
         return PM3_EMALLOC;
     }
-    int16_t *chanG = calloc(width*height, sizeof(int16_t));
+
+    int16_t *chanG = calloc(width * height, sizeof(int16_t));
     if (chanG == NULL) {
         free(chanR);
         return PM3_EMALLOC;
     }
-    int16_t *chanB = calloc(width*height, sizeof(int16_t));
+
+    int16_t *chanB = calloc(width * height, sizeof(int16_t));
     if (chanB == NULL) {
         free(chanR);
         free(chanG);
@@ -396,26 +401,26 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
     }
 
     // Extracting BMP chans
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             chanB[X + (height - Y - 1) * width] = bmp[offset++];
             chanG[X + (height - Y - 1) * width] = bmp[offset++];
             chanR[X + (height - Y - 1) * width] = bmp[offset++];
         }
         // Skip line padding
-        offset+=width%4;
+        offset += width % 4;
     }
 
     if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
         // for BW+Red screens:
-        uint8_t *mapBlack = calloc(width*height, sizeof(uint8_t));
+        uint8_t *mapBlack = calloc(width * height, sizeof(uint8_t));
         if (mapBlack == NULL) {
             free(chanR);
             free(chanG);
             free(chanB);
             return PM3_EMALLOC;
         }
-        uint8_t *mapRed = calloc(width*height, sizeof(uint8_t));
+        uint8_t *mapRed = calloc(width * height, sizeof(uint8_t));
         if (mapRed == NULL) {
             free(chanR);
             free(chanG);
@@ -432,14 +437,14 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         if (save_conversions) {
             // fill BMP chans
             offset = pbmpheader->offset;
-            for (uint16_t Y=0; Y<height; Y++) {
-                for (uint16_t X=0; X<width; X++) {
+            for (uint16_t Y = 0; Y < height; Y++) {
+                for (uint16_t X = 0; X < width; X++) {
                     bmp[offset++] = chanB[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanG[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanR[X + (height - Y - 1) * width] & 0xFF;
                 }
                 // Skip line padding
-                offset+=width%4;
+                offset += width % 4;
             }
             PrintAndLogEx(INFO, "Saving red+black dithered version...");
             if (saveFile(filename, ".bmp", bmp, offset) != PM3_SUCCESS) {
@@ -473,7 +478,7 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         free(mapRed);
     } else {
         // for BW-only screens:
-        int16_t *chanGrey = calloc(width*height, sizeof(int16_t));
+        int16_t *chanGrey = calloc(width * height, sizeof(int16_t));
         if (chanGrey == NULL) {
             free(chanR);
             free(chanG);
@@ -483,7 +488,7 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         rgb_to_gray(chanR, chanG, chanB, width, height, chanGrey);
         dither_chan_inplace(chanGrey, width, height);
 
-        uint8_t *mapBlack = calloc(width*height, sizeof(uint8_t));
+        uint8_t *mapBlack = calloc(width * height, sizeof(uint8_t));
         if (mapBlack == NULL) {
             free(chanR);
             free(chanG);
@@ -496,14 +501,14 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         if (save_conversions) {
             // fill BMP chans
             offset = pbmpheader->offset;
-            for (uint16_t Y=0; Y<height; Y++) {
-                for (uint16_t X=0; X<width; X++) {
+            for (uint16_t Y = 0; Y < height; Y++) {
+                for (uint16_t X = 0; X < width; X++) {
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
                 }
                 // Skip line padding
-                offset+=width%4;
+                offset += width % 4;
             }
             PrintAndLogEx(INFO, "Saving black dithered version...");
             if (saveFile(filename, ".bmp", bmp, offset) != PM3_SUCCESS) {
@@ -549,15 +554,18 @@ static void read_red(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *red) {
 
 static int transceive_blocking( uint8_t* txBuf, uint16_t txBufLen, uint8_t* rxBuf, uint16_t rxBufLen, uint16_t* actLen, bool retransmit ){
     uint8_t fail_num = 0;
-    if (rxBufLen < 2)
+    if (rxBufLen < 2) {
         return PM3_EINVARG;
+    }
+
     while (1) {
         PacketResponseNG resp;
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, txBufLen, 0, txBuf, txBufLen);
         rxBuf[0] = 1;
+
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             if (resp.oldarg[0] > rxBufLen) {
-                PrintAndLogEx(WARNING, "Received % bytes, rxBuf too small (%)", resp.oldarg[0], rxBufLen);
+                PrintAndLogEx(WARNING, "Received %u bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
                 memcpy(rxBuf, resp.data.asBytes, rxBufLen);
                 *actLen = rxBufLen;
                 return PM3_ESOFT;
@@ -565,6 +573,7 @@ static int transceive_blocking( uint8_t* txBuf, uint16_t txBufLen, uint8_t* rxBu
             memcpy(rxBuf, resp.data.asBytes, resp.oldarg[0]);
             *actLen = resp.oldarg[0];
         }
+
         if ((retransmit) && (rxBuf[0] != 0 || rxBuf[1] != 0)) {
             fail_num++;
             if (fail_num > 10) {
