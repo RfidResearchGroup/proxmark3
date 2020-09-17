@@ -13,7 +13,7 @@
 
 int CmdLFFdx(const char *Cmd);
 int detectFDXB(uint8_t *dest, size_t *size);
-int demodFDX(void);
+int demodFDX(bool verbose);
 int getFDXBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits);
 
 #endif
