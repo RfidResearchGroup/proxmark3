@@ -401,9 +401,10 @@ static int usage_t55xx_clonehelp(void) {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_sniff(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx sniff [w <width 0> <width 1>] [b] [h]");
+    PrintAndLogEx(NORMAL, "Usage:  lf t55xx sniff [w <width 0> <width 1>] [l <min level>] [b] [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     w <0> <1>       - Set samples width for 0 and 1 matching (default auto detect)");
+    PrintAndLogEx(NORMAL, "     l <level>       - Set minimum signal level (default 20)");
     PrintAndLogEx(NORMAL, "     b               - Extract from current sample buffer (default will get new samples)");
     PrintAndLogEx(NORMAL, "     h               - This help");
     PrintAndLogEx(NORMAL, "");
@@ -3728,6 +3729,7 @@ static int CmdT55xxSniff(const char *Cmd) {
     bool sampleData = true;
     uint8_t width0 = 0;
     uint8_t width1 = 0;
+    uint8_t minLevel = 20;
     int pulseSamples = 0;
     bool eop;
     uint8_t page;
@@ -3791,6 +3793,10 @@ static int CmdT55xxSniff(const char *Cmd) {
                     return usage_t55xx_sniff();
                 }
                 break;
+            case 'l': 
+                minLevel = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
             default:
                     cmdp++;
                     PrintAndLogEx (ERR,"Invalid options supplied!");
@@ -3808,6 +3814,7 @@ static int CmdT55xxSniff(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO,_CYAN_("T55xx write Detection"));
+    PrintAndLogEx(INFO,"Minimum signal level : "_GREEN_("%d"),minLevel);
     PrintAndLogEx(SUCCESS, "Downlink mode    | password |   Data   | blk | page |  0  |  1  | raw");
     PrintAndLogEx(SUCCESS, "-----------------+----------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
 
@@ -3823,7 +3830,7 @@ static int CmdT55xxSniff(const char *Cmd) {
             while ((idx < GraphTraceLen) && ((GraphBuffer[idx] < -5) || (GraphBuffer[idx] > 5)))
                 idx++;
 
-            while ((idx < GraphTraceLen) && ((GraphBuffer[idx] > -20) && (GraphBuffer[idx] < 20)))
+            while ((idx < GraphTraceLen) && ((GraphBuffer[idx] > (-1 * minLevel)) && (GraphBuffer[idx] < minLevel)))
                 idx++;
 
             eop = false;
@@ -3876,7 +3883,7 @@ static int CmdT55xxSniff(const char *Cmd) {
         // Skip till we get to a "non modulated section" - ie skip if sample is in mid packet
         while ((idx < GraphTraceLen) && ((GraphBuffer[idx] < -5) || (GraphBuffer[idx] > 5)))
             idx++;
-        while ((idx < GraphTraceLen) && ((GraphBuffer[idx] > -25) && (GraphBuffer[idx] < 25)))
+        while ((idx < GraphTraceLen) && ((GraphBuffer[idx] > (-1 * minLevel)) && (GraphBuffer[idx] < minLevel)))
             idx++;
 
         dataLen = 0;
@@ -3999,7 +4006,7 @@ static int CmdT55xxSniff(const char *Cmd) {
             }
         }
 
-        if (haveData) {
+        if ((haveData) && (minWidth > 1) && (maxWidth > minWidth)){
             if (blockAddr == 7)
                 PrintAndLogEx (SUCCESS, "%-15s  | "_GREEN_("%s")" | "_YELLOW_("%08X")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, blockData, blockAddr, page, minWidth, maxWidth, data); 
             else
