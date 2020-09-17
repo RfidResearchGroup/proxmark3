@@ -56,29 +56,36 @@
 #include "cmdlfmotorola.h"  // for Motorola menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 
+#define LF_CMDREAD_MAX_EXTRA_SYMBOLS 4
 static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_cmdread(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [q] [s #samples] [@]");
+    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay duration> z <zero duration> o <one duration> [e <symbol> <duration>] c <cmd symbols> [q] [s #samples] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       d <delay>     delay OFF period, (0 for bitbang mode) (decimal)");
-    PrintAndLogEx(NORMAL, "       z <zero>      ZERO time period (decimal)");
-    PrintAndLogEx(NORMAL, "       o <one>       ONE time period (decimal)");
-    PrintAndLogEx(NORMAL, "       c <cmd>       Command bytes (in ones and zeros)");
-    PrintAndLogEx(NORMAL, "       q            silent (optional)");
-    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
+    PrintAndLogEx(NORMAL, "       d <duration>  delay OFF period, (0 for bitbang mode)");
+    PrintAndLogEx(NORMAL, "       z <duration>  ZERO time period");
+    PrintAndLogEx(NORMAL, "       o <duration>  ONE time period");
+    PrintAndLogEx(NORMAL, "       e <symbol> <duration> Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+    PrintAndLogEx(NORMAL, "       b <duration>  B period");
+    PrintAndLogEx(NORMAL, "       c <cmd>       Command symbols (0/1/...)");
+    PrintAndLogEx(NORMAL, "       q             silent (optional)");
+    PrintAndLogEx(NORMAL, "       s #samples    number of samples to collect (optional)");
+    PrintAndLogEx(NORMAL, "       @             run continuously until a key is pressed (optional)");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in microseconds (us)"));
+    PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in decimal and in microseconds (μs)"));
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "- probing for HT2:");
-    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 c 011000");
-    PrintAndLogEx(NORMAL, "- probing for HT2, oscilloscope style:");
+    PrintAndLogEx(NORMAL, "- probing for Hitag 1/Hitag S:");
+    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 e W 3000 c W00110");
+    PrintAndLogEx(NORMAL, "- probing for Hitag 2:");
+    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 e W 3000 c W11000");
+    PrintAndLogEx(NORMAL, "- probing for Hitag 2, oscilloscope style:");
     PrintAndLogEx(NORMAL, "      data plot");
-    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 c 011000 q s 2000 @");
+    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 e W 3000 c W11000 q s 2000 @");
+    PrintAndLogEx(NORMAL, "- probing for Hitag μ:");
+    PrintAndLogEx(NORMAL, "      lf cmdread d 48 z 112 o 176 e W 3000 e S 240 e E 336 c W0S00000010000E");
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
@@ -324,17 +331,20 @@ int CmdLFCommandRead(const char *Cmd) {
     uint32_t samples = 0;
     uint16_t datalen = 0;
 
-    const uint8_t payload_header_size = 12;
+    const uint8_t payload_header_size = 12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS);
     struct p {
         uint32_t delay;
-        uint16_t ones;
-        uint16_t zeros;
+        uint16_t period_0;
+        uint16_t period_1;
+        uint8_t  symbol_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
+        uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
         uint32_t samples : 31;
         bool     verbose : 1;
         uint8_t data[PM3_CMD_DATA_SIZE - payload_header_size];
     } PACKED payload;
     payload.samples = samples;
     payload.verbose = verbose;
+    uint8_t index_extra = 0;
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -350,12 +360,23 @@ int CmdLFCommandRead(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'z':  // zero
-                payload.zeros = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                payload.period_0 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
                 break;
             case 'o':  // ones
-                payload.ones = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                payload.period_1 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
+                break;
+            case 'e':  // extra symbol definition
+                if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
+                    payload.symbol_extra[index_extra] = param_getchar(Cmd, cmdp + 1);
+                    payload.period_extra[index_extra] = param_get32ex(Cmd, cmdp + 2, 0, 10) & 0xFFFF;
+                    index_extra++;
+                    cmdp += 3;
+                } else {
+                    PrintAndLogEx(WARNING, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+                    errors = true;
+                }
                 break;
             case 's':
                 samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
@@ -380,7 +401,7 @@ int CmdLFCommandRead(const char *Cmd) {
 
     // bitbang mode
     if (payload.delay == 0) {
-        if (payload.zeros < 7 || payload.ones < 7) {
+        if (payload.period_0 < 7 || payload.period_1 < 7) {
             PrintAndLogEx(WARNING, "warning periods cannot be less than 7us in bit bang mode");
             return PM3_EINVARG;
         }

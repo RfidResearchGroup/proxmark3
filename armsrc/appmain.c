@@ -770,13 +770,15 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_MOD_THEN_ACQ_RAW_ADC: {
             struct p {
                 uint32_t delay;
-                uint16_t ones;
-                uint16_t zeros;
+                uint16_t period_0;
+                uint16_t period_1;
+                uint8_t  symbol_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
+                uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
                 uint32_t samples : 31;
                 bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            ModThenAcquireRawAdcSamples125k(payload->delay, payload->zeros, payload->ones, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples);
+            ModThenAcquireRawAdcSamples125k(payload->delay, payload->period_0, payload->period_1, payload->symbol_extra, payload->period_extra, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples);
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {

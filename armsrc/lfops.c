@@ -383,13 +383,15 @@ void loadT55xxConfig(void) {
  * @param period_1
  * @param command (in binary char array)
  */
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command, bool verbose, uint32_t samples) {
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, uint32_t samples) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // use lf config settings
     sample_config *sc = getSamplingConfig();
 
+    LFSetupFPGAForADC(sc->divisor, true);
+    // this causes the field to turn on for uncontrolled amount of time, so we'll turn it off
 
     // Make sure the tag is reset
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -402,15 +404,14 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     // clear read buffer
     BigBuf_Clear_keep_EM();
 
-    LFSetupFPGAForADC(sc->divisor, true);
-
-    // little more time for the tag to fully power up
-    WaitMS(20);
-
     // if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.
     bool bitbang = (delay_off == 0);
     // now modulate the reader field
+
+    // Some tags need to be interrogated very soon after activation else they enter their emulation mode
+    // Therefore it's up to the caller to add an initial symbol of adequate duration, except for bitbang mode.
     if (bitbang) {
+        TurnReadLFOn(20000);
         // HACK it appears the loop and if statements take up about 7us so adjust waits accordingly...
         uint8_t hack_cnt = 7;
         if (period_0 < hack_cnt || period_1 < hack_cnt) {
@@ -459,11 +460,19 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     } else { // old mode of cmd read using delay as off period
         while (*command != '\0' && *command != ' ') {
             LED_D_ON();
-            if (*(command++) == '0')
+            if (*command == '0') {
                 TurnReadLFOn(period_0);
-            else
+            } else if (*command == '1') {
                 TurnReadLFOn(period_1);
-
+            } else {
+                for (uint8_t i=0; i < LF_CMDREAD_MAX_EXTRA_SYMBOLS; i++) {
+                    if (*command == symbol_extra[i]) {
+                        TurnReadLFOn(period_extra[i]);
+                        break;
+                    }
+                }
+            }
+            command++;
             LED_D_OFF();
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             WaitUS(delay_off);

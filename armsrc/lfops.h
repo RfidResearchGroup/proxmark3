@@ -15,7 +15,7 @@
 
 #include "pm3_cmd.h" // struct
 
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command, bool verbose, uint32_t samples);
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, uint32_t samples);
 void ReadTItag(void);
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc);
 
