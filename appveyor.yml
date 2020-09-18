@@ -7,6 +7,7 @@ environment:
   proxspace_zip_folder_name: ProxSpace-*
   proxspace_path: \ProxSpace
   proxspace_home_path: \ProxSpace\pm3
+  wsl_git_path: C:\proxmark
 
 init:
 - ps: >-
@@ -34,7 +35,7 @@ clone_script:
 - ps: >-
     
     Function ExecUpdate($Text, $firstStart) {
-        Write-Host "$Text" -NoNewLine 
+        Write-Host "$Text"
         Start-Process "cmd.exe"  "/c ""cd /D $env:proxspace_path && runme64.bat -c ""exit"""""
         $StartTime=[System.Environment]::TickCount
         Start-Sleep -s 10
@@ -42,6 +43,7 @@ clone_script:
             $cmdprocess = Get-Process "cmd" -ErrorAction SilentlyContinue
             
             if (!$cmdprocess -Or $cmdprocess.HasExited) {
+                Write-Host "$Text" -NoNewLine 
                 Write-Host "[ OK ]" -ForegroundColor Green
                 break
             }
@@ -51,26 +53,55 @@ clone_script:
                 $tmp = $cmdprocess.CloseMainWindow()
                 Start-Sleep -s 5
                 Stop-Process -Name "cmd" -Force -ErrorAction SilentlyContinue
+                Write-Host "$Text" -NoNewLine 
                 Write-Host "Exit by pacman.conf" -ForegroundColor Green
                 break           
             }
             
             if ([System.Environment]::TickCount-$StartTime -gt 1000000) {
+                Write-Host "$Text" -NoNewLine 
                 Write-host "Exit by timeout" -ForegroundColor Yellow
                 break
             }
             
-            Start-Sleep -s 1
+            Start-Sleep -s 5
+            Receive-Job -Job $WSLjob
         }
     }
     
-    Function WSLExec($Text, $Cmd) {
-        Write-Host "$Text" -NoNewLine 
-        wsl -- bash -c $Cmd
-        Write-Host "[ OK ]" -ForegroundColor Green
+    $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
+        Function WSLExec($Text, $Cmd) {
+            Write-Host "$Text" 
+            wsl -- bash -c $Cmd
+            Write-Host "$Text" -NoNewLine 
+            Write-Host "[ OK ]" -ForegroundColor Green
+        }
+    
+        $WSLInstallTime=[System.Environment]::TickCount
+        WSLExec "WSL update..." "sudo apt-get update 1>/dev/null"
+        WSLExec "WSL upgrade..." "sudo apt-get upgrade -y 1>/dev/null" 
+        WSLExec "WSL cleanup..." "sudo apt-get auto-remove -y 1>/dev/null" 
+        WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
+        WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
+        Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
     }
     
-    Write-Host "Removing ProxSpace..." -NoNewLine
+    Function GitClone($Text, $Folder) {
+        Write-Host "$Text" -NoNewLine
+        if(-not $env:appveyor_pull_request_number) {
+            git clone -q --branch=$env:appveyor_repo_branch https://github.com/$env:appveyor_repo_name.git $Folder
+            cd $Folder
+            git checkout -qf $env:appveyor_repo_commit
+        } else {
+            git clone -q https://github.com/$env:appveyor_repo_name.git $Folder
+            cd $Folder
+            git fetch -q origin +refs/pull/$env:appveyor_pull_request_number/merge:
+            git checkout -qf FETCH_HEAD
+        }
+        Write-Host "[ OK ]" -ForegroundColor Green 
+    }
+    
+    Write-Host "ProxSpace: Removing folder..." -NoNewLine
     
     $PSInstallTime=[System.Environment]::TickCount
     
@@ -79,8 +110,10 @@ clone_script:
     Remove-Item -Recurse -Force -Path $env:proxspace_path
 
     Write-Host "[ OK ]" -ForegroundColor Green
+    
+    Receive-Job -Job $WSLjob
 
-    Write-Host "Download ProxSpace..." -NoNewLine
+    Write-Host "ProxSpace: downloading..." -NoNewLine
     
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
@@ -88,7 +121,9 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Green
     
-    Write-Host "Extracting ProxSpace..." -NoNewLine
+    Receive-Job -Job $WSLjob
+    
+    Write-Host "ProxSpace: extracting..." -NoNewLine
     
     Expand-Archive -LiteralPath "$env:proxspace_zip_file" -DestinationPath "\"
     
@@ -96,15 +131,17 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Green
     
-    Write-Host "Renaming ProxSpace folder..." -NoNewLine
+    Receive-Job -Job $WSLjob
+    
+    Write-Host "ProxSpace: renaming folder..." -NoNewLine
     
     Get-ChildItem -Path "\$env:proxspace_zip_folder_name" | Rename-Item -NewName (Split-Path $env:proxspace_path -Leaf)
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
-    ExecUpdate "Initial msys2 startup..." $true
+    ExecUpdate "ProxSpace: initial msys2 startup..." $true
     
-    ExecUpdate "Installing required packages..." $false
+    ExecUpdate "ProxSpace: installing required packages..." $false
     
     
     $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
@@ -113,34 +150,11 @@ clone_script:
     
     Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$PSInstallTime) / 1000) sec" -Category Information
     
-    $WSLInstallTime=[System.Environment]::TickCount
+    GitClone "ProxSpace: Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." $env:appveyor_build_folder
     
-    WSLExec "WSL update..." "sudo apt-get update 1>/dev/null"
+    Receive-Job -Wait -Job $WSLjob
     
-    WSLExec "WSL upgrade..." "sudo apt-get upgrade -y 1>/dev/null"
-    
-    WSLExec "WSL cleanup..." "sudo apt-get auto-remove -y 1>/dev/null"
-    
-    WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null"
-    
-    WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
-    
-    Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
-    
-    Write-Host "Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." -NoNewLine
-
-    if(-not $env:appveyor_pull_request_number) {
-        git clone -q --branch=$env:appveyor_repo_branch https://github.com/$env:appveyor_repo_name.git $env:appveyor_build_folder
-        cd $env:appveyor_build_folder
-        git checkout -qf $env:appveyor_repo_commit
-    } else {
-        git clone -q https://github.com/$env:appveyor_repo_name.git $env:appveyor_build_folder
-        cd $env:appveyor_build_folder
-        git fetch -q origin +refs/pull/$env:appveyor_pull_request_number/merge:
-        git checkout -qf FETCH_HEAD
-    }
-    
-    Write-Host "[ OK ]" -ForegroundColor Green 
+    GitClone "WSL: Cloning repository <$env:appveyor_repo_name> to $env:wsl_git_path ..." $env:wsl_git_path
     
 
 install:
@@ -152,10 +166,6 @@ build_script:
     Function ExecMinGWCmd($Cmd) {
         cd $env:proxspace_path
         ./runme64.bat -c "cd $pmfolder && $Cmd"
-    }
-    
-    Function ExecWSLCmd($Cmd) {
-        wsl -- bash -c $Cmd
     }
     
     Function ExecCheck($Name) {
@@ -171,6 +181,55 @@ build_script:
             Write-Host "$Name [ ERROR ]" -ForegroundColor Red
             throw "Tests error."
         }
+    }
+    
+    $WSLjob = Start-Job -Name WSLCompile -ScriptBlock { 
+        Function ExecWSLCmd($Cmd) {
+            wsl -- bash -c $Cmd
+        }
+        
+        Function ExecCheck($Name) {
+            $testspass = ($LASTEXITCODE -eq 0)
+        
+            $global:TestsPassed=$testspass
+    
+            if ($testspass) {
+                Add-AppveyorTest -Name $Name -Framework NUnit -Filename $Name -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
+                Write-Host "$Name [ OK ]" -ForegroundColor Green
+            } else {
+                Add-AppveyorTest -Name $Name -Framework NUnit -Filename $Name -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
+                Write-Host "$Name [ ERROR ]" -ForegroundColor Red
+                throw "Tests error."
+            }
+        }
+    
+        #Windows Subsystem for Linux (WSL)
+        Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
+        cd $env:wsl_git_path   
+        $TestTime=[System.Environment]::TickCount
+        ExecWSLCmd "make clean;make V=1"  
+        #some checks
+        if(!(Test-Path "$env:wsl_git_path\client\proxmark3")){
+            throw "Main file proxmark3 not exists."
+        }
+        
+        ExecWSLCmd "make check"
+        ExecCheck "WSL make Tests"
+        Start-Sleep -s 2  
+        Write-Host "---------- WSL btaddon ----------" -ForegroundColor Yellow   
+        $TestTime=[System.Environment]::TickCount   
+        ExecWSLCmd "make clean;make V=1 PLATFORM_EXTRAS=BTADDON"  
+        ExecWSLCmd "make check"
+        ExecCheck "WSL BTaddon Tests"   
+        Start-Sleep -s 2  
+        Write-Host "---------- WSL make clean ----------" -ForegroundColor Yellow  
+        ExecWSLCmd 'make clean'  
+        Write-Host "---------- WSL cmake ----------" -ForegroundColor Yellow  
+        $TestTime=[System.Environment]::TickCount 
+        ExecWSLCmd 'mkdir -p client/build; cd client/build; cmake ..; make VERBOSE=1;' 
+        Write-Host "---------- WSL cmake tests ----------" -ForegroundColor Yellow
+        ExecWSLCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3 client'  
+        ExecCheck "WSL cmake Tests"
     }
     
     #ProxSpace
@@ -217,57 +276,8 @@ build_script:
     
     ExecCheck "PS cmake Tests"
     
-    #Windows Subsystem for Linux (WSL)
-    
-    Write-Host "---------- WSL make ----------" -ForegroundColor Yellow
-    
-    cd $env:appveyor_build_folder
-    
-    $TestTime=[System.Environment]::TickCount
-    
-    ExecWSLCmd "make clean;make V=1"
-    
-    #some checks
+    Receive-Job -Wait -Job $WSLjob -ErrorAction Stop
 
-    if(!(Test-Path "$env:proxspace_home_path\$pmfolder\client\proxmark3")){
-
-        throw "Main file proxmark3 not exists."
-
-    }
-    
-    ExecWSLCmd "make check"
-
-    ExecCheck "WSL make Tests"
-    
-    Start-Sleep -s 2
-    
-    Write-Host "---------- WSL btaddon ----------" -ForegroundColor Yellow
-    
-    $TestTime=[System.Environment]::TickCount
-    
-    ExecWSLCmd "make clean;make V=1 PLATFORM_EXTRAS=BTADDON"
-    
-    ExecWSLCmd "make check"
-
-    ExecCheck "WSL BTaddon Tests"
-    
-    Start-Sleep -s 2
-    
-    Write-Host "---------- WSL make clean ----------" -ForegroundColor Yellow
-    
-    ExecWSLCmd 'make clean'
-    
-    Write-Host "---------- WSL cmake ----------" -ForegroundColor Yellow
-    
-    $TestTime=[System.Environment]::TickCount
-    
-    ExecWSLCmd 'rm -rf client/build;mkdir -p client/build; cd client/build; cmake ..; make VERBOSE=1;'
-    
-    Write-Host "---------- WSL cmake tests ----------" -ForegroundColor Yellow
-
-    ExecWSLCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3 client'
-    
-    ExecCheck "WSL cmake Tests"
     
 test_script:
 - ps: >-
