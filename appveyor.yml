@@ -7,7 +7,7 @@ environment:
   proxspace_zip_folder_name: ProxSpace-*
   proxspace_path: \ProxSpace
   proxspace_home_path: \ProxSpace\pm3
-  wsl_git_path: C:\wslgit
+  wsl_git_path: C:\proxmark
 
 init:
 - ps: >-
@@ -209,7 +209,7 @@ build_script:
         $TestTime=[System.Environment]::TickCount
         ExecWSLCmd "make clean;make V=1"  
         #some checks
-        if(!(Test-Path "$env:wsl_git_path\client\proxmark3fail")){
+        if(!(Test-Path "$env:wsl_git_path\client\proxmark3")){
             throw "Main file proxmark3 not exists."
         }
         
