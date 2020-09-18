@@ -34,7 +34,7 @@ clone_script:
 - ps: >-
     
     Function ExecUpdate($Text, $firstStart) {
-        Write-Host "$Text" -NoNewLine 
+        Write-Host "$Text"
         Start-Process "cmd.exe"  "/c ""cd /D $env:proxspace_path && runme64.bat -c ""exit"""""
         $StartTime=[System.Environment]::TickCount
         Start-Sleep -s 10
@@ -42,6 +42,7 @@ clone_script:
             $cmdprocess = Get-Process "cmd" -ErrorAction SilentlyContinue
             
             if (!$cmdprocess -Or $cmdprocess.HasExited) {
+                Write-Host "$Text" -NoNewLine 
                 Write-Host "[ OK ]" -ForegroundColor Green
                 break
             }
@@ -51,11 +52,13 @@ clone_script:
                 $tmp = $cmdprocess.CloseMainWindow()
                 Start-Sleep -s 5
                 Stop-Process -Name "cmd" -Force -ErrorAction SilentlyContinue
+                Write-Host "$Text" -NoNewLine 
                 Write-Host "Exit by pacman.conf" -ForegroundColor Green
                 break           
             }
             
             if ([System.Environment]::TickCount-$StartTime -gt 1000000) {
+                Write-Host "$Text" -NoNewLine 
                 Write-host "Exit by timeout" -ForegroundColor Yellow
                 break
             }
