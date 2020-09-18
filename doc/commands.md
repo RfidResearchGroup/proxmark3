@@ -291,12 +291,14 @@ Check column "offline" for their availability.
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`          
 |`hf mf sim              `|N       |`Simulate MIFARE card`          
 |`hf mf eclr             `|N       |`Clear simulator memory`          
-|`hf mf eget             `|N       |`Get simulator memory block`          
+|`hf mf egetblk          `|N       |`Get simulator memory block`
+|`hf mf egetsc           `|N       |`Get simulator memory sector`
 |`hf mf eset             `|N       |`Set simulator memory block`          
 |`hf mf eload            `|N       |`Load from file emul dump`          
 |`hf mf esave            `|N       |`Save to file emul dump`          
 |`hf mf ecfill           `|N       |`Fill simulator memory with help of keys from simulator`          
-|`hf mf ekeyprn          `|N       |`Print keys from simulator memory`          
+|`hf mf ekeyprn          `|N       |`Print keys from simulator memory`
+|`hf mf eview            `|N       |`View simulator memory`
 |`hf mf csetuid          `|N       |`Set UID     (magic chinese card)`          
 |`hf mf cwipe            `|N       |`Wipe card to default UID/Sectors/Keys`          
 |`hf mf csetblk          `|N       |`Write block (magic chinese card)`          
@@ -304,6 +306,7 @@ Check column "offline" for their availability.
 |`hf mf cgetsc           `|N       |`Read sector (magic chinese card)`          
 |`hf mf cload            `|N       |`Load dump   (magic chinese card)`          
 |`hf mf csave            `|N       |`Save dump from magic chinese card into file or emulator`          
+|`hf mf cview            `|N       |`View card memory (magic chinese card)`
 |`hf mf mad              `|N       |`Checks and prints MAD`          
 |`hf mf ndef             `|N       |`Prints NDEF records from card`          
 |`hf mf ice              `|N       |`collect MIFARE Classic nonces to file`          
@@ -787,6 +790,7 @@ Check column "offline" for their availability.
 |`lf t55xx read          `|N       |`b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]`          
 |`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)`          
 |`lf t55xx recoverpw     `|N       |`[password] Try to recover from bad password write from a cloner. Only use on PW protected chips!`          
+|`lf t55xx sniff         `|N       |`Attempt to recover T55xx commands from sample buffer`          
 |`lf t55xx special       `|N       |`Show block changes with 64 different offsets`          
 |`lf t55xx trace         `|Y       |`[1] Show T55x7 traceability data (page 1/ blk 0-1)`          
 |`lf t55xx wakeup        `|N       |`Send AOR wakeup command`          
