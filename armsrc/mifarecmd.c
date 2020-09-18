@@ -1978,15 +1978,15 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         uint64_t ui64Key = emlGetKey(sectorNo, keytype);
         if (sectorNo == 0) {
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_FIRST)) {
-                retval = PM3_ESOFT;
+                retval = PM3_EPARTIAL;
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth error", sectorNo);
-                goto out;
+                continue;
             }
         } else {
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_NESTED)) {
-                retval = PM3_ESOFT;
+                retval = PM3_EPARTIAL;
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth nested error", sectorNo);
-                goto out;
+                continue;
             }
         }
 
