@@ -209,7 +209,7 @@ build_script:
         $TestTime=[System.Environment]::TickCount
         ExecWSLCmd "make clean;make V=1"  
         #some checks
-        if(!(Test-Path "$env:wsl_git_path\client\proxmark3")){
+        if(!(Test-Path "$env:wsl_git_path\client\proxmark3fail")){
             throw "Main file proxmark3 not exists."
         }
         
