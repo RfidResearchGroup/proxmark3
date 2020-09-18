@@ -922,7 +922,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
-    bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
+    bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
     if (res == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -936,7 +936,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
-        res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
+        res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
         if (res == false) {
             PrintAndLogEx(WARNING, "Command execute timeout");
             return PM3_ETIMEOUT;
@@ -3658,7 +3658,13 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
 
         int res = mfEmlGetMem(data, start + i, 1);
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data, sizeof(data)));
+            if (start + i == 0) {
+                PrintAndLogEx(INFO, "%03d | " _RED_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
+            } else if (mfIsSectorTrailer(i)) {
+                PrintAndLogEx(INFO, "%03d | " _YELLOW_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
+            } else {
+                PrintAndLogEx(INFO, "%03d | %s ", start + i, sprint_hex_ascii(data, sizeof(data)));
+            }
         }
     }
     decode_print_st(start + blocks - 1, data);
