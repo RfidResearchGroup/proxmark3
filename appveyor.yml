@@ -65,13 +65,13 @@ clone_script:
         }
     }
     
-    Function WSLExec($Text, $Cmd) {
-        Write-Host "$Text" -NoNewLine 
-        wsl -- bash -c $Cmd
-        Write-Host "[ OK ]" -ForegroundColor Green
-    }
-    
     $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
+        Function WSLExec($Text, $Cmd) {
+            Write-Host "$Text" 
+            wsl -- bash -c $Cmd
+            Write-Host "$Text[ OK ]" -ForegroundColor Green
+        }
+    
         $WSLInstallTime=[System.Environment]::TickCount
         WSLExec "WSL update..." "sudo apt-get update 1>/dev/null"
         WSLExec "WSL upgrade..." "sudo apt-get upgrade -y 1>/dev/null" 
@@ -80,8 +80,6 @@ clone_script:
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
     }
-    
-    Receive-Job -Job $WSLjob
     
     Write-Host "Removing ProxSpace..." -NoNewLine
     
@@ -92,6 +90,8 @@ clone_script:
     Remove-Item -Recurse -Force -Path $env:proxspace_path
 
     Write-Host "[ OK ]" -ForegroundColor Green
+    
+    Receive-Job -Job $WSLjob
 
     Write-Host "Download ProxSpace..." -NoNewLine
     
@@ -101,6 +101,8 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Green
     
+    Receive-Job -Job $WSLjob
+    
     Write-Host "Extracting ProxSpace..." -NoNewLine
     
     Expand-Archive -LiteralPath "$env:proxspace_zip_file" -DestinationPath "\"
@@ -108,6 +110,8 @@ clone_script:
     Remove-Item "$env:proxspace_zip_file"
     
     Write-Host "[ OK ]" -ForegroundColor Green
+    
+    Receive-Job -Job $WSLjob
     
     Write-Host "Renaming ProxSpace folder..." -NoNewLine
     
