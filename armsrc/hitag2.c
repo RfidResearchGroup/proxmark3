@@ -1490,6 +1490,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             }
             case RHT2F_UID_ONLY: {
                 bStop = !hitag2_read_uid(rx, rxlen, tx, &txlen);
+                if (bSuccessful) bStop = true;
                 attempt_count++; //attempt 3 times to get uid then quit
                 if (!bStop && attempt_count == 3)
                     bStop = true;
@@ -1501,7 +1502,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 goto out;
             }
         }
-        
+        if (bStop) break;
         if (turn_on) {
             // Wait 50ms with field off to be sure the transponder gets reset
             SpinDelay(50);
