@@ -54,7 +54,7 @@ typedef struct {
     //uint8_t foundKey[2];
 } icesector_t;
 
-#define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 4) / 6)
+#define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 5) / 6)
 #define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * 6)
 #define CANDIDATE_SIZE  (0xFFFF * 6)
 
