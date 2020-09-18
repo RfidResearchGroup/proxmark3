@@ -69,7 +69,8 @@ clone_script:
         Function WSLExec($Text, $Cmd) {
             Write-Host "$Text" 
             wsl -- bash -c $Cmd
-            Write-Host "$Text[ OK ]" -ForegroundColor Green
+            Write-Host "$Text" -NoNewLine 
+            Write-Host "[ OK ]" -ForegroundColor Green
         }
     
         $WSLInstallTime=[System.Environment]::TickCount
