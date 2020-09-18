@@ -107,7 +107,7 @@ To test you have the proper read & write rights, plug the Proxmark3 and execute:
 ```sh
 [ -r /dev/ttyACM0 ] && [ -w /dev/ttyACM0 ] && echo ok
 ```
-It must return `ok`. Otherwise this means you've a permissions problem to fix.
+It must return `ok`. Otherwise this means you've got a permission problem to fix.
 
 # Compile and use the project
 
