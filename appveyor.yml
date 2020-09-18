@@ -205,11 +205,11 @@ build_script:
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
-        cd $env:appveyor_build_folder   
+        cd $env:wsl_git_path   
         $TestTime=[System.Environment]::TickCount
         ExecWSLCmd "make clean;make V=1"  
         #some checks
-        if(!(Test-Path "$env:proxspace_home_path\$pmfolder\client\proxmark3")){
+        if(!(Test-Path "$env:wsl_git_path\client\proxmark3")){
             throw "Main file proxmark3 not exists."
         }
         
@@ -226,7 +226,7 @@ build_script:
         ExecWSLCmd 'make clean'  
         Write-Host "---------- WSL cmake ----------" -ForegroundColor Yellow  
         $TestTime=[System.Environment]::TickCount 
-        ExecWSLCmd 'rm -rf client/build;mkdir -p client/build; cd client/build; cmake ..; make VERBOSE=1;' 
+        ExecWSLCmd 'mkdir -p client/build; cd client/build; cmake ..; make VERBOSE=1;' 
         Write-Host "---------- WSL cmake tests ----------" -ForegroundColor Yellow
         ExecWSLCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3 client'  
         ExecCheck "WSL cmake Tests"
