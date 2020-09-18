@@ -60,7 +60,8 @@ clone_script:
                 break
             }
             
-            Start-Sleep -s 1
+            Start-Sleep -s 5
+            Receive-Job -Job $WSLjob
         }
     }
     
@@ -69,6 +70,18 @@ clone_script:
         wsl -- bash -c $Cmd
         Write-Host "[ OK ]" -ForegroundColor Green
     }
+    
+    $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
+        $WSLInstallTime=[System.Environment]::TickCount
+        WSLExec "WSL update..." "sudo apt-get update 1>/dev/null"
+        WSLExec "WSL upgrade..." "sudo apt-get upgrade -y 1>/dev/null" 
+        WSLExec "WSL cleanup..." "sudo apt-get auto-remove -y 1>/dev/null" 
+        WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
+        WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
+        Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
+    }
+    
+    Receive-Job -Job $WSLjob
     
     Write-Host "Removing ProxSpace..." -NoNewLine
     
@@ -113,20 +126,6 @@ clone_script:
     
     Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$PSInstallTime) / 1000) sec" -Category Information
     
-    $WSLInstallTime=[System.Environment]::TickCount
-    
-    WSLExec "WSL update..." "sudo apt-get update 1>/dev/null"
-    
-    WSLExec "WSL upgrade..." "sudo apt-get upgrade -y 1>/dev/null"
-    
-    WSLExec "WSL cleanup..." "sudo apt-get auto-remove -y 1>/dev/null"
-    
-    WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null"
-    
-    WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
-    
-    Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
-    
     Write-Host "Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." -NoNewLine
 
     if(-not $env:appveyor_pull_request_number) {
@@ -141,6 +140,8 @@ clone_script:
     }
     
     Write-Host "[ OK ]" -ForegroundColor Green 
+    
+    Receive-Job -Wait -Job $WSLjob
     
 
 install:
