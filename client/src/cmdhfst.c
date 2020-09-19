@@ -54,12 +54,12 @@ static int usage_hf_st_ndef(void) {
 
 static int usage_hf_st_protect(void) {
     PrintAndLogEx(NORMAL, "\n Change R/W protection for NFC Data Exchange Format (NDEF)\n");
-    PrintAndLogEx(NORMAL, "Usage: hf st protect [h] p <pwd> <r|w> <t>");
+    PrintAndLogEx(NORMAL, "Usage: hf st protect [h] p <pwd> r|w [0|1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "    h          : This help");
     PrintAndLogEx(NORMAL, "    p <pwd>    : 16 byte write password");
-    PrintAndLogEx(NORMAL, "    <r|w>      : Change (r)ead or (w)rite protection");
-    PrintAndLogEx(NORMAL, "    t          : Enable / Disable protection");
+    PrintAndLogEx(NORMAL, "    r|w        : Change (r)ead or (w)rite protection");
+    PrintAndLogEx(NORMAL, "    [0|1]      : Enable / Disable protection");
     PrintAndLogEx(NORMAL, "                 0 = Disable (default)");
     PrintAndLogEx(NORMAL, "                 1 = Enable");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -69,12 +69,12 @@ static int usage_hf_st_protect(void) {
 
 static int usage_hf_st_pwd(void) {
     PrintAndLogEx(NORMAL, "\n Change R/W password for NFC Data Exchange Format (NDEF)\n");
-    PrintAndLogEx(NORMAL, "Usage: hf st pwd [h] p <pwd> <r|w> n <pwd>");
+    PrintAndLogEx(NORMAL, "Usage: hf st pwd [h] p <pwd> r|w n <newpwd>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h          : This help");
-    PrintAndLogEx(NORMAL, "    p <pwd>    : 16 byte write password");
-    PrintAndLogEx(NORMAL, "    <r|w>      : Change (r)ead or (w)rite password");
-    PrintAndLogEx(NORMAL, "    n <pwd>    : New 16 byte password");
+    PrintAndLogEx(NORMAL, "    h           : This help");
+    PrintAndLogEx(NORMAL, "    p <pwd>     : 16 byte write password");
+    PrintAndLogEx(NORMAL, "    r|w         : Change (r)ead or (w)rite password");
+    PrintAndLogEx(NORMAL, "    n <newpwd>  : New 16 byte password");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf st pwd p 82E80053D4CA5C0B656D852CC696C8A1 r n 00000000000000000000000000000000"));
     return PM3_SUCCESS;
