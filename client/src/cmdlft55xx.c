@@ -3728,21 +3728,20 @@ static int CmdT55xxProtect(const char *Cmd) {
 // if the difference bettwen a and b is less then or eq to d  i.e. does a = b +/- d
 #define approxEq(a,b,d) ((abs(a-b) <= d) ? true : false)
 
-static uint8_t t55sniffGetPacket(int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance)
-{
-    int ii = 0;
+static uint8_t t55sniffGetPacket(int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {
+    int i = 0;
     bool ok = true;
     uint8_t dataLen = 0;
 
-    while (ok && (ii < 73)) { // 70 bits max Fixed bit packet
-        if (approxEq(width0, pulseBuffer[ii], tolerance))  {
+    while (ok && (i < 73)) { // 70 bits max Fixed bit packet
+        if (approxEq(width0, pulseBuffer[i], tolerance))  {
             data[dataLen++] = '0';
-            ii++;
+            i++;
             continue;
         }
-        if (approxEq(width1, pulseBuffer[ii], tolerance)) { 
+        if (approxEq(width1, pulseBuffer[i], tolerance)) { 
             data[dataLen++] = '1';
-            ii++;
+            i++;
             continue;
         }
 
@@ -3753,39 +3752,35 @@ static uint8_t t55sniffGetPacket(int *pulseBuffer, char *data, uint8_t width0, u
     return dataLen;
 }
 
-static uint8_t t55sniffTrimSamples(int *pulseBuffer, int *pulseIdx, uint8_t len)
-{
-    for (uint8_t ii = 0; ii < (80 - len); ii++)
+static uint8_t t55sniffTrimSamples(int *pulseBuffer, int *pulseIdx, uint8_t len) {
+    for (uint8_t ii = 0; ii < (80 - len); ii++) {
         pulseBuffer[ii] = pulseBuffer[ii + len];
-
-    *pulseIdx = *pulseIdx - len;
-
+    }
+    
+    *pulseIdx -= len;
     return PM3_SUCCESS;
 }
 
 static int CmdT55xxSniff(const char *Cmd) {
-    uint8_t cmdp = 0;
+
     bool sampleData = true;
-    uint8_t width0 = 0;
-    uint8_t width1 = 0;
-   // uint8_t minLevel = 20;
-    int pulseSamples = 0;
-    uint8_t tolerance = 5;
-    uint8_t page;
-    uint32_t usedPassword;
-    uint32_t blockData;
-    uint8_t blockAddr;
+    bool haveData = false;
+    uint8_t cmdp = 0;
+    uint8_t width0 = 0, width1 = 0;
+    uint8_t tolerance = 5, page, blockAddr;
+    uint16_t dataLen = 0;
     size_t idx = 0;
-    int minWidth=1000;
-    int maxWidth=0;
+    uint32_t usedPassword, blockData;
+    int pulseSamples = 0;
+    int pulseIdx = 0;
+    int minWidth = 1000;
+    int maxWidth = 0;
     char modeText [100];
     char pwdText  [100];
     char dataText [100];
-    bool haveData = false;
     int pulseBuffer[80] = { 0 }; // max should be 73 +/- - Holds Pulse widths
-    int pulseIdx = 0;
     char data[80]; //  linked to pulseBuffer. - Holds 0/1 from pulse widths 
-    uint16_t dataLen = 0;
+
 
     /*
         Notes:
@@ -3832,38 +3827,32 @@ static int CmdT55xxSniff(const char *Cmd) {
                     return usage_t55xx_sniff();
                 }
                 break;
-        //    case 's': 
-        //        minLevel = param_get8ex(Cmd, cmdp + 1, 0, 10);
-        //        cmdp += 2;
-        //        break;
             case 't': 
                 tolerance = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             default:
-                    cmdp++;
-                    PrintAndLogEx (ERR,"Invalid options supplied!");
-                    return usage_t55xx_sniff();
+                cmdp++;
+                PrintAndLogEx (ERR,"Invalid options supplied!");
+                return usage_t55xx_sniff();
         }
     }
 
-    // setup and sample data from Proxmark (if not directed to existing sample/graphbuffer
+    // setup and sample data from Proxmark
+    // if not directed to existing sample/graphbuffer
     if (sampleData) {
-            // get samples 
-            CmdLFSniff ("");
+        CmdLFSniff ("");
     }
 
     // Headings
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO,_CYAN_("T55xx command detection"));
-//    PrintAndLogEx(INFO,"Minimum signal level : "_GREEN_("%d"),minLevel);
     PrintAndLogEx(SUCCESS, "Downlink mode         | password |   Data   | blk | page |  0  |  1  | raw");
     PrintAndLogEx(SUCCESS, "----------------------+----------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
 
     idx = 0;
     // loop though sample buffer
-    while (idx < GraphTraceLen)
-    {
+    while (idx < GraphTraceLen) {
 
         minWidth = 1000;
         maxWidth = 0;
@@ -3874,11 +3863,14 @@ static int CmdT55xxSniff(const char *Cmd) {
         sprintf(pwdText, " ");
         sprintf(dataText, " ");
 
-        if (pulseSamples == 0) idx++;
+        if (pulseSamples == 0) {
+            idx++;
+        }
 
         // find high
-        while ((idx < GraphTraceLen) && (GraphBuffer[idx] < 0))
+        while ((idx < GraphTraceLen) && (GraphBuffer[idx] < 0)) {
             idx++;
+        }
 
         // count high samples
         pulseSamples = 0;
@@ -3890,7 +3882,7 @@ static int CmdT55xxSniff(const char *Cmd) {
         if (pulseSamples > 0) {
             pulseBuffer[pulseIdx++] = pulseSamples;
             if (pulseIdx > 79) { // make room for next sample - if not used by now, it wont be.
-                t55sniffTrimSamples (pulseBuffer,&pulseIdx,1);
+                t55sniffTrimSamples (pulseBuffer, &pulseIdx, 1);
             }
 
             // Check Samples for valid packets;
@@ -3935,13 +3927,13 @@ static int CmdT55xxSniff(const char *Cmd) {
             // Check first bit.
             
             // Long leading 0
-            if (!haveData && (approxEq(pulseBuffer[0],136+minWidth,tolerance) && approxEq(pulseBuffer[1],maxWidth,tolerance))) {
+            if (haveData == false && (approxEq(pulseBuffer[0],136+minWidth,tolerance) && approxEq(pulseBuffer[1],maxWidth,tolerance))) {
                 printf ("Long Leading 0 - not yet hanled | have 1 Fisrt bit | Min : %-3d - Max : %-3d : diff : %d\n",minWidth,maxWidth, maxWidth-minWidth);
                 continue;
             }
 
             // Fixed bit - Default
-            if (!haveData && (approxEq(pulseBuffer[0], maxWidth, tolerance))) {
+            if (haveData == false && (approxEq(pulseBuffer[0], maxWidth, tolerance))) {
                 dataLen = t55sniffGetPacket (pulseBuffer, data, minWidth, maxWidth, tolerance);
 
              //   if ((dataLen == 39) ) 
@@ -3999,7 +3991,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                     }
 
                     // Default Write (or password read ??)
-                    if ((dataLen == 38)) {
+                    if (dataLen == 38) {
                         t55sniffTrimSamples (pulseBuffer, &pulseIdx,38);
 
                         page = data[1] - '0';
@@ -4024,7 +4016,7 @@ static int CmdT55xxSniff(const char *Cmd) {
             }
 
             // Leading 0
-            if (!haveData && (approxEq(pulseBuffer[0],minWidth,tolerance))) {
+            if (haveData == false && (approxEq(pulseBuffer[0], minWidth, tolerance))) {
                 // leading 0 (should = 0 width) 
                 // 1 of 4 (leads with 00)
                 dataLen = t55sniffGetPacket (pulseBuffer,data,minWidth,maxWidth,tolerance);
