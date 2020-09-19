@@ -29,7 +29,7 @@
 #include "dbprint.h"
 
 #include "ticks.h"  // SpinDelay
-#include "protocols.h"  // MIFARE_ULEV1_VERSION, MIFARE_ULEV1_READSIG
+#include "protocols.h"  // MIFARE_ULEV1_VERSION, MIFARE_ULEV1_READSIG, MIFARE_ULEV1_READ_CNT, MIFARE_ULEV1_CHECKTEAR
 #include <string.h>  // memcmp
 #include "mifareutil.h"
 #include "iso14443a.h"
@@ -61,18 +61,32 @@ typedef struct {
 int get_block_count(iso14a_card_select_t card, uint8_t version[], uint16_t version_len);
 uint16_t get_ev1_version(iso14a_card_select_t card, uint8_t *version);
 uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *signature);
+uint16_t get_ev1_counter(iso14a_card_select_t card, uint8_t counter, uint8_t *response);
+uint16_t get_ev1_tearing(iso14a_card_select_t card, uint8_t counter, uint8_t *response);
 
 uint16_t get_ev1_version(iso14a_card_select_t card, uint8_t *version) {
     return mifare_sendcmd(MIFARE_ULEV1_VERSION, NULL, 0, version, NULL, NULL);
 }
 
-uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *signature) {
+uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *response) {
     uint8_t cmd[4] = {MIFARE_ULEV1_READSIG, 0x00, 0x00, 0x00};
     AddCrc14A(cmd, 2);
-
     ReaderTransmit(cmd, sizeof(cmd), NULL);
+    return ReaderReceive(response, NULL);
+}
 
-    return ReaderReceive(signature, NULL);
+uint16_t get_ev1_counter(iso14a_card_select_t card, uint8_t counter, uint8_t *response) {
+    uint8_t cmd[4] = {MIFARE_ULEV1_READ_CNT, counter, 0x00, 0x00};
+    AddCrc14A(cmd, 2);
+    ReaderTransmit(cmd, sizeof(cmd), NULL);
+    return ReaderReceive(response, NULL);
+}
+
+uint16_t get_ev1_tearing(iso14a_card_select_t card, uint8_t counter, uint8_t *response) {
+    uint8_t cmd[4] = {MIFARE_ULEV1_CHECKTEAR, counter, 0x00, 0x00};
+    AddCrc14A(cmd, 2);
+    ReaderTransmit(cmd, sizeof(cmd), NULL);
+    return ReaderReceive(response, NULL);
 }
 
 int get_block_count(iso14a_card_select_t card, uint8_t version[], uint16_t version_len) {
@@ -184,10 +198,11 @@ void RunMod(void) {
                 bool is_ev1 = (version_len != 0) && (block_count != 16);
 
                 if (read_successful) {
-                    uint8_t signature[32] = {0x00};
+                    uint8_t signature[34] = {0x00};
                     if (is_ev1) {
                         get_ev1_signature(card, signature);
                     }
+                    Dbprintf("Preparing emulator memory with:");
                     // Fill first 14 blocks with 0x00 (see comment above)
                     for (int i = 0; i < 14; i++) {
                         uint8_t dataout[4] = {0x00, 0x00, 0x00, 0x00};
@@ -200,12 +215,18 @@ void RunMod(void) {
                             dataout[3] = block_count;
                         } else if (is_ev1 && ((i > 2 && i < 11))) {
                             // On 3-10 add signature on EV1
-                            memcpy(dataout, signature + (i * 4), 4);
+                            memcpy(dataout, signature + ((i - 3) * 4), 4);
                         } else if (is_ev1 && (i > 10)) {
-                            // On 11-14 set tearing to 0xBD on EV1
-                            dataout[3] = 0xBD;
+                            // On 11-14 read and set counter and tearing on EV1
+                            uint8_t counter[5];
+                            uint8_t tearing[3];
+                            get_ev1_counter(card, i - 11, counter);
+                            get_ev1_tearing(card, i - 11, tearing);
+                            memcpy(dataout, counter, 3);
+                            memcpy(dataout + 3, tearing, 1);
                         }
 
+                        Dbhexdump(4, dataout, 0);
                         emlSetMem_xt(dataout, i, 1, 4);
                     }
                     Dbprintf("Successfully loaded into emulator memory...");
