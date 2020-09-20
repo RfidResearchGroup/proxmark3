@@ -243,8 +243,11 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
     StartTicks();
 
     // 50ms for the resonant antenna to settle.
-    if (reader_field)
+    if (reader_field) {
         WaitMS(50);
+    } else {
+        WaitMS(1);
+    }
 }
 
 /**
