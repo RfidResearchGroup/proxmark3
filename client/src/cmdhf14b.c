@@ -105,10 +105,10 @@ static int usage_hf_14b_write_srx(void) {
 static int usage_hf_14b_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
                   "\n"
-                  "Usage: hf 14b dump [h] [card memory] <f filname> \n"
+                  "Usage: hf 14b dump [h] [card memory] <f filename> \n"
                   "Options:\n"
                   "\th             this help\n"
-                  "\t[card memory] 1 = SRIX4K (default), 2 = SRI512"
+                  "\t[card memory] 1 = SRIX4K (default), 2 = SRI512\n"
                   "\tf <name>      filename,  if no <name> UID will be used as filename\n"
                   "\n"
                   "Example:\n"
@@ -834,6 +834,8 @@ static int CmdHF14BDump(const char *Cmd) {
     uint16_t cardsize = 0;
     uint8_t blocks = 0;
     iso14b_card_select_t card;
+
+    if (strlen(Cmd) < 1) return usage_hf_14b_dump();
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
