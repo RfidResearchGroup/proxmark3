@@ -40,7 +40,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size);
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF(void);
+uint32_t SniffLF(bool verbose, uint32_t sample_size);
 
 uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
                        bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip);

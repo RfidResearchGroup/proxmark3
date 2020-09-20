@@ -786,8 +786,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {
-            uint32_t bits = SniffLF();
-            reply_mix(CMD_ACK, bits, 0, 0, 0, 0);
+            struct p {
+                uint32_t samples : 31;
+                bool     verbose : 1;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            uint32_t bits = SniffLF(payload->verbose, payload->samples);
+            reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
         case CMD_LF_HID_WATCH: {

@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Add lf t55xx sniff to allow extracting commands and passwords used be cloners. (@mwalker33)
- - Add options to `lf read` and `lf cmdread` (@doegox)
+ - Add options to `lf read`, `lf cmdread`, `lf sniff` for repeated acquisitions (@doegox)
  - Change options of `lf read` to match `lf cmdread`, this affects historical `d` and `s` options (@doegox)
  - Add `hf waveshare` to upload picture to Waveshare NFC-Powered e-Paper (@doegox)
  - Add `hf 14a config` to deal with badly configured cards: invalid ATQA/BCC/SAK (@doegox)

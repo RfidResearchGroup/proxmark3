@@ -124,12 +124,19 @@ static int usage_lf_sim(void) {
 }
 static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff low frequence signal.");
-    PrintAndLogEx(NORMAL, "Usage: lf sniff [h]");
+    PrintAndLogEx(NORMAL, "Usage: lf sniff [h] [q] [s #samples] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         This help");
+    PrintAndLogEx(NORMAL, "       q            silent (optional)");
+    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
+    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf sniff");
+    PrintAndLogEx(NORMAL, "- oscilloscope style:");
+    PrintAndLogEx(NORMAL, "      data plot");
+    PrintAndLogEx(NORMAL, "      lf sniff q s 3000 @");
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data samples'")" command to download from device");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data plot'")" to look at it");
     return PM3_SUCCESS;
 }
@@ -741,18 +748,81 @@ int CmdLFRead(const char *Cmd) {
     return ret;
 }
 
+int lf_sniff(bool verbose, uint32_t samples) {
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    struct p {
+        uint32_t samples : 31;
+        bool     verbose : 1;
+    } PACKED;
+
+    struct p payload;
+    payload.verbose = verbose;
+    payload.samples = samples;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (g_lf_threshold_set) {
+        WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
+    } else {
+        if (!WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500)) {
+            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    // response is number of bits read
+    uint32_t size = (resp.data.asDwords[0] / 8);
+    getSamples(size, verbose);
+    return PM3_SUCCESS;
+}
+
 int CmdLFSniff(const char *Cmd) {
 
     if (!session.pm3_present) return PM3_ENOTTY;
 
-    uint8_t cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_sniff();
+    bool errors = false;
+    bool verbose = true;
+    bool continuous = false;
+    uint32_t samples = 0;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_sniff();
+            case 's':
+                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'q':
+                verbose = false;
+                cmdp++;
+                break;
+            case '@':
+                continuous = true;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_SNIFF_RAW_ADC, NULL, 0);
-    WaitForResponse(CMD_ACK, NULL);
-    getSamples(0, true);
-    return PM3_SUCCESS;
+    //Validations
+    if (errors) return usage_lf_sniff();
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    }
+    int ret = PM3_SUCCESS;
+    do {
+        ret = lf_sniff(verbose, samples);
+        if (kbd_enter_pressed()) {
+            break;
+        }
+    } while (continuous);
+    return ret;
 }
 
 static void ChkBitstream(void) {
