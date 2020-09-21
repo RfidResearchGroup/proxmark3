@@ -785,14 +785,14 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             puts("\tPGUP                     Page left");
             puts("\tPGDOWN                   Page right");
             puts("\tLEFT                     Move left");
-            puts("\tWHEEL MOUSE UP           Move right");
-            puts("\t<CTLR> LEFT              Move left 1 sample");
-            puts("\t<SHIFT> LEFT             Page left");
-            puts("\tLEFT MOUSE CLICK         Set yellow cursor");
             puts("\tRIGHT                    Move right");
+            puts("\tWHEEL MOUSE UP           Move left");
             puts("\tWHEEL MOUSE DOWN         Move right");
+            puts("\t<CTLR> LEFT              Move left 1 sample");
             puts("\t<CTLR> RIGHT             Move right 1 sample");
+            puts("\t<SHIFT> LEFT             Page left");
             puts("\t<SHIFT> RIGHT            Page right");
+            puts("\tLEFT MOUSE CLICK         Set yellow cursor");
             puts("\tRIGHT MOUSE CLICK        Set purple cursor");
             puts("-----------------------------------------------------------------------");
             break;
