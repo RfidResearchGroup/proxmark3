@@ -694,7 +694,11 @@ void Plot::wheelEvent(QWheelEvent *event) {
         x -= WIDTH_AXES;
         x = (int)(x / GraphPixelsPerPoint);
         x += GraphStart;
+#if QT_VERSION >= 0x050000
+        Zoom(1.0-(float)event->angleDelta().y()/(120/zoom_offset), x);
+#else
         Zoom(1.0-(float)event->delta()/(120/zoom_offset), x);
+#endif
     } else {
         Move(PageWidth*(-(float)event->delta()/(120/move_offset)));
     }
