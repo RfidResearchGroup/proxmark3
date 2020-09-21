@@ -669,12 +669,30 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         case Qt::Key_Down:
             if (GraphPixelsPerPoint <= 50) {
                 GraphPixelsPerPoint *= 2;
+                if (event->modifiers() & Qt::ShiftModifier) {
+                    GraphStart += (CursorBPos - GraphStart) / 2;
+                } else {
+                    GraphStart += (CursorAPos - GraphStart) / 2;
+                }
             }
             break;
 
         case Qt::Key_Up:
             if (GraphPixelsPerPoint >= 0.02) {
                 GraphPixelsPerPoint /= 2;
+                if (event->modifiers() & Qt::ShiftModifier) {
+                    if (GraphStart >= CursorBPos - GraphStart) {
+                        GraphStart -= CursorBPos - GraphStart;
+                    } else {
+                        GraphStart = 0;
+                    }
+                } else {
+                    if (GraphStart >= CursorAPos - GraphStart) {
+                        GraphStart -= CursorAPos - GraphStart;
+                    } else {
+                        GraphStart = 0;
+                    }
+                }
             }
             break;
 
@@ -720,8 +738,10 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             puts("PLOT window keystrokes");
             puts("\tKey                      Action");
             puts("-----------------------------------------------------------------------");
-            puts("\tUP                       Zoom out");
-            puts("\tDOWN                     Zoom in");
+            puts("\tUP                       Zoom out around yellow cursor");
+            puts("\t<SHIFT> UP               Zoom out around purple cursor");
+            puts("\tDOWN                     Zoom in around yellow cursor");
+            puts("\t<SHIFT> DOWN             Zoom in around purple cursor");
             puts("\tG                        Toggle grid display");
             puts("\tH                        Show help");
             puts("\tL                        Toggle lock grid relative to samples");
