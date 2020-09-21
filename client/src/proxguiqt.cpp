@@ -686,7 +686,11 @@ void Plot::wheelEvent(QWheelEvent *event) {
     //  120+shift => zoom out 10%
     const float zoom_offset = 0.1;
     if (event->modifiers() & Qt::ShiftModifier) {
+#if QT_VERSION >= 0x050000
         int x = event->position().x();
+#else
+        int x = event->x();
+#endif
         x -= WIDTH_AXES;
         x = (int)(x / GraphPixelsPerPoint);
         x += GraphStart;
