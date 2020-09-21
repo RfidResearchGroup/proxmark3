@@ -700,7 +700,11 @@ void Plot::wheelEvent(QWheelEvent *event) {
         Zoom(1.0-(float)event->delta()/(120/zoom_offset), x);
 #endif
     } else {
+#if QT_VERSION >= 0x050000
+        Move(PageWidth*(-(float)event->angleDelta().y()/(120/move_offset)));
+#else
         Move(PageWidth*(-(float)event->delta()/(120/move_offset)));
+#endif
     }
     this->update();
 }
