@@ -44,6 +44,8 @@ typedef struct {
     bool addr_given;
     bool pwd_given;
     bool newpwd_given;
+    uint8_t carrier;
+    uint8_t byte;
     uint8_t password[4];
     uint8_t new_password[4];
     uint8_t addresses[4];

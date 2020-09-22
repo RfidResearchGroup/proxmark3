@@ -93,7 +93,32 @@ static int usage_lf_em4x50_wipe(void) {
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_wwipe p 11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_wipe p 11223344"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_lf_em4x50_sim(void) {
+    PrintAndLogEx(NORMAL, "Simulate EM4x50 tag. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sim [h] w <word>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       w <word>  - word (hex)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim w 12345678"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_lf_em4x50_test(void) {
+    PrintAndLogEx(NORMAL, "Test functionality for EM4x50 tag. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_test [h] ...");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       c <0|1>   - carrier on|off (optional)");
+    PrintAndLogEx(NORMAL, "       b <byte>  - byte (hex) (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_test ..."));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -539,10 +564,10 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
 
     uint8_t *data = resp.data.asBytes;
     em4x50_word_t words[EM4X50_NO_WORDS];
+    int now = (resp.status & STATUS_NO_WORDS) >> 2;
     if (edata.addr_given) {
         prepare_result(data, etd->address, etd->address, words);
     } else {
-        int now = (resp.status & STATUS_NO_WORDS) >> 2;
         prepare_result(data, 0, now - 1, words);
     }
 
@@ -550,7 +575,11 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
         memcpy(out, &words, sizeof(em4x50_word_t) * EM4X50_NO_WORDS);
     }
 
-    print_result(words, etd->address, etd->address);
+    if (edata.addr_given)
+        print_result(words, etd->address, etd->address);
+    else
+        print_result(words, 0, now - 1);
+
     return PM3_SUCCESS;
 }
 
@@ -598,8 +627,9 @@ int CmdEM4x50Read(const char *Cmd) {
         }
     }
 
-    if (errors || strlen(Cmd) == 0 || etd.addr_given == false)
-        return usage_lf_em4x50_read();
+    //if (errors || strlen(Cmd) == 0 || etd.addr_given == false)
+    if (errors)
+         return usage_lf_em4x50_read();
 
     return em4x50_read(&etd, NULL, true);
 }
@@ -735,6 +765,135 @@ int CmdEM4x50Wipe(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "\nwiping data " _GREEN_("ok") "\n");
     } else {
         PrintAndLogEx(FAILED, "\nwiping data " _RED_("failed") "\n");
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50Sim(const char *Cmd) {
+
+    // fills EM4x50 tag with zeros including password
+
+    bool errors = false, bword = false;
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_sim();
+
+            case 'w': {
+                if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
+                     PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
+                }
+                bword = true;
+                cmdp += 2;
+                break;
+            }
+
+            case 'f': {
+                if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
+                     PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
+                     return PM3_EINVARG;
+                }
+                bword = true;
+                cmdp += 2;
+                break;
+            }
+
+            default:
+                PrintAndLogEx(WARNING, "\nUnknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || !bword)
+         return usage_lf_em4x50_sim();
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&etd, sizeof(etd));
+
+    if (!WaitForResponse(CMD_ACK, &resp)) {
+        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
+        return PM3_ETIMEOUT;
+    }
+
+    // print response
+    bool isOK = resp.status;
+    if (isOK) {
+        PrintAndLogEx(SUCCESS,"\nsimulation data " _GREEN_("ok") "\n");
+    } else {
+        PrintAndLogEx(FAILED,"\nsimulating data " _RED_("failed") "\n");
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50Test(const char *Cmd) {
+
+    // fills EM4x50 tag with zeros including password
+
+    bool errors = false;
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+    
+    etd.carrier = 2;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_test();
+
+            case 'c':
+                param_getdec(Cmd, cmdp + 1, &etd.carrier);
+                if (etd.carrier != 0 && etd.carrier != 1) {
+                    PrintAndLogEx(FAILED, "\ncarrier has to be either 0 or 1\n");
+                    return PM3_EINVARG;
+                }
+                cmdp += 2;
+                break;
+
+            case 'b':
+                if (param_gethex(Cmd, cmdp + 1, &etd.byte, 2)) {
+                    PrintAndLogEx(FAILED, "\nbyte has to be 2 hex symbols\n");
+                    return PM3_EINVARG;
+                }
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "\nUnknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors)
+         return usage_lf_em4x50_test();
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_TEST, (uint8_t *)&etd, sizeof(etd));
+
+    if (!WaitForResponse(CMD_ACK, &resp)) {
+        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
+        return PM3_ETIMEOUT;
+    }
+
+    // print response
+    bool isOK = resp.status;
+    if (isOK) {
+        PrintAndLogEx(SUCCESS,"\ntest " _GREEN_("ok") "\n");
+    } else {
+        PrintAndLogEx(FAILED,"\ntest " _RED_("failed") "\n");
         return PM3_ESOFT;
     }
 
