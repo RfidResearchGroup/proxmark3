@@ -686,7 +686,8 @@ void Plot::wheelEvent(QWheelEvent *event) {
     //  120+shift => zoom out 10%
     const float zoom_offset = 0.1;
     if (event->modifiers() & Qt::ShiftModifier) {
-#if QT_VERSION >= 0x050000
+// event->position doesn't exist in QT5.12.8, both exist in 5.14.2 and event->x doesn't exist in 5.15.0
+#if QT_VERSION >= 0x051400
         int x = event->position().x();
 #else
         int x = event->x();
@@ -694,13 +695,14 @@ void Plot::wheelEvent(QWheelEvent *event) {
         x -= WIDTH_AXES;
         x = (int)(x / GraphPixelsPerPoint);
         x += GraphStart;
-#if QT_VERSION >= 0x050000
+// event->angleDelta doesn't exist in QT4, both exist in 5.12.8 and 5.14.2 and event->delta doesn't exist in 5.15.0
+#if QT_VERSION >= 0x051400
         Zoom(1.0-(float)event->angleDelta().y()/(120/zoom_offset), x);
 #else
         Zoom(1.0-(float)event->delta()/(120/zoom_offset), x);
 #endif
     } else {
-#if QT_VERSION >= 0x050000
+#if QT_VERSION >= 0x051400
         Move(PageWidth*(-(float)event->angleDelta().y()/(120/move_offset)));
 #else
         Move(PageWidth*(-(float)event->delta()/(120/move_offset)));
