@@ -840,5 +840,5 @@ hf 15 csetuid E011223344556677
 ```
 or (ignore errors):
 ```
-script run iso15_magic -u E004013344556677  
+script run hf_15_magic -u E004013344556677  
 ```

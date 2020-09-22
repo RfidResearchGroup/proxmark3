@@ -15,12 +15,12 @@ example = [[
 
      -- ISO15693 slix magic tag
 
-     script run iso15_magic -u E004013344556677
+     script run hf_15_magic -u E004013344556677
 
-     script run iso15_magic -u E004013344556677 -a
+     script run hf_15_magic -u E004013344556677 -a
 ]]
 usage = [[
-script run iso15_magic -h -u <uid>
+script run hf_15_magic -h -u <uid>
 ]]
 arguments = [[
     -h             : this help
