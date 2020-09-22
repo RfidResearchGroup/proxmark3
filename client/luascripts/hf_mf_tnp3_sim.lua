@@ -18,12 +18,12 @@ For an experimental mode, it tries to manipulate some data.
 At last it sends all data to the PM3 device memory where it can be used in the command  "hf mf sim"
 ]]
 example = [[
-    1. script run hf_mf_autosim
-    2. script run hf_mf_autosim -m
-    3. script run hf_mf_autosim -m -i myfile
+    1. script run hf_mf_tnp3_sim
+    2. script run hf_mf_tnp3_sim -m
+    3. script run hf_mf_tnp3_sim -m -i myfile
 ]]
 usage = [[
-script run hf_mf_autosim [-h] [-m] [-i <filename>]
+script run hf_mf_tnp3_sim [-h] [-m] [-i <filename>]
 ]]
 arguments = [[
     -h             : this help

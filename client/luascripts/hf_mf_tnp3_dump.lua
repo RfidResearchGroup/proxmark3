@@ -16,18 +16,18 @@ This script will try to dump the contents of a Mifare TNP3xxx card.
 It will need a valid KeyA in order to find the other keys and decode the card.
 ]]
 example = [[
-    script run hf_mf_dump-tnp3
-    script run hf_mf_dump-tnp3 -n
-    script run hf_mf_dump-tnp3 -p
-    script run hf_mf_dump-tnp3 -k aabbccddeeff
-    script run hf_mf_dump-tnp3 -k aabbccddeeff -n
-    script run hf_mf_dump-tnp3 -o myfile
-    script run hf_mf_dump-tnp3 -n -o myfile
-    script run hf_mf_dump-tnp3 -p -o myfile
-    script run hf_mf_dump-tnp3 -k aabbccddeeff -n -o myfile
+    script run hf_mf_tnp3_dump
+    script run hf_mf_tnp3_dump -n
+    script run hf_mf_tnp3_dump -p
+    script run hf_mf_tnp3_dump -k aabbccddeeff
+    script run hf_mf_tnp3_dump -k aabbccddeeff -n
+    script run hf_mf_tnp3_dump -o myfile
+    script run hf_mf_tnp3_dump -n -o myfile
+    script run hf_mf_tnp3_dump -p -o myfile
+    script run hf_mf_tnp3_dump -k aabbccddeeff -n -o myfile
 ]]
 usage = [[
-script run hf_mf_dump-tnp3 [-h] [-k <key>] [-n] [-p] [-o <filename>]
+script run hf_mf_tnp3_dump [-h] [-k <key>] [-n] [-p] [-o <filename>]
 ]]
 arguments = [[
     -h             : this help

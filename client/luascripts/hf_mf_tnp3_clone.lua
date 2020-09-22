@@ -18,14 +18,14 @@ desc = [[
 This script will try to make a barebones clone of a tnp3 tag on to a magic generation1 card.
 ]]
 example = [[
-    script run hf_mf_clone-tnp3
-    script run hf_mf_clone-tnp3 -h
-    script run hf_mf_clone-tnp3 -l
-    script run hf_mf_clone-tnp3 -t aa00 -s 0030
+    script run hf_mf_tnp3_clone
+    script run hf_mf_tnp3_clone -h
+    script run hf_mf_tnp3_clone -l
+    script run hf_mf_tnp3_clone -t aa00 -s 0030
 
 ]]
 usage = [[
-script run hf_mf_clone-tnp3 [-h] [-t <toytype>] [-s <subtype>]
+script run hf_mf_tnp3_clone [-h] [-t <toytype>] [-s <subtype>]
 ]]
 arguments = [[
     -h             : this help
