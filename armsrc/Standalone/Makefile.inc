@@ -68,6 +68,7 @@ endif
 # WITH_STANDALONE_HF_ICECLASS
 ifneq (,$(findstring WITH_STANDALONE_HF_ICECLASS,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_iceclass.c
+endif
 # WITH_STANDALONE_LF_THAREXDE
 ifneq (,$(findstring WITH_STANDALONE_LF_THAREXDE,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_tharexde.c
