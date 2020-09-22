@@ -12,8 +12,7 @@ local read14a = require('read14a')
 --[[
 ---Suggestions of improvement:
 --- Add support another types of dumps: BIN, JSON
---- Maybe it will be not only as `mfc_gen3_writer`, like a universal dump manager.
---- Add undependence from the operation system. At the moment code not working in Linux.
+--- Maybe it will be not only as `hf_mf_gen3_writer`, like a universal dump manager.
 --- Hide system messages when you writing a dumps, replace it to some of like [#####----------] 40%
 
 -- iceman notes:

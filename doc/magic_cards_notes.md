@@ -443,7 +443,7 @@ hf mf gen3freeze
 ```
 See also
 ```
-script run mfc_gen3_writer -h
+script run hf_mf_gen3_writer -h
 ```
 
 Equivalent:
