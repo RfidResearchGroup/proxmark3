@@ -1,5 +1,5 @@
--- Run me like this (connected via USB): ./pm3 -l hf_bruteforce.lua
--- Run me like this (connected via Blueshark addon): ./client/proxmark3 /dev/rfcomm0 -l ./hf_bruteforce.lua
+-- Run me like this (connected via USB): ./pm3 -l hf_mfc_uidbruteforce.lua
+-- Run me like this (connected via Blueshark addon): ./client/proxmark3 /dev/rfcomm0 -l ./hf_mfc_uidbruteforce.lua
 
 local getopt = require('getopt')
 local ansicolors  = require('ansicolors')

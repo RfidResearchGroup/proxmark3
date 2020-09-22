@@ -19,7 +19,7 @@ script run hf_mf_magicrevive [-h] [-u]
 ]]
 arguments = [[
     -h      this help
-    -u      remagic a Ultralight tag w 7 bytes UID.
+    -u      try to revive a bricked magic Ultralight tag w 7 bytes UID.
 ]]
 ---
 -- A debug printout-function

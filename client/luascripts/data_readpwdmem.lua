@@ -9,7 +9,7 @@ desc = [[
 This script will read the flash memory of RDV4 and print the stored passwords/keys.
 
 It was meant to be used as a help tool after using the BogRun standalone mode before SPIFFS.
-You should now use read_pwd_mem_spiffs instead after the updated BogRun standalone mode.
+You should now use data_read_pwd_mem_spiffs instead after the updated BogRun standalone mode.
 
 (Iceman) script adapted to read and print keys in the default dictionary flashmemory sections.
 ]]

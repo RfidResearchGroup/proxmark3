@@ -4,7 +4,7 @@ local getopt = require('getopt')
 local ansicolors = require('ansicolors')
 
 copyright = ''
-usage = 'script run parameters.lua -a 1 -blala -c -de'
+usage = 'script run data_example_parameters.lua -a 1 -blala -c -de'
 author = 'Martin Holst Swende'
 version = 'v1.0.2'
 desc = [[
@@ -52,7 +52,7 @@ local function main(args)
     5 parameters; two with values and three flags. The following
     should be valid:
 
-    script run parameters.lua -a 1 -blala -c -de
+    script run data_example_parameters.lua -a 1 -blala -c -de
 
     Notice two things:
     1. 'blala' works just like 'b lala', both set 'b' to 'lala'

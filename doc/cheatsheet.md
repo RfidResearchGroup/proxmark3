@@ -233,7 +233,7 @@ Options
 ---
 i <file>     : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
 
-pm3 --> script run dumptoemul -i dumpdata.bin
+pm3 --> script run hf_mf_dumptoemulator -i dumpdata.bin
 ```
 
 Write to MIFARE block
@@ -285,7 +285,7 @@ Simulate MIFARE Sequence
 ```
 pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump 1
-pm3 --> script run dumptoemul -i dumpdata.bin
+pm3 --> script run hf_mf_dumptoemulator -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
 pm3 --> hf mf sim u 353c2aa6
 ```
@@ -305,19 +305,19 @@ pm3 --> hf mfu info
 Clone MIFARE Ultralight EV1 Sequence
 ```
 pm3 --> hf mfu dump k FFFFFFFF
-pm3 --> script run dumptoemul-mfu -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
+pm3 --> script run hf_mfu_dumptoemulator -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
 pm3 --> hf mfu eload u hf-mfu-XXXX-dump.eml
 pm3 --> hf mfu sim t 7 u hf-mfu-XXXX-dump.eml
 ```
 
 Bruteforce MIFARE Classic card numbers from 11223344 to 11223346
 ```
-pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
+pm3 --> script run hf_mfc_uidbruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 ```
 
 Bruteforce MIFARE Ultralight EV1 card numbers from 11223344556677 to 11223344556679
 ```
-pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
+pm3 --> script run hf_mfc_uidbruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 ```
 
 ## Wiegand manipulation
@@ -563,7 +563,7 @@ Options
 -i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
 -o <filename>   Specifies the output file. If omitted, <uid>.eml is used
 
-pm3 --> script run dumptoemul -i xxxxxxxxxxxxxx.bin
+pm3 --> script run hf_mf_dumptoemulator -i xxxxxxxxxxxxxx.bin
 ```
 
 Convert .eml to .bin
@@ -573,7 +573,7 @@ Options
 -i <filename>   Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
 -o <filename>   Specifies the output file. If omitted, <currdate>.bin is used
 
-pm3 --> script run emul2dump -i myfile.eml -o myfile.bin
+pm3 --> script run data_emulatortohtml -i myfile.eml -o myfile.bin
 ```
 
 Format Mifare card
@@ -585,7 +585,7 @@ Options
 -a <access>     The new access bytes that will be written to the card
 -x              Execute the commands aswell
 
-pm3 --> script run formatMifare -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
+pm3 --> script run hf_mf_format -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ```
 
 ## Memory

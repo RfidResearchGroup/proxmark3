@@ -35,7 +35,7 @@ example = [[
     3. script run lf_t55xx_writetest -t PSK1
 ]]
 usage = [[
-script run test_t55x7 [-h] [-t <modulation type>
+script run lf_t55xx_writetest [-h] [-t <modulation type>
 ]]
 arguments = [[
     -h       this help

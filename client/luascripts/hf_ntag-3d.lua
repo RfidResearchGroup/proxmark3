@@ -221,13 +221,13 @@ local function configure_magic_ntag(uid)
 
     local pwd, pack = core.keygen_algo_d(uid)
 
-    -- Set the arguments for mfu_magic script v1.0.8
+    -- Set the arguments for hf_mfu_magicwrite script v1.0.8
     -- -t 12   == configure NTAG213F
     -- -u    == set UID
     -- -p    == set pwd
     -- -a    == set pack
     args =('-t 12 -u %s -p %08X -a %04X'):format(uid, pwd, pack)
-    require('mfu_magic')
+    require('hf_mfu_magicwrite')
 
     -- Set back args. Not that it's used, just for the karma...
     args = myargs

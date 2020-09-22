@@ -195,7 +195,7 @@ hf mf csetuid 11223344 0044 18
 ```
 
 ```
-script run remagic
+script run run hf_mf_magicrevive
 ```
 
 To execute commands manually:
@@ -518,14 +518,14 @@ Only 7b versions
 ### Proxmark3 commands
 
 ```
-script run ul_uid -h
+script run hf_mfu_setuid -h
 ```
 
 When "soft-bricked" (by writing invalid data in block0), these ones may help:
 
 ```
 hf 14a config h
-script run remagic -u
+script run run hf_mf_magicrevive -u
 ```
 
 ## MIFARE Ultralight DirectWrite
@@ -723,7 +723,7 @@ Emulates partially  UL EV1 48k/128k, NTAG210, NTAG212, NTAGI2C 1K/2K, NTAGI2C 1K
 ### Proxmark3 commands
 
 ```
-script run mfu_magic -h
+script run hf_mfu_magicwrite -h
 ```
 
 # DESFire

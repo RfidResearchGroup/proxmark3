@@ -128,10 +128,10 @@ local function dump_tag(uid, numsectors)
 
         -- Save the global args, those are *our* arguments
         local myargs = args
-        -- Set the arguments for htmldump script
+        -- Set the arguments for data_dumptohtml script
         args =('-i %s.bin -o %s.html'):format(dumpfile, dumpfile)
         -- call it
-        require('htmldump')
+        require('data_dumptohtml')
 
         -- Set back args. Not that it's used, just for the karma...
         args = myargs

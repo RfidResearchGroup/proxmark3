@@ -1,7 +1,7 @@
 ---
 -- This Lua script is designed to run with Iceman/RRG Proxmark3 fork
--- Just copy luxeodump.lua to client/luascripts/
--- and run "script run luxeodump"
+-- Just copy hf_mf_dump-laundromat.lua to client/luascripts/
+-- and run "script run hf_mf_dump-laundromat"
 
 -- requirements
 local cmds = require('commands')

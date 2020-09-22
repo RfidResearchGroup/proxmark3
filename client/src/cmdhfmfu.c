@@ -136,7 +136,7 @@ static int usage_hf_mfu_wrbl(void) {
 
 static int usage_hf_mfu_eload(void) {
     PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`"));
-    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run dumptoemul-mfu`") " to convert the .bin to the eml");
+    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to the eml");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  Options:");
     PrintAndLogEx(NORMAL, "    h          : this help");
