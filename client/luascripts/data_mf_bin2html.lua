@@ -8,25 +8,26 @@ local ansicolors  = require('ansicolors')
 copyright = ''
 author = 'Martin Holst Swende'
 version = 'v1.0.2'
-desc = [[
-This script takes a dumpfile on EML (ASCII) format and produces a html based dump, which is a
+desc =[[
+This script takes a dumpfile and produces a html based dump, which is a
 bit more easily analyzed.
 ]]
 example = [[
-    script run data_emulatortohtml -o dumpdata.eml
+    script run data_mf_bin2html -o mifarecard_foo.html
 ]]
 usage = [[
-script run data_emulatortohtml [-i <file>] [-o <file>]
+script run data_mf_bin2html [-i <file>] [-o <file>]
 ]]
 arguments = [[
     -h              This help
-    -i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
-    -o <filename>   Speciies the output file. If omitted, <curdate>.html is used.
+    -i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
+    -o <filename>   Speciies the output file. If omitted, <curtime>.html is used.
 
 ]]
+-------------------------------
+-- Some utilities
+-------------------------------
 
--- Some globals
-local DEBUG = false -- the debug flag
 ---
 -- A debug printout-function
 local function dbg(args)
@@ -65,14 +66,14 @@ end
 
 local function main(args)
 
-    local input = 'dumpdata.eml'
+    local input = 'dumpdata.bin'
     local output = os.date('%Y-%m-%d_%H%M%S.html');
     for o, a in getopt.getopt(args, 'i:o:h') do
         if o == 'h' then return help() end
         if o == 'i' then input = a end
         if o == 'o' then output = a end
     end
-    local filename, err = dumplib.convert_eml_to_html(input,output)
+    local filename, err = dumplib.convert_bin_to_html(input,output, 16)
     if err then return oops(err) end
 
     print(('Wrote a HTML dump to the file %s'):format(filename))

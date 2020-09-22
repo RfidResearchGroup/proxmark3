@@ -233,7 +233,7 @@ Options
 ---
 i <file>     : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
 
-pm3 --> script run hf_mf_dumptoemulator -i dumpdata.bin
+pm3 --> script run data_mf_bin2eml -i dumpdata.bin
 ```
 
 Write to MIFARE block
@@ -285,7 +285,7 @@ Simulate MIFARE Sequence
 ```
 pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump 1
-pm3 --> script run hf_mf_dumptoemulator -i dumpdata.bin
+pm3 --> script run data_mf_bin2eml -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
 pm3 --> hf mf sim u 353c2aa6
 ```
@@ -563,7 +563,7 @@ Options
 -i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
 -o <filename>   Specifies the output file. If omitted, <uid>.eml is used
 
-pm3 --> script run hf_mf_dumptoemulator -i xxxxxxxxxxxxxx.bin
+pm3 --> script run data_mf_bin2eml -i xxxxxxxxxxxxxx.bin
 ```
 
 Convert .eml to .bin
@@ -573,7 +573,7 @@ Options
 -i <filename>   Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
 -o <filename>   Specifies the output file. If omitted, <currdate>.bin is used
 
-pm3 --> script run data_emulatortohtml -i myfile.eml -o myfile.bin
+pm3 --> script run data_mf_eml2bin -i myfile.eml -o myfile.bin
 ```
 
 Format Mifare card
