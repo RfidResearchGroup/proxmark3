@@ -236,62 +236,6 @@ static void em4x50_setup_read(void) {
     WDT_HIT();
 }
 
-static void em4x50_setup_sim(void) {
-    
-    StopTicks();
-
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
-    sample_config *sc = getSamplingConfig();
-    sc->decimation = 1;
-    sc->averaging = 0;
-
-    //FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
-
-    // FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-
-    // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-    // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
-
-    // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    LOW(GPIO_SSC_DOUT);
-
-    // Enable peripheral Clock for TIMER_CLOCK 0
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    //AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-
-    // Enable peripheral Clock for TIMER_CLOCK 1
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    //AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-
-    // Clear all leds
-    LEDsoff();
-
-    // Reset and enable timers
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // Prepare data trace
-    uint32_t bufsize = 10000;
-
-    // use malloc
-    if (g_logging) initSampleBufferEx(&bufsize, true);
-
-    lf_sample_mean();
-
-}
-
 // functions for "reader" use case
 
 static bool get_signalproperties(void) {
@@ -301,6 +245,7 @@ static bool get_signalproperties(void) {
 
     bool signal_found = false;
     int no_periods = 32, pct = 75, noise = 140;
+    uint8_t sample = 0;
     uint8_t sample_ref = 127;
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
@@ -377,8 +322,6 @@ static int get_next_bit(void) {
 
 static uint32_t get_pulse_length(void) {
 
-    int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
-
     // iterates pulse length (low -> high -> low)
     // to avoid endless loops - quit after EM4X50_SAMPLE_CNT_MAX samples
     
@@ -394,8 +337,6 @@ static uint32_t get_pulse_length(void) {
     }
 
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
-
 
     sample_cnt = 0;
     while (sample < gHigh) {
@@ -811,7 +752,7 @@ static bool check_ack(bool bliw) {
     return false;
 }
 
-static int get_word_from_bitstream(uintö8_t bits[EM4X50_TAG_WORD]) {
+static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
 
     // decodes one word by evaluating pulse lengths and previous bit;
     // word must have 45 bits in total:
@@ -937,13 +878,8 @@ static bool reset(void) {
     if (request_receive_mode()) {
 
         // send login command
-<<<<<<< Updated upstream
-        em4x50_send_byte_with_parity(EM4X50_COMMAND_RESET);
-
-=======
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
  
->>>>>>> Stashed changes
         if (check_ack(false))
             return true;
 
@@ -1391,32 +1327,6 @@ static bool em4x50_sim_send_byte_with_parity2(uint8_t byte) {
     return true;
 }
 
-static bool em4x50_sim_send_word2(uint8_t *word) {
-
-    uint8_t cparity = 0x00;
-    
-    // 4 bytes each with even row parity bit
-    for (int i = 0; i < 4; i++)
-        if (!em4x50_sim_send_byte_with_parity2(word[i]))
-            return false;
-    
-    // column parity
-    for (int i = 0; i < 8; i++) {
-        cparity <<= 1;
-        for (int j = 0; j < 4; j++) {
-            cparity ^= (word[j] >> i) & 1;
-        }
-    }
-    if (!em4x50_sim_send_byte2(cparity))
-        return false;
-    
-    // stop bit
-    if (!em4x50_sim_send_bit2(0))
-        return false;
-    
-    return true;
-}
-
 bool em4x50_sim_send_word3(uint32_t word) {
 
     uint8_t cparity = 0x00;
@@ -1487,81 +1397,6 @@ bool em4x50_sim_send_listen_window2(void) {
             ++check;
         }
     }
-
-    return true;
-}
-
-static bool em4x50_sim_send_listen_window3(void) {
-
-    int t = 0;
-    int i = 0;
-    uint16_t check = 0;
-    uint8_t test[100] = {0};
-    
-    while (t < 5 * EM4X50_T_TAG_FULL_PERIOD) {
-
-        // wait until SSC_CLK goes HIGH
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-            WDT_HIT();
-            if (check == 1000) {
-                if (BUTTON_PRESS())
-                    return false;
-                check = 0;
-            }
-            ++check;
-        }
-        
-        if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD) {
-            SHORT_COIL();
-        } else if (t >= 3 * EM4X50_T_TAG_FULL_PERIOD) {
-            OPEN_COIL();
-
-            i = 0;
-
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-            
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-            while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD) {
-
-                if (i == 0) {
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-                    FpgaSetupSsc();
-                    //SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-                }
-
-                if (i < 100)
-                    test[i++] = AT91C_BASE_SSC->SSC_RHR;
-            
-            }
-
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-            
-            t = 4 * EM4X50_T_TAG_FULL_PERIOD - 1;
-
-        } else if (t >= EM4X50_T_TAG_FULL_PERIOD) {
-            SHORT_COIL();
-        } else if (t >= EM4X50_T_TAG_HALF_PERIOD) {
-            OPEN_COIL();
-        } else {
-            SHORT_COIL();
-        }
-
-        t++;
-        check = 0;
-        
-        //wait until SSC_CLK goes LOW
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-            WDT_HIT();
-            if (check == 1000) {
-                if (BUTTON_PRESS())
-                    return false;
-                check = 0;
-            }
-            ++check;
-        }
-    }
-    for (i = 0; i < 100; i++)
-        Dbprintf("value[%i] = %i", i, test[i]);
 
     return true;
 }
@@ -1660,112 +1495,6 @@ static void simlf(uint8_t *buf, int period) {
 void em4x50_sim(em4x50_data_t *etd) {
     
     bool bsuccess = false;
-
-    //init_tag();
-    //em4x50_setup_sim();
-
-    //FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    
-    //StartTicks();
-
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_MAJOR_MODE_LF_ADC );
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    //WaitMS(20);
-
-    //FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
-
-    //AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-    //AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    //AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
- 
-    // from hitag2
-    //SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    //FpgaSetupSsc();
-    //AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    //AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    //LOW(GPIO_SSC_DOUT);
-    //AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-    
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    // works!
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_TOGGLE_MODE );
-    // does not really work
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_MAJOR_MODE_LF_ADC );
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-    // does not work!
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
-
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
-
-    //AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    //AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
-
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
-    
-    uint8_t word1[4] = {0x27, 0xfc, 0x42, 0x40};
-    uint8_t word2[4] = {0x12, 0x34, 0x56, 0x78};
-
-    bsuccess = em4x50_sim_send_listen_window3();
-    while (bsuccess) {
-
-        bsuccess = em4x50_sim_send_listen_window3()
-                 & em4x50_sim_send_word2(word1)
-                 & em4x50_sim_send_listen_window3()
-                 & em4x50_sim_send_word2(word2)
-                 & em4x50_sim_send_listen_window3();
-    }
-
-    /*
-    WDT_HIT();
-    while (BUTTON_PRESS() == false) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            for (int i = 0; i < 10; i++) {
-                
-                HIGH(GPIO_SSC_DOUT);
-                lf_wait_periods(32);
-                Dbprintf("High");
-
-                LOW(GPIO_SSC_DOUT);
-                lf_wait_periods(32);
-                Dbprintf("Low");
-            }
-            Dbprintf("geht");
-        } else {
-            Dbprintf("Mist");
-        }
-    }
-    */
-
-    /*
-    volatile uint8_t adc_val[2000] = {0};
-
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-    //SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    //FpgaSetupSsc();
-    
-    while (BUTTON_PRESS() == false) {
-
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY))
-            for (int i = 0; i < 2000; i++)
-                adc_val[i] = AT91C_BASE_SSC->SSC_RHR;
-    }
-
-    for (int i = 0; i < 2000; i++)
-        Dbprintf("adc_val = %i", adc_val[i]);
-*/
     
     lf_finalize();
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
@@ -1773,60 +1502,7 @@ void em4x50_sim(em4x50_data_t *etd) {
 
 void em4x50_test(em4x50_data_t *etd) {
     
-    DBGLEVEL = DBG_DEBUG;
-    
-    bool bsuccess = false;
-    
-    em4x50_setup_sim();
-    
-    //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-    //FpgaSetupSsc();
-    //AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-
-    if (etd->carrier == 1) {
-        
-        LED_A_ON();
-        LOW(GPIO_SSC_DOUT);
-        if (DBGLEVEL >= DBG_DEBUG)
-            Dbprintf("carrier on");
-    
-    } else if (etd->carrier == 0) {
-    
-        LED_A_OFF();
-        HIGH(GPIO_SSC_DOUT);
-    
-        if (DBGLEVEL >= DBG_DEBUG)
-            Dbprintf("carrier off");
-
-    } else {
-        
-        LED_B_ON();
-
-        LOW(GPIO_SSC_DOUT);
-
-        while (BUTTON_PRESS() == false) {
-
-            for (int i = 0; i < 10; i++)
-                wait_timer(0, T0 * EM4X50_T_TAG_FULL_PERIOD);
-
-            LED_C_ON();
-
-            // send selective read command
-            em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_SELECTIVE_READ);
-            em4x50_reader_send_bit(0);
-            em4x50_reader_send_bit(0);
-            em4x50_reader_send_byte_with_parity(etd->byte);
-
-            LED_C_OFF();
-
-        }
-        
-        LED_B_OFF();
-        
-        lf_finalize();
-    }
-    
-    bsuccess = true;
+    bool bsuccess = true;
 
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
 }
