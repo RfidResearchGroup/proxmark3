@@ -276,7 +276,7 @@ build_script:
     
     ExecCheck "PS cmake Tests"
     
-    Receive-Job -Wait -Job $WSLjob -ErrorAction Stop
+    Receive-Job -Wait -Job $WSLjob
 
     
 test_script:
