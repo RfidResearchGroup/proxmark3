@@ -330,7 +330,6 @@ static uint32_t get_pulse_length(void) {
     // to avoid endless loops - quit after EM4X50_SAMPLE_CNT_MAX samples
     
     int sample_cnt = 0;
-    uint8_t sample = 0;
 
     volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
