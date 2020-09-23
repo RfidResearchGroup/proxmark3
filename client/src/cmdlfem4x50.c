@@ -629,7 +629,7 @@ int CmdEM4x50Read(const char *Cmd) {
 
     //if (errors || strlen(Cmd) == 0 || etd.addr_given == false)
     if (errors)
-         return usage_lf_em4x50_read();
+        return usage_lf_em4x50_read();
 
     return em4x50_read(&etd, NULL, true);
 }
@@ -788,8 +788,8 @@ int CmdEM4x50Sim(const char *Cmd) {
 
             case 'w': {
                 if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
-                     PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
+                    PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
                 }
                 bword = true;
                 cmdp += 2;
@@ -798,8 +798,8 @@ int CmdEM4x50Sim(const char *Cmd) {
 
             case 'f': {
                 if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
-                     PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
-                     return PM3_EINVARG;
+                    PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
+                    return PM3_EINVARG;
                 }
                 bword = true;
                 cmdp += 2;
@@ -814,7 +814,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     }
 
     if (errors || !bword)
-         return usage_lf_em4x50_sim();
+        return usage_lf_em4x50_sim();
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&etd, sizeof(etd));
@@ -827,9 +827,9 @@ int CmdEM4x50Sim(const char *Cmd) {
     // print response
     bool isOK = resp.status;
     if (isOK) {
-        PrintAndLogEx(SUCCESS,"\nsimulation data " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "\nsimulation data " _GREEN_("ok") "\n");
     } else {
-        PrintAndLogEx(FAILED,"\nsimulating data " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "\nsimulating data " _RED_("failed") "\n");
         return PM3_ESOFT;
     }
 
@@ -844,7 +844,7 @@ int CmdEM4x50Test(const char *Cmd) {
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     PacketResponseNG resp;
-    
+
     etd.carrier = 2;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -878,7 +878,7 @@ int CmdEM4x50Test(const char *Cmd) {
     }
 
     if (errors)
-         return usage_lf_em4x50_test();
+        return usage_lf_em4x50_test();
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_TEST, (uint8_t *)&etd, sizeof(etd));
@@ -891,9 +891,9 @@ int CmdEM4x50Test(const char *Cmd) {
     // print response
     bool isOK = resp.status;
     if (isOK) {
-        PrintAndLogEx(SUCCESS,"\ntest " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "\ntest " _GREEN_("ok") "\n");
     } else {
-        PrintAndLogEx(FAILED,"\ntest " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "\ntest " _RED_("failed") "\n");
         return PM3_ESOFT;
     }
 
