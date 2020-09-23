@@ -1984,6 +1984,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     iso14a_card_select_t card;
     mfu_dump_t dump_file_data;
+    memset(&dump_file_data, 0, sizeof(dump_file_data));
     uint8_t get_version[] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t get_counter_tearing[][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     uint8_t get_signature[32];
