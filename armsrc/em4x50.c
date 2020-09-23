@@ -8,12 +8,10 @@
 // Low frequency EM4x50 commands
 //-----------------------------------------------------------------------------
 
-#include "BigBuf.h"
 #include "fpgaloader.h"
 #include "ticks.h"
 #include "dbprint.h"
 #include "lfadc.h"
-#include "lfsampling.h"
 #include "commonutil.h"
 #include "em4x50.h"
 
@@ -74,7 +72,6 @@ static em4x50_tag_t tag = {
 #define EM4X50_T_TAG_HALF_PERIOD            32
 #define EM4X50_T_TAG_THREE_QUARTER_PERIOD   48
 #define EM4X50_T_TAG_FULL_PERIOD            64
-#define EM4X50_T_TAG_THREE_HALF_PERIOD      96
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
 #define EM4X50_T_WAITING_FOR_SNGLLIW        100
@@ -82,13 +79,11 @@ static em4x50_tag_t tag = {
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
-#define EM4X50_SAMPLE_CNT_MAX               3000
 
 #define EM4X50_BIT_0                        0
 #define EM4X50_BIT_1                        1
 #define EM4X50_BIT_OTHER                    2
 
-#define EM4X50_COMMAND_REQUEST              2
 #define EM4X50_COMMAND_LOGIN                0x01
 #define EM4X50_COMMAND_RESET                0x80
 #define EM4X50_COMMAND_WRITE                0x12
@@ -177,7 +172,7 @@ static void wait_timer(int timer, uint32_t period) {
 
         AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
         while (AT91C_BASE_TC0->TC_CV < period);
-            
+
     } else {
 
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
@@ -246,7 +241,6 @@ static bool get_signalproperties(void) {
 
     bool signal_found = false;
     int no_periods = 32, pct = 75, noise = 140;
-    uint8_t sample = 0;
     uint8_t sample_ref = 127;
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
@@ -257,7 +251,7 @@ static bool get_signalproperties(void) {
     for (int i = 0; i < T0 * no_periods; i++) {
 
         if (BUTTON_PRESS()) return false;
-        
+
         // about 2 samples per bit period
         wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
 
@@ -279,7 +273,7 @@ static bool get_signalproperties(void) {
 
             if (BUTTON_PRESS()) return false;
 
-            sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             if (sample > sample_max[i])
                 sample_max[i] = sample;
 
@@ -324,23 +318,22 @@ static uint32_t get_pulse_length(void) {
 
 //    Dbprintf( _CYAN_("4x50 get_pulse_length A") );
 
-    int timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
     // iterates pulse length (low -> high -> low)
-    // to avoid endless loops - quit if timeout = 0
-    
+
     volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     while (sample > gLow && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     }
-    
+
     if (timeout == 0)
         return 0;
 
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-
     timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+
     while (sample < gHigh && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     }
@@ -349,7 +342,7 @@ static uint32_t get_pulse_length(void) {
         return 0;
 
     timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
-    while (sample > gLow && (timeout--) ) {
+    while (sample > gLow && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     }
 
@@ -366,7 +359,7 @@ static bool check_pulse_length(uint32_t pl, int length) {
 }
 
 static void em4x50_reader_send_bit(int bit) {
-    
+
     // send single bit according to EM4x50 application note and datasheet
 
     // reset clock for the next bit
@@ -399,20 +392,20 @@ static void em4x50_reader_send_bit(int bit) {
 static void em4x50_reader_send_byte(uint8_t byte) {
 
     // send byte (without parity)
-    
+
     for (int i = 0; i < 8; i++)
-        em4x50_reader_send_bit((byte >> (7-i)) & 1);
+        em4x50_reader_send_bit((byte >> (7 - i)) & 1);
 
 }
 
 static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
 
     // send byte followed by its (equal) parity bit
-    
+
     int parity = 0, bit = 0;
-    
+
     for (int i = 0; i < 8; i++) {
-        bit = (byte >> (7-i)) & 1;
+        bit = (byte >> (7 - i)) & 1;
         em4x50_reader_send_bit(bit);
         parity ^= bit;
     }
@@ -421,12 +414,12 @@ static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
 }
 
 static void em4x50_reader_send_word(const uint8_t bytes[4]) {
-    
+
     // send 32 bit word with parity bits according to EM4x50 datasheet
-    
+
     for (int i = 0; i < 4; i++)
         em4x50_reader_send_byte_with_parity(bytes[i]);
-    
+
     // send column parities
     em4x50_reader_send_byte(bytes[0] ^ bytes[1] ^ bytes[2] ^ bytes[3]);
 
@@ -622,7 +615,7 @@ static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
     // identify remaining bits based on pulse lengths
     // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
     while (BUTTON_PRESS() == false) {
-               
+
         i++;
         pl = get_pulse_length();
 
@@ -708,14 +701,14 @@ static bool login(uint8_t password[4]) {
 //==============================================================================
 
 static bool reset(void) {
-  
+
     // resets EM4x50 tag (used by write function)
 
     if (request_receive_mode()) {
 
         // send login command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
- 
+
         if (check_ack(false))
             return true;
 
@@ -777,9 +770,10 @@ static bool selective_read(uint8_t addresses[4]) {
         // send address data
         em4x50_reader_send_word(addresses);
 
-        // look for ACK sequence -> save and verify via standard read mode
-        // (compare number of words)
+        // look for ACK sequence
         if (check_ack(false))
+
+            // save and verify via standard read mode (compare number of words)
             if (standard_read(&now))
                 if (now == (lwr - fwr + 1))
                     return true;
@@ -808,7 +802,7 @@ void em4x50_info(em4x50_data_t *etd) {
 
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
-        
+
         if (etd->pwd_given) {
 
             // try to login with given password
@@ -846,7 +840,8 @@ void em4x50_read(em4x50_data_t *etd) {
     em4x50_setup_read();
 
     // set gHigh and gLow
-    if (get_signalproperties()) {//} && find_em4x50_tag()) {
+    if (get_signalproperties() && find_em4x50_tag()) {
+
         if (etd->addr_given) {
 
             // selective read mode
@@ -863,6 +858,7 @@ void em4x50_read(em4x50_data_t *etd) {
 
             // standard read mode
             bsuccess = standard_read(&now);
+
         }
     }
 
@@ -1092,7 +1088,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
 }
 
 static bool em4x50_sim_send_bit(uint8_t bit) {
-    
+
     uint16_t check = 0;
 
     for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
@@ -1115,7 +1111,7 @@ static bool em4x50_sim_send_bit(uint8_t bit) {
             SHORT_COIL();
 
         check = 0;
-        
+
         //wait until SSC_CLK goes LOW
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
@@ -1131,7 +1127,7 @@ static bool em4x50_sim_send_bit(uint8_t bit) {
             bit ^= 1;
 
     }
-    
+
     return true;
 }
 
@@ -1141,7 +1137,7 @@ static bool em4x50_sim_send_byte(uint8_t byte) {
     for (int i = 0; i < 8; i++)
         if (!em4x50_sim_send_bit((byte >> (7 - i)) & 1))
             return false;
-    
+
     return true;
 
 }
@@ -1149,27 +1145,27 @@ static bool em4x50_sim_send_byte(uint8_t byte) {
 static bool em4x50_sim_send_byte_with_parity(uint8_t byte) {
 
     uint8_t parity = 0x0;
-    
+
     // send byte with parity (even)
     for (int i = 0; i < 8; i++)
         parity ^= (byte >> i) & 1;
-    
+
     if (!em4x50_sim_send_byte(byte))
         return false;;
-    
+
     if (!em4x50_sim_send_bit(parity))
         return false;
-    
+
     return true;
 }
 
 bool em4x50_sim_send_word(uint32_t word) {
 
     uint8_t cparity = 0x00;
-    
+
     // 4 bytes each with even row parity bit
     for (int i = 0; i < 4; i++)
-        if (!em4x50_sim_send_byte_with_parity( (word >> ((3 - i) * 8)) & 0xFF))
+        if (!em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF))
             return false;
 
     // column parity
@@ -1181,7 +1177,7 @@ bool em4x50_sim_send_word(uint32_t word) {
     }
     if (!em4x50_sim_send_byte(cparity))
         return false;
-    
+
     // stop bit
     if (!em4x50_sim_send_bit(0))
         return false;
@@ -1194,7 +1190,7 @@ bool em4x50_sim_send_listen_window(void) {
     //int i = 0;
     uint16_t check = 0;
     //uint8_t test[100] = {0};
-    
+
     for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
 
         // wait until SSC_CLK goes HIGH
@@ -1207,7 +1203,7 @@ bool em4x50_sim_send_listen_window(void) {
             }
             ++check;
         }
-        
+
         if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD) {
             SHORT_COIL();
         } else if (t >= 3 * EM4X50_T_TAG_FULL_PERIOD) {
@@ -1221,7 +1217,7 @@ bool em4x50_sim_send_listen_window(void) {
         }
 
         check = 0;
-        
+
         //wait until SSC_CLK goes LOW
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
@@ -1238,25 +1234,25 @@ bool em4x50_sim_send_listen_window(void) {
 }
 
 void em4x50_sim(em4x50_data_t *etd) {
-    
+
     bool bsuccess = false;
-    
+
     lf_finalize();
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
 }
 
 void em4x50_test(em4x50_data_t *etd) {
-    
+
     bool bsuccess = true;
 
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
 }
 
 int em4x50_standalone_read(uint64_t *words) {
-    
+
     int now = 0;
     uint8_t bits[EM4X50_TAG_WORD];
-    
+
     em4x50_setup_read();
 
     if (get_signalproperties() && find_em4x50_tag()) {
@@ -1267,7 +1263,7 @@ int em4x50_standalone_read(uint64_t *words) {
 
             while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD) {
                 words[now] = 0;
-               
+
                 for (int i = 0; i < EM4X50_TAG_WORD; i++) {
                     words[now] <<= 1;
                     words[now] += bits[i] & 1;
