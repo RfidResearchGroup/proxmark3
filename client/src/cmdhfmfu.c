@@ -945,17 +945,19 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     }
 
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     if (is_valid == false || i == ARRAYLEN(nxp_mfu_public_keys)) {
-        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
+        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_mfu_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 

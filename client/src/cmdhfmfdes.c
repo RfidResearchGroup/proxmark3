@@ -1190,13 +1190,18 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
         if (is_valid)
             break;
     }
+//    PrintAndLogEx(NORMAL, "");
+//    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     if (is_valid == false || i == ARRAYLEN(nxp_desfire_public_keys)) {
-        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
+        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
+        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
+        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
+        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
+        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
 
-//    PrintAndLogEx(NORMAL, "");
-//    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_desfire_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_desfire_public_keys[i].value);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 16);
@@ -1207,7 +1212,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
-    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 
