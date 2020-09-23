@@ -324,41 +324,37 @@ static uint32_t get_pulse_length(void) {
 
 //    Dbprintf( _CYAN_("4x50 get_pulse_length A") );
 
-    int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
+    int timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
     // iterates pulse length (low -> high -> low)
-    // to avoid endless loops - quit after EM4X50_SAMPLE_CNT_MAX samples
+    // to avoid endless loops - quit if timeout = 0
     
-    int sample_cnt = 0;
-
     volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     while (sample > gLow && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-        if (++sample_cnt > EM4X50_SAMPLE_CNT_MAX)
-            return 0;
     }
-
+    
     if (timeout == 0)
         return 0;
 
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
 
+    timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
     while (sample < gHigh && (timeout--)) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-        if (++sample_cnt > EM4X50_SAMPLE_CNT_MAX)
-            return 0;
     }
 
     if (timeout == 0)
         return 0;
 
     timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
-    while (sample > gLow && (timeout--)) {
+    while (sample > gLow && (timeout--) ) {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-        if (++sample_cnt > EM4X50_SAMPLE_CNT_MAX)
-            return 0;
     }
+
+    if (timeout == 0)
+        return 0;
 
     return (uint32_t)AT91C_BASE_TC1->TC_CV;
 
@@ -399,36 +395,7 @@ static void em4x50_reader_send_bit(int bit) {
         while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
     }
 }
-/*
-static void em4x50_sim_send_bit(int bit) {
-    
-    // send single bit according to EM4x50 application note and datasheet
-    
-    // reset clock for the next bit
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
 
-    if (bit == 0) {
-
-        // disable modulation (activates the field) for first half of bit period
-        LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_HALF_PERIOD);
-        
-        // enable modulation for second half of bit period
-        HIGH(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
-
-    } else {
-        
-        // enable modulation (drop the field) for first half of bit period
-        HIGH(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_HALF_PERIOD);
-        
-        // disable modulation for second half of bit period
-        LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC1->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD);
-    }
-}
-*/
 static void em4x50_reader_send_byte(uint8_t byte) {
 
     // send byte (without parity)
@@ -437,16 +404,7 @@ static void em4x50_reader_send_byte(uint8_t byte) {
         em4x50_reader_send_bit((byte >> (7-i)) & 1);
 
 }
-/*
-static void em4x50_sim_send_byte(uint8_t byte) {
 
-    // send byte (without parity)
-
-    for (int i = 0; i < 8; i++)
-        em4x50_sim_send_bit((byte >> (7-i)) & 1);
-
-}
-*/
 static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
 
     // send byte followed by its (equal) parity bit
@@ -461,22 +419,7 @@ static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
 
     em4x50_reader_send_bit(parity);
 }
-/*
-static void em4x50_sim_send_byte_with_parity(uint8_t byte) {
 
-    // send byte followed by its (equal) parity bit
-
-    int parity = 0, bit = 0;
-
-    for (int i = 0; i < 8; i++) {
-        bit = (byte >> (7-i)) & 1;
-        em4x50_sim_send_bit(bit);
-        parity ^= bit;
-    }
-
-    em4x50_sim_send_bit(parity);
-}
-*/
 static void em4x50_reader_send_word(const uint8_t bytes[4]) {
     
     // send 32 bit word with parity bits according to EM4x50 datasheet
@@ -490,108 +433,6 @@ static void em4x50_reader_send_word(const uint8_t bytes[4]) {
     // send final stop bit (always "0")
     em4x50_reader_send_bit(0);
 }
-/*
-
-static void em4x50_sim_send_word(const uint8_t bytes[4]) {
-    
-    // send 32 bit word with parity bits according to EM4x50 datasheet
-
-    for (int i = 0; i < 4; i++)
-        em4x50_sim_send_byte_with_parity(bytes[i]);
-    
-    // send column parities
-    em4x50_sim_send_byte(bytes[0] ^ bytes[1] ^ bytes[2] ^ bytes[3]);
-
-    // send final stop bit (always "0")
-    em4x50_sim_send_bit(0);
-}
-
-static void em4x50_sim_send_ack(void) {
-    
-    // send "acknowledge" according to EM4x50 application note and datasheet
-    
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-    HIGH(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_THREE_HALF_PERIOD);
-    HIGH(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_THREE_HALF_PERIOD);
-    HIGH(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-
-}
-
-static void em4x50_sim_send_nak(void) {
-    
-    // send "not" acknowledge" according to EM4x50 application note and datasheet
-    
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-    HIGH(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_THREE_HALF_PERIOD);
-    HIGH(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_FULL_PERIOD);
-    HIGH(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-
-}
-
-static void em4x50_sim_handle_command(void) {
-    
-    em4x50_sim_send_ack();
-    em4x50_sim_send_nak();
-    Dbprintf("");
-    
-}
-*/
-/*
-static bool em4x50_sim_detect_rm(void) {
-    
-    if (get_next_bit() == EM4X50_BIT_0)
-        if (get_next_bit() == EM4X50_BIT_0)
-            return true;
-    
-    //int periods = 0;
-    //AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    //while (AT91C_BASE_TC0->TC_CV < T0 * EM4X50_T_TAG_FULL_PERIOD)
-    //    adc_val[periods++] = AT91C_BASE_SSC->SSC_RHR;
-
-    return false;
-}
-*/
-/*
-static void em4x50_sim_send_listen_window(void) {
-    
-    // send single listen window according to EM4x50 application note and datasheet
-    
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-
-    HIGH(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
-
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
-
-    HIGH(GPIO_SSC_DOUT);
-    if (em4x50_sim_detect_rm())
-        em4x50_sim_handle_command();
-
-    LOW(GPIO_SSC_DOUT);
-    wait_timer(0, T0 * EM4X50_T_TAG_FULL_PERIOD);
-    
-}
-*/
 
 static bool find_single_listen_window(void) {
 
@@ -829,7 +670,7 @@ static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
 
         }
     }
-    
+
     return 0;
 }
 
@@ -1250,7 +1091,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
 }
 
-static bool em4x50_sim_send_bit2(uint8_t bit) {
+static bool em4x50_sim_send_bit(uint8_t bit) {
     
     uint16_t check = 0;
 
@@ -1294,18 +1135,18 @@ static bool em4x50_sim_send_bit2(uint8_t bit) {
     return true;
 }
 
-static bool em4x50_sim_send_byte2(uint8_t byte) {
+static bool em4x50_sim_send_byte(uint8_t byte) {
 
     // send byte
     for (int i = 0; i < 8; i++)
-        if (!em4x50_sim_send_bit2((byte >> (7 - i)) & 1))
+        if (!em4x50_sim_send_bit((byte >> (7 - i)) & 1))
             return false;
     
     return true;
 
 }
 
-static bool em4x50_sim_send_byte_with_parity2(uint8_t byte) {
+static bool em4x50_sim_send_byte_with_parity(uint8_t byte) {
 
     uint8_t parity = 0x0;
     
@@ -1313,22 +1154,22 @@ static bool em4x50_sim_send_byte_with_parity2(uint8_t byte) {
     for (int i = 0; i < 8; i++)
         parity ^= (byte >> i) & 1;
     
-    if (!em4x50_sim_send_byte2(byte))
+    if (!em4x50_sim_send_byte(byte))
         return false;;
     
-    if (!em4x50_sim_send_bit2(parity))
+    if (!em4x50_sim_send_bit(parity))
         return false;
     
     return true;
 }
 
-bool em4x50_sim_send_word3(uint32_t word) {
+bool em4x50_sim_send_word(uint32_t word) {
 
     uint8_t cparity = 0x00;
     
     // 4 bytes each with even row parity bit
     for (int i = 0; i < 4; i++)
-        if (!em4x50_sim_send_byte_with_parity2( (word >> ((3 - i) * 8)) & 0xFF))
+        if (!em4x50_sim_send_byte_with_parity( (word >> ((3 - i) * 8)) & 0xFF))
             return false;
 
     // column parity
@@ -1338,17 +1179,17 @@ bool em4x50_sim_send_word3(uint32_t word) {
             cparity ^= (((word >> ((3 - j) * 8)) & 0xFF) >> (7 - i)) & 1;
         }
     }
-    if (!em4x50_sim_send_byte2(cparity))
+    if (!em4x50_sim_send_byte(cparity))
         return false;
     
     // stop bit
-    if (!em4x50_sim_send_bit2(0))
+    if (!em4x50_sim_send_bit(0))
         return false;
 
     return true;
 }
 
-bool em4x50_sim_send_listen_window2(void) {
+bool em4x50_sim_send_listen_window(void) {
 
     //int i = 0;
     uint16_t check = 0;
@@ -1396,97 +1237,6 @@ bool em4x50_sim_send_listen_window2(void) {
     return true;
 }
 
-/*
-static void em4x50_sim_send_word3(uint8_t *word) {
-    
-    uint8_t rparity = 0x00, cparity = 0x00;
-    uint64_t word_with_parities = { 0x00 };
-    
-    // bytes + row parities
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 8; j++) {
-            word_with_parities += (word[i] >> j) & 1;
-            word_with_parities <<= 1;
-            rparity ^= (word[i] >> j) & 1;
-        }
-        word_with_parities += rparity & 1;
-        word_with_parities <<= 1;
-    }
-
-    // column parities
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 4; j++) {
-            cparity ^= (word[j] >> i) & 1;
-        }
-        word_with_parities += cparity;
-        word_with_parities <<= 1;
-        cparity = 0;
-    }
-    
-    // stop bit
-    word_with_parities += 0;
-            
-    // send total word
-    for (int i = 0; i < EM4X50_TAG_WORD; i++)
-        em4x50_sim_send_bit2((word_with_parities >> (EM4X50_TAG_WORD-1 - i)) & 1);
-    
-}
-*/
- 
-/*
-static void simlf(uint8_t *buf, int period) {
-    
-    int i = 0, count = 0;
-    int clock1 = 32, clock2 = 64;
-    uint16_t check = 0;
-
-    for (;;) {
-
-        // wait until SSC_CLK goes HIGH
-        // used as a simple detection of a reader field?
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
-            WDT_HIT();
-            if (check == 1000) {
-                if (BUTTON_PRESS())
-                    return;
-                check = 0;
-            }
-            ++check;
-        }
-        
-        if (buf[i])
-            OPEN_COIL();
-        else
-            SHORT_COIL();
-
-        check = 0;
-         
-        //wait until SSC_CLK goes LOW
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
-            WDT_HIT();
-            if (check == 1000) {
-                if (BUTTON_PRESS())
-                    return;
-                check = 0;
-            }
-            ++check;
-        }
-        
-        if (count == EM4X50_T_TAG_HALF_PERIOD) {
-            buf[i] ^= 1;
-        } else if (count == EM4X50_T_TAG_FULL_PERIOD) {
-            buf[i] ^= 1;
-            count = 0;
-            i++;
-            if (i == period) {
-                i = 0;
-            }
-        }
-        count++;
-    }
-}
-*/
-
 void em4x50_sim(em4x50_data_t *etd) {
     
     bool bsuccess = false;
@@ -1516,7 +1266,6 @@ int em4x50_standalone_read(uint64_t *words) {
             memset(bits, 0, sizeof(bits));
 
             while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD) {
-
                 words[now] = 0;
                
                 for (int i = 0; i < EM4X50_TAG_WORD; i++) {
