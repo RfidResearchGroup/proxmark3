@@ -96,7 +96,7 @@ Known issues; needs to be fixed:
 * last byte in last segment is handled incorrectly when it is the last bytes on the card itself (MIM256: => byte 256)
 --]]
 
-example = "script run legic"
+example = "script run hf_legic"
 author  = "Mosci, uhei"
 version = "1.0.4"
 

@@ -1363,7 +1363,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CIDENT: {
-            MifareCIdent();
+            bool is_mfc = packet->data.asBytes[0];
+            MifareCIdent(is_mfc);
             break;
         }
         // Gen 3 magic cards

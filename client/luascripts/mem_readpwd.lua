@@ -9,31 +9,31 @@ desc = [[
 This script will read the flash memory of RDV4 and print the stored passwords/keys.
 
 It was meant to be used as a help tool after using the BogRun standalone mode before SPIFFS.
-You should now use read_pwd_mem_spiffs instead after the updated BogRun standalone mode.
+You should now use data_read_pwd_mem_spiffs instead after the updated BogRun standalone mode.
 
 (Iceman) script adapted to read and print keys in the default dictionary flashmemory sections.
 ]]
 example = [[
     -- This will scan the first 256 bytes of flash memory for stored passwords
-    script run data_readpwdmem
+    script run mem_readpwd
 
     -- This will scan 256 bytes of flash memory at offset 64 for stored passwords
-    script run data_readpwdmem -o 64
+    script run mem_readpwd -o 64
 
     -- This will scan 32 bytes of flash memory at offset 64 for stored passwords
-    script run data_readpwdmem -o 64 -l 32
+    script run mem_readpwd -o 64 -l 32
 
     -- This will print the stored Mifare dictionary keys
-    script run data_readpwdmem -m
+    script run mem_readpwd -m
 
     -- This will print the stored t55xx dictionary passwords
-    script run data_readpwdmem -t
+    script run mem_readpwd -t
 
     -- This will print the stored iClass dictionary keys
-    script run data_readpwdmem -i
+    script run mem_readpwd -i
 ]]
 usage = [[
-    script run data_readpwdmem [-h] [-o <offset>] [-l <length>] [-k <keylength>] [-m] [-t] [-i]
+    script run mem_readpwd [-h] [-o <offset>] [-l <length>] [-k <keylength>] [-m] [-t] [-i]
 ]]
 arguments = [[
     -h              :  this help

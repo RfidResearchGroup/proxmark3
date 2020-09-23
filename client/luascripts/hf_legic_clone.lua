@@ -18,7 +18,7 @@ local ansicolors  = require('ansicolors')
   simplest usage:
     Dump a legic tag with 'hf legic dump'
     place your 'empty' tag on the reader and run
-        'script run legic_clone -i orig.bin -w'
+        'script run hf_legic_clone -i orig.bin -w'
 
     you will see some output like:
 
@@ -95,11 +95,11 @@ This is a script which creates a clone-dump of a dump from a LEGIC Prime Tag (MI
 Create a dump by running `hf legic dump`.
 ]]
 example = [[
-    script run legic_clone -i my_dump.bin -o my_clone.bin -c f8
-    script run legic_clone -i my_dump.bin -d -s
+    script run hf_legic_clone -i my_dump.bin -o my_clone.bin -c f8
+    script run hf_legic_clone -i my_dump.bin -d -s
 ]]
 usage = [[
-script run legic_clone [-h] [-i <file>] [-o <file>] [-c <crc>] [-d] [-s] [-w]
+script run hf_legic_clone [-h] [-i <file>] [-o <file>] [-c <crc>] [-d] [-s] [-w]
 ]]
 arguments = [[
 required :

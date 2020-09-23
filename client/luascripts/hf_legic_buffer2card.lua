@@ -11,10 +11,10 @@ desc =
 This is a script which writes value 0x01 to bytes from position 0x07 until 0xFF on a Legic Prime Tag (MIM256 or MIM1024)  -- (created with 'hf legic save my_dump.hex') --
 ]]
 example = [[
-    script run legic_buffer2card
+    script run hf_legic_buffer2card
 ]]
 usage = [[
-script run legic_buffer2card -h
+script run hf_legic_buffer2card -h
 ]]
 arguments = [[
     -h       - Help text

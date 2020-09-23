@@ -41,7 +41,7 @@ int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype);
 
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);
-void MifareCIdent(void);  // is "magic chinese" card?
+void MifareCIdent(bool is_mfc);  // is "magic chinese" card?
 void MifareHasStaticNonce(void);  // Has the tag a static nonce?
 
 int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len);

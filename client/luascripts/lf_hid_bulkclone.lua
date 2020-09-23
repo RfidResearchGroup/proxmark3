@@ -1,5 +1,5 @@
 --
--- lf_bulk.lua - A tool to clone a large number of tags at once.
+-- lf_hid_bulkclone.lua - A tool to clone a large number of tags at once.
 -- Updated 2017-04-18
 -- Updated 2018-02-20 iceman
 local getopt = require('getopt')

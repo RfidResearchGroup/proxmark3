@@ -26,16 +26,16 @@ It uses both LF and HF simulations.
     -- Author note
     -- I wrote this as i was doing a PACS audit. This is far from complete, but is easily expandable.
     -- The idea was based on proxbrute, but i needed more options, and support for different readers.
-    -- I dont know LUA, so I used Brian Redbeards lf_bulk_program.lua script as a starting point, sorry if its kludgy.
+    -- I dont know LUA, so I used Brian Redbeards lf_hid_bulkclone.lua script as a starting point, sorry if its kludgy.
 
 ]]
 example = [[
     --  (the above example would bruteforce pyramid tags, starting at 10:1000, ending at 10:991, and waiting 1 second between each card)
 
-    script run hf_lf_multi_bruteforce -r pyramid -f 10 -b 1000 -c 10 -t 1 -d down
+    script run multi_bruteforce -r pyramid -f 10 -b 1000 -c 10 -t 1 -d down
 ]]
 usage = [[
-script run hf_lf_multi_bruteforce -r rfid_tag -f facility_code -b base_card_number -c count -t timeout -d direction
+script run multi_bruteforce -r rfid_tag -f facility_code -b base_card_number -c count -t timeout -d direction
 ]]
 arguments = [[
     -h       this help
@@ -110,7 +110,7 @@ local function isempty(s)
     return s == nil or s == ''
 end
 
--- The code below was blatantly stolen from Brian Redbeard's lf_bulk_program.lua script
+-- The code below was blatantly stolen from Brian Redbeard's lf_hid_bulkclone.lua script
 local function toBits(num, bits)
     bits = bits or math.max(1, select(2, math.frexp(num)))
     local t = {}

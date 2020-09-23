@@ -55,7 +55,7 @@ static int l_clearCommandBuffer(lua_State *L) {
 }
 
 /**
- * Enable / Disable fast push mode for lua scripts like mfckeys
+ * Enable / Disable fast push mode for lua scripts like hf_mf_keycheck
  * The following params expected:
  *
  *@brief l_fast_push_mode

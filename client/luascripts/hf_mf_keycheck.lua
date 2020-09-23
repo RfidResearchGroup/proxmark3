@@ -60,7 +60,7 @@ end
 -- waits for answer from pm3 device
 local function checkCommand(response)
     if not response then
-        print("Timeout while waiting for response. Increase TIMEOUT in mfckeys.lua to wait longer")
+        print("Timeout while waiting for response. Increase TIMEOUT in hf_mf_keycheck.lua to wait longer")
         return nil, "Timeout while waiting for device to respond"
     end
 
@@ -237,7 +237,7 @@ local function perform_check(uid, numsectors)
 
     local end_time = os.time()
     print('')
-    print('[+] mfckeys - Checkkey execution time: '..os.difftime(end_time, start_time)..' sec')
+    print('[+] hf_mf_keycheck - Checkkey execution time: '..os.difftime(end_time, start_time)..' sec')
 
     core.fast_push_mode(false)
 

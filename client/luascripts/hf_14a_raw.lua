@@ -7,7 +7,7 @@ copyright = ''
 author = "Martin Holst Swende"
 version = 'v1.0.2'
 desc = [[
-This is a script to allow raw 1444a commands to be sent and received.
+This is a script to allow raw 14443a commands to be sent and received.
 ]]
 example = [[
     # 1. Connect and don't disconnect

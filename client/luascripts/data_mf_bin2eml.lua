@@ -12,10 +12,10 @@ This script takes a dumpfile from 'hf mf dump' and converts it to a format that 
 by the emulator
 ]]
 example = [[
-    script run hf_mf_dumptoemulator -i dumpdata-foobar.bin
+    script run data_mf_bin2eml -i dumpdata-foobar.bin
 ]]
 usage = [[
-script run hf_mf_dumptoemulator [-i <file>] [-o <file>]
+script run data_mf_bin2eml [-i <file>] [-o <file>]
 ]]
 arguments = [[
     -h              This help

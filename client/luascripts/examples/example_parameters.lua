@@ -4,7 +4,7 @@ local getopt = require('getopt')
 local ansicolors = require('ansicolors')
 
 copyright = ''
-usage = 'script run parameters.lua -a 1 -blala -c -de'
+usage = 'script run example_parameters.lua -a 1 -blala -c -de'
 author = 'Martin Holst Swende'
 version = 'v1.0.2'
 desc = [[
@@ -12,10 +12,10 @@ This is an example script to demonstrate handle parameters in scripts.
 For more info, check the comments in the code
 ]]
 example = [[
-    1. script run data_example_parameters -a mytestparam_input -c
+    1. script run example_parameters -a mytestparam_input -c
 ]]
 usage = [[
-script run data_example_parameters [-h] [-a <txt>] [-b <txt>] [-c] [-d] [-e]
+script run example_parameters [-h] [-a <txt>] [-b <txt>] [-c] [-d] [-e]
 ]]
 arguments = [[
     -h              This help
@@ -52,7 +52,7 @@ local function main(args)
     5 parameters; two with values and three flags. The following
     should be valid:
 
-    script run parameters.lua -a 1 -blala -c -de
+    script run example_parameters.lua -a 1 -blala -c -de
 
     Notice two things:
     1. 'blala' works just like 'b lala', both set 'b' to 'lala'

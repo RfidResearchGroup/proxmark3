@@ -2236,14 +2236,14 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         OnSuccessMagic();
 }
 
-void MifareCIdent(void) {
+void MifareCIdent(bool is_mfc) {
     // variables
     uint8_t isGen = 0;
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
-    uint8_t rdbl[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
-    uint8_t rdbl0[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
+    uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
+    uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2323,29 +2323,32 @@ void MifareCIdent(void) {
             goto OUT;
         }
 
-        // magic ntag test
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        SpinDelay(40);
-        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-        if (res == 2) {
-            ReaderTransmit(rdbl, sizeof(rdbl), NULL);
-            res = ReaderReceive(buf, par);
-            if (res == 18) {
-                isGen = MAGIC_NTAG21X;
+        if (! is_mfc) {
+            // magic ntag test
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            SpinDelay(40);
+            iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+            res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+            if (res == 2) {
+                ReaderTransmit(rdblf0, sizeof(rdblf0), NULL);
+                res = ReaderReceive(buf, par);
+                if (res == 18) {
+                    isGen = MAGIC_NTAG21X;
+                }
             }
         }
-
-        // magic MFC Gen3 test
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        SpinDelay(40);
-        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-        if (res == 2) {
-            ReaderTransmit(rdbl0, sizeof(rdbl0), NULL);
-            res = ReaderReceive(buf, par);
-            if (res == 18) {
-                isGen = MAGIC_GEN_3;
+        if (is_mfc) {
+            // magic MFC Gen3 test
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            SpinDelay(40);
+            iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+            res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+            if (res == 2) {
+                ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
+                res = ReaderReceive(buf, par);
+                if (res == 18) {
+                    isGen = MAGIC_GEN_3;
+                }
             }
         }
     };

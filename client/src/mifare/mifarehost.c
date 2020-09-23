@@ -1154,13 +1154,14 @@ int detect_classic_static_nonce(void) {
     return NONCE_FAIL;
 }
 
-/* try to see if card responses to "chinese magic backdoor" commands. */
-int detect_classic_magic(void) {
+/* try to see if card responses to "Chinese magic backdoor" commands. */
+int detect_mf_magic(bool is_mfc) {
 
     uint8_t isGeneration = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_CIDENT, NULL, 0);
+    uint8_t payload[] = { is_mfc };
+    SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
         if (resp.status == PM3_SUCCESS)
             isGeneration = resp.data.asBytes[0];
