@@ -80,7 +80,7 @@ static bool strip_check_parities(uint64_t data, uint32_t *word) {
 
     uint8_t rparity = 0, cparity = 0;
     uint8_t rparity_m = 0, cparity_m = 0, stop_bit_m = 0;
-    
+
     // strip parities
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 8; j++) {
@@ -96,7 +96,7 @@ static bool strip_check_parities(uint64_t data, uint32_t *word) {
             rparity ^= (*word >> (31 - 8 * i - j)) & 1;
         }
     }
-    
+
     // calculate column parities
     for (int i = 0; i < 8; i++) {
         cparity <<= 1;
@@ -104,7 +104,7 @@ static bool strip_check_parities(uint64_t data, uint32_t *word) {
             cparity ^= (*word >> (31 - 8 * j - i)) & 1;
         }
     }
-    
+
     // measured row parities
     for (int i = 0; i < 4; i++) {
         rparity_m <<= 1;
@@ -113,10 +113,10 @@ static bool strip_check_parities(uint64_t data, uint32_t *word) {
 
     // measured column parities
     cparity_m = (data >> 1) & 0xFF;
-    
+
     // measured stop bit
     stop_bit_m = data & 1;
-    
+
     if ((cparity_m == cparity) && (rparity_m == rparity) && (stop_bit_m == 0))
         return true;
 
@@ -128,24 +128,24 @@ static int get_input_data_from_file(uint32_t *words) {
     size_t now = 0;
 
     if (exists_in_spiffs(LF_EM4X50SIMULATE_INPUTFILE)) {
-        
+
         uint32_t size = size_in_spiffs((char *)LF_EM4X50SIMULATE_INPUTFILE);
         uint8_t *mem = BigBuf_malloc(size);
-        
+
         Dbprintf(_YELLOW_("[=] found input file %s"), LF_EM4X50SIMULATE_INPUTFILE);
 
         rdv40_spiffs_read_as_filetype((char *)LF_EM4X50SIMULATE_INPUTFILE, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
-        
+
         now = size / 9;
         for (int i = 0; i < now; i++)
             for (int j = 0; j < 4; j++)
                 words[i] |= (hex2int(mem[2 * j + 9 * i]) << 4 | hex2int(mem[2 * j + 1 + 9 * i])) << ((3 - j) * 8);
-        
+
         Dbprintf(_YELLOW_("[=] read data from input file"));
     }
-                 
+
     BigBuf_free();
-    
+
     return (now > 0) ? now : 0;
 }
 
@@ -160,7 +160,7 @@ static void append(uint8_t *entry, size_t entry_len) {
     }
     LED_C_OFF();
 }
- 
+
 void ModInfo(void) {
     DbpString(_YELLOW_("  LF EM4x50 collector mode") " - a.k.a tharexde");
 }
@@ -202,11 +202,11 @@ void RunMod(void) {
             SpinDown(100);
             break;
         }
-        
+
         if (state == STATE_SIM) {
 
             if (state_change) {
-                
+
                 FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
                 FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
                 FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
@@ -214,7 +214,7 @@ void RunMod(void) {
                 AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
                 AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
                 AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
-                
+
                 LED_A_ON();
                 LED_B_OFF();
                 Dbprintf(_YELLOW_("[=] switched to EM4x50 simulating mode"));
@@ -224,7 +224,7 @@ void RunMod(void) {
                     Dbprintf(_YELLOW_("[=] simulating %i blocks"), now);
                     for (int i = 0; i < now; i++)
                         Dbprintf(_YELLOW_("[=] %2i -> %lx"), i + 1, words[i]);
-                
+
                 } else {
                     Dbprintf(_RED_("[!] error in input data"));
                 }
@@ -237,7 +237,7 @@ void RunMod(void) {
                 em4x50_sim_send_listen_window();
                 em4x50_sim_send_word(words[i]);
             }
-            
+
         } else if (state == STATE_READ) {
 
             if (state_change) {
@@ -255,7 +255,7 @@ void RunMod(void) {
             }
 
             no_words = em4x50_standalone_read(data);
-            
+
             if (no_words > 0) {
 
                 memset(entry, 0, sizeof(entry));
@@ -266,12 +266,12 @@ void RunMod(void) {
                 append(entry, strlen((char *)entry));
 
                 for (int i = 0; i < no_words; i++) {
-                    
+
                     if (strip_check_parities(data[i], &word))
                         sprintf((char *)entry, "  %2i -> 0x%08"PRIx32"  (parity check ok)", i + 1, word);
                     else
                         sprintf((char *)entry, "  %2i -> 0x%08"PRIx32"  (parity check failed)", i + 1, word);
-                    
+
                     Dbprintf("%s", entry);
                     strcat((char *)entry, "\n");
                     append(entry, strlen((char *)entry));
@@ -280,7 +280,7 @@ void RunMod(void) {
 
         }
     }
-    
+
     if (state == STATE_READ)
         DownloadLogInstructions();
     else
