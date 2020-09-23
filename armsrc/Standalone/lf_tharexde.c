@@ -53,7 +53,7 @@
 #define STATE_SIM                   0
 #define STATE_READ                  1
 #define LF_EM4X50SIMULATE_INPUTFILE "lf_em4x50simulate.eml"
-#define LF_EM4X50COLLECT_LOGFILE    "lf_em4x50collect.log"
+#define LF_EM4X50COLLECT_LOGFILE    "lf_em4x50collect"
 #define EM4X50_TAG_WORD             45
 
 bool input_exists;
@@ -232,10 +232,10 @@ void RunMod(void) {
                 state_change = false;
             }
 
-            em4x50_sim_send_listen_window2();
+            em4x50_sim_send_listen_window();
             for (int i = 0; i < now; i++) {
-                em4x50_sim_send_listen_window2();
-                em4x50_sim_send_word3(words[i]);
+                em4x50_sim_send_listen_window();
+                em4x50_sim_send_word(words[i]);
             }
             
         } else if (state == STATE_READ) {
