@@ -362,7 +362,7 @@ static uint32_t get_pulse_length(void) {
 
 static bool check_pulse_length(uint32_t pl, int length) {
     // check if pulse length <pl> corresponds to given length <length>
-    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) & (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
+    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
 }
 
 static void em4x50_reader_send_bit(int bit) {
