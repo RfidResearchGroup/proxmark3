@@ -17,7 +17,7 @@
 #include "crc16.h"
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription 
+#include "emv/apduinfo.h"  // GetAPDUCodeDescription
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
@@ -116,7 +116,7 @@ static char *get_st_chip_model(uint8_t pc) {
         case 0xE3:
             sprintf(s, "ST25TA02KB");
             break;
-         case 0xE4:
+        case 0xE4:
             sprintf(s, "ST25TA512B");
             break;
         case 0xA3:
@@ -150,19 +150,19 @@ static void print_st_cc_info(uint8_t *d, uint8_t n) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "------------ " _CYAN_("Capability Container file") " ------------");
-    PrintAndLogEx(SUCCESS, " len      %u bytes (" _GREEN_("0x%02X") ")", d[1],d[1]);
+    PrintAndLogEx(SUCCESS, " len      %u bytes (" _GREEN_("0x%02X") ")", d[1], d[1]);
     PrintAndLogEx(SUCCESS, " version  %s (" _GREEN_("0x%02X") ")", (d[2] == 0x20) ? "v2.0" : "v1.0", d[2]);
 
-    uint16_t maxr =  (d[3] << 8 | d[4]);
+    uint16_t maxr = (d[3] << 8 | d[4]);
     PrintAndLogEx(SUCCESS, " max bytes read  %u bytes ( 0x%04X )", maxr, maxr);
-    uint16_t maxw =  (d[5] << 8 | d[6]);
+    uint16_t maxw = (d[5] << 8 | d[6]);
     PrintAndLogEx(SUCCESS, " max bytes write %u bytes ( 0x%04X )", maxw, maxw);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " NDEF file control TLV  {");
     PrintAndLogEx(SUCCESS, "    (t) type of file  ( %02X )", d[7]);
     PrintAndLogEx(SUCCESS, "    (v)               ( %02X )", d[8]);
     PrintAndLogEx(SUCCESS, "    file id           ( %02X%02X )", d[9], d[10]);
-    
+
     uint16_t maxndef = (d[11] << 8 | d[12]);
     PrintAndLogEx(SUCCESS, "    max NDEF filesize   %u bytes ( 0x%04X )", maxndef, maxndef);
     PrintAndLogEx(SUCCESS, "    ----- " _CYAN_("access rights") " -------");
@@ -178,11 +178,11 @@ static void print_st_system_info(uint8_t *d, uint8_t n) {
         PrintAndLogEx(WARNING, "Not enought bytes read from system file");
         return;
     }
-    
+
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "------------ " _CYAN_("ST System file") " ------------");    
-    
-    uint16_t len =  (d[0] << 8 | d[1]);
+    PrintAndLogEx(SUCCESS, "------------ " _CYAN_("ST System file") " ------------");
+
+    uint16_t len = (d[0] << 8 | d[1]);
     PrintAndLogEx(SUCCESS, " len      %u bytes (" _GREEN_("0x%04X") ")", len, len);
 
     if (d[2] == 0x80) {
@@ -191,29 +191,29 @@ static void print_st_system_info(uint8_t *d, uint8_t n) {
         PrintAndLogEx(SUCCESS, " GPO Config ( 0x%02X )", d[2]);
         PrintAndLogEx(SUCCESS, "    config lock bit ( %s )", ((d[2] & 0x80) == 0x80) ? _RED_("locked") : _GREEN_("unlocked"));
         uint8_t conf = (d[2] & 0x70) >> 4;
-        switch(conf) {
-            case 0: 
+        switch (conf) {
+            case 0:
                 PrintAndLogEx(SUCCESS, "");
                 break;
-            case 1: 
+            case 1:
                 PrintAndLogEx(SUCCESS, "Session opened");
-                break;                
-            case 2: 
+                break;
+            case 2:
                 PrintAndLogEx(SUCCESS, "WIP");
                 break;
-            case 3: 
+            case 3:
                 PrintAndLogEx(SUCCESS, "MIP");
                 break;
-            case 4: 
+            case 4:
                 PrintAndLogEx(SUCCESS, "Interrupt");
                 break;
-            case 5: 
+            case 5:
                 PrintAndLogEx(SUCCESS, "State Control");
                 break;
-            case 6: 
+            case 6:
                 PrintAndLogEx(SUCCESS, "RF Busy");
                 break;
-            case 7: 
+            case 7:
                 PrintAndLogEx(SUCCESS, "Field Detect");
                 break;
         }
@@ -224,25 +224,25 @@ static void print_st_system_info(uint8_t *d, uint8_t n) {
     PrintAndLogEx(SUCCESS, "                counter ( %s )", ((d[3] & 0x02) == 0x02) ? _RED_("enabled") : _GREEN_("disable"));
     PrintAndLogEx(SUCCESS, "   counter increment on ( %s )", ((d[3] & 0x01) == 0x01) ? _YELLOW_("write") : _YELLOW_("read"));
 
-    uint32_t counter =  (d[4] << 16 | d[5] << 8 | d[6]);
+    uint32_t counter = (d[4] << 16 | d[5] << 8 | d[6]);
     PrintAndLogEx(SUCCESS, " 20bit counter ( 0x%05X )", counter & 0xFFFFF);
-    
+
     PrintAndLogEx(SUCCESS, " Product version ( 0x%02X )", d[7]);
-    
+
     PrintAndLogEx(SUCCESS, "          UID " _GREEN_("%s"), sprint_hex_inrow(d + 8, 7));
     PrintAndLogEx(SUCCESS, "          MFG  0x%02X, " _YELLOW_("%s"), d[8], getTagInfo(d[8]));
     PrintAndLogEx(SUCCESS, " Product Code  0x%02X, " _YELLOW_("%s"), d[9], get_st_chip_model(d[9]));
-    PrintAndLogEx(SUCCESS, "      Device#  " _YELLOW_("%s"), sprint_hex_inrow(d + 10, 5));    
+    PrintAndLogEx(SUCCESS, "      Device#  " _YELLOW_("%s"), sprint_hex_inrow(d + 10, 5));
 
-    uint16_t mem =  (d[0xF] << 8 | d[0x10]);
+    uint16_t mem = (d[0xF] << 8 | d[0x10]);
     PrintAndLogEx(SUCCESS, " Memory Size - 1   %u bytes (" _GREEN_("0x%04X") ")", mem, mem);
-    
+
     PrintAndLogEx(SUCCESS, " IC Reference code %u ( 0x%02X )", d[0x12], d[0x12]);
 
     PrintAndLogEx(SUCCESS, "----------------- " _CYAN_("raw") " -----------------");
     PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(d, n));
-    PrintAndLogEx(NORMAL, "");    
-    
+    PrintAndLogEx(NORMAL, "");
+
     /*
     0012
     80000000001302E2007D0E8DCC
@@ -252,7 +252,7 @@ static void print_st_system_info(uint8_t *d, uint8_t n) {
 static uint16_t get_sw(uint8_t *d, uint8_t n) {
     if (n < 2)
         return 0;
-    
+
     n -= 2;
     return d[n] * 0x0100 + d[n + 1];
 }
@@ -265,10 +265,10 @@ int infoHF_ST(void) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // ---------------  Select NDEF Tag application ----------------    
+    // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
-    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -285,10 +285,10 @@ int infoHF_ST(void) {
     activate_field = false;
     keep_field_on = true;
     // ---------------  CC file reading ----------------
-    
+
     uint8_t aSELECT_FILE_CC[30];
     int aSELECT_FILE_CC_n = 0;
-    param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);    
+    param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
     res = ExchangeAPDU14a(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -298,10 +298,10 @@ int infoHF_ST(void) {
         PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return PM3_ESOFT;
     }
-   
+
     uint8_t aREAD_CC[30];
     int aREAD_CC_n = 0;
-    param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);    
+    param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);
     res = ExchangeAPDU14a(aREAD_CC, aREAD_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -315,10 +315,10 @@ int infoHF_ST(void) {
     print_st_cc_info(response, resplen - 2);
 
 
-    // ---------------  System file reading ----------------   
+    // ---------------  System file reading ----------------
     uint8_t aSELECT_FILE_SYS[30];
     int aSELECT_FILE_SYS_n = 0;
-    param_gethex_to_eol("00a4000c02e101", 0, aSELECT_FILE_SYS, sizeof(aSELECT_FILE_SYS), &aSELECT_FILE_SYS_n);    
+    param_gethex_to_eol("00a4000c02e101", 0, aSELECT_FILE_SYS, sizeof(aSELECT_FILE_SYS), &aSELECT_FILE_SYS_n);
     res = ExchangeAPDU14a(aSELECT_FILE_SYS, aSELECT_FILE_SYS_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -330,10 +330,10 @@ int infoHF_ST(void) {
     }
 
     keep_field_on = false;
-    
+
     uint8_t aREAD_SYS[30];
     int aREAD_SYS_n = 0;
-    param_gethex_to_eol("00b0000012", 0, aREAD_SYS, sizeof(aREAD_SYS), &aREAD_SYS_n);    
+    param_gethex_to_eol("00b0000012", 0, aREAD_SYS, sizeof(aREAD_SYS), &aREAD_SYS_n);
     res = ExchangeAPDU14a(aREAD_SYS, aREAD_SYS_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -359,17 +359,17 @@ static int cmd_hf_st_sim(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h' || c == 0x00) return usage_hf_st_sim();
 
-    int uidlen = 0;    
+    int uidlen = 0;
     uint8_t cmdp = 0;
     uint8_t uid[7] = {0};
     if (c == 'u') {
         param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
         uidlen >>= 1;
         if (uidlen != 7) {
-             return usage_hf_st_sim();
+            return usage_hf_st_sim();
         }
     }
-    
+
     char param[40];
     snprintf(param, sizeof(param), "t 10 u %s", sprint_hex_inrow(uid, uidlen));
     return CmdHF14ASim(param);
@@ -379,14 +379,14 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h' || c == 0x00) return usage_hf_st_ndef();
 
-    int pwdlen = 0;    
+    int pwdlen = 0;
     uint8_t cmdp = 0;
     uint8_t pwd[16] = {0};
     if (c == 'p') {
         param_gethex_ex(Cmd, cmdp + 1, pwd, &pwdlen);
         pwdlen >>= 1;
         if (pwdlen != 16) {
-             return usage_hf_st_ndef();
+            return usage_hf_st_ndef();
         }
     }
 
@@ -395,10 +395,10 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // ---------------  Select NDEF Tag application ----------------    
+    // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
-    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -418,7 +418,7 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     // ---------------  NDEF file reading ----------------
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
-    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);    
+    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -429,7 +429,7 @@ static int cmd_hf_st_ndef(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // ---------------  VERIFY ----------------   
+    // ---------------  VERIFY ----------------
     uint8_t aVERIFY[30];
     int aVERIFY_n = 0;
     param_gethex_to_eol("0020000100", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
@@ -446,17 +446,17 @@ static int cmd_hf_st_ndef(const char *Cmd) {
         if (res)
             return res;
 
-        sw = get_sw(response, resplen);       
+        sw = get_sw(response, resplen);
         if (sw != 0x9000) {
             PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             return PM3_ESOFT;
         }
     }
-   
+
     keep_field_on = false;
     uint8_t aREAD_NDEF[30];
     int aREAD_NDEF_n = 0;
-    param_gethex_to_eol("00b000001d", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);    
+    param_gethex_to_eol("00b000001d", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
     res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -472,23 +472,23 @@ static int cmd_hf_st_ndef(const char *Cmd) {
 }
 
 static int cmd_hf_st_protect(const char *Cmd) {
-    
+
     uint8_t cmdp = 0;
     bool errors = false;
     int pwdlen = 0;
     uint8_t pwd[16] = {0};
     int statelen = 3;
     uint8_t state[3] = {0x26, 0, 0};
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_hf_st_protect();
-            case '0': 
+            case '0':
                 state[0] = 0x26;  //Disable protection
                 cmdp++;
                 break;
-            case '1': 
+            case '1':
                 state[0] = 0x28;  //Enable protection
                 cmdp++;
                 break;
@@ -515,14 +515,14 @@ static int cmd_hf_st_protect(const char *Cmd) {
     //Validations
 
     if (state[2] == 0x00) {
-         PrintAndLogEx(WARNING, "Missing action (r)ead or (w)rite");
-         errors = true;
+        PrintAndLogEx(WARNING, "Missing action (r)ead or (w)rite");
+        errors = true;
     }
     if (pwdlen != 16) {
-         PrintAndLogEx(WARNING, "Missing 16 byte password");
-         errors = true;
-    } 
-    
+        PrintAndLogEx(WARNING, "Missing 16 byte password");
+        errors = true;
+    }
+
     if (errors || cmdp == 0) return usage_hf_st_protect();
 
     bool activate_field = true;
@@ -530,10 +530,10 @@ static int cmd_hf_st_protect(const char *Cmd) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // ---------------  Select NDEF Tag application ----------------    
+    // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
-    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -553,7 +553,7 @@ static int cmd_hf_st_protect(const char *Cmd) {
     // ---------------  Select NDEF file ----------------
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
-    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);    
+    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -564,7 +564,7 @@ static int cmd_hf_st_protect(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // ---------------  VERIFY ----------------   
+    // ---------------  VERIFY ----------------
     uint8_t aVERIFY[30];
     int aVERIFY_n = 0;
     // need to provide 16byte password
@@ -574,12 +574,12 @@ static int cmd_hf_st_protect(const char *Cmd) {
     if (res)
         return res;
 
-    sw = get_sw(response, resplen);       
+    sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return PM3_ESOFT;
     }
-    
+
     // ---------------  Change protection ----------------
     keep_field_on = false;
     uint8_t aPROTECT[30];
@@ -595,9 +595,9 @@ static int cmd_hf_st_protect(const char *Cmd) {
         PrintAndLogEx(ERR, "changing protection failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return PM3_ESOFT;
     }
-    
-    PrintAndLogEx(SUCCESS, " %s protection ( %s )", ((state[2] & 0x01) == 0x01) ? _YELLOW_("read") : _YELLOW_("write"), 
-                                                    ((state[0] & 0x28) == 0x28) ? _RED_("enabled") : _GREEN_("disabled"));
+
+    PrintAndLogEx(SUCCESS, " %s protection ( %s )", ((state[2] & 0x01) == 0x01) ? _YELLOW_("read") : _YELLOW_("write"),
+                  ((state[0] & 0x28) == 0x28) ? _RED_("enabled") : _GREEN_("disabled"));
 
     return PM3_SUCCESS;
 }
@@ -608,9 +608,9 @@ static int cmd_hf_st_pwd(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
-    int pwdlen = 0;    
+    int pwdlen = 0;
     uint8_t pwd[16] = {0};
-    int newpwdlen = 0;    
+    int newpwdlen = 0;
     uint8_t newpwd[16] = {0};
     int changePwdlen = 4;
     uint8_t changePwd[4] = {0x24, 0x00, 0x00, 0x10};
@@ -647,17 +647,17 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     //Validations
 
     if (changePwd[2] == 0x00) {
-         PrintAndLogEx(WARNING, "Missing password specification: (r)ead or (w)rite");
-         errors = true;
+        PrintAndLogEx(WARNING, "Missing password specification: (r)ead or (w)rite");
+        errors = true;
     }
     if (pwdlen != 16) {
-         PrintAndLogEx(WARNING, "Missing original 16 byte password");
-         errors = true;
-    } 
+        PrintAndLogEx(WARNING, "Missing original 16 byte password");
+        errors = true;
+    }
     if (newpwdlen != 16) {
-         PrintAndLogEx(WARNING, "Missing new 16 byte password");
-         errors = true;
-    } 
+        PrintAndLogEx(WARNING, "Missing new 16 byte password");
+        errors = true;
+    }
     if (errors || cmdp == 0) return usage_hf_st_pwd();
 
     bool activate_field = true;
@@ -665,10 +665,10 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // ---------------  Select NDEF Tag application ----------------    
+    // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
-    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -688,7 +688,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     // ---------------  Select NDEF file ----------------
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
-    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);    
+    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -699,7 +699,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // ---------------  VERIFY ----------------   
+    // ---------------  VERIFY ----------------
     uint8_t aVERIFY[30];
     int aVERIFY_n = 0;
     // need to provide 16byte password
@@ -709,7 +709,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     if (res)
         return res;
 
-    sw = get_sw(response, resplen);       
+    sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return PM3_ESOFT;
@@ -720,7 +720,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     keep_field_on = false;
     uint8_t aCHG_PWD[30];
     int aCHG_PWD_n = 0;
-    param_gethex_to_eol("00", 0, aCHG_PWD, sizeof(aCHG_PWD), &aCHG_PWD_n);    
+    param_gethex_to_eol("00", 0, aCHG_PWD, sizeof(aCHG_PWD), &aCHG_PWD_n);
     memcpy(aCHG_PWD + aCHG_PWD_n, changePwd, changePwdlen);
     memcpy(aCHG_PWD + aCHG_PWD_n + changePwdlen, newpwd, newpwdlen);
     res = ExchangeAPDU14a(aCHG_PWD, aCHG_PWD_n + changePwdlen + newpwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
