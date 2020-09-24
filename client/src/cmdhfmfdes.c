@@ -321,7 +321,7 @@ typedef enum {
     DESFIRE_EV3,
     DESFIRE_LIGHT,
     PLUS_EV1,
-    NTAG413,
+    NTAG413DNA,
 } nxp_cardtype_t;
 
 typedef struct {
@@ -388,7 +388,7 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     else if (major == 0x30 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire Light") ")", major, minor);
     else if (major == 0x10 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("NTAG413") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("NTAG413DNA") ")", major, minor);
     else
         snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
@@ -656,7 +656,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     if (major == 0x11 &&  minor == 0x00)      
         return PLUS_EV1;
     if (major == 0x10 && minor == 0x00)
-        return NTAG413;
+        return NTAG413DNA;
     return DESFIRE_UNKNOWN;
 }
 
@@ -3327,7 +3327,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (cardtype == DESFIRE_EV2 || 
         cardtype == DESFIRE_LIGHT || 
         cardtype == DESFIRE_EV3 ||
-        cardtype == NTAG413) {
+        cardtype == NTAG413DNA) {
         // Signature originality check
         uint8_t signature[56] = {0};
         size_t signature_len = 0;
