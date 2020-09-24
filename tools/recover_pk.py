@@ -10,6 +10,8 @@ debug = False
 
 def recover(data, signature):
     recovered = set()
+    # Some, like Vivokey Spark1, are doing a SHA256
+    # alghash = "sha256"
     alghash = None
     if len(signature) == 32:
         curve = sslcrypto.ecc.get_curve("secp128r1")
