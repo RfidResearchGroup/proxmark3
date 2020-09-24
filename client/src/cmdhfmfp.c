@@ -197,9 +197,9 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
 
     PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_plus_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_plus_public_keys[i].value);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 16);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 32);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 64);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 96);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));

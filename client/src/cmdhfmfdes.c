@@ -1176,6 +1176,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
         {"Mifare Plus EV1",         "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
 
+
     uint32_t i;
     bool is_valid = false;
 
@@ -1204,9 +1205,9 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
 
     PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_desfire_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_desfire_public_keys[i].value);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 16);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 32);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 64);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 96);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
