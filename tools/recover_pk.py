@@ -8,11 +8,8 @@ import sys
 
 debug = False
 
-def recover(data, signature):
+def recover(data, signature, alghash=None):
     recovered = set()
-    # Some, like Vivokey Spark1, are doing a SHA256
-    # alghash = "sha256"
-    alghash = None
     if len(signature) == 32:
         curve = sslcrypto.ecc.get_curve("secp128r1")
         recoverable = False
@@ -50,28 +47,38 @@ def recover(data, signature):
                 pass
     return recovered
 
+def recover_multiple(uids, sigs, alghash=None):
+    recovered = set()
+    assert len(uids) == len(sigs)
+    for i in range(len(uids)):
+        data = binascii.unhexlify(uids[i])
+        if debug:
+            print("UID       (%2i): " %  len(data), binascii.hexlify(data))
+        signature = binascii.unhexlify(sigs[i])
+        if debug:
+            print("Signature (%2i): " % len(signature), binascii.hexlify(signature))
+        recovered_tmp = recover(data, signature, alghash)
+        if i == 0:
+            if recovered_tmp == set():
+                break
+            else:
+                recovered = recovered_tmp
+        else:
+            recovered &= recovered_tmp
+    return recovered
+
 if len(sys.argv) < 3 or len(sys.argv) % 2 == 0:
     print("Usage:   \n%s UID SIGN [UID SIGN] [...]" % sys.argv[0])
     print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b" % sys.argv[0])
     exit(1)
 
-recovered = set()
-for i in range(1, len(sys.argv), 2):
-    data = binascii.unhexlify(sys.argv[i])
-    if debug:
-        print("UID       (%2i): " %  len(data), binascii.hexlify(data))
-    signature = binascii.unhexlify(sys.argv[i+1])
-    if debug:
-        print("Signature (%2i): " % len(signature), binascii.hexlify(signature))
-    recovered_tmp = recover(data, signature)
-    if i == 1:
-        if recovered_tmp == set():
-            break
-        else:
-            recovered = recovered_tmp
-    else:
-        recovered &= recovered_tmp
-
+print("Assuming no hash was used in the signature generation:")
+recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2])
+print("Possible uncompressed Pk(s):")
+for pk in list(recovered):
+    print(binascii.hexlify(pk).decode('utf8'))
+print("Assuming SHA-256 was used in the signature generation:")
+recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2], alghash="sha256")
 print("Possible uncompressed Pk(s):")
 for pk in list(recovered):
     print(binascii.hexlify(pk).decode('utf8'))
