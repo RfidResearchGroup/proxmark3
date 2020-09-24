@@ -58,9 +58,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("%d bytes") ")", fsize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -88,18 +88,17 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire MF3ICD40") ")", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV2") ")", major, minor);
     else if (major == 0x33 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
-
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire Light") ")", major, minor);
     else if (major == 0x11 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Plus EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("Plus EV1") ")", major, minor);
     else
         snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
@@ -186,21 +185,26 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
 
     if (is_valid == false || i == ARRAYLEN(nxp_plus_public_keys)) {
-        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
+        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
+        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
+        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
+        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
+        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_plus_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_plus_public_keys[i].value);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 16);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 32);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 64);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 96);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
-    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 
@@ -356,10 +360,8 @@ static int CmdHFMFPInfo(const char *Cmd) {
         }
 
         if (card.sak == 0x20) {
-            PrintAndLogEx(INFO, "           SAK: " _GREEN_("MIFARE Plus SL0/SL3") " or " _GREEN_("MIFARE DESFire"));
-
             if (card.ats_len > 0) {
-
+                PrintAndLogEx(INFO, "           SAK: " _GREEN_("MIFARE Plus SL0/SL3") " or " _GREEN_("MIFARE DESFire"));
                 SLmode = 3;
                 // check SL0
                 uint8_t data[250] = {0};
@@ -368,15 +370,22 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
 
-                // DESFire answers 0x1C
+                // DESFire answers 0x1C or 67 00
                 // Plus answers 0x0B, 0x09
-                PrintAndLogEx(INFO, "ICEE: %s", sprint_hex(data, datalen));
-
-                if (memcmp(data, "\x67\x00", 2) == 0) {
-                    PrintAndLogEx(INFO, "\tMost likely a MIFARE DESFire tag");
+                if ( data[0] != 0x0b && data[0] != 0x09 && data[0] != 0x1C && data[0] != 0x67) {
+                    PrintAndLogEx(INFO, _RED_("Send copy to iceman of this command output!"));
+                    PrintAndLogEx(INFO, "data: %s", sprint_hex(data, datalen));
+                }
+                
+                if ((memcmp(data, "\x67\x00", 2) == 0) ||
+                    (memcmp(data, "\x1C\x83\x0C", 3) == 0) 
+                    ) {
+                    PrintAndLogEx(INFO, "        result: " _RED_("MIFARE DESFire"));
                     PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
                     DropField();
                     return PM3_SUCCESS;
+                } else {
+                    PrintAndLogEx(INFO, "        result: " _GREEN_("MIFARE Plus SL0/SL3"));
                 }
 
                 if (!res && datalen > 1 && data[0] == 0x09) {

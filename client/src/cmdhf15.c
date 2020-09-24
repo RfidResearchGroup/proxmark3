@@ -380,7 +380,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         {"NXP Public key", "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
         {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
         {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MICRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+        {"MIKRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
         {"Spark1 Public key", "04d64bb732c0d214e7ec580736acf847284b502c25c0f7f2fa86aace1dada4387a"},
     };
     /*
@@ -423,6 +423,16 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         };
     */
     uint8_t i;
+    uint8_t revuid[8];
+    for (i = 0; i < sizeof(revuid); i++) {
+        revuid[i] = uid[7 - i];
+    }
+    uint8_t revsign[32];
+    for (i = 0; i < sizeof(revsign); i++) {
+        revsign[i] = signature[31 - i];
+    }
+    
+    int reason = 0;
     bool is_valid = false;
     for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
 
@@ -432,22 +442,65 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 
         int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, false);
         is_valid = (res == 0);
-        if (is_valid)
+        if (is_valid) {
+            reason = 1;
             break;
+        }
+        
+        // try with sha256
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, true);
+        is_valid = (res == 0);
+        if (is_valid) {
+            reason = 2;
+            break;
+        }
+
+        // try with reversed uid / signature
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), false);
+        is_valid = (res == 0);
+        if (is_valid) {
+            reason = 3;
+            break;
+        }
+
+        
+        // try with sha256
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), true);
+        is_valid = (res == 0);
+        if (is_valid) {
+            reason = 4;
+            break;
+        }
     }
 
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     if (is_valid == false || i == ARRAYLEN(nxp_15693_public_keys)) {
-        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
+        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_15693_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_15693_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex(signature, 32));
-    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
+    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
+    switch(reason) {
+        case 1:
+            PrintAndLogEx(INFO, "                  Params used: UID and signature, plain");
+            break;
+        case 2:
+            PrintAndLogEx(INFO, "                  Params used: UID and signature, SHA256");
+            break;
+        case 3:
+            PrintAndLogEx(INFO, "                  Params used: reversed UID and signature, plain");
+            break;
+        case 4: 
+            PrintAndLogEx(INFO, "                  Params used: reversed UID and signature, SHA256");
+            break;
+    }
     return PM3_SUCCESS;
 }
 
