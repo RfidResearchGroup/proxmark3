@@ -493,7 +493,7 @@ static int ul_fudan_check(void) {
     return (!resp.data.asBytes[0]) ? FUDAN_UL : UL; //if response == 0x00 then Fudan, else Genuine NXP
 }
 
-static int ul_print_default(uint8_t *data) {
+static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
 
     uint8_t uid[7];
     uid[0] = data[0];
@@ -503,10 +503,14 @@ static int ul_print_default(uint8_t *data) {
     uid[4] = data[5];
     uid[5] = data[6];
     uid[6] = data[7];
+    bool mful_uid_layout = true;
 
-    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), sprint_hex(uid, 7));
-    PrintAndLogEx(SUCCESS, "    UID[0]: %02X, %s",  uid[0], getTagInfo(uid[0]));
-    if (uid[0] == 0x05 && ((uid[1] & 0xf0) >> 4) == 2) {   // is infineon and 66RxxP
+    if (memcmp(uid, real_uid, 7) != 0) {
+        mful_uid_layout = false;
+    }
+    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), sprint_hex(real_uid, 7));
+    PrintAndLogEx(SUCCESS, "    UID[0]: %02X, %s",  real_uid[0], getTagInfo(real_uid[0]));
+    if (real_uid[0] == 0x05 && ((real_uid[1] & 0xf0) >> 4) == 2) {   // is infineon and 66RxxP
         uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
         switch (chip) {
             case 0xC2:
@@ -520,20 +524,23 @@ static int ul_print_default(uint8_t *data) {
                 break; //512 pages /2 sectors
         }
     }
-    // CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2
-    int crc0 = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
-    if (data[3] == crc0)
-        PrintAndLogEx(SUCCESS, "      BCC0: %02X (" _GREEN_("ok") ")", data[3]);
-    else
-        PrintAndLogEx(NORMAL, "      BCC0: %02X, crc should be %02X", data[3], crc0);
+    if (mful_uid_layout) {
+        // CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2
+        int crc0 = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+        if (data[3] == crc0)
+            PrintAndLogEx(SUCCESS, "      BCC0: %02X (" _GREEN_("ok") ")", data[3]);
+        else
+            PrintAndLogEx(NORMAL, "      BCC0: %02X, crc should be %02X", data[3], crc0);
 
-    int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
-    if (data[8] == crc1)
-        PrintAndLogEx(SUCCESS, "      BCC1: %02X (" _GREEN_("ok") ")", data[8]);
-    else
-        PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
-
-    PrintAndLogEx(SUCCESS, "  Internal: %02X (%s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+        int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
+        if (data[8] == crc1)
+            PrintAndLogEx(SUCCESS, "      BCC1: %02X (" _GREEN_("ok") ")", data[8]);
+        else
+            PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
+        PrintAndLogEx(SUCCESS, "  Internal: %02X (%s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Blocks 0-2: %s", sprint_hex(data + 0, 12));
+    }
 
     PrintAndLogEx(SUCCESS, "      Lock: %s - %s",
                   sprint_hex(data + 10, 2),
@@ -1214,7 +1221,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     uint8_t *key = pwd;
     uint8_t pack[4] = {0, 0, 0, 0};
     int len;
-    uint8_t uid[7];
 
     char tempStr[50];
 
@@ -1267,9 +1273,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return PM3_ESOFT;
     } else if (status == 16) {
-        memcpy(uid, data, 3);
-        memcpy(uid + 3, data + 4, 4);
-        ul_print_default(data);
+        ul_print_default(data, card.uid);
         ndef_print_CC(data + 12);
     } else {
         locked = true;
@@ -1351,7 +1355,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             return PM3_ESOFT;
         }
         if (status == 32) {
-            ulev1_print_signature(tagtype, uid, ulev1_signature, sizeof(ulev1_signature));
+            ulev1_print_signature(tagtype, card.uid, ulev1_signature, sizeof(ulev1_signature));
         } else {
             // re-select
             if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
