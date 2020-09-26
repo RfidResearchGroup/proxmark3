@@ -3007,7 +3007,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     bool useCardPassword = false;
-    uint32_t cardPassword = 0x00000000;
+    uint32_t cardPassword = 0x00;
+    uint64_t cardID = 0x00;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -3036,7 +3037,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             case 'e':
                 // White cloner password based on EM4100 ID
                 useCardPassword = true;
-                cardPassword = lf_t55xx_white_pwdgen (param_get64ex(Cmd,cmdp + 1,0,16) & 0xFFFFFFFF);
+                cardID = param_get64ex(Cmd,cmdp + 1,0,16);
+                uint32_t card32Bit = cardID & 0xFFFFFFFF;
+                cardPassword = lf_t55xx_white_pwdgen (card32Bit);
                 cmdp += 2;
                 break;
             default:
@@ -3104,7 +3107,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     // try calculated password
     if (useCardPassword) {
 
-        PrintAndLogEx(INFO, "Testing %08"PRIX32, cardPassword);
+        PrintAndLogEx(INFO, "Testing %08"PRIX32" generated ", cardPassword);
         for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
             if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, cardPassword, dl_mode)) {
@@ -3113,7 +3116,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             found = tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, cardPassword);
             if (found) {
-                PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX32) " ]", cardPassword);
+                PrintAndLogEx(SUCCESS, "Found valid password : [ " _GREEN_("%08"PRIX32) " ]", cardPassword);
                 dl_mode = 4; // Exit other downlink mode checks
             }
 
@@ -3122,7 +3125,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         }
     }
 
-    if (use_pwd_file) {
+    if ((!found) && (use_pwd_file)) {
         uint32_t keycount = 0;
 
         int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
@@ -3167,8 +3170,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                     dl_mode = 4;
             }
         }
-        if (!found) PrintAndLogEx(WARNING, "Check pwd failed");
     }
+
+    if (!found) PrintAndLogEx(WARNING, "Check pwd failed");
 
     free(keyBlock);
 
