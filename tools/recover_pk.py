@@ -359,18 +359,93 @@ def recover_multiple(uids, sigs, alghash=None):
             recovered &= recovered_tmp
     return recovered
 
-if len(sys.argv) < 3 or len(sys.argv) % 2 == 0:
-    print("Usage:   \n%s UID SIGN [UID SIGN] [...]" % sys.argv[0])
-    print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b" % sys.argv[0])
-    exit(1)
+def selftests():
+    tests = [
+        {'name': "Mifare Ultralight EV1",
+         'samples': ["04C1285A373080", "CEA2EB0B3C95D0844A95B824A7553703B3702378033BF0987899DB70151A19E7",
+                     "04C2285A373080", "A561506723D422D29ED9F93E60D20B9ED1E05CC1BF81DA19FE500CA0B81CC0ED"],
+         'pk': "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8" },
+        {'name': "NTAG21x",
+         'samples': ["04E10CDA993C80", "8B76052EE42F5567BEB53238B3E3F9950707C0DCC956B5C5EFCFDB709B2D82B3",
+                     "04DB0BDA993C80", "6048EFD9417CD10F6B7F1818D471A7FE5B46868D2EABDC6307A1E0AAE139D8D0"],
+         'pk': "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61" },
+        {'name': "Mifare Classic EV1",
+         'samples': ["0433619AB35780", "B9FAE369EC21C980650D87ED9AE9B1610E859131B4B8699C647548AB68D249BB",
+                     "524374E2",       "F8758CE30A58553A9985C458FB9C7D340FCFB04847B928A0667939272BC58B5E",
+                     "53424B8A",       "B4F533E8C06C021E242EFE8558C1672ED7022E5AE4E7AA2D46113B0AB6928AFC"],
+         'pk': "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF" },
+        {'name': "DESFire Light",
+         'samples': ["0439556ACB6480", "D5BD0978106E1E38B513642335966AB21E9F950DCFCFAB45FF13D0DC3CA4C2AE7E0D671DF1240937D040DAC4601C5F66ED62C546EE03ED08",
+                     "043B156ACB6480", "76B46932BF2FCF4931A24C755F5CB1686B914F1856177686B864BDAD58EFA6A7493E5C2232F3ADDAA434EA4647BFD1D385BDA6115E77D74C"],
+         'pk': "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D" },
+        {'name': "DESFire EV2",
+         'samples': ["042A41CAE45380", "B2769F8DDB575AEA2A680ADCA8FFED4FAB81A1E9908E2B82FE0FABB697BBD9B23835C416970E75768F12902ACA491349E94E6589EAF4F508",
+                     "045640CAE45380", "D34B53A8C2C100D700DEA1C4C0D0DE4409F3A418CD8D57C4F41F146E42AD9A55F014199ABBF5CA259C7799DB0AE20D5E77D4950AC7E95D33"],
+         'pk': "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A" },
+# TODO one more Mifare Plus EV1...
+        {'name': "Mifare Plus EV1",
+         'samples': ["042A2B221C5080", "BAC40CD88E9193C58ADA5055350C4F648EB5A7AEC4FCF9BD4CDD7B1C558DE5F59C6636F26286ED48622AAA2331D4DF1CEE23B57B94BDA631"],
+         'pk': "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E" },
+        {'name': "NTAG413DNA",
+         'samples': ["042468222F5C80", "B9211E320F321BD1D0E158E10FF15109B389638BAE15D9909D7725BF1250ED236D66F1AF75C94D60330E4E92535F5E6997675281A5687173",
+                     "042938222F5C80", "18B642797D1FD71806146A7A6EC778D3FDD04F39C4A3B36A592BD1A114DC44E5528380FA766C0B7EA32B284AFBE84300B620369F0686D8CC"],
+         'pk': "04bb5d514f7050025c7d0f397310360eec91eaf792e96fc7e0f496cb4e669d414f877b7b27901fe67c2e3b33cd39d1c797715189ac951c2add" },
+        {'name': "NTAG424DNA",
+         'samples': ["0463474AA26A80", "27E9A50E6CA4BA9037C02F7D20A80D0284D0C1D83C67F5A5AC1D8A4EF86C9508417E4E9C6F85AA7920F0ABDED984CAF20467D66EA54BBF08",
+                     "04C46C222A6380", "344A806EBF704C05C19215D2F840529CE365AAD2D08A469A95896D75D477D9FAB02A0C827E9F215BD8EB0E56A3A9A008FB75D706AABBD4DA"],
+         'pk': "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410" },
+        {'name': "Vivokey Spark1",
+# ! tag signature bytes output by pm3 must be read right to left: echo $sig |sed 's/\(..\)/\1\n/g'|tac|tr -d '\n'  (and it uses a SHA256)
+         'samples': ["E0040118009C870C", "4B4E03E1211952EF6A5F9D84AB218CD4D7549D0CDF8CA8779F9AD16C9A9CBF3B",
+                     "E0040118009B4D62", "25CF13747C3389EC7889DE916E3747584978511CC78B51CFB1883B494CBED7AB"],
+         'pk': "04d64bb732c0d214e7ec580736acf847284b502c25c0f7f2fa86aace1dada4387a" },
+# ! tag UID is considered inversed: E0040118009B5FEE => EE5F9B00180104E0
+# TODO one more ICODE-DNA...
+        {'name': "ICODE DNA, ICODE SLIX2",
+         'samples': ["EE5F9B00180104E0", "32D9E7579CD77E6F1FA11419231E874826984C5F189FDE1421684563A9663377"],
+         'pk': "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0" },
+    ]
+    succeeded = True
+    for t in tests:
+        print("Testing %-25s" % (t['name']+":"), end="")
+        recovered = recover_multiple(t['samples'][::2], t['samples'][1::2])
+        recovered |= recover_multiple(t['samples'][::2], t['samples'][1::2], alghash="sha256")
+        if (len(recovered) == 1):
+            pk = recovered.pop()
+            pk = binascii.hexlify(pk).decode('utf8')
+            if pk.lower() == t['pk'].lower():
+                print("[OK]")
+            else:
+                succeeded = False
+                print("[FAIL]")
+        elif len(t['samples'])//2 == 1:
+            pks = [binascii.hexlify(pk).decode('utf8').lower() for pk in list(recovered)]
+            if t['pk'].lower() in pks:
+                print("[OK]")
+            else:
+                succeeded = False
+                print("[FAIL]")
+        else:
+            succeeded = False
+            print("[FAIL]")
+    print("Tests:                           [%s]" % ["FAIL", "OK"][succeeded])
 
-print("Assuming no hash was used in the signature generation:")
-recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2])
-print("Possible uncompressed Pk(s):")
-for pk in list(recovered):
-    print(binascii.hexlify(pk).decode('utf8'))
-print("Assuming SHA-256 was used in the signature generation:")
-recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2], alghash="sha256")
-print("Possible uncompressed Pk(s):")
-for pk in list(recovered):
-    print(binascii.hexlify(pk).decode('utf8'))
+if __name__ == "__main__":
+    if len(sys.argv) == 2 and sys.argv[1] == "selftests":
+        selftests()
+        exit(0)
+    if len(sys.argv) < 3 or len(sys.argv) % 2 == 0:
+        print("Usage:   \n%s UID SIGN [UID SIGN] [...]" % sys.argv[0])
+        print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b" % sys.argv[0])
+        exit(1)
+
+    print("Assuming no hash was used in the signature generation:")
+    recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2])
+    print("Possible uncompressed Pk(s):")
+    for pk in list(recovered):
+        print(binascii.hexlify(pk).decode('utf8'))
+    print("Assuming SHA-256 was used in the signature generation:")
+    recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2], alghash="sha256")
+    print("Possible uncompressed Pk(s):")
+    for pk in list(recovered):
+        print(binascii.hexlify(pk).decode('utf8'))
