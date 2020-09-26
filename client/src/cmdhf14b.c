@@ -624,8 +624,8 @@ static bool HF14B_Std_Info(bool verbose) {
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -663,10 +663,9 @@ static bool HF14B_Std_Info(bool verbose) {
 
 // SRx get and print full info (needs more info...)
 static bool HF14B_ST_Info(bool verbose) {
-
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -681,28 +680,6 @@ static bool HF14B_ST_Info(bool verbose) {
         return false;
 
     print_st_general_info(card.uid, card.uidlen);
-
-    //add locking bit information here. uint8_t data[16] = {0x00};
-    // uint8_t datalen = 2;
-    // uint8_t resplen;
-    // uint8_t blk1;
-    // data[0] = 0x08;
-
-    //
-    // if (model == 0x2) { //SR176 has special command:
-    // data[1] = 0xf;
-    // resplen = 4;
-    // } else {
-    // data[1] = 0xff;
-    // resplen = 6;
-    // }
-
-    // //std read cmd
-    // if (HF14BCmdRaw(true, true, data, &datalen, false)==0)
-    // return rawClose();
-
-    // if (datalen != resplen || !crc) return rawClose();
-    //print_ST_Lock_info(data[5]>>2);
     return true;
 }
 
@@ -721,8 +698,9 @@ static bool HF14B_ST_Reader(bool verbose) {
 
     // SRx get and print general info about SRx chip from UID
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return is_success;
@@ -760,9 +738,9 @@ static bool HF14B_Std_Reader(bool verbose) {
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return false;
@@ -798,54 +776,90 @@ static bool HF14B_Std_Reader(bool verbose) {
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
 static bool HF14B_Other_Reader(bool verbose) {
 
-    // uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
-    // uint8_t datalen = 4;
+    uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
+    uint8_t datalen = 4;
 
-    // // 14b get and print UID only (general info)
-    // uint32_t flags = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC;
+    // 14b get and print UID only (general info)
+    uint32_t flags = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC;
 
-    // clearCommandBuffer();
-    // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
-    // PacketResponseNG resp;
-    // WaitForResponse(CMD_HF_ISO14443B_COMMAND,&resp);
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
 
-    // if (datalen > 2 ) {
-    // PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-    // PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
-    // //PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, datalen));
-    // rawclose();
-    // return true;
-    // }
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        switch_off_field_14b();        
+        return false;
+    }
+    int status = resp.oldarg[0];
+    PrintAndLogEx(DEBUG, "status %d", status);
 
-    // data[0] = ISO14443B_AUTHENTICATE;
-    // clearCommandBuffer();
-    // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
-    // PacketResponseNG resp;
-    // WaitForResponse(CMD_HF_ISO14443B_COMMAND, &resp);
+    if (status == 0) {
+        PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, 1));
+        switch_off_field_14b();
+        return true;
+    } else if (status > 0) {
+        PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
+        switch_off_field_14b();
+        return true;
+    }
 
-    // if (datalen > 0) {
-    // PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-    // PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0A command ans:");
-    // // PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, datalen));
-    // rawClose();
-    // return true;
-    // }
+    data[0] = ISO14443B_AUTHENTICATE;
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        switch_off_field_14b();        
+        return false;
+    }
+    status = resp.oldarg[0];
+    PrintAndLogEx(INFO, "status %d", status);
 
-    // data[0] = ISO14443B_RESET;
-    // clearCommandBuffer();
-    // SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
-    // PacketResponseNG resp;
-    // WaitForResponse(CMD_HF_ISO14443B_COMMAND, &resp);
+    if (status == 0) {
+        PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0A command ans:");
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, 1));
+        switch_off_field_14b();
+        return true;
+    } else if (status > 0) {
+        PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x0A command ans:");
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
+        switch_off_field_14b();
+        return true;
+    }
 
-    // if (datalen > 0) {
-    // PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-    // PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0C command ans:");
-    // PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, datalen));
-    // rawClose();
-    // return true;
-    // }
 
-    // rawClose();
+    data[0] = ISO14443B_RESET;
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
+   if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        switch_off_field_14b();        
+        return false;
+    }
+    status = resp.oldarg[0];
+    PrintAndLogEx(INFO, "status %d", status);
+
+    if (status == 0) {
+        PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0C command ans:");
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, 1));
+        switch_off_field_14b();
+        return true;
+    } else if (status > 0) {
+        PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x0C command ans:");
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
+        switch_off_field_14b();
+        return true;
+    }
+
+    switch_off_field_14b();
     return false;
 }
 
