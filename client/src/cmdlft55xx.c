@@ -29,6 +29,7 @@
 #include "fileutils.h"  // loadDictionary
 #include "util_posix.h"
 #include "cmdlf.h"      // for lf sniff
+#include "generator.h"
 
 // Some defines for readability
 #define T55XX_DLMODE_FIXED         0 // Default Mode
@@ -3035,11 +3036,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             case 'e':
                 // White cloner password based on EM4100 ID
                 useCardPassword = true;
-                uint64_t EMID = param_get64ex(Cmd,cmdp + 1,0,16);   // Get 5 byte EM4100 ID
-                uint32_t ID = EMID & 0xFFFFFFFF; // White Cloner only using low 32 bits
-                // Final formula found by paleopterix (proxmark forum)
-                cardPassword = 0x00010303 + ((ID & 0x86ee00ec) ^ ((ID & 0x000000ec) << 8) ^  ((ID & 0x86000000) >> 16));
-                cmdp+=2;
+                cardPassword = lf_t55xx_white_pwdgen (param_get64ex(Cmd,cmdp + 1,0,16) & 0xFFFFFFFF);
+                cmdp += 2;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
