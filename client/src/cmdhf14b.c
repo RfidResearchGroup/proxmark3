@@ -89,11 +89,11 @@ static int usage_hf_14b_read_srx(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_14b_write_srx(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf 14b [h] sriwrite <1|2> <BLOCK> <DATA>");
+    PrintAndLogEx(NORMAL, "Usage:  hf 14b [h] sriwrite <1|2> <block> <data>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h        this help");
     PrintAndLogEx(NORMAL, "       <1|2>    1 = SRIX4K , 2 = SRI512");
-    PrintAndLogEx(NORMAL, "       <block>  BLOCK number depends on tag, special block == FF");
+    PrintAndLogEx(NORMAL, "       <block>  (hex) block number depends on tag, special block == FF");
     PrintAndLogEx(NORMAL, "       <data>   hex bytes of data to be written");
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 1 7F 11223344"));
@@ -420,53 +420,175 @@ static char *get_ST_Chip_Model(uint8_t data) {
     return retStr;
 }
 
-// REMAKE:
-/*
-static int print_ST_Lock_info(uint8_t model) {
+static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
 
-    PrintAndLogEx(NORMAL, "Chip Write Protection Bits:");
-    // now interpret the data
-    switch (model){
-    case 0x0: //fall through (SRIX4K special)
-    case 0x3: //fall through (SRIx4K)
-    case 0x7: //             (SRI4K)
-    //only need data[3]
-    blk1 = 9;
-    PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+3, 1));
-    PrintAndLogEx(NORMAL, " 07/08:%slocked", (data[3] & 1) ? " not " : " " );
-    for (uint8_t i = 1; i<8; i++){
-    PrintAndLogEx(NORMAL, "    %02u:%slocked", blk1, (data[3] & (1 << i)) ? " not " : " " );
-    blk1++;
+    static char str[3] = { 0x00, 0x00, 0x00 };
+    char *s = str;
+    sprintf(s, " ");
+
+    if (blk > 15) {
+        return s;
     }
-    break;
-    case 0x4: //fall through (SRIX512)
-    case 0x6: //fall through (SRI512)
-    case 0xC: //             (SRT512)
-    //need data[2] and data[3]
-    blk1 = 0;
-    PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+2, 2));
-    for (uint8_t b=2; b<4; b++){
-    for (uint8_t i=0; i<8; i++){
-    PrintAndLogEx(NORMAL, "    %02u:%slocked", blk1, (data[b] & (1 << i)) ? " not " : " " );
-    blk1++;
+    uint8_t mask = 0;
+    switch (model) {
+        case 0x0:   // SRIX4K special
+        case 0x3:   // SRIx4K
+        case 0x7: { // SRI4K
+            //only need data[3]
+            switch(blk) {
+                case 7:
+                case 8:
+                    mask = 0x01;
+                    break;
+                case 9:
+                    mask = 0x02;
+                    break;
+                case 10:
+                    mask = 0x04;
+                    break;
+                case 11:
+                    mask = 0x08;
+                    break;
+                case 12:
+                    mask = 0x10;
+                    break;
+                case 13:
+                    mask = 0x20;
+                    break;
+                case 14:
+                    mask = 0x40;
+                    break;
+                case 15:
+                    mask = 0x80;
+                    break;
+                default:
+                    return s;
+            }
+            if ((lockbytes[1] & mask) == 0) {
+                sprintf(s, "*");
+            }
+            return s;
+        }
+        case 0x4:   // SRIX512
+        case 0x6:   // SRI512
+        case 0xC: { // SRT512
+            //need data[2] and data[3]
+            uint8_t b = 1;
+            switch(blk) {
+                case 0:
+                    mask = 0x01;
+                    break;
+                case 1:
+                    mask = 0x02;
+                    break;
+                case 2:
+                    mask = 0x04;
+                    break;
+                case 3:
+                    mask = 0x08;
+                    break;
+                case 4:
+                    mask = 0x10;
+                    break;
+                case 5:
+                    mask = 0x20;
+                    break;
+                case 6:
+                    mask = 0x40;
+                    break;
+                case 7:
+                    mask = 0x80;
+                    break;
+                case 8:
+                    mask = 0x01;
+                    b = 0;
+                    break;
+                case 9:
+                    mask = 0x02;
+                    b = 0;
+                    break;
+                case 10:
+                    mask = 0x04;
+                    b = 0;
+                    break;
+                case 11:
+                    mask = 0x08;
+                    b = 0;
+                    break;
+                case 12:
+                    mask = 0x10;
+                    b = 0;
+                    break;
+                case 13:
+                    mask = 0x20;
+                    b = 0;
+                    break;
+                case 14:
+                    mask = 0x40;
+                    b = 0;
+                    break;
+                case 15:
+                    mask = 0x80;
+                    b = 0;
+                    break;
+            }
+            if ((lockbytes[b] & mask) == 0) {
+                sprintf(s, "*");
+            }
+            return s;
+        }
+        case 0x2: {  // SR176
+            //need data[2]
+            switch(blk) {
+                case 0:
+                case 1:
+                    mask = 0x1;
+                    break;
+                case 2:
+                case 3:
+                    mask = 0x2;
+                    break;
+                case 4:
+                case 5:
+                    mask = 0x4;
+                    break;
+                case 6:
+                case 7:
+                    mask = 0x8;
+                    break;
+                case 8:
+                case 9:
+                    mask = 0x10;
+                    break;
+                case 10:
+                case 11:
+                    mask = 0x20;
+                    break;
+                case 12:
+                case 13:
+                    mask = 0x40;
+                    break;
+                case 14:
+                case 15:
+                    mask = 0x80;
+                    break;
+           }
+            // iceman:  this is opposite!  need sample to test with.
+            if ((lockbytes[0] & mask)) {
+                sprintf(s, "*");
+            }            
+            return s;
+        }
+        default:
+            break;
     }
-    }
-    break;
-    case 0x2: //             (SR176)
-    //need data[2]
-    blk1 = 0;
-    PrintAndLogEx(NORMAL, "   raw: %s", sprint_bin(data+2, 1));
-    for (uint8_t i = 0; i<8; i++){
-    PrintAndLogEx(NORMAL, " %02u/%02u:%slocked", blk1, blk1+1, (data[2] & (1 << i)) ? " " : " not " );
-    blk1+=2;
-    }
-    break;
-    default:
-    return rawClose();
-    }
-    return 1;
+    return s;    
 }
-*/
+
+static uint8_t get_st_chipid(uint8_t *uid) {
+    return uid[5] >> 2;
+}
+
 // print UID info from SRx chips (ST Microelectronics)
 static void print_st_general_info(uint8_t *data, uint8_t len) {
     //uid = first 8 bytes in data
@@ -673,7 +795,7 @@ static bool HF14B_Std_Reader(bool verbose) {
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
-static bool HF14B_Other_Reader(void) {
+static bool HF14B_Other_Reader(bool verbose) {
 
     // uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
     // uint8_t datalen = 4;
@@ -687,9 +809,9 @@ static bool HF14B_Other_Reader(void) {
     // WaitForResponse(CMD_HF_ISO14443B_COMMAND,&resp);
 
     // if (datalen > 2 ) {
-    // PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
-    // PrintAndLogEx(NORMAL, "unknown tag type answered to a 0x000b3f80 command ans:");
-    // //PrintAndLogEx(NORMAL, "%s", sprint_hex(data, datalen));
+    // PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+    // PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
+    // //PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, datalen));
     // rawclose();
     // return true;
     // }
@@ -701,9 +823,9 @@ static bool HF14B_Other_Reader(void) {
     // WaitForResponse(CMD_HF_ISO14443B_COMMAND, &resp);
 
     // if (datalen > 0) {
-    // PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
-    // PrintAndLogEx(NORMAL, "Unknown tag type answered to a 0x0A command ans:");
-    // // PrintAndLogEx(NORMAL, "%s", sprint_hex(data, datalen));
+    // PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+    // PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0A command ans:");
+    // // PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, datalen));
     // rawClose();
     // return true;
     // }
@@ -715,9 +837,9 @@ static bool HF14B_Other_Reader(void) {
     // WaitForResponse(CMD_HF_ISO14443B_COMMAND, &resp);
 
     // if (datalen > 0) {
-    // PrintAndLogEx(NORMAL, "\n14443-3b tag found:");
-    // PrintAndLogEx(NORMAL, "Unknown tag type answered to a 0x0C command ans:");
-    // PrintAndLogEx(NORMAL, "%s", sprint_hex(data, datalen));
+    // PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
+    // PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0C command ans:");
+    // PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, datalen));
     // rawClose();
     // return true;
     // }
@@ -827,10 +949,6 @@ static int CmdHF14BDump(const char *Cmd) {
     bool errors = false;
     uint8_t cmdp = 0, cardtype = 1;
     uint16_t cardsize = 0;
-    uint8_t blocks = 0;
-    iso14b_card_select_t card;
-
-    if (strlen(Cmd) < 1) return usage_hf_14b_dump();
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -855,6 +973,7 @@ static int CmdHF14BDump(const char *Cmd) {
     //Validations
     if (errors) return usage_hf_14b_dump();
 
+    uint8_t blocks = 0;
     switch (cardtype) {
         case 2:
             cardsize = (512 / 8) + 4;
@@ -867,6 +986,7 @@ static int CmdHF14BDump(const char *Cmd) {
             break;
     }
 
+    iso14b_card_select_t card;
     if (get_14b_UID(&card) == false) {
         PrintAndLogEx(WARNING, "No tag found.");
         return PM3_SUCCESS;
@@ -879,12 +999,10 @@ static int CmdHF14BDump(const char *Cmd) {
     }
 
     // detect blocksize from card :)
-    PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprint_hex(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
-
+    PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
+    
     uint8_t data[cardsize];
     memset(data, 0, sizeof(data));
-
-    int blocknum = 0;
     uint8_t *recv = NULL;
     int status = 0;
 
@@ -901,8 +1019,10 @@ static int CmdHF14BDump(const char *Cmd) {
         }
     }
 
-    uint8_t req[2] = {ISO14443B_READ_BLK};
+    PrintAndLogEx(INFO, "." NOLF);
 
+    uint8_t req[2] = {ISO14443B_READ_BLK};
+    int blocknum = 0;
     for (int retry = 0; retry < 5; retry++) {
 
         req[1] = blocknum;
@@ -928,8 +1048,8 @@ static int CmdHF14BDump(const char *Cmd) {
 
             memcpy(data + (blocknum * 4), resp.data.asBytes, 4);
 
+            // last read.
             if (blocknum == 0xFF) {
-                //last read.
                 break;
             }
 
@@ -941,31 +1061,47 @@ static int CmdHF14BDump(const char *Cmd) {
             }
 
             PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
         }
     }
     PrintAndLogEx(NORMAL, "");
 
     if (blocknum != 0xFF) {
-        PrintAndLogEx(NORMAL, "Dump failed");
+        PrintAndLogEx(FAILED, "Dump failed");
         goto out;
     }
 
-    PrintAndLogEx(NORMAL, "block#   | data         | ascii");
-    PrintAndLogEx(NORMAL, "---------+--------------+----------");
+    uint8_t chipid = get_st_chipid(card.uid);
+    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(data + (blocknum * 4), 4));
+    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", data[(blocknum * 4)], data[(blocknum * 4) + 1]);
+    PrintAndLogEx(DEBUG, "chipid      : %02x", chipid);
+
+    PrintAndLogEx(INFO, " block#  | data         |lck| ascii");
+    PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
     for (int i = 0; i <= blocks; i++) {
-        PrintAndLogEx(NORMAL,
-                      "%3d/0x%02X | %s | %s",
+        PrintAndLogEx(INFO,
+                      "%3d/0x%02X | %s | %s | %s",
                       i,
                       i,
                       sprint_hex(data + (i * 4), 4),
+                      get_st_lock_info(chipid, data + (blocknum * 4), i),
                       sprint_ascii(data + (i * 4), 4)
                      );
     }
-
+    
+    PrintAndLogEx(INFO,
+            "%3d/0x%02X | %s | %s | %s",
+            0xFF,
+            0xFF,
+            sprint_hex(data + (0xFF * 4), 4),
+            get_st_lock_info(chipid, data + (blocknum * 4), 0xFF),
+            sprint_ascii(data + (0xFF * 4), 4)
+         );    
+    PrintAndLogEx(INFO, "---------+--------------+---+----------");
     PrintAndLogEx(NORMAL, "");
 
-
+    // save to file
     size_t datalen = (blocks + 1) * 4;
     saveFileEML(filename, data, datalen, 4);
     saveFile(filename, ".bin", data, datalen);
@@ -1136,7 +1272,7 @@ int readHF14B(bool verbose) {
 
     // try unknown 14b read commands (to be identified later)
     // could be read of calypso, CEPAS, moneo, or pico pass.
-    if (HF14B_Other_Reader())
+    if (HF14B_Other_Reader(verbose))
         return 1;
 
     if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
