@@ -422,13 +422,14 @@ static char *get_ST_Chip_Model(uint8_t data) {
 
 static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
 
-    static char str[3] = { 0x00, 0x00, 0x00 };
+    static char str[16];
     char *s = str;
     sprintf(s, " ");
 
     if (blk > 15) {
         return s;
     }
+
     uint8_t mask = 0;
     switch (model) {
         case 0x0:   // SRIX4K special
@@ -465,7 +466,7 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
                     return s;
             }
             if ((lockbytes[1] & mask) == 0) {
-                sprintf(s, "*");
+                sprintf(s, _RED_("1"));
             }
             return s;
         }
@@ -533,7 +534,7 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
                     break;
             }
             if ((lockbytes[b] & mask) == 0) {
-                sprintf(s, "*");
+                sprintf(s, _RED_("1"));
             }
             return s;
         }
@@ -575,7 +576,7 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
            }
             // iceman:  this is opposite!  need sample to test with.
             if ((lockbytes[0] & mask)) {
-                sprintf(s, "*");
+                sprintf(s, _RED_("1"));
             }            
             return s;
         }
