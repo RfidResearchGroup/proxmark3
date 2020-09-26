@@ -1679,9 +1679,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 } else if ((card.uid[1] & 0xF0) == 0x70) {
                     printTag("my-d(tm) move lean SLE 66R01L");
                 }
+                isMifareUltralight = true;
+                isMifareClassic = false;
 
                 if (card.sak == 0x88) {
                     printTag("Infineon MIFARE CLASSIC 1K");
+                    isMifareUltralight = false;
+                    isMifareClassic = true;
                 }
                 getTagLabel(card.uid[0], card.uid[1]);
                 break;
