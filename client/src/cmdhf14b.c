@@ -797,7 +797,6 @@ static bool HF14B_Other_Reader(bool verbose) {
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
-        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, 1));
         switch_off_field_14b();
         return true;
     } else if (status > 0) {
@@ -817,12 +816,11 @@ static bool HF14B_Other_Reader(bool verbose) {
         return false;
     }
     status = resp.oldarg[0];
-    PrintAndLogEx(INFO, "status %d", status);
+    PrintAndLogEx(DEBUG, "status %d", status);
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0A command ans:");
-        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, 1));
         switch_off_field_14b();
         return true;
     } else if (status > 0) {
@@ -833,22 +831,20 @@ static bool HF14B_Other_Reader(bool verbose) {
         return true;
     }
 
-
     data[0] = ISO14443B_RESET;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
-   if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         switch_off_field_14b();        
         return false;
     }
     status = resp.oldarg[0];
-    PrintAndLogEx(INFO, "status %d", status);
+    PrintAndLogEx(DEBUG, "status %d", status);
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0C command ans:");
-        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, 1));
         switch_off_field_14b();
         return true;
     } else if (status > 0) {
