@@ -1461,12 +1461,20 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
                 }
             }
-            if (len < 1) PrintAndLogEx(WARNING, _YELLOW_("password not known"));
+            if (len < 1) { 
+                PrintAndLogEx(WARNING, _YELLOW_("password not known"));
+                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+            }
+        } else {
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
         }
     }
 out:
     DropField();
-    if (locked) PrintAndLogEx(FAILED, "\nTag appears to be locked, try using the key to get more info");
+    if (locked) {
+        PrintAndLogEx(INFO, "\nTag appears to be locked, try using the key to get more info");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
+    }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
