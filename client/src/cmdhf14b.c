@@ -880,11 +880,11 @@ static int CmdHF14BDump(const char *Cmd) {
     if (fileNameLen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += sprintf(fptr, "hf-14b-");
-        FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+        FillFileNameByUID(fptr, SwapEndian64(card.uid, 8, 8), "-dump", card.uidlen);
     }
 
     // detect blocksize from card :)
-    PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprint_hex(SwapEndian64(card.uid, 8, 8), card.uidlen));
 
     uint8_t data[cardsize];
     memset(data, 0, sizeof(data));
@@ -915,10 +915,10 @@ static int CmdHF14BDump(const char *Cmd) {
 
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
-            uint8_t status = resp.oldarg[0] & 0xFF;
-            if (status > 0) {
-                continue;
-            }
+            //uint8_t status = resp.oldarg[0] & 0xFF;
+            //if (status > 0) {
+            //    continue;
+            //}
 
             uint16_t len = (resp.oldarg[1] & 0xFFFF);
             recv = resp.data.asBytes;
