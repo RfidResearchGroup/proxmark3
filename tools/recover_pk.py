@@ -421,7 +421,7 @@ def selftests():
         elif len(t['samples'])//2 == 1:
             pks = [binascii.hexlify(pk).decode('utf8').lower() for pk in list(recovered)]
             if t['pk'].lower() in pks:
-                print("[OK]")
+                print("[OK] (partial)")
             else:
                 succeeded = False
                 print("[FAIL]")
