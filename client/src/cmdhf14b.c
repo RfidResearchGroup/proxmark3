@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
-// Modified 2018 iceman
+// Modified 2018, 2020 iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -104,16 +104,16 @@ static int usage_hf_14b_write_srx(void) {
 }
 static int usage_hf_14b_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
+                  "If memory size defaults to SRI4K if auto detect fails.\n"
                   "\n"
-                  "Usage: hf 14b dump [h] [card memory] <f filename> \n"
+                  "Usage: hf 14b dump [h] <f filename> \n"
                   "Options:\n"
                   "\th             this help\n"
-                  "\t[card memory] 1 = SRIX4K (default), 2 = SRI512\n"
-                  "\tf <name>      filename,  if no <name> UID will be used as filename\n"
+                  "\tf <name>      (optional) filename,  if no <name> UID will be used as filename\n"
                   "\n"
                   "Example:\n"
-                  _YELLOW_("\thf 14b dump f\n")
-                  _YELLOW_("\thf 14b dump 2 f mydump")
+                  _YELLOW_("\thf 14b dump\n")
+                  _YELLOW_("\thf 14b dump f mydump")
                  );
     return PM3_SUCCESS;
 }
@@ -590,19 +590,39 @@ static uint8_t get_st_chipid(uint8_t *uid) {
     return uid[5] >> 2;
 }
 
+static uint8_t get_st_cardsize(uint8_t *uid) {
+    uint8_t chipid = get_st_chipid(uid);
+    switch(chipid) {
+        case 0x0: 
+        case 0x3:
+        case 0x7:
+            return 1;
+        case 0x4:
+        case 0x6:
+        case 0xC:
+            return 2;
+        default:
+            return 0;
+    }
+    return 0;
+}
+
 // print UID info from SRx chips (ST Microelectronics)
 static void print_st_general_info(uint8_t *data, uint8_t len) {
     //uid = first 8 bytes in data
+    uint8_t mfgid = data[6];
+    uint8_t chipid = get_st_chipid(data);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(SwapEndian64(data, 8, 8), len));
-    PrintAndLogEx(SUCCESS, " MFG: %02X, " _YELLOW_("%s"), data[6], getTagInfo(data[6]));
-    PrintAndLogEx(SUCCESS, "Chip: %02X, " _YELLOW_("%s"), data[5] >> 2, get_ST_Chip_Model(data[5] >> 2));
+    PrintAndLogEx(SUCCESS, " MFG: %02X, " _YELLOW_("%s"), mfgid, getTagInfo(mfgid));
+    PrintAndLogEx(SUCCESS, "Chip: %02X, " _YELLOW_("%s"), chipid, get_ST_Chip_Model(chipid));
 }
 
-//05 00 00 = find one tag in field
-//1d xx xx xx xx 00 08 01 00 = attrib xx=UID (resp 10 [f9 e0])
-//a3 = ?  (resp 03 [e2 c2])
-//02 = ?  (resp 02 [6a d3])
+// iceman, some 14B APDU break down
+// 05 00 00 = find one tag in field
+// 1d xx xx xx xx 00 08 01 00 = attrib xx=UID (resp 10 [f9 e0])
+// a3 = ?  (resp 03 [e2 c2])
+// 02 = ?  (resp 02 [6a d3])
 // 022b (resp 02 67 00 [29  5b])
 // 0200a40400 (resp 02 67 00 [29 5b])
 // 0200a4040c07a0000002480300 (resp 02 67 00 [29 5b])
@@ -612,10 +632,10 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
 // 0200a404000cd2760001354b414e4d30310000 (resp 02 6a 82 [4b 4c])
 // 0200a404000ca000000063504b43532d313500 (resp 02 6a 82 [4b 4c])
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
-//03 = ?  (resp 03 [e3 c2])
-//c2 = ?  (resp c2 [66 15])
-//b2 = ?  (resp a3 [e9 67])
-//a2 = ?  (resp 02 [6a d3])
+// 03 = ?  (resp 03 [e3 c2])
+// c2 = ?  (resp c2 [66 15])
+// b2 = ?  (resp a3 [e9 67])
+// a2 = ?  (resp 02 [6a d3])
 
 // 14b get and print Full Info (as much as we know)
 static bool HF14B_Std_Info(bool verbose) {
@@ -970,19 +990,25 @@ static int CmdHF14BDump(const char *Cmd) {
                 cmdp += 2;
                 break;
             default:
-                if (cmdp == 0) {
-                    cardtype = param_get8ex(Cmd, cmdp, 1, 10);
-                    cmdp++;
-                } else {
-                    PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                    errors = true;
-                    break;
-                }
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
     }
 
     //Validations
     if (errors) return usage_hf_14b_dump();
+
+    iso14b_card_select_t card;
+    if (get_14b_UID(&card) == false) {
+        PrintAndLogEx(WARNING, "No tag found.");
+        return PM3_SUCCESS;
+    }
+
+    // detect cardsize
+    // 1 = 4096
+    // 2 = 512
+    cardtype = get_st_cardsize(card.uid);
 
     uint8_t blocks = 0;
     switch (cardtype) {
@@ -995,12 +1021,6 @@ static int CmdHF14BDump(const char *Cmd) {
             cardsize = (4096 / 8) + 4;
             blocks = 0x7F;
             break;
-    }
-
-    iso14b_card_select_t card;
-    if (get_14b_UID(&card) == false) {
-        PrintAndLogEx(WARNING, "No tag found.");
-        return PM3_SUCCESS;
     }
 
     if (fileNameLen < 1) {
