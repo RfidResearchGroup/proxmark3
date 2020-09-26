@@ -1139,7 +1139,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t 
 /* Sends an APDU to the tag
  * TODO: check CRC and preamble
  */
-uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response, uint16_t respmaxlen) {
+int iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response, uint16_t respmaxlen) {
 
     LED_A_ON();
     uint8_t message_frame[message_length + 4];
@@ -1158,7 +1158,7 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(message_frame, sizeof(message_frame), &start_time, &eof_time);
 
-    // get response
+    // Get response?
     if (response == NULL)  {
         LED_A_OFF();
         return 0;
@@ -1170,13 +1170,13 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
 
     if (retlen < 3) {
         LED_A_OFF();
-        return 0;
+        return -1;
     }
 
     // VALIDATE CRC
     if (!check_crc(CRC_14443_B, response, retlen)) {
         if (DBGLEVEL > DBG_DEBUG) DbpString("CRC fail");
-        return 0;
+        return -2;
     }
 
     return retlen;
@@ -1185,7 +1185,7 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
 /**
 * SRx Initialise.
 */
-static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
+static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     // INITIATE command: wake up the tag using the INITIATE
     static const uint8_t init_srx[] = { ISO14443B_INITIATE, 0x00, 0x97, 0x5b };
     uint8_t r_init[3] = {0x0};
@@ -1201,7 +1201,7 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     FpgaDisableTracing();
 
     if (retlen <= 0)
-        return 2;
+        return -1;
 
     // Randomly generated Chip ID
     if (card) {
@@ -1222,17 +1222,17 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     FpgaDisableTracing();
 
     if (retlen != 3) {
-        return 2;
+        return -1;
     }
 
     // Check the CRC of the answer:
     if (!check_crc(CRC_14443_B, r_select, retlen)) {
-        return 3;
+        return -2;
     }
 
     // Check response from the tag: should be the same UID as the command we just sent:
     if (select_srx[1] != r_select[0]) {
-        return 1;
+        return -3;
     }
 
     // First get the tag's UID:
@@ -1248,12 +1248,12 @@ static uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     FpgaDisableTracing();
 
     if (retlen != 10) {
-        return 2;
+        return -1;
     }
 
     // The check the CRC of the answer
     if (!check_crc(CRC_14443_B, r_papid, retlen)) {
-        return 3;
+        return -2;
     }
 
     if (card) {
@@ -1437,11 +1437,11 @@ void ReadSTMemoryIso14443b(uint16_t numofblocks) {
     uint8_t *mem = BigBuf_malloc((numofblocks + 1) * 4);
 
     iso14b_card_select_t card;
-    uint8_t res = iso14443b_select_srx_card(&card);
-
+    int res = iso14443b_select_srx_card(&card);
     int isOK = PM3_SUCCESS;
+
     // 0: OK 2: attrib fail, 3:crc fail,
-    if (res > 0) {
+    if (res < 1) {
         isOK = PM3_ETIMEOUT;
         goto out;
     }

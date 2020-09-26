@@ -32,7 +32,7 @@ static int usage_hf_14b_info(void) {
     PrintAndLogEx(NORMAL, "       s    silently");
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b info"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b reader [h] [s]");
@@ -41,7 +41,7 @@ static int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, "       s    silently");
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b reader"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14b_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-p] [-s / -ss] [-t] <0A 0B 0C ... hex>");
@@ -55,7 +55,7 @@ static int usage_hf_14b_raw(void) {
     PrintAndLogEx(NORMAL, "       -t    timeout in ms");
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b raw -s -c -p 0200a40400"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14b_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
@@ -65,7 +65,7 @@ static int usage_hf_14b_sniff(void) {
     PrintAndLogEx(NORMAL, "       h    this help");
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sniff"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14b_sim(void) {
     PrintAndLogEx(NORMAL, "Emulating ISO/IEC 14443 type B tag with 4 UID / PUPI");
@@ -76,7 +76,7 @@ static int usage_hf_14b_sim(void) {
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sim"));
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sim u 11223344"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14b_read_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b sriread [h] <1|2>");
@@ -86,7 +86,7 @@ static int usage_hf_14b_read_srx(void) {
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriread 1"));
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriread 2"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b [h] sriwrite <1|2> <BLOCK> <DATA>");
@@ -100,7 +100,7 @@ static int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 1 FF 11223344"));
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 2 15 11223344"));
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 2 FF 11223344"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14b_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
@@ -115,15 +115,8 @@ static int usage_hf_14b_dump(void) {
                   _YELLOW_("\thf 14b dump f\n")
                   _YELLOW_("\thf 14b dump 2 f mydump")
                  );
-    return 0;
+    return PM3_SUCCESS;
 }
-
-/*
-static void switch_on_field_14b(void) {
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT, 0, 0, NULL, 0);
-}
-*/
 
 static int switch_off_field_14b(void) {
     clearCommandBuffer();
@@ -311,12 +304,14 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     if (card == NULL)
         return false;
 
+    int status = 0;
+
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-        uint8_t status = resp.oldarg[0];
+        status = resp.oldarg[0];
         if (status == 0) {
             memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             return true;
@@ -328,7 +323,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-        uint8_t status = resp.oldarg[0];
+        status = resp.oldarg[0];
         if (status == 0) {
             memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             return true;
@@ -345,7 +340,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
 // 4       = bit rate capacity
 // 5       = max frame size / -4 info
 // 6       = FWI / Coding options
-static void print_atqb_resp(uint8_t *data, uint8_t cid) {
+static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     //PrintAndLogEx(SUCCESS, "           UID: %s", sprint_hex(data+1,4));
     PrintAndLogEx(SUCCESS, "      App Data: %s", sprint_hex(data, 4));
     PrintAndLogEx(SUCCESS, "      Protocol: %s", sprint_hex(data + 4, 3));
@@ -387,7 +382,7 @@ static void print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, "Tag :");
     PrintAndLogEx(SUCCESS, "  Max Buf Length: %u (MBLI) %s", cid >> 4, (cid & 0xF0) ? "" : "chained frames not supported");
     PrintAndLogEx(SUCCESS, "  CID : %u", cid & 0x0f);
-    return;
+    return PM3_SUCCESS;
 }
 
 // get SRx chip model (from UID) // from ST Microelectronics
@@ -502,7 +497,7 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
 // 14b get and print Full Info (as much as we know)
 static bool HF14B_Std_Info(bool verbose) {
 
-    bool isSuccess = false;
+    bool is_success = false;
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
@@ -512,13 +507,13 @@ static bool HF14B_Std_Info(bool verbose) {
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         switch_off_field_14b();
-        return false;
+        return is_success;
     }
 
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.oldarg[0];
+    int status = resp.oldarg[0];
 
     switch (status) {
         case 0:
@@ -527,12 +522,12 @@ static bool HF14B_Std_Info(bool verbose) {
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
-            isSuccess = true;
+            is_success = true;
             break;
-        case 2:
+        case -1:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
             break;
-        case 3:
+        case -2:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
             break;
         default:
@@ -540,7 +535,7 @@ static bool HF14B_Std_Info(bool verbose) {
             break;
     }
 
-    return isSuccess;
+    return is_success;
 }
 
 // SRx get and print full info (needs more info...)
@@ -558,8 +553,8 @@ static bool HF14B_ST_Info(bool verbose) {
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.oldarg[0];
-    if (status > 0)
+    int status = resp.oldarg[0];
+    if (status < 0)
         return false;
 
     print_st_general_info(card.uid, card.uidlen);
@@ -599,7 +594,7 @@ static int CmdHF14Binfo(const char *Cmd) {
 
 static bool HF14B_ST_Reader(bool verbose) {
 
-    bool isSuccess = false;
+    bool is_success = false;
 
     // SRx get and print general info about SRx chip from UID
     clearCommandBuffer();
@@ -607,38 +602,38 @@ static bool HF14B_ST_Reader(bool verbose) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        return false;
+        return is_success;
     }
 
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.oldarg[0];
+    int status = resp.oldarg[0];
 
     switch (status) {
         case 0:
             print_st_general_info(card.uid, card.uidlen);
-            isSuccess = true;
+            is_success = true;
             break;
-        case 1:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 random chip id fail");
-            break;
-        case 2:
+        case -1:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
             break;
-        case 3:
+        case -2:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
+            break;
+        case -3:
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 random chip id fail");
             break;
         default:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b card select SRx failed");
             break;
     }
-    return isSuccess;
+    return is_success;
 }
 
 static bool HF14B_Std_Reader(bool verbose) {
 
-    bool isSuccess = false;
+    bool is_success = false;
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
@@ -653,7 +648,7 @@ static bool HF14B_Std_Reader(bool verbose) {
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
-    uint64_t status = resp.oldarg[0];
+    int status = resp.oldarg[0];
 
     switch (status) {
         case 0:
@@ -662,19 +657,19 @@ static bool HF14B_Std_Reader(bool verbose) {
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
-            isSuccess = true;
+            is_success = true;
             break;
-        case 2:
+        case -1:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
             break;
-        case 3:
+        case -2:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
             break;
         default:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b card select failed");
             break;
     }
-    return isSuccess;
+    return is_success;
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
@@ -880,17 +875,18 @@ static int CmdHF14BDump(const char *Cmd) {
     if (fileNameLen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += sprintf(fptr, "hf-14b-");
-        FillFileNameByUID(fptr, SwapEndian64(card.uid, 8, 8), "-dump", card.uidlen);
+        FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
     }
 
     // detect blocksize from card :)
-    PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprint_hex(SwapEndian64(card.uid, 8, 8), card.uidlen));
+    PrintAndLogEx(NORMAL, "Reading memory from tag UID %s", sprint_hex(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
 
     uint8_t data[cardsize];
     memset(data, 0, sizeof(data));
 
     int blocknum = 0;
     uint8_t *recv = NULL;
+    int status = 0;
 
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -898,8 +894,9 @@ static int CmdHF14BDump(const char *Cmd) {
 
     //select
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
-        if (resp.oldarg[0]) {
-            PrintAndLogEx(INFO, "failed to select %" PRId64 " | %" PRId64, resp.oldarg[0], resp.oldarg[1]);
+        status = resp.oldarg[0];
+        if (status < 0) {
+            PrintAndLogEx(FAILED, "failed to select arg0[%" PRId64 "] arg1 [%" PRId64 "]", resp.oldarg[0], resp.oldarg[1]);
             goto out;
         }
     }
@@ -915,10 +912,11 @@ static int CmdHF14BDump(const char *Cmd) {
 
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
-            //uint8_t status = resp.oldarg[0] & 0xFF;
-            //if (status > 0) {
-            //    continue;
-            //}
+            status = resp.oldarg[0];
+            if (status < 0) {
+                PrintAndLogEx(FAILED, "retrying one more time");
+                continue;
+            }
 
             uint16_t len = (resp.oldarg[1] & 0xFFFF);
             recv = resp.data.asBytes;
@@ -1112,10 +1110,12 @@ int CmdHF14B(const char *Cmd) {
 int infoHF14B(bool verbose) {
 
     // try std 14b (atqb)
-    if (HF14B_Std_Info(verbose)) return 1;
+    if (HF14B_Std_Info(verbose)) 
+        return 1;
 
     // try ST 14b
-    if (HF14B_ST_Info(verbose)) return 1;
+    if (HF14B_ST_Info(verbose))
+        return 1;
 
     // try unknown 14b read commands (to be identified later)
     //   could be read of calypso, CEPAS, moneo, or pico pass.
@@ -1127,14 +1127,17 @@ int infoHF14B(bool verbose) {
 int readHF14B(bool verbose) {
 
     // try std 14b (atqb)
-    if (HF14B_Std_Reader(verbose)) return 1;
+    if (HF14B_Std_Reader(verbose))
+        return 1;
 
     // try ST Microelectronics 14b
-    if (HF14B_ST_Reader(verbose)) return 1;
+    if (HF14B_ST_Reader(verbose))
+        return 1;
 
     // try unknown 14b read commands (to be identified later)
     // could be read of calypso, CEPAS, moneo, or pico pass.
-    if (HF14B_Other_Reader()) return 1;
+    if (HF14B_Other_Reader())
+        return 1;
 
     if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
     return 0;
