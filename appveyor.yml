@@ -7,6 +7,7 @@ environment:
   proxspace_zip_folder_name: ProxSpace-*
   proxspace_path: \ProxSpace
   proxspace_home_path: \ProxSpace\pm3
+  wsl_git_path: C:\proxmark
 
 init:
 - ps: >-
@@ -34,14 +35,15 @@ clone_script:
 - ps: >-
     
     Function ExecUpdate($Text, $firstStart) {
-        Write-Host "$Text" -NoNewLine 
-        Start-Process "cmd.exe"  "/c ""cd /D $env:proxspace_path && call msys2\ps\setup.cmd && msys2\msys2_shell.cmd -mingw64 -defterm -no-start -c ""exit"""""
+        Write-Host "$Text"
+        Start-Process "cmd.exe"  "/c ""cd /D $env:proxspace_path && runme64.bat -c ""exit"""""
         $StartTime=[System.Environment]::TickCount
         Start-Sleep -s 10
         while($true) {
             $cmdprocess = Get-Process "cmd" -ErrorAction SilentlyContinue
             
             if (!$cmdprocess -Or $cmdprocess.HasExited) {
+                Write-Host "$Text" -NoNewLine 
                 Write-Host "[ OK ]" -ForegroundColor Green
                 break
             }
@@ -51,30 +53,67 @@ clone_script:
                 $tmp = $cmdprocess.CloseMainWindow()
                 Start-Sleep -s 5
                 Stop-Process -Name "cmd" -Force -ErrorAction SilentlyContinue
+                Write-Host "$Text" -NoNewLine 
                 Write-Host "Exit by pacman.conf" -ForegroundColor Green
                 break           
             }
             
             if ([System.Environment]::TickCount-$StartTime -gt 1000000) {
+                Write-Host "$Text" -NoNewLine 
                 Write-host "Exit by timeout" -ForegroundColor Yellow
                 break
             }
             
-            Start-Sleep -s 1
+            Start-Sleep -s 5
+            Receive-Job -Job $WSLjob
         }
     }
     
-    Write-Host "Removing ProxSpace..." -NoNewLine
+    $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
+        Function WSLExec($Text, $Cmd) {
+            Write-Host "$Text" 
+            wsl -- bash -c $Cmd
+            Write-Host "$Text" -NoNewLine 
+            Write-Host "[ OK ]" -ForegroundColor Green
+        }
     
-    $CloneTime=[System.Environment]::TickCount
+        $WSLInstallTime=[System.Environment]::TickCount
+        WSLExec "WSL update..." "sudo apt-get update 1>/dev/null"
+        WSLExec "WSL upgrade..." "sudo apt-get upgrade -y 1>/dev/null" 
+        WSLExec "WSL cleanup..." "sudo apt-get auto-remove -y 1>/dev/null" 
+        WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
+        WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
+        Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
+    }
+    
+    Function GitClone($Text, $Folder) {
+        Write-Host "$Text" -NoNewLine
+        if(-not $env:appveyor_pull_request_number) {
+            git clone -q --branch=$env:appveyor_repo_branch https://github.com/$env:appveyor_repo_name.git $Folder
+            cd $Folder
+            git checkout -qf $env:appveyor_repo_commit
+        } else {
+            git clone -q https://github.com/$env:appveyor_repo_name.git $Folder
+            cd $Folder
+            git fetch -q origin +refs/pull/$env:appveyor_pull_request_number/merge:
+            git checkout -qf FETCH_HEAD
+        }
+        Write-Host "[ OK ]" -ForegroundColor Green 
+    }
+    
+    Write-Host "ProxSpace: Removing folder..." -NoNewLine
+    
+    $PSInstallTime=[System.Environment]::TickCount
     
     cd \
 
     Remove-Item -Recurse -Force -Path $env:proxspace_path
 
     Write-Host "[ OK ]" -ForegroundColor Green
+    
+    Receive-Job -Job $WSLjob
 
-    Write-Host "Download ProxSpace..." -NoNewLine
+    Write-Host "ProxSpace: downloading..." -NoNewLine
     
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
@@ -82,7 +121,9 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Green
     
-    Write-Host "Extracting ProxSpace..." -NoNewLine
+    Receive-Job -Job $WSLjob
+    
+    Write-Host "ProxSpace: extracting..." -NoNewLine
     
     Expand-Archive -LiteralPath "$env:proxspace_zip_file" -DestinationPath "\"
     
@@ -90,37 +131,30 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Green
     
-    Write-Host "Renaming ProxSpace folder..." -NoNewLine
+    Receive-Job -Job $WSLjob
+    
+    Write-Host "ProxSpace: renaming folder..." -NoNewLine
     
     Get-ChildItem -Path "\$env:proxspace_zip_folder_name" | Rename-Item -NewName (Split-Path $env:proxspace_path -Leaf)
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
-    ExecUpdate "Initial msys2 startup..." $true
+    ExecUpdate "ProxSpace: initial msys2 startup..." $true
     
-    ExecUpdate "Installing required packages..." $false
+    ExecUpdate "ProxSpace: installing required packages..." $false
     
     
     $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
     
     Write-Host "ProxSpace version: $psversion" -ForegroundColor Yellow
     
-    Write-Host "Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." -NoNewLine
-
-    if(-not $env:appveyor_pull_request_number) {
-        git clone -q --branch=$env:appveyor_repo_branch https://github.com/$env:appveyor_repo_name.git $env:appveyor_build_folder
-        cd $env:appveyor_build_folder
-        git checkout -qf $env:appveyor_repo_commit
-    } else {
-        git clone -q https://github.com/$env:appveyor_repo_name.git $env:appveyor_build_folder
-        cd $env:appveyor_build_folder
-        git fetch -q origin +refs/pull/$env:appveyor_pull_request_number/merge:
-        git checkout -qf FETCH_HEAD
-    }
+    Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$PSInstallTime) / 1000) sec" -Category Information
     
-    Write-Host "[ OK ]" -ForegroundColor Green
+    GitClone "ProxSpace: Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." $env:appveyor_build_folder
     
-    Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$CloneTime) / 1000) sec" -Category Information
+    Receive-Job -Wait -Job $WSLjob
+    
+    GitClone "WSL: Cloning repository <$env:appveyor_repo_name> to $env:wsl_git_path ..." $env:wsl_git_path
     
 
 install:
@@ -131,90 +165,119 @@ build_script:
     
     Function ExecMinGWCmd($Cmd) {
         cd $env:proxspace_path
-        msys2\msys2_shell.cmd -mingw64 -defterm -no-start -c "cd $pmfolder && $Cmd"
+        ./runme64.bat -c "cd $pmfolder && $Cmd"
     }
-
     
-    Write-Host "---------- make ----------" -ForegroundColor Yellow
+    Function ExecCheck($Name) {
+        $testspass = ($LASTEXITCODE -eq 0)
+    
+        $global:TestsPassed=$testspass
+
+        if ($testspass) {
+            Add-AppveyorTest -Name $Name -Framework NUnit -Filename $Name -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
+            Write-Host "$Name [ OK ]" -ForegroundColor Green
+        } else {
+            Add-AppveyorTest -Name $Name -Framework NUnit -Filename $Name -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
+            Write-Host "$Name [ ERROR ]" -ForegroundColor Red
+            throw "Tests error."
+        }
+    }
+    
+    $WSLjob = Start-Job -Name WSLCompile -ScriptBlock { 
+        Function ExecWSLCmd($Cmd) {
+            wsl -- bash -c $Cmd
+        }
+        
+        Function ExecCheck($Name) {
+            $testspass = ($LASTEXITCODE -eq 0)
+        
+            $global:TestsPassed=$testspass
+    
+            if ($testspass) {
+                Add-AppveyorTest -Name $Name -Framework NUnit -Filename $Name -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
+                Write-Host "$Name [ OK ]" -ForegroundColor Green
+            } else {
+                Add-AppveyorTest -Name $Name -Framework NUnit -Filename $Name -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
+                Write-Host "$Name [ ERROR ]" -ForegroundColor Red
+                throw "Tests error."
+            }
+        }
+    
+        #Windows Subsystem for Linux (WSL)
+        Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
+        cd $env:wsl_git_path   
+        $TestTime=[System.Environment]::TickCount
+        ExecWSLCmd "make clean;make V=1"  
+        #some checks
+        if(!(Test-Path "$env:wsl_git_path\client\proxmark3")){
+            throw "Main file proxmark3 not exists."
+        }
+        
+        ExecWSLCmd "make check"
+        ExecCheck "WSL make Tests"
+        Start-Sleep -s 2  
+        Write-Host "---------- WSL btaddon ----------" -ForegroundColor Yellow   
+        $TestTime=[System.Environment]::TickCount   
+        ExecWSLCmd "make clean;make V=1 PLATFORM_EXTRAS=BTADDON"  
+        ExecWSLCmd "make check"
+        ExecCheck "WSL BTaddon Tests"   
+        Start-Sleep -s 2  
+        Write-Host "---------- WSL make clean ----------" -ForegroundColor Yellow  
+        ExecWSLCmd 'make clean'  
+        Write-Host "---------- WSL cmake ----------" -ForegroundColor Yellow  
+        $TestTime=[System.Environment]::TickCount 
+        ExecWSLCmd 'mkdir -p client/build; cd client/build; cmake ..; make VERBOSE=1;' 
+        Write-Host "---------- WSL cmake tests ----------" -ForegroundColor Yellow
+        ExecWSLCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3 client'  
+        ExecCheck "WSL cmake Tests"
+    }
+    
+    #ProxSpace
+    
+    Write-Host "---------- PS make ----------" -ForegroundColor Yellow
     
     $TestTime=[System.Environment]::TickCount  
     
-    #make
-    
-    cd $env:proxspace_path
-    
-    msys2\ps\setup.cmd
-    
     ExecMinGWCmd "make clean;make V=1"
-
-    #some checks
 
     if(!(Test-Path "$env:proxspace_home_path\$pmfolder\client\proxmark3.exe")){
 
-    throw "Main file proxmark3.exe not exists."
+        throw "Main file proxmark3.exe not exists."
 
     }
 
     ExecMinGWCmd 'make check'
 
-    $testspass = ($LASTEXITCODE -eq 0)
+    ExecCheck "PS make Tests"
     
-    $global:TestsPassed=$testspass
-
-    if ($testspass) {
-      Add-AppveyorTest -Name "make Tests" -Framework NUnit -Filename "make check" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
-      Write-Host "make Tests [ OK ]" -ForegroundColor Green
-    } else {
-      Add-AppveyorTest -Name "make Tests" -Framework NUnit -Filename "make check" -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
-      Write-Host "make Tests [ ERROR ]" -ForegroundColor Red
-      throw "Tests error."
-    }
-    
-    Write-Host "---------- btaddon ----------" -ForegroundColor Yellow
+    Write-Host "---------- PS btaddon ----------" -ForegroundColor Yellow
     
     $TestTime=[System.Environment]::TickCount
 
     ExecMinGWCmd 'make clean;make V=1 PLATFORM_EXTRAS=BTADDON'
 
     ExecMinGWCmd 'make check'
-
-    $testspass = ($LASTEXITCODE -eq 0)
-
-    $global:TestsPassed=(($global:TestsPassed) -and ($testspass))
     
-    if ($testspass) {
-      Add-AppveyorTest -Name "BTaddon Tests" -Framework NUnit -Filename "make check" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
-      Write-Host "BTaddon Tests [ OK ]" -ForegroundColor Green
-    } else {
-      Add-AppveyorTest -Name "BTaddon Tests" -Framework NUnit -Filename "make check" -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
-      Write-Host "BTaddon Tests [ ERROR ]" -ForegroundColor Red
-    }
+    ExecCheck "PS BTaddon Tests"
     
-    Write-Host "---------- make clean ----------" -ForegroundColor Yellow
+    Write-Host "---------- PS make clean ----------" -ForegroundColor Yellow
     
     ExecMinGWCmd 'make clean'
     
-    Write-Host "---------- cmake ----------" -ForegroundColor Yellow
+    Write-Host "---------- PS cmake ----------" -ForegroundColor Yellow
     
     $TestTime=[System.Environment]::TickCount
     
     ExecMinGWCmd 'mkdir -p client/build; cd client/build; cmake -G""MSYS Makefiles"" ..; make VERBOSE=1;'
     
-    Write-Host "---------- cmake tests ----------" -ForegroundColor Yellow
+    Write-Host "---------- PS cmake tests ----------" -ForegroundColor Yellow
 
     ExecMinGWCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
     
-    $testspass = ($LASTEXITCODE -eq 0)
-
-    $global:TestsPassed=(($global:TestsPassed) -and ($testspass))
+    ExecCheck "PS cmake Tests"
     
-    if ($testspass) {
-      Add-AppveyorTest -Name "cmake Tests" -Framework NUnit -Filename "make client/check" -Outcome Passed -Duration "$([System.Environment]::TickCount-$TestTime)"
-      Write-Host "cmake Tests [ OK ]" -ForegroundColor Green
-    } else {
-      Add-AppveyorTest -Name "cmake Tests" -Framework NUnit -Filename "make client/check" -Outcome Failed -Duration "$([System.Environment]::TickCount-$TestTime)"
-      Write-Host "cmake Tests [ ERROR ]" -ForegroundColor Red
-    }
+    Receive-Job -Wait -Job $WSLjob
+
     
 test_script:
 - ps: >-

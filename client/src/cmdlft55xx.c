@@ -401,17 +401,18 @@ static int usage_t55xx_clonehelp(void) {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_sniff(void) {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx sniff [w <width 0> <width 1>] [l <min level>] [b] [h]");
+    PrintAndLogEx(NORMAL, "Usage:  lf t55xx sniff [w <width 0> <width 1>] [l <min level>] [s <level>] [t <level>] [1] [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     w <0> <1>       - Set samples width for 0 and 1 matching (default auto detect)");
-    PrintAndLogEx(NORMAL, "     l <level>       - Set minimum signal level (default 20)");
-    PrintAndLogEx(NORMAL, "     b               - Extract from current sample buffer (default will get new samples)");
+  //  PrintAndLogEx(NORMAL, "     s <level>       - Set minimum signal level (default 20)");
+    PrintAndLogEx(NORMAL, "     t <level>       - Set tolerance level (default 5).  lower means tighter");
+    PrintAndLogEx(NORMAL, "     1               - Extract from current sample buffer (default will get new samples)");
     PrintAndLogEx(NORMAL, "     h               - This help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff b"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff w 7 14 b"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff 1 t 2"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx sniff w 7 14 1"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -3724,27 +3725,62 @@ static int CmdT55xxProtect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// if the difference bettwen a and b is less then or eq to d  i.e. does a = b +/- d
+#define approxEq(a,b,d) ((abs(a-b) <= d) ? true : false)
+
+static uint8_t t55sniffGetPacket(int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {
+    int i = 0;
+    bool ok = true;
+    uint8_t dataLen = 0;
+
+    while (ok && (i < 73)) { // 70 bits max Fixed bit packet
+        if (approxEq(width0, pulseBuffer[i], tolerance))  {
+            data[dataLen++] = '0';
+            i++;
+            continue;
+        }
+        if (approxEq(width1, pulseBuffer[i], tolerance)) { 
+            data[dataLen++] = '1';
+            i++;
+            continue;
+        }
+
+        ok = false;
+    }
+    data[dataLen] = 0x00;
+
+    return dataLen;
+}
+
+static uint8_t t55sniffTrimSamples(int *pulseBuffer, int *pulseIdx, uint8_t len) {
+    for (uint8_t ii = 0; ii < (80 - len); ii++) {
+        pulseBuffer[ii] = pulseBuffer[ii + len];
+    }
+    
+    *pulseIdx -= len;
+    return PM3_SUCCESS;
+}
+
 static int CmdT55xxSniff(const char *Cmd) {
-    uint8_t cmdp = 0;
+
     bool sampleData = true;
-    uint8_t width0 = 0;
-    uint8_t width1 = 0;
-    uint8_t minLevel = 20;
-    int pulseSamples = 0;
-    bool eop;
-    uint8_t page;
-    uint32_t usedPassword;
-    uint32_t blockData;
-    uint8_t blockAddr;
-    char data[100]; // Max should be 80. 
+    bool haveData = false;
+    uint8_t cmdp = 0;
+    uint8_t width0 = 0, width1 = 0;
+    uint8_t tolerance = 5, page, blockAddr;
     uint16_t dataLen = 0;
     size_t idx = 0;
-    size_t start;
-    int minWidth;
-    int maxWidth;
+    uint32_t usedPassword, blockData;
+    int pulseSamples = 0;
+    int pulseIdx = 0;
+    int minWidth = 1000;
+    int maxWidth = 0;
     char modeText [100];
     char pwdText  [100];
-    bool haveData = false;
+    char dataText [100];
+    int pulseBuffer[80] = { 0 }; // max should be 73 +/- - Holds Pulse widths
+    char data[80]; //  linked to pulseBuffer. - Holds 0/1 from pulse widths 
+
 
     /*
         Notes:
@@ -3770,14 +3806,12 @@ static int CmdT55xxSniff(const char *Cmd) {
                    | 1  |  48 - 64  |  41 - 72  |  21 - 96  |   tbc     |
                     ----------------------------------------------------
                                                              00 01 10 11
-                   
-                   
     */
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_t55xx_sniff();
-            case 'b':
+            case '1':
                 sampleData = false;
                 cmdp ++;
                 break;
@@ -3785,7 +3819,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                 width0 = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 width1 = param_get8ex(Cmd, cmdp + 2, 0, 10);
                 cmdp += 3;
-                
+
                 if (width0 == 0) PrintAndLogEx (ERR,"need both sample widths!  "_RED_("Missing sample width for 0"));
                 if (width1 == 0) PrintAndLogEx (ERR,"need both sample widths!  "_RED_("Missing sample width for 1"));
                 if ((width0 == 0) || (width1 == 0)) {
@@ -3793,229 +3827,245 @@ static int CmdT55xxSniff(const char *Cmd) {
                     return usage_t55xx_sniff();
                 }
                 break;
-            case 'l': 
-                minLevel = param_get8ex(Cmd, cmdp + 1, 0, 10);
+            case 't': 
+                tolerance = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             default:
-                    cmdp++;
-                    PrintAndLogEx (ERR,"Invalid options supplied!");
-                    return usage_t55xx_sniff();
+                cmdp++;
+                PrintAndLogEx (ERR,"Invalid options supplied!");
+                return usage_t55xx_sniff();
         }
     }
 
-    // setup and sample data from Proxmark (if not directed to existing sample/graphbuffer
+    // setup and sample data from Proxmark
+    // if not directed to existing sample/graphbuffer
     if (sampleData) {
-            // get samples 
-            CmdLFSniff ("");
+        CmdLFSniff ("");
     }
+
+    // Headings
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO,_CYAN_("T55xx command detection"));
+    PrintAndLogEx(SUCCESS, "Downlink mode         | password |   Data   | blk | page |  0  |  1  | raw");
+    PrintAndLogEx(SUCCESS, "----------------------+----------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
 
     idx = 0;
+    // loop though sample buffer
+    while (idx < GraphTraceLen) {
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO,_CYAN_("T55xx write Detection"));
-    PrintAndLogEx(INFO,"Minimum signal level : "_GREEN_("%d"),minLevel);
-    PrintAndLogEx(SUCCESS, "Downlink mode    | password |   Data   | blk | page |  0  |  1  | raw");
-    PrintAndLogEx(SUCCESS, "-----------------+----------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
-
-    while (idx < GraphTraceLen)
-    {
-        start = idx;
         minWidth = 1000;
         maxWidth = 0;
+        dataLen = 0;
+        data[0] = 0;
+        haveData = false;
+        sprintf(modeText, "Default");
+        sprintf(pwdText, " ");
+        sprintf(dataText, " ");
 
-        // Auto detect bit widths
-        if ((width0 == 0) && (width1 == 0)) {
-            // Skip till we get to a "non modulated section"
-            while ((idx < GraphTraceLen) && ((GraphBuffer[idx] < -5) || (GraphBuffer[idx] > 5)))
-                idx++;
+        if (pulseSamples == 0) {
+            idx++;
+        }
 
-            while ((idx < GraphTraceLen) && ((GraphBuffer[idx] > (-1 * minLevel)) && (GraphBuffer[idx] < minLevel)))
-                idx++;
+        // find high
+        while ((idx < GraphTraceLen) && (GraphBuffer[idx] < 0)) {
+            idx++;
+        }
 
-            eop = false;
-            pulseSamples = 0;
+        // count high samples
+        pulseSamples = 0;
+        while ((idx < GraphTraceLen) && (GraphBuffer[idx] > 0)) { // last bit seems to be high to zero, but can vary in width..
+            pulseSamples++;
+            idx++;
+        }
 
-            // Skip until start of next signal - Should be a positive rise above 0
-            while ((idx < GraphTraceLen) && (GraphBuffer[idx] < 10)) idx++;
+        if (pulseSamples > 0) {
+            pulseBuffer[pulseIdx++] = pulseSamples;
+            if (pulseIdx > 79) { // make room for next sample - if not used by now, it wont be.
+                t55sniffTrimSamples (pulseBuffer, &pulseIdx, 1);
+            }
 
-            while ((idx < GraphTraceLen) && !eop) {
-
-                if ((GraphBuffer[idx-1] <= 0) && (GraphBuffer[idx] > 0))
-                    pulseSamples = 0;
-
-                if ((GraphBuffer[idx-1] > 0) && (GraphBuffer[idx] <= 0)) {
-                    if (pulseSamples > 0) {
-
-                        if (pulseSamples < minWidth)
-                            minWidth = pulseSamples;
-
-                        if (pulseSamples > maxWidth)
-                            maxWidth = pulseSamples;
-
-                        pulseSamples = 0;
-                    }
-                }
-
-                if ((GraphBuffer[idx-1] > 0) && (GraphBuffer[idx] <= 0) ) {
-                    // End of Packet will have a High to zero drop and stay around 0, so if it drags on or does not keep going down
-                    if (((GraphBuffer[idx+5] + 10) > GraphBuffer[idx]) || (pulseSamples > 50)) { // very high chance of being noise
-                        eop = true;
+            // Check Samples for valid packets;
+            // We should find (outside of leading bits) we have a packet of "1" and "0" at same widths.
+            if (pulseIdx >= 6) {// min size for a read - ignoring 1of4 10 0 <adr>
+                
+                // We auto find widths
+                if ((width0 == 0) && (width1 == 0)) {
+                    // We ignore bit 0 for the moment as it may be a ref. pulse, so check last
+                    uint8_t ii = 2;
+                    minWidth = pulseBuffer[1];
+                    maxWidth = pulseBuffer[1];
+                    bool done = false;
+                
+                    while ((!done) && (ii < pulseIdx) && ((maxWidth <= minWidth) || (approxEq(minWidth,maxWidth,tolerance)))) { // min should be 8, 16-32 more normal
+                        if (pulseBuffer[ii]+3 < minWidth) {
+                            minWidth = pulseBuffer[ii];
+                            done = true;
+                        }
+                        if (pulseBuffer[ii]-1 > maxWidth) {
+                            maxWidth = pulseBuffer[ii];
+                            done = true;
+                        }
+                        ii++;
                     }
                 } else {
-                    pulseSamples++;
+                    minWidth = width0;
+                    maxWidth = width1;
                 }
-                idx++;
             }
 
-            maxWidth = minWidth * 1.75;// + ((25 * MinWidth) / 100);
-            //  minWidth = MinWidth;// - ((15 * MinWidth) / 100);
-        } else {
-            maxWidth = width1;
-            minWidth = width0;
-        }
-
-        // =====================================================
-        // go back and find first packet....
-        idx = start; 
-        haveData = false;
-
-        // Skip till we get to a "non modulated section" - ie skip if sample is in mid packet
-        while ((idx < GraphTraceLen) && ((GraphBuffer[idx] < -5) || (GraphBuffer[idx] > 5)))
-            idx++;
-        while ((idx < GraphTraceLen) && ((GraphBuffer[idx] > (-1 * minLevel)) && (GraphBuffer[idx] < minLevel)))
-            idx++;
-
-        dataLen = 0;
-        eop = false;
-        pulseSamples = 0;
-
-        // Skip until start of next signal - Should be a positive rise above 0
-        while ((idx < GraphTraceLen) && (GraphBuffer[idx] < 10)) idx++;
-
-        while ((idx < GraphTraceLen) && !eop) {
-            if ((GraphBuffer[idx-1] <= 0) && (GraphBuffer[idx] > 0)) {
-                pulseSamples = 0;
+            //  out of bounds... min max far enough appart and minWidth is large enough
+            if (((maxWidth - minWidth) < 6) || (minWidth < 6)) // min 8 +/- 
+                continue;
+            
+            // At this point we should have 
+            // - a min of 6 samples
+            // - the 0 and 1 sample widths
+            // - min 0 and min seperations (worst case)
+            // No max checks done (yet) as have seen samples > then specs in use.
+            
+            // Check first bit.
+            
+            // Long leading 0
+            if (haveData == false && (approxEq(pulseBuffer[0],136+minWidth,tolerance) && approxEq(pulseBuffer[1],maxWidth,tolerance))) {
+                printf ("Long Leading 0 - not yet hanled | have 1 Fisrt bit | Min : %-3d - Max : %-3d : diff : %d\n",minWidth,maxWidth, maxWidth-minWidth);
+                continue;
             }
-            // a return to 0 makes end of needed data.  it should cross to negataive before rising to next bit
-            if ((GraphBuffer[idx-1] > 0) && (GraphBuffer[idx] <= 0) ) {
-                // End of Packet will have a High to zero drop and stay around 0, so if it drags on or does not keep going down
-                // 
-                if (((GraphBuffer[idx+5] + 10) > GraphBuffer[idx]) || (pulseSamples > 50)) { // very high chance of being noise
-                    eop = true;
-                } else { // if we have way too many samples, wont be a valid bit.
-                    if (pulseSamples >= maxWidth) //16)  // 30 ??
-                        data[dataLen++] = '1';
-                    else {
-                        if (pulseSamples >= minWidth) // Since we found Min Width this should be hit
-                            data[dataLen++] = '0';
-                        else {
-                            eop = true; // Too short, not a bit - Something went wrong, as we found min width
+
+            // Fixed bit - Default
+            if (haveData == false && (approxEq(pulseBuffer[0], maxWidth, tolerance))) {
+                dataLen = t55sniffGetPacket (pulseBuffer, data, minWidth, maxWidth, tolerance);
+
+             //   if ((dataLen == 39) ) 
+             //           printf ("Fixed | Data end of 80 samples | offset : %llu - datalen %-2d - data : %s  --- - Bit 0 width : %d\n",idx,dataLen,data,pulseBuffer[0]);
+
+                if (data[0] == '0') { // should never get here..
+                    dataLen = 0; 
+                    data[0] = 0;
+                } else {
+
+                    // Default Read
+                    if (dataLen == 6) {
+                        t55sniffTrimSamples (pulseBuffer, &pulseIdx,4); // left 1 or 2 samples seemed to help 
+
+                        page = data[1] - '0';
+                        blockAddr = 0;
+                        for (uint8_t i = 3; i < 6; i++) {
+                            blockAddr <<= 1;
+                            if (data[i] == '1') 
+                                blockAddr |= 1;
                         }
+                        blockData = 0;
+                        haveData = true;
+                        sprintf(modeText, "Default Read");
+                    }
+
+                    // Password Write
+                    if (dataLen == 70) {
+                        t55sniffTrimSamples (pulseBuffer, &pulseIdx,70);
+
+                        page = data[1] - '0';
+                        usedPassword = 0;
+                        for (uint8_t i = 2; i <= 33; i++) {
+                            usedPassword <<= 1;
+                            if (data[i] == '1') 
+                                usedPassword |= 1;
+                        }
+                        // Lock bit 34
+                        blockData = 0;
+                        for (uint8_t i = 35; i <= 66; i++) {
+                            blockData <<= 1;
+                            if (data[i] == '1') 
+                                blockData |= 1;
+                        }
+                        blockAddr = 0;
+                        for (uint8_t i = 67; i <= 69; i++) {
+                            blockAddr <<= 1;
+                            if (data[i] == '1') 
+                                blockAddr |= 1;
+                        }
+                        haveData = true;
+                        sprintf(modeText, "Default pwd write");
+                        sprintf(pwdText, "%08X", usedPassword);
+                        sprintf(dataText, "%08X",blockData );
+                    }
+
+                    // Default Write (or password read ??)
+                    if (dataLen == 38) {
+                        t55sniffTrimSamples (pulseBuffer, &pulseIdx,38);
+
+                        page = data[1] - '0';
+                        usedPassword = 0;
+                        blockData = 0;
+                        for (uint8_t i = 3; i <= 34; i++) {
+                            blockData <<= 1;
+                            if (data[i] == '1') 
+                                blockData |= 1;
+                        }
+                        blockAddr = 0;
+                        for (uint8_t i = 35; i <= 37; i++) {
+                            blockAddr <<= 1;
+                            if (data[i] == '1') 
+                                blockAddr |= 1;
+                        }
+                        haveData = true;
+                        sprintf(modeText, "Default write");
+                        sprintf(dataText, "%08X",blockData );
                     }
                 }
             }
-            else
-                pulseSamples++;
-            if (dataLen > 80) // to long for t55xx packets
-                eop = true;
-            idx++;
-        }
-        data[dataLen] = 0x00;
 
-        // printf ("%d : %s\n",dataLen,data);
-        
-        sprintf(modeText, "Default");
-        sprintf(pwdText, "        ");
+            // Leading 0
+            if (haveData == false && (approxEq(pulseBuffer[0], minWidth, tolerance))) {
+                // leading 0 (should = 0 width) 
+                // 1 of 4 (leads with 00)
+                dataLen = t55sniffGetPacket (pulseBuffer,data,minWidth,maxWidth,tolerance);
+                // **** Should check to 0 to be actual 0 as well i.e. 01 .... data ....
+                if ((data[0] == '0') && (data[1] == '1')) {
+                    if (dataLen == 73) {
+                        t55sniffTrimSamples (pulseBuffer, &pulseIdx, 73);
 
-        if (dataLen == 73) { // Potential leading 0 password write.
-            if ((memcmp (data, "01100", 5) == 0) || (memcmp (data, "01000", 5) == 0)) { // Still looking good Page 1 or 0
-
-                page = data[2] - '0';
-                usedPassword = 0;
-                for (uint8_t i = 5; i < 32+5; i++) {
-                    usedPassword <<= 1;
-                    if (data[i] == '1') 
-                        usedPassword |= 1;
+                        page = data[2] - '0';
+                        usedPassword = 0;
+                        for (uint8_t i = 5; i <= 36; i++) {
+                            usedPassword <<= 1;
+                            if (data[i] == '1') 
+                                usedPassword |= 1;
+                        }
+                        blockData = 0;
+                        for (uint8_t i = 38; i <= 69; i++) {
+                            blockData <<= 1;
+                            if (data[i] == '1') 
+                                blockData |= 1;
+                        }
+                        blockAddr = 0;
+                        for (uint8_t i = 70; i <= 72; i++) {
+                            blockAddr <<= 1;
+                            if (data[i] == '1') 
+                                blockAddr |= 1;
+                        }
+                        haveData = true;
+                        sprintf(modeText, "Leading 0 pwd write");
+                        sprintf(pwdText, "%08X", usedPassword);
+                        sprintf(dataText, "%08X",blockData );
+                    }
                 }
-                blockData = 0;
-                for (uint8_t i = 38; i < 38+32; i++) {
-                    blockData <<= 1;
-                    if (data[i] == '1') 
-                        blockData |= 1;
-                }
-                blockAddr = 0;
-                for (uint8_t i = 70; i < 70+3; i++) {
-                    blockAddr <<= 1;
-                    if (data[i] == '1') 
-                        blockAddr |= 1;
-                }
-                haveData = true;
-                sprintf(modeText, "leading 0");
-                sprintf(pwdText,"%08X", usedPassword);
-            }
-        }
-        
-        if (dataLen == 70) { // Potential default password write.
-
-            if ((memcmp (data, "10", 2) == 0) || (memcmp (data, "11", 2) == 0)) { // Still looking good Page 1 or 0
-
-                page = data[1] - '0';
-                usedPassword = 0;
-                for (uint8_t i = 2; i < 34; i++) {
-                    usedPassword <<= 1;
-                    if (data[i] == '1') 
-                        usedPassword |= 1;
-                }
-                blockData = 0;
-                for (uint8_t i = 35; i < 67; i++) {
-                    blockData <<= 1;
-                    if (data[i] == '1') 
-                        blockData |= 1;
-                }
-                blockAddr = 0;
-                for (uint8_t i = 67; i < 70; i++) {
-                    blockAddr <<= 1;
-                    if (data[i] == '1') 
-                        blockAddr |= 1;
-                }
-                haveData = true;
-                sprintf(pwdText, "%08X", usedPassword);
             }
         }
 
-
-        if (dataLen == 38) { // Potential defaukt write (no password).
-
-            if ((memcmp (data, "10", 2) == 0) || (memcmp (data, "11", 2) == 0)) { // Still looking good Page 1 or 0
-
-                page = data[1] - '0';
-                blockData = 0;
-                for (uint8_t i = 3; i < 35; i++) {
-                    blockData <<= 1;
-                    if (data[i] == '1') 
-                        blockData |= 1;
-                }
-                blockAddr = 0;
-                for (uint8_t i = 35; i < 38; i++) {
-                    blockAddr <<= 1;
-                    if (data[i] == '1') 
-                        blockAddr |= 1;
-                }
-                haveData = true;
-            }
-        }
-
-        if ((haveData) && (minWidth > 1) && (maxWidth > minWidth)){
+        // Print results
+        if (haveData) { //&& (minWidth > 1) && (maxWidth > minWidth)){
             if (blockAddr == 7)
-                PrintAndLogEx (SUCCESS, "%-15s  | "_GREEN_("%s")" | "_YELLOW_("%08X")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, blockData, blockAddr, page, minWidth, maxWidth, data); 
+                PrintAndLogEx (SUCCESS, "%-20s  | "_GREEN_("%8s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data); 
             else
-                PrintAndLogEx (SUCCESS, "%-15s  | "_GREEN_("%s")" | "_GREEN_("%08X")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, blockData, blockAddr, page, minWidth, maxWidth, data); 
+                PrintAndLogEx (SUCCESS, "%-20s  | "_GREEN_("%8s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data); 
         }
     }
-    PrintAndLogEx (SUCCESS, "------------------------------------------------------------------------------------------------------------------------------------------------");
-    PrintAndLogEx (NORMAL, "");
 
+    // footer
+    PrintAndLogEx (SUCCESS, "-----------------------------------------------------------------------------------------------------------------------------------------------------");
+    PrintAndLogEx (NORMAL, "");
+    
     return PM3_SUCCESS;
 }
 

@@ -243,8 +243,11 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
     StartTicks();
 
     // 50ms for the resonant antenna to settle.
-    if (reader_field)
+    if (reader_field) {
         WaitMS(50);
+    } else {
+        WaitMS(1);
+    }
 }
 
 /**
@@ -397,9 +400,9 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size) {
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF(void) {
+uint32_t SniffLF(bool verbose, uint32_t sample_size) {
     BigBuf_Clear_ext(false);
-    return ReadLF(false, true, 0);
+    return ReadLF(false, verbose, sample_size);
 }
 
 /**

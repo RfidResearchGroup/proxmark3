@@ -50,6 +50,9 @@ class Plot: public QWidget {
   protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
+    void Zoom(float factor, int refX);
+    void Move(int offset);
+    void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event) { mouseMoveEvent(event); }
     void keyPressEvent(QKeyEvent *event);

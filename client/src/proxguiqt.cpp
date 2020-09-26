@@ -637,6 +637,80 @@ void Plot::closeEvent(QCloseEvent *event) {
     g_useOverlays = false;
 }
 
+void Plot::Zoom(float factor, int refX) {
+    if (factor >=1) { // Zoom in
+        if (GraphPixelsPerPoint <= 25 * factor) {
+            GraphPixelsPerPoint *= factor;
+            GraphStart += (refX - GraphStart) - ((refX - GraphStart) / factor);
+        }
+    } else {          // Zoom out
+        if (GraphPixelsPerPoint >= 0.01 / factor) {
+            GraphPixelsPerPoint *= factor;
+            if (GraphStart >= ((refX - GraphStart) / factor) - (refX - GraphStart)) {
+                GraphStart -= ((refX - GraphStart) / factor) - (refX - GraphStart);
+            } else {
+                GraphStart = 0;
+            }
+        }
+    }
+}
+
+void Plot::Move(int offset) {
+    if (offset > 0) { // Move right
+        if (GraphPixelsPerPoint < 20) {
+            GraphStart += offset;
+        } else {
+            GraphStart++;
+        }
+    } else { // Move left
+        if (GraphPixelsPerPoint < 20) {
+            if (GraphStart >= (uint)-offset) {
+                GraphStart += offset;
+            } else {
+                GraphStart = 0;
+            }
+        } else {
+            if (GraphStart > 0) {
+                GraphStart--;
+            }
+        }
+    }
+}
+
+void Plot::wheelEvent(QWheelEvent *event) {
+    // event->delta()
+    //  120 => shift right 5%
+    // -120 => shift left 5%
+    const float move_offset = 0.05;
+    // -120+shift => zoom in 10%
+    //  120+shift => zoom out 10%
+    const float zoom_offset = 0.1;
+    if (event->modifiers() & Qt::ShiftModifier) {
+// event->position doesn't exist in QT5.12.8, both exist in 5.14.2 and event->x doesn't exist in 5.15.0
+#if QT_VERSION >= 0x050d00
+        int x = event->position().x();
+#else
+        int x = event->x();
+#endif
+        x -= WIDTH_AXES;
+        x = (int)(x / GraphPixelsPerPoint);
+        x += GraphStart;
+// event->angleDelta doesn't exist in QT4, both exist in 5.12.8 and 5.14.2 and event->delta doesn't exist in 5.15.0
+#if QT_VERSION >= 0x050d00
+        Zoom(1.0-(float)event->angleDelta().y()/(120/zoom_offset), x);
+#else
+        Zoom(1.0-(float)event->delta()/(120/zoom_offset), x);
+#endif
+    } else {
+#if QT_VERSION >= 0x050d00
+        Move(PageWidth*(-(float)event->angleDelta().y()/(120/move_offset)));
+#else
+        Move(PageWidth*(-(float)event->delta()/(120/move_offset)));
+#endif
+    }
+    this->update();
+}
+
 void Plot::mouseMoveEvent(QMouseEvent *event) {
     int x = event->x();
     x -= WIDTH_AXES;
@@ -667,37 +741,27 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
     switch (event->key()) {
         case Qt::Key_Down:
-            if (GraphPixelsPerPoint <= 50) {
-                GraphPixelsPerPoint *= 2;
+            if (event->modifiers() & Qt::ShiftModifier) {
+                Zoom(2, CursorBPos);
+            } else {
+                Zoom(2, CursorAPos);
             }
             break;
 
         case Qt::Key_Up:
-            if (GraphPixelsPerPoint >= 0.02) {
-                GraphPixelsPerPoint /= 2;
+            if (event->modifiers() & Qt::ShiftModifier) {
+                Zoom(0.5, CursorBPos);
+            } else {
+                Zoom(0.5, CursorAPos);
             }
             break;
 
         case Qt::Key_Right:
-            if (GraphPixelsPerPoint < 20) {
-                GraphStart += offset;
-            } else {
-                GraphStart++;
-            }
+            Move(offset);
             break;
 
         case Qt::Key_Left:
-            if (GraphPixelsPerPoint < 20) {
-                if (GraphStart >= offset) {
-                    GraphStart -= offset;
-                } else {
-                    GraphStart = 0;
-                }
-            } else {
-                if (GraphStart > 0) {
-                    GraphStart--;
-                }
-            }
+            Move(-offset);
             break;
 
         case Qt::Key_G:
@@ -720,8 +784,12 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             puts("PLOT window keystrokes");
             puts("\tKey                      Action");
             puts("-----------------------------------------------------------------------");
-            puts("\tUP                       Zoom out");
-            puts("\tDOWN                     Zoom in");
+            puts("\tUP                       Zoom out around yellow cursor");
+            puts("\t<SHIFT> UP               Zoom out around purple cursor");
+            puts("\t<SHIFT> WHEEL MOUSE UP   Zoom out around mouse cursor");
+            puts("\tDOWN                     Zoom in around yellow cursor");
+            puts("\t<SHIFT> DOWN             Zoom in around purple cursor");
+            puts("\t<SHIFT> WHEEL MOUSE DOWN Zoom in around mouse cursor");
             puts("\tG                        Toggle grid display");
             puts("\tH                        Show help");
             puts("\tL                        Toggle lock grid relative to samples");
@@ -731,12 +799,14 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             puts("\tPGUP                     Page left");
             puts("\tPGDOWN                   Page right");
             puts("\tLEFT                     Move left");
-            puts("\t<CTLR> LEFT              Move left 1 sample");
-            puts("\t<SHIFT> LEFT             Page left");
-            puts("\tLEFT MOUSE CLICK         Set yellow cursor");
             puts("\tRIGHT                    Move right");
+            puts("\tWHEEL MOUSE UP           Move left");
+            puts("\tWHEEL MOUSE DOWN         Move right");
+            puts("\t<CTLR> LEFT              Move left 1 sample");
             puts("\t<CTLR> RIGHT             Move right 1 sample");
+            puts("\t<SHIFT> LEFT             Page left");
             puts("\t<SHIFT> RIGHT            Page right");
+            puts("\tLEFT MOUSE CLICK         Set yellow cursor");
             puts("\tRIGHT MOUSE CLICK        Set purple cursor");
             puts("-----------------------------------------------------------------------");
             break;

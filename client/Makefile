@@ -326,9 +326,9 @@ ifeq ($(SKIPQT),1)
 else
     ifeq ($(QT_FOUND),1)
         ifeq ($(QT5_FOUND),1)
-            $(info GUI support:       QT5 found, enabled)
+            $(info GUI support:       QT5 found, enabled ($(shell QT_SELECT=5 qmake -v 2>/dev/null|grep -o 'Qt version.*')))
         else
-            $(info GUI support:       QT4 found, enabled)
+            $(info GUI support:       QT4 found, enabled ($(shell QT_SELECT=4 qmake -v 2>/dev/null|grep -o 'Qt version.*')))
         endif
     else
         $(info GUI support:       QT not found, disabled)

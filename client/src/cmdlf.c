@@ -56,29 +56,36 @@
 #include "cmdlfmotorola.h"  // for Motorola menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 
+#define LF_CMDREAD_MAX_EXTRA_SYMBOLS 4
 static bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_cmdread(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay period> z <zero period> o <one period> c <cmdbytes> [q] [s #samples] [@]");
+    PrintAndLogEx(NORMAL, "Usage: lf cmdread d <delay duration> z <zero duration> o <one duration> [e <symbol> <duration>] c <cmd symbols> [q] [s #samples] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       d <delay>     delay OFF period, (0 for bitbang mode) (decimal)");
-    PrintAndLogEx(NORMAL, "       z <zero>      ZERO time period (decimal)");
-    PrintAndLogEx(NORMAL, "       o <one>       ONE time period (decimal)");
-    PrintAndLogEx(NORMAL, "       c <cmd>       Command bytes (in ones and zeros)");
-    PrintAndLogEx(NORMAL, "       q            silent (optional)");
-    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
+    PrintAndLogEx(NORMAL, "       d <duration>  delay OFF period, (0 for bitbang mode)");
+    PrintAndLogEx(NORMAL, "       z <duration>  ZERO time period");
+    PrintAndLogEx(NORMAL, "       o <duration>  ONE time period");
+    PrintAndLogEx(NORMAL, "       e <symbol> <duration> Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+    PrintAndLogEx(NORMAL, "       b <duration>  B period");
+    PrintAndLogEx(NORMAL, "       c <cmd>       Command symbols (0/1/...)");
+    PrintAndLogEx(NORMAL, "       q             silent (optional)");
+    PrintAndLogEx(NORMAL, "       s #samples    number of samples to collect (optional)");
+    PrintAndLogEx(NORMAL, "       @             run continuously until a key is pressed (optional)");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in microseconds (us)"));
+    PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in decimal and in microseconds (us)"));
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "- probing for HT2:");
-    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 c 011000");
-    PrintAndLogEx(NORMAL, "- probing for HT2, oscilloscope style:");
-    PrintAndLogEx(NORMAL, "      data plot");
-    PrintAndLogEx(NORMAL, "      lf cmdread d 50 z 116 o 166 c 011000 q s 2000 @");
+    PrintAndLogEx(NORMAL, "- probing for Hitag 1/Hitag S:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W00110"));
+    PrintAndLogEx(NORMAL, "- probing for Hitag 2:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000"));
+    PrintAndLogEx(NORMAL, "- probing for Hitag 2, oscilloscope style:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000 q s 2000 @"));
+    PrintAndLogEx(NORMAL, "- probing for Hitag (us):");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 48 z 112 o 176 e W 3000 e S 240 e E 336 c W0S00000010000E"));
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
@@ -117,12 +124,19 @@ static int usage_lf_sim(void) {
 }
 static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff low frequence signal.");
-    PrintAndLogEx(NORMAL, "Usage: lf sniff [h]");
+    PrintAndLogEx(NORMAL, "Usage: lf sniff [h] [q] [s #samples] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         This help");
+    PrintAndLogEx(NORMAL, "       q            silent (optional)");
+    PrintAndLogEx(NORMAL, "       s #samples   number of samples to collect (optional)");
+    PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf sniff");
+    PrintAndLogEx(NORMAL, "- oscilloscope style:");
+    PrintAndLogEx(NORMAL, "      data plot");
+    PrintAndLogEx(NORMAL, "      lf sniff q s 3000 @");
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
-    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data samples'")" command to download from device");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data plot'")" to look at it");
     return PM3_SUCCESS;
 }
@@ -324,17 +338,20 @@ int CmdLFCommandRead(const char *Cmd) {
     uint32_t samples = 0;
     uint16_t datalen = 0;
 
-    const uint8_t payload_header_size = 12;
+    const uint8_t payload_header_size = 12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS);
     struct p {
         uint32_t delay;
-        uint16_t ones;
-        uint16_t zeros;
+        uint16_t period_0;
+        uint16_t period_1;
+        uint8_t  symbol_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
+        uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
         uint32_t samples : 31;
         bool     verbose : 1;
         uint8_t data[PM3_CMD_DATA_SIZE - payload_header_size];
     } PACKED payload;
     payload.samples = samples;
     payload.verbose = verbose;
+    uint8_t index_extra = 0;
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -350,12 +367,23 @@ int CmdLFCommandRead(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'z':  // zero
-                payload.zeros = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                payload.period_0 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
                 break;
             case 'o':  // ones
-                payload.ones = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                payload.period_1 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
+                break;
+            case 'e':  // extra symbol definition
+                if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
+                    payload.symbol_extra[index_extra] = param_getchar(Cmd, cmdp + 1);
+                    payload.period_extra[index_extra] = param_get32ex(Cmd, cmdp + 2, 0, 10) & 0xFFFF;
+                    index_extra++;
+                    cmdp += 3;
+                } else {
+                    PrintAndLogEx(WARNING, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+                    errors = true;
+                }
                 break;
             case 's':
                 samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
@@ -380,7 +408,7 @@ int CmdLFCommandRead(const char *Cmd) {
 
     // bitbang mode
     if (payload.delay == 0) {
-        if (payload.zeros < 7 || payload.ones < 7) {
+        if (payload.period_0 < 7 || payload.period_1 < 7) {
             PrintAndLogEx(WARNING, "warning periods cannot be less than 7us in bit bang mode");
             return PM3_EINVARG;
         }
@@ -720,18 +748,81 @@ int CmdLFRead(const char *Cmd) {
     return ret;
 }
 
+int lf_sniff(bool verbose, uint32_t samples) {
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    struct p {
+        uint32_t samples : 31;
+        bool     verbose : 1;
+    } PACKED;
+
+    struct p payload;
+    payload.verbose = verbose;
+    payload.samples = samples;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (g_lf_threshold_set) {
+        WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
+    } else {
+        if (!WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500)) {
+            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    // response is number of bits read
+    uint32_t size = (resp.data.asDwords[0] / 8);
+    getSamples(size, verbose);
+    return PM3_SUCCESS;
+}
+
 int CmdLFSniff(const char *Cmd) {
 
     if (!session.pm3_present) return PM3_ENOTTY;
 
-    uint8_t cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_sniff();
+    bool errors = false;
+    bool verbose = true;
+    bool continuous = false;
+    uint32_t samples = 0;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_sniff();
+            case 's':
+                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'q':
+                verbose = false;
+                cmdp++;
+                break;
+            case '@':
+                continuous = true;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_SNIFF_RAW_ADC, NULL, 0);
-    WaitForResponse(CMD_ACK, NULL);
-    getSamples(0, true);
-    return PM3_SUCCESS;
+    //Validations
+    if (errors) return usage_lf_sniff();
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+    }
+    int ret = PM3_SUCCESS;
+    do {
+        ret = lf_sniff(verbose, samples);
+        if (kbd_enter_pressed()) {
+            break;
+        }
+    } while (continuous);
+    return ret;
 }
 
 static void ChkBitstream(void) {
@@ -1362,7 +1453,7 @@ int CmdLFfind(const char *Cmd) {
     if (demodNexWatch() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
     if (demodIndala() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
     if (demodEM410x() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
-    if (demodFDX() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
+    if (demodFDX(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
     if (demodGuard() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
     if (demodIdteck() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
     if (demodJablotron() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
@@ -1431,7 +1522,7 @@ out:
 }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,            AlwaysAvailable, "This help"},
+    {"-----------", CmdHelp,            AlwaysAvailable, "-------------- " _CYAN_("Direct") " --------------"},
     {"awid",        CmdLFAWID,          AlwaysAvailable, "{ AWID RFIDs...              }"},
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
     {"em",          CmdLFEM4X,          AlwaysAvailable, "{ EM4X CHIPs & RFIDs...      }"},
@@ -1458,16 +1549,17 @@ static command_t CommandTable[] = {
     {"t55xx",       CmdLFT55XX,         AlwaysAvailable, "{ T55xx CHIPs...             }"},
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
-    {"",            CmdHelp,            AlwaysAvailable, ""},
+    {"-----------", CmdHelp,            AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
+    {"help",        CmdHelp,            AlwaysAvailable, "This help"},
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read (all periods in microseconds)"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
     {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag (in offline mode it you can load first then search)"},
     {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer with optional GAP (in microseconds)"},
-    {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate LF ASK tag from demodbuffer or input"},
-    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate LF FSK tag from demodbuffer or input"},
-    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate LF PSK tag from demodbuffer or input"},
-//    {"simpsk",      CmdLFnrzSim,        IfPm3Lf,         "Simulate LF NRZ tag from demodbuffer or input"},
+    {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF ASK tag") " from demodbuffer or input"},
+    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF FSK tag") " from demodbuffer or input"},
+    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF PSK tag") " from demodbuffer or input"},
+//    {"simpsk",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("LF NRZ tag") " from demodbuffer or input"},
     {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},

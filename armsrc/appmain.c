@@ -770,18 +770,29 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_MOD_THEN_ACQ_RAW_ADC: {
             struct p {
                 uint32_t delay;
-                uint16_t ones;
-                uint16_t zeros;
+                uint16_t period_0;
+                uint16_t period_1;
+                uint8_t  symbol_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
+                uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
                 uint32_t samples : 31;
                 bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            ModThenAcquireRawAdcSamples125k(payload->delay, payload->zeros, payload->ones, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples);
+            uint8_t  symbol_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
+            uint16_t period_extra[LF_CMDREAD_MAX_EXTRA_SYMBOLS];
+            memcpy(symbol_extra, payload->symbol_extra, sizeof(symbol_extra));
+            memcpy(period_extra, payload->period_extra, sizeof(period_extra));
+            ModThenAcquireRawAdcSamples125k(payload->delay, payload->period_0, payload->period_1, symbol_extra, period_extra, packet->data.asBytes + sizeof(struct p), payload->verbose, payload->samples);
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {
-            uint32_t bits = SniffLF();
-            reply_mix(CMD_ACK, bits, 0, 0, 0, 0);
+            struct p {
+                uint32_t samples : 31;
+                bool     verbose : 1;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            uint32_t bits = SniffLF(payload->verbose, payload->samples);
+            reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
         case CMD_LF_HID_WATCH: {
@@ -1344,7 +1355,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CIDENT: {
-            MifareCIdent();
+            bool is_mfc = packet->data.asBytes[0];
+            MifareCIdent(is_mfc);
             break;
         }
         // Gen 3 magic cards

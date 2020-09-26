@@ -4,9 +4,6 @@
 #include "common.h"
 #include "usart_defs.h"
 
-#define USART_BUFFLEN 512
-#define USART_FIFOLEN (2*USART_BUFFLEN)
-
 // Higher baudrates are pointless, only increasing overflow risk
 
 extern uint32_t g_usart_baudrate;

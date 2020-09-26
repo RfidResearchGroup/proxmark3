@@ -317,10 +317,23 @@ static int usage_hf14_decryptbytes(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf14_eget(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf eget <block number>");
+static int usage_hf14_egetblk(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf mf egetblk <block number>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "      h          this help");
+    PrintAndLogEx(NORMAL, "      <block>    block number");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf eget 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf egetblk 0"));
+    return PM3_SUCCESS;
+}
+static int usage_hf14_egetsc(void) {
+    PrintAndLogEx(NORMAL, "Get sector data from emulator memory.\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mf egetsc [h] <sector number>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "      h          this help");
+    PrintAndLogEx(NORMAL, "      <sector>   sector number");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mf egetsc 0"));
     return PM3_SUCCESS;
 }
 static int usage_hf14_eclr(void) {
@@ -909,7 +922,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
-    bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
+    bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
     if (res == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -923,7 +936,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
-        res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
+        res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
         if (res == false) {
             PrintAndLogEx(WARNING, "Command execute timeout");
             return PM3_ETIMEOUT;
@@ -3607,9 +3620,9 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
 
 
 // EMULATOR COMMANDS
-static int CmdHF14AMfEGet(const char *Cmd) {
+static int CmdHF14AMfEGetBlk(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || c == 'h') return usage_hf14_eget();
+    if (strlen(Cmd) < 1 || c == 'h') return usage_hf14_egetblk();
 
     uint8_t data[16] = {0x00};
     uint8_t blockNo = param_get8(Cmd, 0);
@@ -3620,6 +3633,44 @@ static int CmdHF14AMfEGet(const char *Cmd) {
     }
     return PM3_SUCCESS;
 }
+static int CmdHF14AMfEGetSc(const char *Cmd) {
+    uint8_t data[16] = {0};
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_egetsc();
+
+    uint8_t sector = param_get8(Cmd, 0);
+    if (sector > 39) {
+        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(NORMAL, "\n  # | data  - sector %02d / 0x%02X ", sector, sector);
+    PrintAndLogEx(NORMAL, "----+------------------------------------------------");
+    uint8_t blocks = 4;
+    uint8_t start = sector * 4;
+    if (sector > 32) {
+        blocks = 16;
+        start = 128 + (sector - 32) * 16;
+    }
+
+    for (int i = 0; i < blocks; i++) {
+
+        int res = mfEmlGetMem(data, start + i, 1);
+        if (res == PM3_SUCCESS) {
+            if (start + i == 0) {
+                PrintAndLogEx(INFO, "%03d | " _RED_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
+            } else if (mfIsSectorTrailer(i)) {
+                PrintAndLogEx(INFO, "%03d | " _YELLOW_("%s"), start + i, sprint_hex_ascii(data, sizeof(data)));
+            } else {
+                PrintAndLogEx(INFO, "%03d | %s ", start + i, sprint_hex_ascii(data, sizeof(data)));
+            }
+        }
+    }
+    decode_print_st(start + blocks - 1, data);
+    return PM3_SUCCESS;
+}
+
 
 static int CmdHF14AMfEClear(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
@@ -5222,23 +5273,24 @@ static command_t CommandTable[] = {
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"sim",         CmdHF14AMfSim,          IfPm3Iso14443a,  "Simulate MIFARE card"},
+    {"ecfill",      CmdHF14AMfECFill,       IfPm3Iso14443a,  "Fill simulator memory with help of keys from simulator"},
     {"eclr",        CmdHF14AMfEClear,       IfPm3Iso14443a,  "Clear simulator memory"},
-    {"eget",        CmdHF14AMfEGet,         IfPm3Iso14443a,  "Get simulator memory block"},
-    {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set simulator memory block"},
+    {"egetblk",     CmdHF14AMfEGetBlk,      IfPm3Iso14443a,  "Get simulator memory block"},
+    {"egetsc",      CmdHF14AMfEGetSc,       IfPm3Iso14443a,  "Get simulator memory sector"},    
+    {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from simulator memory"},
     {"eload",       CmdHF14AMfELoad,        IfPm3Iso14443a,  "Load from file emul dump"},
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},
+    {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set simulator memory block"},
     {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emul memory"},
-    {"ecfill",      CmdHF14AMfECFill,       IfPm3Iso14443a,  "Fill simulator memory with help of keys from simulator"},
-    {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from simulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " -----------------------"},
-    {"csetuid",     CmdHF14AMfCSetUID,      IfPm3Iso14443a,  "Set UID"},
-    {"cwipe",       CmdHF14AMfCWipe,        IfPm3Iso14443a,  "Wipe card to default UID/Sectors/Keys"},
-    {"csetblk",     CmdHF14AMfCSetBlk,      IfPm3Iso14443a,  "Write block"},
     {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block"},
     {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector"},
     {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump"},
     {"csave",       CmdHF14AMfCSave,        IfPm3Iso14443a,  "Save dump from card into file or emulator"},
+    {"csetblk",     CmdHF14AMfCSetBlk,      IfPm3Iso14443a,  "Write block"},
+    {"csetuid",     CmdHF14AMfCSetUID,      IfPm3Iso14443a,  "Set UID"},
     {"cview",       CmdHF14AMfCView,        IfPm3Iso14443a,  "view card"},
+    {"cwipe",       CmdHF14AMfCWipe,        IfPm3Iso14443a,  "Wipe card to default UID/Sectors/Keys"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen3") " -----------------------"},
     {"gen3uid",     CmdHf14AGen3UID,        IfPm3Iso14443a,  "Set UID without manufacturer block"},
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite full manufacturer block"},

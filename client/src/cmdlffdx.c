@@ -65,6 +65,17 @@ static int usage_lf_fdx_clone(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_lf_fdx_read(void) {
+    PrintAndLogEx(NORMAL, "Read FDX-B animal tag");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf fdx read [h] [@]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "      h               : This help");
+    PrintAndLogEx(NORMAL, "      @               : run continuously until a key is pressed (optional)");
+    PrintAndLogEx(NORMAL, "Note that the continuous mode is less verbose");
+    return PM3_SUCCESS;
+}
+
 static int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of FDX-B animal tag");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
@@ -206,7 +217,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
 
 //see ASKDemod for what args are accepted
 //almost the same demod as cmddata.c/CmdFDXBdemodBI
-int demodFDX(void) {
+int demodFDX(bool verbose) {
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
     if (ASKbiphaseDemod("0 32 1 100", false) != PM3_SUCCESS) {
@@ -266,6 +277,11 @@ int demodFDX(void) {
     uint8_t raw[8];
     num_to_bytes(rawid, 8, raw);
 
+    if (!verbose) {
+        PROMPT_CLEARLINE;
+        PrintAndLogEx(SUCCESS, "Animal ID          " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
+        return PM3_SUCCESS;
+    }
     PrintAndLogEx(SUCCESS, "FDX-B / ISO 11784/5 Animal");
     PrintAndLogEx(SUCCESS, "Animal ID          " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
     PrintAndLogEx(SUCCESS, "National Code      " _GREEN_("%012" PRIu64) " (0x%" PRIX64 ")", NationalCode, NationalCode);
@@ -307,7 +323,7 @@ int demodFDX(void) {
 
 static int CmdFdxDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    return demodFDX();
+    return demodFDX(true);
 }
 
 static int CmdFdxRead(const char *Cmd) {
@@ -318,6 +334,27 @@ static int CmdFdxRead(const char *Cmd) {
         PrintAndLogEx(ERR, "failed to get current device LF config");
         return retval;
     }
+
+    bool errors = false;
+    bool continuous = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_fdx_read();
+            case '@':
+                continuous = true;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    //Validations
+    if (errors) return usage_lf_fdx_read();
     int16_t tmp_div = config.divisor;
     if (tmp_div != LF_DIVISOR_134) {
         config.divisor = LF_DIVISOR_134;
@@ -328,11 +365,22 @@ static int CmdFdxRead(const char *Cmd) {
             return retval;
         }
     }
-    retval = lf_read(false, 10000);
-    if (retval != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "failed to get LF read from device");
-        return retval;
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
+    int ret = PM3_SUCCESS;
+    do {
+        retval = lf_read(false, 10000);
+        if (retval != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to get LF read from device");
+            return retval;
+        }
+        ret = demodFDX(!continuous); // be verbose only if not in continuous mode
+        if (kbd_enter_pressed()) {
+            break;
+        }
+        PrintAndLogEx(INPLACE, "");
+    } while (continuous);
     if (tmp_div != LF_DIVISOR_134) {
         config.divisor = tmp_div;
         retval = lf_config(&config);
@@ -341,7 +389,7 @@ static int CmdFdxRead(const char *Cmd) {
             return retval;
         }
     }
-    return CmdFdxDemod(Cmd);
+    return ret;
 }
 
 static int CmdFdxClone(const char *Cmd) {

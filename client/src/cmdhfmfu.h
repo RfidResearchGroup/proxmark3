@@ -57,6 +57,7 @@ typedef enum TAGTYPE_UL {
     NTAG_216_F       = 0x800000,
     UL_EV1           = 0x1000000,
     UL_NANO_40       = 0x2000000,
+    NTAG_213_TT      = 0x4000000,
     UL_MAGIC         = UL | MAGIC,
     UL_C_MAGIC       = UL_C | MAGIC,
     UL_ERROR         = 0xFFFFFF,

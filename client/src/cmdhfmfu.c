@@ -136,7 +136,7 @@ static int usage_hf_mfu_wrbl(void) {
 
 static int usage_hf_mfu_eload(void) {
     PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`"));
-    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run dumptoemul-mfu`") " to convert the .bin to the eml");
+    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run hf_mfu_dumptoemulator`") " to convert the .bin to the eml");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  Options:");
     PrintAndLogEx(NORMAL, "    h          : this help");
@@ -272,14 +272,14 @@ uint32_t UL_TYPES_ARRAY[] = {
     UNKNOWN,   UL,          UL_C,        UL_EV1_48,       UL_EV1_128,      NTAG,
     NTAG_203,  NTAG_210,    NTAG_212,    NTAG_213,        NTAG_215,        NTAG_216,
     MY_D,      MY_D_NFC,    MY_D_MOVE,   MY_D_MOVE_NFC,   MY_D_MOVE_LEAN,  FUDAN_UL,
-    UL_EV1,    NTAG_213_F,  NTAG_216_F,  UL_NANO_40,      NTAG_I2C_1K
+    UL_EV1,    NTAG_213_F,  NTAG_216_F,  UL_NANO_40,      NTAG_I2C_1K,     NTAG_213_TT
 };
 
 uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
     MAX_UL_BLOCKS,     MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS,  MAX_NTAG_203,
     MAX_NTAG_203,      MAX_NTAG_210,  MAX_NTAG_212,   MAX_NTAG_213,      MAX_NTAG_215,       MAX_NTAG_216,
     MAX_UL_BLOCKS,     MAX_MY_D_NFC,  MAX_MY_D_MOVE,  MAX_MY_D_MOVE,     MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
-    MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40,    MAX_NTAG_I2C_1K
+    MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40,    MAX_NTAG_I2C_1K,    MAX_NTAG_213
 };
 
 //------------------------------------
@@ -493,7 +493,7 @@ static int ul_fudan_check(void) {
     return (!resp.data.asBytes[0]) ? FUDAN_UL : UL; //if response == 0x00 then Fudan, else Genuine NXP
 }
 
-static int ul_print_default(uint8_t *data) {
+static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
 
     uint8_t uid[7];
     uid[0] = data[0];
@@ -503,10 +503,14 @@ static int ul_print_default(uint8_t *data) {
     uid[4] = data[5];
     uid[5] = data[6];
     uid[6] = data[7];
+    bool mful_uid_layout = true;
 
-    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), sprint_hex(uid, 7));
-    PrintAndLogEx(SUCCESS, "    UID[0]: %02X, %s",  uid[0], getTagInfo(uid[0]));
-    if (uid[0] == 0x05 && ((uid[1] & 0xf0) >> 4) == 2) {   // is infineon and 66RxxP
+    if (memcmp(uid, real_uid, 7) != 0) {
+        mful_uid_layout = false;
+    }
+    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), sprint_hex(real_uid, 7));
+    PrintAndLogEx(SUCCESS, "    UID[0]: %02X, %s",  real_uid[0], getTagInfo(real_uid[0]));
+    if (real_uid[0] == 0x05 && ((real_uid[1] & 0xf0) >> 4) == 2) {   // is infineon and 66RxxP
         uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
         switch (chip) {
             case 0xC2:
@@ -520,20 +524,23 @@ static int ul_print_default(uint8_t *data) {
                 break; //512 pages /2 sectors
         }
     }
-    // CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2
-    int crc0 = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
-    if (data[3] == crc0)
-        PrintAndLogEx(SUCCESS, "      BCC0: %02X (" _GREEN_("ok") ")", data[3]);
-    else
-        PrintAndLogEx(NORMAL, "      BCC0: %02X, crc should be %02X", data[3], crc0);
+    if (mful_uid_layout) {
+        // CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2
+        int crc0 = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+        if (data[3] == crc0)
+            PrintAndLogEx(SUCCESS, "      BCC0: %02X (" _GREEN_("ok") ")", data[3]);
+        else
+            PrintAndLogEx(NORMAL, "      BCC0: %02X, crc should be %02X", data[3], crc0);
 
-    int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
-    if (data[8] == crc1)
-        PrintAndLogEx(SUCCESS, "      BCC1: %02X (" _GREEN_("ok") ")", data[8]);
-    else
-        PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
-
-    PrintAndLogEx(SUCCESS, "  Internal: %02X (%s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+        int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
+        if (data[8] == crc1)
+            PrintAndLogEx(SUCCESS, "      BCC1: %02X (" _GREEN_("ok") ")", data[8]);
+        else
+            PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
+        PrintAndLogEx(SUCCESS, "  Internal: %02X (%s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Blocks 0-2: %s", sprint_hex(data + 0, 12));
+    }
 
     PrintAndLogEx(SUCCESS, "      Lock: %s - %s",
                   sprint_hex(data + 10, 2),
@@ -678,6 +685,8 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
         PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 213 144bytes (NT2H1311G0DU)"), spaces, "");
     else if (tagtype & NTAG_213_F)
         PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 213F 144bytes (NT2H1311F0DTL)"), spaces, "");
+    else if (tagtype & NTAG_213_TT)
+        PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 213TT 144bytes (NT2H1311TTDU)"), spaces, "");
     else if (tagtype & NTAG_215)
         PrintAndLogEx(SUCCESS, "%*sTYPE: " _YELLOW_("NTAG 215 504bytes (NT2H1511G0DU)"), spaces, "");
     else if (tagtype & NTAG_216)
@@ -758,7 +767,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 
     PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", startPage, startPage, sprint_hex(data, 4));
 
-    if ((tagtype & (NTAG_213_F | NTAG_216_F))) {
+    if ((tagtype & (NTAG_213_F | NTAG_213_TT | NTAG_216_F))) {
         uint8_t mirror_conf = (data[0] & 0xC0);
         uint8_t mirror_byte = (data[0] & 0x30);
         bool sleep_en = (data[0] & 0x08);
@@ -801,7 +810,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
                 break;
         }
         // valid mirror start page and byte position within start page.
-        if (tagtype & NTAG_213_F) {
+        if ((tagtype & NTAG_213_F)||(tagtype & NTAG_213_TT)) {
             switch (mirror_conf) {
                 case 1:
                 { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x24) ? "OK" : "Invalid value"); break;}
@@ -880,7 +889,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
         {"NXP Public key", "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
         {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
         {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MICRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+        {"MIKRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
     };
 
     /*
@@ -945,17 +954,19 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     }
 
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     if (is_valid == false || i == ARRAYLEN(nxp_mfu_public_keys)) {
-        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
+        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_mfu_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 
@@ -1088,6 +1099,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 MF0UNH1001DUx 0004030203000B03
                 NT2L1001G0DUx 0004040102000B03
                 NT2H1001G0DUx 0004040202000B03
+                NT2H1311TTDUx 0004040203000F03
                 Micron UL 0034210101000E03
                 */
 
@@ -1104,6 +1116,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x13", 7) == 0) { tagtype = NTAG_216; break; }
                 else if (memcmp(version, "\x00\x04\x04\x04\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213_F; break; }
                 else if (memcmp(version, "\x00\x04\x04\x04\x01\x00\x13", 7) == 0) { tagtype = NTAG_216_F; break; }
+                else if (memcmp(version, "\x00\x04\x04\x02\x03\x00\x0F", 7) == 0) { tagtype = NTAG_213_TT; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x01\x13", 7) == 0) { tagtype = NTAG_I2C_1K; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x01\x15", 7) == 0) { tagtype = NTAG_I2C_2K; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x02\x13", 7) == 0) { tagtype = NTAG_I2C_1K_PLUS; break; }
@@ -1208,7 +1221,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     uint8_t *key = pwd;
     uint8_t pack[4] = {0, 0, 0, 0};
     int len;
-    uint8_t uid[7];
 
     char tempStr[50];
 
@@ -1261,9 +1273,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return PM3_ESOFT;
     } else if (status == 16) {
-        memcpy(uid, data, 3);
-        memcpy(uid + 3, data + 4, 4);
-        ul_print_default(data);
+        ul_print_default(data, card.uid);
         ndef_print_CC(data + 12);
     } else {
         locked = true;
@@ -1328,7 +1338,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     // NTAG counters?
-    if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216))) {
+    if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_213_TT | NTAG_215 | NTAG_216))) {
         if (ntag_print_counter()) {
             // failed - re-select
             if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
@@ -1336,7 +1346,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     // Read signature
-    if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
+    if ((tagtype & (UL_EV1_48 | UL_EV1_128 | UL_EV1 | UL_NANO_40 | NTAG_213 | NTAG_213_F | NTAG_213_TT | NTAG_215 | NTAG_216 | NTAG_216_F | NTAG_I2C_1K | NTAG_I2C_2K | NTAG_I2C_1K_PLUS | NTAG_I2C_2K_PLUS))) {
         uint8_t ulev1_signature[32] = {0x00};
         status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature));
         if (status == -1) {
@@ -1345,7 +1355,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             return PM3_ESOFT;
         }
         if (status == 32) {
-            ulev1_print_signature(tagtype, uid, ulev1_signature, sizeof(ulev1_signature));
+            ulev1_print_signature(tagtype, card.uid, ulev1_signature, sizeof(ulev1_signature));
         } else {
             // re-select
             if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
@@ -1984,6 +1994,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     iso14a_card_select_t card;
     mfu_dump_t dump_file_data;
+    memset(&dump_file_data, 0, sizeof(dump_file_data));
     uint8_t get_version[] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t get_counter_tearing[][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     uint8_t get_signature[32];
@@ -2021,7 +2032,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         uint8_t n = 0;
 
         // NTAG has 1 counter, at 0x02
-        if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_215 | NTAG_216))) {
+        if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_213_TT | NTAG_215 | NTAG_216))) {
             n = 2;
         }
 

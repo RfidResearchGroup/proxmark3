@@ -1979,32 +1979,33 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     int isMagic = 0;
-    if (isMifareClassic || isMifareUltralight) {
-        isMagic = detect_classic_magic();
+    if (isMifareClassic) {
+        isMagic = detect_mf_magic(true);
+    }
+    if (isMifareUltralight) {
+        isMagic = detect_mf_magic(false);
+    }
+    if (isMifareClassic) {
+        int res = detect_classic_static_nonce();
+        if (res == NONCE_STATIC)
+            PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
 
-        if (isMifareClassic) {
+        if (res == NONCE_FAIL && verbose)
+            PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
 
-            int res = detect_classic_static_nonce();
-            if (res == NONCE_STATIC)
-                PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
+        if (res == NONCE_NORMAL) {
 
-            if (res == NONCE_FAIL && verbose)
-                PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
+            // not static
+            res = detect_classic_prng();
+            if (res == 1)
+                PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
+            else if (res == 0)
+                PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
+            else
+                PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
 
-            if (res == NONCE_NORMAL) {
-
-                // not static
-                res = detect_classic_prng();
-                if (res == 1)
-                    PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
-                else if (res == 0)
-                    PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
-                else
-                    PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
-
-                if (do_nack_test)
-                    detect_classic_nackbug(false);
-            }
+            if (do_nack_test)
+                detect_classic_nackbug(false);
         }
     }
 
