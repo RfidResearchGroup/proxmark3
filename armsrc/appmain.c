@@ -1045,6 +1045,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_login((em4x50_data_t *)packet->data.asBytes);
             break;
         }
+        case CMD_LF_EM4X50_RESET: {
+            em4x50_reset();
+            break;
+        }
 #endif
 
 #ifdef WITH_ISO15693

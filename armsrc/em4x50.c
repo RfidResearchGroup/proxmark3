@@ -1100,35 +1100,6 @@ void em4x50_wipe(em4x50_data_t *etd) {
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
 }
 
-int em4x50_standalone_read(uint64_t *words) {
-
-    int now = 0;
-    uint8_t bits[EM4X50_TAG_WORD];
-
-    em4x50_setup_read();
-
-    if (get_signalproperties() && find_em4x50_tag()) {
-
-        if (find_double_listen_window(false)) {
-
-            memset(bits, 0, sizeof(bits));
-
-            while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD) {
-                words[now] = 0;
-
-                for (int i = 0; i < EM4X50_TAG_WORD; i++) {
-                    words[now] <<= 1;
-                    words[now] += bits[i] & 1;
-                }
-
-                now++;
-            }
-        }
-    }
-
-    return now;
-}
-
 void em4x50_brute(em4x50_data_t *etd) {
 
     // searching for password in given range
@@ -1210,4 +1181,51 @@ void em4x50_login(em4x50_data_t *etd) {
 
     lf_finalize();
     reply_ng(CMD_ACK, status, 0, 0);
+}
+
+void em4x50_reset(void) {
+
+    // reset EM4x50
+
+    uint8_t status = 0;
+
+    em4x50_setup_read();
+
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag()) {
+
+        status = reset();
+    }
+
+    lf_finalize();
+    reply_ng(CMD_ACK, status, 0, 0);
+}
+
+int em4x50_standalone_read(uint64_t *words) {
+
+    int now = 0;
+    uint8_t bits[EM4X50_TAG_WORD];
+
+    em4x50_setup_read();
+
+    if (get_signalproperties() && find_em4x50_tag()) {
+
+        if (find_double_listen_window(false)) {
+
+            memset(bits, 0, sizeof(bits));
+
+            while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD) {
+                words[now] = 0;
+
+                for (int i = 0; i < EM4X50_TAG_WORD; i++) {
+                    words[now] <<= 1;
+                    words[now] += bits[i] & 1;
+                }
+
+                now++;
+            }
+        }
+    }
+
+    return now;
 }

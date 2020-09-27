@@ -28,5 +28,6 @@ void em4x50_read(em4x50_data_t *etd);
 void em4x50_wipe(em4x50_data_t *etd);
 void em4x50_brute(em4x50_data_t *etd);
 void em4x50_login(em4x50_data_t *etd);
+void em4x50_reset(void);
 
 #endif /* EM4X50_H */

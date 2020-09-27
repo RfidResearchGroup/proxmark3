@@ -122,6 +122,17 @@ static int usage_lf_em4x50_login(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+static int usage_lf_em4x50_reset(void) {
+    PrintAndLogEx(NORMAL, "Reset EM4x50 tag. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_reset [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_reset"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 
 static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t *words) {
 
@@ -866,6 +877,41 @@ int CmdEM4x50Login(const char *Cmd) {
         PrintAndLogEx(NORMAL, "\nlogin " _GREEN_("ok") "\n");
     else
         PrintAndLogEx(NORMAL, "\nlogin " _RED_("failed") "\n");
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50Reset(const char *Cmd) {
+
+    bool errors = false;
+    uint8_t cmdp = 0;
+    PacketResponseNG resp;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_reset();
+            default:
+                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    
+    if (errors)
+        return usage_lf_em4x50_reset();
+
+    // start
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_RESET, 0, 0);
+    WaitForResponse(CMD_ACK, &resp);
+
+    // print response
+    if ((bool)resp.status)
+        PrintAndLogEx(NORMAL, "\nreset " _GREEN_("ok") "\n");
+    else
+        PrintAndLogEx(NORMAL, "\nreset " _RED_("failed") "\n");
 
     return PM3_SUCCESS;
 }
