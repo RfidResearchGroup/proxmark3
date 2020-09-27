@@ -1029,6 +1029,9 @@ static int CmdHF14BDump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
     }
 
+    uint8_t chipid = get_st_chipid(card.uid);     
+    PrintAndLogEx(SUCCESS, "Found a " _GREEN_("%s") " tag", get_ST_Chip_Model(chipid));
+
     // detect blocksize from card :)
     PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
     
@@ -1102,10 +1105,9 @@ static int CmdHF14BDump(const char *Cmd) {
         goto out;
     }
 
-    uint8_t chipid = get_st_chipid(card.uid);
     PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(data + (blocknum * 4), 4));
     PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", data[(blocknum * 4)], data[(blocknum * 4) + 1]);
-    PrintAndLogEx(DEBUG, "chipid      : %02x", chipid);
+
 
     PrintAndLogEx(INFO, " block#  | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
