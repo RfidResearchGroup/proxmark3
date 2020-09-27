@@ -97,16 +97,16 @@ static int usage_lf_em4x50_wipe(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_lf_em4x50_bruteforce(void) {
+static int usage_lf_em4x50_brute(void) {
     PrintAndLogEx(NORMAL, "Guess password of EM4x50 tag. Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_bruteforce [h] f <pwd> l <pwd>");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_brute [h] f <pwd> l <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       f <pwd>   - start password (hex, lsb notation)");
     PrintAndLogEx(NORMAL, "       l <pwd>   - stop password (hex, lsb notation)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_bruteforce f 11200000 l 11300000"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_brute f 11200000 l 11300000"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -754,7 +754,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdEM4x50BruteForce(const char *Cmd) {
+int CmdEM4x50Brute(const char *Cmd) {
 
     bool startpwd = false, stoppwd = false, errors = false;
     const int speed = 27;   // 27 passwords/second (empirical value)
@@ -767,7 +767,7 @@ int CmdEM4x50BruteForce(const char *Cmd) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_lf_em4x50_bruteforce();
+                return usage_lf_em4x50_brute();
             case 'f':
                 etd.start_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 startpwd = true;
@@ -786,7 +786,7 @@ int CmdEM4x50BruteForce(const char *Cmd) {
     }
     
     if (errors || !startpwd || !stoppwd)
-        return usage_lf_em4x50_bruteforce();
+        return usage_lf_em4x50_brute();
 
     // print some information
     no_iter = etd.stop_password - etd.start_password + 1;
@@ -800,7 +800,7 @@ int CmdEM4x50BruteForce(const char *Cmd) {
 
     // start
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_BRUTEFORCE, (uint8_t *)&etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X50_BRUTE, (uint8_t *)&etd, sizeof(etd));
     WaitForResponse(CMD_ACK, &resp);
 
     // print response

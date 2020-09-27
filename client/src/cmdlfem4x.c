@@ -1398,7 +1398,7 @@ static command_t CommandTable[] = {
     {"4x50_write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change passwword of EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
     {"4x50_wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe data from EM4x50"},
-    {"4x50_bruteforce", CmdEM4x50BruteForce, IfPm3EM4x50,  "guess password of EM4x50"},
+    {"4x50_brute",  CmdEM4x50Brute,       IfPm3EM4x50,     "guess password of EM4x50"},
     {NULL, NULL, NULL, NULL}
 };
 
