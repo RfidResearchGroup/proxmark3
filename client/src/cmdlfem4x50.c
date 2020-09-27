@@ -37,8 +37,8 @@ static int usage_lf_em4x50_write(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       a <addr>  - memory address to write to (dec)");
-    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex)");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write a 3 w deadc0de"));
     PrintAndLogEx(NORMAL, "");
@@ -50,8 +50,8 @@ static int usage_lf_em4x50_write_password(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write_password [h] [p <pwd>] [n <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
-    PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex, lsb notation)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write_password p 11223344 n 01020304"));
     PrintAndLogEx(NORMAL, "");
@@ -119,6 +119,19 @@ static int usage_lf_em4x50_test(void) {
     PrintAndLogEx(NORMAL, "       b <byte>  - byte (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_test ..."));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_lf_em4x50_brute(void) {
+    PrintAndLogEx(NORMAL, "Guess password of EM4x50 tag. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_brute [h] f <pwd> l <pwd>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       f <pwd>   - start password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       l <pwd>   - stop password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_brute f 11200000 l 11300000"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -771,11 +784,11 @@ int CmdEM4x50Wipe(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdEM4x50Sim(const char *Cmd) {
+int CmdEM4x50Brute(const char *Cmd) {
 
-    // fills EM4x50 tag with zeros including password
-
-    bool errors = false, bword = false;
+    bool startpwd = false, stoppwd = false, errors = false;
+    const int speed = 27;   // 27 passwords/second (empirical value)
+    int no_iter = 0, dur_h = 0, dur_m = 0, dur_s = 0;
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     PacketResponseNG resp;
@@ -784,118 +797,47 @@ int CmdEM4x50Sim(const char *Cmd) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_lf_em4x50_sim();
-
-            case 'w': {
-                if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
-                    PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
-                bword = true;
+                return usage_lf_em4x50_brute();
+            case 'f':
+                etd.start_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                startpwd = true;
                 cmdp += 2;
                 break;
-            }
-
-            case 'f': {
-                if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
-                    PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
-                bword = true;
+            case 'l':
+                etd.stop_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                stoppwd = true;
                 cmdp += 2;
                 break;
-            }
-
             default:
-                PrintAndLogEx(WARNING, "\nUnknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
     }
+    
+    if (errors || !startpwd || !stoppwd)
+        return usage_lf_em4x50_brute();
 
-    if (errors || !bword)
-        return usage_lf_em4x50_sim();
+    // print some information
+    no_iter = etd.stop_password - etd.start_password + 1;
+    dur_s = no_iter / speed;
+    dur_h = dur_s / 3600;
+    dur_m = (dur_s - dur_h * 3600) / 60;
+    dur_s -= dur_h * 3600 + dur_m * 60;
+    PrintAndLogEx(NORMAL, "\ntrying %i passwords in range [0x%08x, 0x%08x]",
+                  no_iter, etd.start_password, etd.stop_password);
+    PrintAndLogEx(NORMAL, "estimated duration: %ih%im%is\n", dur_h, dur_m, dur_s);
 
+    // start
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&etd, sizeof(etd));
-
-    if (!WaitForResponse(CMD_ACK, &resp)) {
-        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
-        return PM3_ETIMEOUT;
-    }
+    SendCommandNG(CMD_LF_EM4X50_BRUTE, (uint8_t *)&etd, sizeof(etd));
+    WaitForResponse(CMD_ACK, &resp);
 
     // print response
-    bool isOK = resp.status;
-    if (isOK) {
-        PrintAndLogEx(SUCCESS, "\nsimulation data " _GREEN_("ok") "\n");
-    } else {
-        PrintAndLogEx(FAILED, "\nsimulating data " _RED_("failed") "\n");
-        return PM3_ESOFT;
-    }
-
-    return PM3_SUCCESS;
-}
-
-int CmdEM4x50Test(const char *Cmd) {
-
-    // fills EM4x50 tag with zeros including password
-
-    bool errors = false;
-    uint8_t cmdp = 0;
-    em4x50_data_t etd;
-    PacketResponseNG resp;
-
-    etd.carrier = 2;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_em4x50_test();
-
-            case 'c':
-                param_getdec(Cmd, cmdp + 1, &etd.carrier);
-                if (etd.carrier != 0 && etd.carrier != 1) {
-                    PrintAndLogEx(FAILED, "\ncarrier has to be either 0 or 1\n");
-                    return PM3_EINVARG;
-                }
-                cmdp += 2;
-                break;
-
-            case 'b':
-                if (param_gethex(Cmd, cmdp + 1, &etd.byte, 2)) {
-                    PrintAndLogEx(FAILED, "\nbyte has to be 2 hex symbols\n");
-                    return PM3_EINVARG;
-                }
-                cmdp += 2;
-                break;
-
-            default:
-                PrintAndLogEx(WARNING, "\nUnknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    if (errors)
-        return usage_lf_em4x50_test();
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_TEST, (uint8_t *)&etd, sizeof(etd));
-
-    if (!WaitForResponse(CMD_ACK, &resp)) {
-        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
-        return PM3_ETIMEOUT;
-    }
-
-    // print response
-    bool isOK = resp.status;
-    if (isOK) {
-        PrintAndLogEx(SUCCESS, "\ntest " _GREEN_("ok") "\n");
-    } else {
-        PrintAndLogEx(FAILED, "\ntest " _RED_("failed") "\n");
-        return PM3_ESOFT;
-    }
+    if ((bool)resp.status)
+        PrintAndLogEx(NORMAL, "\npassword " _GREEN_("found") ": 0x%08x\n", resp.data.asDwords[0]);
+    else
+        PrintAndLogEx(NORMAL, "\npassword: " _RED_("not found") "\n");
 
     return PM3_SUCCESS;
 }

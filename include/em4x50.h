@@ -51,6 +51,8 @@ typedef struct {
     uint8_t addresses[4];
     uint8_t address;
     uint8_t word[4];
+    uint32_t start_password;
+    uint32_t stop_password;
 } em4x50_data_t;
 
 typedef struct {
