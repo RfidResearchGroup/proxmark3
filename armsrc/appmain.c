@@ -1041,6 +1041,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_brute((em4x50_data_t *)packet->data.asBytes);
             break;
         }
+        case CMD_LF_EM4X50_LOGIN: {
+            em4x50_login((em4x50_data_t *)packet->data.asBytes);
+            break;
+        }
 #endif
 
 #ifdef WITH_ISO15693

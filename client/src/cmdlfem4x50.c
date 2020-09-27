@@ -97,31 +97,6 @@ static int usage_lf_em4x50_wipe(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_lf_em4x50_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate EM4x50 tag. ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sim [h] w <word>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       w <word>  - word (hex)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim w 12345678"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_lf_em4x50_test(void) {
-    PrintAndLogEx(NORMAL, "Test functionality for EM4x50 tag. ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_test [h] ...");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       c <0|1>   - carrier on|off (optional)");
-    PrintAndLogEx(NORMAL, "       b <byte>  - byte (hex) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_test ..."));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_lf_em4x50_brute(void) {
     PrintAndLogEx(NORMAL, "Guess password of EM4x50 tag. Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
@@ -132,6 +107,18 @@ static int usage_lf_em4x50_brute(void) {
     PrintAndLogEx(NORMAL, "       l <pwd>   - stop password (hex, lsb notation)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_brute f 11200000 l 11300000"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_lf_em4x50_login(void) {
+    PrintAndLogEx(NORMAL, "Login into EM4x50 tag. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_login [h] p <pwd>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_login p 11200000"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -838,6 +825,47 @@ int CmdEM4x50Brute(const char *Cmd) {
         PrintAndLogEx(NORMAL, "\npassword " _GREEN_("found") ": 0x%08x\n", resp.data.asDwords[0]);
     else
         PrintAndLogEx(NORMAL, "\npassword: " _RED_("not found") "\n");
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50Login(const char *Cmd) {
+
+    bool errors = false, pwd_given = false;
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_login();
+            case 'p':
+                etd.login_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                pwd_given = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    
+    if (errors || !pwd_given)
+        return usage_lf_em4x50_login();
+
+    // start
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_LOGIN, (uint8_t *)&etd, sizeof(etd));
+    WaitForResponse(CMD_ACK, &resp);
+
+    // print response
+    if ((bool)resp.status)
+        PrintAndLogEx(NORMAL, "\nlogin " _GREEN_("ok") "\n");
+    else
+        PrintAndLogEx(NORMAL, "\nlogin " _RED_("failed") "\n");
 
     return PM3_SUCCESS;
 }

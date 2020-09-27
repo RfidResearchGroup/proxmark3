@@ -1184,3 +1184,30 @@ void em4x50_brute(em4x50_data_t *etd) {
     lf_finalize();
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)(&pwd), 32);
 }
+
+void em4x50_login(em4x50_data_t *etd) {
+
+    // login into EM4x50
+
+    uint8_t status = 0;
+    uint8_t bytes[4] = {0x0, 0x0, 0x0, 0x0};
+    uint32_t rpwd = 0x0;
+
+    em4x50_setup_read();
+
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag()) {
+
+        // lsb -> msb
+        rpwd = reflect32(etd->login_password);
+        
+        // convert to "old" data format
+        for (int i = 0; i < 4; i++)
+            bytes[i] = (rpwd >> ((3 - i) * 8)) & 0xFF;
+
+        status = login(bytes);
+    }
+
+    lf_finalize();
+    reply_ng(CMD_ACK, status, 0, 0);
+}
