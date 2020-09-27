@@ -715,18 +715,20 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "%s", temp);
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
-        if (IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
-            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
-        } else {
-            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3 RDV4") " ]");
-            PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3 RDV4 Extras") " ]");
-            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
-
-            if (IfPm3FpcUsartDevFromUsb()) {
-                PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
+        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
+        if (IfPm3Rdv4Fw() == false ){
+            PrintAndLogEx(NORMAL, "  firmware.........................%s", _GREEN_("PM3OTHER"));
+            if (IfPm3FpcUsartHost()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on..........%s", _GREEN_("present"));
             }
+        } else {
+            PrintAndLogEx(NORMAL, "  firmware.........................%s", _GREEN_("PM3RDV4"));
+            PrintAndLogEx(NORMAL, "  external flash...................%s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "  smartcard reader.................%s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on..........%s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+        }
+        if (IfPm3FpcUsartDevFromUsb()) {
+            PrintAndLogEx(NORMAL, "  FPC USART for developer..........%s", _GREEN_("present"));
         }
 
         PrintAndLogEx(NORMAL, "");

@@ -26,6 +26,12 @@ bool IfPm3Present(void) {
     return session.pm3_present;
 }
 
+bool IfPm3Rdv4Fw(void) {
+    if (!IfPm3Present())
+        return false;
+    return (pm3_capabilities.compiled_with_flash) || (pm3_capabilities.compiled_with_smartcard);
+}
+
 bool IfPm3Flash(void) {
     if (!IfPm3Present())
         return false;
