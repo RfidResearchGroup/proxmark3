@@ -97,6 +97,22 @@ uint16_t reflect16(uint16_t b) {
     return v;
 }
 
+uint32_t reflect32(uint32_t b) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
+    uint32_t v = b; // 32-bit word to reverse bit order
+    // swap odd and even bits
+    v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+    // swap consecutive pairs
+    v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+    // swap nibbles ...
+    v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+    // swap bytes
+    v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+    // swap 2-byte long pairs
+    v = ( v >> 16             ) | ( v               << 16);
+    return v;
+}
+
 void num_to_bytes(uint64_t n, size_t len, uint8_t *dest) {
     while (len--) {
         dest[len] = (uint8_t) n;
