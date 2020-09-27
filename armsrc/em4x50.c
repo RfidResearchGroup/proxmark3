@@ -1094,7 +1094,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
 }
 
-void em4x50_bruteforce(em4x50_data_t *etd) {
+void em4x50_brute(em4x50_data_t *etd) {
 
     // searching for password in given range
 
@@ -1129,12 +1129,12 @@ void em4x50_bruteforce(em4x50_data_t *etd) {
                 if (cnt == 500) {
                     Dbprintf("");
                     Dbprintf("|---------+------------+------------|");
-                    Dbprintf("|   no.   | pwd (lsb)  | pwd (msb)  |");
+                    Dbprintf("|   no.   | pwd (msb)  | pwd (lsb)  |");
                     Dbprintf("|---------+------------+------------|");
                 }
 
                 // print data
-                Dbprintf("|%8i | 0x%08x | 0x%08x |", cnt, pwd, rpwd);
+                Dbprintf("|%8i | 0x%08x | 0x%08x |", cnt, rpwd, pwd);
             }
             
             if (BUTTON_PRESS())
