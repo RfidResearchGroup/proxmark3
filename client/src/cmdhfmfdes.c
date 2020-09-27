@@ -321,6 +321,7 @@ typedef enum {
     DESFIRE_EV3,
     DESFIRE_LIGHT,
     PLUS_EV1,
+    NTAG413DNA,
 } nxp_cardtype_t;
 
 typedef struct {
@@ -347,9 +348,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("%d bytes") ")", fsize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -377,18 +378,22 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire MF3ICD40") ")", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV2") ")", major, minor);
     else if (major == 0x33 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire Light") ")", major, minor);
+    else if (major == 0x10 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("NTAG413DNA") ")", major, minor);
     else
         snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
+
+//04 01 01 01 00 1A 05
 }
 
 static int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
@@ -648,9 +653,10 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
-    if (major == 0x11 &&  minor == 0x00)
+    if (major == 0x11 &&  minor == 0x00)      
         return PLUS_EV1;
-
+    if (major == 0x10 && minor == 0x00)
+        return NTAG413DNA;
     return DESFIRE_UNKNOWN;
 }
 
@@ -3318,7 +3324,10 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
 
-    if (cardtype == DESFIRE_EV2 || cardtype == DESFIRE_LIGHT || cardtype == DESFIRE_EV3) {
+    if (cardtype == DESFIRE_EV2 || 
+        cardtype == DESFIRE_LIGHT || 
+        cardtype == DESFIRE_EV3 ||
+        cardtype == NTAG413DNA) {
         // Signature originality check
         uint8_t signature[56] = {0};
         size_t signature_len = 0;

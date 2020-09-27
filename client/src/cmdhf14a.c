@@ -1638,6 +1638,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isMifareDESFire = false;
     bool isMifarePlus = false;
     bool isMifareUltralight = false;
+    bool isST = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -1657,6 +1658,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(SUCCESS, "MANUFACTURER:    " _YELLOW_("%s"), getTagInfo(card.uid[0]));
 
         switch (card.uid[0]) {
+            case 0x02: // ST
+                isST = true;
+                break;
             case 0x04: // NXP
                 nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
 
@@ -1679,9 +1683,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 } else if ((card.uid[1] & 0xF0) == 0x70) {
                     printTag("my-d(tm) move lean SLE 66R01L");
                 }
+                isMifareUltralight = true;
+                isMifareClassic = false;
 
                 if (card.sak == 0x88) {
                     printTag("Infineon MIFARE CLASSIC 1K");
+                    isMifareUltralight = false;
+                    isMifareClassic = true;
                 }
                 getTagLabel(card.uid[0], card.uid[1]);
                 break;
@@ -2017,6 +2025,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isMifareDESFire && isMagic == 0)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
+
+    if (isST)
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
 
     DropField();
     return select_status;
