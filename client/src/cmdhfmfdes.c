@@ -488,7 +488,7 @@ static const char *getstatus(uint16_t *sw) {
                 return "Current authentication status does not allow the requested command";
 
             case MFDES_E_BOUNDARY:
-                return "Attempted to read/write data from/to beyong the file's/record's limit";
+                return "Attempted to read/write data from/to beyond the file's/record's limit";
 
             case MFDES_E_PICC_INTEGRITY:
                 return "PICC integrity error, PICC will be disabled";
