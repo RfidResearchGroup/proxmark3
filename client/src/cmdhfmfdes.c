@@ -488,7 +488,7 @@ static const char *getstatus(uint16_t *sw) {
                 return "Current authentication status does not allow the requested command";
 
             case MFDES_E_BOUNDARY:
-                return "Attempted to read/write data from/to beyong the file's/record's limit";
+                return "Attempted to read/write data from/to beyond the file's/record's limit";
 
             case MFDES_E_PICC_INTEGRITY:
                 return "PICC integrity error, PICC will be disabled";
@@ -2851,9 +2851,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_param_begin,
         arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
         arg_strx0("oO", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("dD", "data", "<data>", "Data to write (hex bytes, 0xFFFF bytes max.)"),
+        arg_strx0("dD", "data", "<data>", "Data to write (hex bytes, 256 bytes max)"),
         arg_int0("type", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian, optional)"),
+        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes, big endian, optional)"),
         arg_param_end
     };
 
