@@ -1062,7 +1062,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
             // to verify result reset EM4x50
             if (reset()) {
 
-                // login not necessary because protectd word has been set to 0
+                // login not necessary because protected word has been set to 0
                 // -> no read protected words
                 // -> selective read can be called immediately
                 if (selective_read(addresses)) {
@@ -1142,7 +1142,8 @@ void em4x50_brute(em4x50_data_t *etd) {
         }
 
         // print footer
-        Dbprintf("|---------+------------+------------|");
+        if (cnt >= 500)
+            Dbprintf("|---------+------------+------------|");
     }
 
     lf_finalize();
