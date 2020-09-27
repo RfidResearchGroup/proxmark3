@@ -53,6 +53,7 @@ typedef struct {
     uint8_t word[4];
     uint32_t start_password;
     uint32_t stop_password;
+    uint32_t login_password;
 } em4x50_data_t;
 
 typedef struct {
