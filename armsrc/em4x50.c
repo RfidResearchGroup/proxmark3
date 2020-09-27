@@ -1003,9 +1003,11 @@ void em4x50_write(em4x50_data_t *etd) {
 
 void em4x50_write_password(em4x50_data_t *etd) {
 
-    // sinmple change of password
+    // simple change of password
 
     bool bsuccess = false;
+    uint8_t rpwd[4] = {0x0, 0x0, 0x0, 0x0};
+    uint8_t rnewpwd[4] = {0x0, 0x0, 0x0, 0x0};
 
     init_tag();
     em4x50_setup_read();
@@ -1013,9 +1015,20 @@ void em4x50_write_password(em4x50_data_t *etd) {
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
 
+        // lsb -> msb
+        rpwd[0] = reflect8(etd->password[3]);
+        rpwd[1] = reflect8(etd->password[2]);
+        rpwd[2] = reflect8(etd->password[1]);
+        rpwd[3] = reflect8(etd->password[0]);
+
+        rnewpwd[0] = reflect8(etd->new_password[3]);
+        rnewpwd[1] = reflect8(etd->new_password[2]);
+        rnewpwd[2] = reflect8(etd->new_password[1]);
+        rnewpwd[3] = reflect8(etd->new_password[0]);
+
         // login and change password
-        if (login(etd->password)) {
-            bsuccess = write_password(etd->password, etd->new_password);
+        if (login(rpwd)) {
+            bsuccess = write_password(rpwd, rnewpwd);
         }
     }
 
@@ -1079,4 +1092,59 @@ void em4x50_wipe(em4x50_data_t *etd) {
 
     lf_finalize();
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
+}
+
+void em4x50_bruteforce(em4x50_data_t *etd) {
+
+    // searching for password in given range
+
+    bool bsuccess = false;
+    int cnt = 0;
+    uint8_t bytes[4] ={0x0, 0x0, 0x0, 0x0};
+    uint32_t pwd = 0x0, rpwd = 0x0;
+    
+    init_tag();
+    em4x50_setup_read();
+
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag()) {
+
+        for (pwd = etd->start_password; pwd <= etd->stop_password; pwd++) {
+
+            // lsb -> msb
+            rpwd = reflect32(pwd);
+            
+            for (int i = 0; i < 4; i++)
+                bytes[i] = (rpwd >> ((3 - i) * 8)) & 0xFF;
+            
+            if (login(bytes)) {
+                bsuccess = true;
+                break;
+            }
+            
+            // print password every 500 iterations
+            if ((++cnt % 500) == 0) {
+
+                // print header
+                if (cnt == 500) {
+                    Dbprintf("");
+                    Dbprintf("|---------+------------+------------|");
+                    Dbprintf("|   no.   | pwd (lsb)  | pwd (msb)  |");
+                    Dbprintf("|---------+------------+------------|");
+                }
+
+                // print data
+                Dbprintf("|%8i | 0x%08x | 0x%08x |", cnt, pwd, rpwd);
+            }
+            
+            if (BUTTON_PRESS())
+                break;
+        }
+
+        // print footer
+        Dbprintf("|---------+------------+------------|");
+    }
+
+    lf_finalize();
+    reply_ng(CMD_ACK, bsuccess, (uint8_t *)(&pwd), 32);
 }
