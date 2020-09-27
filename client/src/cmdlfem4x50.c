@@ -37,8 +37,8 @@ static int usage_lf_em4x50_write(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       a <addr>  - memory address to write to (dec)");
-    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex)");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write a 3 w deadc0de"));
     PrintAndLogEx(NORMAL, "");
@@ -50,8 +50,8 @@ static int usage_lf_em4x50_write_password(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write_password [h] [p <pwd>] [n <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
-    PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex, lsb notation)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write_password p 11223344 n 01020304"));
     PrintAndLogEx(NORMAL, "");
@@ -94,6 +94,19 @@ static int usage_lf_em4x50_wipe(void) {
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_wwipe p 11223344"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_lf_em4x50_bruteforce(void) {
+    PrintAndLogEx(NORMAL, "Guess password of EM4x50 tag. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_bruteforce [h] f <pwd> l <pwd>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "       f <pwd>   - start password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       l <pwd>   - stop password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_bruteforce f 11200000 l 11300000"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -737,6 +750,64 @@ int CmdEM4x50Wipe(const char *Cmd) {
         PrintAndLogEx(FAILED, "\nwiping data " _RED_("failed") "\n");
         return PM3_ESOFT;
     }
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50BruteForce(const char *Cmd) {
+
+    bool startpwd = false, stoppwd = false, errors = false;
+    const int speed = 27;   // 27 passwords/second (empirical value)
+    int no_iter = 0, dur_h = 0, dur_m = 0, dur_s = 0;
+    uint8_t cmdp = 0;
+    em4x50_data_t etd;
+    PacketResponseNG resp;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_em4x50_bruteforce();
+            case 'f':
+                etd.start_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                startpwd = true;
+                cmdp += 2;
+                break;
+            case 'l':
+                etd.stop_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                stoppwd = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    
+    if (errors || !startpwd || !stoppwd)
+        return usage_lf_em4x50_bruteforce();
+
+    // print some information
+    no_iter = etd.stop_password - etd.start_password + 1;
+    dur_s = no_iter / speed;
+    dur_h = dur_s / 3600;
+    dur_m = (dur_s - dur_h * 3600) / 60;
+    dur_s -= dur_h * 3600 + dur_m * 60;
+    PrintAndLogEx(NORMAL, "\ntrying %i passwords in range [0x%08x, 0x%08x]",
+                  no_iter, etd.start_password, etd.stop_password);
+    PrintAndLogEx(NORMAL, "estimated duration: %ih%im%is\n", dur_h, dur_m, dur_s);
+
+    // start
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_BRUTEFORCE, (uint8_t *)&etd, sizeof(etd));
+    WaitForResponse(CMD_ACK, &resp);
+
+    // print response
+    if ((bool)resp.status)
+        PrintAndLogEx(NORMAL, "\npassword " _GREEN_("found") ": 0x%08x\n", resp.data.asDwords[0]);
+    else
+        PrintAndLogEx(NORMAL, "\npassword: " _RED_("not found") "\n");
 
     return PM3_SUCCESS;
 }
