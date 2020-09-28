@@ -355,7 +355,7 @@ static int usage_t55xx_protect(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx protect n 01020304") "         - sets new password to 01020304");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx protect p 11223344") "         - use pwd 11223344 to set newpwd to 00000000");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx protect p 11223344 n 00000000") "         - use pwd 11223344 to set newpwd to 00000000");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
