@@ -77,14 +77,14 @@ static int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in decimal and in microseconds (us)"));
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "- probing for Hitag 1/Hitag S:");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 1/Hitag S") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W00110"));
-    PrintAndLogEx(NORMAL, "- probing for Hitag 2:");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000"));
-    PrintAndLogEx(NORMAL, "- probing for Hitag 2, oscilloscope style:");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2, oscilloscope style") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000 q s 2000 @"));
-    PrintAndLogEx(NORMAL, "- probing for Hitag (us):");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag (us)") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 48 z 112 o 176 e W 3000 e S 240 e E 336 c W0S00000010000E"));
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
@@ -116,8 +116,8 @@ static int usage_lf_sim(void) {
     PrintAndLogEx(NORMAL, "       h         This help");
     PrintAndLogEx(NORMAL, "       <gap>     Start gap (in microseconds)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf sim 240     - start simulating with 240ms gap");
-    PrintAndLogEx(NORMAL, "         lf sim");
+    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim 240") "     - start simulating with 240ms gap");
+    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim"));
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
@@ -132,9 +132,9 @@ static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf sniff");
-    PrintAndLogEx(NORMAL, "- oscilloscope style:");
-    PrintAndLogEx(NORMAL, "      data plot");
-    PrintAndLogEx(NORMAL, "      lf sniff q s 3000 @");
+    PrintAndLogEx(NORMAL, _CYAN_(" oscilloscope style") ":");
+    PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff q s 3000 @"));
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data plot'")" to look at it");
@@ -154,12 +154,12 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "       t <threshold>     Sets trigger threshold. 0 means no threshold (range: 0-128)");
     PrintAndLogEx(NORMAL, "       s <samplestoskip> Sets a number of samples to skip before capture. Default: 0");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf config              - shows current config");
-    PrintAndLogEx(NORMAL, "      lf config b 8 L        - samples at 125 kHz, 8bps.");
-    PrintAndLogEx(NORMAL, "      lf config H b 4 d 3    - samples at 134 kHz, averages three samples into one, stored with ");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf config") "              - shows current config");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf config b 8 L") "        - samples at 125 kHz, 8bps.");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf config H b 4 d 3") "    - samples at 134 kHz, averages three samples into one, stored with ");
     PrintAndLogEx(NORMAL, "                                a resolution of 4 bits per sample.");
-    PrintAndLogEx(NORMAL, "      lf read                - performs a read (active field)");
-    PrintAndLogEx(NORMAL, "      lf sniff               - performs a sniff (no active field)");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf read") "                - performs a read (active field)");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff") "               - performs a sniff (no active field)");
     return PM3_SUCCESS;
 }
 static int usage_lf_simfsk(void) {
@@ -180,10 +180,10 @@ static int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "\n  NOTE: if you set one clock manually set them all manually");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 40 H 8 L 5 d 010203      -  FSK1  rf/40  data 010203");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 40 H 5 L 8 d 010203      -  FSK1a rf/40  data 010203");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 64 H 10 L 8 d 010203     -  FSK2  rf/64  data 010203");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 64 H 8 L 10 d 010203     -  FSK2a rf/64  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 8 L 5 d 010203") "      -  FSK1  rf/40  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 5 L 8 d 010203") "      -  FSK1a rf/40  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 10 L 8 d 010203") "     -  FSK2  rf/64  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 8 L 10 d 010203") "     -  FSK2a rf/64  data 010203");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -221,10 +221,10 @@ static int usage_lf_find(void) {
     PrintAndLogEx(NORMAL, "       <0|1>         Use data from Graphbuffer, if not set, try reading data from tag.");
     PrintAndLogEx(NORMAL, "       u             Search for Unknown tags, if not set, reads only known tags.");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf search     = try reading data from tag & search for known tags");
-    PrintAndLogEx(NORMAL, "      lf search 1   = use data from GraphBuffer & search for known tags");
-    PrintAndLogEx(NORMAL, "      lf search u   = try reading data from tag & search for known and unknown tags");
-    PrintAndLogEx(NORMAL, "      lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search") "      - try reading data from tag & search for known tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search 1") "    - use data from GraphBuffer & search for known tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search u") "    - try reading data from tag & search for known and unknown tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search 1 u") "  - use data from GraphBuffer & search for known and unknown tags");
     return PM3_SUCCESS;
 }
 static int usage_lf_tune(void) {
