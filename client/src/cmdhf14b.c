@@ -13,16 +13,17 @@
 
 #include <ctype.h>
 #include "fileutils.h"
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"        // clearCommandBuffer
+#include "cmdparser.h"     // command_t
+#include "comms.h"         // clearCommandBuffer
 #include "cmdtrace.h"
-
 #include "crc16.h"
 #include "cmdhf14a.h"
-#include "protocols.h"  // definitions of ISO14B protocol
+#include "protocols.h"     // definitions of ISO14B/7816 protocol
+#include "emv/apduinfo.h"  // GetAPDUCodeDescription 
+#include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_hf_14b_info(void) {
@@ -117,11 +118,28 @@ static int usage_hf_14b_dump(void) {
                  );
     return PM3_SUCCESS;
 }
+static int usage_hf_14b_ndef(void) {
+    PrintAndLogEx(NORMAL, "\n Print NFC Data Exchange Format (NDEF)\n");
+    PrintAndLogEx(NORMAL, "Usage: hf 14b ndef [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "    h          : This help");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14b ndef"));
+    return PM3_SUCCESS;
+}
 
 static int switch_off_field_14b(void) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_DISCONNECT, 0, 0, NULL, 0);
     return PM3_SUCCESS;
+}
+
+static uint16_t get_sw(uint8_t *d, uint8_t n) {
+    if (n < 2)
+        return 0;
+    
+    n -= 2;
+    return d[n] * 0x0100 + d[n + 1];
 }
 
 static bool waitCmd14b(bool verbose) {
@@ -1249,11 +1267,93 @@ static int srix4kValid(const char *Cmd) {
     return 0;
 }
 */
+
+static int CmdHF14BNdef(const char *Cmd) {
+    char c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h' || c == 0x00) return usage_hf_14b_ndef();
+
+//    bool activate_field = true;
+//    bool keep_field_on = true;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    // ---------------  Select NDEF Tag application ----------------    
+    uint8_t aSELECT_AID[80];
+    int aSELECT_AID_n = 0;
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
+    int res = 0;
+//    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    if (resplen < 2)
+        return PM3_ESOFT;
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+//    activate_field = false;
+//    keep_field_on = true;
+    // ---------------  Send CC select ----------------
+    // ---------------  Read binary ----------------
+    
+    // ---------------  NDEF file reading ----------------
+    uint8_t aSELECT_FILE_NDEF[30];
+    int aSELECT_FILE_NDEF_n = 0;
+    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);    
+//    res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    // ---------------  Read binary ----------------
+    uint8_t aREAD_NDEF[30];
+    int aREAD_NDEF_n = 0;
+    param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);    
+//    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+    // take offset from response
+    uint8_t offset = response[1];
+
+    // ---------------  Read binary w offset ----------------
+//    keep_field_on = false;
+    aREAD_NDEF_n = 0;
+    param_gethex_to_eol("00b00002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+    aREAD_NDEF[4] = offset;
+//    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res)
+        return res;
+
+    sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    return NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"dump",        CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO14443-B tag, save to file"},
     {"info",        CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
-    {"list",        CmdHF14BList,     AlwaysAvailable,  "List ISO 14443B history"},
+    {"list",        CmdHF14BList,     AlwaysAvailable, "List ISO 14443B history"},
+    {"ndef",        CmdHF14BNdef,     IfPm3Iso14443b,  "Read NDEF file on tag"},
     {"raw",         CmdHF14BCmdRaw,   IfPm3Iso14443b,  "Send raw hex data to tag"},
     {"reader",      CmdHF14BReader,   IfPm3Iso14443b,  "Act as a 14443B reader to identify a tag"},
     {"sim",         CmdHF14BSim,      IfPm3Iso14443b,  "Fake ISO 14443B tag"},
