@@ -132,6 +132,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlfguard.c
         ${PM3_ROOT}/client/src/cmdlfhid.c
         ${PM3_ROOT}/client/src/cmdlfhitag.c
+        ${PM3_ROOT}/client/src/cmdlfidteck.c
         ${PM3_ROOT}/client/src/cmdlfindala.c
         ${PM3_ROOT}/client/src/cmdlfio.c
         ${PM3_ROOT}/client/src/cmdlfjablotron.c

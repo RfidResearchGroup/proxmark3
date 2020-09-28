@@ -33,28 +33,29 @@
 #include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
+#include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
-#include "cmdlft55xx.h"     // for t55xx menu
-#include "cmdlfti.h"        // for ti menu
-#include "cmdlfpresco.h"    // for presco menu
-#include "cmdlfpcf7931.h"   // for pcf7931 menu
-#include "cmdlfpyramid.h"   // for pyramid menu
-#include "cmdlfviking.h"    // for viking menu
-#include "cmdlfnedap.h"     // for NEDAP menu
-#include "cmdlfjablotron.h" // for JABLOTRON menu
-#include "cmdlfvisa2000.h"  // for VISA2000 menu
-#include "cmdlfnoralsy.h"   // for NORALSY meny
 #include "cmdlfcotag.h"     // for COTAG meny
-#include "cmdlfindala.h"    // for indala menu
-#include "cmdlfguard.h"     // for gproxii menu
 #include "cmdlffdx.h"       // for fdx-b menu
-#include "cmdlfparadox.h"   // for paradox menu
-#include "cmdlfnexwatch.h"  // for nexwatch menu
-#include "cmdlfsecurakey.h" // for securakey menu
-#include "cmdlfpac.h"       // for pac menu
+#include "cmdlfgallagher.h" // for GALLAGHER menu
+#include "cmdlfguard.h"     // for gproxii menu
+#include "cmdlfindala.h"    // for indala menu
+#include "cmdlfjablotron.h" // for JABLOTRON menu
 #include "cmdlfkeri.h"      // for keri menu
 #include "cmdlfmotorola.h"  // for Motorola menu
-#include "cmdlfgallagher.h" // for GALLAGHER menu
+#include "cmdlfnedap.h"     // for NEDAP menu
+#include "cmdlfnexwatch.h"  // for nexwatch menu
+#include "cmdlfnoralsy.h"   // for NORALSY meny
+#include "cmdlfpac.h"       // for pac menu
+#include "cmdlfparadox.h"   // for paradox menu
+#include "cmdlfpcf7931.h"   // for pcf7931 menu
+#include "cmdlfpresco.h"    // for presco menu
+#include "cmdlfpyramid.h"   // for pyramid menu
+#include "cmdlfsecurakey.h" // for securakey menu
+#include "cmdlft55xx.h"     // for t55xx menu
+#include "cmdlfti.h"        // for ti menu
+#include "cmdlfviking.h"    // for viking menu
+#include "cmdlfvisa2000.h"  // for VISA2000 menu
 
 #define LF_CMDREAD_MAX_EXTRA_SYMBOLS 4
 static bool g_lf_threshold_set = false;
@@ -1531,6 +1532,7 @@ static command_t CommandTable[] = {
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
     {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
+    {"idteck",      CmdLFIdteck,        AlwaysAvailable, "{ Idteck RFIDs...            }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},
     {"jablotron",   CmdLFJablotron,     AlwaysAvailable, "{ Jablotron RFIDs...         }"},

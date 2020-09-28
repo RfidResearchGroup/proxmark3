@@ -80,7 +80,6 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose);
 void setClockGrid(uint32_t clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
 int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-int demodIdteck(bool verbose);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
