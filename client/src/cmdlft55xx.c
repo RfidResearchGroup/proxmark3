@@ -3964,7 +3964,7 @@ static int CmdT55xxSniff(const char *Cmd) {
             
             // Long leading 0
             if (haveData == false && (approxEq(pulseBuffer[0],136+minWidth,tolerance) && approxEq(pulseBuffer[1],maxWidth,tolerance))) {
-                printf ("Long Leading 0 - not yet hanled | have 1 Fisrt bit | Min : %-3d - Max : %-3d : diff : %d\n",minWidth,maxWidth, maxWidth-minWidth);
+               // printf ("Long Leading 0 - not yet hanled | have 1 Fisrt bit | Min : %-3d - Max : %-3d : diff : %d\n",minWidth,maxWidth, maxWidth-minWidth);
                 continue;
             }
 
