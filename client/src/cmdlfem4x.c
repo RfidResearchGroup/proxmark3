@@ -63,17 +63,17 @@ static int usage_lf_em410x_watch(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_lf_em410x_write(void) {
+static int usage_lf_em410x_clone(void) {
     PrintAndLogEx(NORMAL, "Writes EM410x ID to a T55x7 or Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 410x_write [h] <id> <card> [clock]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 410x_clone [h] <id> <card> [clock]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       <id>      - ID number");
     PrintAndLogEx(NORMAL, "       <card>    - 0|1  0 = Q5/T5555,  1 = T55x7");
     PrintAndLogEx(NORMAL, "       <clock>   - 16|32|40|64, optional, set R/F clock rate, defaults to 64");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_write 0F0368568B 1") "       = write ID to t55x7 card");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 410x_clone 0F0368568B 1") "       = write ID to t55x7 card");
     return PM3_SUCCESS;
 }
 static int usage_lf_em410x_ws(void) {
@@ -615,9 +615,9 @@ static int CmdEM410xWatchnSpoof(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdEM410xWrite(const char *Cmd) {
+static int CmdEM410xClone(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 0x00 || cmdp == 'h') return usage_lf_em410x_write();
+    if (cmdp == 0x00 || cmdp == 'h') return usage_lf_em410x_clone();
 
     uint64_t id = param_get64ex(Cmd, 0, -1, 16);
     uint8_t card = param_get8ex(Cmd, 1, 0xFF, 10);
@@ -626,19 +626,19 @@ static int CmdEM410xWrite(const char *Cmd) {
     // Check ID
     if (id == 0xFFFFFFFFFFFFFFFF) {
         PrintAndLogEx(ERR, "error, ID is required\n");
-        usage_lf_em410x_write();
+        usage_lf_em410x_clone();
         return PM3_EINVARG;
     }
     if (id >= 0x10000000000) {
         PrintAndLogEx(ERR, "error, given EM410x ID is longer than 40 bits\n");
-        usage_lf_em410x_write();
+        usage_lf_em410x_clone();
         return PM3_EINVARG;
     }
 
     // Check Card
     if (card > 1) {
         PrintAndLogEx(FAILED, "error, bad card type selected\n");
-        usage_lf_em410x_write();
+        usage_lf_em410x_clone();
         return PM3_EINVARG;
     }
 
@@ -650,7 +650,7 @@ static int CmdEM410xWrite(const char *Cmd) {
     if ((clock1 != 16) && (clock1 != 32) && (clock1 != 64) && (clock1 != 40)) {
         PrintAndLogEx(FAILED, "error, clock rate" _RED_("%d")" not valid", clock1);
         PrintAndLogEx(INFO, "supported clock rates: " _YELLOW_("16, 32, 40, 60") "\n");
-        usage_lf_em410x_write();
+        usage_lf_em410x_clone();
         return PM3_EINVARG;
     }
 
@@ -1407,7 +1407,7 @@ static command_t CommandTable[] = {
     {"410x_brute",  CmdEM410xBrute,       IfPm3Lf,         "reader bruteforce attack by simulating EM410x tags"},
     {"410x_watch",  CmdEM410xWatch,       IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
     {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-    {"410x_write",  CmdEM410xWrite,       IfPm3Lf,         "write EM410x UID to T55x7 or Q5/T5555 tag"},
+    {"410x_clone",  CmdEM410xClone,       IfPm3Lf,         "write EM410x UID to T55x7 or Q5/T5555 tag"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "-------------------- " _CYAN_("EM 4x05 / 4x69") " -------------------"},
     {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},

@@ -490,7 +490,7 @@ Check column "offline" for their availability.
 |`lf em 410x_brute       `|N       |`reader bruteforce attack by simulating EM410x tags`          
 |`lf em 410x_watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`          
 |`lf em 410x_spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`          
-|`lf em 410x_write       `|N       |`write EM410x UID to T5555(Q5) or T55x7 tag`          
+|`lf em 410x_clone       `|N       |`write EM410x UID to T5555(Q5) or T55x7 tag`          
 |`lf em 4x05_demod       `|Y       |`demodulate a EM4x05/EM4x69 tag from the GraphBuffer`          
 |`lf em 4x05_dump        `|N       |`dump EM4x05/EM4x69 tag`          
 |`lf em 4x05_wipe        `|N       |`wipe EM4x05/EM4x69 tag`          
