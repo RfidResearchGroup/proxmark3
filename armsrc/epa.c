@@ -222,10 +222,9 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
     // since the card doesn't always care for the expected length we send it,
     // we reserve 262 bytes here just to be safe (256-byte APDU + SW + ISO frame)
     uint8_t response_apdu[262];
-    int rapdu_length = 0;
 
     // select the file EF.CardAccess
-    rapdu_length = EPA_APDU((uint8_t *)apdu_select_binary_cardaccess,
+    int rapdu_length = EPA_APDU((uint8_t *)apdu_select_binary_cardaccess,
                             sizeof(apdu_select_binary_cardaccess),
                             response_apdu,
                             sizeof(response_apdu)
