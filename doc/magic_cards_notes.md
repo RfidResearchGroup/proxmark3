@@ -495,6 +495,9 @@ Computing BCC1 on UID 04112233445566: `analyse lcr 33445566` = `44`
 
 Int is internal, typically 0x48
 
+Anticol shortcut (CL1/3000) is supported for UL, ULC, NTAG except NTAG I2C
+
+
 ## MIFARE Ultralight Gen1A
 
 ### Identify
@@ -561,11 +564,13 @@ Issue three regular MFU write commands in a row to write first three blocks.
 
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
+* Anticol shortcut (CL1/3000): fails
 
 #### MIFARE Ultralight DirectWrite flavour 2
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A00A000AB00000000000000000184D
+* Anticol shortcut (CL1/3000): succeeds
 
 ### Proxmark3 commands
 
@@ -672,6 +677,7 @@ hf 14a info
 
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
+* Anticol shortcut (CL1/3000): fails
 
 # NTAG
 
@@ -703,6 +709,7 @@ hf 14a info
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 0A78008102DBA0C119402AB5
+* Anticol shortcut (CL1/3000): succeeds
 
 ## NTAG21x
 
@@ -719,6 +726,8 @@ hf 14a info
 Emulates fully NTAG213, 213F, 215, 216, 216F
 
 Emulates partially  UL EV1 48k/128k, NTAG210, NTAG212, NTAGI2C 1K/2K, NTAGI2C 1K/2K PLUS
+
+Anticol shortcut (CL1/3000): fails
 
 ### Proxmark3 commands
 
