@@ -60,7 +60,7 @@ static int usage_lf_presco_sim(void) {
 int demodPresco(bool verbose) {
     (void) verbose; // unused so far
     bool st = true;
-    if (ASKDemod_ext(32, 0, 0, 0, true, false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(32, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
         return PM3_ESOFT;
     }

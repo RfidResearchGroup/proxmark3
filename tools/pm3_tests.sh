@@ -428,9 +428,9 @@ while true; do
       if ! CheckExecute slow "lf T55 paradox test"               "$CLIENTBIN -c 'data load traces/lf_t5577_paradox.pm3; lf search 1'" "Paradox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 paradox test2"              "$CLIENTBIN -c 'data load traces/lf_t5577_paradox.pm3; lf paradox demod'" \
                                                                      "Paradox - ID: 004209dea FC: 96 Card: 40426, Checksum: b2, Raw: 0f55555695596a6a9999a59a"; then break; fi
-#      if ! CheckExecute slow "lf T55 presco test"                "$CLIENTBIN -c 'data load traces/lf_t5577_presco.pm3; lf search 1'" "Presco ID found"; then break; fi
-#      if ! CheckExecute slow "lf T55 presco test2"               "$CLIENTBIN -c 'data load traces/lf_t5577_presco.pm3; lf presco demod'" \
-#                                                                     "Presco - Card: 1E8021D9, Raw: 10D0000000000000000000001E8021D9"; then break; fi
+      if ! CheckExecute slow "lf T55 presco test"                "$CLIENTBIN -c 'data load traces/lf_t5577_presco.pm3; lf search 1'" "Presco ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 presco test2"               "$CLIENTBIN -c 'data load traces/lf_t5577_presco.pm3; lf presco demod'" \
+                                                                     "Presco - Card: 1E8021D9, Raw: 10D0000000000000000000001E8021D9"; then break; fi
       if ! CheckExecute slow "lf T55 pyramid test"               "$CLIENTBIN -c 'data load traces/lf_t5577_pyramid.pm3; lf search 1'" "Pyramid ID found"; then break; fi
       if ! CheckExecute slow "lf T55 pyramid test2"              "$CLIENTBIN -c 'data load traces/lf_t5577_pyramid.pm3; lf pyramid demod'" \
                                                                      "Pyramid - len: 26, FC: 123 Card: 11223 - Wiegand: 2f657ae, Raw: 00010101010101010101016eb35e5da4"; then break; fi
