@@ -24,6 +24,10 @@ lf gallagher clone b 0FFD5461A9DA1346B2D1AC32
 lf read s 10000
 data save f lf_t5577_gallagher
 
+lf gproxii clone 26 123 11223
+lf read s 10000
+data save f lf_t5577_gproxii
+
 lf hid clone 2006ec0c86
 lf read s 10000
 data save f lf_t5577_hid

@@ -371,6 +371,9 @@ while true; do
       if ! CheckExecute slow "lf T55 gallagher test"             "$CLIENTBIN -c 'data load traces/lf_t5577_gallagher.pm3; lf search 1'" "GALLAGHER ID found"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test2"            "$CLIENTBIN -c 'data load traces/lf_t5577_gallagher.pm3; lf gallagher demod'" \
                                                                      "GALLAGHER - Region: 0 FC: 27865 CN: 682758 Issue Level: 13"; then break; fi
+      if ! CheckExecute slow "lf T55 gproxii test"               "$CLIENTBIN -c 'data load traces/lf_t5577_gproxii.pm3; lf search 1'" "Guardall G-Prox II ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 gproxii test2"              "$CLIENTBIN -c 'data load traces/lf_t5577_gproxii.pm3; lf gproxii demod'" \
+                                                                     "G-Prox-II - len: 26 FC: 123 Card: 11223, Raw: f98c7038c63356c7ac26398c"; then break; fi
       if ! CheckExecute slow "lf T55 hid test"                   "$CLIENTBIN -c 'data load traces/lf_t5577_hid.pm3; lf search 1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid test2"                  "$CLIENTBIN -c 'data load traces/lf_t5577_hid.pm3; lf hid demod'" \
                                                                      "HID Prox - 2006ec0c86 (1603) - len: 26 bit - OEM: 000 FC: 118 Card: 1603"; then break; fi
