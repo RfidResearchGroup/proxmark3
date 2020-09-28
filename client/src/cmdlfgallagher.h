@@ -14,7 +14,7 @@
 
 int CmdLFGallagher(const char *Cmd);
 
-int demodGallagher(void);
+int demodGallagher(bool verbose);
 int detectGallagher(uint8_t *dest, size_t *size);
 #endif
 

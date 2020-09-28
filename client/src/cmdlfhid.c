@@ -152,8 +152,8 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
 //by marshmellow (based on existing demod + holiman's refactor)
 //HID Prox demod - FSK RF/50 with preamble of 00011101 (then manchester encoded)
 //print full HID Prox ID and some bit format details if found
-static int CmdHIDDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodHID(bool verbose) {
+    (void) verbose; // unused so far
 
     // HID simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
     if (isGraphBitstream()) {
@@ -261,10 +261,16 @@ static int CmdHIDDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHIDDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodHID(true);
+}
+
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdHIDRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 12000);
-    return CmdHIDDemod(Cmd);
+    return demodHID(true);
 }
 
 // this read loops on device side.
@@ -561,8 +567,4 @@ static int CmdHelp(const char *Cmd) {
 int CmdLFHID(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-}
-
-int demodHID(void) {
-    return CmdHIDDemod("");
 }

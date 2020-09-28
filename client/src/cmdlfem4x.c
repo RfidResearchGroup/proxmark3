@@ -390,15 +390,14 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     return PM3_SUCCESS;
 }
 
-int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
+int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose) {
     bool st = true;
 
     // em410x simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
     if (isGraphBitstream()) {
         convertGraphFromBitstream();
     }
-
-    if (ASKDemod_ext(Cmd, false, false, 1, &st) != PM3_SUCCESS)
+    if (ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, false, false, 1, &st) != PM3_SUCCESS)
         return PM3_ESOFT;
     return AskEm410xDecode(verbose, hi, lo);
 }
@@ -423,14 +422,27 @@ static int CmdEM410xWatch(const char *Cmd) {
 //takes 3 arguments - clock, invert and maxErr as integers
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
+int demodEM410x(bool verbose) {
+    (void) verbose; // unused so far
+    uint32_t hi = 0;
+    uint64_t lo = 0;
+    return AskEm410xDemod(0, 0, 100, 0, false, &hi, &lo, true);
+}
+
 static int CmdEM410xDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 10 || cmdp == 'h') return usage_lf_em410x_demod();
 
     uint32_t hi = 0;
     uint64_t lo = 0;
-
-    if (AskEm410xDemod(Cmd, &hi, &lo, true) != PM3_SUCCESS)
+    int clk = 0;
+    int invert = 0;
+    int maxErr = 100;
+    size_t maxLen = 0;
+    char amp = tolower(param_getchar(Cmd, 0));
+    sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
+    bool amplify = amp == 'a';
+    if (AskEm410xDemod(clk, invert, maxErr, maxLen, amplify, &hi, &lo, true) != PM3_SUCCESS)
         return PM3_ESOFT;
 
     g_em410xid = lo;
@@ -439,8 +451,20 @@ static int CmdEM410xDemod(const char *Cmd) {
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdEM410xRead(const char *Cmd) {
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) > 10 || cmdp == 'h') return usage_lf_em410x_demod();
+
+    uint32_t hi = 0;
+    uint64_t lo = 0;
+    int clk = 0;
+    int invert = 0;
+    int maxErr = 100;
+    size_t maxLen = 0;
+    char amp = tolower(param_getchar(Cmd, 0));
+    sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
+    bool amplify = amp == 'a';
     lf_read(false, 12288);
-    return CmdEM410xDemod(Cmd);
+    return AskEm410xDemod(clk, invert, maxErr, maxLen, amplify, &hi, &lo, true);
 }
 
 // emulate an EM410X tag
@@ -735,7 +759,7 @@ static bool detectFSK(void) {
         return false;
     }
     // demod
-    int ans = FSKrawDemod("0 0", false);
+    int ans = FSKrawDemod(0, 0, 0, 0, false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: FSK Demod failed");
         return false;
@@ -751,12 +775,12 @@ static bool detectPSK(void) {
     }
     //demod
     //try psk1 -- 0 0 6 (six errors?!?)
-    ans = PSKDemod("0 0 6", false);
+    ans = PSKDemod(0, 0, 6, false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 Demod failed");
 
         //try psk1 inverted
-        ans = PSKDemod("0 1 6", false);
+        ans = PSKDemod(0, 1, 6, false);
         if (ans != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 inverted Demod failed");
             return false;
@@ -769,7 +793,7 @@ static bool detectPSK(void) {
 // try manchester - NOTE: ST only applies to T55x7 tags.
 static bool detectASK_MAN(void) {
     bool stcheck = false;
-    if (ASKDemod_ext("0 0 0", false, false, 1, &stcheck) != PM3_SUCCESS) {
+    if (ASKDemod_ext(0, 0, 0, 0, false, false, false, 1, &stcheck) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
         return false;
     }
@@ -777,11 +801,11 @@ static bool detectASK_MAN(void) {
 }
 
 static bool detectASK_BI(void) {
-    int ans = ASKbiphaseDemod("0 0 1", false);
+    int ans = ASKbiphaseDemod(0, 0, 1, 50, false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase normal demod failed");
 
-        ans = ASKbiphaseDemod("0 1 1", false);
+        ans = ASKbiphaseDemod(0, 1, 1, 50, false);
         if (ans != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/biphase inverted demod failed");
             return false;
@@ -790,11 +814,11 @@ static bool detectASK_BI(void) {
     return true;
 }
 static bool detectNRZ(void) {
-    int ans = NRZrawDemod("0 0 1", false);
+    int ans = NRZrawDemod(0, 0, 1, false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ normal demod failed");
 
-        ans = NRZrawDemod("0 1 1", false);
+        ans = NRZrawDemod(0, 1, 1, false);
         if (ans != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ inverted demod failed");
             return false;
@@ -1410,8 +1434,4 @@ static int CmdHelp(const char *Cmd) {
 int CmdLFEM4X(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-}
-
-int demodEM410x(void) {
-    return CmdEM410xDemod("");
 }

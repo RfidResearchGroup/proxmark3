@@ -15,5 +15,5 @@
 
 int CmdLFTI(const char *Cmd);
 
-int demodTI(void);
+int demodTI(bool verbose);
 #endif

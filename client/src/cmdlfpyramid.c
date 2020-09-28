@@ -64,14 +64,10 @@ static int usage_lf_pyramid_sim(void) {
     return PM3_SUCCESS;
 }
 
-static int CmdPyramidDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodPyramid();
-}
-
 //Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
 //print full Farpointe Data/Pyramid Prox ID and some bit format details if found
-int demodPyramid(void) {
+int demodPyramid(bool verbose) {
+    (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -213,9 +209,15 @@ int demodPyramid(void) {
     return PM3_SUCCESS;
 }
 
+static int CmdPyramidDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodPyramid(true);
+}
+
 static int CmdPyramidRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 15000);
-    return CmdPyramidDemod(Cmd);
+    return demodPyramid(true);
 }
 
 static int CmdPyramidClone(const char *Cmd) {

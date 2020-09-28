@@ -71,16 +71,12 @@ const uint8_t paradox_lut[] = {
 
 #define PARADOX_PREAMBLE_LEN 8
 
-static int CmdParadoxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodParadox();
-}
-
 //by marshmellow
 //Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
 //print full Paradox Prox ID and some bit format details if found
 
-int demodParadox(void) {
+int demodParadox(bool verbose) {
+    (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -201,11 +197,18 @@ int demodParadox(void) {
 
     return PM3_SUCCESS;
 }
+
+static int CmdParadoxDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodParadox(true);
+}
+
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdParadoxRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 10000);
-    return CmdParadoxDemod(Cmd);
+    return demodParadox(true);
 }
 
 static int CmdParadoxClone(const char *Cmd) {

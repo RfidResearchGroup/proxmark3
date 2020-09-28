@@ -53,14 +53,12 @@ static int usage_lf_viking_sim(void) {
     return PM3_SUCCESS;
 }
 
-static int CmdVikingDemod(const char *Cmd) {
-    return demodViking();
-}
-
 //see ASKDemod for what args are accepted
-int demodViking(void) {
+int demodViking(bool verbose) {
+    (void) verbose; // unused so far
 
-    if (ASKDemod("", false, false, 1) != PM3_SUCCESS) {
+    bool st = false;
+    if (ASKDemod_ext(0, 0, 100, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
         return PM3_ESOFT;
     }
@@ -84,10 +82,16 @@ int demodViking(void) {
     return PM3_SUCCESS;
 }
 
+static int CmdVikingDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodViking(true);
+}
+
 //see ASKDemod for what args are accepted
 static int CmdVikingRead(const char *Cmd) {
+    (void)Cmd;
     lf_read(false, 10000);
-    return CmdVikingDemod(Cmd);
+    return demodViking(true);
 }
 
 static int CmdVikingClone(const char *Cmd) {

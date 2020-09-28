@@ -15,7 +15,7 @@
 
 int CmdLFAWID(const char *Cmd);
 
-int demodAWID(void);
+int demodAWID(bool verbose);
 int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits);
 
 #endif

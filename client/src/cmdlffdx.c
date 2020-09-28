@@ -220,7 +220,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
 int demodFDX(bool verbose) {
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
-    if (ASKbiphaseDemod("0 32 1 100", false) != PM3_SUCCESS) {
+    if (ASKbiphaseDemod(0, 32, 1, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
         return PM3_ESOFT;
     }
