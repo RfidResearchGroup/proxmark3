@@ -479,7 +479,7 @@ int generator_selftest(void) {
 
 
     uint32_t lf_id = lf_t55xx_white_pwdgen(0x00000080);
-    success = (lf_id = 0x00018383);
+    success = (lf_id == 0x00018383);
     if (success)
         testresult++;
     PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ? "OK" : "->00018383<--");
