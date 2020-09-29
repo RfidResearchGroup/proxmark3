@@ -77,7 +77,7 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
 
         PrintAndLogEx(NORMAL,"");
         if (ctx->programHelp) {
-            PrintAndLogEx(NORMAL,_SectionTagColor_("examples:"));
+            PrintAndLogEx(NORMAL,_SectionTagColor_("examples/notes:"));
             char *buf = NULL;
             int idx = 0;
             buf = realloc (buf,strlen (ctx->programHelp)+1); // more then enough as we are splitting
