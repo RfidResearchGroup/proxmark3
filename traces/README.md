@@ -49,7 +49,6 @@
 |filename|description|
 |--------|-----------|
 |lf_Q5_mod-*|Q5 configured to emit `00 01 02 03 04 05 06 07 08 09 0A 0B` under various modulation schemes|
-|lf_Q5_mod-data.bin|Raw data used for lf_Q5_mod-* Q5 configuration|
 |lf_ATA5577_*|ATA5577 configured to emulate various techs as suggested in the Proxmark3 clone commands|
 |lf_ATA5577.txt|Description on how lf_ATA5577_* were generated|
 
