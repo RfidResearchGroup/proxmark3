@@ -14,7 +14,7 @@
 
 int CmdLFMotorola(const char *Cmd);
 
-int demodMotorola(void);
+int demodMotorola(bool verbose);
 int detectMotorola(uint8_t *dest, size_t *size);
 int readMotorolaUid(void);
 #endif

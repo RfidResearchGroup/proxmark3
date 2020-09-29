@@ -28,16 +28,10 @@
 
 static int CmdHelp(const char *Cmd);
 
-//see PSKDemod for what args are accepted
-static int CmdMotorolaDemod(const char *Cmd) {
-    (void)Cmd;
-    return demodMotorola();
-}
-
-int demodMotorola(void) {
-
+int demodMotorola(bool verbose) {
+    (void) verbose; // unused so far
     //PSK1
-    if (PSKDemod("32 1", true) != PM3_SUCCESS) {
+    if (PSKDemod(32, 1, 100, true) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
         return PM3_ESOFT;
     }
@@ -124,6 +118,12 @@ int demodMotorola(void) {
     return PM3_SUCCESS;
 }
 
+//see PSKDemod for what args are accepted
+static int CmdMotorolaDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodMotorola(true);
+}
+
 static int CmdMotorolaRead(const char *Cmd) {
     // Motorola Flexpass seem to work at 74 kHz
     // and take about 4400 samples to befor modulating
@@ -145,7 +145,7 @@ static int CmdMotorolaRead(const char *Cmd) {
     sc.divisor = LF_DIVISOR_125;
     sc.samples_to_skip = 0;
     lf_config(&sc);
-    return demodMotorola();
+    return demodMotorola(true);
 }
 
 static int CmdMotorolaClone(const char *Cmd) {

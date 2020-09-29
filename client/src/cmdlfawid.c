@@ -196,9 +196,8 @@ static int CmdAWIDWatch(const char *Cmd) {
 //by marshmellow
 //AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
-static int CmdAWIDDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
+int demodAWID(bool verbose) {
+    (void) verbose; // unused so far
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID failed to allocate memory");
@@ -337,10 +336,16 @@ static int CmdAWIDDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdAWIDDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodAWID(true);
+}
+
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdAWIDRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 12000);
-    return CmdAWIDDemod(Cmd);
+    return demodAWID(true);
 }
 
 static int CmdAWIDSim(const char *Cmd) {
@@ -604,8 +609,4 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
     PrintAndLogEx(SUCCESS, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
 
     return PM3_SUCCESS;
-}
-
-int demodAWID(void) {
-    return CmdAWIDDemod("");
 }

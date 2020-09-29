@@ -151,25 +151,17 @@ static void decodeHeden2L(uint8_t *bits) {
 // Indala 26 bit decode
 // by marshmellow, martinbeier
 // optional arguments - same as PSKDemod (clock & invert & maxerr)
-static int CmdIndalaDemod(const char *Cmd) {
-
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_indala_demod();
-
-    int ans;
-    if (strlen(Cmd) > 0)
-        ans = PSKDemod(Cmd, true);
-    else
-        ans = PSKDemod("32", true);
-
+int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
+    (void) verbose; // unused so far
+    int ans = PSKDemod(clk, invert, maxErr, true);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d", ans);
         return PM3_ESOFT;
     }
 
-    uint8_t invert = 0;
+    uint8_t inv = 0;
     size_t size = DemodBufferLen;
-    int idx = detectIndala(DemodBuffer, &size, &invert);
+    int idx = detectIndala(DemodBuffer, &size, &inv);
     if (idx < 0) {
         if (idx == -1)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: not enough samples");
@@ -281,6 +273,29 @@ static int CmdIndalaDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int demodIndala(bool verbose) {
+    return demodIndalaEx(32, 0, 100, verbose);
+}
+
+static int CmdIndalaDemod(const char *Cmd) {
+
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (cmdp == 'h') return usage_lf_indala_demod();
+
+    int clk = 32, invert = 0, maxErr = 100;
+    if (strlen(Cmd) > 0) {
+        sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+    }
+    if (clk == 1) {
+        invert = 1;
+        clk = 0;
+    }
+    if (invert != 0 && invert != 1) {
+        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
+        return PM3_EINVARG;
+    }
+    return demodIndalaEx(clk, invert, maxErr, true);
+}
 // older alternative indala demodulate (has some positives and negatives)
 // returns false positives more often - but runs against more sets of samples
 // poor psk signal can be difficult to demod this approach might succeed when the other fails
@@ -485,8 +500,15 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdIndalaRead(const char *Cmd) {
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (cmdp == 'h') return usage_lf_indala_demod();
+
+    int clk = 32, invert = 0, maxErr = 100;
+    if (strlen(Cmd) > 0) {
+        sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+    }
     lf_read(false, 30000);
-    return CmdIndalaDemod(Cmd);
+    return demodIndalaEx(clk, invert, maxErr, true);
 }
 
 static int CmdIndalaSim(const char *Cmd) {
@@ -864,8 +886,4 @@ out:
     // note loses 1 bit at beginning of transformation...
     return (int) idx;
 
-}
-
-int demodIndala(void) {
-    return CmdIndalaDemod("");
 }

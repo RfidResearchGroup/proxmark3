@@ -33,28 +33,29 @@
 #include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
+#include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
-#include "cmdlft55xx.h"     // for t55xx menu
-#include "cmdlfti.h"        // for ti menu
-#include "cmdlfpresco.h"    // for presco menu
-#include "cmdlfpcf7931.h"   // for pcf7931 menu
-#include "cmdlfpyramid.h"   // for pyramid menu
-#include "cmdlfviking.h"    // for viking menu
-#include "cmdlfnedap.h"     // for NEDAP menu
-#include "cmdlfjablotron.h" // for JABLOTRON menu
-#include "cmdlfvisa2000.h"  // for VISA2000 menu
-#include "cmdlfnoralsy.h"   // for NORALSY meny
 #include "cmdlfcotag.h"     // for COTAG meny
-#include "cmdlfindala.h"    // for indala menu
-#include "cmdlfguard.h"     // for gproxii menu
 #include "cmdlffdx.h"       // for fdx-b menu
-#include "cmdlfparadox.h"   // for paradox menu
-#include "cmdlfnexwatch.h"  // for nexwatch menu
-#include "cmdlfsecurakey.h" // for securakey menu
-#include "cmdlfpac.h"       // for pac menu
+#include "cmdlfgallagher.h" // for GALLAGHER menu
+#include "cmdlfguard.h"     // for gproxii menu
+#include "cmdlfindala.h"    // for indala menu
+#include "cmdlfjablotron.h" // for JABLOTRON menu
 #include "cmdlfkeri.h"      // for keri menu
 #include "cmdlfmotorola.h"  // for Motorola menu
-#include "cmdlfgallagher.h" // for GALLAGHER menu
+#include "cmdlfnedap.h"     // for NEDAP menu
+#include "cmdlfnexwatch.h"  // for nexwatch menu
+#include "cmdlfnoralsy.h"   // for NORALSY meny
+#include "cmdlfpac.h"       // for pac menu
+#include "cmdlfparadox.h"   // for paradox menu
+#include "cmdlfpcf7931.h"   // for pcf7931 menu
+#include "cmdlfpresco.h"    // for presco menu
+#include "cmdlfpyramid.h"   // for pyramid menu
+#include "cmdlfsecurakey.h" // for securakey menu
+#include "cmdlft55xx.h"     // for t55xx menu
+#include "cmdlfti.h"        // for ti menu
+#include "cmdlfviking.h"    // for viking menu
+#include "cmdlfvisa2000.h"  // for VISA2000 menu
 
 #define LF_CMDREAD_MAX_EXTRA_SYMBOLS 4
 static bool g_lf_threshold_set = false;
@@ -77,14 +78,14 @@ static int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in decimal and in microseconds (us)"));
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "- probing for Hitag 1/Hitag S:");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 1/Hitag S") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W00110"));
-    PrintAndLogEx(NORMAL, "- probing for Hitag 2:");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000"));
-    PrintAndLogEx(NORMAL, "- probing for Hitag 2, oscilloscope style:");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag 2, oscilloscope style") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 50 z 116 o 166 e W 3000 c W11000 q s 2000 @"));
-    PrintAndLogEx(NORMAL, "- probing for Hitag (us):");
+    PrintAndLogEx(NORMAL, _CYAN_(" probing for Hitag (us)") ":");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf cmdread d 48 z 112 o 176 e W 3000 e S 240 e E 336 c W0S00000010000E"));
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
@@ -116,8 +117,8 @@ static int usage_lf_sim(void) {
     PrintAndLogEx(NORMAL, "       h         This help");
     PrintAndLogEx(NORMAL, "       <gap>     Start gap (in microseconds)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf sim 240     - start simulating with 240ms gap");
-    PrintAndLogEx(NORMAL, "         lf sim");
+    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim 240") "     - start simulating with 240ms gap");
+    PrintAndLogEx(NORMAL, _YELLOW_("         lf sim"));
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     return PM3_SUCCESS;
@@ -132,9 +133,9 @@ static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "       @            run continuously until a key is pressed (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf sniff");
-    PrintAndLogEx(NORMAL, "- oscilloscope style:");
-    PrintAndLogEx(NORMAL, "      data plot");
-    PrintAndLogEx(NORMAL, "      lf sniff q s 3000 @");
+    PrintAndLogEx(NORMAL, _CYAN_(" oscilloscope style") ":");
+    PrintAndLogEx(NORMAL, _YELLOW_("      data plot"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff q s 3000 @"));
     PrintAndLogEx(NORMAL, "Extras:");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")" to set parameters.");
     PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data plot'")" to look at it");
@@ -154,12 +155,12 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "       t <threshold>     Sets trigger threshold. 0 means no threshold (range: 0-128)");
     PrintAndLogEx(NORMAL, "       s <samplestoskip> Sets a number of samples to skip before capture. Default: 0");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf config              - shows current config");
-    PrintAndLogEx(NORMAL, "      lf config b 8 L        - samples at 125 kHz, 8bps.");
-    PrintAndLogEx(NORMAL, "      lf config H b 4 d 3    - samples at 134 kHz, averages three samples into one, stored with ");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf config") "              - shows current config");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf config b 8 L") "        - samples at 125 kHz, 8bps.");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf config H b 4 d 3") "    - samples at 134 kHz, averages three samples into one, stored with ");
     PrintAndLogEx(NORMAL, "                                a resolution of 4 bits per sample.");
-    PrintAndLogEx(NORMAL, "      lf read                - performs a read (active field)");
-    PrintAndLogEx(NORMAL, "      lf sniff               - performs a sniff (no active field)");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf read") "                - performs a read (active field)");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf sniff") "               - performs a sniff (no active field)");
     return PM3_SUCCESS;
 }
 static int usage_lf_simfsk(void) {
@@ -180,10 +181,10 @@ static int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "\n  NOTE: if you set one clock manually set them all manually");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 40 H 8 L 5 d 010203      -  FSK1  rf/40  data 010203");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 40 H 5 L 8 d 010203      -  FSK1a rf/40  data 010203");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 64 H 10 L 8 d 010203     -  FSK2  rf/64  data 010203");
-    PrintAndLogEx(NORMAL, "       lf simfsk c 64 H 8 L 10 d 010203     -  FSK2a rf/64  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 8 L 5 d 010203") "      -  FSK1  rf/40  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 40 H 5 L 8 d 010203") "      -  FSK1a rf/40  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 10 L 8 d 010203") "     -  FSK2  rf/64  data 010203");
+    PrintAndLogEx(NORMAL,  _YELLOW_("       lf simfsk c 64 H 8 L 10 d 010203") "     -  FSK2a rf/64  data 010203");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -221,10 +222,10 @@ static int usage_lf_find(void) {
     PrintAndLogEx(NORMAL, "       <0|1>         Use data from Graphbuffer, if not set, try reading data from tag.");
     PrintAndLogEx(NORMAL, "       u             Search for Unknown tags, if not set, reads only known tags.");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf search     = try reading data from tag & search for known tags");
-    PrintAndLogEx(NORMAL, "      lf search 1   = use data from GraphBuffer & search for known tags");
-    PrintAndLogEx(NORMAL, "      lf search u   = try reading data from tag & search for known and unknown tags");
-    PrintAndLogEx(NORMAL, "      lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search") "      - try reading data from tag & search for known tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search 1") "    - use data from GraphBuffer & search for known tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search u") "    - try reading data from tag & search for known and unknown tags");
+    PrintAndLogEx(NORMAL,  _YELLOW_("      lf search 1 u") "  - use data from GraphBuffer & search for known and unknown tags");
     return PM3_SUCCESS;
 }
 static int usage_lf_tune(void) {
@@ -1445,27 +1446,27 @@ int CmdLFfind(const char *Cmd) {
         }
     }
 
-    if (demodVisa2k() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
-    if (demodHID() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
-    if (demodAWID() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
-    if (demodIOProx() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
-    if (demodParadox() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
-    if (demodNexWatch() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
-    if (demodIndala() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
-    if (demodEM410x() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
+    if (demodVisa2k(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
+    if (demodHID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
+    if (demodAWID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
+    if (demodIOProx(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
+    if (demodParadox(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!"); goto out;}
+    if (demodNexWatch(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
+    if (demodIndala(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
+    if (demodEM410x(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
     if (demodFDX(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
-    if (demodGuard() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
-    if (demodIdteck() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
-    if (demodJablotron() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
-    if (demodNedap() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
-    if (demodNoralsy() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
-    if (demodKeri() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
-    if (demodPac() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
-    if (demodPresco() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
-    if (demodPyramid() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
-    if (demodSecurakey() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
-    if (demodViking() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
-    if (demodGallagher() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
+    if (demodGuard(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
+    if (demodIdteck(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
+    if (demodJablotron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
+    if (demodNedap(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NEDAP ID") " found!"); goto out;}
+    if (demodNoralsy(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Noralsy ID") " found!"); goto out;}
+    if (demodKeri(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("KERI ID") " found!"); goto out;}
+    if (demodPac(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("PAC/Stanley ID") " found!"); goto out;}
+    if (demodPresco(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Presco ID") " found!"); goto out;}
+    if (demodPyramid(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Pyramid ID") " found!"); goto out;}
+    if (demodSecurakey(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") " found!"); goto out;}
+    if (demodViking(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") " found!"); goto out;}
+    if (demodGallagher(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") " found!"); goto out;}
 
 //    if (demodTI() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") " found!"); goto out;}
 //    if (demodFermax() == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
@@ -1486,14 +1487,14 @@ int CmdLFfind(const char *Cmd) {
 
         //fsk
         if (GetFskClock("", false)) {
-            if (FSKrawDemod("", true) == PM3_SUCCESS) {
+            if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
                 PrintAndLogEx(NORMAL, "\nUnknown FSK Modulated Tag found!");
                 goto out;
             }
         }
 
         bool st = true;
-        if (ASKDemod_ext("0 0 0", true, false, 1, &st) == PM3_SUCCESS) {
+        if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag found!");
             PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
             goto out;
@@ -1531,6 +1532,7 @@ static command_t CommandTable[] = {
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
     {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
+    {"idteck",      CmdLFIdteck,        AlwaysAvailable, "{ Idteck RFIDs...            }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},
     {"jablotron",   CmdLFJablotron,     AlwaysAvailable, "{ Jablotron RFIDs...         }"},

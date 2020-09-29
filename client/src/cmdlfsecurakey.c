@@ -38,17 +38,13 @@ static int usage_lf_securakey_clone(void) {
     return PM3_SUCCESS;
 }
 
-static int CmdSecurakeyDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodSecurakey();
-}
-
 //see ASKDemod for what args are accepted
-int demodSecurakey(void) {
+int demodSecurakey(bool verbose) {
+    (void) verbose; // unused so far
 
     //ASK / Manchester
     bool st = false;
-    if (ASKDemod_ext("40 0 0", false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(40, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ASK/Manchester Demod failed");
         return PM3_ESOFT;
     }
@@ -128,9 +124,15 @@ int demodSecurakey(void) {
     return PM3_SUCCESS;
 }
 
+static int CmdSecurakeyDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodSecurakey(true);
+}
+
 static int CmdSecurakeyRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 8000);
-    return CmdSecurakeyDemod(Cmd);
+    return demodSecurakey(true);
 }
 
 static int CmdSecurakeyClone(const char *Cmd) {

@@ -78,16 +78,11 @@ static uint64_t getJablontronCardId(uint64_t rawcode) {
     return id;
 }
 
-//see ASKDemod for what args are accepted
-static int CmdJablotronDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodJablotron();
-}
-
-int demodJablotron(void) {
+int demodJablotron(bool verbose) {
+    (void) verbose; // unused so far
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
-    if (ASKbiphaseDemod("0 64 1 0", false) != PM3_SUCCESS) {
+    if (ASKbiphaseDemod(0, 64, 1, 0, false) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron ASKbiphaseDemod failed");
         return PM3_ESOFT;
     }
@@ -137,9 +132,16 @@ int demodJablotron(void) {
     return PM3_SUCCESS;
 }
 
+//see ASKDemod for what args are accepted
+static int CmdJablotronDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodJablotron(true);
+}
+
 static int CmdJablotronRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 16000);
-    return demodJablotron();
+    return demodJablotron(true);
 }
 
 static int CmdJablotronClone(const char *Cmd) {

@@ -13,7 +13,7 @@
 
 int CmdLFVerichip(const char *Cmd);
 
-int demodVerichip(void);
+int demodVerichip(bool verbose);
 int detectVerichip(uint8_t *dest, size_t *size);
 #endif
 

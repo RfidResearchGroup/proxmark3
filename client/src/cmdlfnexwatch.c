@@ -150,8 +150,9 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
     return PM3_SUCCESS;
 }
 
-int demodNexWatch(void) {
-    if (PSKDemod("", false) != PM3_SUCCESS) {
+int demodNexWatch(bool verbose) {
+    (void) verbose; // unused so far
+    if (PSKDemod(0, 0, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
         return PM3_ESOFT;
     }
@@ -259,14 +260,15 @@ int demodNexWatch(void) {
 
 static int CmdNexWatchDemod(const char *Cmd) {
     (void)Cmd;
-    return demodNexWatch();
+    return demodNexWatch(true);
 }
 
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdNexWatchRead(const char *Cmd) {
+    (void)Cmd;
     lf_read(false, 20000);
-    return CmdNexWatchDemod(Cmd);
+    return demodNexWatch(true);
 }
 
 static int CmdNexWatchClone(const char *Cmd) {

@@ -65,12 +65,11 @@ static int usage_lf_guard_sim(void) {
 //WARNING: if it fails during some points it will destroy the DemodBuffer data
 // but will leave the GraphBuffer intact.
 //if successful it will push askraw data back to demod buffer ready for emulation
-static int CmdGuardDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
+int demodGuard(bool verbose) {
+    (void) verbose; // unused so far
     //Differential Biphase
     //get binary from ask wave
-    if (ASKbiphaseDemod("0 64 0 0", false) != PM3_SUCCESS) {
+    if (ASKbiphaseDemod(0, 64, 0, 0, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
         return PM3_ESOFT;
     }
@@ -150,9 +149,15 @@ static int CmdGuardDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdGuardDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodGuard(true);
+}
+
 static int CmdGuardRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 10000);
-    return CmdGuardDemod(Cmd);
+    return demodGuard(true);
 }
 
 static int CmdGuardClone(const char *Cmd) {
@@ -288,10 +293,6 @@ int detectGProxII(uint8_t *bits, size_t *size) {
         return (int) startIdx;
     }
     return -5; //spacer bits not found - not a valid gproxII
-}
-
-int demodGuard(void) {
-    return CmdGuardDemod("");
 }
 
 // Works for 26bits.

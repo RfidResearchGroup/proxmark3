@@ -15,10 +15,11 @@
 int CmdLFINDALA(const char *Cmd);
 
 int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert);
-int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
-int detectIndala64(uint8_t *bitStream, size_t *size, uint8_t *invert);
-int detectIndala224(uint8_t *bitStream, size_t *size, uint8_t *invert);
-int demodIndala(void);
+//int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
+//int detectIndala64(uint8_t *bitStream, size_t *size, uint8_t *invert);
+//int detectIndala224(uint8_t *bitStream, size_t *size, uint8_t *invert);
+int demodIndalaEx(int clk, int invert, int maxErr, bool verbose);
+int demodIndala(bool verbose);
 int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits);
 
 #endif

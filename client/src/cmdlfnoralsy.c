@@ -62,12 +62,11 @@ static uint8_t noralsy_chksum(uint8_t *bits, uint8_t len) {
 }
 
 //see ASKDemod for what args are accepted
-static int CmdNoralsyDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
+int demodNoralsy(bool verbose) {
+    (void) verbose; // unused so far
     //ASK / Manchester
     bool st = true;
-    if (ASKDemod_ext("32 0 0", false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(32, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
         return PM3_ESOFT;
     }
@@ -132,9 +131,15 @@ static int CmdNoralsyDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdNoralsyDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodNoralsy(true);
+}
+
 static int CmdNoralsyRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 8000);
-    return CmdNoralsyDemod(Cmd);
+    return demodNoralsy(true);
 }
 
 static int CmdNoralsyClone(const char *Cmd) {
@@ -291,7 +296,3 @@ int detectNoralsy(uint8_t *dest, size_t *size) {
 * * = unknown
 *
 **/
-
-int demodNoralsy(void) {
-    return CmdNoralsyDemod("");
-}

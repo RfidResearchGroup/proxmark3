@@ -38,14 +38,10 @@ static int usage_lf_verichip_clone(void) {
 }
 
 //see NRZDemod for what args are accepted
-static int CmdVerichipDemod(const char *Cmd) {
-    (void)Cmd;
-    return demodVerichip();
-}
-
-int demodVerichip(void) {
+int demodVerichip(bool verbose) {
+    (void) verbose; // unused so far
     //NRZ
-    if (NRZrawDemod("", false) != PM3_SUCCESS) {
+    if (NRZrawDemod(0, 0, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - VERICHIP: NRZ Demod failed");
         return PM3_ESOFT;
     }
@@ -81,9 +77,15 @@ int demodVerichip(void) {
     return PM3_SUCCESS;
 }
 
+static int CmdVerichipDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodVerichip(true);
+}
+
 static int CmdVerichipRead(const char *Cmd) {
+    (void)Cmd;
     lf_read(false, 4096 * 2 + 20);
-    return CmdVerichipDemod(Cmd);
+    return demodVerichip(true);
 }
 
 static int CmdVerichipClone(const char *Cmd) {
