@@ -27,7 +27,7 @@
 |lf_HomeAgain.pm3|HomeAgain animal (cat) tag - ID 985121004515220|
 |lf_HomeAgain1600.pm3|HomeAgain animal (cat) tag - ID 985121004515220|
 |lf_IDTECK_4944544BAC40E069.pm3| IDTECK raw 4944544BAC40E069 , PSK,  printed  "806 082 43084"|
-|lf_IDTECK_idk50_PSK| IDTECK (?)|
+|lf_IDTECK_idk50_PSK.pm3| IDTECK (?)|
 |lf_Indala-00002-12345678-1A.pm3|Indala credit-card style card|
 |lf_Indala-504278295.pm3|PSK 26 bit indala|
 |lf_IOProx-XSF-01-3B-44725.pm3|IO Prox FSK RF/64 ID in name|
