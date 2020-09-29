@@ -24,8 +24,8 @@
 #define _ExampleColor_(s) _YELLOW_(s)
 #define _CommandColor_(s) _RED_(s)
 #define _DescriptionColor_(s) _CYAN_(s)
-#define _ArgColor_(s) _WHITE_(s)
-#define _ArgHelpColor_(s) _WHITE_(s)
+#define _ArgColor_(s) s
+#define _ArgHelpColor_(s) s
 // End Custom Colors
 // Option width set to 30 to allow option descriptions to align.  approx line 74
 // Example width set to 50 to allow help descriptions to align.  approx line 93
