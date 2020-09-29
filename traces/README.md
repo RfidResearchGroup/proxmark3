@@ -39,7 +39,7 @@
 |lf_NEXWATCH_Securakey-64169.pm3          |Securakey Tag BitLen: 26, Card ID: 64169, FC: 0x35|
 |lf_PAC-8E4C058E.pm3                      |PAC/Stanley 20204/21020 PAC8 tag (ID: 8E4C058E)|
 |lf_Paradox-96_40426-APJN08.pm3           |PARADOX FC 96 CN 40426|
-|lf_TI.pm3                                |TI HDX? -1/1 acquisition|
+|lf_TI.pm3                                |TI HDX FSK 134.2 / 123.2kHz, zerocross line acquisition at 2 MHz|
 |lf_Transit999-best.pm3                   |Transit 999 format (UID 99531670)|
 |lf_VeriChip_1022000000084146.pm3         |VeriChip,  epoxy encased glasschip (ID: 1022-00000000084146) |
 |lf_VISA2000.pm3                          |VISA2000 ASK/MAN RF/64, Card: 480518|
