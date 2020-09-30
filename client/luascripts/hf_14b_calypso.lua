@@ -7,7 +7,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This is a script to communicate with a CALYSPO / 14443b tag using the '14b raw' commands
 ]]
@@ -30,12 +30,13 @@ device-side.
 ]]
 
 local function calypso_parse(result)
-    local r = Command.parse(result)
-    local len = r.arg2 * 2
-    r.data = string.sub(r.data, 0, len);
-    print('GOT:', r.data)
-    if r.arg1 == 0 then
-        return r, nil
+    local r = Command.parse(result)    
+    if r.arg1 >= 0 then
+        local len = r.arg2 * 2
+        if len > 0 then 
+            r.data = string.sub(r.data, 0, len);
+            return r, nil
+        end
     end
     return nil,nil
 end
@@ -123,12 +124,19 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
             arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
             data = data}    -- data bytes (commands etc)
 
-    result, err = command:sendMIX(ignoreresponse)
+    local use_cmd_ack = true
+    result, err = command:sendMIX(ignoreresponse, 2000, use_cmd_ack)
     if result then
-        local r = calypso_parse(result)
-        return r, nil
+        local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL', result)
+        if arg0 >= 0 then
+            return calypso_parse(result)
+        else 
+            err = 'card response failed'
+        end
+    else
+        err = 'No response from card'
     end
-    return respone, err
+    return result, err
 end
 ---
 -- calypso_card_num : Reads card number from ATR and
@@ -136,23 +144,22 @@ end
 local function calypso_card_num(card)
     if not card then return end
     local card_num = tonumber( card.uid:sub(1,8),16 )
-    print('Card UID', card.uid)
-    print('Card Number', card_num)
+    print('')
+    print('Card UID    ' ..ansicolors.green..card.uid:format('%x')..ansicolors.reset)
+    print('Card Number ' ..ansicolors.green..string.format('%u', card_num)..ansicolors.reset)
+    print('-----------------------')
 end
 ---
 -- analyse CALYPSO apdu status bytes.
 local function calypso_apdu_status(apdu)
     -- last two is CRC
     -- next two is APDU status bytes.
-    local status = false
     local mess = 'FAIL'
     local sw = apdu:sub( #apdu-7, #apdu-4)
     desc, err = iso7816.tostring(sw)
-    print ('SW', sw, desc, err )
-
-    status = ( sw == '9000' )
-
-    return status
+    --print ('SW', sw, desc, err )
+    local status = ( sw == '9000' )
+    return status, desc, err
 end
 
 local _calypso_cmds = {
@@ -215,7 +222,7 @@ function main(args)
         if o == 'b' then bytes = a end
     end
 
-    lib14b.connect()
+--    lib14b.connect()
 
     -- Select 14b tag.
     card, err = lib14b.waitFor14443b()
@@ -241,14 +248,23 @@ function main(args)
     --for i = 1,10 do
         --result, err = calypso_send_cmd_raw('0294a40800043f000002',false)  --select ICC file
         for i, apdu in spairs(_calypso_cmds) do
-            print('>>', i )
+            print('>> '..ansicolors.yellow..i..ansicolors.reset)
             apdu = apdu:gsub('%s+', '')
             result, err = calypso_send_cmd_raw(apdu , false)
-            if result then
-                calypso_apdu_status(result.data)
-                print('<<', result.data )
+            if err then
+                print('<< '..err)
             else
-                print('<< no answer')
+                if result then     
+                    local status, desc, err = calypso_apdu_status(result.data)
+                    local d = result.data:sub(3, #result.data)
+                    if status then
+                        print('<< '..d..' ('..ansicolors.green..'ok'..ansicolors.reset..')')
+                    else
+                        print('<< '..d..' '..ansicolors.red..err..ansicolors.reset )
+                    end
+                else
+                    print('<< no answer')
+                end
             end
         end
     lib14b.disconnect()
