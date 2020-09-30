@@ -155,12 +155,10 @@ static int CmdMotorolaClone(const char *Cmd) {
     int datalen = 0;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf indala clone",
+    CLIParserInit(&ctx, "lf motorola clone",
                   "Enables cloning of Motorola card with specified uid onto T55x7\n"
-                  "defaults to 64.\n",
-                  "\n"
-                  "Samples:\n"
-                  _YELLOW_("\tlf motorola clone a0000000a0002021") "\n"
+                  "defaults to 64.",
+                  "lf motorola clone a0000000a0002021"
                  );
 
     void *argtable[] = {
