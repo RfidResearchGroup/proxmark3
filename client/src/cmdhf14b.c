@@ -1599,8 +1599,8 @@ static int CmdHF14BNdef(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h' || c == 0x00) return usage_hf_14b_ndef();
 
-//    bool activate_field = true;
-//    bool keep_field_on = true;
+    bool activate_field = true;
+    bool keep_field_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -1608,22 +1608,25 @@ static int CmdHF14BNdef(const char *Cmd) {
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
-    int res = 0;
-//    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
-        return res;
+    int res = exchange_14b_apdu(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res) {
+        goto out;
+    }
 
-    if (resplen < 2)
-        return PM3_ESOFT;
+    if (resplen < 2) {
+        res = PM3_ESOFT;
+        goto out;
+    }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return PM3_ESOFT;
+        res = PM3_ESOFT;
+        goto out;
     }
 
-//    activate_field = false;
-//    keep_field_on = true;
+    activate_field = false;
+    keep_field_on = true;
     // ---------------  Send CC select ----------------
     // ---------------  Read binary ----------------
 
@@ -1631,48 +1634,57 @@ static int CmdHF14BNdef(const char *Cmd) {
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
-//    res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    res = exchange_14b_apdu(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
-        return res;
+        goto out;
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return PM3_ESOFT;
+        res = PM3_ESOFT;
+        goto out;
     }
 
     // ---------------  Read binary ----------------
     uint8_t aREAD_NDEF[30];
     int aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
-//    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
-        return res;
+    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res) {
+        goto out;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return PM3_ESOFT;
+        res = PM3_ESOFT;
+        goto out;
     }
     // take offset from response
     uint8_t offset = response[1];
 
     // ---------------  Read binary w offset ----------------
-//    keep_field_on = false;
+    keep_field_on = false;
     aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b00002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
     aREAD_NDEF[4] = offset;
-//    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
-        return res;
+    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res) {
+        goto out;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return PM3_ESOFT;
+        res = PM3_ESOFT;
+        goto out;
     }
 
-    return NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+    res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+    
+out:
+    switch_off_field_14b();
+    return res;
 }
 
 static command_t CommandTable[] = {
