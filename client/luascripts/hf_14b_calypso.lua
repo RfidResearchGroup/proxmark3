@@ -7,7 +7,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.3'
+version = 'v1.0.4'
 desc = [[
 This is a script to communicate with a CALYSPO / 14443b tag using the '14b raw' commands
 ]]
@@ -256,7 +256,7 @@ function main(args)
             else
                 if result then     
                     local status, desc, err = calypso_apdu_status(result.data)
-                    local d = result.data:sub(3, #result.data)
+                    local d = result.data:sub(3, (#result.data - 8))
                     if status then
                         print('<< '..d..' ('..ansicolors.green..'ok'..ansicolors.reset..')')
                     else
