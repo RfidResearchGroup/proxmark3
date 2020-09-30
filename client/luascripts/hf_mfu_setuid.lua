@@ -70,18 +70,18 @@ function magicUID(b0, b1, b2)
     print('Using backdoor Magic tag function')
 
     -- write block 0
-    core.console('hf 14a raw -p -a -b 7 40')
-    core.console('hf 14a raw -p -a 43')
+    core.console('hf 14a raw -k -a -b 7 40')
+    core.console('hf 14a raw -k -a 43')
     core.console('hf 14a raw -c -a A200'..b0)
 
     -- write block 1
-    core.console('hf 14a raw -p -a -b 7 40')
-    core.console('hf 14a raw -p -a 43')
+    core.console('hf 14a raw -k -a -b 7 40')
+    core.console('hf 14a raw -k -a 43')
     core.console('hf 14a raw -c -a A201'..b1)
 
     -- write block 2
-    core.console('hf 14a raw -p -a -b 7 40')
-    core.console('hf 14a raw -p -a 43')
+    core.console('hf 14a raw -k -a -b 7 40')
+    core.console('hf 14a raw -k -a 43')
     core.console('hf 14a raw -c -a A202'..b2)
 end
 --
@@ -90,16 +90,16 @@ function brickableUID(b0, b1, b2)
 
     print('Using BRICKABLE Magic tag function')
 
-    core.console('hf 14a raw -p -s -3')
+    core.console('hf 14a raw -k -s -3')
 
     -- write block 0
-    core.console('hf 14a raw -p -c A200'..b0)
+    core.console('hf 14a raw -k -c A200'..b0)
 
     -- write block 1
-    core.console('hf 14a raw -p -c A201'..b1)
+    core.console('hf 14a raw -k -c A201'..b1)
 
     -- write block 2
-    core.console('hf 14a raw -p -c A202'..b2)
+    core.console('hf 14a raw -k -c A202'..b2)
 end
 ---
 -- The main entry point
