@@ -10,12 +10,14 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhf14b.h"
-
 #include <ctype.h>
 #include "fileutils.h"
 #include "cmdparser.h"     // command_t
+#include "commonutil.h"    // ARRAYLEN
 #include "comms.h"         // clearCommandBuffer
+#include "emv/emvcore.h"   // TLVPrintFromBuffer
 #include "cmdtrace.h"
+#include "cliparser.h"
 #include "crc16.h"
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14B/7816 protocol
@@ -23,6 +25,11 @@
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
+
+// iso14b apdu input frame length
+static uint16_t apdu_frame_length = 0;
+uint16_t ats_fsc[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+bool apdu_in_framing_enable = true;
 
 static int CmdHelp(const char *Cmd);
 
@@ -145,7 +152,6 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
 static bool waitCmd14b(bool verbose) {
 
     PacketResponseNG resp;
-
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
         uint16_t len = (resp.oldarg[1] & 0xFFFF);
@@ -1270,6 +1276,336 @@ static int srix4kValid(const char *Cmd) {
 }
 */
 
+static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
+
+    PacketResponseNG resp;
+    if (card)
+        memset(card, 0, sizeof(iso14b_card_select_t));
+
+    switch_off_field_14b();
+
+    // Anticollision + SELECT STD card
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD, 0, 0, NULL, 0);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        PrintAndLogEx(INFO, "Trying 14B Select SR");
+
+        // Anticollision + SELECT SR card
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {        
+            PrintAndLogEx(ERR, "connection timeout");
+            switch_off_field_14b();
+            return PM3_ESOFT;
+        }
+    }
+
+    // check result
+    int status = resp.oldarg[0];
+    if (status < 0) {
+        PrintAndLogEx(ERR, "No card in field.");
+        switch_off_field_14b();
+        return PM3_ESOFT;
+    }
+
+    apdu_frame_length = 0;
+    // get frame length from ATS in card data structure
+    iso14b_card_select_t *vcard = (iso14b_card_select_t *) resp.data.asBytes;
+//    uint8_t fsci = vcard->atqb[1] & 0x0f;
+//    if (fsci < ARRAYLEN(ats_fsc)) {
+//        apdu_frame_length = ats_fsc[fsci];
+//    }
+
+    if (card) {
+        memcpy(card, vcard, sizeof(iso14b_card_select_t));
+    }
+
+    if (disconnect) {
+        switch_off_field_14b();
+    }
+    return PM3_SUCCESS;
+}
+
+static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
+    *chainingout = false;
+
+    if (activateField) {
+        // select with no disconnect and set frameLength
+        int selres = select_card_14443b_4(false, NULL);
+        if (selres != PM3_SUCCESS)
+            return selres;
+    }
+
+    uint16_t flags = 0;
+    
+    //  Don't support 14B chaining yet
+    if (chainingin)
+        flags = ISO14B_SEND_CHAINING;
+
+    // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
+    // https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
+    // here length PM3_CMD_DATA_SIZE=512
+    // timeout must be authomatically set by "get ATS"
+    if (datain)
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, (datainlen & 0xFFFF), 0, datain, datainlen & 0xFFFF);
+    else
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, 0, 0, NULL, 0);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+        uint8_t *recv = resp.data.asBytes;
+        int iLen = resp.oldarg[0];
+        uint8_t res = resp.oldarg[1];
+
+        int dlen = iLen - 2;
+        if (dlen < 0) {
+            dlen = 0;
+        }
+        *dataoutlen += dlen;
+
+        if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
+            PrintAndLogEx(ERR, "APDU: Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
+            return PM3_ESOFT;
+        }
+
+        // I-block ACK
+        if ((res & 0xf2) == 0xa2) {
+            *dataoutlen = 0;
+            *chainingout = true;
+            return PM3_SUCCESS;
+        }
+
+        if (!iLen) {
+            PrintAndLogEx(ERR, "APDU: No APDU response.");
+            return PM3_ESOFT;
+        }
+
+        // check apdu length
+        if (iLen < 2 && iLen >= 0) {
+            PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", iLen);
+            return PM3_ESOFT;
+        }
+
+        // check block TODO
+        if (iLen == -2) {
+            PrintAndLogEx(ERR, "APDU: Block type mismatch.");
+            return PM3_ESOFT;
+        }
+
+        memcpy(dataout, recv, dlen);
+
+        // chaining
+        if ((res & 0x10) != 0) {
+            *chainingout = true;
+        }
+
+        // CRC Check
+        if (iLen == -1) {
+            PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error.");
+            return PM3_ESOFT;
+        }
+    } else {
+        PrintAndLogEx(ERR, "APDU: Reply timeout.");
+        return PM3_ETIMEOUT;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+    *dataoutlen = 0;
+    bool chaining = false;
+    int res;
+
+    // 3 byte here - 1b framing header, 2b crc16
+    if (apdu_in_framing_enable &&
+            ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+        int clen = 0;
+
+        bool v_activate_field = activate_field;
+
+        do {
+            int vlen = MIN(apdu_frame_length - 3, datainlen - clen);
+            bool chainBlockNotLast = ((clen + vlen) < datainlen);
+
+            *dataoutlen = 0;
+            res = handle_14b_apdu(chainBlockNotLast, &datain[clen], vlen, v_activate_field, dataout, maxdataoutlen, dataoutlen, &chaining);
+            if (res) {
+                if (leave_signal_on == false)
+                    switch_off_field_14b();
+
+                return 200;
+            }
+
+            // check R-block ACK
+//TODO check this one...
+            if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) { // *dataoutlen!=0. 'A && (!A || B)' is equivalent to 'A && B'
+                if (leave_signal_on == false) {
+                    switch_off_field_14b();
+                }
+                return 201;
+            }
+
+            clen += vlen;
+            v_activate_field = false;
+            if (*dataoutlen) {
+                if (clen != datainlen)
+                    PrintAndLogEx(ERR, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
+                break;
+            }
+        } while (clen < datainlen);
+
+    } else {
+
+        res = handle_14b_apdu(false, datain, datainlen, activate_field, dataout, maxdataoutlen, dataoutlen, &chaining);
+        if (res != PM3_SUCCESS) {
+            if (leave_signal_on == false) {
+                switch_off_field_14b();
+            }
+            return res;
+        }
+    }
+
+    while (chaining) {
+        // I-block with chaining
+        res = handle_14b_apdu(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
+        if (res != PM3_SUCCESS) {
+            if (leave_signal_on == false) {
+                switch_off_field_14b();
+            }
+            return 100;
+        }
+    }
+
+    if (leave_signal_on == false) {
+        switch_off_field_14b();
+    }
+
+    return PM3_SUCCESS;
+}
+
+// ISO14443-4. 7. Half-duplex block transmission protocol
+static int CmdHF14BAPDU(const char *Cmd) {
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    int datalen = 0;
+    uint8_t header[PM3_CMD_DATA_SIZE];
+    int headerlen = 0;
+    bool activate_field = false;
+    bool leave_signal_on = false;
+    bool decode_TLV = false;
+    bool decode_APDU = false;
+    bool make_APDU = false;
+    bool extended_APDU = false;
+    int le = 0;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b apdu",
+                  "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
+                  "hf 14b apdu -s 94a40800043f000002\n"
+                  "hf 14b apdu -sd 00A404000E325041592E5359532E444446303100 -> decode apdu\n"
+                  "hf 14b apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 -> encode standard apdu\n"
+                  "hf 14b apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("s",  "select",   "activate field and select card"),
+        arg_lit0("k",  "keep",     "leave the signal field ON after receive response"),
+        arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
+        arg_lit0("d",  "decode",   "decode apdu request if it possible"),
+        arg_str0("m",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
+        arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
+        arg_int0("l",  "le",       "<Le (int)>", "Le apdu parameter if `m` parameter included"),
+        arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    activate_field = arg_get_lit(ctx, 1);
+    leave_signal_on = arg_get_lit(ctx, 2);
+    decode_TLV = arg_get_lit(ctx, 3);
+    decode_APDU = arg_get_lit(ctx, 4);
+
+    CLIGetHexWithReturn(ctx, 5, header, &headerlen);
+    make_APDU = headerlen > 0;
+    if (make_APDU && headerlen != 4) {
+        PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    extended_APDU = arg_get_lit(ctx, 6);
+    le = arg_get_int_def(ctx, 7, 0);
+
+    if (make_APDU) {
+        uint8_t apdudata[PM3_CMD_DATA_SIZE] = {0};
+        int apdudatalen = 0;
+
+        CLIGetHexBLessWithReturn(ctx, 8, apdudata, &apdudatalen, 1 + 2);
+
+        APDUStruct apdu;
+        apdu.cla = header[0];
+        apdu.ins = header[1];
+        apdu.p1 = header[2];
+        apdu.p2 = header[3];
+
+        apdu.lc = apdudatalen;
+        apdu.data = apdudata;
+
+        apdu.extended_apdu = extended_APDU;
+        apdu.le = le;
+
+        if (APDUEncode(&apdu, data, &datalen)) {
+            PrintAndLogEx(ERR, "can't make apdu with provided parameters.");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+
+    } else {
+        if (extended_APDU) {
+            PrintAndLogEx(ERR, "make mode not set but here `e` option.");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        if (le > 0) {
+            PrintAndLogEx(ERR, "make mode not set but here `l` option.");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+
+        // len = data + PCB(1b) + CRC(2b)
+        CLIGetHexBLessWithReturn(ctx, 8, data, &datalen, 1 + 2);
+    }
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s",
+            activate_field ? "sel " : "",
+            leave_signal_on ? "keep " : "",
+            decode_TLV ? "TLV" : "",
+            sprint_hex(data, datalen)
+        );
+
+    if (decode_APDU) {
+        APDUStruct apdu;
+        if (APDUDecode(data, datalen, &apdu) == 0)
+            APDUPrint(apdu);
+        else
+            PrintAndLogEx(WARNING, "can't decode APDU.");
+    }
+
+    int res = exchange_14b_apdu(data, datalen, activate_field, leave_signal_on, data, PM3_CMD_DATA_SIZE, &datalen);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(data, datalen));
+    PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
+
+    // TLV decoder
+    if (decode_TLV && datalen > 4) {
+        TLVPrintFromBuffer(data, datalen - 2);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14BNdef(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h' || c == 0x00) return usage_hf_14b_ndef();
@@ -1352,6 +1688,7 @@ static int CmdHF14BNdef(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
+    {"apdu",        CmdHF14BAPDU,     IfPm3Iso14443b,  "Send ISO 14443-4 APDU to tag"},    
     {"dump",        CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO14443-B tag, save to file"},
     {"info",        CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
     {"list",        CmdHF14BList,     AlwaysAvailable, "List ISO 14443B history"},
