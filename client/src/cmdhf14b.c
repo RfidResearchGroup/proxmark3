@@ -1369,7 +1369,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
         }
 
         // check apdu length
-        if (rlen == 0 && rlen == 1) {
+        if (rlen == 0 || rlen == 1) {
             PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", rlen);
             return PM3_ESOFT;
         }
