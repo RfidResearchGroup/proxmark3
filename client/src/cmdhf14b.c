@@ -19,7 +19,7 @@
 #include "crc16.h"
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14B/7816 protocol
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription 
+#include "emv/apduinfo.h"  // GetAPDUCodeDescription
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
@@ -137,7 +137,7 @@ static int switch_off_field_14b(void) {
 static uint16_t get_sw(uint8_t *d, uint8_t n) {
     if (n < 2)
         return 0;
-    
+
     n -= 2;
     return d[n] * 0x0100 + d[n + 1];
 }
@@ -453,7 +453,7 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
         case 0x3:   // SRIx4K
         case 0x7: { // SRI4K
             //only need data[3]
-            switch(blk) {
+            switch (blk) {
                 case 7:
                 case 8:
                     mask = 0x01;
@@ -492,7 +492,7 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
         case 0xC: { // SRT512
             //need data[2] and data[3]
             uint8_t b = 1;
-            switch(blk) {
+            switch (blk) {
                 case 0:
                     mask = 0x01;
                     break;
@@ -557,7 +557,7 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
         }
         case 0x2: {  // SR176
             //need data[2]
-            switch(blk) {
+            switch (blk) {
                 case 0:
                 case 1:
                     mask = 0x1;
@@ -590,17 +590,17 @@ static char *get_st_lock_info(uint8_t model, uint8_t *lockbytes, uint8_t blk) {
                 case 15:
                     mask = 0x80;
                     break;
-           }
+            }
             // iceman:  this is opposite!  need sample to test with.
             if ((lockbytes[0] & mask)) {
                 sprintf(s, _RED_("1"));
-            }            
+            }
             return s;
         }
         default:
             break;
     }
-    return s;    
+    return s;
 }
 
 static uint8_t get_st_chipid(uint8_t *uid) {
@@ -609,8 +609,8 @@ static uint8_t get_st_chipid(uint8_t *uid) {
 
 static uint8_t get_st_cardsize(uint8_t *uid) {
     uint8_t chipid = get_st_chipid(uid);
-    switch(chipid) {
-        case 0x0: 
+    switch (chipid) {
+        case 0x0:
         case 0x3:
         case 0x7:
             return 1;
@@ -777,7 +777,7 @@ static bool HF14B_Std_Reader(bool verbose) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-    
+
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return false;
@@ -828,7 +828,7 @@ static bool HF14B_Other_Reader(bool verbose) {
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        switch_off_field_14b();        
+        switch_off_field_14b();
         return false;
     }
     int status = resp.oldarg[0];
@@ -852,7 +852,7 @@ static bool HF14B_Other_Reader(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        switch_off_field_14b();        
+        switch_off_field_14b();
         return false;
     }
     status = resp.oldarg[0];
@@ -876,7 +876,7 @@ static bool HF14B_Other_Reader(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        switch_off_field_14b();        
+        switch_off_field_14b();
         return false;
     }
     status = resp.oldarg[0];
@@ -1049,12 +1049,12 @@ static int CmdHF14BDump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
     }
 
-    uint8_t chipid = get_st_chipid(card.uid);     
+    uint8_t chipid = get_st_chipid(card.uid);
     PrintAndLogEx(SUCCESS, "Found a " _GREEN_("%s") " tag", get_ST_Chip_Model(chipid));
 
     // detect blocksize from card :)
     PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
-    
+
     uint8_t data[cardsize];
     memset(data, 0, sizeof(data));
     uint8_t *recv = NULL;
@@ -1142,15 +1142,15 @@ static int CmdHF14BDump(const char *Cmd) {
                       sprint_ascii(data + (i * 4), 4)
                      );
     }
-    
+
     PrintAndLogEx(INFO,
-            "%3d/0x%02X | %s | %s | %s",
-            0xFF,
-            0xFF,
-            sprint_hex(data + (0xFF * 4), 4),
-            get_st_lock_info(chipid, data + (blocknum * 4), 0xFF),
-            sprint_ascii(data + (0xFF * 4), 4)
-         );    
+                  "%3d/0x%02X | %s | %s | %s",
+                  0xFF,
+                  0xFF,
+                  sprint_hex(data + (0xFF * 4), 4),
+                  get_st_lock_info(chipid, data + (blocknum * 4), 0xFF),
+                  sprint_ascii(data + (0xFF * 4), 4)
+                 );
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
     PrintAndLogEx(NORMAL, "");
 
@@ -1279,10 +1279,10 @@ static int CmdHF14BNdef(const char *Cmd) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // ---------------  Select NDEF Tag application ----------------    
+    // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
-    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);    
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = 0;
 //    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
@@ -1301,11 +1301,11 @@ static int CmdHF14BNdef(const char *Cmd) {
 //    keep_field_on = true;
     // ---------------  Send CC select ----------------
     // ---------------  Read binary ----------------
-    
+
     // ---------------  NDEF file reading ----------------
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
-    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);    
+    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
 //    res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -1319,7 +1319,7 @@ static int CmdHF14BNdef(const char *Cmd) {
     // ---------------  Read binary ----------------
     uint8_t aREAD_NDEF[30];
     int aREAD_NDEF_n = 0;
-    param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);    
+    param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
 //    res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res)
         return res;
@@ -1381,7 +1381,7 @@ int CmdHF14B(const char *Cmd) {
 int infoHF14B(bool verbose) {
 
     // try std 14b (atqb)
-    if (HF14B_Std_Info(verbose)) 
+    if (HF14B_Std_Info(verbose))
         return 1;
 
     // try ST 14b

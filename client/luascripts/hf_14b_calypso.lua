@@ -30,10 +30,10 @@ device-side.
 ]]
 
 local function calypso_parse(result)
-    local r = Command.parse(result)    
+    local r = Command.parse(result)
     if r.arg1 >= 0 then
         local len = r.arg2 * 2
-        if len > 0 then 
+        if len > 0 then
             r.data = string.sub(r.data, 0, len);
             return r, nil
         end
@@ -130,7 +130,7 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL', result)
         if arg0 >= 0 then
             return calypso_parse(result)
-        else 
+        else
             err = 'card response failed'
         end
     else
@@ -254,7 +254,7 @@ function main(args)
             if err then
                 print('<< '..err)
             else
-                if result then     
+                if result then
                     local status, desc, err = calypso_apdu_status(result.data)
                     local d = result.data:sub(3, (#result.data - 8))
                     if status then

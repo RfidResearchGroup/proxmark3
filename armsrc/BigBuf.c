@@ -297,7 +297,7 @@ void tosend_stuffbit(int b) {
         Dbprintf(_RED_("toSend overflow"));
         return;
     }
-    
+
     if (toSend.bit >= 8) {
         toSend.max++;
         toSend.buf[toSend.max] = 0;

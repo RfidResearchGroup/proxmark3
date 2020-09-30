@@ -225,10 +225,10 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
 
     // select the file EF.CardAccess
     int rapdu_length = EPA_APDU((uint8_t *)apdu_select_binary_cardaccess,
-                            sizeof(apdu_select_binary_cardaccess),
-                            response_apdu,
-                            sizeof(response_apdu)
-                           );
+                                sizeof(apdu_select_binary_cardaccess),
+                                response_apdu,
+                                sizeof(response_apdu)
+                               );
 
     if (rapdu_length < 6
             || response_apdu[rapdu_length - 4] != 0x90

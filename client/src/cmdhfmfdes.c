@@ -653,7 +653,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
-    if (major == 0x11 &&  minor == 0x00)      
+    if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
     if (major == 0x10 && minor == 0x00)
         return NTAG413DNA;
@@ -3319,10 +3319,10 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
 
-    if (cardtype == DESFIRE_EV2 || 
-        cardtype == DESFIRE_LIGHT || 
-        cardtype == DESFIRE_EV3 ||
-        cardtype == NTAG413DNA) {
+    if (cardtype == DESFIRE_EV2 ||
+            cardtype == DESFIRE_LIGHT ||
+            cardtype == DESFIRE_EV3 ||
+            cardtype == NTAG413DNA) {
         // Signature originality check
         uint8_t signature[56] = {0};
         size_t signature_len = 0;

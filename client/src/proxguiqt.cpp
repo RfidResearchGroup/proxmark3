@@ -638,7 +638,7 @@ void Plot::closeEvent(QCloseEvent *event) {
 }
 
 void Plot::Zoom(float factor, int refX) {
-    if (factor >=1) { // Zoom in
+    if (factor >= 1) { // Zoom in
         if (GraphPixelsPerPoint <= 25 * factor) {
             GraphPixelsPerPoint *= factor;
             GraphStart += (refX - GraphStart) - ((refX - GraphStart) / factor);
@@ -664,7 +664,7 @@ void Plot::Move(int offset) {
         }
     } else { // Move left
         if (GraphPixelsPerPoint < 20) {
-            if (GraphStart >= (uint)-offset) {
+            if (GraphStart >= (uint) - offset) {
                 GraphStart += offset;
             } else {
                 GraphStart = 0;
@@ -697,15 +697,15 @@ void Plot::wheelEvent(QWheelEvent *event) {
         x += GraphStart;
 // event->angleDelta doesn't exist in QT4, both exist in 5.12.8 and 5.14.2 and event->delta doesn't exist in 5.15.0
 #if QT_VERSION >= 0x050d00
-        Zoom(1.0-(float)event->angleDelta().y()/(120/zoom_offset), x);
+        Zoom(1.0 - (float)event->angleDelta().y() / (120 / zoom_offset), x);
 #else
-        Zoom(1.0-(float)event->delta()/(120/zoom_offset), x);
+        Zoom(1.0 - (float)event->delta() / (120 / zoom_offset), x);
 #endif
     } else {
 #if QT_VERSION >= 0x050d00
-        Move(PageWidth*(-(float)event->angleDelta().y()/(120/move_offset)));
+        Move(PageWidth * (-(float)event->angleDelta().y() / (120 / move_offset)));
 #else
-        Move(PageWidth*(-(float)event->delta()/(120/move_offset)));
+        Move(PageWidth * (-(float)event->delta() / (120 / move_offset)));
 #endif
     }
     this->update();

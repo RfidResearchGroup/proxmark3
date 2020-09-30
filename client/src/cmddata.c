@@ -660,7 +660,7 @@ static int Cmdaskmandemod(const char *Cmd) {
         Cmd++;
     } else if (Cmd[1] == 's') {
         st = true;
-        Cmd+=2;
+        Cmd += 2;
     }
     int clk = 0;
     int invert = 0;

@@ -814,7 +814,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
                 break;
         }
         // valid mirror start page and byte position within start page.
-        if ((tagtype & NTAG_213_F)||(tagtype & NTAG_213_TT)) {
+        if ((tagtype & NTAG_213_F) || (tagtype & NTAG_213_TT)) {
             switch (mirror_conf) {
                 case 1:
                 { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x24) ? "OK" : "Invalid value"); break;}
@@ -1116,7 +1116,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = NTAG_210; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0E", 7) == 0) { tagtype = NTAG_212; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; }
-                else if (memcmp(version, "\x00\x04\x04\x02\x01\x01\x0F", 7) == 0) { tagtype = NTAG_213_C; break; } 
+                else if (memcmp(version, "\x00\x04\x04\x02\x01\x01\x0F", 7) == 0) { tagtype = NTAG_213_C; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x11", 7) == 0) { tagtype = NTAG_215; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x13", 7) == 0) { tagtype = NTAG_216; break; }
                 else if (memcmp(version, "\x00\x04\x04\x04\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213_F; break; }
@@ -1466,7 +1466,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
                 }
             }
-            if (len < 1) { 
+            if (len < 1) {
                 PrintAndLogEx(WARNING, _YELLOW_("password not known"));
                 PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen r`") " to get see known pwd gen algo suggestions");
             }

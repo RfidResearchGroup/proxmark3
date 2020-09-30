@@ -55,7 +55,7 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
     /* verify the argtable[] entries were allocated sucessfully */
     if (arg_nullcheck(ctx->argtable) != 0) {
         /* NULL entries were detected, some allocations must have failed */
-        PrintAndLogEx(ERR,"ERROR: Insufficient memory\n");
+        PrintAndLogEx(ERR, "ERROR: Insufficient memory\n");
         fflush(stdout);
         return 2;
     }
@@ -65,48 +65,48 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
     /* special case: '--help' takes precedence over error reporting */
     if ((argc < 2 && !allowEmptyExec) || ((struct arg_lit *)(ctx->argtable)[0])->count > 0) { // help must be the first record
         if (ctx->programHint)
-            PrintAndLogEx(NORMAL,"\n"_DescriptionColor_("%s"), ctx->programHint);
+            PrintAndLogEx(NORMAL, "\n"_DescriptionColor_("%s"), ctx->programHint);
 
-        PrintAndLogEx(NORMAL,"\n"_SectionTagColor_("usage:"));
-        PrintAndLogEx (NORMAL,"    "_CommandColor_("%s")NOLF, ctx->programName); 
+        PrintAndLogEx(NORMAL, "\n"_SectionTagColor_("usage:"));
+        PrintAndLogEx(NORMAL, "    "_CommandColor_("%s")NOLF, ctx->programName);
         arg_print_syntaxv(stdout, ctx->argtable, "\n\n");
 
-        PrintAndLogEx(NORMAL,_SectionTagColor_("options:"));
+        PrintAndLogEx(NORMAL, _SectionTagColor_("options:"));
 
         arg_print_glossary(stdout, ctx->argtable, "    "_ArgColor_("%-30s")" "_ArgHelpColor_("%s")"\n");
 
-        PrintAndLogEx(NORMAL,"");
+        PrintAndLogEx(NORMAL, "");
         if (ctx->programHelp) {
-            PrintAndLogEx(NORMAL,_SectionTagColor_("examples/notes:"));
+            PrintAndLogEx(NORMAL, _SectionTagColor_("examples/notes:"));
             char *buf = NULL;
             int idx = 0;
-            buf = realloc (buf,strlen (ctx->programHelp)+1); // more then enough as we are splitting
+            buf = realloc(buf, strlen(ctx->programHelp) + 1); // more then enough as we are splitting
 
             char *p2; // pointer to split example from comment.
             int egWidth = 30;
-            for (int i = 0; i <= strlen (ctx->programHelp); i++) { // <= so to get string terminator.
+            for (int i = 0; i <= strlen(ctx->programHelp); i++) {  // <= so to get string terminator.
                 buf[idx++] = ctx->programHelp[i];
                 if ((ctx->programHelp[i] == '\n') || (ctx->programHelp[i] == 0x00)) {
-                    buf[idx-1] = 0x00;
-                    p2 = strstr(buf,"->"); // See if the example has a comment.
+                    buf[idx - 1] = 0x00;
+                    p2 = strstr(buf, "->"); // See if the example has a comment.
                     if (p2 != NULL) {
-                        *(p2-1) = 0x00;
+                        *(p2 - 1) = 0x00;
 
                         if (strlen(buf) > 28)
                             egWidth = strlen(buf) + 5;
                         else
                             egWidth = 30;
 
-                        PrintAndLogEx(NORMAL,"    "_ExampleColor_("%-*s")" %s", egWidth, buf, p2);
+                        PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s")" %s", egWidth, buf, p2);
                     } else {
-                        PrintAndLogEx(NORMAL,"    "_ExampleColor_("%-*s"), egWidth, buf);
+                        PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s"), egWidth, buf);
                     }
                     idx = 0;
                 }
             }
 
-            PrintAndLogEx(NORMAL,"");
-            free (buf);
+            PrintAndLogEx(NORMAL, "");
+            free(buf);
         }
 
         fflush(stdout);
@@ -117,7 +117,7 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
     if (nerrors > 0) {
         /* Display the error details contained in the arg_end struct.*/
         arg_print_errors(stdout, ((struct arg_end *)(ctx->argtable)[vargtableLen - 1]), ctx->programName);
-        PrintAndLogEx(WARNING,"Try '%s --help' for more information.\n", ctx->programName);
+        PrintAndLogEx(WARNING, "Try '%s --help' for more information.\n", ctx->programName);
         fflush(stdout);
         return 3;
     }

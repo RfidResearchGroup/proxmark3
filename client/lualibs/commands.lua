@@ -130,13 +130,13 @@ function Command:sendMIX( ignore_response, timeout, use_cmd_ack)
     if timeout == nil then timeout = TIMEOUT end
     local data = self.data
     local cmd = self.cmd
-    local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3   
+    local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
 
     local err, msg = core.SendCommandMIX(cmd, arg1, arg2, arg3, data)
     if err == nil then return err, msg end
     if ignore_response then return true, nil end
-    
-    local ack = _commands.CMD_ACK 
+
+    local ack = _commands.CMD_ACK
     if use_cmd_ack then
         ack = cmd
     end

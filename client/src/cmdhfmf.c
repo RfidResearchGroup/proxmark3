@@ -5271,7 +5271,7 @@ static command_t CommandTable[] = {
     {"ecfill",      CmdHF14AMfECFill,       IfPm3Iso14443a,  "Fill simulator memory with help of keys from simulator"},
     {"eclr",        CmdHF14AMfEClear,       IfPm3Iso14443a,  "Clear simulator memory"},
     {"egetblk",     CmdHF14AMfEGetBlk,      IfPm3Iso14443a,  "Get simulator memory block"},
-    {"egetsc",      CmdHF14AMfEGetSc,       IfPm3Iso14443a,  "Get simulator memory sector"},    
+    {"egetsc",      CmdHF14AMfEGetSc,       IfPm3Iso14443a,  "Get simulator memory sector"},
     {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from simulator memory"},
     {"eload",       CmdHF14AMfELoad,        IfPm3Iso14443a,  "Load from file emul dump"},
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},

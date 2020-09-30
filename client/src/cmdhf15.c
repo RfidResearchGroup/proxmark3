@@ -431,7 +431,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
     for (i = 0; i < sizeof(revsign); i++) {
         revsign[i] = signature[31 - i];
     }
-    
+
     int reason = 0;
     bool is_valid = false;
     for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
@@ -446,7 +446,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
             reason = 1;
             break;
         }
-        
+
         // try with sha256
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, true);
         is_valid = (res == 0);
@@ -463,7 +463,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
             break;
         }
 
-        
+
         // try with sha256
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), true);
         is_valid = (res == 0);
@@ -487,7 +487,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
     PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
-    switch(reason) {
+    switch (reason) {
         case 1:
             PrintAndLogEx(INFO, "                  Params used: UID and signature, plain");
             break;
@@ -497,7 +497,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         case 3:
             PrintAndLogEx(INFO, "                  Params used: reversed UID and signature, plain");
             break;
-        case 4: 
+        case 4:
             PrintAndLogEx(INFO, "                  Params used: reversed UID and signature, SHA256");
             break;
     }
