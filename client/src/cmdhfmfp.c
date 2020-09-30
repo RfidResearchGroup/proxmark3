@@ -371,7 +371,8 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
 
                 // DESFire answers 0x1C or 67 00
-                // Plus answers 0x0B, 0x09
+                // Plus answers 0x0B, 0x09, 0x06 
+				// Which tag answers 6D 00 ??
                 if ( data[0] != 0x0b && data[0] != 0x09 && data[0] != 0x1C && data[0] != 0x67) {
                     PrintAndLogEx(INFO, _RED_("Send copy to iceman of this command output!"));
                     PrintAndLogEx(INFO, "data: %s", sprint_hex(data, datalen));
@@ -384,6 +385,8 @@ static int CmdHFMFPInfo(const char *Cmd) {
                     PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
                     DropField();
                     return PM3_SUCCESS;
+                } else if (memcmp(data, "\x6D\x00", 2) == 0) {
+                    isPlus = false;
                 } else {
                     PrintAndLogEx(INFO, "        result: " _GREEN_("MIFARE Plus SL0/SL3"));
                 }
