@@ -1774,7 +1774,8 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
         status = iso14443b_apdu(cmd, len, (param & ISO14B_SEND_CHAINING), buf, sizeof(buf));
-        reply_mix(CMD_HF_ISO14443B_COMMAND, status, status, 0, buf, status);
+        sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
+        reply_mix(CMD_HF_ISO14443B_COMMAND, status, status, 0, buf, sendlen);
     }
 
     if ((param & ISO14B_RAW) == ISO14B_RAW) {
@@ -1782,8 +1783,6 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
             AddCrc14B(cmd, len);
             len += 2;
         }
-        uint8_t buf[100] = {0};
-
         uint32_t start_time = 0;
         uint32_t eof_time = 0;
         CodeAndTransmit14443bAsReader(cmd, len, &start_time, &eof_time);
