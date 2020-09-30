@@ -83,16 +83,23 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
             buf = realloc (buf,strlen (ctx->programHelp)+1); // more then enough as we are splitting
 
             char *p2; // pointer to split example from comment.
-            for (int i = 0; i < strlen (ctx->programHelp); i++) {
+            int egWidth = 30;
+            for (int i = 0; i <= strlen (ctx->programHelp); i++) { // <= so to get string terminator.
                 buf[idx++] = ctx->programHelp[i];
                 if ((ctx->programHelp[i] == '\n') || (ctx->programHelp[i] == 0x00)) {
                     buf[idx-1] = 0x00;
                     p2 = strstr(buf,"->"); // See if the example has a comment.
                     if (p2 != NULL) {
                         *(p2-1) = 0x00;
-                        PrintAndLogEx(NORMAL,"    "_ExampleColor_("%-50s")" %s",buf,p2);
+
+                        if (strlen(buf) > 28)
+                            egWidth = strlen(buf) + 5;
+                        else
+                            egWidth = 30;
+
+                        PrintAndLogEx(NORMAL,"    "_ExampleColor_("%-*s")" %s", egWidth, buf, p2);
                     } else {
-                        PrintAndLogEx(NORMAL,"    "_ExampleColor_("%-50s"),buf);
+                        PrintAndLogEx(NORMAL,"    "_ExampleColor_("%-*s"), egWidth, buf);
                     }
                     idx = 0;
                 }
