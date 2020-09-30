@@ -926,10 +926,10 @@ static int CmdHF14BReadSri(const char *Cmd) {
 static int CmdHF14BWriteSri(const char *Cmd) {
     /*
      * For SRIX4K  blocks 00 - 7F
-     * hf 14b raw -c -p 09 $srix4kwblock $srix4kwdata
+     * hf 14b raw -c -k 09 $srix4kwblock $srix4kwdata
      *
      * For SR512  blocks 00 - 0F
-     * hf 14b raw -c -p 09 $sr512wblock $sr512wdata
+     * hf 14b raw -c -k 09 $sr512wblock $sr512wdata
      *
      * Special block FF =  otp_lock_reg block.
      * Data len 4 bytes-
