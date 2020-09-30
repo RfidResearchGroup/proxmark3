@@ -52,17 +52,17 @@ static int usage_hf_14b_reader(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_14b_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-p] [-s / -ss] [-t] <0A 0B 0C ... hex>");
+    PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-k] [-s / -ss] [-t] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
     PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -p    leave the field on after receive");
+    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
     PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
     PrintAndLogEx(NORMAL, "       -ss   active signal field ON with select for SRx ST Microelectronics tags");
     PrintAndLogEx(NORMAL, "       -t    timeout in ms");
     PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b raw -s -c -p 0200a40400"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b raw -s -c -k 0200a40400"));
     return PM3_SUCCESS;
 }
 static int usage_hf_14b_sniff(void) {
@@ -203,7 +203,7 @@ static int CmdHF14BSniff(const char *Cmd) {
 }
 
 static int CmdHF14BCmdRaw(const char *Cmd) {
-    bool reply = true, power = false, select = false, hasTimeout = false;
+    bool reply = true, keep_field_on = false, select = false, hasTimeout = false;
     char buf[5] = "";
     int i = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
@@ -228,8 +228,8 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
                 case 'c':
                     flags |= ISO14B_APPEND_CRC;
                     break;
-                case 'p':
-                    power = true;
+                case 'k':
+                    keep_field_on = true;
                     break;
                 case 's':
                     select = true;
@@ -283,7 +283,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
 
-    if (power == 0)
+    if (keep_field_on == 0)
         flags |= ISO14B_DISCONNECT;
 
     if (datalen > 0)

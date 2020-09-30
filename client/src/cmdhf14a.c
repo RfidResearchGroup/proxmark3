@@ -246,11 +246,11 @@ static int usage_hf_14a_sniff(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_14a_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
+    PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-k] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
     PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -p    leave the signal field ON after receive");
+    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
     PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
     PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
     PrintAndLogEx(NORMAL, "       -b    number of bits to send. Useful for send partial byte");
@@ -1186,7 +1186,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
 static int CmdHF14ACmdRaw(const char *Cmd) {
     bool reply = 1;
     bool crc = false;
-    bool power = false;
+    bool keep_field_on = false;
     bool active = false;
     bool active_select = false;
     bool no_rats = false;
@@ -1218,8 +1218,8 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                 case 'c':
                     crc = true;
                     break;
-                case 'p':
-                    power = true;
+                case 'k':
+                    keep_field_on = true;
                     break;
                 case 'a':
                     active = true;
@@ -1306,7 +1306,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         argtimeout = 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
 
-    if (power) {
+    if (keep_field_on) {
         flags |= ISO14A_NO_DISCONNECT;
     }
 
@@ -1423,37 +1423,9 @@ static int CmdHF14AChaining(const char *Cmd) {
     return 0;
 }
 
-static command_t CommandTable[] = {
-    {"help",        CmdHelp,              AlwaysAvailable, "This help"},
-    {"list",        CmdHF14AList,         AlwaysAvailable,  "List ISO 14443-a history"},
-    {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
-    {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
-    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "<n> Collect n>0 ISO14443-a UIDs in one go"},
-    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "<UID> -- Simulate ISO 14443-a tag"},
-    {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
-    {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
-    {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
-    {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
-    {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
-    {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return PM3_SUCCESS;
-}
-
-int CmdHF14A(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(CommandTable, Cmd);
-}
-
 static void printTag(const char *tag) {
     PrintAndLogEx(SUCCESS, "   " _YELLOW_("%s"), tag);
 }
-
 
 typedef enum {
     MTNONE = 0,
@@ -2029,4 +2001,31 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     DropField();
     return select_status;
+}
+
+static command_t CommandTable[] = {
+    {"help",        CmdHelp,              AlwaysAvailable, "This help"},
+    {"list",        CmdHF14AList,         AlwaysAvailable,  "List ISO 14443-a history"},
+    {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
+    {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
+    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "<n> Collect n>0 ISO14443-a UIDs in one go"},
+    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "<UID> -- Simulate ISO 14443-a tag"},
+    {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
+    {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
+    {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
+    {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
+    {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
+    {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdHF14A(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
 }
