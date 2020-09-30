@@ -125,15 +125,6 @@ static int usage_hf_14b_dump(void) {
                  );
     return PM3_SUCCESS;
 }
-static int usage_hf_14b_ndef(void) {
-    PrintAndLogEx(NORMAL, "\n Print NFC Data Exchange Format (NDEF)\n");
-    PrintAndLogEx(NORMAL, "Usage: hf 14b ndef [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h          : This help");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14b ndef"));
-    return PM3_SUCCESS;
-}
 
 static int switch_off_field_14b(void) {
     clearCommandBuffer();
@@ -1596,8 +1587,18 @@ static int CmdHF14BAPDU(const char *Cmd) {
 }
 
 static int CmdHF14BNdef(const char *Cmd) {
-    char c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h' || c == 0x00) return usage_hf_14b_ndef();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b ndef",
+                  "Print NFC Data Exchange Format (NDEF)",
+                  "hf 14b ndef"
+                  );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     bool activate_field = true;
     bool keep_field_on = true;
