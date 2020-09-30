@@ -1335,15 +1335,13 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
     }
 
     uint16_t flags = 0;
-    
-    //  Don't support 14B chaining yet
+
     if (chainingin)
         flags = ISO14B_SEND_CHAINING;
 
     // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
     // https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
     // here length PM3_CMD_DATA_SIZE=512
-    // timeout must be authomatically set by "get ATS"
     if (datain)
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, (datainlen & 0xFFFF), 0, datain, datainlen & 0xFFFF);
     else
@@ -1352,13 +1350,14 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         uint8_t *recv = resp.data.asBytes;
-        int iLen = resp.oldarg[0];
+        int rlen = resp.oldarg[0];
         uint8_t res = resp.oldarg[1];
 
-        int dlen = iLen - 2;
+        int dlen = rlen - 2;
         if (dlen < 0) {
             dlen = 0;
         }
+        
         *dataoutlen += dlen;
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
@@ -1373,20 +1372,14 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
             return PM3_SUCCESS;
         }
 
-        if (!iLen) {
+        if (rlen < 0) {
             PrintAndLogEx(ERR, "APDU: No APDU response.");
             return PM3_ESOFT;
         }
 
         // check apdu length
-        if (iLen < 2 && iLen >= 0) {
-            PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", iLen);
-            return PM3_ESOFT;
-        }
-
-        // check block TODO
-        if (iLen == -2) {
-            PrintAndLogEx(ERR, "APDU: Block type mismatch.");
+        if (rlen == 0 && rlen == 1) {
+            PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", rlen);
             return PM3_ESOFT;
         }
 
@@ -1397,11 +1390,6 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
             *chainingout = true;
         }
 
-        // CRC Check
-        if (iLen == -1) {
-            PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error.");
-            return PM3_ESOFT;
-        }
     } else {
         PrintAndLogEx(ERR, "APDU: Reply timeout.");
         return PM3_ETIMEOUT;
@@ -1418,8 +1406,8 @@ static int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field
     // 3 byte here - 1b framing header, 2b crc16
     if (apdu_in_framing_enable &&
             ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
-        int clen = 0;
 
+        int clen = 0;
         bool v_activate_field = activate_field;
 
         do {
@@ -1435,9 +1423,10 @@ static int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field
                 return 200;
             }
 
+            // TODO check this one...
             // check R-block ACK
-//TODO check this one...
-            if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) { // *dataoutlen!=0. 'A && (!A || B)' is equivalent to 'A && B'
+            // *dataoutlen!=0. 'A && (!A || B)' is equivalent to 'A && B'
+            if ((*dataoutlen == 0) && (*dataoutlen != 0 || chaining != chainBlockNotLast)) { 
                 if (leave_signal_on == false) {
                     switch_off_field_14b();
                 }
@@ -1576,9 +1565,9 @@ static int CmdHF14BAPDU(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s",
-            activate_field ? "sel " : "",
-            leave_signal_on ? "keep " : "",
-            decode_TLV ? "TLV" : "",
+            activate_field ? "sel" : "",
+            leave_signal_on ? " keep" : "",
+            decode_TLV ? " TLV" : "",
             sprint_hex(data, datalen)
         );
 
@@ -1596,7 +1585,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(data, datalen));
-    PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
+    PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
 
     // TLV decoder
     if (decode_TLV && datalen > 4) {
