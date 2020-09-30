@@ -1184,7 +1184,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
             // temporarily increase timeout
             iso14b_set_timeout(MAX((data_bytes[1] & 0x3f) * save_iso14b_timeout, ISO14443B_READER_TIMEOUT));
             // Transmit WTX back
-            // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
+            // byte1 - WTXM [1..59]. command FWT = FWT * WTXM
             data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
             // now need to fix CRC.
             AddCrc14B(data_bytes, len - 2);
@@ -1204,7 +1204,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
 
         // if we received an I- or R(ACK)-Block with a block number equal to the
         // current block number, toggle the current block number
-        if (len >= 3 // PCB+CRC = 3 bytes
+        if (len >= 3 // PCB + CRC = 3 bytes
                 && ((data_bytes[0] & 0xC0) == 0 // I-Block
                     || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
                 && (data_bytes[0] & 0x01) == iso14b_pcb_blocknum) { // equal block numbers
@@ -1736,6 +1736,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     size_t len = c->oldarg[1] & 0xffff;
     uint32_t timeout = c->oldarg[2];
     uint8_t *cmd = c->data.asBytes;
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
 
     if (DBGLEVEL > DBG_DEBUG) Dbprintf("14b raw: param, %04x", param);
 
@@ -1772,8 +1773,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     }
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
-        uint8_t buf[100] = {0};
-        status = iso14443b_apdu(cmd, len, (param & ISO14A_SEND_CHAINING), buf, sizeof(buf));
+        status = iso14443b_apdu(cmd, len, (param & ISO14B_SEND_CHAINING), buf, sizeof(buf));
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, status, 0, buf, status);
     }
 
