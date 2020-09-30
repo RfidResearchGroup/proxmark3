@@ -563,13 +563,13 @@ static int CmdHF14AInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a info",
                   "This command makes more extensive tests against a ISO14443a tag in order to collect information",
-                  "Sample:\n\thf 14a info -nsv - shows full information about the card\n");
+                  "hf 14a info -nsv -> shows full information about the card\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("vV",  "verbose",   "adds some information to results"),
-        arg_lit0("nN",  "nacktest",   "test for nack bug"),
-        arg_lit0("sS",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
+        arg_lit0("v",  "verbose",   "adds some information to results"),
+        arg_lit0("n",  "nacktest",   "test for nack bug"),
+        arg_lit0("s",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1080,20 +1080,20 @@ static int CmdHF14AAPDU(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a apdu",
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
-                  "Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
-                  "\thf 14a apdu -sd 00A404000E325041592E5359532E444446303100 - decode apdu\n"
-                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 - encode standard apdu\n"
-                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 - encode extended apdu\n");
+                  "hf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
+                  "hf 14a apdu -sd 00A404000E325041592E5359532E444446303100 -> decode apdu\n"
+                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 -> encode standard apdu\n"
+                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("sS",  "select",   "activate field and select card"),
-        arg_lit0("kK",  "keep",     "leave the signal field ON after receive response"),
-        arg_lit0("tT",  "tlv",      "executes TLV decoder if it possible"),
-        arg_lit0("dD",  "decapdu",  "decode apdu request if it possible"),
-        arg_str0("mM",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
-        arg_lit0("eE",  "extended", "make extended length apdu if `m` parameter included"),
-        arg_int0("lL",  "le",       "<Le (int)>", "Le apdu parameter if `m` parameter included"),
+        arg_lit0("s",  "select",   "activate field and select card"),
+        arg_lit0("k",  "keep",     "leave the signal field ON after receive response"),
+        arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
+        arg_lit0("d",  "decapdu",  "decode apdu request if it possible"),
+        arg_str0("m",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
+        arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
+        arg_int0("l",  "le",       "<Le (int)>", "Le apdu parameter if `m` parameter included"),
         arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
         arg_param_end
     };
@@ -1369,8 +1369,7 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a antifuzz",
                   "Tries to fuzz the ISO14443a anticollision phase",
-                  "Usage:\n"
-                  "\thf 14a antifuzz -4\n");
+                  "hf 14a antifuzz -4\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1398,9 +1397,8 @@ static int CmdHF14AChaining(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
-                  "Usage:\n"
-                  "\thf 14a chaining disable -> disable chaining\n"
-                  "\thf 14a chaining         -> show chaining enable/disable state\n");
+                  "hf 14a chaining disable -> disable chaining\n"
+                  "hf 14a chaining         -> show chaining enable/disable state\n");
 
     void *argtable[] = {
         arg_param_begin,
