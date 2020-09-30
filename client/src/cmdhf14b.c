@@ -164,7 +164,6 @@ static bool waitCmd14b(bool verbose) {
                               (crc) ? _GREEN_("ok") : _RED_("fail")
                              );
             } else if (len == 0) {
-                PrintAndLogEx(SUCCESS, "received SOF only (maybe iCLASS/Picopass)");
             } else {
                 PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
             }
@@ -779,18 +778,17 @@ static bool HF14B_Std_Reader(bool verbose) {
     PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
         return false;
     }
 
-    iso14b_card_select_t card;
-    memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
-
     int status = resp.oldarg[0];
 
     switch (status) {
-        case 0:
+        case 0: {
+            iso14b_card_select_t card;
+            memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
@@ -798,15 +796,19 @@ static bool HF14B_Std_Reader(bool verbose) {
             print_atqb_resp(card.atqb, card.cid);
             is_success = true;
             break;
-        case -1:
+        }
+        case -1: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
             break;
-        case -2:
+        }
+        case -2: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
             break;
-        default:
+        }
+        default: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b card select failed");
             break;
+        }
     }
     return is_success;
 }
