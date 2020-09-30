@@ -315,10 +315,10 @@ static int usage_15_raw(void) {
         {"-r", "do not read response" },
         {"-2", "use slower '1 out of 256' mode" },
         {"-c", "calculate and append CRC" },
-        {"-p", "leave the signal field ON" },
+        {"-k", "keep signal field ON after receive" },
         {"", "Tip: turn on debugging for verbose output"},
     };
-    PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>\n");
+    PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-k] [-c] <0A 0B 0C ... hex>\n");
     PrintAndLogOptions(options, 4, 3);
     return PM3_SUCCESS;
 }
@@ -1353,7 +1353,7 @@ static int CmdHF15Raw(const char *Cmd) {
     if (strlen(Cmd) < 3 || cmdp == 'h') return usage_15_raw();
 
     int reply = 1, fast = 1, i = 0;
-    bool crc = false, leaveSignalON = false;
+    bool crc = false, keep_field_on = false;
     char buf[5] = "";
     uint8_t data[100];
     uint32_t datalen = 0, temp;
@@ -1364,21 +1364,18 @@ static int CmdHF15Raw(const char *Cmd) {
     while (Cmd[i] != '\0') {
         if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
+            switch (tolower(Cmd[i + 1])) {
                 case 'r':
-                case 'R':
                     reply = 0;
                     break;
                 case '2':
                     fast = 0;
                     break;
                 case 'c':
-                case 'C':
                     crc = true;
                     break;
-                case 'p':
-                case 'P':
-                    leaveSignalON = true;
+                case 'k':
+                    keep_field_on = true;
                     break;
                 default:
                     PrintAndLogEx(WARNING, "Invalid option");
@@ -1429,7 +1426,7 @@ static int CmdHF15Raw(const char *Cmd) {
         }
     }
 
-    if (leaveSignalON == false)
+    if (keep_field_on == false)
         DropField();
 
     return PM3_SUCCESS;
