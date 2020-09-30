@@ -906,7 +906,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
     Demod14bInit(response, max_len);
     
     // Setup and start DMA.
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+    //FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
@@ -1105,6 +1105,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
         // EGT extra guard time  1 ETU = 9us
         // For PCD it ranges 0-57us === 0 - 6 ETU
         // FOR PICC it ranges 0-19us == 0 - 2 ETU
+        
     }
 
     // Send EOF
@@ -1120,13 +1121,10 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     *   TR0 - FWT for all other commands
     *       32,64,128,256,512, ... , 262144, 524288 ETU
     */
+    int pad = (12 + (len * 10) + 11) & 0x7;
 
-    for (i = 0; i < 8 ; ++i)
+    for (i = 0; i < 16 - pad; ++i)
         tosend_stuffbit(1);
-
-    // Convert from last character reference to length
-    tosend_t *ts = get_tosend();
-    ts->max++;
 }
 
 /*
