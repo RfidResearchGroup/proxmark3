@@ -2954,13 +2954,13 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "Usage:\n\thf mfu ndef -> shows NDEF data\n"
-                  "\thf mfu ndef -k ffffffff -> shows NDEF data with key\n");
+                  "hf mfu ndef -> shows NDEF data\n"
+                  "hf mfu ndef -k ffffffff -> shows NDEF data with key");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("kK", "key", "replace default key for NDEF", NULL),
-        arg_lit0("lL", "key", "(optional) swap entered key's endianness"),
+        arg_str0("k", "key", "replace default key for NDEF", NULL),
+        arg_lit0("l", "key", "(optional) swap entered key's endianness"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
