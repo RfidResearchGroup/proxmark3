@@ -100,7 +100,7 @@ module fpga_lf(
     lf_ed_threshold = 8bits threshold value.
 
   conf_word 12bits
-    conf_word[7:5] = 3bit major mode.
+    conf_word[8:6]  = 3bit major mode.
     conf_word[0]    = 1bit lf_field
     conf_word[1]    = 1bit lf_ed_toggle_mode
     conf_word[7:0]  = 8bit divisor
@@ -110,7 +110,7 @@ module fpga_lf(
 bit  |    15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
 -----+-------------------------------------------
 cmd  |     x  x  x  x
-major|                          x x x
+major|                        x x x
 opt  |                                      x x
 divi |                          x x x x x x x x
 thres|                          x x x x x x x x
