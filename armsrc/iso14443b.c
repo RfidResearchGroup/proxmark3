@@ -274,8 +274,7 @@ static struct {
     enum {
         DEMOD_UNSYNCD,
         DEMOD_PHASE_REF_TRAINING,
-        DEMOD_AWAITING_FALLING_EDGE_OF_SOF,
-        DEMOD_GOT_FALLING_EDGE_OF_SOF,
+        WAIT_FOR_RISING_EDGE_OF_SOF,
         DEMOD_AWAITING_START_BIT,
         DEMOD_RECEIVING_DATA
     }       state;
@@ -724,6 +723,13 @@ void SimulateIso14443bTag(uint32_t pupi) {
 // tag's response, which we leave in the buffer to be demodulated on the
 // PC side.
 //=============================================================================
+// We support both 14b framing and 14b' framing.
+// 14b framing looks like:
+// xxxxxxxx1111111111111111-000000000011-0........1-0........1-0........1-1-0........1-0........1-1000000000011xxxxxx
+//         TR1              SOF 10*0+2*1 start-stop  ^^^^^^^^byte         ^ occasional stuff bit   EOF 10*0+N*1
+// 14b' framing looks like:
+// xxxxxxxxxxxxxxxx111111111111111111111-0........1-0........1-0........1-1-0........1-0........1-000000000000xxxxxxx
+//                 SOF?                  start-stop  ^^^^^^^^byte         ^ occasional stuff bit  EOF
 
 /*
  * Handles reception of a bit from the tag
@@ -774,57 +780,33 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             break;
         }
         case DEMOD_PHASE_REF_TRAINING: {
-            if (Demod.posCount < 8) {
-                if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {
-                    // set the reference phase (will code a logic '1') by averaging over 32 1/fs.
-                    // note: synchronization time > 80 1/fs
-                    Demod.sumI += ci;
-                    Demod.sumQ += cq;
-                    Demod.posCount++;
+            // While we get a constant signal
+            if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {
+                if (((ABS(Demod.sumI) > ABS(Demod.sumQ)) && (((ci > 0) && (Demod.sumI > 0)) || ((ci < 0) && (Demod.sumI < 0)))) ||  // signal closer to horizontal, polarity check based on on I
+                    ((ABS(Demod.sumI) <= ABS(Demod.sumQ)) && (((cq > 0) && (Demod.sumQ > 0)) || ((cq < 0) && (Demod.sumQ < 0))))) { // signal closer to vertical, polarity check based on on Q
+                    if (Demod.posCount < 10) {  // refine signal approximation during first 10 samples
+                        Demod.sumI += ci;
+                        Demod.sumQ += cq;
+                    }
+                    Demod.posCount += 1;
                 } else {
-                    // subcarrier lost
-                    Demod.state = DEMOD_UNSYNCD;
+                    // transition
+                    if (Demod.posCount < 10) {
+                        // subcarrier lost
+                        Demod.state = DEMOD_UNSYNCD;
+                        break;
+                    } else {
+                        // at this point it can be start of 14b' data or start of 14b SOF
+                        MAKE_SOFT_DECISION();
+                        Demod.posCount = 1;				// this was the first half
+                        Demod.thisBit = v;
+                        Demod.shiftReg = 0;
+                        Demod.state = DEMOD_RECEIVING_DATA;
+                    }
                 }
             } else {
-                Demod.state = DEMOD_AWAITING_FALLING_EDGE_OF_SOF;
-            }
-            break;
-        }
-        case DEMOD_AWAITING_FALLING_EDGE_OF_SOF: {
-
-            MAKE_SOFT_DECISION();
-
-            if (v < 0) {	// logic '0' detected
-                Demod.state = DEMOD_GOT_FALLING_EDGE_OF_SOF;
-                Demod.posCount = 0;	// start of SOF sequence
-            } else {
-                if (Demod.posCount > 200/4) {	// maximum length of TR1 = 200 1/fs
-                    Demod.state = DEMOD_UNSYNCD;
-                }
-            }
-            Demod.posCount++;
-            break;
-        }
-        case DEMOD_GOT_FALLING_EDGE_OF_SOF: {
-
-            Demod.posCount++;
-            MAKE_SOFT_DECISION();
-
-            if (v > 0) {
-                if (Demod.posCount < 9 * 2) { // low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
-                    Demod.state = DEMOD_UNSYNCD;
-                } else {
-                    LED_C_ON(); // Got SOF
-                    Demod.posCount = 0;
-                    Demod.bitCount = 0;
-                    Demod.len = 0;
-                    Demod.state = DEMOD_AWAITING_START_BIT;
-                }
-            } else {
-                if (Demod.posCount > 12 * 2) { // low phase of SOF too long (> 12 etu)
-                    Demod.state = DEMOD_UNSYNCD;
-                    LED_C_OFF();
-                }
+                // subcarrier lost
+                Demod.state = DEMOD_UNSYNCD;
             }
             break;
         }
@@ -845,6 +827,28 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                 Demod.thisBit = v;
                 Demod.shiftReg = 0;
                 Demod.state = DEMOD_RECEIVING_DATA;
+            }
+            break;
+        }
+        case WAIT_FOR_RISING_EDGE_OF_SOF: {
+
+            Demod.posCount++;
+            MAKE_SOFT_DECISION();
+            if (v > 0) {
+                if (Demod.posCount < 9 * 2) { // low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
+                    Demod.state = DEMOD_UNSYNCD;
+                } else {
+                    LED_C_ON(); // Got SOF
+                    Demod.posCount = 0;
+                    Demod.bitCount = 0;
+                    Demod.len = 0;
+                    Demod.state = DEMOD_AWAITING_START_BIT;
+                }
+            } else {
+                if (Demod.posCount > 12 * 2) { // low phase of SOF too long (> 12 etu)
+                    Demod.state = DEMOD_UNSYNCD;
+                    LED_C_OFF();
+                }
             }
             break;
         }
@@ -874,11 +878,20 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                         Demod.bitCount = 0;
                         Demod.state = DEMOD_AWAITING_START_BIT;
                     } else {
-                        Demod.state = DEMOD_AWAITING_FALLING_EDGE_OF_SOF;
-                        LED_C_OFF();
                         if (s == 0x000) {
-                            // This is EOF (start, stop and all data bits == '0'
-                            return true;
+                            if (Demod.len > 0) {
+                                LED_C_OFF();
+                                // This is EOF (start, stop and all data bits == '0'
+                                return true;
+                            } else {
+                                // Zeroes but no data acquired yet?
+                                // => Still in SOF of 14b, wait for raising edge
+                                Demod.posCount = 10 * 2;
+                                Demod.bitCount = 0;
+                                Demod.len = 0;
+                                Demod.state = WAIT_FOR_RISING_EDGE_OF_SOF;
+                                break;
+                            }
                         }
                     }
                 }
@@ -1692,7 +1705,7 @@ void SniffIso14443b(void) {
                 expect_tag_answer = false;
                 tag_is_active = false;
             } else {
-                tag_is_active = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
+                tag_is_active = (Demod.state > WAIT_FOR_RISING_EDGE_OF_SOF);
             }
         }
     }
