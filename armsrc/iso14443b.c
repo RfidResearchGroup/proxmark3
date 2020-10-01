@@ -893,6 +893,16 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                                 break;
                             }
                         }
+                        if (AMPLITUDE(ci, cq) < SUBCARRIER_DETECT_THRESHOLD) {
+                            LED_C_OFF();
+                            // subcarrier lost
+                            Demod.state = DEMOD_UNSYNCD;
+                            if (Demod.len > 0) { // no EOF but no signal anymore and we got data, e.g. ASK CTx
+                                return true;
+                            }
+                        }
+                        // we have still signal but no proper byte or EOF? this shouldn't happen
+                        Demod.state = WAIT_FOR_RISING_EDGE_OF_SOF;
                     }
                 }
                 Demod.posCount = 0;
