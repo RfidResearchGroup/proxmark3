@@ -580,20 +580,19 @@ static int CmdIndalaClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala clone",
                   "clone INDALA UID to T55x7 or Q5/T5555 tag",
-                  "Examples:\n"
-                  _YELLOW_("\tlf indala clone --heden 888\n")
-                  _YELLOW_("\tlf indala clone --fc 123 --cn 1337\n")
-                  _YELLOW_("\tlf indala clone -r a0000000a0002021\n")
-                  _YELLOW_("\tlf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"));
+                  "lf indala clone --heden 888\n"
+                  "lf indala clone --fc 123 --cn 1337\n"
+                  "lf indala clone -r a0000000a0002021\n"
+                  "lf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("lL", "long",  "optional - long UID 224 bits"),
-        arg_int0("cC", "heden", "<decimal>", "Cardnumber for Heden 2L format"),
-        arg_strx0("rR", "raw",  "<hex>", "raw bytes"),
-        arg_lit0("qQ", "Q5",    "optional - specify writing to Q5/T5555 tag"),
-        arg_int0("", "fc",      "<decimal>", "Facility Code (26 bit format)"),
-        arg_int0("", "cn",      "<decimal>", "Cardnumber (26 bit format)"),
+        arg_lit0("l", "long",  "optional - long UID 224 bits"),
+        arg_int0("c", "heden", "<decimal>", "Cardnumber for Heden 2L format"),
+        arg_strx0("r", "raw",  "<hex>", "raw bytes"),
+        arg_lit0("q", "Q5",    "optional - specify writing to Q5/T5555 tag"),
+        arg_int0(NULL, "fc",      "<decimal>", "Facility Code (26 bit format)"),
+        arg_int0(NULL, "cn",      "<decimal>", "Cardnumber (26 bit format)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

@@ -653,7 +653,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
-    if (major == 0x11 &&  minor == 0x00)      
+    if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
     if (major == 0x10 && minor == 0x00)
         return NTAG413DNA;
@@ -2079,12 +2079,12 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes selectaid",
                   "Select Application ID",
-                  "Usage:\n\thf mfdes selectaid -a 123456\n"
+                  "hf mfdes selectaid -a 123456"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("aA",  "aid",    "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_strx0("a",  "aid",    "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2114,16 +2114,16 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createaid",
                   "Create Application ID",
-                  "Usage:\n\thf mfdes createaid -a 123456 -f 1111 -k 0E -l 2E -n Test\n"
+                  "hf mfdes createaid -a 123456 -f 1111 -k 0E -l 2E -n Test"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("aA",  "aid",    "<aid>", "App ID to create as hex bytes ("),
-        arg_strx0("fF",  "fid",    "<fid>", "File ID to create (optional)"),
-        arg_strx0("kK",  "keysetting1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
-        arg_strx0("lL",  "keysetting2",    "<keysetting2>", "Key Setting 2"),
-        arg_str0("nN",  "name",    "<name>", "App ISO-4 Name (optional)"),
+        arg_strx0("a",  "aid",    "<aid>", "App ID to create as hex bytes (3 hex bytes)"),
+        arg_strx0("f",  "fid",    "<fid>", "File ID to create (optional)"),
+        arg_strx0("k",  "ks1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
+        arg_strx0("l",  "ks2",    "<keysetting2>", "Key Setting 2"),
+        arg_str0("n",  "name",    "<name>", "App ISO-4 Name (optional)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2242,13 +2242,13 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes deleteaid",
                   "Delete Application ID",
-                  "Usage:\n\t-a aid (3 hex bytes, big endian)\n\n"
-                  "Example:\n\thf mfdes deleteaid -a 123456\n"
+//                  "Usage:\n\t-a aid (3 hex bytes, big endian)\n\n"
+                  "hf mfdes deleteaid -a 123456"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("aA",  "aid",    "<aid>", "App ID to delete"),
+        arg_strx0("a",  "aid",    "<aid>", "App ID (3 hex bytes, big endian) to delete"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2305,17 +2305,15 @@ static int selectfile(uint8_t *aid, uint32_t fileno, uint8_t *cs) {
 
 static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes clearrecord",
-                  "Clear record file",
-                  "Usage:\n\t"
-                  "hf mfdes clearrecord -n 01\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+    CLIParserInit(&ctx, "hf mfdes clearfile",
+                  "Clear record file\nMake sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes clearfile -n 01"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes, big endian, optional)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2369,15 +2367,13 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes deletefile",
                   "Delete File",
-                  "Usage:\n\t"
-                  "hf mfdes deletefile -n 01\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "hf mfdes deletefile -n 01 -> Make sure to select aid or authenticate aid before running this command."
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
         arg_param_end
     };
 
@@ -2431,19 +2427,19 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createfile",
                   "Create Standard/Backup File",
-                  "Usage:"
-                  "\n\thf mfdes createfile -f 0001 -n 01 -c 0 -r EEEE -s 000100 -a 123456\n"
+                  "hf mfdes createfile -f 0001 -n 01 -c 0 -r EEEE -s 000100 -a 123456"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("fF", "fileid", "<fileid>", "ISO FID (2 hex bytes, big endian)"),
-        arg_int0("cC", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
-        arg_strx0("rR", "accessrights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-        arg_strx0("sS", "filesize", "<filesize>", "File size (3 hex bytes, big endian)"),
-        arg_lit0("bB", "backup", "Create backupfile instead of standard file"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("f", "fileid", "<fileid>", "ISO FID (2 hex bytes, big endian)"),
+        arg_int0("c", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
+//        arg_strx0("r", "accessrights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
+        arg_strx0("r", "rights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
+        arg_strx0("s", "filesize", "<filesize>", "File size (3 hex bytes, big endian)"),
+        arg_lit0("b", "backup", "Create backupfile instead of standard file"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
         arg_param_end
     };
 
@@ -2548,16 +2544,15 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
 static int CmdHF14ADesGetValueData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getvalue",
-                  "Get value from value file",
-                  "Usage:"
-                  "\n\thf mfdes getvalue -n 03\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "Get value from value file\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes getvalue -n 03"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2620,21 +2615,19 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
 static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes readdata",
-                  "Read data from File",
-                  "Usage:"
-                  "\n\thf mfdes readdata -n 01 -t 0 -o 000000 -l 000000 -a 123456\n"
-                  "\thf mfdes readdata -n 01 -t 0 (Read all data from standard file, fileno 01)\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "Read data from File\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes readdata -n 01 -t 0 -o 000000 -l 000000 -a 123456\n"
+                  "hf mfdes readdata -n 01 -t 0 -> Read all data from standard file, fileno 01"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("oO", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("lL", "length", "<length>",
-                  "Length to read (3 hex bytes, big endian -> 000000 = Read all data),optional"),
-        arg_int0("tT", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("o", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
+        arg_strx0("l", "length", "<length>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data),optional"),
+        arg_int0("t", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
         arg_param_end
     };
 
@@ -2743,18 +2736,17 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 static int CmdHF14ADesChangeValue(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes changevalue",
-                  "Change value (credit/limitedcredit/debit)",
-                  "Usage:"
-                  "\n\thf mfdes changevalue -n 03 -m 0 -d 00000001\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "Change value (credit/limitedcredit/debit)\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes changevalue -n 03 -m 0 -d 00000001"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("dD", "value", "<value>", "Value to increase (4 hex bytes, big endian)"),
-        arg_int0("mM", "mode", "<mode>", "Mode (0=Credit, 1=LimitedCredit, 2=Debit)"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("d", "value", "<value>", "Value to increase (4 hex bytes, big endian)"),
+        arg_int0("m", "mode", "<mode>", "Mode (0=Credit, 1=LimitedCredit, 2=Debit)"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian)"),
         arg_param_end
     };
 
@@ -2841,19 +2833,18 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes writedata",
-                  "Write data to File",
-                  "Usage:"
-                  "\n\thf mfdes writedata -n 01 -t 0 -o 000000 -d 3132333435363738\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "Write data to File\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes writedata -n 01 -t 0 -o 000000 -d 3132333435363738"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("oO", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
-        arg_strx0("dD", "data", "<data>", "Data to write (hex bytes, 256 bytes max)"),
-        arg_int0("type", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes, big endian, optional)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("o", "offset", "<offset>", "File Offset (3 hex bytes, big endian), optional"),
+        arg_strx0("d", "data", "<data>", "Data to write (hex bytes, 256 bytes max)"),
+        arg_int0("t", "type", "<type>", "File Type (0=Standard/Backup, 1=Record)"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes, big endian, optional)"),
         arg_param_end
     };
 
@@ -2947,22 +2938,23 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createrecordfile",
-                  "Create Linear/Cyclic Record File",
-                  "Usage:"
-                  "\n\thf mfdes createrecordfile -f 1122 -n 02 -c 0 -r EEEE -s 000010 -m 000005 -a 123456\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "Create Linear/Cyclic Record File\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes createrecordfile -f 1122 -n 02 -c 0 -r EEEE -s 000010 -m 000005 -a 123456"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_strx0("fF", "fileid", "<fileid>", "ISO FID (2 hex bytes, big endian)"),
-        arg_int0("cC", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
-        arg_strx0("rR", "accessrights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-        arg_strx0("sS", "recordsize", "<recordsize>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
-        arg_strx0("mM", "maxnumrecord", "<maxnumrecord>", "Max. Number of Records (3 hex bytes, big endian)"),
-        arg_lit0("bB", "cyclic", "Create cyclic record file instead of linear record file"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_strx0("f", "fileid", "<fileid>", "ISO FID (2 hex bytes, big endian)"),
+        arg_int0("c", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
+//        arg_strx0("r", "accessrights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
+//        arg_strx0("s", "recordsize", "<recordsize>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
+        arg_strx0("r", "rights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
+        arg_strx0("s", "size", "<recordsize>", "Record size (3 hex bytes, big endian, 000001 to FFFFFF)"),
+        arg_strx0("m", "maxrecord", "<maxrecord>", "Max. Number of Records (3 hex bytes, big endian)"),
+        arg_lit0("b", "cyclic", "Create cyclic record file instead of linear record file"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
         arg_param_end
     };
 
@@ -3082,22 +3074,21 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
 static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createvaluefile",
-                  "Create Value File",
-                  "Usage:"
-                  "\n\thf mfdes createvaluefile -n 03 -c 0 -r EEEE -l 00000000 -u 00002000 -v 00000001 -m 02 -a 123456\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "Create Value File\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes createvaluefile -n 03 -c 0 -r EEEE -l 00000000 -u 00002000 -v 00000001 -m 02 -a 123456\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("nN", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
-        arg_int0("cC", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
-        arg_strx0("rR", "accessrights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
-        arg_strx0("lL", "lowerlimit", "<lowerlimit>", "Lower limit (4 hex bytes, big endian)"),
-        arg_strx0("uU", "upperlimit", "<upperlimit>", "Upper limit (4 hex bytes, big endian)"),
-        arg_strx0("vV", "value", "<value>", "Value (4 hex bytes, big endian)"),
-        arg_strx0("mM", "limitcredit", "<limitcredit>", "Limited Credit enabled (1 hex byte [Bit 0=LimitedCredit, 1=FreeValue])"),
-        arg_strx0("aA", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
+        arg_strx0("n", "fileno", "<fileno>", "File Number (1 hex byte, 0x00 - 0x1F)"),
+        arg_int0("c", "com.set", "<comset>", "Communication setting (0=Plain,1=Plain+MAC,3=Enciphered)"),
+        arg_strx0("r", "rights", "<accessrights>", "Access rights (2 hex bytes -> RW/Chg/R/W, 0-D Key, E Free, F Denied)"),
+        arg_strx0("l", "lowerlimit", "<lowerlimit>", "Lower limit (4 hex bytes, big endian)"),
+        arg_strx0("u", "upperlimit", "<upperlimit>", "Upper limit (4 hex bytes, big endian)"),
+        arg_strx0("v", "value", "<value>", "Value (4 hex bytes, big endian)"),
+        arg_strx0("m", "limitcredit", "<limitcredit>", "Limited Credit enabled (1 hex byte [Bit 0=LimitedCredit, 1=FreeValue])"),
+        arg_strx0("a", "aid", "<aid>", "App ID to select as hex bytes (3 bytes,big endian,optional)"),
         arg_param_end
     };
 
@@ -3215,11 +3206,15 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
 static int CmdHF14ADesFormatPICC(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes formatpicc",
-                  "Formats MIFARE DESFire PICC to factory state",
-                  "Usage:"
-                  "\n\thf mfdes formatpicc\n"
-                  "Make sure to authenticate picc before running this command.\n"
+                  "Formats MIFARE DESFire PICC to factory state\n"
+                  "Make sure to authenticate picc before running this command.",
+                  "hf mfdes formatpicc"
                  );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     sAPDU apdu = {0x90, MFDES_FORMAT_PICC, 0x00, 0x00, 0, NULL}; // 0xDF
     uint16_t sw = 0;
@@ -3324,10 +3319,10 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
 
-    if (cardtype == DESFIRE_EV2 || 
-        cardtype == DESFIRE_LIGHT || 
-        cardtype == DESFIRE_EV3 ||
-        cardtype == NTAG413DNA) {
+    if (cardtype == DESFIRE_EV2 ||
+            cardtype == DESFIRE_LIGHT ||
+            cardtype == DESFIRE_EV3 ||
+            cardtype == NTAG413DNA) {
         // Signature originality check
         uint8_t signature[56] = {0};
         size_t signature_len = 0;
@@ -3761,20 +3756,19 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     uint8_t newkeylength = 8;
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes changekey",
-                  "Changes Mifare DESFire Key",
-                  "Usage:"
-                  "\n\thf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708 (DES,keynumber 0)\n"
-                  "Make sure to select aid or authenticate aid before running this command.\n"
+                  "Changes Mifare DESFire Key\n"
+                  "Make sure to select aid or authenticate aid before running this command.",
+                  "hf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708 -> DES,keynumber 0"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("nN",  "keyno",  "<keyno>", "Key number used for authentification"),
-        arg_int0("tT",  "algo",   "<algo>", "Current key algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
-        arg_str0("kK",  "key",     "<Key>", "Current Key (HEX 8-24 bytes)"),
-        arg_int0("uU",  "newalgo",   "<newalgo>", "New key algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
-        arg_str0("jJ",  "newkey",     "<newkey>", "New Key (HEX 8-24 bytes)"),
-        arg_int0("vV",  "aesversion",     "<aesversion>", "Aes version (if aes is used)"),
+        arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
+        arg_int0("t",  "algo",   "<algo>", "Current key algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
+        arg_str0("k",  "key",     "<Key>", "Current Key (HEX 8-24 bytes)"),
+        arg_int0("u",  "newalgo",   "<newalgo>", "New key algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
+        arg_str0("j",  "newkey",     "<newkey>", "New Key (HEX 8-24 bytes)"),
+        arg_int0("v",  "aesversion",     "<aesversion>", "Aes version (if aes is used)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3860,23 +3854,22 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes auth",
                   "Authenticates Mifare DESFire using Key",
-                  "Usage:"
-                  "\n\thf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 (AES,keynumber 0, aid 0x803201)"
-                  "\n\thf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 (3DES,keynumber 1, aid 0x000000)"
-                  "\n\thf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 (DES,keynumber 2, aid 0x000000)"
-                  "\n\thf mfdes auth -m 1 -t 1 -a 000000 -n 0 (DES, defaultkey, aid 0x000000)"
-                  "\n\thf mfdes auth -m 2 -t 2 -a 000000 -n 0 (3DES, defaultkey, aid 0x000000)"
-                  "\n\thf mfdes auth -m 3 -t 4 -a 000000 -n 0 (3K3DES, defaultkey, aid 0x000000)"
-                  "\n\thf mfdes auth -m 3 -t 4 -a 000000 -n 0 (AES, defaultkey, aid 0x000000)"
+                  "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> AES,keynumber 0, aid 0x803201\n"
+                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3DES,keynumber 1, aid 0x000000\n"
+                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> DES,keynumber 2, aid 0x000000\n"
+                  "hf mfdes auth -m 1 -t 1 -a 000000 -n 0 -> DES, defaultkey, aid 0x000000\n"
+                  "hf mfdes auth -m 2 -t 2 -a 000000 -n 0 -> 3DES, defaultkey, aid 0x000000\n"
+                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> 3K3DES, defaultkey, aid 0x000000\n"
+                  "hf mfdes auth -m 3 -t 4 -a 000000 -n 0 -> AES, defaultkey, aid 0x000000"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("mM",  "type",   "<type>", "Auth type (1=normal, 2=iso, 3=aes)"),
-        arg_int0("tT",  "algo",   "<algo>", "Crypt algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
-        arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
-        arg_int0("nN",  "keyno",  "<keyno>", "Key number used for authentification"),
-        arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
+        arg_int0("m",  "type",   "<type>", "Auth type (1=normal, 2=iso, 3=aes)"),
+        arg_int0("t",  "algo",   "<algo>", "Crypt algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 4=AES)"),
+        arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
+        arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
+        arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4222,23 +4215,22 @@ static int CmdHF14aDesChk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with Mifare Desfire card.",
-                  "Usage:\n"
-                  "    hf mfdes chk -a 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456\n"
-                  "    hf mfdes chk -d mfdes_default_keys -> check keys from dictionary against all existing aid on card\n"
-                  "    hf mfdes chk -d mfdes_default_keys -a 123456 -> check keys from dictionary against aid 0x123456\n"
-                  "    hf mfdes chk -a 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json\n"
-                  "    hf mfdes chk -a 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00\n");
+                  "hf mfdes chk -a 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456\n"
+                  "hf mfdes chk -d mfdes_default_keys -> check keys from dictionary against all existing aid on card\n"
+                  "hf mfdes chk -d mfdes_default_keys -a 123456 -> check keys from dictionary against aid 0x123456\n"
+                  "hf mfdes chk -a 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json\n"
+                  "hf mfdes chk -a 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("aA",  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
-        arg_str0("kK",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
-        arg_str0("dD",  "dict",      "<file>", "File with keys dictionary"),
+        arg_strx0("a",  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
+        arg_str0("k",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
+        arg_str0("d",  "dict",      "<file>", "File with keys dictionary"),
         arg_lit0(NULL,  "pattern1b", "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL,  "pattern2b", "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
-        arg_str0("jJ",  "json",      "<file>",  "Json file to save keys"),
-        arg_lit0("vV",  "verbose",   "Verbose mode."),
+        arg_str0("j",  "json",      "<file>",  "Json file to save keys"),
+        arg_lit0("v",  "verbose",   "Verbose mode."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4489,17 +4481,16 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
-                  "Usage:\n"
-                  _YELLOW_("\thf mfdes ndef") "                                             -> shows NDEF data\n"
-                  _YELLOW_("\thf mfdes ndef -vv") "                                         -> shows NDEF parsed and raw data\n"
-                  _YELLOW_("\thf mfdes ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7") " -> shows NDEF data with custom AID and key\n");
+                  "hf mfdes ndef -> shows NDEF data\n"
+                  "hf mfdes ndef -v -> shows NDEF parsed and raw data\n"
+                  "hf mfdes ndef -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("vV",  "verbose",  0, 2, "show technical data"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_str0("",    "aid",      "<aid>", "replace default aid for NDEF"),
-        arg_str0("kK",  "key",      "<key>", "replace default key for NDEF"),
-        arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
+        arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
+        arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

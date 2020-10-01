@@ -118,7 +118,7 @@ static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t re
         case 'a':
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
         case 'b':
-            return iso14443b_apdu(apdu, length, response, respmaxlen);
+            return iso14443b_apdu(apdu, length, false, response, respmaxlen);
         default:
             return 0;
     }
@@ -225,10 +225,10 @@ int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
 
     // select the file EF.CardAccess
     int rapdu_length = EPA_APDU((uint8_t *)apdu_select_binary_cardaccess,
-                            sizeof(apdu_select_binary_cardaccess),
-                            response_apdu,
-                            sizeof(response_apdu)
-                           );
+                                sizeof(apdu_select_binary_cardaccess),
+                                response_apdu,
+                                sizeof(response_apdu)
+                               );
 
     if (rapdu_length < 6
             || response_apdu[rapdu_length - 4] != 0x90

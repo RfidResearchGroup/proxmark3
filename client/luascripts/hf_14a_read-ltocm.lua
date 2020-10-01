@@ -135,13 +135,13 @@ function main(args)
     end
 
 -- Original loop
---    core.console("hf 14a raw -a -p -b 7 45")
---    local cmd_select = string.format("hf 14a raw -c -p 9370%s", serial_number)
+--    core.console("hf 14a raw -a -k -b 7 45")
+--    local cmd_select = string.format("hf 14a raw -c -k 9370%s", serial_number)
 --    core.console(cmd_select)
 --    for i = 0, 254 do
---      local cmd_rd_blk = string.format("hf 14a raw -c -p 30 %02x", i)
+--      local cmd_rd_blk = string.format("hf 14a raw -c -k 30 %02x", i)
 --      core.console(cmd_rd_blk)
---      core.console("hf 14a raw -p 80")
+--      core.console("hf 14a raw -k 80")
 --    end
 --   core.console("hf 14a raw -r")
 

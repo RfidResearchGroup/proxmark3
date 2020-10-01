@@ -200,14 +200,14 @@ script run run hf_mf_magicrevive
 
 To execute commands manually:
 ```
-hf 14a raw -a -p -b 7       40
-hf 14a raw    -p            43
-hf 14a raw    -p -c         A000
+hf 14a raw -a -k -b 7       40
+hf 14a raw    -k            43
+hf 14a raw    -k -c         A000
 hf 14a raw       -c -t 1000 11223344440804006263646566676869
 ```
 wipe:
 ```
-hf 14a raw -a -p -b 7       40
+hf 14a raw -a -k -b 7       40
 hf 14a raw -t 1000          41
 ```
 
@@ -383,9 +383,9 @@ Same as MIFARE Classic DirectWrite, but block0 can be locked with special comman
 
 To lock definitively block0:
 ```
-hf 14a raw -a -p -b 7 40
-hf 14a raw    -p      43
-hf 14a raw    -p -c   e000
+hf 14a raw -a -k -b 7 40
+hf 14a raw    -k      43
+hf 14a raw    -k -c   e000
 hf 14a raw       -c   85000000000000000000000000000008
 ```
 
@@ -581,8 +581,8 @@ hf mfu setuid
 Equivalent: don't use `hf mfu wrbl` as you need to write three blocks in a row, but do, with proper BCCx:
 
 ```
-hf 14a raw -s -c -p a2 00 041122bf 
-hf 14a raw    -c -p a2 01 33445566
+hf 14a raw -s -c -k a2 00 041122bf 
+hf 14a raw    -c -k a2 01 33445566
 hf 14a raw    -c    a2 02 44480000
 ```
 

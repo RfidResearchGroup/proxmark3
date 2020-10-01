@@ -129,6 +129,7 @@ static int l_SendCommandOLD(lua_State *L) {
         }
     }
 
+    clearCommandBuffer();
     SendCommandOLD(cmd, arg0, arg1, arg2, data, len);
     lua_pushboolean(L, true);
     return 1;
@@ -176,6 +177,7 @@ static int l_SendCommandMIX(lua_State *L) {
         }
     }
 
+    clearCommandBuffer();
     SendCommandMIX(cmd, arg0, arg1, arg2, data, len);
     lua_pushboolean(L, true);
     return 1;
@@ -215,6 +217,7 @@ static int l_SendCommandNG(lua_State *L) {
         }
     }
 
+    clearCommandBuffer();
     SendCommandNG(cmd, data, len);
     lua_pushboolean(L, true);
     return 1;
@@ -387,8 +390,9 @@ static int l_WaitForResponseTimeout(lua_State *L) {
         ms_timeout = luaL_checkunsigned(L, 2);
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false)
+    if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false) {
         return returnToLuaWithError(L, "No response from the device");
+    }
 
     char foo[sizeof(PacketResponseNG)];
     n = 0;
@@ -426,7 +430,6 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     //Push it as a string
     lua_pushlstring(L, (const char *)&foo, sizeof(foo));
-
     return 1;
 }
 

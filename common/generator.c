@@ -419,7 +419,7 @@ uint32_t lf_t55xx_white_pwdgen(uint32_t id) {
     uint32_t r1 = rotl(id & 0x000000ec, 8);
     uint32_t r2 = rotl(id & 0x86000000, 16);
     uint32_t pwd = 0x10303;
-    pwd += ((id & 0x86ee00ec) ^ r1 ^ r2 );
+    pwd += ((id & 0x86ee00ec) ^ r1 ^ r2);
     return pwd;
 }
 
@@ -483,7 +483,7 @@ int generator_selftest(void) {
     if (success)
         testresult++;
     PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ? "OK" : "->00018383<--");
-    
+
     PrintAndLogEx(SUCCESS, "------------------- Selftest %s", (testresult == NUM_OF_TEST) ? "OK" : "fail");
     return PM3_SUCCESS;
 }

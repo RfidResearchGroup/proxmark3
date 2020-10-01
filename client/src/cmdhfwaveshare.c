@@ -97,7 +97,7 @@ static int usage_hf_waveshare_loadbmp(void) {
     PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename[.bmp]") " to upload to tag");
     PrintAndLogEx(NORMAL, "  m <nr>  : " _YELLOW_("model number") " of your tag");
     PrintAndLogEx(NORMAL, "  s       : save dithered version in filename-[n].bmp, only for RGB BMP");
-    for (uint8_t i=0; i< MEND; i++) {
+    for (uint8_t i = 0; i < MEND; i++) {
         PrintAndLogEx(NORMAL, "  m %2i    : %s", i, models[i].desc);
     }
     PrintAndLogEx(NORMAL, "");
@@ -168,8 +168,8 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t mod
 }
 
 static void rgb_to_gray(int16_t *chanR, int16_t *chanG, int16_t *chanB, uint16_t width, uint16_t height, int16_t *chanGrey) {
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             // greyscale conversion
             float Clinear = 0.2126 * chanR[X + Y * width] + 0.7152 * chanG[X + Y * width] + 0.0722 * chanB[X + Y * width];
             // Csrgb = 12.92 Clinear when Clinear <= 0.0031308
@@ -181,24 +181,24 @@ static void rgb_to_gray(int16_t *chanR, int16_t *chanG, int16_t *chanB, uint16_t
 
 // Floyd-Steinberg dithering
 static void dither_chan_inplace(int16_t *chan, uint16_t width, uint16_t height) {
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             int16_t oldp = chan[X + Y * width];
             int16_t newp = oldp > 127 ? 255 : 0;
             chan[X + Y * width] = newp;
             int16_t err = oldp - newp;
-            float m[] = {7,3,5,1};
-            if (X < width - 1){
-                chan[X + 1 +  Y      * width] = chan[X + 1 +  Y      * width] + m[0]/16 * err;
+            float m[] = {7, 3, 5, 1};
+            if (X < width - 1) {
+                chan[X + 1 +  Y      * width] = chan[X + 1 +  Y      * width] + m[0] / 16 * err;
             }
             if (Y < height - 1) {
-                chan[X - 1 + (Y + 1) * width] = chan[X - 1 + (Y + 1) * width] + m[1]/16 * err;
+                chan[X - 1 + (Y + 1) * width] = chan[X - 1 + (Y + 1) * width] + m[1] / 16 * err;
             }
-            if (Y < height - 1){
-                chan[X     + (Y + 1) * width] = chan[X     + (Y + 1) * width] + m[2]/16 * err;
+            if (Y < height - 1) {
+                chan[X     + (Y + 1) * width] = chan[X     + (Y + 1) * width] + m[2] / 16 * err;
             }
-            if ((X < width - 1) && (Y < height - 1)){
-                chan[X + 1 + (Y + 1) * width] = chan[X + 1 + (Y + 1) * width] + m[3]/16 * err;
+            if ((X < width - 1) && (Y < height - 1)) {
+                chan[X + 1 + (Y + 1) * width] = chan[X + 1 + (Y + 1) * width] + m[3] / 16 * err;
             }
         }
     }
@@ -210,16 +210,16 @@ static uint32_t color_compare(int16_t r1, int16_t g1, int16_t b1, int16_t r2, in
     int16_t inG = g1 - g2;
     int16_t inB = b1 - b2;
     // use RGB-to-grey weighting
-    float dist =  0.2126 *inR*inR + 0.7152 *inG*inG + 0.0722 *inB*inB;
+    float dist =  0.2126 * inR * inR + 0.7152 * inG * inG + 0.0722 * inB * inB;
     return dist;
 }
 
 static void nearest_color(int16_t oldR, int16_t oldG, int16_t oldB, uint8_t *palette, uint16_t palettelen, uint8_t *newR, uint8_t *newG, uint8_t *newB) {
-    uint32_t bestdist=0x7FFFFFFF;
-    for (uint16_t i=0; i < palettelen; i++) {
-        uint8_t R = palette[i*3+0];
-        uint8_t G = palette[i*3+1];
-        uint8_t B = palette[i*3+2];
+    uint32_t bestdist = 0x7FFFFFFF;
+    for (uint16_t i = 0; i < palettelen; i++) {
+        uint8_t R = palette[i * 3 + 0];
+        uint8_t G = palette[i * 3 + 1];
+        uint8_t B = palette[i * 3 + 2];
         uint32_t dist = color_compare(oldR, oldG, oldB, R, G, B);
         if (dist < bestdist) {
             bestdist = dist;
@@ -231,8 +231,8 @@ static void nearest_color(int16_t oldR, int16_t oldG, int16_t oldB, uint8_t *pal
 }
 
 static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, uint16_t width, uint16_t height, uint8_t *palette, uint16_t palettelen) {
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             // scan odd lines in the opposite direction
             uint16_t XX = X;
             if (Y % 2) {
@@ -249,48 +249,48 @@ static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, u
             int16_t errR = oldR - newR;
             int16_t errG = oldG - newG;
             int16_t errB = oldB - newB;
-            float m[]={7,3,5,1};
+            float m[] = {7, 3, 5, 1};
             if (Y % 2) {
                 if (XX > 0) {
-                    chanR[XX - 1 +  Y      * width] = (chanR[XX - 1 +  Y      * width] + m[0]/16 * errR);
-                    chanG[XX - 1 +  Y      * width] = (chanG[XX - 1 +  Y      * width] + m[0]/16 * errG);
-                    chanB[XX - 1 +  Y      * width] = (chanB[XX - 1 +  Y      * width] + m[0]/16 * errB);
+                    chanR[XX - 1 +  Y      * width] = (chanR[XX - 1 +  Y      * width] + m[0] / 16 * errR);
+                    chanG[XX - 1 +  Y      * width] = (chanG[XX - 1 +  Y      * width] + m[0] / 16 * errG);
+                    chanB[XX - 1 +  Y      * width] = (chanB[XX - 1 +  Y      * width] + m[0] / 16 * errB);
                 }
                 if (Y < height - 1) {
-                    chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[3]/16 * errR);
-                    chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[3]/16 * errG);
-                    chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[3]/16 * errB);
+                    chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[3] / 16 * errR);
+                    chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[3] / 16 * errG);
+                    chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[3] / 16 * errB);
                 }
                 if (Y < height - 1) {
-                    chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2]/16 * errR);
-                    chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2]/16 * errG);
-                    chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2]/16 * errB);
+                    chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2] / 16 * errR);
+                    chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2] / 16 * errG);
+                    chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2] / 16 * errB);
                 }
                 if ((XX < width - 1) && (Y < height - 1)) {
-                    chanR[XX + 1 + (Y + 1) * width] = (chanR[XX + 1 + (Y + 1) * width] + m[1]/16 * errR);
-                    chanG[XX + 1 + (Y + 1) * width] = (chanG[XX + 1 + (Y + 1) * width] + m[1]/16 * errG);
-                    chanB[XX + 1 + (Y + 1) * width] = (chanB[XX + 1 + (Y + 1) * width] + m[1]/16 * errB);
+                    chanR[XX + 1 + (Y + 1) * width] = (chanR[XX + 1 + (Y + 1) * width] + m[1] / 16 * errR);
+                    chanG[XX + 1 + (Y + 1) * width] = (chanG[XX + 1 + (Y + 1) * width] + m[1] / 16 * errG);
+                    chanB[XX + 1 + (Y + 1) * width] = (chanB[XX + 1 + (Y + 1) * width] + m[1] / 16 * errB);
                 }
             } else {
                 if (XX < width - 1) {
-                    chanR[XX + 1 +  Y      * width] = (chanR[XX + 1 +  Y      * width] + m[0]/16 * errR);
-                    chanG[XX + 1 +  Y      * width] = (chanG[XX + 1 +  Y      * width] + m[0]/16 * errG);
-                    chanB[XX + 1 +  Y      * width] = (chanB[XX + 1 +  Y      * width] + m[0]/16 * errB);
+                    chanR[XX + 1 +  Y      * width] = (chanR[XX + 1 +  Y      * width] + m[0] / 16 * errR);
+                    chanG[XX + 1 +  Y      * width] = (chanG[XX + 1 +  Y      * width] + m[0] / 16 * errG);
+                    chanB[XX + 1 +  Y      * width] = (chanB[XX + 1 +  Y      * width] + m[0] / 16 * errB);
                 }
                 if (Y < height - 1) {
-                    chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[1]/16 * errR);
-                    chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[1]/16 * errG);
-                    chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[1]/16 * errB);
+                    chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[1] / 16 * errR);
+                    chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[1] / 16 * errG);
+                    chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[1] / 16 * errB);
                 }
                 if (Y < height - 1) {
-                    chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2]/16 * errR);
-                    chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2]/16 * errG);
-                    chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2]/16 * errB);
+                    chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2] / 16 * errR);
+                    chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2] / 16 * errG);
+                    chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2] / 16 * errB);
                 }
                 if ((XX < width - 1) && (Y < height - 1)) {
-                    chanR[XX + 1 + (Y + 1) * width] = (chanR[XX + 1 + (Y + 1) * width] + m[3]/16 * errR);
-                    chanG[XX + 1 + (Y + 1) * width] = (chanG[XX + 1 + (Y + 1) * width] + m[3]/16 * errG);
-                    chanB[XX + 1 + (Y + 1) * width] = (chanB[XX + 1 + (Y + 1) * width] + m[3]/16 * errB);
+                    chanR[XX + 1 + (Y + 1) * width] = (chanR[XX + 1 + (Y + 1) * width] + m[3] / 16 * errR);
+                    chanG[XX + 1 + (Y + 1) * width] = (chanG[XX + 1 + (Y + 1) * width] + m[3] / 16 * errG);
+                    chanB[XX + 1 + (Y + 1) * width] = (chanB[XX + 1 + (Y + 1) * width] + m[3] / 16 * errB);
                 }
             }
         }
@@ -298,8 +298,8 @@ static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, u
 }
 
 static void rgb_to_gray_red_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, uint16_t width, uint16_t height) {
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             float Clinear = 0.2126 * chanR[X + Y * width] + 0.7152 * chanG[X + Y * width] + 0.0722 * chanB[X + Y * width];
             if ((chanR[X + Y * width] < chanG[X + Y * width] && chanR[X + Y * width] < chanB[X + Y * width])) {
                 chanR[X + Y * width] = Clinear;
@@ -311,16 +311,16 @@ static void rgb_to_gray_red_inplace(int16_t *chanR, int16_t *chanG, int16_t *cha
 }
 
 static void threshold_chan(int16_t *colorchan, uint16_t width, uint16_t height, uint8_t threshold, uint8_t *colormap) {
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             colormap[X + Y * width] = colorchan[X + Y * width] < threshold;
         }
     }
 }
 
 static void threshold_rgb_black_red(int16_t *chanR, int16_t *chanG, int16_t *chanB, uint16_t width, uint16_t height, uint8_t threshold_black, uint8_t threshold_red, uint8_t *blackmap, uint8_t *redmap) {
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             if ((chanR[X + Y * width] < threshold_black) && (chanG[X + Y * width] < threshold_black) && (chanB[X + Y * width] < threshold_black)) {
                 blackmap[X + Y * width] = 1;
                 redmap[X + Y * width] = 0;
@@ -344,16 +344,16 @@ static void map8to1(uint8_t *colormap, uint16_t width, uint16_t height, uint8_t 
     }
     uint8_t data = 0;
     uint8_t count = 0;
-    for (uint16_t Y=0; Y<height; Y++) {
-        for (uint16_t X=0; X<width; X++) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
             data = data | colormap[X + Y * width];
-            count+=1;
+            count += 1;
             if ((count >= 8) || (X == width - 1)) {
-                colormap8[X / 8 + Y * width8] = (~data)&0xFF;
+                colormap8[X / 8 + Y * width8] = (~data) & 0xFF;
                 count = 0;
                 data = 0;
             }
-            data = (data << 1)&0xFF;
+            data = (data << 1) & 0xFF;
         }
     }
 }
@@ -430,8 +430,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
         }
         rgb_to_gray_red_inplace(chanR, chanG, chanB, width, height);
 
-        uint8_t palette[] ={0x00,0x00,0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00}; // black, white, red
-        dither_rgb_inplace(chanR, chanG, chanB, width, height, palette, sizeof(palette)/3);
+        uint8_t palette[] = {0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00}; // black, white, red
+        dither_rgb_inplace(chanR, chanG, chanB, width, height, palette, sizeof(palette) / 3);
 
         threshold_rgb_black_red(chanR, chanG, chanB, width, height, 128, 128, mapBlack, mapRed);
         if (save_conversions) {
@@ -552,7 +552,7 @@ static void read_red(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *red) {
     }
 }
 
-static int transceive_blocking( uint8_t* txBuf, uint16_t txBufLen, uint8_t* rxBuf, uint16_t rxBufLen, uint16_t* actLen, bool retransmit ){
+static int transceive_blocking(uint8_t *txBuf, uint16_t txBufLen, uint8_t *rxBuf, uint16_t rxBufLen, uint16_t *actLen, bool retransmit) {
     uint8_t fail_num = 0;
     if (rxBufLen < 2) {
         return PM3_EINVARG;
@@ -565,7 +565,7 @@ static int transceive_blocking( uint8_t* txBuf, uint16_t txBufLen, uint8_t* rxBu
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             if (resp.oldarg[0] > rxBufLen) {
-                PrintAndLogEx(WARNING, "Received %u bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
+                PrintAndLogEx(WARNING, "Received %"PRIu32 " bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
                 memcpy(rxBuf, resp.data.asBytes, rxBufLen);
                 *actLen = rxBufLen;
                 return PM3_ESOFT;
@@ -863,7 +863,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         } else if (model_nr == M2in7) {   //2.7inch
             for (i = 0; i < 48; i++) {
                 //read_black(i,step8, model_nr, black);
-                memset(&step8[3], 0xFF, sizeof(step8)-3);
+                memset(&step8[3], 0xFF, sizeof(step8) - 3);
                 ret = transceive_blocking(step8, 124, rx, 20, actrxlen, true); // cd 08
                 if (ret != PM3_SUCCESS) {
                     return ret;

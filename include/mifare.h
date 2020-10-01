@@ -116,6 +116,7 @@ typedef enum ISO14B_COMMAND {
     ISO14B_SELECT_STD = (1 << 6),
     ISO14B_SELECT_SR = (1 << 7),
     ISO14B_SET_TIMEOUT = (1 << 8),
+    ISO14B_SEND_CHAINING = (1 << 9),
 } iso14b_command_t;
 
 typedef enum ISO15_COMMAND {

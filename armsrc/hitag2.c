@@ -1748,7 +1748,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     // init as reader
     lf_init(true, false);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    
+
     // Tag specific configuration settings (sof, timings, etc.)
 // TODO HTS
     /*    if (htf <= HTS_LAST_CMD) {

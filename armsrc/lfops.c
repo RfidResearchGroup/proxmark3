@@ -465,7 +465,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
             } else if (*command == '1') {
                 TurnReadLFOn(period_1);
             } else {
-                for (uint8_t i=0; i < LF_CMDREAD_MAX_EXTRA_SYMBOLS; i++) {
+                for (uint8_t i = 0; i < LF_CMDREAD_MAX_EXTRA_SYMBOLS; i++) {
                     if (*command == symbol_extra[i]) {
                         TurnReadLFOn(period_extra[i]);
                         break;

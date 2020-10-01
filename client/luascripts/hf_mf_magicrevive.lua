@@ -59,24 +59,24 @@ end
 
 local function cmdUltralight()
     return {
-    [0] = 'hf 14a raw -p -a -b 7 40',
-    [1] = 'hf 14a raw -p -a 43',
+    [0] = 'hf 14a raw -k -a -b 7 40',
+    [1] = 'hf 14a raw -k -a 43',
     [2] = 'hf 14a raw -c -a A2005380712A',
-    [3] = 'hf 14a raw -p -a -b 7 40',
-    [4] = 'hf 14a raw -p -a 43',
+    [3] = 'hf 14a raw -k -a -b 7 40',
+    [4] = 'hf 14a raw -k -a 43',
     [5] = 'hf 14a raw -c -a A2010200D980',
-    [6] = 'hf 14a raw -p -a -b 7 40',
-    [7] = 'hf 14a raw -p -a 43',
+    [6] = 'hf 14a raw -k -a -b 7 40',
+    [7] = 'hf 14a raw -k -a 43',
     [8] = 'hf 14a raw -c -a A2025B480000',
     [9] = 'hf 14a raw -c -a 5000',
     }
 end
 local function cmdClassic()
     return {
-    [0] = 'hf 14a raw -p -a -b 7 40',
-    [1] = 'hf 14a raw -p -a 43',
-    [2] = 'hf 14a raw -c -p -a A000',
-    [3] = 'hf 14a raw -c -p -a 01020304049802000000000000001001',
+    [0] = 'hf 14a raw -k -a -b 7 40',
+    [1] = 'hf 14a raw -k -a 43',
+    [2] = 'hf 14a raw -c -k -a A000',
+    [3] = 'hf 14a raw -c -k -a 01020304049802000000000000001001',
     [4] = 'hf 14a raw -c -a 5000',
     }
 end
