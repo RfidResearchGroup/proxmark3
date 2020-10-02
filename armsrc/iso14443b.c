@@ -902,7 +902,11 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                             }
                         }
                         // we have still signal but no proper byte or EOF? this shouldn't happen
+                        //Demod.posCount = 10 * 2;
+                        Demod.bitCount = 0;
+                        Demod.len = 0;
                         Demod.state = WAIT_FOR_RISING_EDGE_OF_SOF;
+                        break;
                     }
                 }
                 Demod.posCount = 0;
@@ -1254,6 +1258,79 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
 }
 
 /**
+* ASK CTS initialise.
+*/
+static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
+    // INITIATE command: wake up the tag using the INITIATE
+    uint8_t cmdINIT[] = {ASK_REQT, 0xF9, 0xE0};
+    uint8_t cmdMSBUID[] = {ASK_SELECT, 0xFF, 0xFF, 0x00, 0x00};
+    uint8_t cmdLSBUID[] = {0xC4, 0x00, 0x00};
+
+    AddCrc14B(cmdMSBUID, 3);
+    AddCrc14B(cmdLSBUID, 1);
+
+    uint8_t r[8];
+    
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(cmdINIT, sizeof(cmdINIT), &start_time, &eof_time);
+
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    int retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    FpgaDisableTracing();
+
+    if (retlen != 4) {
+        return -1;
+    }
+    if (check_crc(CRC_14443_B, r, retlen) == false) {
+        return -2;
+    }
+
+    if (card) {
+        // pc. fc  Product code, Facility code
+        card->pc = r[0];
+        card->fc = r[1];
+    }
+
+    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    CodeAndTransmit14443bAsReader(cmdMSBUID, sizeof(cmdMSBUID), &start_time, &eof_time);
+
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    FpgaDisableTracing();
+
+    if (retlen != 4) {
+        return -1;
+    }
+    if (check_crc(CRC_14443_B, r, retlen) == false) {
+        return -2;
+    }
+
+    if (card) {
+        memcpy(card->uid, r, 2);
+    }
+
+    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    CodeAndTransmit14443bAsReader(cmdLSBUID, sizeof(cmdLSBUID), &start_time, &eof_time);
+
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    FpgaDisableTracing();
+
+    if (retlen != 4) {
+        return -1;
+    }
+    if (check_crc(CRC_14443_B, r, retlen) == false) {
+        return -2;
+    }
+
+    if (card) {
+        memcpy(card->uid + 2, r, 2);
+    }
+
+    return 0;
+}
+/**
 * SRx Initialise.
 */
 static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
@@ -1271,8 +1348,9 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     int retlen = Get14443bAnswerFromTag(r_init, sizeof(r_init), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
-    if (retlen <= 0)
+    if (retlen <= 0) {
         return -1;
+    }
 
     // Randomly generated Chip ID
     if (card) {
@@ -1295,8 +1373,6 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     if (retlen != 3) {
         return -1;
     }
-
-    // Check the CRC of the answer:
     if (!check_crc(CRC_14443_B, r_select, retlen)) {
         return -2;
     }
@@ -1321,8 +1397,6 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     if (retlen != 10) {
         return -1;
     }
-
-    // The check the CRC of the answer
     if (!check_crc(CRC_14443_B, r_papid, retlen)) {
         return -2;
     }
@@ -1792,6 +1866,15 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
     }
+
+    if ((param & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
+        iso14b_cts_card_select_t cts;
+        sendlen = sizeof(iso14b_cts_card_select_t);
+        status = iso14443b_select_cts_card(&cts);
+        reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&cts, sendlen);
+        // 0: OK 2: demod fail, 3:crc fail,
+        if (status > 0) goto out;
+    }    
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
         status = iso14443b_apdu(cmd, len, (param & ISO14B_SEND_CHAINING), buf, sizeof(buf));

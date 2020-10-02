@@ -11,6 +11,7 @@
 
 #include "cmdhf14b.h"
 #include <ctype.h>
+#include "iso14b.h"
 #include "fileutils.h"
 #include "cmdparser.h"     // command_t
 #include "commonutil.h"    // ARRAYLEN
@@ -43,10 +44,10 @@ static int usage_hf_14b_info(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_14b_reader(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14b reader [h] [s]");
+    PrintAndLogEx(NORMAL, "Usage: hf 14b reader [h] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h    this help");
-    PrintAndLogEx(NORMAL, "       s    silently");
+    PrintAndLogEx(NORMAL, "       v    verbose");
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b reader"));
     return PM3_SUCCESS;
@@ -632,6 +633,20 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
     PrintAndLogEx(SUCCESS, "Chip: %02X, " _YELLOW_("%s"), chipid, get_ST_Chip_Model(chipid));
 }
 
+// print UID info from ASK CT chips
+static void print_ct_general_info(void *vcard) {
+    iso14b_cts_card_select_t card;
+    memcpy(&card, (iso14b_cts_card_select_t *)vcard, sizeof(iso14b_cts_card_select_t));
+    
+    uint32_t uid32 = (card.uid[0] |card.uid[1] << 8 |card.uid[2] << 16 | card.uid[3] << 24);
+    PrintAndLogEx(SUCCESS, "ASK C-Ticket");
+    PrintAndLogEx(SUCCESS, "           UID: " _GREEN_("%s") " ( " _YELLOW_("%u") " )", sprint_hex(card.uid, sizeof(card.uid)), uid32);
+    PrintAndLogEx(SUCCESS, "  Product Code: %02X", card.pc);
+    PrintAndLogEx(SUCCESS, " Facility Code: %02X", card.fc);
+    PrintAndLogEx(NORMAL, "");
+
+}
+
 // iceman, some 14B APDU break down
 // 05 00 00 = find one tag in field
 // 1d xx xx xx xx 00 08 01 00 = attrib xx=UID (resp 10 [f9 e0])
@@ -726,7 +741,7 @@ static int CmdHF14Binfo(const char *Cmd) {
     return infoHF14B(verbose);
 }
 
-static bool HF14B_ST_Reader(bool verbose) {
+static bool HF14B_st_reader(bool verbose) {
 
     bool is_success = false;
 
@@ -751,22 +766,22 @@ static bool HF14B_ST_Reader(bool verbose) {
             is_success = true;
             break;
         case -1:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ST ATTRIB fail");
             break;
         case -2:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ST CRC fail");
             break;
         case -3:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 random chip id fail");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ST random chip id fail");
             break;
         default:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b card select SRx failed");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b ST card select SRx failed");
             break;
     }
     return is_success;
 }
 
-static bool HF14B_Std_Reader(bool verbose) {
+static bool HF14B_std_reader(bool verbose) {
 
     bool is_success = false;
 
@@ -810,77 +825,45 @@ static bool HF14B_Std_Reader(bool verbose) {
     return is_success;
 }
 
-static bool HF14B_ask_ct_Reader(bool verbose) {
-    uint8_t cmd1[] = {0x10};
-    uint8_t cmd2[] = {0x9F, 0xFF, 0xFF};
-    uint8_t cmd3[] = {0xC4};
-    uint8_t uid[4];
-    uint8_t pc, fc;
+static bool HF14B_ask_ct_reader(bool verbose) {
+
+    bool is_success = false;
 
     // 14b get and print UID only (general info)
-    uint32_t flags = ISO14B_CONNECT | ISO14B_RAW | ISO14B_APPEND_CRC;
+    clearCommandBuffer();
     PacketResponseNG resp;
-    int status;
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, sizeof(cmd1), 0, cmd1, sizeof(cmd1));
-
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        switch_off_field_14b();
         return false;
     }
 
-    status = resp.oldarg[0];
-    PrintAndLogEx(DEBUG, "status cmd1 %d", status);
-    if (status == 4) {
-        pc = resp.data.asBytes[0];
-        fc = resp.data.asBytes[1];
-    } else {
-        switch_off_field_14b();
-        return false;
+    int status = resp.oldarg[0];
+
+    switch (status) {
+        case 0: {
+            print_ct_general_info(resp.data.asBytes);
+            is_success = true;
+            break;
+        }
+        case -1: {
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CTS wrong length");
+            break;
+        }
+        case -2: {
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CTS CRC fail");
+            break;
+        }
+        default: {
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b CTS card select failed");
+            break;
+        }
     }
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, sizeof(cmd2), 0, cmd2, sizeof(cmd2));
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        switch_off_field_14b();
-        return false;
-    }
-    status = resp.oldarg[0];
-    PrintAndLogEx(DEBUG, "status cmd2 %d", status);
-    if (status == 4) {
-        uid[0] = resp.data.asBytes[0];
-        uid[1] = resp.data.asBytes[1];
-    } else {
-        switch_off_field_14b();
-        return false;
-    }
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, sizeof(cmd3), 0, cmd3, sizeof(cmd3));
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        switch_off_field_14b();
-        return false;
-    }
-    status = resp.oldarg[0];
-    PrintAndLogEx(DEBUG, "status cmd3 %d", status);
-    if (status == 4) {
-        uid[2] = resp.data.asBytes[0];
-        uid[3] = resp.data.asBytes[1];
-        uint32_t uid32 = uid[0] + (uid[1] << 8) + (uid[2] << 16) + (uid[3] << 24);
-        PrintAndLogEx(SUCCESS, "\nASK CT - 14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "UID: %02X%02X%02X%02X (%u)    Product code: %02X    Fab code: %02X", uid[0], uid[1], uid[2], uid[3], uid32, pc, fc);
-        switch_off_field_14b();
-        return true;
-    } else {
-        switch_off_field_14b();
-        return false;
-    }
+    return is_success;
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
-static bool HF14B_Other_Reader(bool verbose) {
+static bool HF14B_other_reader(bool verbose) {
 
     uint8_t data[] = {0x00, 0x0b, 0x3f, 0x80};
     uint8_t datalen = 4;
@@ -969,7 +952,7 @@ static bool HF14B_Other_Reader(bool verbose) {
 static int CmdHF14BReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_reader();
-    bool verbose = !(cmdp == 's');
+    bool verbose = (cmdp == 'v');
     return readHF14B(verbose);
 }
 
@@ -1806,19 +1789,20 @@ int infoHF14B(bool verbose) {
 int readHF14B(bool verbose) {
 
     // try std 14b (atqb)
-    if (HF14B_Std_Reader(verbose))
+    if (HF14B_std_reader(verbose))
         return 1;
 
     // try ST Microelectronics 14b
-    if (HF14B_ST_Reader(verbose))
+    if (HF14B_st_reader(verbose))
+        return 1;
+
+    // try ASK CT 14b
+    if (HF14B_ask_ct_reader(verbose))
         return 1;
 
     // try unknown 14b read commands (to be identified later)
     // could be read of calypso, CEPAS, moneo, or pico pass.
-    if (HF14B_Other_Reader(verbose))
-        return 1;
-
-    if (HF14B_ask_ct_Reader(verbose))
+    if (HF14B_other_reader(verbose))
         return 1;
 
     if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");

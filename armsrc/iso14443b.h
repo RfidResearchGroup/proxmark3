@@ -15,7 +15,7 @@
 
 #include "common.h"
 
-#include "mifare.h"
+#include "iso14b.h"
 #include "pm3_cmd.h"
 
 #ifndef AddCrc14A
