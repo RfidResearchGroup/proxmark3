@@ -52,16 +52,6 @@ static int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b reader"));
     return PM3_SUCCESS;
 }
-static int usage_hf_14b_sniff(void) {
-    PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
-    PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list 14b'");
-    PrintAndLogEx(NORMAL, "Usage: hf 14b sniff [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h    this help");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sniff"));
-    return PM3_SUCCESS;
-}
 static int usage_hf_14b_sim(void) {
     PrintAndLogEx(NORMAL, "Emulating ISO/IEC 14443 type B tag with 4 UID / PUPI");
     PrintAndLogEx(NORMAL, "Usage: hf 14b sim [h] u <uid>");
@@ -183,11 +173,27 @@ static int CmdHF14BSim(const char *Cmd) {
 
 static int CmdHF14BSniff(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_14b_sniff();
-
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b sniff",
+                  "Sniff the communication reader and tag",
+                  "hf 14b sniff"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    
+    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
+
+    WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
+    
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
