@@ -19,6 +19,7 @@
 #include "crc16.h"
 #include "cmdhf14a.h"
 #include "protocols.h"  // definitions of ISO14B protocol
+#include "iso14b.h"
 
 #define TIMEOUT 2000
 static int CmdHelp(const char *Cmd);
