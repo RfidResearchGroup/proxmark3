@@ -127,7 +127,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static bool waitCmd14b(bool verbose) {
+static bool wait_cmd_14b(bool verbose) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
@@ -196,13 +196,17 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b raw",
                   "Sends raw bytes to card ",
-                  "hf 14b raw -s 0 -c -k  0200a40400"
+                  "hf 14b raw -s -c -k 0200a40400\n"
+                  "hf 14b raw --sr -c -k 0200a40400\n"
+                  "hf 14b raw --cts -c -k 0200a40400\n"
                 );
     
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k", "keep",               "leave the signal field ON after receive response"),
-        arg_int0("s", "select", "decimal",  "activate field and select card (0 = std, 1 = SRx ST, 2 = ASK C-ticket"),
+        arg_lit0("s", "std",                "activate field and select standard card"),
+        arg_lit0(NULL, "sr",                "activate field and select SRx ST"),
+        arg_lit0(NULL, "cts",               "activate field and select ASK C-ticket"),        
         arg_lit0("c", "crc",                "calculate and append CRC"),
         arg_lit0("r", "noresponse",         "do not read response"),
         arg_int0("t", "timeout", "decimal", "timeout in ms"),
@@ -214,41 +218,39 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
 
     bool select = false;   
     bool keep_field_on = arg_get_lit(ctx, 1);
-    int select_type = arg_get_int_def(ctx, 2, -1);
-    bool add_crc = arg_get_lit(ctx, 3);
-    bool read_reply = arg_get_lit(ctx, 4);    
-    int user_timeout = arg_get_int_def(ctx, 5, -1);
-    bool verbose = arg_get_lit(ctx, 6);
+    bool select_std = arg_get_lit(ctx, 2);
+    bool select_sr = arg_get_lit(ctx, 3);
+    bool select_cts = arg_get_lit(ctx, 4);
+    bool add_crc = arg_get_lit(ctx, 5);
+    bool read_reply = !arg_get_lit(ctx, 6);
+    int user_timeout = arg_get_int_def(ctx, 7, -1);
+    bool verbose = arg_get_lit(ctx, 8);
 
     uint32_t flags = ISO14B_CONNECT;
     if (add_crc) {
         flags |= ISO14B_APPEND_CRC;
     }
 
-    switch(select_type) {
-        case 0:
-            select = true;
-            flags |= ISO14B_SELECT_STD;
-            if (verbose)
-                PrintAndLogEx(INFO, "using standard select");
-            break;
-        case 1:
-            select = true;
-            flags |= ISO14B_SELECT_SR;
-            if (verbose)
-                PrintAndLogEx(INFO, "using SRx ST select");
-            break;
-        case 2:
-            select = true;
-            flags |= ISO14B_SELECT_CTS;
-            if (verbose)
-                PrintAndLogEx(INFO, "using ASK C-ticket select");
-            break;        
+    if (select_std) {
+        select = true;
+        flags |= ISO14B_SELECT_STD;
+        if (verbose)
+            PrintAndLogEx(INFO, "using standard select");
+    } else if (select_sr) {
+        select = true;
+        flags |= ISO14B_SELECT_SR;
+        if (verbose)
+            PrintAndLogEx(INFO, "using SRx ST select");
+    } else if (select_cts) {
+        select = true;
+        flags |= ISO14B_SELECT_CTS;
+        if (verbose)
+            PrintAndLogEx(INFO, "using ASK C-ticket select");
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     int datalen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 7), data, sizeof(data), &datalen);
+    CLIParamHexToBuf(arg_get_str(ctx, 9), data, sizeof(data), &datalen);
     CLIParserFree(ctx);
 
     uint32_t time_wait = 0;
@@ -258,9 +260,11 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         flags |= ISO14B_SET_TIMEOUT;
         if (user_timeout > MAX_14B_TIMEOUT) {
             user_timeout = MAX_14B_TIMEOUT;
-            PrintAndLogEx(INFO, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+            PrintAndLogEx(INFO, "set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
         time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        if (verbose)
+            PrintAndLogEx(INFO, "using timeout %u", user_timeout);
     }
 
     if (keep_field_on == 0)
@@ -274,7 +278,6 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
-
     if (read_reply == false) {
         return PM3_SUCCESS;
     }
@@ -282,12 +285,12 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     bool success = true;
     // get back iso14b_card_select_t, don't print it.
     if (select) {
-        success = waitCmd14b(verbose);
+        success = wait_cmd_14b(verbose);
     }
 
     // get back response from the raw bytes you sent.
     if (success && datalen > 0) {
-        waitCmd14b(true);
+        wait_cmd_14b(true);
     }
 
     return PM3_SUCCESS;
@@ -1309,14 +1312,20 @@ static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     // Anticollision + SELECT STD card
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
-        PrintAndLogEx(INFO, "Trying 14B Select SR");
+        PrintAndLogEx(INFO, "Trying 14B Select SRx");
 
         // Anticollision + SELECT SR card
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {        
-            PrintAndLogEx(ERR, "connection timeout");
-            switch_off_field_14b();
-            return PM3_ESOFT;
+            PrintAndLogEx(INFO, "Trying 14B Select CTS");
+
+            // Anticollision + SELECT ASK C-Ticket card
+            SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_CTS, 0, 0, NULL, 0);
+            if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {        
+                PrintAndLogEx(ERR, "connection timeout");
+                switch_off_field_14b();
+                return PM3_ESOFT;
+            }
         }
     }
 
