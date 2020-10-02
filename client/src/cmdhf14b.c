@@ -811,15 +811,19 @@ static bool HF14B_Std_Reader(bool verbose) {
 }
 
 static bool HF14B_ask_ct_Reader(bool verbose) {
-    uint8_t cmd[] = {0x10};
-    uint8_t datalen = 1;
+    uint8_t cmd1[] = {0x10};
+    uint8_t cmd2[] = {0x9F, 0xFF, 0xFF};
+    uint8_t cmd3[] = {0xC4};
+    uint8_t uid[4];
+    uint8_t pc, fc;
 
     // 14b get and print UID only (general info)
     uint32_t flags = ISO14B_CONNECT | ISO14B_RAW | ISO14B_APPEND_CRC;
+    PacketResponseNG resp;
+    int status;
 
     clearCommandBuffer();
-    PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, cmd, sizeof(cmd));
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, sizeof(cmd1), 0, cmd1, sizeof(cmd1));
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -827,20 +831,52 @@ static bool HF14B_ask_ct_Reader(bool verbose) {
         return false;
     }
 
-    int status = resp.oldarg[0];
-    PrintAndLogEx(DEBUG, "status %d", status);
-    bool retval = false;
-    if (status == 0) {
-        PrintAndLogEx(SUCCESS, "\nASK CT - 14443-3b tag found:");
-        retval = true;
-    } else if (status > 0) {
-        PrintAndLogEx(SUCCESS, "\nASK CT - 14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
-        retval = true;
+    status = resp.oldarg[0];
+    PrintAndLogEx(DEBUG, "status cmd1 %d", status);
+    if (status == 4) {
+        pc = resp.data.asBytes[0];
+        fc = resp.data.asBytes[1];
+    } else {
+        switch_off_field_14b();
+        return false;
     }
-    
-    switch_off_field_14b();
-    return retval;
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, sizeof(cmd2), 0, cmd2, sizeof(cmd2));
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        switch_off_field_14b();
+        return false;
+    }
+    status = resp.oldarg[0];
+    PrintAndLogEx(DEBUG, "status cmd2 %d", status);
+    if (status == 4) {
+        uid[0] = resp.data.asBytes[0];
+        uid[1] = resp.data.asBytes[1];
+    } else {
+        switch_off_field_14b();
+        return false;
+    }
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, sizeof(cmd3), 0, cmd3, sizeof(cmd3));
+    if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        switch_off_field_14b();
+        return false;
+    }
+    status = resp.oldarg[0];
+    PrintAndLogEx(DEBUG, "status cmd3 %d", status);
+    if (status == 4) {
+        uid[2] = resp.data.asBytes[0];
+        uid[3] = resp.data.asBytes[1];
+        uint32_t uid32 = uid[0] + (uid[1] << 8) + (uid[2] << 16) + (uid[3] << 24);
+        PrintAndLogEx(SUCCESS, "\nASK CT - 14443-3b tag found:");
+        PrintAndLogEx(SUCCESS, "UID: %02X%02X%02X%02X (%u)    Product code: %02X    Fab code: %02X", uid[0], uid[1], uid[2], uid[3], uid32, pc, fc);
+        switch_off_field_14b();
+        return true;
+    } else {
+        switch_off_field_14b();
+        return false;
+    }
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
