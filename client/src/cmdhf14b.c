@@ -597,7 +597,7 @@ static void print_ct_general_info(void *vcard) {
     
     uint32_t uid32 = (card.uid[0] |card.uid[1] << 8 |card.uid[2] << 16 | card.uid[3] << 24);
     PrintAndLogEx(SUCCESS, "ASK C-Ticket");
-    PrintAndLogEx(SUCCESS, "           UID: " _GREEN_("%s") " ( " _YELLOW_("%u") " )", sprint_hex(card.uid, sizeof(card.uid)), uid32);
+    PrintAndLogEx(SUCCESS, "           UID: " _GREEN_("%s") " ( " _YELLOW_("%010u") " )", sprint_hex(card.uid, sizeof(card.uid)), uid32);
     PrintAndLogEx(SUCCESS, "  Product Code: %02X", card.pc);
     PrintAndLogEx(SUCCESS, " Facility Code: %02X", card.fc);
     PrintAndLogEx(NORMAL, "");
