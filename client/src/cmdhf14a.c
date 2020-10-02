@@ -236,8 +236,8 @@ static int usage_hf_14a_sim(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_14a_sniff(void) {
-    PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
-    PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list 14a'");
+    PrintAndLogEx(NORMAL, "Collect data from the field and save into command buffer.");
+    PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf 14a list'");
     PrintAndLogEx(NORMAL, "Usage:  hf 14a sniff [c][r]");
     PrintAndLogEx(NORMAL, "c - triggered by first data from card");
     PrintAndLogEx(NORMAL, "r - triggered by first 7-bit request from reader (REQ,WUP,...)");
