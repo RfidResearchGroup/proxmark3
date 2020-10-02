@@ -52,20 +52,6 @@ static int usage_hf_14b_reader(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b reader"));
     return PM3_SUCCESS;
 }
-static int usage_hf_14b_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14b raw [-h] [-r] [-c] [-k] [-s / -ss] [-t] <0A 0B 0C ... hex>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -r    do not read response");
-    PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
-    PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
-    PrintAndLogEx(NORMAL, "       -ss   active signal field ON with select for SRx ST Microelectronics tags");
-    PrintAndLogEx(NORMAL, "       -t    timeout in ms");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b raw -s -c -k 0200a40400"));
-    return PM3_SUCCESS;
-}
 static int usage_hf_14b_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list 14b'");
@@ -162,6 +148,8 @@ static bool waitCmd14b(bool verbose) {
                               (crc) ? _GREEN_("ok") : _RED_("fail")
                              );
             } else if (len == 0) {
+                if (verbose)
+                    PrintAndLogEx(INFO, "no response from tag");
             } else {
                 PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
             }
@@ -204,76 +192,67 @@ static int CmdHF14BSniff(const char *Cmd) {
 }
 
 static int CmdHF14BCmdRaw(const char *Cmd) {
-    bool reply = true, keep_field_on = false, select = false, hasTimeout = false;
-    char buf[5] = "";
-    int i = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    uint16_t datalen = 0;
+    
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b raw",
+                  "Sends raw bytes to card ",
+                  "hf 14b raw -s 0 -c -k  0200a40400"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("k", "keep",               "leave the signal field ON after receive response"),
+        arg_int0("s", "select", "decimal",  "activate field and select card (0 = std, 1 = SRx ST, 2 = ASK C-ticket"),
+        arg_lit0("c", "crc",                "calculate and append CRC"),
+        arg_lit0("r", "noresponse",         "do not read response"),
+        arg_int0("t", "timeout", "decimal", "timeout in ms"),
+        arg_lit0("v", "verbose",            "verbose"),
+        arg_strx0(NULL, NULL,               "<data (hex)>", "bytes to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool select = false;   
+    bool keep_field_on = arg_get_lit(ctx, 1);
+    int select_type = arg_get_int_def(ctx, 2, -1);
+    bool add_crc = arg_get_lit(ctx, 3);
+    bool read_reply = arg_get_lit(ctx, 4);    
+    int user_timeout = arg_get_int_def(ctx, 5, -1);
+    bool verbose = arg_get_lit(ctx, 6);
+
     uint32_t flags = ISO14B_CONNECT;
-    uint32_t temp = 0, user_timeout = 0, time_wait = 0;
-
-    if (strlen(Cmd) < 2) return usage_hf_14b_raw();
-
-    // strip
-    while (*Cmd == ' ' || *Cmd == '\t') ++Cmd;
-
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == ' ' || Cmd[i] == '\t') { ++i; continue; }
-        if (Cmd[i] == '-') {
-            switch (tolower(Cmd[i + 1])) {
-                case 'h':
-                    return usage_hf_14b_raw();
-                case 'r':
-                    reply = false;
-                    break;
-                case 'c':
-                    flags |= ISO14B_APPEND_CRC;
-                    break;
-                case 'k':
-                    keep_field_on = true;
-                    break;
-                case 's':
-                    select = true;
-                    if (tolower(Cmd[i + 2]) == 's') {
-                        flags |= ISO14B_SELECT_SR;
-                        ++i;
-                    } else {
-                        flags |= ISO14B_SELECT_STD;
-                    }
-                    break;
-                case 't':
-                    hasTimeout = true;
-                    sscanf(Cmd + i + 2, "%d", &user_timeout);
-                    i += 3;
-                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
-                    i -= 2;
-                    break;
-                default:
-                    return usage_hf_14b_raw();
-            }
-            i += 2;
-            continue;
-        }
-        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
-                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
-                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
-            buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = Cmd[i];
-            i++;
-
-            if (strlen(buf) >= 2) {
-                sscanf(buf, "%x", &temp);
-                data[datalen++] = (uint8_t)(temp & 0xff);
-                *buf = 0;
-                memset(buf, 0x00, sizeof(buf));
-            }
-            continue;
-        }
-        PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, i));
-        return PM3_EINVARG;
+    if (add_crc) {
+        flags |= ISO14B_APPEND_CRC;
     }
 
-    if (hasTimeout) {
+    switch(select_type) {
+        case 0:
+            select = true;
+            flags |= ISO14B_SELECT_STD;
+            if (verbose)
+                PrintAndLogEx(INFO, "using standard select");
+            break;
+        case 1:
+            select = true;
+            flags |= ISO14B_SELECT_SR;
+            if (verbose)
+                PrintAndLogEx(INFO, "using SRx ST select");
+            break;
+        case 2:
+            select = true;
+            flags |= ISO14B_SELECT_CTS;
+            if (verbose)
+                PrintAndLogEx(INFO, "using ASK C-ticket select");
+            break;        
+    }
+
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    int datalen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 7), data, sizeof(data), &datalen);
+    CLIParserFree(ctx);
+
+    uint32_t time_wait = 0;
+    if (user_timeout > 0) {
 
 #define MAX_14B_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         flags |= ISO14B_SET_TIMEOUT;
@@ -296,14 +275,14 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
 
-    if (reply == false) {
+    if (read_reply == false) {
         return PM3_SUCCESS;
     }
 
     bool success = true;
     // get back iso14b_card_select_t, don't print it.
     if (select) {
-        success = waitCmd14b(false);
+        success = waitCmd14b(verbose);
     }
 
     // get back response from the raw bytes you sent.
