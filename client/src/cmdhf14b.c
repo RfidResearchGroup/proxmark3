@@ -34,35 +34,6 @@ bool apdu_in_framing_enable = true;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_14b_info(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14b info [h] [s]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h    this help");
-    PrintAndLogEx(NORMAL, "       s    silently");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b info"));
-    return PM3_SUCCESS;
-}
-static int usage_hf_14b_reader(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14b reader [h] [v]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h    this help");
-    PrintAndLogEx(NORMAL, "       v    verbose");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b reader"));
-    return PM3_SUCCESS;
-}
-static int usage_hf_14b_sim(void) {
-    PrintAndLogEx(NORMAL, "Emulating ISO/IEC 14443 type B tag with 4 UID / PUPI");
-    PrintAndLogEx(NORMAL, "Usage: hf 14b sim [h] u <uid>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h    this help");
-    PrintAndLogEx(NORMAL, "       u    4byte UID/PUPI");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sim"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sim u 11223344"));
-    return PM3_SUCCESS;
-}
 static int usage_hf_14b_read_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b sriread [h] <1|2>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -158,16 +129,29 @@ static int CmdHF14BList(const char *Cmd) {
 }
 
 static int CmdHF14BSim(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_14b_sim();
-
-    uint32_t pupi = 0;
-    if (cmdp == 'u') {
-        pupi = param_get32ex(Cmd, 1, 0, 16);
-    }
+    
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b sim",
+                  "Simulate a ISO/IEC 14443 type B tag with 4 byte UID / PUPI",
+                  "hf 14b sim\n"
+                  "hf 14b sim -u 11AA33BB"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("u", "uid", "hex", "4byte UID/PUPI"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    uint8_t pupi[4];
+    int n = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_SIMULATE, pupi, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));
+    
     return PM3_SUCCESS;
 }
 
@@ -722,10 +706,20 @@ static bool HF14B_ST_Info(bool verbose) {
 
 // menu command to get and print all info known about any known 14b tag
 static int CmdHF14Binfo(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_14b_info();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b info",
+                  "Tag information for ISO/IEC 14443 type B based tags",
+                  "hf 14b info\n"
+                );
 
-    bool verbose = !(cmdp == 's');
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
     return infoHF14B(verbose);
 }
 
@@ -938,9 +932,20 @@ static bool HF14B_other_reader(bool verbose) {
 
 // menu command to get and print general info about all known 14b chips
 static int CmdHF14BReader(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_14b_reader();
-    bool verbose = (cmdp == 'v');
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b reader",
+                  "Act as a 14443B reader to identify a tag",
+                  "hf 14b reader\n"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
     return readHF14B(verbose);
 }
 

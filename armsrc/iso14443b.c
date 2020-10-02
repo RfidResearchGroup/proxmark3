@@ -530,7 +530,7 @@ static void TransmitFor14443b_AsTag(uint8_t *response, uint16_t len) {
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateIso14443bTag(uint32_t pupi) {
+void SimulateIso14443bTag(uint8_t *pupi) {
 
     LED_A_ON();
     // the only commands we understand is WUPB, AFI=0, Select All, N=1:
@@ -553,14 +553,14 @@ void SimulateIso14443bTag(uint32_t pupi) {
         0x5e, 0xd7
     };
 
-    // response to HLTB and ATTRIB
-    static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
-
     // ...PUPI/UID supplied from user. Adjust ATQB response accordingly
-    if (pupi > 0) {
-        num_to_bytes(pupi, 4, respATQB + 1);
+    if (memcmp("\x00\x00\x00\x00", pupi, 4) != 0) {
+        memcpy(respATQB + 1, pupi, 4);
         AddCrc14B(respATQB, 12);
     }
+
+    // response to HLTB and ATTRIB
+    static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
 
     // setup device.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

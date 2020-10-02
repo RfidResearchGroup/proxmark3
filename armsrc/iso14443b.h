@@ -32,7 +32,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
 int iso14443b_select_card(iso14b_card_select_t *card);
 int iso14443b_select_card_srx(iso14b_card_select_t *card);
 
-void SimulateIso14443bTag(uint32_t pupi);
+void SimulateIso14443bTag(uint8_t *pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint16_t numofblocks);
 void SniffIso14443b(void);
