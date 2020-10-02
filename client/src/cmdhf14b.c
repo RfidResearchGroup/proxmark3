@@ -34,16 +34,6 @@ bool apdu_in_framing_enable = true;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_14b_read_srx(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf 14b sriread [h] <1|2>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h        this help");
-    PrintAndLogEx(NORMAL, "       <1|2>    1 = SRIX4K , 2 = SRI512");
-    PrintAndLogEx(NORMAL, "Example:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriread 1"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriread 2"));
-    return PM3_SUCCESS;
-}
 static int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 14b [h] sriwrite <1|2> <block> <data>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -932,11 +922,36 @@ static int CmdHF14BReader(const char *Cmd) {
  * this command just dumps the contents of the memory/
  */
 static int CmdHF14BReadSri(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_14b_read_srx();
+    
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b sriread",
+                  "Read contents of a SRI512 | SRIX4K tag",
+                  "hf 14b sriread\n"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);   
+    CLIParserFree(ctx);
+    
+    iso14b_card_select_t card;
+    if (get_14b_UID(&card) == false) {
+        PrintAndLogEx(WARNING, "no tag found");
+        return PM3_SUCCESS;
+    }
 
-    uint8_t tagtype = param_get8(Cmd, 0);
-    uint8_t blocks = (tagtype == 1) ? 0x7F : 0x0F;
+    if (card.uidlen != 8) {
+        PrintAndLogEx(FAILED, "current dump command only work with SRI4K / SRI512 tags");        
+        return PM3_SUCCESS;
+    }
+
+    // detect cardsize
+    // 1 = 4096
+    // 2 = 512
+    uint8_t cardtype = get_st_cardsize(card.uid);
+    uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_SRI_READ, blocks, 0, 0, NULL, 0);
