@@ -58,21 +58,6 @@ static int usage_hf_14b_write_srx(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("       hf 14b sriwrite 2 FF 11223344"));
     return PM3_SUCCESS;
 }
-static int usage_hf_14b_dump(void) {
-    PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
-                  "If memory size defaults to SRI4K if auto detect fails.\n"
-                  "\n"
-                  "Usage: hf 14b dump [h] <f filename> \n"
-                  "Options:\n"
-                  "\th             this help\n"
-                  "\tf <name>      (optional) filename,  if no <name> UID will be used as filename\n"
-                  "\n"
-                  "Example:\n"
-                  _YELLOW_("\thf 14b dump\n")
-                  _YELLOW_("\thf 14b dump f mydump")
-                 );
-    return PM3_SUCCESS;
-}
 
 static int switch_off_field_14b(void) {
     clearCommandBuffer();
@@ -373,7 +358,7 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
 }
 
 // get SRx chip model (from UID) // from ST Microelectronics
-static char *get_ST_Chip_Model(uint8_t data) {
+static char *get_st_chip_model(uint8_t data) {
     static char model[20];
     char *retStr = model;
     memset(model, 0, sizeof(model));
@@ -602,7 +587,7 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(SwapEndian64(data, 8, 8), len));
     PrintAndLogEx(SUCCESS, " MFG: %02X, " _YELLOW_("%s"), mfgid, getTagInfo(mfgid));
-    PrintAndLogEx(SUCCESS, "Chip: %02X, " _YELLOW_("%s"), chipid, get_ST_Chip_Model(chipid));
+    PrintAndLogEx(SUCCESS, "Chip: %02X, " _YELLOW_("%s"), chipid, get_st_chip_model(chipid));
 }
 
 // print UID info from ASK CT chips
@@ -619,12 +604,9 @@ static void print_ct_general_info(void *vcard) {
 
 }
 
-// iceman, some 14B APDU break down
+// iceman, calypso?
 // 05 00 00 = find one tag in field
 // 1d xx xx xx xx 00 08 01 00 = attrib xx=UID (resp 10 [f9 e0])
-// a3 = ?  (resp 03 [e2 c2])
-// 02 = ?  (resp 02 [6a d3])
-// 022b (resp 02 67 00 [29  5b])
 // 0200a40400 (resp 02 67 00 [29 5b])
 // 0200a4040c07a0000002480300 (resp 02 67 00 [29 5b])
 // 0200a4040c07a0000002480200 (resp 02 67 00 [29 5b])
@@ -633,10 +615,6 @@ static void print_ct_general_info(void *vcard) {
 // 0200a404000cd2760001354b414e4d30310000 (resp 02 6a 82 [4b 4c])
 // 0200a404000ca000000063504b43532d313500 (resp 02 6a 82 [4b 4c])
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
-// 03 = ?  (resp 03 [e3 c2])
-// c2 = ?  (resp c2 [66 15])
-// b2 = ?  (resp a3 [e9 67])
-// a2 = ?  (resp 02 [6a d3])
 
 // 14b get and print Full Info (as much as we know)
 static bool HF14B_Std_Info(bool verbose) {
@@ -1036,43 +1014,45 @@ static int CmdHF14BWriteSri(const char *Cmd) {
 // need to write to file
 static int CmdHF14BDump(const char *Cmd) {
 
-    uint8_t fileNameLen = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b dump",
+                  "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
+                  "Tries to autodetect cardtype, memory size defaults to SRI4K",
+                  "hf 14b dump\n"
+                  "hf 14b dump -f myfilename\n"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("f", "file", "<filename>", "(optional) filename,  if no <name> UID will be used as filename"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     char *fptr = filename;
-    bool errors = false;
-    uint8_t cmdp = 0, cardtype = 1;
-    uint16_t cardsize = 0;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_14b_dump();
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors) return usage_hf_14b_dump();
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t*)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
 
     iso14b_card_select_t card;
     if (get_14b_UID(&card) == false) {
-        PrintAndLogEx(WARNING, "No tag found.");
+        PrintAndLogEx(WARNING, "no tag found");
+        return PM3_SUCCESS;
+    }
+    
+    if (card.uidlen != 8) {
+        PrintAndLogEx(FAILED, "current dump command only work with SRI4K / SRI512 tags");        
         return PM3_SUCCESS;
     }
 
     // detect cardsize
     // 1 = 4096
     // 2 = 512
-    cardtype = get_st_cardsize(card.uid);
-
+    uint8_t cardtype = get_st_cardsize(card.uid);
     uint8_t blocks = 0;
+    uint16_t cardsize = 0;
+
     switch (cardtype) {
         case 2:
             cardsize = (512 / 8) + 4;
@@ -1085,17 +1065,17 @@ static int CmdHF14BDump(const char *Cmd) {
             break;
     }
 
-    if (fileNameLen < 1) {
-        PrintAndLogEx(INFO, "Using UID as filename");
+    if (fnlen < 1) {
+        PrintAndLogEx(INFO, "using UID as filename");
         fptr += sprintf(fptr, "hf-14b-");
         FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
     }
 
     uint8_t chipid = get_st_chipid(card.uid);
-    PrintAndLogEx(SUCCESS, "Found a " _GREEN_("%s") " tag", get_ST_Chip_Model(chipid));
+    PrintAndLogEx(SUCCESS, "found a " _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
     // detect blocksize from card :)
-    PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
+    PrintAndLogEx(INFO, "reading tag memory from UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
 
     uint8_t data[cardsize];
     memset(data, 0, sizeof(data));
@@ -1163,7 +1143,7 @@ static int CmdHF14BDump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (blocknum != 0xFF) {
-        PrintAndLogEx(FAILED, "Dump failed");
+        PrintAndLogEx(FAILED, "dump failed");
         goto out;
     }
 
