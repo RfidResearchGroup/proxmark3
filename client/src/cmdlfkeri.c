@@ -135,14 +135,10 @@ static int CmdKeriMSScramble(KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID
     return PM3_SUCCESS;
 }
 
-static int CmdKeriDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodKeri();
-}
+int demodKeri(bool verbose) {
+    (void) verbose; // unused so far
 
-int demodKeri(void) {
-
-    if (PSKDemod("", false) != PM3_SUCCESS) {
+    if (PSKDemod(0, 0, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: PSK1 Demod failed");
         return PM3_ESOFT;
     }
@@ -212,9 +208,15 @@ int demodKeri(void) {
     return PM3_SUCCESS;
 }
 
+static int CmdKeriDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodKeri(true);
+}
+
 static int CmdKeriRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 10000);
-    return CmdKeriDemod(Cmd);
+    return demodKeri(true);
 }
 
 static int CmdKeriClone(const char *Cmd) {

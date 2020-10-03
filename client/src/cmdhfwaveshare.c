@@ -565,7 +565,7 @@ static int transceive_blocking(uint8_t *txBuf, uint16_t txBufLen, uint8_t *rxBuf
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             if (resp.oldarg[0] > rxBufLen) {
-                PrintAndLogEx(WARNING, "Received %u bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
+                PrintAndLogEx(WARNING, "Received %"PRIu32 " bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
                 memcpy(rxBuf, resp.data.asBytes, rxBufLen);
                 *actLen = rxBufLen;
                 return PM3_ESOFT;

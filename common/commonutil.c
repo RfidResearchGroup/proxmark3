@@ -161,12 +161,12 @@ void htole24(uint32_t val, uint8_t data[3]) {
 
 // ROL on u32
 uint32_t rotl(uint32_t a, uint8_t n) {
-	n &= 31; 
-  	return (a << n) | (a >> (32 - n));
+    n &= 31;
+    return (a << n) | (a >> (32 - n));
 }
 
 // ROR on u32
 uint32_t rotr(uint32_t a, uint8_t n) {
-	n &= 31;
-  	return (a >> n) | (a << (32 - n));
+    n &= 31;
+    return (a >> n) | (a << (32 - n));
 }

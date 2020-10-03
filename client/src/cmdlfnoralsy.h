@@ -13,7 +13,7 @@
 
 int CmdLFNoralsy(const char *Cmd);
 
-int demodNoralsy(void);
+int demodNoralsy(bool verbose);
 int detectNoralsy(uint8_t *dest, size_t *size);
 int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits);
 

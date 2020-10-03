@@ -196,7 +196,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         dumpCommandsRecursive(Commands, 1);
         return PM3_SUCCESS;
     }
-    
+
     if (strcmp(Cmd, "coffee") == 0) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "    ((\n     ))\n" _YELLOW_("  .______.\n  |      |]\n  \\      /\n   `----´\n\n"));

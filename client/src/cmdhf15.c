@@ -315,10 +315,10 @@ static int usage_15_raw(void) {
         {"-r", "do not read response" },
         {"-2", "use slower '1 out of 256' mode" },
         {"-c", "calculate and append CRC" },
-        {"-p", "leave the signal field ON" },
+        {"-k", "keep signal field ON after receive" },
         {"", "Tip: turn on debugging for verbose output"},
     };
-    PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>\n");
+    PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-k] [-c] <0A 0B 0C ... hex>\n");
     PrintAndLogOptions(options, 4, 3);
     return PM3_SUCCESS;
 }
@@ -381,7 +381,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
         {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
         {"MIKRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
-        {"Spark1 Public key", "04d64bb732c0d214e7ec580736acf847284b502c25c0f7f2fa86aace1dada4387a"},
+        {"VivoKey Spark1 Public key", "04d64bb732c0d214e7ec580736acf847284b502c25c0f7f2fa86aace1dada4387a"},
     };
     /*
         uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
@@ -431,7 +431,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
     for (i = 0; i < sizeof(revsign); i++) {
         revsign[i] = signature[31 - i];
     }
-    
+
     int reason = 0;
     bool is_valid = false;
     for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
@@ -446,7 +446,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
             reason = 1;
             break;
         }
-        
+
         // try with sha256
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, true);
         is_valid = (res == 0);
@@ -463,7 +463,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
             break;
         }
 
-        
+
         // try with sha256
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), true);
         is_valid = (res == 0);
@@ -487,7 +487,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
     PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
-    switch(reason) {
+    switch (reason) {
         case 1:
             PrintAndLogEx(INFO, "                  Params used: UID and signature, plain");
             break;
@@ -497,7 +497,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         case 3:
             PrintAndLogEx(INFO, "                  Params used: reversed UID and signature, plain");
             break;
-        case 4: 
+        case 4:
             PrintAndLogEx(INFO, "                  Params used: reversed UID and signature, SHA256");
             break;
     }
@@ -1353,7 +1353,7 @@ static int CmdHF15Raw(const char *Cmd) {
     if (strlen(Cmd) < 3 || cmdp == 'h') return usage_15_raw();
 
     int reply = 1, fast = 1, i = 0;
-    bool crc = false, leaveSignalON = false;
+    bool crc = false, keep_field_on = false;
     char buf[5] = "";
     uint8_t data[100];
     uint32_t datalen = 0, temp;
@@ -1364,21 +1364,18 @@ static int CmdHF15Raw(const char *Cmd) {
     while (Cmd[i] != '\0') {
         if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
+            switch (tolower(Cmd[i + 1])) {
                 case 'r':
-                case 'R':
                     reply = 0;
                     break;
                 case '2':
                     fast = 0;
                     break;
                 case 'c':
-                case 'C':
                     crc = true;
                     break;
-                case 'p':
-                case 'P':
-                    leaveSignalON = true;
+                case 'k':
+                    keep_field_on = true;
                     break;
                 default:
                     PrintAndLogEx(WARNING, "Invalid option");
@@ -1429,7 +1426,7 @@ static int CmdHF15Raw(const char *Cmd) {
         }
     }
 
-    if (leaveSignalON == false)
+    if (keep_field_on == false)
         DropField();
 
     return PM3_SUCCESS;

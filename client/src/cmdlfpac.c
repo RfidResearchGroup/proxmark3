@@ -144,14 +144,10 @@ static void pacCardIdToRaw(uint8_t *outRawBytes, const char *cardId) {
 }
 
 //see NRZDemod for what args are accepted
-static int CmdPacDemod(const char *Cmd) {
-    (void)Cmd;
-    return demodPac();
-}
-
-int demodPac(void) {
+int demodPac(bool verbose) {
+    (void) verbose; // unused so far
     //NRZ
-    if (NRZrawDemod("", false) != PM3_SUCCESS) {
+    if (NRZrawDemod(0, 0, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: NRZ Demod failed");
         return PM3_ESOFT;
     }
@@ -188,9 +184,15 @@ int demodPac(void) {
     return retval;
 }
 
+static int CmdPacDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodPac(true);
+}
+
 static int CmdPacRead(const char *Cmd) {
+    (void)Cmd;
     lf_read(false, 4096 * 2 + 20);
-    return CmdPacDemod(Cmd);
+    return demodPac(true);
 }
 
 static int CmdPacClone(const char *Cmd) {

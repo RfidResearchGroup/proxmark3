@@ -13,6 +13,6 @@
 
 int CmdLFNEXWATCH(const char *Cmd);
 
-int demodNexWatch(void);
+int demodNexWatch(bool verbose);
 int detectNexWatch(uint8_t *dest, size_t *size, bool *invert);
 #endif

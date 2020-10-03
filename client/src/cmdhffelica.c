@@ -21,7 +21,7 @@
 #include "crc16.h"
 #include "util.h"
 #include "ui.h"
-#include "mifare.h"     // felica_card_select_t struct
+#include "iso18.h"     // felica_card_select_t struct
 #include "des.h"
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
@@ -84,11 +84,11 @@ static int usage_hf_felica_dumplite(void) {
 }
 
 static int usage_hf_felica_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
+    PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-k] [-a] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
     PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -p    leave the signal field ON after receive");
+    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
     PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
     PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
     return PM3_SUCCESS;
@@ -1687,7 +1687,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
     bool reply = 1;
     bool crc = false;
-    bool power = false;
+    bool keep_field_on = false;
     bool active = false;
     bool active_select = false;
     uint16_t numbits = 0;
@@ -1714,8 +1714,8 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
                 case 'c':
                     crc = true;
                     break;
-                case 'p':
-                    power = true;
+                case 'k':
+                    keep_field_on = true;
                     break;
                 case 'a':
                     active = true;
@@ -1771,7 +1771,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
             flags |= FELICA_NO_SELECT;
     }
 
-    if (power) {
+    if (keep_field_on) {
         flags |= FELICA_NO_DISCONNECT;
     }
 

@@ -13,7 +13,7 @@
 
 int CmdLFKeri(const char *Cmd);
 
-int demodKeri(void);
+int demodKeri(bool verbose);
 int detectKeri(uint8_t *dest, size_t *size, bool *invert);
 
 #endif

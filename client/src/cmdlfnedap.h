@@ -13,7 +13,7 @@
 
 int CmdLFNedap(const char *Cmd);
 
-int demodNedap(void);
+int demodNedap(bool verbose);
 int detectNedap(uint8_t *dest, size_t *size);
 int getNedapBits(uint32_t cn, uint8_t *nedapBits);
 

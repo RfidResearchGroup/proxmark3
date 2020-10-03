@@ -29,6 +29,7 @@
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "commonutil.h"  // ARRAYLEN
+#include "cliparser.h"
 #include "ui.h"
 #include "graph.h"
 #include "cmddata.h"  //for g_debugMode, demodbuff cmds
@@ -42,70 +43,6 @@
 #endif
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_hid_watch(void) {
-    PrintAndLogEx(NORMAL, "Enables HID compatible reader mode printing details.");
-    PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf hid watch");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        lf hid watch"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_lf_hid_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of HID card with card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf hid sim [h] [ID]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h   - This help");
-    PrintAndLogEx(NORMAL, "       ID  - HID id");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid sim 2006ec0c86"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_lf_hid_clone(void) {
-    PrintAndLogEx(NORMAL, "Clone HID to T55x7. " _BLUE_("Tag must be on antenna!"));
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf hid clone [h] [l] ID");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h   - This help");
-    PrintAndLogEx(NORMAL, "       l   - 84bit ID");
-    PrintAndLogEx(NORMAL, "       ID  - HID id");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone 2006ec0c86"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone l 2006ec0c86"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_lf_hid_brute(void) {
-    PrintAndLogEx(NORMAL, "Enables bruteforce of HID readers with specified facility code.");
-    PrintAndLogEx(NORMAL, "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
-    PrintAndLogEx(NORMAL, "if cardnumber is not given, it starts with 1 and goes up to 65535");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf hid brute [h] [v] w <format> [<field> (decimal)>] [up|down] {...}");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h                 :  This help");
-    PrintAndLogEx(NORMAL, "       w <format>        :  see " _YELLOW_("`wiegand list`") " for available formats");
-    PrintAndLogEx(NORMAL, "       f <facility-code> :  facility code");
-    PrintAndLogEx(NORMAL, "       c <cardnumber>    :  card number to start with");
-    PrintAndLogEx(NORMAL, "       i <issuelevel>    :  issue level");
-    PrintAndLogEx(NORMAL, "       o <oem>           :  OEM code");
-    PrintAndLogEx(NORMAL, "       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
-    PrintAndLogEx(NORMAL, "       v                 :  verbose logging, show all tries");
-    PrintAndLogEx(NORMAL, "       up                :  direction to increment card number. (default is both directions)");
-    PrintAndLogEx(NORMAL, "       down              :  direction to decrement card number. (default is both directions)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 224"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 21 d 2000"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute v w H10301 f 21 c 200 d 2000"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 // sending three times.  Didn't seem to break the previous sim?
 static int sendPing(void) {
@@ -152,8 +89,8 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
 //by marshmellow (based on existing demod + holiman's refactor)
 //HID Prox demod - FSK RF/50 with preamble of 00011101 (then manchester encoded)
 //print full HID Prox ID and some bit format details if found
-static int CmdHIDDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodHID(bool verbose) {
+    (void) verbose; // unused so far
 
     // HID simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
     if (isGraphBitstream()) {
@@ -261,17 +198,35 @@ static int CmdHIDDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHIDDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodHID(true);
+}
+
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdHIDRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 12000);
-    return CmdHIDDemod(Cmd);
+    return demodHID(true);
 }
 
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdHIDWatch(const char *Cmd) {
-    uint8_t c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h') return usage_lf_hid_watch();
+    CLIParserContext *ctx;
+
+    CLIParserInit(&ctx, "lf hid watch",
+                  "Enables HID compatible reader mode printing details.\n"
+                  "By default, values are printed and logged until the button is pressed or another USB command is issued.\n",
+                  "lf hid watch"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for HID Prox cards - place tag on antenna");
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
@@ -284,28 +239,52 @@ static int CmdHIDWatch(const char *Cmd) {
 }
 
 static int CmdHIDSim(const char *Cmd) {
+    int idlen = 0;
+    uint8_t id[10] = {0};
     lf_hidsim_t payload;
     payload.longFMT = 0;
     uint32_t hi2 = 0, hi = 0, lo = 0;
-    uint32_t n = 0, i = 0;
+    uint32_t i = 0;
 
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_hid_sim();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hid sim",
+                  "Enables simulation of HID card with card number.",
+                  "lf hid sim 2006ec0c86"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("l", "long", "Simulate HID tag with long ID"),
+        arg_str1(NULL, NULL, "<hex>", "HID tag ID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (strchr(Cmd, 'l') != 0) {
-        i++;
-        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
+    bool long_id = arg_get_lit(ctx, 1);
+
+    CLIGetHexWithReturn(ctx, 2, id, &idlen);
+
+    CLIParserFree(ctx);
+
+    if (long_id) {
+        for (i=0; i < idlen; ++i) {
             hi2 = (hi2 << 4) | (hi >> 28);
             hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (n & 0xf);
-        }
+            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
 
+            hi2 = (hi2 << 4) | (hi >> 28);
+            hi = (hi << 4) | (lo >> 28);
+            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
+        }
         PrintAndLogEx(INFO, "Simulating HID tag with long ID: " _GREEN_("%x%08x%08x"), hi2, hi, lo);
         payload.longFMT = 1;
     } else {
-        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
+        for (i=0; i < idlen; ++i) {
             hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (n & 0xf);
+            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
+
+            hi = (hi << 4) | (lo >> 28);
+            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
         }
         PrintAndLogEx(SUCCESS, "Simulating HID tag with ID: " _GREEN_("%x%08x"), hi, lo);
         hi2 = 0;
@@ -328,28 +307,55 @@ static int CmdHIDSim(const char *Cmd) {
 }
 
 static int CmdHIDClone(const char *Cmd) {
+    int idlen = 0;
+    uint8_t id[10] = {0};
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
-    uint32_t n = 0, i = 0;
+    uint32_t i = 0;
 
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_hid_clone();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hid clone",
+                  "Clone HID to T55x7. Tag must be on antenna!",
+                  "lf hid clone 2006ec0c86\n"
+                  "lf hid clone -l 2006ec0c86"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("l", "long", "84bit HID long ID"),
+        arg_str1(NULL, NULL, "<hex>", "HID tag ID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool long_id = arg_get_lit(ctx, 1);
+
+    CLIGetHexWithReturn(ctx, 2, id, &idlen);
+
+    CLIParserFree(ctx);
+
     uint8_t longid[1] = {0};
-    if (strchr(Cmd, 'l') != 0) {
-        i++;
-        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
+
+    if (long_id) {
+        for (i=0; i < idlen; ++i) {
             hi2 = (hi2 << 4) | (hi >> 28);
             hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (n & 0xf);
-        }
+            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
 
+            hi2 = (hi2 << 4) | (hi >> 28);
+            hi = (hi << 4) | (lo >> 28);
+            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
+        }
         PrintAndLogEx(INFO, "Preparing to clone HID tag with long ID: " _GREEN_("%x%08x%08x"), hi2, hi, lo);
 
         longid[0] = 1;
     } else {
-        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
+        for (i=0; i < idlen; ++i) {
             hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (n & 0xf);
+            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
+
+            hi = (hi << 4) | (lo >> 28);
+            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
         }
         PrintAndLogEx(INFO, "Preparing to clone HID tag with ID: " _GREEN_("%x%08x"), hi, lo);
         hi2 = 0;
@@ -379,82 +385,63 @@ static int CmdHIDClone(const char *Cmd) {
 
 static int CmdHIDBrute(const char *Cmd) {
 
-    bool errors = false, verbose = false;
     uint32_t delay = 1000;
-    uint8_t cmdp = 0;
     int format_idx = -1;
     int direction = 0;
-    char format[16] = {0};
+    uint8_t format[16] = {0};
+    int formatLen;
 
     wiegand_card_t cn_hi, cn_low;
     memset(&cn_hi, 0, sizeof(wiegand_card_t));
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hid brute",
+                  "Enables bruteforce of HID readers with specified facility code.\n"
+                  "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step\n"
+                  "if cardnumber is not given, it starts with 1 and goes up to 65535",
+                  "lf hid brute -w H10301 -f 224\n"
+                  "lf hid brute -w H10301 -f 21 -d 2000\n"
+                  "lf hid brute -v -w H10301 -f 21 -c 200 -d 2000\n"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose",           "verbose logging, show all tries"),
+        arg_str1("w", "wiegand", "format", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_int0("f", "fn",      "dec",    "facility code"),
+        arg_int0("c", "cn",      "dec",    "card number to start with"),
+        arg_int0("i", NULL,      "dec",    "issue level"),
+        arg_int0("o", "oem",     "dec",    "OEM code"),
+        arg_int0("d", "delay",   "dec",    "delay betweens attempts in ms. Default 1000ms"), 
+        arg_lit0(NULL, "up",               "direction to increment card number. (default is both directions)"),
+        arg_lit0(NULL, "down",             "direction to decrement card number. (default is both directions)"),        
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-        char s[10] = {0};
-        if (param_getstr(Cmd, cmdp, s, sizeof(s)) > 0) {
-            if (strlen(s) > 1) {
-                str_lower((char *)s);
-                if (str_startswith(s, "up")) {
-                    direction = 1;
-                } else if (str_startswith(s, "do")) {
-                    direction = 2;
-                }
-                cmdp++;
-                continue;
-            }
-        }
+    bool verbose = arg_get_lit(ctx, 1);
+    
+    CLIGetStrWithReturn(ctx, 2, format, &formatLen);
 
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_hid_brute();
-            case 'w':
-                param_getstr(Cmd, cmdp + 1, format, sizeof(format));
-                format_idx = HIDFindCardFormat(format);
-                if (format_idx == -1) {
-                    PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'c':
-                cn_hi.CardNumber = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'd':
-                // delay between attemps,  defaults to 1000ms.
-                delay = param_get32ex(Cmd, cmdp + 1, 1000, 10);
-                cmdp += 2;
-                break;
-            case 'f':
-                cn_hi.FacilityCode =  param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'i':
-                cn_hi.IssueLevel = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'o':
-                cn_hi.OEM = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter: " _YELLOW_("'%c'"), param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
+    format_idx = HIDFindCardFormat((char*) format);
     if (format_idx == -1) {
-        PrintAndLogEx(ERR, "You must select a wiegand format. See " _YELLOW_("`wiegand list`") " for available formats\n");
-        errors = true;
+        PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
+        return PM3_EINVARG;
     }
 
-    if (errors) return usage_lf_hid_brute();
+    cn_hi.FacilityCode = arg_get_int_def(ctx, 3, 0);
+    cn_hi.CardNumber = arg_get_int_def(ctx, 4, 0);
+    cn_hi.IssueLevel = arg_get_int_def(ctx, 5, 0);
+    cn_hi.OEM = arg_get_int_def(ctx, 6, 0);
+    delay = arg_get_int_def(ctx, 7, 1000);
+
+    if (arg_get_lit(ctx, 8) && arg_get_lit(ctx, 9)) {
+        direction = 0;
+    } else if (arg_get_lit(ctx, 8)) {
+        direction = 1;
+    } else if (arg_get_lit(ctx, 9)) {
+        direction = 2;
+    }
 
     if (verbose) {
         PrintAndLogEx(INFO, "Wiegand format#.. %i", format_idx);
@@ -561,8 +548,4 @@ static int CmdHelp(const char *Cmd) {
 int CmdLFHID(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-}
-
-int demodHID(void) {
-    return CmdHIDDemod("");
 }

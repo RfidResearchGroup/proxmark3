@@ -11,10 +11,10 @@ This is a script to allow raw 14443a commands to be sent and received.
 ]]
 example = [[
     # 1. Connect and don't disconnect
-    script run hf_14a_raw -p
+    script run hf_14a_raw -k
 
     # 2. Send mf auth, read response (nonce)
-    script run hf_14a_raw -o -x 6000F57b -p
+    script run hf_14a_raw -o -x 6000F57b -k
 
     # 3. disconnect
     script run hf_14a_raw -o
@@ -26,10 +26,10 @@ usage = [[
 script run hf_14a_raw -x 6000F57b
 ]]
 arguments = [[
-    -o              do not connect - use this only if you previously used -p to stay connected
+    -o              do not connect - use this only if you previously used -k to stay connected
     -r              do not read response
     -c              calculate and append CRC
-    -p              stay connected - dont inactivate the field
+    -k              stay connected - dont inactivate the field
     -x <payload>    Data to send (NO SPACES!)
     -d              Debug flag
     -t              Topaz mode
@@ -187,8 +187,8 @@ function selftest()
     DEBUG = true
     dbg('Performing test')
     main()
-    main('-p')
-    main(' -o -x 6000F57b -p')
+    main('-k')
+    main(' -o -x 6000F57b -k')
     main('-o')
     main('-x 6000F57b')
     dbg('Tests done')

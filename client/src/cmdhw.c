@@ -716,7 +716,7 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
-        if (IfPm3Rdv4Fw() == false ){
+        if (IfPm3Rdv4Fw() == false) {
             PrintAndLogEx(NORMAL, "  firmware.........................%s", _GREEN_("PM3OTHER"));
             if (IfPm3FpcUsartHost()) {
                 PrintAndLogEx(NORMAL, "  FPC USART for BT add-on..........%s", _GREEN_("present"));

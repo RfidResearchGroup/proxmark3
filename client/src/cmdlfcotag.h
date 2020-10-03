@@ -18,6 +18,6 @@
 #endif
 
 int CmdLFCOTAG(const char *Cmd);
-int demodCOTAG(void);
+int demodCOTAG(bool verbose);
 int readCOTAGUid(void);
 #endif

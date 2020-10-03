@@ -597,6 +597,8 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
 int CmdEM4x50Read(const char *Cmd) {
 
     em4x50_data_t etd;
+    memset(&etd, 0x00, sizeof(em4x50_data_t));
+
     etd.pwd_given = false;
     etd.addr_given = false;
     etd.newpwd_given = false;

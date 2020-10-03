@@ -95,8 +95,8 @@ static int CmdIOProxWatch(const char *Cmd) {
 //by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioprox ID and some format details
-static int CmdIOProxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodIOProx(bool verbose) {
+    (void) verbose; // unused so far
     int idx = 0, retval = PM3_SUCCESS;
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -190,10 +190,15 @@ static int CmdIOProxDemod(const char *Cmd) {
     return retval;
 }
 
+static int CmdIOProxDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodIOProx(true);
+}
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdIOProxRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 12000);
-    return CmdIOProxDemod(Cmd);
+    return demodIOProx(true);
 }
 static int CmdIOProxSim(const char *Cmd) {
     uint16_t cn = 0;
@@ -309,10 +314,6 @@ static int CmdHelp(const char *Cmd) {
 int CmdLFIO(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-}
-
-int demodIOProx(void) {
-    return CmdIOProxDemod("");
 }
 
 //Index map

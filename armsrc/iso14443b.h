@@ -15,7 +15,7 @@
 
 #include "common.h"
 
-#include "mifare.h"
+#include "iso14b.h"
 #include "pm3_cmd.h"
 
 #ifndef AddCrc14A
@@ -27,12 +27,12 @@
 #endif
 
 void iso14443b_setup(void);
-int iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response, uint16_t respmaxlen);
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res);
 
 int iso14443b_select_card(iso14b_card_select_t *card);
 int iso14443b_select_card_srx(iso14b_card_select_t *card);
 
-void SimulateIso14443bTag(uint32_t pupi);
+void SimulateIso14443bTag(uint8_t *pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint16_t numofblocks);
 void SniffIso14443b(void);

@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include "util.h"
 
-#define arg_param_begin arg_lit0("hH",  "help",    "This help")
+#define arg_param_begin arg_lit0("h",  "help",    "This help")
 #define arg_param_end arg_end(20)
 
 #define arg_getsize(a)      (sizeof(a) / sizeof(a[0]))

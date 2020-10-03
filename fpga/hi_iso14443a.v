@@ -540,16 +540,14 @@ begin
         bit_to_arm = sendbit;
 end
 
-
-
-
 assign ssp_din = bit_to_arm;
 
 // Subcarrier (adc_clk/16, for FPGA_HF_ISO14443A_TAGSIM_MOD only).
 wire sub_carrier;
 assign sub_carrier = ~sub_carrier_cnt[3];
 
-// in FPGA_HF_ISO14443A_READER_MOD: drop carrier for mod_sig_coil==1 (pause); in FPGA_HF_ISO14443A_READER_LISTEN: carrier always on; in other modes: carrier always off
+// in FPGA_HF_ISO14443A_READER_MOD: drop carrier for mod_sig_coil == 1 (pause); 
+// in FPGA_HF_ISO14443A_READER_LISTEN: carrier always on; in other modes: carrier always off
 assign pwr_hi = (ck_1356meg & (((mod_type == `FPGA_HF_ISO14443A_READER_MOD) & ~mod_sig_coil) || (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)));
 
 
@@ -565,7 +563,6 @@ assign pwr_oe4 = mod_sig_coil & sub_carrier & (mod_type == `FPGA_HF_ISO14443A_TA
 // This is all LF, so doesn't matter.
 assign pwr_oe2 = 1'b0;
 assign pwr_lo = 1'b0;
-
 
 assign dbg = negedge_cnt[3];
 

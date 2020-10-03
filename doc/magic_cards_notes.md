@@ -200,14 +200,14 @@ script run run hf_mf_magicrevive
 
 To execute commands manually:
 ```
-hf 14a raw -a -p -b 7       40
-hf 14a raw    -p            43
-hf 14a raw    -p -c         A000
+hf 14a raw -a -k -b 7       40
+hf 14a raw    -k            43
+hf 14a raw    -k -c         A000
 hf 14a raw       -c -t 1000 11223344440804006263646566676869
 ```
 wipe:
 ```
-hf 14a raw -a -p -b 7       40
+hf 14a raw -a -k -b 7       40
 hf 14a raw -t 1000          41
 ```
 
@@ -383,9 +383,9 @@ Same as MIFARE Classic DirectWrite, but block0 can be locked with special comman
 
 To lock definitively block0:
 ```
-hf 14a raw -a -p -b 7 40
-hf 14a raw    -p      43
-hf 14a raw    -p -c   e000
+hf 14a raw -a -k -b 7 40
+hf 14a raw    -k      43
+hf 14a raw    -k -c   e000
 hf 14a raw       -c   85000000000000000000000000000008
 ```
 
@@ -495,6 +495,9 @@ Computing BCC1 on UID 04112233445566: `analyse lcr 33445566` = `44`
 
 Int is internal, typically 0x48
 
+Anticol shortcut (CL1/3000) is supported for UL, ULC, NTAG except NTAG I2C
+
+
 ## MIFARE Ultralight Gen1A
 
 ### Identify
@@ -561,11 +564,13 @@ Issue three regular MFU write commands in a row to write first three blocks.
 
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
+* Anticol shortcut (CL1/3000): fails
 
 #### MIFARE Ultralight DirectWrite flavour 2
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A00A000AB00000000000000000184D
+* Anticol shortcut (CL1/3000): succeeds
 
 ### Proxmark3 commands
 
@@ -576,8 +581,8 @@ hf mfu setuid
 Equivalent: don't use `hf mfu wrbl` as you need to write three blocks in a row, but do, with proper BCCx:
 
 ```
-hf 14a raw -s -c -p a2 00 041122bf 
-hf 14a raw    -c -p a2 01 33445566
+hf 14a raw -s -c -k a2 00 041122bf 
+hf 14a raw    -c -k a2 01 33445566
 hf 14a raw    -c    a2 02 44480000
 ```
 
@@ -672,6 +677,7 @@ hf 14a info
 
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
+* Anticol shortcut (CL1/3000): fails
 
 # NTAG
 
@@ -703,6 +709,7 @@ hf 14a info
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 0A78008102DBA0C119402AB5
+* Anticol shortcut (CL1/3000): succeeds
 
 ## NTAG21x
 
@@ -719,6 +726,8 @@ hf 14a info
 Emulates fully NTAG213, 213F, 215, 216, 216F
 
 Emulates partially  UL EV1 48k/128k, NTAG210, NTAG212, NTAGI2C 1K/2K, NTAGI2C 1K/2K PLUS
+
+Anticol shortcut (CL1/3000): fails
 
 ### Proxmark3 commands
 

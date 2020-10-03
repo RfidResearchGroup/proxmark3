@@ -107,15 +107,14 @@ static uint8_t isEven_64_63(const uint8_t *data) { // 8
 }
 
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
-static int CmdLFNedapDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
+int demodNedap(bool verbose) {
+    (void) verbose; // unused so far
     uint8_t data[16], buffer[7], r0, r1, r2, r3, r4, r5, idxC1, idxC2, idxC3, idxC4, idxC5, fixed0, fixed1, unk1, unk2, subtype; // 4 bits
     size_t size, offset = 0;
     uint16_t checksum, customerCode; // 12 bits
     uint32_t badgeId; // max 99999
 
-    if (ASKbiphaseDemod("0 64 1 0", false) != PM3_SUCCESS) {
+    if (ASKbiphaseDemod(0, 64, 1, 0, false) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - NEDAP: ASK/Biphase Demod failed");
         return PM3_ESOFT;
     }
@@ -262,6 +261,10 @@ static int CmdLFNedapDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLFNedapDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodNedap(true);
+}
 /* Index map                                                      E                                                                              E
  preamble    enc tag type         encrypted uid                   P d    33    d    90    d    04    d    71    d    40    d    45    d    E7    P
  1111111110 00101101000001011010001100100100001011010100110101100 1 0 00110011 0 10010000 0 00000100 0 01110001 0 01000000 0 01000101 0 11100111 1
@@ -307,8 +310,9 @@ lf t55xx wr b 4 d 4c0003ff
 */
 
 static int CmdLFNedapRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 16000);
-    return CmdLFNedapDemod(Cmd);
+    return demodNedap(true);
 }
 
 static void NedapGen(uint8_t subType, uint16_t customerCode, uint32_t id, bool isLong, uint8_t *data) { // 8 or 16
@@ -554,8 +558,3 @@ int CmdLFNedap(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
-int demodNedap(void) {
-    return CmdLFNedapDemod("");
-}
-

@@ -12,7 +12,7 @@
 #define CMDHFFELICA_H__
 
 #include "common.h"
-#include "mifare.h"
+#include "iso18.h"
 
 int CmdHFFelica(const char *Cmd);
 int readFelicaUid(bool verbose);

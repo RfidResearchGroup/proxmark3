@@ -1747,6 +1747,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     // init as reader
     lf_init(true, false);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // Tag specific configuration settings (sof, timings, etc.)
 // TODO HTS
@@ -1780,9 +1781,10 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     size_t max_nrzs = (8 * HITAG_FRAME_LEN + 5) * 2; // up to 2 nrzs per bit
     uint8_t nrz_samples[max_nrzs];
     size_t nrzs = 0;
-
     int16_t checked = 0;
     uint32_t signal_size = 10000;
+    bool turn_on = true;
+
     while (bStop == false && BUTTON_PRESS() == false) {
 
         // use malloc
@@ -1818,9 +1820,20 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             }
         }
 
-        // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
-        lf_wait_periods(t_wait_2);
-        command_start += t_wait_2;
+        if (bStop) break;
+        if (turn_on) {
+            // Wait 50ms with field off to be sure the transponder gets reset
+            SpinDelay(50);
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+            turn_on = false;
+            // Wait with field on to be in "Wait for START_AUTH" timeframe
+            lf_wait_periods(HITAG_T_WAIT_POWERUP + HITAG_T_WAIT_START_AUTH_MAX / 4);
+            command_start += HITAG_T_WAIT_POWERUP + HITAG_T_WAIT_START_AUTH_MAX / 4;
+        } else {
+            // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
+            lf_wait_periods(t_wait_2);
+            command_start += t_wait_2;
+        }
 
         // Transmit the reader frame
         command_duration = hitag_reader_send_frame(tx, txlen);

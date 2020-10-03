@@ -13,7 +13,7 @@
 
 int CmdLFSecurakey(const char *Cmd);
 
-int demodSecurakey(void);
+int demodSecurakey(bool verbose);
 int detectSecurakey(uint8_t *dest, size_t *size);
 
 #endif

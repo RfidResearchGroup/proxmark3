@@ -13,7 +13,7 @@
 
 int CmdLFJablotron(const char *Cmd);
 
-int demodJablotron(void);
+int demodJablotron(bool verbose);
 int detectJablotron(uint8_t *bits, size_t *size);
 int getJablotronBits(uint64_t fullcode, uint8_t *bits);
 

@@ -396,8 +396,8 @@ LZ4HC_InsertAndGetWiderMatch(
                                     if (lookBackLength == 0) { /* no back possible */
                                         size_t const maxML = MIN(currentSegmentLength, srcPatternLength);
                                         if ((size_t)longest < maxML) {
-                                            assert(base + matchIndex < ip);
-                                            if (ip - (base + matchIndex) > LZ4_DISTANCE_MAX) break;
+                                            assert(base + matchIndex != ip);
+                                            if ((size_t)(ip - base) - matchIndex > LZ4_DISTANCE_MAX) break;
                                             assert(maxML < 2 GB);
                                             longest = (int)maxML;
                                             *matchpos = base + matchIndex;   /* virtual pos, relative to ip, to retrieve offset */
@@ -908,8 +908,8 @@ int LZ4_sizeofStateHC(void) { return (int)sizeof(LZ4_streamHC_t); }
                    * it reports an aligment of 8-bytes,
                    * while actually aligning LZ4_streamHC_t on 4 bytes. */
 static size_t LZ4_streamHC_t_alignment(void) {
-    struct { char c; LZ4_streamHC_t t; } t_a;
-    return sizeof(t_a) - sizeof(t_a.t);
+    typedef struct { char c; LZ4_streamHC_t t; } t_a;
+    return sizeof(t_a) - sizeof(LZ4_streamHC_t);
 }
 #endif
 
@@ -1038,7 +1038,7 @@ void LZ4_favorDecompressionSpeed(LZ4_streamHC_t *LZ4_streamHCPtr, int favor) {
 int LZ4_loadDictHC(LZ4_streamHC_t *LZ4_streamHCPtr,
                    const char *dictionary, int dictSize) {
     LZ4HC_CCtx_internal *const ctxPtr = &LZ4_streamHCPtr->internal_donotuse;
-    DEBUGLOG(4, "LZ4_loadDictHC(%p, %p, %d)", LZ4_streamHCPtr, dictionary, dictSize);
+    DEBUGLOG(4, "LZ4_loadDictHC(ctx:%p, dict:%p, dictSize:%d)", LZ4_streamHCPtr, dictionary, dictSize);
     assert(LZ4_streamHCPtr != NULL);
     if (dictSize > 64 KB) {
         dictionary += (size_t)dictSize - 64 KB;
@@ -1285,8 +1285,13 @@ static int LZ4HC_compress_optimal(LZ4HC_CCtx_internal *ctx,
                                   int const fullUpdate,
                                   const dictCtx_directive dict,
                                   const HCfavor_e favorDecSpeed) {
+    int retval = 0;
 #define TRAILING_LITERALS 3
+#ifdef LZ4HC_HEAPMODE
+    LZ4HC_optimal_t *const opt = (LZ4HC_optimal_t *)malloc(sizeof(LZ4HC_optimal_t) * (LZ4_OPT_NUM + TRAILING_LITERALS));
+#else
     LZ4HC_optimal_t opt[LZ4_OPT_NUM + TRAILING_LITERALS];   /* ~64 KB, which is a bit large for stack... */
+#endif
 
     const BYTE *ip = (const BYTE *) source;
     const BYTE *anchor = ip;
@@ -1298,6 +1303,9 @@ static int LZ4HC_compress_optimal(LZ4HC_CCtx_internal *ctx,
     BYTE *oend = op + dstCapacity;
 
     /* init */
+#ifdef LZ4HC_HEAPMODE
+    if (opt == NULL) goto _return_label;
+#endif
     DEBUGLOG(5, "LZ4HC_compress_optimal(dst=%p, dstCapa=%u)", dst, (unsigned)dstCapacity);
     *srcSizePtr = 0;
     if (limit == fillOutput) oend -= LASTLITERALS;   /* Hack for support LZ4 format restriction */
@@ -1522,7 +1530,10 @@ _last_literals:
         size_t const totalSize = 1 + litLength + lastRunSize;
         if (limit == fillOutput) oend += LASTLITERALS;  /* restore correct value */
         if (limit && (op + totalSize > oend)) {
-            if (limit == limitedOutput) return 0;  /* Check output limit */
+            if (limit == limitedOutput) { /* Check output limit */
+                retval = 0;
+                goto _return_label;
+            }
             /* adapt lastRunSize to fill 'dst' */
             lastRunSize  = (size_t)(oend - op) - 1;
             litLength = (lastRunSize + 255 - RUN_MASK) / 255;
@@ -1544,12 +1555,17 @@ _last_literals:
 
     /* End */
     *srcSizePtr = (int)(((const char *)ip) - source);
-    return (int)((char *)op - dst);
+    retval = (int)((char *)op - dst);
+    goto _return_label;
 
 _dest_overflow:
     if (limit == fillOutput) {
         op = opSaved;  /* restore correct out pointer */
         goto _last_literals;
     }
-    return 0;
+_return_label:
+#ifdef LZ4HC_HEAPMODE
+    free(opt);
+#endif
+    return retval;
 }

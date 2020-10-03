@@ -292,6 +292,12 @@ void tosend_reset(void) {
 }
 
 void tosend_stuffbit(int b) {
+
+    if (toSend.max >= TOSEND_BUFFER_SIZE - 1) {
+        Dbprintf(_RED_("toSend overflow"));
+        return;
+    }
+
     if (toSend.bit >= 8) {
         toSend.max++;
         toSend.buf[toSend.max] = 0;
@@ -299,7 +305,7 @@ void tosend_stuffbit(int b) {
     }
 
     if (b)
-        toSend.buf[ toSend.max] |= (1 << (7 - toSend.bit));
+        toSend.buf[toSend.max] |= (1 << (7 - toSend.bit));
 
     toSend.bit++;
 

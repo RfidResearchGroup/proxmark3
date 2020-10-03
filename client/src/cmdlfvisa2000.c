@@ -87,10 +87,6 @@ static uint8_t visa_parity(uint32_t id) {
     return par;
 }
 
-static int CmdVisa2kDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodVisa2k();
-}
 /**
 *
 * 56495332 00096ebd 00000077 —> tag id 618173
@@ -103,14 +99,15 @@ static int CmdVisa2kDemod(const char *Cmd) {
 *
 **/
 //see ASKDemod for what args are accepted
-int demodVisa2k(void) {
+int demodVisa2k(bool verbose) {
+    (void) verbose; // unused so far
     save_restoreGB(GRAPH_SAVE);
 
     //CmdAskEdgeDetect("");
 
     //ASK / Manchester
     bool st = true;
-    if (ASKDemod_ext("64 0 0", false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(64, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
         save_restoreGB(GRAPH_RESTORE);
         return PM3_ESOFT;
@@ -160,10 +157,16 @@ int demodVisa2k(void) {
     return PM3_SUCCESS;
 }
 
+static int CmdVisa2kDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodVisa2k(true);
+}
+
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 static int CmdVisa2kRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 20000);
-    return CmdVisa2kDemod(Cmd);
+    return demodVisa2k(true);
 }
 
 static int CmdVisa2kClone(const char *Cmd) {

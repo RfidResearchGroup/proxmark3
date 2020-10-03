@@ -447,6 +447,7 @@ SRCS =  aidsearch.c \
 		cmdlfgallagher.c \
 		cmdlfhid.c \
 		cmdlfhitag.c \
+		cmdlfidteck.c \
 		cmdlfindala.c \
 		cmdlfio.c \
 		cmdlfjablotron.c \
