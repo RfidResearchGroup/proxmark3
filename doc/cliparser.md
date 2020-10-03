@@ -10,15 +10,29 @@ hf 14b raw -ss
 lf search 1
 lf config h H
 ```
-In order to counter this and unify it,  there was discussion over at the official repository a few years ago (link to issue)  and there it became clear a change is needed. Among the different solutions suggested @merlokk's idea of using the lib cliparser was agreed upon. The lib was adapted and implemented for commands like 
+even the external tools which we collected into this repo,  under folder */tools/* folder uses their own argument parsing.
+
+
+In order to counter this and unify it,  there was discussion over at the official repository a few years ago [link to issue](https://github.com/Proxmark/proxmark3/issues/467) and there it became clear a change is needed. Among the different solutions suggested @merlokk's idea of using the lib cliparser was agreed upon. The lib was adapted and implemented for commands like 
+
 ```
-emv
-hf fido
+[usb] pm3 --> emv
+[usb] pm3 --> hf fido
 ```
-And then it fell into silence since it wasn't well documented how to use the cliparser.  Looking at source code wasn't very efficient.  However the need of a better cli parsing was still there. Fast forward today,  where more commands has used the cliparser but it still wasn't the natural way when adding a new client command to the Proxmark3 client.  After more discussions among @doegox, @iceman1001 and @mrwalker the concept became more clear on how to use the cliparser lib in the _preferred_ way.   The aftermath was a design and layout specfied which lead to a simpler implemtentation of the cliparser in the client source code while still unfiy all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness. 
+
+And then it fell into silence since it wasn't well documented how to use the cliparser. Looking at source code wasn't very efficient. However the need of a better cli parsing was still there. 
+
+Fast forward today, where more commands has used the cliparser but it still wasn't the natural way when adding a new client command to the Proxmark3 client.
+After more discussions among @doegox, @iceman1001 and @mrwalker the concept became more clear on how to use the cliparser lib in the _preferred_ way.   
+
+The aftermath was a design and layout specfied which lead to a simpler implemtentation of the cliparser in the client source code while still unfiy all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness. 
 
 ![sample of new style helptext](http://www.icedev.se/proxmark3/helptext.png)
 
+
+Furthermore @mrwalker offered to take notes and thus this document was created. 
+
+This is the _new_ and _prefered_ way to implement _helptext_ and _cli parsing_ for Proxmark3 client commands and it's external tools.
 
 
 ## cliparser setup and use
@@ -126,6 +140,12 @@ Once you have extracted the options, cleanup the context.
    CLIParserFree(ctx);
 
 ### retreiving options
+
+
+The parser will format and color and layout as needed.
+It will also add the `-h --help` option automatic.
+
+
 **bool option**  
 arg_get_lit(\<context\>, \<opt index\>);
 
