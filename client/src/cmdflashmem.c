@@ -29,7 +29,7 @@ static int CmdHelp(const char *Cmd);
 static int CmdFlashmemSpiBaudrate(const char *Cmd) {
     
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, " mem baudrate 48",
+    CLIParserInit(&ctx, "mem baudrate",
                   "Set the baudrate for the SPI flash memory communications.\n"
                   "Reading Flash ID will virtually always fail under 48MHz setting.\n"
                   "Unless you know what you are doing, please stay at 24MHz.\n"
