@@ -168,15 +168,15 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("k", "keep",               "leave the signal field ON after receive response"),
-        arg_lit0("s", "std",                "activate field and select standard card"),
-        arg_lit0(NULL, "sr",                "activate field and select SRx ST"),
-        arg_lit0(NULL, "cts",               "activate field and select ASK C-ticket"),        
-        arg_lit0("c", "crc",                "calculate and append CRC"),
-        arg_lit0("r", "noresponse",         "do not read response"),
-        arg_int0("t", "timeout", "decimal", "timeout in ms"),
-        arg_lit0("v", "verbose",            "verbose"),
-        arg_strx0(NULL, NULL,               "<data (hex)>", "bytes to send"),
+        arg_lit0("k", "keep",           "leave the signal field ON after receive response"),
+        arg_lit0("s", "std",            "activate field and select standard card"),
+        arg_lit0(NULL, "sr",            "activate field and select SRx ST"),
+        arg_lit0(NULL, "cts",           "activate field and select ASK C-ticket"),        
+        arg_lit0("c", "crc",            "calculate and append CRC"),
+        arg_lit0("r", "noresponse",     "do not read response"),
+        arg_int0("t", "timeout", "dec", "timeout in ms"),
+        arg_lit0("v", "verbose",        "verbose"),
+        arg_strx0(NULL, NULL,           "<data (hex)>", "bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1022,7 +1022,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
                      );
     }
 
-    sprintf(str, "-ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
+    sprintf(str, "--ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
     return CmdHF14BCmdRaw(str);
 }
 
