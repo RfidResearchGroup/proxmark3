@@ -4195,7 +4195,8 @@ static void arg_cat_option(char *dest,
 #endif
 
         if (datatype) {
-            arg_cat(&dest, "=", &ndest);
+//            arg_cat(&dest, "=", &ndest);
+            arg_cat(&dest, " ", &ndest);
             if (optvalue) {
                 arg_cat(&dest, "[", &ndest);
                 arg_cat(&dest, datatype, &ndest);
