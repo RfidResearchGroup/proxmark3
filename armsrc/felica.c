@@ -9,7 +9,7 @@
 #include "commonutil.h"
 #include "dbprint.h"
 #include "ticks.h"
-#include "mifare.h"
+#include "iso18.h"
 
 // FeliCa timings
 // minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56MHz) cycles

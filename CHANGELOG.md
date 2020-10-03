@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add low level support for 14b' aka Innovatron (@doegox)
+ - Add doc/cliparser.md (@mwalker33)
  - Add `hf 14b apdu` - send APDU over ISO14443B (@iceman1001)
  - Add `lf t55xx chk e <EM4100> option` - Checks calculated password based on the EM4100 id from some white cloners forumla by paleopterix (@mwalker33)
  - Add `lf t55xx sniff` to allow extracting commands and passwords used be cloners. (@mwalker33)

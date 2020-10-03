@@ -39,6 +39,7 @@ wire disabl = mod_type[0];
 // Most off, oe4 for modulation;
 // Trying reader emulation (would presumably just require switching power on, but I am not sure)
 assign pwr_lo = 1'b0;
+assign pwr_oe2 = 1'b0;
 
 // 512x64/fc  -wait before ts0, 32768 ticks
 // tslot: 256*64/fc
@@ -339,7 +340,6 @@ end
 //put modulation here to maintain the correct clock. Seems that some readers are sensitive to that
 reg pwr_hi;
 reg pwr_oe1;
-reg pwr_oe2;
 reg pwr_oe3;
 reg pwr_oe4;
 
@@ -351,7 +351,6 @@ begin
         begin
         pwr_hi <= ck_1356meg;
         pwr_oe1 <= 1'b0;//mod;
-        pwr_oe2 <= 1'b0;//mod;
         pwr_oe3 <= 1'b0;//mod;
         pwr_oe4 <= mod;//1'b0;
         end
@@ -359,10 +358,12 @@ begin
         begin
         pwr_hi <= 1'b0;
         pwr_oe1 <= 1'b0;
-        pwr_oe2 <= 1'b0;
         pwr_oe3 <= 1'b0;
         pwr_oe4 <= mod;
         end
 end
+
+
+
 
 endmodule

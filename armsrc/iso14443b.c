@@ -274,8 +274,7 @@ static struct {
     enum {
         DEMOD_UNSYNCD,
         DEMOD_PHASE_REF_TRAINING,
-        DEMOD_AWAITING_FALLING_EDGE_OF_SOF,
-        DEMOD_GOT_FALLING_EDGE_OF_SOF,
+        WAIT_FOR_RISING_EDGE_OF_SOF,
         DEMOD_AWAITING_START_BIT,
         DEMOD_RECEIVING_DATA
     }       state;
@@ -531,7 +530,7 @@ static void TransmitFor14443b_AsTag(uint8_t *response, uint16_t len) {
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateIso14443bTag(uint32_t pupi) {
+void SimulateIso14443bTag(uint8_t *pupi) {
 
     LED_A_ON();
     // the only commands we understand is WUPB, AFI=0, Select All, N=1:
@@ -554,14 +553,14 @@ void SimulateIso14443bTag(uint32_t pupi) {
         0x5e, 0xd7
     };
 
-    // response to HLTB and ATTRIB
-    static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
-
     // ...PUPI/UID supplied from user. Adjust ATQB response accordingly
-    if (pupi > 0) {
-        num_to_bytes(pupi, 4, respATQB + 1);
+    if (memcmp("\x00\x00\x00\x00", pupi, 4) != 0) {
+        memcpy(respATQB + 1, pupi, 4);
         AddCrc14B(respATQB, 12);
     }
+
+    // response to HLTB and ATTRIB
+    static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
 
     // setup device.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -724,6 +723,13 @@ void SimulateIso14443bTag(uint32_t pupi) {
 // tag's response, which we leave in the buffer to be demodulated on the
 // PC side.
 //=============================================================================
+// We support both 14b framing and 14b' framing.
+// 14b framing looks like:
+// xxxxxxxx1111111111111111-000000000011-0........1-0........1-0........1-1-0........1-0........1-1000000000011xxxxxx
+//         TR1              SOF 10*0+2*1 start-stop  ^^^^^^^^byte         ^ occasional stuff bit   EOF 10*0+N*1
+// 14b' framing looks like:
+// xxxxxxxxxxxxxxxx111111111111111111111-0........1-0........1-0........1-1-0........1-0........1-000000000000xxxxxxx
+//                 SOF?                  start-stop  ^^^^^^^^byte         ^ occasional stuff bit  EOF
 
 /*
  * Handles reception of a bit from the tag
@@ -774,57 +780,33 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             break;
         }
         case DEMOD_PHASE_REF_TRAINING: {
-            if (Demod.posCount < 8) {
-                if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {
-                    // set the reference phase (will code a logic '1') by averaging over 32 1/fs.
-                    // note: synchronization time > 80 1/fs
-                    Demod.sumI += ci;
-                    Demod.sumQ += cq;
-                    Demod.posCount++;
+            // While we get a constant signal
+            if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {
+                if (((ABS(Demod.sumI) > ABS(Demod.sumQ)) && (((ci > 0) && (Demod.sumI > 0)) || ((ci < 0) && (Demod.sumI < 0)))) ||  // signal closer to horizontal, polarity check based on on I
+                    ((ABS(Demod.sumI) <= ABS(Demod.sumQ)) && (((cq > 0) && (Demod.sumQ > 0)) || ((cq < 0) && (Demod.sumQ < 0))))) { // signal closer to vertical, polarity check based on on Q
+                    if (Demod.posCount < 10) {  // refine signal approximation during first 10 samples
+                        Demod.sumI += ci;
+                        Demod.sumQ += cq;
+                    }
+                    Demod.posCount += 1;
                 } else {
-                    // subcarrier lost
-                    Demod.state = DEMOD_UNSYNCD;
+                    // transition
+                    if (Demod.posCount < 10) {
+                        // subcarrier lost
+                        Demod.state = DEMOD_UNSYNCD;
+                        break;
+                    } else {
+                        // at this point it can be start of 14b' data or start of 14b SOF
+                        MAKE_SOFT_DECISION();
+                        Demod.posCount = 1;				// this was the first half
+                        Demod.thisBit = v;
+                        Demod.shiftReg = 0;
+                        Demod.state = DEMOD_RECEIVING_DATA;
+                    }
                 }
             } else {
-                Demod.state = DEMOD_AWAITING_FALLING_EDGE_OF_SOF;
-            }
-            break;
-        }
-        case DEMOD_AWAITING_FALLING_EDGE_OF_SOF: {
-
-            MAKE_SOFT_DECISION();
-
-            if (v < 0) {	// logic '0' detected
-                Demod.state = DEMOD_GOT_FALLING_EDGE_OF_SOF;
-                Demod.posCount = 0;	// start of SOF sequence
-            } else {
-                if (Demod.posCount > 200/4) {	// maximum length of TR1 = 200 1/fs
-                    Demod.state = DEMOD_UNSYNCD;
-                }
-            }
-            Demod.posCount++;
-            break;
-        }
-        case DEMOD_GOT_FALLING_EDGE_OF_SOF: {
-
-            Demod.posCount++;
-            MAKE_SOFT_DECISION();
-
-            if (v > 0) {
-                if (Demod.posCount < 9 * 2) { // low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
-                    Demod.state = DEMOD_UNSYNCD;
-                } else {
-                    LED_C_ON(); // Got SOF
-                    Demod.posCount = 0;
-                    Demod.bitCount = 0;
-                    Demod.len = 0;
-                    Demod.state = DEMOD_AWAITING_START_BIT;
-                }
-            } else {
-                if (Demod.posCount > 12 * 2) { // low phase of SOF too long (> 12 etu)
-                    Demod.state = DEMOD_UNSYNCD;
-                    LED_C_OFF();
-                }
+                // subcarrier lost
+                Demod.state = DEMOD_UNSYNCD;
             }
             break;
         }
@@ -845,6 +827,28 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                 Demod.thisBit = v;
                 Demod.shiftReg = 0;
                 Demod.state = DEMOD_RECEIVING_DATA;
+            }
+            break;
+        }
+        case WAIT_FOR_RISING_EDGE_OF_SOF: {
+
+            Demod.posCount++;
+            MAKE_SOFT_DECISION();
+            if (v > 0) {
+                if (Demod.posCount < 9 * 2) { // low phase of SOF too short (< 9 etu). Note: spec is >= 10, but FPGA tends to "smear" edges
+                    Demod.state = DEMOD_UNSYNCD;
+                } else {
+                    LED_C_ON(); // Got SOF
+                    Demod.posCount = 0;
+                    Demod.bitCount = 0;
+                    Demod.len = 0;
+                    Demod.state = DEMOD_AWAITING_START_BIT;
+                }
+            } else {
+                if (Demod.posCount > 12 * 2) { // low phase of SOF too long (> 12 etu)
+                    Demod.state = DEMOD_UNSYNCD;
+                    LED_C_OFF();
+                }
             }
             break;
         }
@@ -874,12 +878,35 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                         Demod.bitCount = 0;
                         Demod.state = DEMOD_AWAITING_START_BIT;
                     } else {
-                        Demod.state = DEMOD_AWAITING_FALLING_EDGE_OF_SOF;
-                        LED_C_OFF();
                         if (s == 0x000) {
-                            // This is EOF (start, stop and all data bits == '0'
-                            return true;
+                            if (Demod.len > 0) {
+                                LED_C_OFF();
+                                // This is EOF (start, stop and all data bits == '0'
+                                return true;
+                            } else {
+                                // Zeroes but no data acquired yet?
+                                // => Still in SOF of 14b, wait for raising edge
+                                Demod.posCount = 10 * 2;
+                                Demod.bitCount = 0;
+                                Demod.len = 0;
+                                Demod.state = WAIT_FOR_RISING_EDGE_OF_SOF;
+                                break;
+                            }
                         }
+                        if (AMPLITUDE(ci, cq) < SUBCARRIER_DETECT_THRESHOLD) {
+                            LED_C_OFF();
+                            // subcarrier lost
+                            Demod.state = DEMOD_UNSYNCD;
+                            if (Demod.len > 0) { // no EOF but no signal anymore and we got data, e.g. ASK CTx
+                                return true;
+                            }
+                        }
+                        // we have still signal but no proper byte or EOF? this shouldn't happen
+                        //Demod.posCount = 10 * 2;
+                        Demod.bitCount = 0;
+                        Demod.len = 0;
+                        Demod.state = WAIT_FOR_RISING_EDGE_OF_SOF;
+                        break;
                     }
                 }
                 Demod.posCount = 0;
@@ -1231,6 +1258,79 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
 }
 
 /**
+* ASK CTS initialise.
+*/
+static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
+    // INITIATE command: wake up the tag using the INITIATE
+    uint8_t cmdINIT[] = {ASK_REQT, 0xF9, 0xE0};
+    uint8_t cmdMSBUID[] = {ASK_SELECT, 0xFF, 0xFF, 0x00, 0x00};
+    uint8_t cmdLSBUID[] = {0xC4, 0x00, 0x00};
+
+    AddCrc14B(cmdMSBUID, 3);
+    AddCrc14B(cmdLSBUID, 1);
+
+    uint8_t r[8];
+    
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(cmdINIT, sizeof(cmdINIT), &start_time, &eof_time);
+
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    int retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    FpgaDisableTracing();
+
+    if (retlen != 4) {
+        return -1;
+    }
+    if (check_crc(CRC_14443_B, r, retlen) == false) {
+        return -2;
+    }
+
+    if (card) {
+        // pc. fc  Product code, Facility code
+        card->pc = r[0];
+        card->fc = r[1];
+    }
+
+    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    CodeAndTransmit14443bAsReader(cmdMSBUID, sizeof(cmdMSBUID), &start_time, &eof_time);
+
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    FpgaDisableTracing();
+
+    if (retlen != 4) {
+        return -1;
+    }
+    if (check_crc(CRC_14443_B, r, retlen) == false) {
+        return -2;
+    }
+
+    if (card) {
+        memcpy(card->uid, r, 2);
+    }
+
+    start_time = eof_time + DELAY_ISO14443B_VICC_TO_VCD_READER;
+    CodeAndTransmit14443bAsReader(cmdLSBUID, sizeof(cmdLSBUID), &start_time, &eof_time);
+
+    eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+    retlen = Get14443bAnswerFromTag(r, sizeof(r), ISO14443B_READER_TIMEOUT, &eof_time);
+    FpgaDisableTracing();
+
+    if (retlen != 4) {
+        return -1;
+    }
+    if (check_crc(CRC_14443_B, r, retlen) == false) {
+        return -2;
+    }
+
+    if (card) {
+        memcpy(card->uid + 2, r, 2);
+    }
+
+    return 0;
+}
+/**
 * SRx Initialise.
 */
 static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
@@ -1248,8 +1348,9 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     int retlen = Get14443bAnswerFromTag(r_init, sizeof(r_init), ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
-    if (retlen <= 0)
+    if (retlen <= 0) {
         return -1;
+    }
 
     // Randomly generated Chip ID
     if (card) {
@@ -1272,8 +1373,6 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     if (retlen != 3) {
         return -1;
     }
-
-    // Check the CRC of the answer:
     if (!check_crc(CRC_14443_B, r_select, retlen)) {
         return -2;
     }
@@ -1298,8 +1397,6 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     if (retlen != 10) {
         return -1;
     }
-
-    // The check the CRC of the answer
     if (!check_crc(CRC_14443_B, r_papid, retlen)) {
         return -2;
     }
@@ -1692,7 +1789,7 @@ void SniffIso14443b(void) {
                 expect_tag_answer = false;
                 tag_is_active = false;
             } else {
-                tag_is_active = (Demod.state > DEMOD_GOT_FALLING_EDGE_OF_SOF);
+                tag_is_active = (Demod.state > WAIT_FOR_RISING_EDGE_OF_SOF);
             }
         }
     }
@@ -1769,6 +1866,15 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
     }
+
+    if ((param & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
+        iso14b_cts_card_select_t cts;
+        sendlen = sizeof(iso14b_cts_card_select_t);
+        status = iso14443b_select_cts_card(&cts);
+        reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&cts, sendlen);
+        // 0: OK 2: demod fail, 3:crc fail,
+        if (status > 0) goto out;
+    }    
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
         status = iso14443b_apdu(cmd, len, (param & ISO14B_SEND_CHAINING), buf, sizeof(buf));

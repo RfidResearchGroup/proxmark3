@@ -64,7 +64,11 @@
 
 |filename|description|
 |--------|-----------|
-|hf_14b_raw_050008_resp.pm3               |Response to `hf 14b raw -c 050008`|
+|hf_14b_raw_050008_resp.pm3               |Response of 14b card to `hf 14b raw -c 050008`|
+|hf_14b_raw_0600_st_sri512.pm3            |Response of ST SRI512 to `hf 14b raw -c 0600`|
+|hf_14b_raw_0600_st_sri512_collision.pm3  |Same but with two cards, showing the collisions in answers|
+|hf_14b_raw_10_ask_ctx.pm3                |Response of ASK CTx to `hf 14b raw -c 10`|
+|hf_14b_raw_010fxxxxxxxx_innovatron.pm3   |Response of 14b' card to `hf 14b raw -c -k 010fxxxxxxxx`|
 
 ## HF sniffed traces
 

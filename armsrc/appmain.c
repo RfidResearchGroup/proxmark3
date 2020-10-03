@@ -1126,11 +1126,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO14443B_SIMULATE: {
-            SimulateIso14443bTag(packet->oldarg[0]);
+            SimulateIso14443bTag(packet->data.asBytes);
             break;
         }
         case CMD_HF_ISO14443B_COMMAND: {
-            //SendRawCommand14443B(packet->oldarg[0],packet->oldarg[1],packet->oldarg[2],packet->data.asBytes);
             SendRawCommand14443B_Ex(packet);
             break;
         }

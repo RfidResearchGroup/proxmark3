@@ -247,6 +247,16 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
+// ASK C-ticket
+#define ASK_REQT               0x10
+#define ASK_IDENTIFY           0x0F
+#define ASK_SELECT             0x9F
+#define ASK_MULTREAD           (0x1 << 4) // High nibble
+#define ASK_UPDATE             (0x3 << 4) // High nibble
+#define ASK_WRITE              (0x5 << 4) // High nibble
+#define ASK_READ               (0x6 << 4) // High nibble
+#define ASK_DESACTIVATE        0xF0
+
 
 // defined crypto RF commands
 // only interpreting channel 1 communication

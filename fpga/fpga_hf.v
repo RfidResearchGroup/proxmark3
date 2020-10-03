@@ -92,7 +92,8 @@ module fpga_hf(
 //-----------------------------------------------------------------------------
 
 /*
- Attempt to write up how its hooked up. Iceman 2020.
+ Attempt to write up how its hooked up.
+ / Iceman, 2020
 
  Communication between ARM / FPGA is done inside armsrc/fpgaloader.c see: function FpgaSendCommand()
  Send 16 bit command / data pair to FPGA
@@ -108,8 +109,9 @@ module fpga_hf(
 bit  |    15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
 -----+-------------------------------------------
 cmd  |     x  x  x  x
-major|                          x x x
-opt  |                                    x x x
+major|                        x x x
+opt  |                                  x x x x
+sub  |                              x x 
 divi |                          x x x x x x x x
 thres|                          x x x x x x x x
 -----+-------------------------------------------
