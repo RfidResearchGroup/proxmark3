@@ -28,11 +28,11 @@ It will also add the `-h --help` option automatic.
 
 ## design comments
 
-* where possiable all options should be lowercase.  
-* extended options preceeded with -- should be short  
+* where possible all options should be lowercase.  
+* extended options preceded with -- should be short  
 * options provided directly (without an option identifier) should be avoided.  
-* -vv for extra verbos should be avoided; use of debug level is prefered.  
-* with --options the equal is not needed (will work with and without) so dont use '='  
+* -vv for extra verbos should be avoided; use of debug level is preferred.  
+* with --options the equal is not needed (will work with and without) so don't use '='  
   e.g. cmd --cn 12345
 
 
@@ -62,10 +62,10 @@ In the command function, setup the context
     CLIParserContext *ctx;
 
 
-### define the text
+### define the context
 CLIParserInit (\<context\>, \<description\>, \<notes\n examples ... \>);
 
-use -> to seperate example and example comment and \\n to seperate examples.
+use -> to separate example and example comment and \\n to separate examples.
 e.g. lf indala clone -r a0000000a0002021 -> this uses .....
 
     CLIParserInit(&ctx, "lf indala clone",                          
@@ -92,21 +92,28 @@ _All options has a parameter index,  since `-h --help` is added automatic, it wi
 Hence all options you add will start at index 1 and upwards._
 
 **Notes:**  
-booleen : arg_lit0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)  
+**bool option.  true if supplied**  
+bool : arg_lit0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)  
 
-**integer**  
-    optional integer : arg_int0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+**integer that is optional**  
+    optional integer : arg_int0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**integer that is required**  
     required integer : arg_int1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
 
-**Strings 0 or 1**  
-     optional string : arg_str0("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+**String option that is optional and only one instance can be provided**  
+     optional string : arg_str0("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**String option that is required and only one instance can be provided**  
      required string : arg_str1("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
 
-**Strings x to 250**  
-    optional string : arg_strx0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+**String option that is optional and can have up to 250 instances provided**  
+    optional string : arg_strx0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**String option that is required/at least one instance and can have up to 250 instances**  
     required string : arg_strx1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
 
-**if an option does not have a short or long option, use NULL in its place**
+**if an option does not have a short or long option, use NULL in its place**  
         
 ### show the menu
 CLIExecWithReturn(\<context\>, \<command line to parse\>, \<arg/opt table\>, \<return on error\>);
