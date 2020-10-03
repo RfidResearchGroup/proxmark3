@@ -321,7 +321,7 @@ static int cmd_hf_st_sim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx1("u", "uid", "<hex>", "7 byte UID"),
+        arg_str1("u", "uid", "<hex>", "7 byte UID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
