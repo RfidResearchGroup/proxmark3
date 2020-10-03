@@ -1168,7 +1168,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t 
 /* Sends an APDU to the tag
  * TODO: check CRC and preamble
  */
-int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8_t *response, uint16_t respmaxlen) {
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res) {
 
     uint8_t real_cmd[msg_len + 4];
 
@@ -1195,10 +1195,10 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
     CodeAndTransmit14443bAsReader(real_cmd, msg_len + 3, &start_time, &eof_time);
 
     eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    int len = Get14443bAnswerFromTag(response, respmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
+    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
     FpgaDisableTracing();
 
-    uint8_t *data_bytes = (uint8_t *) response;
+    uint8_t *data_bytes = (uint8_t *) rxdata;
 
     if (len <= 0) {
         return 0; //DATA LINK ERROR
@@ -1219,10 +1219,10 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
 
             // retrieve the result again (with increased timeout)
             eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-            len = Get14443bAnswerFromTag(response, respmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
+            len = Get14443bAnswerFromTag(rxdata, rxmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
             FpgaDisableTracing();
 
-            data_bytes = response;
+            data_bytes = rxdata;
             // restore timeout
             iso14b_set_timeout(save_iso14b_timeout);
         }
@@ -1237,8 +1237,8 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, uint8
         }
 
         // if we received I-block with chaining we need to send ACK and receive another block of data
-        if (response)
-            *response = data_bytes[0];
+        if (res)
+            *res = data_bytes[0];
 
         // crc check
         if (len >= 3 && !check_crc(CRC_14443_B, data_bytes, len)) {
@@ -1877,9 +1877,10 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     }    
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
-        status = iso14443b_apdu(cmd, len, (param & ISO14B_SEND_CHAINING), buf, sizeof(buf));
+        uint8_t res;
+        status = iso14443b_apdu(cmd, len, (param & ISO14B_SEND_CHAINING), buf, sizeof(buf), &res);
         sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
-        reply_mix(CMD_HF_ISO14443B_COMMAND, status, status, 0, buf, sendlen);
+        reply_mix(CMD_HF_ISO14443B_COMMAND, status, res, 0, buf, sendlen);
     }
 
     if ((param & ISO14B_RAW) == ISO14B_RAW) {

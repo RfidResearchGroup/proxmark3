@@ -118,7 +118,7 @@ static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t re
         case 'a':
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
         case 'b':
-            return iso14443b_apdu(apdu, length, false, response, respmaxlen);
+            return iso14443b_apdu(apdu, length, false, response, respmaxlen, NULL);
         default:
             return 0;
     }
