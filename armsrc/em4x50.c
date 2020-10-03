@@ -451,7 +451,7 @@ static bool find_single_listen_window(void) {
     return false;
 }
 
-static bool find_double_listen_window(bool bcommand) {
+static int find_double_listen_window(bool bcommand) {
 
     // find two successive listen windows that indicate the beginning of
     // data transmission
@@ -505,12 +505,159 @@ static bool find_double_listen_window(bool bcommand) {
                     return true;
                 }
             }
-            cnt_pulses++;
         }
+        cnt_pulses++;
     }
 
     return false;
 }
+
+static bool em4x50_sim_send_bit(uint8_t bit) {
+
+    uint16_t check = 0;
+
+    for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
+
+        // wait until SSC_CLK goes HIGH
+        // used as a simple detection of a reader field?
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+
+        if (bit)
+            OPEN_COIL();
+        else
+            SHORT_COIL();
+
+        check = 0;
+
+        //wait until SSC_CLK goes LOW
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+
+        if (t == EM4X50_T_TAG_HALF_PERIOD)
+            bit ^= 1;
+
+    }
+
+    return true;
+}
+
+static bool em4x50_sim_send_byte(uint8_t byte) {
+
+    // send byte
+    for (int i = 0; i < 8; i++)
+        if (!em4x50_sim_send_bit((byte >> (7 - i)) & 1))
+            return false;
+
+    return true;
+
+}
+
+static bool em4x50_sim_send_byte_with_parity(uint8_t byte) {
+
+    uint8_t parity = 0x0;
+
+    // send byte with parity (even)
+    for (int i = 0; i < 8; i++)
+        parity ^= (byte >> i) & 1;
+
+    if (!em4x50_sim_send_byte(byte))
+        return false;;
+
+    if (!em4x50_sim_send_bit(parity))
+        return false;
+
+    return true;
+}
+
+bool em4x50_sim_send_word(uint32_t word) {
+
+    uint8_t cparity = 0x00;
+
+    // 4 bytes each with even row parity bit
+    for (int i = 0; i < 4; i++)
+        if (!em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF))
+            return false;
+
+    // column parity
+    for (int i = 0; i < 8; i++) {
+        cparity <<= 1;
+        for (int j = 0; j < 4; j++) {
+            cparity ^= (((word >> ((3 - j) * 8)) & 0xFF) >> (7 - i)) & 1;
+        }
+    }
+    if (!em4x50_sim_send_byte(cparity))
+        return false;
+
+    // stop bit
+    if (!em4x50_sim_send_bit(0))
+        return false;
+
+    return true;
+}
+
+bool em4x50_sim_send_listen_window(void) {
+
+    //int i = 0;
+    uint16_t check = 0;
+    //uint8_t test[100] = {0};
+
+    for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
+
+        // wait until SSC_CLK goes HIGH
+        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+
+        if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD) {
+            SHORT_COIL();
+        } else if (t >= 3 * EM4X50_T_TAG_FULL_PERIOD) {
+            OPEN_COIL();
+        } else if (t >= EM4X50_T_TAG_FULL_PERIOD) {
+            SHORT_COIL();
+        } else if (t >= EM4X50_T_TAG_HALF_PERIOD) {
+            OPEN_COIL();
+        } else {
+            SHORT_COIL();
+        }
+
+        check = 0;
+
+        //wait until SSC_CLK goes LOW
+        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            WDT_HIT();
+            if (check == 1000) {
+                if (BUTTON_PRESS())
+                    return false;
+                check = 0;
+            }
+            ++check;
+        }
+    }
+
+    return true;
+}
+
 
 static bool find_em4x50_tag(void) {
 
@@ -519,7 +666,7 @@ static bool find_em4x50_tag(void) {
     return find_single_listen_window();
 }
 
-static bool request_receive_mode(void) {
+static int request_receive_mode(void) {
 
     // To issue a command we have to find a listen window first.
     // Because identification and sychronization at the same time is not
@@ -1100,67 +1247,29 @@ void em4x50_wipe(em4x50_data_t *etd) {
     reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
 }
 
-void em4x50_brute(em4x50_data_t *etd) {
+void em4x50_reset(void) {
 
-    // searching for password in given range
+    // reset EM4x50
 
-    bool bsuccess = false;
-    int cnt = 0;
-    uint8_t bytes[4] ={0x0, 0x0, 0x0, 0x0};
-    uint32_t pwd = 0x0, rpwd = 0x0;
-    
-    init_tag();
+    uint8_t status = 0;
+
     em4x50_setup_read();
 
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
 
-        for (pwd = etd->start_password; pwd <= etd->stop_password; pwd++) {
-
-            // lsb -> msb
-            rpwd = reflect32(pwd);
-            
-            for (int i = 0; i < 4; i++)
-                bytes[i] = (rpwd >> ((3 - i) * 8)) & 0xFF;
-            
-            if (login(bytes)) {
-                bsuccess = true;
-                break;
-            }
-            
-            // print password every 500 iterations
-            if ((++cnt % 500) == 0) {
-
-                // print header
-                if (cnt == 500) {
-                    Dbprintf("");
-                    Dbprintf("|---------+------------+------------|");
-                    Dbprintf("|   no.   | pwd (msb)  | pwd (lsb)  |");
-                    Dbprintf("|---------+------------+------------|");
-                }
-
-                // print data
-                Dbprintf("|%8i | 0x%08x | 0x%08x |", cnt, rpwd, pwd);
-            }
-            
-            if (BUTTON_PRESS())
-                break;
-        }
-
-        // print footer
-        if (cnt >= 500)
-            Dbprintf("|---------+------------+------------|");
+        status = reset();
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, (uint8_t *)(&pwd), 32);
+    reply_ng(CMD_ACK, status, 0, 0);
 }
 
 void em4x50_login(em4x50_data_t *etd) {
 
     // login into EM4x50
 
-    uint8_t status = 0;
+    uint8_t status = false;
     uint8_t bytes[4] = {0x0, 0x0, 0x0, 0x0};
     uint32_t rpwd = 0x0;
 
@@ -1183,22 +1292,87 @@ void em4x50_login(em4x50_data_t *etd) {
     reply_ng(CMD_ACK, status, 0, 0);
 }
 
-void em4x50_reset(void) {
+static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
 
-    // reset EM4x50
+    // searching for password in given range
 
-    uint8_t status = 0;
+    bool pwd_found = false;
+    int cnt = 0;
+    uint32_t rpwd = 0x0;
+    uint8_t bytes[4] = {0x0, 0x0, 0x0, 0x0};
+
+    for (*pwd = start; *pwd <= stop; (*pwd)++) {
+
+        // lsb -> msb
+        rpwd = reflect32(*pwd);
+        
+        for (int i = 0; i < 4; i++)
+            bytes[i] = (rpwd >> ((3 - i) * 8)) & 0xFF;
+        
+        if (login(bytes)) {
+            pwd_found = true;
+            break;
+        }
+        
+        // print password every 500 iterations
+        if ((++cnt % 500) == 0) {
+
+            // print header
+            if (cnt == 500) {
+                Dbprintf("|---------+------------+------------|");
+                Dbprintf("|   no.   | pwd (msb)  | pwd (lsb)  |");
+                Dbprintf("|---------+------------+------------|");
+            }
+
+            // print data
+            Dbprintf("|%8i | 0x%08x | 0x%08x |", cnt, rpwd, *pwd);
+        }
+        
+        if (BUTTON_PRESS())
+            break;
+ 
+    }
+
+    // print footer
+    if (cnt >= 500)
+        Dbprintf("|---------+------------+------------|");
+
+    return pwd_found;
+}
+
+void em4x50_brute(em4x50_data_t *etd) {
+
+    // envoke password search
+
+    bool bsuccess = false;
+    uint32_t pwd = 0x0;
+    
+    em4x50_setup_read();
+
+    if (get_signalproperties() && find_em4x50_tag())
+        bsuccess = brute(etd->start_password, etd->stop_password, &pwd);
+
+    lf_finalize();
+    reply_ng(CMD_ACK, bsuccess, (uint8_t *)(&pwd), 32);
+}
+
+int em4x50_standalone_brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
+
+    // envoke password search in standalone mode
+
+    int status = false;
 
     em4x50_setup_read();
 
-    // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
-
-        status = reset();
+        status = brute(start, stop, pwd);
+    } else {
+        status = PM3_ETIMEOUT;
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, 0, 0);
+
+    return status;
 }
 
 int em4x50_standalone_read(uint64_t *words) {
