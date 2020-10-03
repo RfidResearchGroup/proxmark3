@@ -10,15 +10,29 @@ hf 14b raw -ss
 lf search 1
 lf config h H
 ```
-In order to counter this and unify it,  there was discussion over at the official repository a few years ago (link to issue)  and there it became clear a change is needed. Among the different solutions suggested @merlokk's idea of using the lib cliparser was agreed upon. The lib was adapted and implemented for commands like 
+even the external tools which we collected into this repo,  under folder */tools/* folder uses their own argument parsing.
+
+
+In order to counter this and unify it,  there was discussion over at the official repository a few years ago [link to issue](https://github.com/Proxmark/proxmark3/issues/467) and there it became clear a change is needed. Among the different solutions suggested @merlokk's idea of using the lib cliparser was agreed upon. The lib was adapted and implemented for commands like 
+
 ```
-emv
-hf fido
+[usb] pm3 --> emv
+[usb] pm3 --> hf fido
 ```
-And then it fell into silence since it wasn't well documented how to use the cliparser.  Looking at source code wasn't very efficient.  However the need of a better cli parsing was still there. Fast forward today,  where more commands has used the cliparser but it still wasn't the natural way when adding a new client command to the Proxmark3 client.  After more discussions among @doegox, @iceman1001 and @mrwalker the concept became more clear on how to use the cliparser lib in the _preferred_ way.   The aftermath was a design and layout specfied which lead to a simpler implemtentation of the cliparser in the client source code while still unfiy all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness. 
+
+And then it fell into silence since it wasn't well documented how to use the cliparser. Looking at source code wasn't very efficient. However the need of a better cli parsing was still there. 
+
+Fast forward today, where more commands has used the cliparser but it still wasn't the natural way when adding a new client command to the Proxmark3 client.
+After more discussions among @doegox, @iceman1001 and @mrwalker the concept became more clear on how to use the cliparser lib in the _preferred_ way.   
+
+The aftermath was a design and layout specfied which lead to a simpler implemtentation of the cliparser in the client source code while still unfiy all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness. 
 
 ![sample of new style helptext](http://www.icedev.se/proxmark3/helptext.png)
 
+
+Furthermore @mrwalker offered to take notes and thus this document was created. 
+
+This is the _new_ and _prefered_ way to implement _helptext_ and _cli parsing_ for Proxmark3 client commands and it's external tools.
 
 
 ## cliparser setup and use
@@ -28,11 +42,11 @@ It will also add the `-h --help` option automatic.
 
 ## design comments
 
-* where possiable all options should be lowercase.  
-* extended options preceeded with -- should be short  
+* where possible all options should be lowercase.  
+* extended options preceded with -- should be short  
 * options provided directly (without an option identifier) should be avoided.  
-* -vv for extra verbos should be avoided; use of debug level is prefered.  
-* with --options the equal is not needed (will work with and without) so dont use '='  
+* -vv for extra verbos should be avoided; use of debug level is preferred.  
+* with --options the equal is not needed (will work with and without) so don't use '='  
   e.g. cmd --cn 12345
 
 
@@ -62,10 +76,10 @@ In the command function, setup the context
     CLIParserContext *ctx;
 
 
-### define the text
+### define the context
 CLIParserInit (\<context\>, \<description\>, \<notes\n examples ... \>);
 
-use -> to seperate example and example comment and \\n to seperate examples.
+use -> to separate example and example comment and \\n to separate examples.
 e.g. lf indala clone -r a0000000a0002021 -> this uses .....
 
     CLIParserInit(&ctx, "lf indala clone",                          
@@ -92,21 +106,28 @@ _All options has a parameter index,  since `-h --help` is added automatic, it wi
 Hence all options you add will start at index 1 and upwards._
 
 **Notes:**  
-booleen : arg_lit0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)  
+**bool option.  true if supplied**  
+bool : arg_lit0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)  
 
-**integer**  
-    optional integer : arg_int0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+**integer that is optional**  
+    optional integer : arg_int0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**integer that is required**  
     required integer : arg_int1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
 
-**Strings 0 or 1**  
-     optional string : arg_str0("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+**String option that is optional and only one instance can be provided**  
+     optional string : arg_str0("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**String option that is required and only one instance can be provided**  
      required string : arg_str1("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
 
-**Strings x to 250**  
-    optional string : arg_strx0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+**String option that is optional and can have up to 250 instances provided**  
+    optional string : arg_strx0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**String option that is required/at least one instance and can have up to 250 instances**  
     required string : arg_strx1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
 
-**if an option does not have a short or long option, use NULL in its place**
+**if an option does not have a short or long option, use NULL in its place**  
         
 ### show the menu
 CLIExecWithReturn(\<context\>, \<command line to parse\>, \<arg/opt table\>, \<return on error\>);
@@ -119,6 +140,12 @@ Once you have extracted the options, cleanup the context.
    CLIParserFree(ctx);
 
 ### retreiving options
+
+
+The parser will format and color and layout as needed.
+It will also add the `-h --help` option automatic.
+
+
 **bool option**  
 arg_get_lit(\<context\>, \<opt index\>);
 

@@ -4270,8 +4270,13 @@ static void arg_cat_optionv(char *dest,
     }
 
     if (datatype) {
-        if (longopts)
+/*        if (longopts)
             arg_cat(&dest, "=", &ndest);
+        else if (shortopts)
+            arg_cat(&dest, " ", &ndest);
+*/
+        if (longopts)
+            arg_cat(&dest, " ", &ndest);
         else if (shortopts)
             arg_cat(&dest, " ", &ndest);
 
