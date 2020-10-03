@@ -32,7 +32,7 @@ lf hid clone 2006ec0c86
 lf read s 10000
 data save f lf_t5577_hid
 
-lf hid clone l 2006ec0c86
+lf hid clone -l 2006ec0c86
 lf read s 20000
 data save f lf_t5577_hid_84
 

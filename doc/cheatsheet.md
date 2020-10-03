@@ -379,14 +379,18 @@ Brute force HID reader
 ```
 Options
 ---
-a <format>        :  26|33|34|35|37|40|44|84
-f <facility-code> :  8-bit value HID facility code
-c <cardnumber>    :  (optional) cardnumber to start with, max 65535
-d <delay>         :  delay betweens attempts in ms. Default 1000ms
-v                 :  verbose logging, show all tries
+-v, --verbose        : verbose logging, show all tries
+-w, --wiegand format : see `wiegand list` for available formats
+-f, --fn dec         : facility code
+-c, --cn dec         : card number to start with
+-i dec               : issue level
+-o, --oem dec        : OEM code
+-d, --delay dec      : delay betweens attempts in ms. Default 1000ms
+--up                 : direction to increment card number. (default is both directions)
+--down               : direction to decrement card number. (default is both directions)
 
-pm3 --> lf hid brute a 26 f 224
-pm3 --> lf hid brute v a 26 f 21 c 200 d 2000
+pm3 --> lf hid brute -w H10301 -f 224
+pm3 --> lf hid brute -v -w H10301 -f 21 -c 200 -d 2000
 ```
 
 ## Indala
