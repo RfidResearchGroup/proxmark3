@@ -6,14 +6,15 @@
 
 Note: the parser will format and color and layout as needed.
 
-## common options
-where possiable all options should be lowercase.  
-extended options preceeded with -- should be short  
-options provided directly (without an option identifier) should be avoided.  
--vv for extra verbos should be avoided; use of debug level is prefered.  
-whith --options the equle is not needed (will work with and without) so dont use '='  
-e.g. cmd --cn 12345
+## design comments
+* where possiable all options should be lowercase.  
+* extended options preceeded with -- should be short  
+* options provided directly (without an option identifier) should be avoided.  
+* -vv for extra verbos should be avoided; use of debug level is prefered.  
+* with --options the equal is not needed (will work with and without) so dont use '='  
+  e.g. cmd --cn 12345
 
+## common options
     -h --help       : help
     --cn            : card number
     --fn            : facility number
@@ -61,13 +62,21 @@ e.g. lf indala clone -r a0000000a0002021 -> this uses .....
     };
     
 **Notes:**  
-booleen : arg_lit0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>);  
-optional integer : arg_int0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>);  
-required integer : arg_int1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>);  
-optional string : arg_strx0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>);  
-required string : arg_strx1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>);
+booleen : arg_lit0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)  
 
-** if an option does not have a short or long option, use NULL in its place. **
+**integer**  
+    optional integer : arg_int0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+    required integer : arg_int1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**Strings 0 or 1**  
+     optional string : arg_str0("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+     required string : arg_str1("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**Strings x to 250**  
+    optional string : arg_strx0 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)\
+    required string : arg_strx1 ("\<short option\>", "\<long option\>", \["\<format\>",\] \<"description"\>)
+
+**if an option does not have a short or long option, use NULL in its place**
         
 ### show the menu
 CLIExecWithReturn(\<context\>, \<command line to parse\>, \<arg/opt table\>, \<return on error\>);
