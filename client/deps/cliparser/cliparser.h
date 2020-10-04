@@ -28,11 +28,17 @@
 #define arg_get_dbl(ctx, n)      (((struct arg_dbl*)((ctx)->argtable)[n])->dval[0])
 #define arg_get_dbl_def(ctx, n, def)(arg_get_dbl_count((ctx), n) ? (arg_get_dbl((ctx), n)) : (def))
 
+#define arg_get_u32(ctx, n)          (uint32_t)(((struct arg_dbl*)((ctx)->argtable)[n])->dval[0])
+#define arg_get_u32_def(ctx, n, def) (arg_get_dbl_count((ctx), n) ? (arg_get_u32((ctx), n)) : (uint32_t)(def))
+
 #define arg_get_str(ctx, n)      ((struct arg_str*)((ctx)->argtable)[n])
 #define arg_get_str_len(ctx, n)  (strlen(((struct arg_str*)((ctx)->argtable)[n])->sval[0]))
 
 #define arg_strx1(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 1, 250, (glossary)))
 #define arg_strx0(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 0, 250, (glossary)))
+
+#define arg_u32_0 arg_dbl0
+#define arg_u32_1 arg_dbl1
 
 #define CLIParserFree(ctx)        if ((ctx)) {arg_freetable(ctx->argtable, ctx->argtableLen); free((ctx)); (ctx)=NULL;}
 #define CLIExecWithReturn(ctx, cmd, atbl, ifempty)    if (CLIParserParseString(ctx, cmd, atbl, arg_getsize(atbl), ifempty)) {CLIParserFree((ctx)); return PM3_ESOFT;}
