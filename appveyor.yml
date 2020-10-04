@@ -103,7 +103,15 @@ clone_script:
         Write-Host "[ OK ]" -ForegroundColor Green 
     }
     
+    Write-Host "ProxSpace: Removing folder..." -NoNewLine
+    
     $PSInstallTime=[System.Environment]::TickCount
+    
+    cd \
+    
+    Remove-Item -Recurse -Force -Path $env:proxspace_path -ErrorAction SilentlyContinue
+    
+    Write-Host "[ OK ]" -ForegroundColor Green
 
     Write-Host "ProxSpace: downloading..." -NoNewLine
     
@@ -133,7 +141,7 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\chache"
+    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\chache" -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
