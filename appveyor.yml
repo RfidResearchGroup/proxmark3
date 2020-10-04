@@ -71,6 +71,11 @@ clone_script:
         }
     }
     
+    Function ExecMinGWCmd($Cmd) {
+        cd $env:proxspace_path
+        ./runme64.bat -c "$Cmd"
+    }
+    
     $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
         Function WSLExec($Text, $Cmd) {
             Write-Host "$Text" 
@@ -145,9 +150,13 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
-    ExecUpdate "ProxSpace: initial msys2 startup..." $true
+    #ExecUpdate "ProxSpace: initial msys2 startup..." $true
     
-    ExecUpdate "ProxSpace: installing required packages..." $false  
+    ExecMinGWCmd exit
+    
+    ExecMinGWCmd exit
+    
+    #ExecUpdate "ProxSpace: installing required packages..." $false  
     
     $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
     
