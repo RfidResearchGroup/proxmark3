@@ -103,37 +103,47 @@ e.g. lf indala clone -r a0000000a0002021 -> this uses .....
     };
 
 _All options has a parameter index,  since `-h --help` is added automatic, it will be assigned index 0.
-Hence all options you add will start at index 1 and upwards._
+Hence all options you add will start at index 1 and upwards. It added in the define "arg_param_begin_
 
-**Notes:**
-**bool option.  true if supplied**
-bool : arg_lit0 ("\<short option\>", "\<long option\>", \<"description"\>)
+### Notes:
+#### bool option.  true if supplied
+`bool : arg_lit0 ("<short option>", "<long option>", <"description">)`
 
-**integer that is optional**
-    optional integer : arg_int0 ("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### integer that is optional
+`optional integer : arg_int0 ("<short option>", "<long option>", "<format>", <"description">)`
 
-**integer that is required**
-    required integer : arg_int1 ("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### integer that is required
+`required integer : arg_int1 ("<short option>", "<long option>", "<format>", <"description">)`
 
-**double that is optional**
-    optional double : arg_dbl0 ("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### double that is optional
+`optional double : arg_dbl0 ("<short option>", "<long option>", "<format>", <"description">)`
 
-**double that is required**
-    required double : arg_dbl1 ("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### double that is required
+`required double : arg_dbl1 ("<short option>", "<long option>", "<format>", <"description">)`
 
-**String option that is optional and only one instance can be provided**
-     optional string : arg_str0("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### String option that is optional and only one instance can be provided
+`optional string : arg_str0 ("<short option>", "<long option>", "<format>", <"description">)`
 
-**String option that is required and only one instance can be provided**
-     required string : arg_str1("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### String option that is required and only one instance can be provided
+`required string : arg_str1 ("<short option>", "<long option>", "<format>", <"description">)`
 
-**String option that is optional and can have up to 250 instances provided**
-    optional string : arg_strx0 ("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### String option that is optional and can have up to 250 instances provided
+`optional string : arg_strx0 ("<short option>", "<long option>", "<format>", <"description">)`
 
-**String option that is required/at least one instance and can have up to 250 instances**
-    required string : arg_strx1 ("\<short option\>", "\<long option\>", "\<format\>", \<"description"\>)
+#### String option that is required/at least one instance and can have up to 250 instances
+`required string : arg_strx1 ("<short option>", "<long option>", "<format>", <"description">)`
+
+Unsigned values, like  u32 and u64 can be accomplished with
+
+#### unsigned integer optional
+`optional unsigned : arg_u64_0 ("<short option>", "<long option>", "<format>", <"description">)`
+
+#### unsigned integer required
+`required unsigned : arg_u64_1 ("<short option>", "<long option>", "<format>", <"description">)`
+
 
 **if an option does not have a short or long option, use NULL in its place**
+
 
 ### show the menu
 `CLIExecWithReturn(\<context\>, \<command line to parse\>, \<arg/opt table\>, \<return on error\>);`
@@ -161,6 +171,18 @@ arg_get_lit(\<context\>, \<opt index\>);
 arg_get_int_def(\<context\>, \<opt index\>, \<default value\>);
 
     cardnumber = arg_get_int_def(ctx, 2, -1);
+
+
+**uint32**
+arg_get_u32_def(\<context\>, \<opt index\>, \<default value\>);
+
+    cardnumber = arg_get_u32_def(ctx, 2, 0);
+
+**uint64**
+arg_get_u64_def(\<context\>, \<opt index\>, \<default value\>);
+
+    cardnumber = arg_get_u64_def(ctx, 2, 0);
+
 
 **hex option**
 CLIGetHexWithReturn(\<context\>, \<opt index\>, \<store variable\>, \<ptr to stored length\>);
