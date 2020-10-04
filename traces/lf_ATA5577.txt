@@ -56,15 +56,15 @@ lf jablotron clone 112233
 lf read s 16000
 data save f lf_t5577_jablotron
 
-lf keri clone 112233
+lf keri clone --id 112233
 lf read s 10000
 data save f lf_t5577_keri
 
-lf keri clone t i fc 6 cn 12345
+lf keri clone -t i --fc 6 --id 12345
 lf read s 10000
 data save f lf_t5577_keri_internalid
 
-lf keri clone t m f 6 c 12345
+lf keri clone -t m --fc 6 --id 12345
 lf read s 10000
 data save f lf_t5577_keri_msid
 

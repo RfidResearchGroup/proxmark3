@@ -14,7 +14,7 @@ lf search
 
 rem  Test of keri clone & read
 lf t55xx wipe
-lf keri clone 1337
+lf keri clone --id 1337
 lf keri read
 lf search
 
