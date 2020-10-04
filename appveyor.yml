@@ -152,6 +152,8 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
+    Get-ChildItem C:\cache
+    
     Copy-Item -Path "C:\cache\*" -Destination "$env:proxspace_path\msys2\var\cache\pacman\pkg" -Recurse -Force -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
@@ -255,7 +257,11 @@ build_script:
     
     ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
     
+    Remove-Item -Recurse -Force -Path "C:\cache\*" -ErrorAction SilentlyContinue
+    
     Copy-Item -Path "$env:proxspace_path\msys2\var\cache\pacman\pkg\*" -Destination "C:\cache" -Recurse -Force
+    
+    Get-ChildItem C:\cache
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
     
