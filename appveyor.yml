@@ -152,7 +152,7 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\cache" -ErrorAction SilentlyContinue
+    Copy-Item -Path "C:\cache\*" -Destination "$env:proxspace_path\msys2\var\cache\pacman\pkg" -Recurse -Force -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
@@ -255,7 +255,7 @@ build_script:
     
     ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
     
-    Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "C:\cache"
+    Copy-Item -Path "$env:proxspace_path\msys2\var\cache\pacman\pkg\*" -Destination "C:\cache" -Recurse -Force
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
     
