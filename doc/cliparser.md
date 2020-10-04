@@ -25,14 +25,14 @@ And then it fell into silence since it wasn't well documented how to use the cli
 Fast forward today, where more commands has used the cliparser but it still wasn't the natural way when adding a new client command to the Proxmark3 client.
 After more discussions among @doegox, @iceman1001 and @mrwalker the concept became more clear on how to use the cliparser lib in the _preferred_ way.
 
-The aftermath was a design and layout specfied which lead to a simpler implemtentation of the cliparser in the client source code while still unfiy all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness.
+The aftermath was a design and layout specified which lead to a simpler implementation of the cliparser in the client source code while still unifiy all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness.
 
 ![sample of new style helptext](http://www.icedev.se/proxmark3/helptext.png)
 
 
 Furthermore @mrwalker offered to take notes and thus this document was created.
 
-This is the _new_ and _prefered_ way to implement _helptext_ and _cli parsing_ for Proxmark3 client commands and it's external tools.
+This is the _new_ and _preferred_ way to implement _helptext_ and _cli parsing_ for Proxmark3 client commands and it's external tools.
 
 
 ## cliparser setup and use
@@ -45,7 +45,7 @@ It will also add the `-h --help` option automatic.
 * where possible all options should be lowercase.
 * extended options preceded with -- should be short
 * options provided directly (without an option identifier) should be avoided.
-* -vv for extra verbos should be avoided; use of debug level is preferred.
+* -vv for extra verbose should be avoided; use of debug level is preferred.
 * with --options the equal is not needed (will work with and without) so don't use '='
   e.g. cmd --cn 12345
 
@@ -59,7 +59,7 @@ It will also add the `-h --help` option automatic.
     --raw           : raw data
     -k --key        : key supplied
     -n --keyno      : key number to use
-    -v --verbose    : flag when output should provide more information, not conidered debug.
+    -v --verbose    : flag when output should provide more information, not considered debug.
     -1 --buffer     : use the sample buffer
 
 
@@ -77,7 +77,7 @@ In the command function, setup the context
 
 
 ### define the context
-CLIParserInit (\<context\>, \<description\>, \<notes\n examples ... \>);
+`CLIParserInit (\<context\>, \<description\>, \<notes\n examples ... \>);`
 
 use -> to separate example and example comment and \\n to separate examples.
 e.g. lf indala clone -r a0000000a0002021 -> this uses .....
@@ -136,16 +136,16 @@ bool : arg_lit0 ("\<short option\>", "\<long option\>", \<"description"\>)
 **if an option does not have a short or long option, use NULL in its place**
 
 ### show the menu
-CLIExecWithReturn(\<context\>, \<command line to parse\>, \<arg/opt table\>, \<return on error\>);
+`CLIExecWithReturn(\<context\>, \<command line to parse\>, \<arg/opt table\>, \<return on error\>);`
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
 ### clean up
 Once you have extracted the options, cleanup the context.
 
-   CLIParserFree(ctx);
+    CLIParserFree(ctx);
 
-### retreiving options
+### retrieving options
 
 
 The parser will format and color and layout as needed.
