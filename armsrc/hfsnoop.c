@@ -99,7 +99,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
 
         optimizedSniff((uint16_t *)mem, *len);
 
-        if (DBGLEVEL >= DBG_INFO)   {
+        if (DBGLEVEL >= DBG_INFO) {
             Dbprintf("Trigger kicked in (%d >= 180)", r);
             Dbprintf("Collected %u samples", *len);
         }
