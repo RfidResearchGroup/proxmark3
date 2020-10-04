@@ -53,6 +53,7 @@ class Plot: public QWidget {
     void closeEvent(QCloseEvent *event);
     void Zoom(float factor, int refX);
     void Move(int offset);
+    void Trim(void);
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event) { mouseMoveEvent(event); }

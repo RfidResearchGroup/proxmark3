@@ -687,6 +687,25 @@ void Plot::Move(int offset) {
     }
 }
 
+void Plot::Trim(void) {
+    uint32_t lref, rref;
+    if ((CursorAPos == 0) || (CursorBPos == 0)) { // if we don't have both cursors set
+        lref = GraphStart;
+        rref = GraphStop;
+    } else {
+        lref = CursorAPos < CursorBPos ? CursorAPos : CursorBPos;
+        rref = CursorAPos < CursorBPos ? CursorBPos : CursorAPos;
+        GraphPixelsPerPoint = GraphPixelsPerPoint * (GraphStop - GraphStart) / (rref - lref);
+        CursorAPos -= lref;
+        CursorBPos -= lref;
+    }
+    for (uint32_t i = lref; i < rref; ++i)
+        GraphBuffer[i - lref] = GraphBuffer[i];
+    GraphTraceLen = rref - lref;
+    GraphStart = 0;
+//    RepaintGraphWindow();
+}
+
 void Plot::wheelEvent(QWheelEvent *event) {
     // event->delta()
     //  120 => shift right 5%
@@ -809,6 +828,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             puts("\tH                        Show help");
             puts("\tL                        Toggle lock grid relative to samples");
             puts("\tQ                        Hide window");
+            puts("\tT                        Trim data on displayed window or on cursors if defined");
             puts("\tHOME                     Move to the start of the graph");
             puts("\tEND                      Move to the end of the graph");
             puts("\tPGUP                     Page left");
@@ -836,6 +856,10 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
         case Qt::Key_Q:
             master->hide();
+            break;
+
+        case Qt::Key_T:
+            Trim();
             break;
 
         case Qt::Key_Home:
