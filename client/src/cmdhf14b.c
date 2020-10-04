@@ -161,9 +161,9 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b raw",
                   "Sends raw bytes to card ",
-                  "hf 14b raw -s -c -k 0200a40400\n"
-                  "hf 14b raw --sr -c -k 0200a40400\n"
-                  "hf 14b raw --cts -c -k 0200a40400\n"
+                  "hf 14b raw -cks      --data 0200a40400    -> standard select\n"
+                  "hf 14b raw -ck --sr  --data 0200a40400    -> SRx select\n"
+                  "hf 14b raw -ck --cts --data 0200a40400    -> C-ticket select\n"
                 );
     
     void *argtable[] = {
@@ -173,10 +173,10 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         arg_lit0(NULL, "sr",            "activate field and select SRx ST"),
         arg_lit0(NULL, "cts",           "activate field and select ASK C-ticket"),        
         arg_lit0("c", "crc",            "calculate and append CRC"),
-        arg_lit0("r", "noresponse",     "do not read response"),
-        arg_int0("t", "timeout", "dec", "timeout in ms"),
-        arg_lit0("v", "verbose",        "verbose"),
-        arg_strx0(NULL, NULL,           "<data (hex)>", "bytes to send"),
+        arg_lit0("r", "noresponse",         "do not read response"),
+        arg_int0("t", "timeout",   "<dec>", "timeout in ms"),
+        arg_lit0("v", "verbose",            "verbose"),
+        arg_strx0("d", "data",     "<hex>", "data, bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1525,10 +1525,10 @@ static int CmdHF14BAPDU(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b apdu",
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
-                  "hf 14b apdu -s 94a40800043f000002\n"
-                  "hf 14b apdu -sd 00A404000E325041592E5359532E444446303100 -> decode apdu\n"
-                  "hf 14b apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 -> encode standard apdu\n"
-                  "hf 14b apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
+                  "hf 14b apdu -s  --hex 94a40800043f000002\n"
+                  "hf 14b apdu -sd --hex 00A404000E325041592E5359532E444446303100        -> decode apdu\n"
+                  "hf 14b apdu -sm 00A40400 -l 256    --hex 325041592E5359532E4444463031 -> encode standard apdu\n"
+                  "hf 14b apdu -sm 00A40400 -el 65536 --hex 325041592E5359532E4444463031 -> encode extended apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1536,10 +1536,10 @@ static int CmdHF14BAPDU(const char *Cmd) {
         arg_lit0("k",  "keep",     "leave the signal field ON after receive response"),
         arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0("d",  "decode",   "decode apdu request if it possible"),
-        arg_str0("m",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
+        arg_str0("m",  "make",     "<hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
-        arg_int0("l",  "le",       "<Le (int)>", "Le apdu parameter if `m` parameter included"),
-        arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
+        arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
+        arg_strx1("h", "hex",      "<hex>", "<APDU | data> if `m` parameter included"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
