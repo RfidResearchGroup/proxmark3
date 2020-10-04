@@ -147,8 +147,7 @@ clone_script:
 
     ExecUpdate "ProxSpace: initial msys2 startup..." $true
     
-    ExecUpdate "ProxSpace: installing required packages..." $false
-    
+    ExecUpdate "ProxSpace: installing required packages..." $false  
     
     $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
     
@@ -241,6 +240,14 @@ build_script:
     
     #ProxSpace
     
+    Write-Host "ProxSpace: create new cache..." -NoNewLine
+    
+    ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
+    
+    Move-Item -Path "$env:proxspace_path\msys2\var\chache" -Destination "C:\cache"
+    
+    Write-Host "[ OK ]" -ForegroundColor Gree 
+    
     Write-Host "---------- PS make ----------" -ForegroundColor Yellow
     
     $TestTime=[System.Environment]::TickCount  
@@ -282,14 +289,6 @@ build_script:
     ExecMinGWCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
     
     ExecCheck "PS cmake Tests"
-    
-    Write-Host "ProxSpace: create new cache..." -NoNewLine
-    
-    ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
-    
-    Move-Item -Path "$env:proxspace_path\msys2\var\chache" -Destination "C:\cache"
-    
-    Write-Host "[ OK ]" -ForegroundColor Gree 
     
     Receive-Job -Wait -Job $WSLjob
 
