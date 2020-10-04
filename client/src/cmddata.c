@@ -50,20 +50,6 @@ static int usage_data_save(void) {
     PrintAndLogEx(NORMAL, "       data save f mytrace w    - save graphbuffer to wave file");
     return PM3_SUCCESS;
 }
-static int usage_data_scale(void) {
-    PrintAndLogEx(NORMAL, "Set cursor display scale.");
-    PrintAndLogEx(NORMAL, "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful. ");
-    PrintAndLogEx(NORMAL, "once the scale is set, the differential reading between brackets is the time duration in seconds.");
-    PrintAndLogEx(NORMAL, "For example, if acquiring in 125kHz, use scale 125.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: data scale [h] <kHz>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          this help");
-    PrintAndLogEx(NORMAL, "       <kHz>      sets scale of carrier frequency expressed in kHz");
-    PrintAndLogEx(NORMAL, "Samples:");
-    PrintAndLogEx(NORMAL, "       data scale 125      - if sampled in 125kHz");
-    return PM3_SUCCESS;
-}
 static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -1913,14 +1899,32 @@ int CmdSave(const char *Cmd) {
 }
 
 static int CmdScale(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_data_scale();
 
-    CursorScaleFactor = atoi(Cmd);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data scale",
+                  "Set cursor display scale.\n"
+                  "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful.\n"
+                  "once the scale is set, the differential reading between brackets can become a time duration.",
+                  "data scale --sr 125   -u ms  -> if sampled in 125 kHz, reading will be in milliseconds\n"
+                  "data scale --sr 1.695 -u us  -> if HF, sampling is 1.695 MHz. Reading will be in microseconds\n"
+                  "data scale --sr 16    -u ETU -> if HF, 16 samples per ETU. Reading will be in ETUs"
+                  );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_dbl1(NULL,  "sr", "<float>", "sets scale according to sampling rate"),
+        arg_str0("u", "unit", "<string>", "time unit to display (max 10 chars)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CursorScaleFactor = arg_get_dbl_def(ctx, 1, 0);
     if (CursorScaleFactor == 0) {
         PrintAndLogEx(FAILED, "bad, can't have zero scale");
         CursorScaleFactor = 1;
     }
+    int len = 0;
+    CursorScaleFactorUint[0] = '\x00';
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t*)CursorScaleFactorUint, sizeof(CursorScaleFactorUint), &len);
+    CLIParserFree(ctx);
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }

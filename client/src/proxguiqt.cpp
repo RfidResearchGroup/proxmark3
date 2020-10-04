@@ -596,10 +596,11 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Draw annotations
     char str[200];
-    sprintf(str, "@%u  dt=%u [%2.2f] zoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
+    sprintf(str, "@%u  dt=%i [%2.2f %s] zoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
             GraphStart,
             CursorBPos - CursorAPos,
             ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor,
+            CursorScaleFactorUint,
             GraphPixelsPerPoint,
             CursorAPos,
             CursorBPos,
