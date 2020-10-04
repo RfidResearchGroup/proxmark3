@@ -1825,7 +1825,8 @@ static int CmdMtrim(const char *Cmd) {
     uint32_t start = 0, stop = 0;
     sscanf(Cmd, "%u %u", &start, &stop);
 
-    if (start > GraphTraceLen || stop > GraphTraceLen || start > stop) return PM3_ESOFT;
+    if (start > GraphTraceLen || stop > GraphTraceLen || start >= stop) 
+        return PM3_ESOFT;
 
     // leave start position sample
     start++;
