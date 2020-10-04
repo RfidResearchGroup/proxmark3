@@ -152,9 +152,11 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Get-ChildItem C:\cache
+    Get-ChildItem "C:\cache"
     
     Copy-Item -Path "C:\cache\*" -Destination "$env:proxspace_path\msys2\var\cache\pacman\pkg" -Recurse -Force -ErrorAction SilentlyContinue
+    
+    Get-ChildItem "C:\cache"
     
     Get-ChildItem $env:proxspace_path\msys2\var\cache\pacman\pkg
     
@@ -180,6 +182,8 @@ build_script:
 - ps: >-
 
     $pmfolder = Split-Path $env:appveyor_build_folder -Leaf
+    
+    Get-ChildItem "C:\cache"
     
     Function ExecMinGWCmd($Cmd) {
         cd $env:proxspace_path
@@ -257,13 +261,17 @@ build_script:
     
     Write-Host "ProxSpace: create new cache..." -NoNewLine
     
+    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
+    
     ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
     
     Remove-Item -Recurse -Force -Path "C:\cache\*" -ErrorAction SilentlyContinue
     
     Copy-Item -Path "$env:proxspace_path\msys2\var\cache\pacman\pkg\*" -Destination "C:\cache" -Recurse -Force
     
-    Get-ChildItem C:\cache
+    Get-ChildItem "C:\cache"
+    
+    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
     
