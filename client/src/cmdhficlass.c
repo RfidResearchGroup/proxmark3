@@ -18,6 +18,7 @@
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "cmdtrace.h"
+#include "cliparser.h"
 #include "util_posix.h"
 #include "comms.h"
 #include "des.h"
@@ -359,20 +360,7 @@ static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_permutekey(void) {
-    PrintAndLogEx(NORMAL, "Permute function from 'heart of darkness' paper.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass permute [h] <r|f> <bytes>\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h          Show this help");
-    PrintAndLogEx(NORMAL, "  r          reverse permuted key");
-    PrintAndLogEx(NORMAL, "  f          permute key");
-    PrintAndLogEx(NORMAL, "  <bytes>    input bytes");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass permute r 0123456789abcdef"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 
 static int cmp_uint32(const void *a, const void *b) {
 
@@ -3522,17 +3510,26 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     uint8_t data[16] = {0};
     bool isReverse = false;
     int len = 0;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h')
-        return usage_hf_iclass_permutekey();
 
-    isReverse = (cmdp == 'r');
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass permute",
+                  "Permute function from 'heart of darkness' paper.",
+                  "hf iclass permute --reverse --key 0123456789abcdef\n"
+                  "hf iclass permute --key ff55330f0055330f\n");
 
-    param_gethex_ex(Cmd, 1, data, &len);
-    if (len % 2)
-        return usage_hf_iclass_permutekey();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "reverse",        "reverse permuted key"),       
+        arg_str1(NULL, "key", "<bytes>", "input key"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    len >>= 1;
+    isReverse = arg_get_lit(ctx, 1);
+       
+    CLIGetHexWithReturn(ctx, 2, data, &len);
+
+    CLIParserFree(ctx); 
 
     memcpy(key, data, 8);
 
