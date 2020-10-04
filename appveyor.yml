@@ -141,7 +141,7 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\chache" -ErrorAction SilentlyContinue
+    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\cache" -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
@@ -244,7 +244,7 @@ build_script:
     
     ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
     
-    Move-Item -Path "$env:proxspace_path\msys2\var\chache" -Destination "C:\cache"
+    Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "C:\cache"
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
     
