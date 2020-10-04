@@ -38,29 +38,38 @@ clone_script:
     
     Function ExecUpdate($Text, $firstStart) {
         Write-Host "$Text"
-        Start-Process "cmd.exe"  "/c ""cd /D $env:proxspace_path && runme64.bat -c ""exit"""""
+        
+        $PSjob = Start-Job -Name PSInstall -ScriptBlock { 
+            cd $env:proxspace_path
+            ./runme64.bat -c "exit"
+        }
+        
         $StartTime=[System.Environment]::TickCount
         Start-Sleep -s 10
-        while($true) {
-            $cmdprocess = Get-Process "cmd" -ErrorAction SilentlyContinue
-            
-            if (!$cmdprocess -Or $cmdprocess.HasExited) {
+        while($true) {            
+            if ($PSjob.State -eq 'Completed') {
                 Write-Host "$Text" -NoNewLine 
                 Write-Host "[ OK ]" -ForegroundColor Green
                 break
             }
             
+            if ($PSjob.State -eq 'Failed') {
+                Write-Host "$Text" -NoNewLine 
+                Write-Host "[ Failed ]" -ForegroundColor Red
+                break
+            }
+            
             if ($firstStart -And (Test-Path "$env:proxspace_path\msys2\etc\pacman.conf.pacnew")) {
                 Start-Sleep -s 5
-                $tmp = $cmdprocess.CloseMainWindow()
+                Stop-Job -Job $PSjob
                 Start-Sleep -s 5
-                Stop-Process -Name "cmd" -Force -ErrorAction SilentlyContinue
                 Write-Host "$Text" -NoNewLine 
                 Write-Host "Exit by pacman.conf" -ForegroundColor Green
                 break           
             }
             
             if ([System.Environment]::TickCount-$StartTime -gt 1000000) {
+                Stop-Job -Job $PSjob
                 Write-Host "$Text" -NoNewLine 
                 Write-host "Exit by timeout" -ForegroundColor Yellow
                 break
@@ -69,11 +78,8 @@ clone_script:
             Start-Sleep -s 5
             Receive-Job -Job $WSLjob
         }
-    }
-    
-    Function ExecMinGWCmd($Cmd) {
-        cd $env:proxspace_path
-        ./runme64.bat -c "$Cmd"
+        
+        Receive-Job -Wait -Job $PSjob
     }
     
     $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
@@ -150,13 +156,9 @@ clone_script:
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
-    #ExecUpdate "ProxSpace: initial msys2 startup..." $true
+    ExecUpdate "ProxSpace: initial msys2 startup..." $true
     
-    ExecMinGWCmd exit
-    
-    ExecMinGWCmd exit
-    
-    #ExecUpdate "ProxSpace: installing required packages..." $false  
+    ExecUpdate "ProxSpace: installing required packages..." $false  
     
     $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
     
