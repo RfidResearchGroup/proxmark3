@@ -78,8 +78,6 @@ clone_script:
             Start-Sleep -s 5
             Receive-Job -Job $WSLjob
         }
-        
-        Receive-Job -Wait -Job $PSjob
     }
     
     $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
