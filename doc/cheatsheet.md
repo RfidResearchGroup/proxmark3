@@ -332,23 +332,25 @@ Convert Site & Facility code to Wiegand raw hex
 ```
 Options
 ---
-w <format> o <OEM> f <FC> c <CN> i <issuelevel>
-w            : wiegand format to use
-o            : OEM number / site code
-f            : facility code
-c            : card number
-i            : issue level
+-w <format> --oem <OEM> --fc <FC> --cn <CN> --issue <issuelevel>
 
-pm3 --> wiegand encode 0 56 150
+-w            : wiegand format to use
+--oem        : OEM number / site code
+--fc         : facility code
+--cn         : card number
+--issue      : issue level
+
+pm3 --> wiegand encode -w H10301 --oem 0 --fc 56  --cn 150
 ```
 
 Convert Site & Facility code from Wiegand raw hex to numbers
 ```
 Options
 ---
-p            : ignore parity errors
+-p           : ignore parity errors
+--raw        : raw hex to be decoded
 
-pm3 --> wiegand decode 2006f623ae
+pm3 --> wiegand decode --raw 2006f623ae
 ```
 
 ## HID Prox
@@ -556,7 +558,7 @@ pm3 --> script list
 View lua helptext
 
 ```
-pm3 --> script run  <nameofscript> -h
+pm3 --> script run <nameofscript> -h
 ```
 
 
@@ -599,15 +601,15 @@ Load default keys into flash memory (RDV4 only)
 ```
 Options
 ---
-o <offset>         : offset in memory
-f <filename>       : file name
-m                  : upload 6 bytes keys (mifare key dictionary)
-i                  : upload 8 bytes keys (iClass key dictionary)
-t                  : upload 4 bytes keys (pwd dictionary)
+-o <offset>         : offset in memory
+-f <filename>       : file name
+--mfc               : upload 6 bytes keys (mifare key dictionary)
+--iclass            : upload 8 bytes keys (iClass key dictionary)
+--t55xx             : upload 4 bytes keys (pwd dictionary)
 
-pm3 --> mem load f mfc_default_keys m
-pm3 --> mem load f t55xx_default_pwds t
-pm3 --> mem load f iclass_default_keys i
+pm3 --> mem load -f mfc_default_keys --mfc
+pm3 --> mem load -f t55xx_default_pwds --t5xx
+pm3 --> mem load -f iclass_default_keys --iclass
 ```
 
 ## Sim Module
