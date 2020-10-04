@@ -1905,9 +1905,9 @@ static int CmdScale(const char *Cmd) {
                   "Set cursor display scale.\n"
                   "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful.\n"
                   "once the scale is set, the differential reading between brackets can become a time duration.",
-                  "data scale --sr 125   -u ms  -> if sampled in 125 kHz, reading will be in milliseconds\n"
-                  "data scale --sr 1.695 -u us  -> if HF, sampling is 1.695 MHz. Reading will be in microseconds\n"
-                  "data scale --sr 16    -u ETU -> if HF, 16 samples per ETU. Reading will be in ETUs"
+                  "data scale --sr 125   -u ms  -> for LF sampled at 125 kHz. Reading will be in milliseconds\n"
+                  "data scale --sr 1.695 -u us  -> for HF sampled at 1.695 MHz. Reading will be in microseconds\n"
+                  "data scale --sr 16    -u ETU -> for HF with 16 samples per ETU. Reading will be in ETUs"
                   );
     void *argtable[] = {
         arg_param_begin,
@@ -1922,8 +1922,8 @@ static int CmdScale(const char *Cmd) {
         CursorScaleFactor = 1;
     }
     int len = 0;
-    CursorScaleFactorUint[0] = '\x00';
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t*)CursorScaleFactorUint, sizeof(CursorScaleFactorUint), &len);
+    CursorScaleFactorUnit[0] = '\x00';
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t*)CursorScaleFactorUnit, sizeof(CursorScaleFactorUnit), &len);
     CLIParserFree(ctx);
     RepaintGraphWindow();
     return PM3_SUCCESS;

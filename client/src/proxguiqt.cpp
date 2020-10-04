@@ -424,7 +424,8 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     if (len == 0) return;
     // clock_t begin = clock();
     QPainterPath penPath;
-    int vMin = INT_MAX, vMax = INT_MIN, vMean = 0, v = 0;
+    int vMin = INT_MAX, vMax = INT_MIN, v = 0;
+    int64_t vMean = 0;
     uint32_t i = 0;
     int x = xCoordOf(GraphStart, plotRect);
     int y = yCoordOf(buffer[GraphStart], plotRect, g_absVMax);
@@ -447,7 +448,8 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
         if (v > vMax) vMax = v;
         vMean += v;
     }
-    vMean /= (i - GraphStart);
+    GraphStop = i;
+    vMean /= (GraphStop - GraphStart);
 
     painter->setPen(getColor(graphNum));
 
@@ -483,10 +485,9 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     //Graph annotations
     painter->drawPath(penPath);
     char str[200];
-    sprintf(str, "max=%d  min=%d  mean=%d  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
-            vMax, vMin, vMean, i, len, buffer[CursorAPos], buffer[CursorBPos]);
+    sprintf(str, "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
+            vMax, vMin, vMean, GraphStop - GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
     painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
-
     //clock_t end = clock();
     //double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
     //printf("Plot time %f\n", elapsed_secs);
@@ -596,11 +597,19 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Draw annotations
     char str[200];
-    sprintf(str, "@%u  dt=%i [%2.2f %s] zoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
+    char scalestr[30] = {0};
+    if (CursorScaleFactor != 1) {
+        if (CursorScaleFactorUnit[0] == '\x00') {
+            sprintf(scalestr, "[%2.2f] ", ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor);
+        } else {
+            sprintf(scalestr, "[%2.2f %s] ", ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor, CursorScaleFactorUnit);
+        }
+    }
+    sprintf(str, "@%u..%u  dt=%i %szoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
             GraphStart,
+            GraphStop,
             CursorBPos - CursorAPos,
-            ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor,
-            CursorScaleFactorUint,
+            scalestr,
             GraphPixelsPerPoint,
             CursorAPos,
             CursorBPos,
