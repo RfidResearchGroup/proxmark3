@@ -19,9 +19,15 @@
 
 #define arg_getsize(a)      (sizeof(a) / sizeof(a[0]))
 #define arg_get_lit(ctx, n)      (((struct arg_lit*)((ctx)->argtable)[n])->count)
+
 #define arg_get_int_count(ctx, n)(((struct arg_int*)((ctx)->argtable)[n])->count)
 #define arg_get_int(ctx, n)      (((struct arg_int*)((ctx)->argtable)[n])->ival[0])
 #define arg_get_int_def(ctx, n, def)(arg_get_int_count((ctx), n) ? (arg_get_int((ctx), n)) : (def))
+
+#define arg_get_dbl_count(ctx, n)(((struct arg_dbl*)((ctx)->argtable)[n])->count)
+#define arg_get_dbl(ctx, n)      (((struct arg_dbl*)((ctx)->argtable)[n])->dval[0])
+#define arg_get_dbl_def(ctx, n, def)(arg_get_dbl_count((ctx), n) ? (arg_get_dbl((ctx), n)) : (def))
+
 #define arg_get_str(ctx, n)      ((struct arg_str*)((ctx)->argtable)[n])
 #define arg_get_str_len(ctx, n)  (strlen(((struct arg_str*)((ctx)->argtable)[n])->sval[0]))
 
