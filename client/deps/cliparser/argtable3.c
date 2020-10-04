@@ -1408,7 +1408,7 @@ static int arg_dbl_scanfn(struct arg_dbl *parent, const char *argval) {
 
         /* extract double from argval into val */
         val = strtod(argval, &end);
-        printf("ice  %lf \n", val);
+
         /* if success then store result in parent->dval[] array otherwise return error*/
         if (*end == 0)
             parent->dval[parent->count++] = val;
