@@ -1,6 +1,8 @@
 version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
+cache:
+  - C:\cache
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
@@ -101,17 +103,7 @@ clone_script:
         Write-Host "[ OK ]" -ForegroundColor Green 
     }
     
-    Write-Host "ProxSpace: Removing folder..." -NoNewLine
-    
     $PSInstallTime=[System.Environment]::TickCount
-    
-    cd \
-
-    Remove-Item -Recurse -Force -Path $env:proxspace_path
-
-    Write-Host "[ OK ]" -ForegroundColor Green
-    
-    Receive-Job -Job $WSLjob
 
     Write-Host "ProxSpace: downloading..." -NoNewLine
     
@@ -138,6 +130,12 @@ clone_script:
     Get-ChildItem -Path "\$env:proxspace_zip_folder_name" | Rename-Item -NewName (Split-Path $env:proxspace_path -Leaf)
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
+    
+    Write-Host "ProxSpace: move cache..." -NoNewLine
+    
+    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\chache"
+    
+    Write-Host "[ OK ]" -ForegroundColor Gree 
 
     ExecUpdate "ProxSpace: initial msys2 startup..." $true
     
@@ -151,8 +149,6 @@ clone_script:
     Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$PSInstallTime) / 1000) sec" -Category Information
     
     GitClone "ProxSpace: Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." $env:appveyor_build_folder
-    
-    Receive-Job -Wait -Job $WSLjob
     
     GitClone "WSL: Cloning repository <$env:appveyor_repo_name> to $env:wsl_git_path ..." $env:wsl_git_path
     
@@ -202,6 +198,9 @@ build_script:
                 throw "Tests error."
             }
         }
+        
+        #WSL: wait for installation to finish
+        Receive-Job -Wait -Name WSLInstall
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
@@ -275,6 +274,14 @@ build_script:
     ExecMinGWCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
     
     ExecCheck "PS cmake Tests"
+    
+    Write-Host "ProxSpace: create new cache..." -NoNewLine
+    
+    ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
+    
+    Move-Item -Path "$env:proxspace_path\msys2\var\chache" -Destination "C:\cache"
+    
+    Write-Host "[ OK ]" -ForegroundColor Gree 
     
     Receive-Job -Wait -Job $WSLjob
 
