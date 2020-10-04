@@ -8,7 +8,7 @@
 // GUI (QT)
 //-----------------------------------------------------------------------------
 #include "proxguiqt.h"
-
+#include <inttypes.h>
 #include <stdbool.h>
 #include <iostream>
 #include <QPainterPath>
