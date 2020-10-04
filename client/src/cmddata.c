@@ -1916,9 +1916,9 @@ static int CmdScale(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    CursorScaleFactor = arg_get_dbl_def(ctx, 1, 0);
-    if (CursorScaleFactor == 0) {
-        PrintAndLogEx(FAILED, "bad, can't have zero scale");
+    CursorScaleFactor = arg_get_dbl_def(ctx, 1, 1);
+    if (CursorScaleFactor <= 0) {
+        PrintAndLogEx(FAILED, "bad, can't have negative or zero scale");
         CursorScaleFactor = 1;
     }
     int len = 0;
