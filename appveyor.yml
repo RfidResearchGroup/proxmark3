@@ -7,7 +7,7 @@ environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
   proxspace_zip_folder_name: ProxSpace-*
-  proxspace_path: \ProxSpace
+  proxspace_path: C:\ProxSpace
   proxspace_home_path: \ProxSpace\pm3
   wsl_git_path: C:\proxmark
   APPVEYOR_SAVE_CACHE_ON_ERROR: true
@@ -155,6 +155,8 @@ clone_script:
     Get-ChildItem C:\cache
     
     Copy-Item -Path "C:\cache\*" -Destination "$env:proxspace_path\msys2\var\cache\pacman\pkg" -Recurse -Force -ErrorAction SilentlyContinue
+    
+    Get-ChildItem $env:proxspace_path\msys2\var\cache\pacman\pkg
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
