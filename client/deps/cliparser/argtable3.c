@@ -4275,7 +4275,10 @@ static void arg_parse_untagged(int argc,
     /* register an error for each unused argv[] entry */
     while (optind < argc) {
         /*printf("arg_parse_untagged(): argv[%d]=\"%s\" not consumed\n",optind,argv[optind]);*/
-        arg_register_error(endtable, endtable, ARG_ENOMATCH, argv[optind++]);
+        if (argv[optind][0] != '\x00') {
+            arg_register_error(endtable, endtable, ARG_ENOMATCH, argv[optind]);
+        }
+        optind++;
     }
 
     return;
