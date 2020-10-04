@@ -10,6 +10,7 @@ environment:
   proxspace_path: \ProxSpace
   proxspace_home_path: \ProxSpace\pm3
   wsl_git_path: C:\proxmark
+  APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
 init:
 - ps: >-
