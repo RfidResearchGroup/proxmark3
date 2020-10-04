@@ -703,7 +703,6 @@ void Plot::Trim(void) {
         GraphBuffer[i - lref] = GraphBuffer[i];
     GraphTraceLen = rref - lref;
     GraphStart = 0;
-//    RepaintGraphWindow();
 }
 
 void Plot::wheelEvent(QWheelEvent *event) {
