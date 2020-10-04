@@ -72,10 +72,10 @@ int CmdWiegandEncode(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "fc", "<dec>", "facility number"),
-        arg_int1(NULL, "cn", "<dec>", "card number"),
-        arg_int0(NULL, "issue", "<dec>", "issue level"),
-        arg_int0(NULL, "oem", "<dec>", "OEM code"),
+        arg_u64_0(NULL, "fc", "<dec>", "facility number"),
+        arg_u64_1(NULL, "cn", "<dec>", "card number"),
+        arg_u64_0(NULL, "issue", "<dec>", "issue level"),
+        arg_u64_0(NULL, "oem", "<dec>", "OEM code"),
         arg_strx1("w", "wiegand", "<format>", "see `wiegand list` for available formats"),        
         arg_param_end
     };
@@ -84,11 +84,11 @@ int CmdWiegandEncode(const char *Cmd) {
     wiegand_card_t data;
     memset(&data, 0, sizeof(wiegand_card_t));
     
-    data.FacilityCode = (uint32_t)arg_get_int_def(ctx, 1, 0);
-    data.CardNumber = (uint64_t)arg_get_int_def(ctx, 2, 0);
-    data.IssueLevel = (uint32_t)arg_get_int_def(ctx, 3, 0);
-    data.OEM = (uint32_t)arg_get_int_def(ctx, 4, 0);
-
+    data.FacilityCode = arg_get_u32_def(ctx, 1, 0);
+    data.CardNumber = arg_get_u64_def(ctx, 2, 0);
+    data.IssueLevel = arg_get_u32_def(ctx, 3, 0);
+    data.OEM = arg_get_u32_def(ctx, 4, 0);
+    
     int len = 0;
     char format[16] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t*)format, sizeof(format), &len);
