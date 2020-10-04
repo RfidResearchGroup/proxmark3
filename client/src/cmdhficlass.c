@@ -225,21 +225,6 @@ static int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_view(void) {
-    PrintAndLogEx(NORMAL, "Print a iCLASS tag dump file\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iClass view [f <filename>] [s <startblock>] [e <endblock>] [v]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h                Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename>     filename of dump");
-    PrintAndLogEx(NORMAL, "  s <startblock>   print from this block (default block6)");
-    PrintAndLogEx(NORMAL, "  e <endblock>     end printing at this block (default 0, ALL)");
-    PrintAndLogEx(NORMAL, "  v                verbose output");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass view f hf-iclass-AA162D30F8FF12F1-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass view s 1 f hf-iclass-AA162D30F8FF12F1-dump.bin"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, "Calculate new key for updating\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass calc_newkey o <old key> n <new key> s [csn] e\n");
@@ -2668,43 +2653,31 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 }
 
 static int CmdHFiClassView(const char *Cmd) {
-    int startblock = 0;
-    int endblock = 0;
-    char filename[FILE_PATH_SIZE];
-    bool errors = false, verbose = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_view();
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "Filename too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            case 's':
-                startblock = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'e':
-                endblock = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass view",
+                  "Print a iCLASS tag dump file",
+                  "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
+                  "hf iclass view --startblock 1 --file hf-iclass-AA162D30F8FF12F1-dump.bin\n");
 
-    if (errors || (strlen(Cmd) == 0)) return usage_hf_iclass_view();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f",  "file", "<filename>",  "filename of dump"),
+        arg_int0(NULL, "startblock", "<dec>", "print from this block (default block6)"),        
+        arg_int0(NULL, "endblock", "<dec>",   "end printing at this block (default 0, ALL)"),
+        arg_lit0("v",  "verbose",             "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t*)filename, FILE_PATH_SIZE, &fnlen);
+
+    int startblock = arg_get_int_def(ctx, 2, 0);
+    int endblock = arg_get_int_def(ctx, 3, 0);
+    bool verbose = arg_get_lit(ctx, 4);
+
+    CLIParserFree(ctx);        
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
