@@ -17,6 +17,7 @@
 
 #include "commonutil.h"     // ARRAYLEN
 #include "cmdparser.h"    // command_t
+#include "cliparser.h"
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
@@ -26,43 +27,6 @@
 #include "cmdlft55xx.h" // verifywrite
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_keri_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 or Q5/T5555 tag\n");
-    PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
-    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] [c <cardnumber>] <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h            : This help");
-    PrintAndLogEx(NORMAL, "      <id>         : Keri Internal ID");
-    PrintAndLogEx(NORMAL, "      <Q5>         : specify writing to Q5/T5555 tag");
-    // New format
-    PrintAndLogEx(NORMAL, "      <t> [m|i]    : Type m - MS, i - Internal ID");
-    PrintAndLogEx(NORMAL, "      <f> <fc>     : Facility Code");
-    PrintAndLogEx(NORMAL, "      <c> <cn>     : Card Number");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone 112233"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone t i fc 6 cn 12345"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf keri clone t m f 6 c 12345"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_keri_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of KERI card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf keri sim [h] <id>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          : This help");
-    PrintAndLogEx(NORMAL, "      <id>       : Keri Internal ID");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf keri sim 112233"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 typedef enum  {Scramble = 0, Descramble = 1} KeriMSScramble_t;
 
 static int CmdKeriMSScramble(KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID, uint32_t *CardID) {
@@ -222,8 +186,9 @@ static int CmdKeriRead(const char *Cmd) {
 static int CmdKeriClone(const char *Cmd) {
 
     bool q5 = false;
-    uint8_t cmdidx = 0;
-    char keritype = 'i'; // default to internalid
+    
+    uint8_t keritype[2] = {'i'}; // default to internalid
+    int typeLen = 0;
     uint32_t fc = 0;
     uint32_t cid = 0;
     uint32_t internalid = 0;
@@ -240,42 +205,35 @@ static int CmdKeriClone(const char *Cmd) {
     // dynamic bitrate used
     blocks[0] |= 0xF << 18;
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_clone();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf keri clone",
+                  "clone a KERI tag to a T55x7 or Q5/T5555 tag",
+                  "lf keri clone -t i --id 12345\n"
+                  "lf keri clone -t m --fc 6 --id 12345\n");
 
-    // Assume old format for backwards compatibility and only parameter is the internal id
-    cid = param_get32ex(Cmd, 0, 0, 10);
-
-    // find other options
-    while (param_getchar(Cmd, cmdidx) != 0x00) { // && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdidx))) {
-            case 'h': // help
-                return usage_lf_keri_clone();
-            case 't': // format type
-                keritype = tolower(param_getchar(Cmd, cmdidx + 1));
-                cmdidx += 2;
-                break;
-            case 'f': // fc
-                fc =  param_get32ex(Cmd, cmdidx + 1, 0, 10);
-                cmdidx += 2;
-                break;
-            case 'c': // cardid
-                cid =  param_get32ex(Cmd, cmdidx + 1, 0, 10);
-                cmdidx += 2;
-                break;
-            case 'q': // q5
-                blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
-                q5 = true;
-                cmdidx++;
-                break;
-            default:
-                // Skip unknown
-                cmdidx++;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("q",  "q5",            "specify writing to Q5/T5555 tag"),        
+        arg_str0("t",  "type", "<m|i>", "Type m - MS, i - Internal ID"),
+        arg_int0(NULL, "fc",   "<dec>", "Facility Code"),
+        arg_int1(NULL, "id",   "<dec>", "Keri ID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+   
+    if (arg_get_lit(ctx, 1)) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
+        q5 = true;
     }
 
+    CLIGetStrWithReturn(ctx, 2, keritype, &typeLen);
+
+    fc = arg_get_int_def(ctx, 3, 0);
+    cid = arg_get_int_def(ctx, 4, 0);
+    CLIParserFree(ctx);
+
     // Setup card data/build internal id
-    switch (keritype) {
+    switch (keritype[0]) {
         case 'i' : // Internal ID
             // MSB is ONE
             internalid = cid | 0x80000000;
@@ -283,6 +241,9 @@ static int CmdKeriClone(const char *Cmd) {
         case 'm' : // MS
             CmdKeriMSScramble(Scramble, &fc, &cid, &internalid);
             break;
+        default  :
+            PrintAndLogEx(ERR, "Invalid type");
+            return PM3_EINVARG;
     }
 
     // Prepare and write to card
@@ -303,11 +264,23 @@ static int CmdKeriClone(const char *Cmd) {
 
 static int CmdKeriSim(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h')
-        return usage_lf_keri_sim();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf keri sim",
+                  "Enables simulation of KERI card with card number.",
+                  "lf keri sim --id 112233"
+                );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1(NULL, "id", "<dec>", "KERI Internal ID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint64_t internalid = param_get32ex(Cmd, 0, 0, 10);
+    uint64_t internalid = arg_get_int_def(ctx, 1, 0);
+
+    CLIParserFree(ctx);
+    
     internalid |= 0x80000000;
     internalid <<= 3;
     internalid += 7;
