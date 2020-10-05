@@ -2,7 +2,7 @@ version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
 cache:
-  - C:\cache -> appveyor.yml
+  - C:\cache
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
@@ -79,7 +79,6 @@ clone_script:
             Start-Sleep -s 5
             Receive-Job -Job $WSLjob
         }
-        Receive-Job -Wait -Job $PSjob
     }
     
     $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
