@@ -147,9 +147,10 @@ void RunMod(void) {
         int state = STATE_SEARCH;
 
         DbpString("Scanning...");
+        int button_pressed = BUTTON_NO_CLICK;
         for (;;) {
             // Was our button held down or pressed?
-            int button_pressed = BUTTON_HELD(1000);
+            button_pressed = BUTTON_HELD(1000);
 
             if (button_pressed != BUTTON_NO_CLICK || data_available())
                 break;
@@ -248,6 +249,8 @@ void RunMod(void) {
                 state = STATE_SEARCH;
             }
         }
+        if (button_pressed  == BUTTON_HOLD)        //Holding down the button
+            break;
     }
 
     DbpString("exiting");
