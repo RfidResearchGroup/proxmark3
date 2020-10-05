@@ -292,7 +292,7 @@ static int CmdScriptRun(const char *Cmd) {
             // get the top of the stack as the error and pop it off
             const char *str = lua_tostring(lua_state, lua_gettop(lua_state));
             lua_pop(lua_state, 1);
-            puts(str);
+            PrintAndLogEx(FAILED, _RED_("error") " - %s", str);
         }
 
         //luaL_dofile(lua_state, buf);
