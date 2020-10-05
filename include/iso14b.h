@@ -38,6 +38,7 @@ typedef enum ISO14B_COMMAND {
     ISO14B_SET_TIMEOUT =        (1 << 8),
     ISO14B_SEND_CHAINING =      (1 << 9),
     ISO14B_SELECT_CTS =         (1 << 10),
+    ISO14B_CLEARTRACE =         (1 << 11),
 } iso14b_command_t;
 
 #endif // _ISO14B_H_

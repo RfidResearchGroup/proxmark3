@@ -325,8 +325,8 @@ static int cmd_hf_st_sim(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    CLIParserFree(ctx);
 
     if (uidlen != 7) {
         PrintAndLogEx(ERR, "UID must be 7 hex bytes");
@@ -350,12 +350,12 @@ static int cmd_hf_st_ndef(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("p", "password", "<hex>", "16 byte read password"),
+        arg_str0("p", "pwd", "<hex>", "16 byte read password"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-
     CLIGetHexWithReturn(ctx, 1, pwd, &pwdlen);
+    CLIParserFree(ctx);
 
     if (pwdlen == 0) {
         with_pwd = false;
@@ -483,13 +483,10 @@ static int cmd_hf_st_protect(const char *Cmd) {
     disable_protection = arg_get_lit(ctx, 2);
     read_protection = arg_get_lit(ctx, 3);
     write_protection = arg_get_lit(ctx, 4);
-
     CLIGetHexWithReturn(ctx, 5, pwd, &pwdlen);
-
     CLIParserFree(ctx);        
 
     //Validations
-
     if (enable_protection && disable_protection) {
         PrintAndLogEx(ERR, "Must specify either enable or disable protection, not both");
         return PM3_EINVARG;
@@ -625,14 +622,12 @@ static int cmd_hf_st_pwd(const char *Cmd) {
 
     change_read_password = arg_get_lit(ctx, 1);
     change_write_password = arg_get_lit(ctx, 2);
-
     CLIGetHexWithReturn(ctx, 3, pwd, &pwdlen);
-
     CLIGetHexWithReturn(ctx, 4, newpwd, &newpwdlen);
-
+    CLIParserFree(ctx);
+    
     if (change_read_password && change_write_password) {
         PrintAndLogEx(ERR, "Must specify either read or write, not both");
-        CLIParserFree(ctx);        
         return PM3_EINVARG;
     } else {
         if (change_read_password) {
@@ -642,8 +637,6 @@ static int cmd_hf_st_pwd(const char *Cmd) {
             changePwd[2] = 0x02;
         }
     }
-
-    CLIParserFree(ctx);
 
     if (pwdlen != 16) {
         PrintAndLogEx(ERR, "Original write password must be 16 hex bytes");
@@ -727,9 +720,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
         return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, " %s password changed", ((changePwd[2] & 0x01) == 0x01) ? _YELLOW_("read") : _YELLOW_("write"));
-
     return PM3_SUCCESS;
-
 }
 
 static int cmd_hf_st_list(const char *Cmd) {

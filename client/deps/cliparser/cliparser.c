@@ -251,12 +251,13 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (!ibuf)
         return 0;
 
-    if (ibuf > maxdatalen) {
+    if (ibuf + 1 > maxdatalen) {
+        printf("Parameter error: string too long, expect max %i chars\n", maxdatalen - 1);
         fflush(stdout);
         return 2;
     }
 
-    memcpy(data, tmp_buf, ibuf);
+    memcpy(data, tmp_buf, ibuf + 1);
     *datalen = ibuf;
     return 0;
 }

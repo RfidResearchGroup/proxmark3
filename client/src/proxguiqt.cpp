@@ -8,7 +8,7 @@
 // GUI (QT)
 //-----------------------------------------------------------------------------
 #include "proxguiqt.h"
-
+#include <inttypes.h>
 #include <stdbool.h>
 #include <iostream>
 #include <QPainterPath>
@@ -424,7 +424,8 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     if (len == 0) return;
     // clock_t begin = clock();
     QPainterPath penPath;
-    int vMin = INT_MAX, vMax = INT_MIN, vMean = 0, v = 0;
+    int vMin = INT_MAX, vMax = INT_MIN, v = 0;
+    int64_t vMean = 0;
     uint32_t i = 0;
     int x = xCoordOf(GraphStart, plotRect);
     int y = yCoordOf(buffer[GraphStart], plotRect, g_absVMax);
@@ -447,7 +448,8 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
         if (v > vMax) vMax = v;
         vMean += v;
     }
-    vMean /= (i - GraphStart);
+    GraphStop = i;
+    vMean /= (GraphStop - GraphStart);
 
     painter->setPen(getColor(graphNum));
 
@@ -483,10 +485,9 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     //Graph annotations
     painter->drawPath(penPath);
     char str[200];
-    sprintf(str, "max=%d  min=%d  mean=%d  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
-            vMax, vMin, vMean, i, len, buffer[CursorAPos], buffer[CursorBPos]);
+    sprintf(str, "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
+            vMax, vMin, vMean, GraphStop - GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
     painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
-
     //clock_t end = clock();
     //double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
     //printf("Plot time %f\n", elapsed_secs);
@@ -596,10 +597,19 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Draw annotations
     char str[200];
-    sprintf(str, "@%u  dt=%u [%2.2f] zoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
+    char scalestr[30] = {0};
+    if (CursorScaleFactor != 1) {
+        if (CursorScaleFactorUnit[0] == '\x00') {
+            sprintf(scalestr, "[%2.2f] ", ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor);
+        } else {
+            sprintf(scalestr, "[%2.2f %s] ", ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor, CursorScaleFactorUnit);
+        }
+    }
+    sprintf(str, "@%u..%u  dt=%i %szoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
             GraphStart,
+            GraphStop,
             CursorBPos - CursorAPos,
-            ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor,
+            scalestr,
             GraphPixelsPerPoint,
             CursorAPos,
             CursorBPos,
@@ -637,7 +647,7 @@ void Plot::closeEvent(QCloseEvent *event) {
     g_useOverlays = false;
 }
 
-void Plot::Zoom(float factor, int refX) {
+void Plot::Zoom(double factor, int refX) {
     if (factor >= 1) { // Zoom in
         if (GraphPixelsPerPoint <= 25 * factor) {
             GraphPixelsPerPoint *= factor;
@@ -677,14 +687,38 @@ void Plot::Move(int offset) {
     }
 }
 
+void Plot::Trim(void) {
+    uint32_t lref, rref;
+    const double zoom_offset = 1.148698354997035; // 2**(1/5)
+    if ((CursorAPos == 0) || (CursorBPos == 0)) { // if we don't have both cursors set
+        lref = GraphStart;
+        rref = GraphStop;
+    } else {
+        lref = CursorAPos < CursorBPos ? CursorAPos : CursorBPos;
+        rref = CursorAPos < CursorBPos ? CursorBPos : CursorAPos;
+        // GraphPixelsPerPoint mush remain a power of zoom_offset
+        double GPPPtarget = GraphPixelsPerPoint * (GraphStop - GraphStart) / (rref - lref);
+        while (GraphPixelsPerPoint < GPPPtarget) {
+            GraphPixelsPerPoint *= zoom_offset;
+        }
+        GraphPixelsPerPoint /= zoom_offset;
+        CursorAPos -= lref;
+        CursorBPos -= lref;
+    }
+    for (uint32_t i = lref; i < rref; ++i)
+        GraphBuffer[i - lref] = GraphBuffer[i];
+    GraphTraceLen = rref - lref;
+    GraphStart = 0;
+}
+
 void Plot::wheelEvent(QWheelEvent *event) {
     // event->delta()
     //  120 => shift right 5%
     // -120 => shift left 5%
     const float move_offset = 0.05;
-    // -120+shift => zoom in 10%
-    //  120+shift => zoom out 10%
-    const float zoom_offset = 0.1;
+    // -120+shift => zoom in  (5 times = *2)
+    //  120+shift => zoom out (5 times = /2)
+    const double zoom_offset = 1.148698354997035; // 2**(1/5)
     if (event->modifiers() & Qt::ShiftModifier) {
 // event->position doesn't exist in QT5.12.8, both exist in 5.14.2 and event->x doesn't exist in 5.15.0
 #if QT_VERSION >= 0x050d00
@@ -697,10 +731,15 @@ void Plot::wheelEvent(QWheelEvent *event) {
         x += GraphStart;
 // event->angleDelta doesn't exist in QT4, both exist in 5.12.8 and 5.14.2 and event->delta doesn't exist in 5.15.0
 #if QT_VERSION >= 0x050d00
-        Zoom(1.0 - (float)event->angleDelta().y() / (120 / zoom_offset), x);
+        float delta = event->angleDelta().y();
 #else
-        Zoom(1.0 - (float)event->delta() / (120 / zoom_offset), x);
+        float delta = event->delta();
 #endif
+        if (delta < 0) {
+            Zoom(zoom_offset, x);
+        } else {
+            Zoom(1.0 / zoom_offset, x);
+        }
     } else {
 #if QT_VERSION >= 0x050d00
         Move(PageWidth * (-(float)event->angleDelta().y() / (120 / move_offset)));
@@ -794,6 +833,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             puts("\tH                        Show help");
             puts("\tL                        Toggle lock grid relative to samples");
             puts("\tQ                        Hide window");
+            puts("\tT                        Trim data on displayed window or on cursors if defined");
             puts("\tHOME                     Move to the start of the graph");
             puts("\tEND                      Move to the end of the graph");
             puts("\tPGUP                     Page left");
@@ -821,6 +861,10 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
         case Qt::Key_Q:
             master->hide();
+            break;
+
+        case Qt::Key_T:
+            Trim();
             break;
 
         case Qt::Key_Home:

@@ -63,7 +63,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static bool wait_cmd_14b(bool verbose) {
+static bool wait_cmd_14b(bool verbose, bool is_select) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
@@ -71,6 +71,23 @@ static bool wait_cmd_14b(bool verbose) {
         uint16_t len = (resp.oldarg[1] & 0xFFFF);
         uint8_t *data = resp.data.asBytes;
 
+        // handle select responses
+        if (is_select) {
+
+            // 0: OK; -1: attrib fail; -2:crc fail
+            int status = (int)resp.oldarg[0];
+            if (status == 0) {
+                
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        // handle raw bytes responses
         if (verbose) {
 
             if (len >= 3) {
@@ -121,12 +138,14 @@ static int CmdHF14BSim(const char *Cmd) {
     
     uint8_t pupi[4];
     int n = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
+    if (res) {
+        PrintAndLogEx(FAILED, "failed to read pupi");
+        return PM3_EINVARG;
+    }
     CLIParserFree(ctx);
-
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));
-    
+    SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));   
     return PM3_SUCCESS;
 }
 
@@ -161,27 +180,26 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b raw",
                   "Sends raw bytes to card ",
-                  "hf 14b raw -s -c -k 0200a40400\n"
-                  "hf 14b raw --sr -c -k 0200a40400\n"
-                  "hf 14b raw --cts -c -k 0200a40400\n"
+                  "hf 14b raw -cks      --data 0200a40400    -> standard select\n"
+                  "hf 14b raw -ck --sr  --data 0200a40400    -> SRx select\n"
+                  "hf 14b raw -ck --cts --data 0200a40400    -> C-ticket select\n"
                 );
     
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("k", "keep",               "leave the signal field ON after receive response"),
-        arg_lit0("s", "std",                "activate field and select standard card"),
-        arg_lit0(NULL, "sr",                "activate field and select SRx ST"),
-        arg_lit0(NULL, "cts",               "activate field and select ASK C-ticket"),        
-        arg_lit0("c", "crc",                "calculate and append CRC"),
+        arg_lit0("k", "keep",           "leave the signal field ON after receive response"),
+        arg_lit0("s", "std",            "activate field and select standard card"),
+        arg_lit0(NULL, "sr",            "activate field and select SRx ST"),
+        arg_lit0(NULL, "cts",           "activate field and select ASK C-ticket"),        
+        arg_lit0("c", "crc",            "calculate and append CRC"),
         arg_lit0("r", "noresponse",         "do not read response"),
-        arg_int0("t", "timeout", "decimal", "timeout in ms"),
+        arg_int0("t", "timeout",   "<dec>", "timeout in ms"),
         arg_lit0("v", "verbose",            "verbose"),
-        arg_strx0(NULL, NULL,               "<data (hex)>", "bytes to send"),
+        arg_strx0("d", "data",     "<hex>", "data, bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool select = false;   
     bool keep_field_on = arg_get_lit(ctx, 1);
     bool select_std = arg_get_lit(ctx, 2);
     bool select_sr = arg_get_lit(ctx, 3);
@@ -197,25 +215,25 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     }
 
     if (select_std) {
-        select = true;
-        flags |= ISO14B_SELECT_STD;
+        flags |= (ISO14B_SELECT_STD | ISO14B_CLEARTRACE);
         if (verbose)
             PrintAndLogEx(INFO, "using standard select");
     } else if (select_sr) {
-        select = true;
-        flags |= ISO14B_SELECT_SR;
+        flags |= (ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
         if (verbose)
-            PrintAndLogEx(INFO, "using SRx ST select");
+            PrintAndLogEx(INFO, "using ST/SRx select");
     } else if (select_cts) {
-        select = true;
-        flags |= ISO14B_SELECT_CTS;
+        flags |= (ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
         if (verbose)
-            PrintAndLogEx(INFO, "using ASK C-ticket select");
+            PrintAndLogEx(INFO, "using ASK/C-ticket select");
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     int datalen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 9), data, sizeof(data), &datalen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 9), data, sizeof(data), &datalen);
+    if (res && verbose) {
+        PrintAndLogEx(INFO, "called with no raw bytes");
+    }
     CLIParserFree(ctx);
 
     uint32_t time_wait = 0;
@@ -244,18 +262,33 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
     if (read_reply == false) {
+        clearCommandBuffer();
         return PM3_SUCCESS;
     }
 
-    bool success = true;
-    // get back iso14b_card_select_t, don't print it.
-    if (select) {
-        success = wait_cmd_14b(verbose);
+    bool success = true;    
+    // Select, device will send back iso14b_card_select_t, don't print it.
+    if (select_std) {
+        success = wait_cmd_14b(verbose, true);
+        if (verbose && success)
+            PrintAndLogEx(SUCCESS, "Got response for standard select");
+    }
+
+    if (select_sr) {
+        success = wait_cmd_14b(verbose, true);
+        if (verbose && success)
+            PrintAndLogEx(SUCCESS, "Got response for ST/SRx select");
+    }
+
+    if (select_cts) {
+        success = wait_cmd_14b(verbose, true);
+        if (verbose && success)
+            PrintAndLogEx(SUCCESS, "Got response for ASK/C-ticket select");
     }
 
     // get back response from the raw bytes you sent.
     if (success && datalen > 0) {
-        wait_cmd_14b(true);
+        wait_cmd_14b(true, false);
     }
 
     return PM3_SUCCESS;
@@ -1022,7 +1055,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
                      );
     }
 
-    sprintf(str, "-ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
+    sprintf(str, "--ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
     return CmdHF14BCmdRaw(str);
 }
 
@@ -1525,10 +1558,10 @@ static int CmdHF14BAPDU(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b apdu",
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
-                  "hf 14b apdu -s 94a40800043f000002\n"
-                  "hf 14b apdu -sd 00A404000E325041592E5359532E444446303100 -> decode apdu\n"
-                  "hf 14b apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 -> encode standard apdu\n"
-                  "hf 14b apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
+                  "hf 14b apdu -s  --hex 94a40800043f000002\n"
+                  "hf 14b apdu -sd --hex 00A404000E325041592E5359532E444446303100        -> decode apdu\n"
+                  "hf 14b apdu -sm 00A40400 -l 256    --hex 325041592E5359532E4444463031 -> encode standard apdu\n"
+                  "hf 14b apdu -sm 00A40400 -el 65536 --hex 325041592E5359532E4444463031 -> encode extended apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1536,10 +1569,10 @@ static int CmdHF14BAPDU(const char *Cmd) {
         arg_lit0("k",  "keep",     "leave the signal field ON after receive response"),
         arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0("d",  "decode",   "decode apdu request if it possible"),
-        arg_str0("m",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
+        arg_str0("m",  "make",     "<hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
-        arg_int0("l",  "le",       "<Le (int)>", "Le apdu parameter if `m` parameter included"),
-        arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
+        arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
+        arg_strx1(NULL, "hex",     "<hex>", "<APDU | data> if `m` parameter included"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

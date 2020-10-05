@@ -1479,6 +1479,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
     if (recv != NULL) {
         res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
     }
+    FpgaDisableTracing();
     return res;
 }
 
@@ -1494,6 +1495,7 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
     if (recv != NULL) {
         res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
     }
+    FpgaDisableTracing();
     return res;
 }
 

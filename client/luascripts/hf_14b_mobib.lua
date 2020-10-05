@@ -7,16 +7,17 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.4'
+version = 'v1.0.0'
 desc = [[
-This is a script to communicate with a CALYSPO / 14443b tag using the '14b raw' commands
+This is a script to communicate with a MOBIB tag using the '14b raw' commands
 ]]
 example = [[
-    script run hf_14b_calypso -b 11223344
+    script run hf_14b_mobib
+    script run hf_14b_mobib -b 11223344
 
 ]]
 usage = [[
-script run hf_14b_calypso -h -b
+script run hf_14b_mobib -h -b
 ]]
 arguments = [[
       h   this helptext
@@ -114,8 +115,6 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
 
     local command, flags, result, err
     flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
---    flags = lib14b.ISO14B_COMMAND.ISO14B_RAW +
---            lib14b.ISO14B_COMMAND.ISO14B_APPEND_CRC
 
     data = data or "00"
 
@@ -163,48 +162,56 @@ local function calypso_apdu_status(apdu)
     return status, desc, err
 end
 
-local CLA = '94'
+local CLA = '00'
 local _calypso_cmds = {
-
--- Break down of command bytes:
---  A4 = select
---  Master File  3F00
---  0x3F = master file
---  0x00 = master file id, is constant to 0x00.
-
---  DF Dedicated File  38nn
---  can be seen as directories
---  0x38
---  0xNN  id
---  ["01.Select ICC file"] = '0294 a4 080004 3f00 0002',
-
---  EF Elementary File
---  EF1 Pin file
---  EF2 Key file
---  Grey Lock file
---  Electronic deposit file
---  Electronic Purse file
---  Electronic Transaction log file
-
-    ['01.Select ICC file']    = CLA..'a4 080004 3f00 0002',
-    ['02.ICC']                = CLA..'b2 01 041d',
-    ['03.Select EnvHol file'] = CLA..'a4 080004 2000 2001',
-    ['04.EnvHol1']            = CLA..'b2 01 041d',
-    ['05.Select EvLog file']  = CLA..'a4 080004 2000 2010',
-    ['06.EvLog1']             = CLA..'b2 01 041d',
-    ['07.EvLog2']             = CLA..'b2 02 041d',
-    ['08.EvLog3']             = CLA..'b2 03 041d',
-    ['09.Select ConList file']= CLA..'a4 080004 2000 2050',
-    ['10.ConList']            = CLA..'b2 01 041d',
-    ['11.Select Contra file'] = CLA..'a4 080004 2000 2020',
-    ['12.Contra1']            = CLA..'b2 01 041d',
-    ['13.Contra2']            = CLA..'b2 02 041d',
-    ['14.Contra3']            = CLA..'b2 03 041d',
-    ['15.Contra4']            = CLA..'b2 04 041d',
-    ['16.Select Counter file']= CLA..'a4 080004 2000 2069',
-    ['17.Counter']            = CLA..'b2 01 041d',
-    ['18.Select SpecEv file'] = CLA..'a4 080004 2000 2040',
-    ['19.SpecEv1']            = CLA..'b2 01 041d',
+    ['01.SELECT AID 1TIC.ICA']   = CLA..'a4 0400 08 315449432e494341',
+    ['02.Select ICC file a']     = CLA..'a4 0000 02 3f00',
+    ['03.Select ICC file b']     = CLA..'a4 0000 02 0002',
+    ['04.ICC']                   = CLA..'b2 0104 1d',
+    ['05.Select Holder file']    = CLA..'a4 0000 02 3f1c',
+    ['06.Holder1']               = CLA..'b2 0104 1d',
+    ['07.Holder2']               = CLA..'b2 0204 1d',
+    ['08.Select EnvHol file a']  = CLA..'a4 0000 00',
+    ['09.Select EnvHol file b']  = CLA..'a4 0000 02 2000',
+    ['10.Select EnvHol file c']  = CLA..'a4 0000 02 2001',
+    ['11.EnvHol1']               = CLA..'b2 0104 1d',
+    ['11.EnvHol2']               = CLA..'b2 0204 1d',
+    ['12.Select EvLog file']     = CLA..'a4 0000 02 2010',
+    ['13.EvLog1']                = CLA..'b2 0104 1d',
+    ['14.EvLog2']                = CLA..'b2 0204 1d',
+    ['15.EvLog3']                = CLA..'b2 0304 1d',
+    ['16.Select ConList file']   = CLA..'a4 0000 02 2050',
+    ['17.ConList']               = CLA..'b2 0104 1d',
+    ['18.Select Contra file']    = CLA..'a4 0000 02 2020',
+    ['19.Contra1']               = CLA..'b2 0104 1d',
+    ['20.Contra2']               = CLA..'b2 0204 1d',
+    ['21.Contra3']               = CLA..'b2 0304 1d',
+    ['22.Contra4']               = CLA..'b2 0404 1d',
+    ['23.Contra5']               = CLA..'b2 0504 1d',
+    ['24.Contra6']               = CLA..'b2 0604 1d',
+    ['25.Contra7']               = CLA..'b2 0704 1d',
+    ['26.Contra8']               = CLA..'b2 0804 1d',
+    ['27.Contra9']               = CLA..'b2 0904 1d',
+    ['28.ContraA']               = CLA..'b2 0a04 1d',
+    ['29.ContraB']               = CLA..'b2 0b04 1d',
+    ['30.ContraC']               = CLA..'b2 0c04 1d',
+    ['31.Select Counter file']   = CLA..'a4 0000 02 2069',
+    ['32.Counter']               = CLA..'b2 0104 1d',
+    ['33.Select LoadLog file a'] = CLA..'a4 0000 00',
+    ['34.Select LoadLog file b'] = CLA..'a4 0000 02 1000',
+    ['35.Select LoadLog file c'] = CLA..'a4 0000 02 1014',
+    ['36.LoadLog']               = CLA..'b2 0104 1d',
+    ['37.Select Purcha file']    = CLA..'a4 0000 02 1015',
+    ['38.Purcha1']               = CLA..'b2 0104 1d',
+    ['39.Purcha2']               = CLA..'b2 0204 1d',
+    ['40.Purcha3']               = CLA..'b2 0304 1d',
+    ['41.Select SpecEv file a']  = CLA..'a4 0000 00',
+    ['42.Select SpecEv file b']  = CLA..'a4 0000 02 2000',
+    ['43.Select SpecEv file c']  = CLA..'a4 0000 02 2040',
+    ['44.SpecEv1']               = CLA..'b2 0104 1d',
+    ['45.SpecEv2']               = CLA..'b2 0204 1d',
+    ['46.SpecEv3']               = CLA..'b2 0304 1d',
+    ['47.SpecEv4']               = CLA..'b2 0404 1d',
 }
 
 ---
@@ -231,42 +238,26 @@ function main(args)
     calypso_card_num(card)
     cid = card.cid
 
-    --[[
-    NAME        VALUE  APDU_POS
-    PCB         0x0A   0
-    CID         0x00   1
-    CLA         0x94   2
-    SELECT FILE 0xA4   3
-    READ FILE   0xB2   3
-    P1                 4
-    P2                 5
-    LEN_
-             0  1  2  3  4  5  6  7
-    apdu = '02 94 a4 08 00 04 3f 00 00 02'  --select ICC file
-    DF_NAME = "1TIC.ICA"
-    --]]
-    --for i = 1,10 do
-        --result, err = calypso_send_cmd_raw('0294a40800043f000002',false)  --select ICC file
-        for i, apdu in spairs(_calypso_cmds) do
-            print('>> '..ansicolors.yellow..i..ansicolors.reset)
-            apdu = apdu:gsub('%s+', '')
-            result, err = calypso_send_cmd_raw(apdu , false)
-            if err then
-                print('<< '..err)
-            else
-                if result then
-                    local status, desc, err = calypso_apdu_status(result.data)
-                    local d = result.data:sub(3, (#result.data - 8))
-                    if status then
-                        print('<< '..d..' ('..ansicolors.green..'ok'..ansicolors.reset..')')
-                    else
-                        print('<< '..d..' '..ansicolors.red..err..ansicolors.reset )
-                    end
+    for i, apdu in spairs(_calypso_cmds) do
+        print('>> '..ansicolors.yellow..i..ansicolors.reset)
+        apdu = apdu:gsub('%s+', '')
+        result, err = calypso_send_cmd_raw(apdu , false)
+        if err then
+            print('<< '..err)
+        else
+            if result then
+                local status, desc, err = calypso_apdu_status(result.data)
+                local d = result.data:sub(3, (#result.data - 8))
+                if status then
+                    print('<< '..d..' ('..ansicolors.green..'ok'..ansicolors.reset..')')
                 else
-                    print('<< no answer')
+                    print('<< '..d..' '..ansicolors.red..err..ansicolors.reset )
                 end
+            else
+                print('<< no answer')
             end
         end
+    end
     lib14b.disconnect()
 end
 ---

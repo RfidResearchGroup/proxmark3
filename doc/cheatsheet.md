@@ -332,23 +332,25 @@ Convert Site & Facility code to Wiegand raw hex
 ```
 Options
 ---
-w <format> o <OEM> f <FC> c <CN> i <issuelevel>
-w            : wiegand format to use
-o            : OEM number / site code
-f            : facility code
-c            : card number
-i            : issue level
+-w <format> --oem <OEM> --fc <FC> --cn <CN> --issue <issuelevel>
 
-pm3 --> wiegand encode 0 56 150
+-w            : wiegand format to use
+--oem        : OEM number / site code
+--fc         : facility code
+--cn         : card number
+--issue      : issue level
+
+pm3 --> wiegand encode -w H10301 --oem 0 --fc 56  --cn 150
 ```
 
 Convert Site & Facility code from Wiegand raw hex to numbers
 ```
 Options
 ---
-p            : ignore parity errors
+-p           : ignore parity errors
+--raw        : raw hex to be decoded
 
-pm3 --> wiegand decode 2006f623ae
+pm3 --> wiegand decode --raw 2006f623ae
 ```
 
 ## HID Prox
@@ -379,14 +381,18 @@ Brute force HID reader
 ```
 Options
 ---
-a <format>        :  26|33|34|35|37|40|44|84
-f <facility-code> :  8-bit value HID facility code
-c <cardnumber>    :  (optional) cardnumber to start with, max 65535
-d <delay>         :  delay betweens attempts in ms. Default 1000ms
-v                 :  verbose logging, show all tries
+-v, --verbose        : verbose logging, show all tries
+-w, --wiegand format : see `wiegand list` for available formats
+-f, --fn dec         : facility code
+-c, --cn dec         : card number to start with
+-i dec               : issue level
+-o, --oem dec        : OEM code
+-d, --delay dec      : delay betweens attempts in ms. Default 1000ms
+--up                 : direction to increment card number. (default is both directions)
+--down               : direction to decrement card number. (default is both directions)
 
-pm3 --> lf hid brute a 26 f 224
-pm3 --> lf hid brute v a 26 f 21 c 200 d 2000
+pm3 --> lf hid brute -w H10301 -f 224
+pm3 --> lf hid brute -v -w H10301 -f 21 -c 200 -d 2000
 ```
 
 ## Indala
@@ -552,7 +558,7 @@ pm3 --> script list
 View lua helptext
 
 ```
-pm3 --> script run  <nameofscript> -h
+pm3 --> script run <nameofscript> -h
 ```
 
 
@@ -595,15 +601,15 @@ Load default keys into flash memory (RDV4 only)
 ```
 Options
 ---
-o <offset>         : offset in memory
-f <filename>       : file name
-m                  : upload 6 bytes keys (mifare key dictionary)
-i                  : upload 8 bytes keys (iClass key dictionary)
-t                  : upload 4 bytes keys (pwd dictionary)
+-o <offset>         : offset in memory
+-f <filename>       : file name
+--mfc               : upload 6 bytes keys (mifare key dictionary)
+--iclass            : upload 8 bytes keys (iClass key dictionary)
+--t55xx             : upload 4 bytes keys (pwd dictionary)
 
-pm3 --> mem load f mfc_default_keys m
-pm3 --> mem load f t55xx_default_pwds t
-pm3 --> mem load f iclass_default_keys i
+pm3 --> mem load -f mfc_default_keys --mfc
+pm3 --> mem load -f t55xx_default_pwds --t5xx
+pm3 --> mem load -f iclass_default_keys --iclass
 ```
 
 ## Sim Module
