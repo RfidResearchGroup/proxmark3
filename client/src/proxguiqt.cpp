@@ -638,11 +638,12 @@ Plot::Plot(QWidget *parent) : QWidget(parent), GraphStart(0), GraphPixelsPerPoin
     palette.setColor(QPalette::Button, QColor(100, 100, 100));
     setPalette(palette);
     setAutoFillBackground(true);
+
     CursorAPos = 0;
     CursorBPos = 0;
+    GraphStop = 0;
 
     setWindowTitle(tr("Sliders"));
-
     master = parent;
 }
 
