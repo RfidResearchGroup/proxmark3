@@ -139,11 +139,12 @@ static int CmdHF14BSim(const char *Cmd) {
     uint8_t pupi[4];
     int n = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
+    CLIParserFree(ctx);
+    
     if (res) {
         PrintAndLogEx(FAILED, "failed to read pupi");
         return PM3_EINVARG;
     }
-    CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));   
     return PM3_SUCCESS;
