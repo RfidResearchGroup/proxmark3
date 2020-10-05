@@ -1968,6 +1968,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
     } else {
         PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
+        if ((card.sak & 0x20) == 0x20) {
+            PrintAndLogEx(INFO, "SAK incorrectly claims that card supports RATS");
+        }
     }
 
     int isMagic = 0;
