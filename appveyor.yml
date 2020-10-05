@@ -151,6 +151,8 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
+    "dummy" > C\cache\update_cache.txt
+    
     Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\cache" -Force
     
     Get-ChildItem "C:\"
