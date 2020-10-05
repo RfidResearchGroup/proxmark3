@@ -2,7 +2,7 @@ version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
 cache:
-  - C:\cache
+  - C:\cache -> appveyor.yml
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
@@ -180,12 +180,6 @@ install:
     
     Copy-Item -Path "$env:proxspace_cache_path\*" -Destination "$env:proxspace_path\msys2\var\cache\" -Force -Recurse -ErrorAction SilentlyContinue
     
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\"
-    
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\"
-    
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
-    
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
     ExecUpdate "ProxSpace: initial msys2 startup..." $true
@@ -221,6 +215,7 @@ build_script:
     
     $WSLjob = Start-Job -Name WSLCompile -ScriptBlock { 
         Function ExecWSLCmd($Cmd) {
+            cd $env:wsl_git_path   
             wsl -- bash -c $Cmd
         }
         
@@ -244,7 +239,6 @@ build_script:
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
-        cd $env:wsl_git_path   
         $TestTime=[System.Environment]::TickCount
         ExecWSLCmd "make clean;make V=1"  
         #some checks
