@@ -54,7 +54,7 @@ void RunMod(void) {
     for (;;) {
         WDT_HIT();
         // exit from Standalone Mode,   send a usbcommand.
-        if (data_available()) return;
+        if (data_available()) break;
 
         SpinDelay(300);
 
@@ -72,7 +72,7 @@ void RunMod(void) {
 
             for (;;) {
                 // exit from Standalone Mode,   send a usbcommand.
-                if (data_available()) return;
+                if (data_available()) break;
 
                 if (BUTTON_PRESS()) {
                     if (cardRead[selected]) {
@@ -223,7 +223,7 @@ void RunMod(void) {
             DbpString("Playing");
             for (; ;) {
                 // exit from Standalone Mode,   send a usbcommand.
-                if (data_available()) return;
+                if (data_available()) break;
 
                 int button_pressed = BUTTON_HELD(1000);
                 if (button_pressed == BUTTON_NO_CLICK) {  // No button action, proceed with sim
@@ -280,4 +280,6 @@ void RunMod(void) {
             LED(selected + 1, 0);
         }
     }
+    DbpString(_YELLOW_("[=]") "exiting");
+    LEDsoff();
 }
