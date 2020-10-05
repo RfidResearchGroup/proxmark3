@@ -1049,6 +1049,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_reset();
             break;
         }
+        case CMD_LF_EM4X50_WATCH: {
+            em4x50_watch();
+            break;
+        }
 #endif
 
 #ifdef WITH_ISO15693

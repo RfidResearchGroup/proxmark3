@@ -1403,3 +1403,48 @@ int em4x50_standalone_read(uint64_t *words) {
 
     return now;
 }
+
+void em4x50_watch() {
+
+    // reads continuously and displays standard reads of tag
+
+    int now = 0;
+    
+    init_tag();
+    em4x50_setup_read();
+
+    while (BUTTON_PRESS() == false) {
+
+        WDT_HIT();
+        init_tag();
+        now = 0;
+
+        if (get_signalproperties() && find_em4x50_tag()) {
+            
+            standard_read(&now);
+
+            if (now > 0) {
+
+                Dbprintf("");
+                for (int i = 0; i < now; i++) {
+                    
+                    Dbprintf("EM4x50 TAG ID: "
+                             _GREEN_("%02x%02x%02x%02x") " (msb) - "
+                             _GREEN_("%02x%02x%02x%02x") " (lsb)",
+                             tag.sectors[i][0],
+                             tag.sectors[i][1],
+                             tag.sectors[i][2],
+                             tag.sectors[i][3],
+                             reflect8(tag.sectors[i][3]),
+                             reflect8(tag.sectors[i][2]),
+                             reflect8(tag.sectors[i][1]),
+                             reflect8(tag.sectors[i][0]));
+                }
+            }
+        }
+    }
+
+    LOW(GPIO_SSC_DOUT);
+    lf_finalize();
+    reply_ng(CMD_ACK, 1, 0, 0);
+}
