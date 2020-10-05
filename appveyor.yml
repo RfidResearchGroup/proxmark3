@@ -236,6 +236,8 @@ build_script:
         
         #WSL: wait for installation to finish
         Receive-Job -Wait -Name WSLInstall -ErrorAction SilentlyContinue
+        
+        Add-AppveyorMessage -Message "WSL start" -Category Information
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
