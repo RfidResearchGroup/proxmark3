@@ -212,6 +212,8 @@ build_script:
         }
     }
     
+    $WSLInstalljob = Get-Job -Name WSLInstall
+    
     $WSLjob = Start-Job -Name WSLCompile -ScriptBlock { 
         Function ExecWSLCmd($Cmd) {
             cd $env:wsl_git_path   
@@ -264,7 +266,7 @@ build_script:
         Write-Host "---------- WSL cmake tests ----------" -ForegroundColor Yellow
         ExecWSLCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3 client'  
         ExecCheck "WSL cmake Tests"
-    } -InputObject Get-Job -Name WSLInstall
+    } -InputObject $WSLInstalljob
     
     #ProxSpace
     
