@@ -2,14 +2,14 @@ version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
 cache:
-  - C:\cache -> appveyor.yml
+  - C:\ps-cache -> appveyor.yml
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
   proxspace_zip_folder_name: ProxSpace-*
   proxspace_path: C:\ProxSpace
   proxspace_home_path: \ProxSpace\pm3
-  proxspace_cache_path: C:\cache
+  proxspace_cache_path: C:\ps-cache
   wsl_git_path: C:\proxmark
   APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
