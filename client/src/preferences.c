@@ -52,6 +52,7 @@ int preferences_load(void) {
     session.overlay.y = 60 + session.plot.y + session.plot.h;
     session.overlay.h = 200;
     session.overlay.w = session.plot.w;
+    session.overlay_sliders = true;
     session.show_hints = false;
 
 //    setDefaultPath (spDefault, "");
@@ -185,6 +186,7 @@ void preferences_save_callback(json_t *root) {
     JsonSaveInt(root, "window.overlay.ypos", session.overlay.y);
     JsonSaveInt(root, "window.overlay.hsize", session.overlay.h);
     JsonSaveInt(root, "window.overlay.wsize", session.overlay.w);
+    JsonSaveBoolean(root, "window.overlay.sliders", session.overlay_sliders);
 
     // Log level, convert to text
     switch (session.client_debug_level) {
@@ -270,6 +272,8 @@ void preferences_load_callback(json_t *root) {
         session.overlay.h = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.overlay.wsize", &i1) == 0)
         session.overlay.w = i1;
+    if (json_unpack_ex(root, &up_error, 0, "{s:b}", "window.overlay.sliders", &b1) == 0)
+        session.overlay_sliders = b1;
 
     // show options
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "show.emoji", &s1) == 0) {
@@ -353,6 +357,16 @@ static int usage_set_hints(void) {
     PrintAndLogEx(NORMAL, "     "_GREEN_("on")"          - Display hints");
     return PM3_SUCCESS;
 }
+
+static int usage_set_plotsliders(void) {
+    PrintAndLogEx(NORMAL, "Usage: pref set plotsliders <on | off>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("on")"          - show plot slider controls");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - hide plot slider controls");
+    return PM3_SUCCESS;
+}
+
 /*
 static int usage_set_savePaths(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set savepaths [help] [create] [default <path>] [dump <path>] [trace <path>]");
@@ -490,6 +504,13 @@ static void showHintsState(prefShowOpt_t opt) {
         PrintAndLogEx(INFO, "   %s hints.................. "_GREEN_("on"), prefShowMsg(opt));
     else
         PrintAndLogEx(INFO, "   %s hints.................. "_WHITE_("off"), prefShowMsg(opt));
+}
+
+static void showPlotSliderState(prefShowOpt_t opt) {
+    if (session.overlay_sliders)
+        PrintAndLogEx(INFO, "   %s show plot sliders...... "_GREEN_("on"), prefShowMsg(opt));
+    else
+        PrintAndLogEx(INFO, "   %s show plot sliders...... "_WHITE_("off"), prefShowMsg(opt));
 }
 
 
@@ -755,6 +776,52 @@ static int setCmdHint(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
+static int setCmdPlotSliders(const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool validValue = false;
+    char strOpt[50];
+    bool newValue = session.overlay_sliders;
+
+    if (param_getchar(Cmd, cmdp) == 0x00)
+        return usage_set_plotsliders();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+
+        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp(strOpt, "help", 4) == 0)
+                return usage_set_plotsliders();
+            if (strncmp(strOpt, "off", 3) == 0) {
+                validValue = true;
+                newValue = false;
+            }
+            if (strncmp(strOpt, "on", 2) == 0) {
+                validValue = true;
+                newValue = true;
+            }
+
+            if (validValue) {
+                if (session.overlay_sliders != newValue) {// changed
+                    showPlotSliderState(prefShowOLD);
+                    session.overlay_sliders = newValue;
+                    showPlotSliderState(prefShowNEW);
+                    preferences_save();
+                } else {
+                    PrintAndLogEx(INFO, "nothing changed");
+                    showPlotSliderState(prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR, "invalid option");
+                return usage_set_plotsliders();
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 /*
 static int setCmdSavePaths (const char *Cmd) {
     uint8_t cmdp = 0;
@@ -866,6 +933,11 @@ static int getCmdDebug(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getCmdPlotSlider(const char *Cmd) {
+    showPlotSliderState(prefShowNone);
+    return PM3_SUCCESS;
+}
+
 static command_t getCommandTable[] = {
 //     {"help",             getCmdHelp,          AlwaysAvailable, "This help"},
     {"emoji",            getCmdEmoji,         AlwaysAvailable, "Get emoji display preference"},
@@ -873,6 +945,7 @@ static command_t getCommandTable[] = {
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     //  {"defaultsavepaths", getCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
     {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
+    {"plotsliders",      getCmdPlotSlider,    AlwaysAvailable, "Get plot slider display preference"},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
     {NULL, NULL, NULL, NULL}
 };
@@ -884,6 +957,7 @@ static command_t setCommandTable[] = {
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     //  {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
     {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
+    {"plotsliders",setCmdPlotSliders,         AlwaysAvailable, "Set plot slider display"},
     //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
     {NULL, NULL, NULL, NULL}
 };
@@ -925,8 +999,8 @@ static int CmdPrefShow(const char *Cmd) {
     //  showSavePathState(spDefault, prefShowNone);
     //  showSavePathState(spDump, prefShowNone);
     //  showSavePathState(spTrace, prefShowNone);
-
     showClientDebugState(prefShowNone);
+    showPlotSliderState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
