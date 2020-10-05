@@ -315,8 +315,6 @@ build_script:
     
     ExecMinGWCmd 'mkdir -p client/build; cd client/build; cmake -G""MSYS Makefiles"" ..; make VERBOSE=1;'
     
-    ExecMinGWCmd 'cat /pm3/proxmark/client/build/CMakeFiles/CMakeOutput.log'
-    
     Write-Host "---------- PS cmake tests ----------" -ForegroundColor Yellow
 
     ExecMinGWCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
