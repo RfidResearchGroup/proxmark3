@@ -155,6 +155,9 @@ void RunMod(void) {
                 break;
             else if (state == STATE_SEARCH) {
                 if (!iso14443a_select_card(NULL, &card, NULL, true, 0, true)) {
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    LED_D_OFF();
+                    SpinDelay(500);
                     continue;
                 } else {
                     if (card.sak == SAK && card.atqa[0] == ATQA0 && card.atqa[1] == ATQA1 && card.uidlen == 7) {
