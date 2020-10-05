@@ -67,7 +67,7 @@ clone_script:
         WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
-        New-Item -ItemType "file" -Path "C:\WSL-Finished.txt" -Force
+        New-Item -ItemType "file" -Path "C:\WSL-Finished.txt" -Force | Out-Null
     }
     
     $env:PSInstallTime=[System.Environment]::TickCount
