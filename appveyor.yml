@@ -154,9 +154,9 @@ install:
             }
             
             Start-Sleep -s 5
-            Receive-Job -Name WSLInstall
+            Receive-Job -Name WSLInstall -ErrorAction SilentlyContinue
         }
-        Receive-Job -Wait -Name PSInstall
+        #Receive-Job -Wait -Name PSInstall
     }
     
     Function GitClone($Text, $Folder) {
