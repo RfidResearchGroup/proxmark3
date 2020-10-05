@@ -29,7 +29,6 @@ init:
 
     $releasename+=$env:APPVEYOR_BUILD_VERSION + " [" + $env:APPVEYOR_REPO_COMMIT_SHORT + "]"
 
-
     Write-Host "repository: $env:appveyor_repo_name branch:$env:APPVEYOR_REPO_BRANCH release: $releasename" -ForegroundColor Yellow
 
     Add-AppveyorMessage -Message "[$env:APPVEYOR_REPO_COMMIT_SHORT]$env:appveyor_repo_name($env:APPVEYOR_REPO_BRANCH)" -Category Information -Details "repository: $env:appveyor_repo_name branch: $env:APPVEYOR_REPO_BRANCH release: $releasename"
@@ -239,12 +238,14 @@ build_script:
         
         #WSL: wait for installation to finish
         if($env:wsl_install_running){
-            Write-Host "Waiting for WSL installation to finish..."
+            Write-Host "Waiting for WSL installation to finish..." -NoNewLine
             while($env:wsl_install_running) {
-                Start-Sleep -s 1
+                Start-Sleep -s 5
             }
             Write-Host "$Name [ OK ]" -ForegroundColor Green
         }
+        
+        Add-AppveyorMessage -Message "WSL start: $env:wsl_install_running" -Category Information
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
@@ -333,7 +334,6 @@ build_script:
     Receive-Job -Wait -Name WSLInstall -ErrorAction SilentlyContinue
     
     Receive-Job -Wait -Job $WSLjob
-
     
 test_script:
 - ps: >-
