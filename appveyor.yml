@@ -152,13 +152,11 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Get-ChildItem "C:\cache"
+    Copy-Item -Path "C:\cache\*" -Destination "$env:proxspace_path\msys2\var\cache\pacman\pkg" -Recurse -Force
     
-    Copy-Item -Path "C:\cache\*" -Destination "$env:proxspace_path\msys2\var\cache\pacman\pkg" -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem "C:\cache\"
     
-    Get-ChildItem "C:\cache"
-    
-    Get-ChildItem $env:proxspace_path\msys2\var\cache\pacman\pkg
+    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
@@ -175,6 +173,10 @@ clone_script:
     GitClone "ProxSpace: Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." $env:appveyor_build_folder
     
     GitClone "WSL: Cloning repository <$env:appveyor_repo_name> to $env:wsl_git_path ..." $env:wsl_git_path
+    
+    Get-ChildItem "C:\cache\"
+    
+    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
 
 install:
@@ -261,15 +263,17 @@ build_script:
     
     Write-Host "ProxSpace: create new cache..." -NoNewLine
     
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
-    
     ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
     
-    Remove-Item -Recurse -Force -Path "C:\cache\*" -ErrorAction SilentlyContinue
+    #Remove-Item -Recurse -Force -Path "C:\cache\*" -ErrorAction SilentlyContinue
+    
+    Get-ChildItem "C:\cache\"
+    
+    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
     Copy-Item -Path "$env:proxspace_path\msys2\var\cache\pacman\pkg\*" -Destination "C:\cache" -Recurse -Force
     
-    Get-ChildItem "C:\cache"
+    Get-ChildItem "C:\cache\"
     
     Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
