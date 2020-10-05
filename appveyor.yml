@@ -9,6 +9,7 @@ environment:
   proxspace_zip_folder_name: ProxSpace-*
   proxspace_path: C:\ProxSpace
   proxspace_home_path: \ProxSpace\pm3
+  proxspace_cache_path: C:\cache
   wsl_git_path: C:\proxmark
   APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
@@ -70,6 +71,8 @@ clone_script:
     }
     
     Write-Host "ProxSpace: Removing folder..." -NoNewLine
+    
+    cd \
     
     Remove-Item -Recurse -Force -Path $env:proxspace_path -ErrorAction SilentlyContinue
     
@@ -174,11 +177,7 @@ install:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\cache" -Force
-    
-    Get-ChildItem "C:\"
-    
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
+    Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
@@ -271,17 +270,9 @@ build_script:
     
     ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
     
-    Get-ChildItem "C:\cache\"
+    Remove-Item -Recurse -Force -Path "$env:proxspace_cache_path" -ErrorAction SilentlyContinue
     
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\" 
-    
-    Remove-Item -Recurse -Force -Path C:\cache -ErrorAction SilentlyContinue
-    
-    Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "C:\cache" -Force
-    
-    Get-ChildItem "C:\cache\"
-    
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
+    Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "$env:proxspace_cache_path" -Force
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
     
