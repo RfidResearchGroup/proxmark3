@@ -426,6 +426,7 @@ static int CmdHIDBrute(const char *Cmd) {
     format_idx = HIDFindCardFormat((char*) format);
     if (format_idx == -1) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -434,6 +435,8 @@ static int CmdHIDBrute(const char *Cmd) {
     cn_hi.IssueLevel = arg_get_int_def(ctx, 5, 0);
     cn_hi.OEM = arg_get_int_def(ctx, 6, 0);
     delay = arg_get_int_def(ctx, 7, 1000);
+
+    CLIParserFree(ctx);
 
     if (arg_get_lit(ctx, 8) && arg_get_lit(ctx, 9)) {
         direction = 0;
