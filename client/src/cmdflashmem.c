@@ -459,7 +459,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     mbedtls_mpi_write_string(&rsa.E, 16, str_exp, sizeof(str_exp), &exlen);
     mbedtls_mpi_write_string(&rsa.N, 16, str_pk, sizeof(str_pk), &pklen);
 
-    PrintAndLogEx(INFO, "Len.................. %u", rsa.len);
+    PrintAndLogEx(INFO, "Len.................. %"PRIu64, rsa.len);
     PrintAndLogEx(INFO, "Exponent............. %s", str_exp);
     PrintAndLogEx(INFO, "Public key modulus N");
     PrintAndLogEx(INFO, " %.64s", str_pk);
