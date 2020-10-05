@@ -647,7 +647,7 @@ void Plot::closeEvent(QCloseEvent *event) {
     g_useOverlays = false;
 }
 
-void Plot::Zoom(float factor, int refX) {
+void Plot::Zoom(double factor, int refX) {
     if (factor >= 1) { // Zoom in
         if (GraphPixelsPerPoint <= 25 * factor) {
             GraphPixelsPerPoint *= factor;
@@ -710,9 +710,9 @@ void Plot::wheelEvent(QWheelEvent *event) {
     //  120 => shift right 5%
     // -120 => shift left 5%
     const float move_offset = 0.05;
-    // -120+shift => zoom in 10%
-    //  120+shift => zoom out 10%
-    const float zoom_offset = 0.1;
+    // -120+shift => zoom in  (5 times = *2)
+    //  120+shift => zoom out (5 times = /2)
+    const double zoom_offset = 1.148698354997035; // 2**(1/5)
     if (event->modifiers() & Qt::ShiftModifier) {
 // event->position doesn't exist in QT5.12.8, both exist in 5.14.2 and event->x doesn't exist in 5.15.0
 #if QT_VERSION >= 0x050d00
@@ -730,9 +730,9 @@ void Plot::wheelEvent(QWheelEvent *event) {
         float delta = event->delta();
 #endif
         if (delta < 0) {
-            Zoom(1.0 - (float)delta / (120 / zoom_offset), x);
+            Zoom(zoom_offset, x);
         } else {
-            Zoom(1.0 / (1.0 + (float)delta / (120 / zoom_offset)), x);
+            Zoom(1.0 / zoom_offset, x);
         }
     } else {
 #if QT_VERSION >= 0x050d00
