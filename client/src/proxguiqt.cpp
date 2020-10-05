@@ -647,19 +647,23 @@ void Plot::closeEvent(QCloseEvent *event) {
     g_useOverlays = false;
 }
 
-void Plot::Zoom(double factor, int refX) {
+void Plot::Zoom(double factor, uint32_t refX) {
     if (factor >= 1) { // Zoom in
         if (GraphPixelsPerPoint <= 25 * factor) {
             GraphPixelsPerPoint *= factor;
-            GraphStart += (refX - GraphStart) - ((refX - GraphStart) / factor);
+            if (refX > GraphStart) {
+                GraphStart += (refX - GraphStart) - ((refX - GraphStart) / factor);
+            }
         }
     } else {          // Zoom out
         if (GraphPixelsPerPoint >= 0.01 / factor) {
             GraphPixelsPerPoint *= factor;
-            if (GraphStart >= ((refX - GraphStart) / factor) - (refX - GraphStart)) {
-                GraphStart -= ((refX - GraphStart) / factor) - (refX - GraphStart);
-            } else {
-                GraphStart = 0;
+            if (refX > GraphStart) {
+                if (GraphStart >= ((refX - GraphStart) / factor) - (refX - GraphStart)) {
+                    GraphStart -= ((refX - GraphStart) / factor) - (refX - GraphStart);
+                } else {
+                    GraphStart = 0;
+                }
             }
         }
     }
@@ -722,9 +726,9 @@ void Plot::wheelEvent(QWheelEvent *event) {
     if (event->modifiers() & Qt::ShiftModifier) {
 // event->position doesn't exist in QT5.12.8, both exist in 5.14.2 and event->x doesn't exist in 5.15.0
 #if QT_VERSION >= 0x050d00
-        int x = event->position().x();
+        uint32_t x = event->position().x();
 #else
-        int x = event->x();
+        uint32_t x = event->x();
 #endif
         x -= WIDTH_AXES;
         x = (int)(x / GraphPixelsPerPoint);
@@ -765,6 +769,7 @@ void Plot::mouseMoveEvent(QMouseEvent *event) {
 
 void Plot::keyPressEvent(QKeyEvent *event) {
     uint32_t offset; // Left/right movement offset (in sample size)
+    const double zoom_offset = 1.148698354997035; // 2**(1/5)
 
     if (event->modifiers() & Qt::ShiftModifier) {
         if (PlotGridX)
@@ -781,17 +786,33 @@ void Plot::keyPressEvent(QKeyEvent *event) {
     switch (event->key()) {
         case Qt::Key_Down:
             if (event->modifiers() & Qt::ShiftModifier) {
-                Zoom(2, CursorBPos);
+                if (event->modifiers() & Qt::ControlModifier) {
+                    Zoom(zoom_offset, CursorBPos);
+                } else {
+                    Zoom(2, CursorBPos);
+                }
             } else {
-                Zoom(2, CursorAPos);
+                if (event->modifiers() & Qt::ControlModifier) {
+                    Zoom(zoom_offset, CursorAPos);
+                } else {
+                    Zoom(2, CursorAPos);
+                }
             }
             break;
 
         case Qt::Key_Up:
             if (event->modifiers() & Qt::ShiftModifier) {
-                Zoom(0.5, CursorBPos);
+                if (event->modifiers() & Qt::ControlModifier) {
+                    Zoom(1.0/zoom_offset, CursorBPos);
+                } else {
+                    Zoom(0.5, CursorBPos);
+                }
             } else {
-                Zoom(0.5, CursorAPos);
+                if (event->modifiers() & Qt::ControlModifier) {
+                    Zoom(1.0/zoom_offset, CursorAPos);
+                } else {
+                    Zoom(0.5, CursorAPos);
+                }
             }
             break;
 
