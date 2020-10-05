@@ -2,7 +2,7 @@ version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
 cache:
-  - C:\cache
+  - C:\cache -> appveyor.yml
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
@@ -69,6 +69,8 @@ clone_script:
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
     }
+    
+    $env:PSInstallTime=[System.Environment]::TickCount
     
     Write-Host "ProxSpace: Removing folder..." -NoNewLine
     
@@ -171,13 +173,9 @@ install:
         Write-Host "[ OK ]" -ForegroundColor Green 
     }
     
-    $PSInstallTime=[System.Environment]::TickCount
-    
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
     Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force
-    
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
@@ -185,7 +183,7 @@ install:
     
     ExecUpdate "ProxSpace: installing required packages..." $false    
     
-    Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$PSInstallTime) / 1000) sec" -Category Information
+    Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$env:PSInstallTime) / 1000) sec" -Category Information
 
 build_script:
 - ps: >-
