@@ -173,11 +173,11 @@ install:
     
     $PSInstallTime=[System.Environment]::TickCount
     
-    Write-Host "[ OK ]" -ForegroundColor Gree 
-    
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
     Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force
+    
+    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
