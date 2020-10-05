@@ -203,7 +203,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     data_len = hdr->data_len;
 
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
-        PrintAndLogEx(DEBUG, "trace pos offset %"PRIu32 " larger than reported tracelen %u", tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr), traceLen);
+        PrintAndLogEx(DEBUG, "trace pos offset %"PRIu64 " larger than reported tracelen %u", tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr), traceLen);
         return traceLen;
     }
 
