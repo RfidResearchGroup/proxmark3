@@ -324,8 +324,9 @@ on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
 - ps: >-
- # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-
+    
+    # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    
     Write-Host "ProxSpace: create new cache..." -NoNewLine
     
     cd $env:proxspace_path
@@ -337,3 +338,4 @@ on_finish:
     Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "$env:proxspace_cache_path" -Force
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
+    
