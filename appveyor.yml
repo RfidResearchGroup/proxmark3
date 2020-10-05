@@ -52,8 +52,6 @@ clone_script:
         Write-Host "[ OK ]" -ForegroundColor Green 
     }
     
-    $env:wsl_install_running = true
-    
     $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
         Function WSLExec($Text, $Cmd) {
             Write-Host "$Text" 
@@ -69,7 +67,6 @@ clone_script:
         WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
-        $env:wsl_install_running = false
     }
     
     $env:PSInstallTime=[System.Environment]::TickCount
@@ -237,13 +234,7 @@ build_script:
         }
         
         #WSL: wait for installation to finish
-        if($env:wsl_install_running){
-            Write-Host "Waiting for WSL installation to finish..." -NoNewLine
-            while($env:wsl_install_running) {
-                Start-Sleep -s 5
-            }
-            Write-Host "$Name [ OK ]" -ForegroundColor Green
-        }
+        Receive-Job -Wait -Job $input -ErrorAction SilentlyContinue
         
         Add-AppveyorMessage -Message "WSL start: $env:wsl_install_running" -Category Information
     
@@ -273,7 +264,7 @@ build_script:
         Write-Host "---------- WSL cmake tests ----------" -ForegroundColor Yellow
         ExecWSLCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3 client'  
         ExecCheck "WSL cmake Tests"
-    }
+    } -InputObject Get-Job -Name WSLInstall
     
     #ProxSpace
     
@@ -330,8 +321,6 @@ build_script:
     ExecMinGWCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
     
     ExecCheck "PS cmake Tests"
-    
-    Receive-Job -Wait -Name WSLInstall -ErrorAction SilentlyContinue
     
     Receive-Job -Wait -Job $WSLjob
     
