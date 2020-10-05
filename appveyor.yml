@@ -153,7 +153,7 @@ clone_script:
     
     Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\cache" -Force
     
-    Get-ChildItem "C:\cache\"
+    Get-ChildItem "C:\"
     
     Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
@@ -183,8 +183,6 @@ build_script:
 - ps: >-
 
     $pmfolder = Split-Path $env:appveyor_build_folder -Leaf
-    
-    Get-ChildItem "C:\cache"
     
     Function ExecMinGWCmd($Cmd) {
         cd $env:proxspace_path
@@ -267,6 +265,8 @@ build_script:
     Get-ChildItem "C:\cache\"
     
     Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\" 
+    
+    Remove-Item -Recurse -Force -Path C:\cache -ErrorAction SilentlyContinue
     
     Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "C:\cache" -Force
     
