@@ -63,7 +63,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static bool wait_cmd_14b(bool verbose) {
+static bool wait_cmd_14b(bool verbose, bool is_select) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
@@ -71,6 +71,23 @@ static bool wait_cmd_14b(bool verbose) {
         uint16_t len = (resp.oldarg[1] & 0xFFFF);
         uint8_t *data = resp.data.asBytes;
 
+        // handle select responses
+        if (is_select) {
+
+            // 0: OK; -1: attrib fail; -2:crc fail
+            int status = (int)resp.oldarg[0];
+            if (status == 0) {
+                
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        // handle raw bytes responses
         if (verbose) {
 
             if (len >= 3) {
@@ -121,12 +138,14 @@ static int CmdHF14BSim(const char *Cmd) {
     
     uint8_t pupi[4];
     int n = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
+    if (res) {
+        PrintAndLogEx(FAILED, "failed to read pupi");
+        return PM3_EINVARG;
+    }
     CLIParserFree(ctx);
-
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));
-    
+    SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));   
     return PM3_SUCCESS;
 }
 
@@ -181,7 +200,6 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool select = false;   
     bool keep_field_on = arg_get_lit(ctx, 1);
     bool select_std = arg_get_lit(ctx, 2);
     bool select_sr = arg_get_lit(ctx, 3);
@@ -197,25 +215,25 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     }
 
     if (select_std) {
-        select = true;
-        flags |= ISO14B_SELECT_STD;
+        flags |= (ISO14B_SELECT_STD | ISO14B_CLEARTRACE);
         if (verbose)
             PrintAndLogEx(INFO, "using standard select");
     } else if (select_sr) {
-        select = true;
-        flags |= ISO14B_SELECT_SR;
+        flags |= (ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
         if (verbose)
-            PrintAndLogEx(INFO, "using SRx ST select");
+            PrintAndLogEx(INFO, "using ST/SRx select");
     } else if (select_cts) {
-        select = true;
-        flags |= ISO14B_SELECT_CTS;
+        flags |= (ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
         if (verbose)
-            PrintAndLogEx(INFO, "using ASK C-ticket select");
+            PrintAndLogEx(INFO, "using ASK/C-ticket select");
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     int datalen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 9), data, sizeof(data), &datalen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 9), data, sizeof(data), &datalen);
+    if (res && verbose) {
+        PrintAndLogEx(INFO, "called with no raw bytes");
+    }
     CLIParserFree(ctx);
 
     uint32_t time_wait = 0;
@@ -244,18 +262,33 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
     if (read_reply == false) {
+        clearCommandBuffer();
         return PM3_SUCCESS;
     }
 
-    bool success = true;
-    // get back iso14b_card_select_t, don't print it.
-    if (select) {
-        success = wait_cmd_14b(verbose);
+    bool success = true;    
+    // Select, device will send back iso14b_card_select_t, don't print it.
+    if (select_std) {
+        success = wait_cmd_14b(verbose, true);
+        if (verbose && success)
+            PrintAndLogEx(SUCCESS, "Got response for standard select");
+    }
+
+    if (select_sr) {
+        success = wait_cmd_14b(verbose, true);
+        if (verbose && success)
+            PrintAndLogEx(SUCCESS, "Got response for ST/SRx select");
+    }
+
+    if (select_cts) {
+        success = wait_cmd_14b(verbose, true);
+        if (verbose && success)
+            PrintAndLogEx(SUCCESS, "Got response for ASK/C-ticket select");
     }
 
     // get back response from the raw bytes you sent.
     if (success && datalen > 0) {
-        wait_cmd_14b(true);
+        wait_cmd_14b(true, false);
     }
 
     return PM3_SUCCESS;
@@ -1539,7 +1572,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         arg_str0("m",  "make",     "<hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
-        arg_strx1("h", "hex",      "<hex>", "<APDU | data> if `m` parameter included"),
+        arg_strx1(NULL, "hex",     "<hex>", "<APDU | data> if `m` parameter included"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
