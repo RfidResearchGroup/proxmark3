@@ -176,7 +176,9 @@ install:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path "$env:proxspace_path\msys2\var\cache\"
+    
+    Copy-Item -Path "$env:proxspace_cache_path\*" -Destination "$env:proxspace_path\msys2\var\cache\" -Force -Recurse -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
