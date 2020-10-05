@@ -2,7 +2,7 @@ version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
 cache:
-  - C:\ps-cache -> appveyor.yml
+  - C:\ps-cache
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
@@ -53,9 +53,7 @@ clone_script:
         Write-Host "[ OK ]" -ForegroundColor Green 
     }
     
-    $env:wsl_installed = false
-    
-    $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
+    $env:WSLInstalljob = Start-Job -Name WSLInstall -ScriptBlock { 
         Function WSLExec($Text, $Cmd) {
             Write-Host "$Text" 
             wsl -- bash -c $Cmd
@@ -70,7 +68,6 @@ clone_script:
         WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
-        $env:wsl_installed = true
     }
     
     $env:PSInstallTime=[System.Environment]::TickCount
@@ -157,7 +154,7 @@ install:
             }
             
             Start-Sleep -s 5
-            Receive-Job -Name WSLInstall -ErrorAction SilentlyContinue
+            Receive-Job -Job $env:WSLInstalljob -ErrorAction SilentlyContinue
         }
         #Receive-Job -Wait -Name PSInstall
     }
@@ -238,9 +235,7 @@ build_script:
         }
         
         #WSL: wait for installation to finish
-        while(!$env:wsl_installed) {
-            Start-Sleep -s 5
-        }
+        Receive-Job -Job $env:WSLInstalljob -ErrorAction SilentlyContinue
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
