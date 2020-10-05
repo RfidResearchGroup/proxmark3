@@ -79,7 +79,8 @@ static bool wait_cmd_14b(bool verbose, bool is_select) {
             if (status == 0) {
                 
                 if (verbose) {
-                    PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
+                    PrintAndLogEx(SUCCESS, "received " _YELLOW_("%u") " bytes", len);   
+                    PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
                 }
                 return true;
             } else {
@@ -93,8 +94,8 @@ static bool wait_cmd_14b(bool verbose, bool is_select) {
             if (len >= 3) {
                 bool crc = check_crc(CRC_14443_B, data, len);
 
-                PrintAndLogEx(SUCCESS, "len %u | %s[%02X %02X] %s",
-                              len,
+                PrintAndLogEx(SUCCESS, "received " _YELLOW_("%u") " bytes", len);
+                PrintAndLogEx(SUCCESS, "%s[%02X %02X] %s",
                               sprint_hex(data, len - 2),
                               data[len - 2],
                               data[len - 1],
@@ -104,12 +105,12 @@ static bool wait_cmd_14b(bool verbose, bool is_select) {
                 if (verbose)
                     PrintAndLogEx(INFO, "no response from tag");
             } else {
-                PrintAndLogEx(SUCCESS, "len %u | %s", len, sprint_hex(data, len));
+                PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
             }
         }
         return true;
     } else {
-        PrintAndLogEx(WARNING, "command execution timeout");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 }
@@ -189,11 +190,11 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k", "keep",           "leave the signal field ON after receive response"),
-        arg_lit0("s", "std",            "activate field and select standard card"),
-        arg_lit0(NULL, "sr",            "activate field and select SRx ST"),
-        arg_lit0(NULL, "cts",           "activate field and select ASK C-ticket"),        
+        arg_lit0("s", "std",            "activate field, use ISO14B select"),
+        arg_lit0(NULL, "sr",            "activate field, use SRx ST select"),
+        arg_lit0(NULL, "cts",           "activate field, use ASK C-ticket select"),
         arg_lit0("c", "crc",            "calculate and append CRC"),
-        arg_lit0("r", "noresponse",         "do not read response"),
+        arg_lit0("r", "noresponse",         "do not read response from card"),
         arg_int0("t", "timeout",   "<dec>", "timeout in ms"),
         arg_lit0("v", "verbose",            "verbose"),
         arg_strx0("d", "data",     "<hex>", "data, bytes to send"),
@@ -218,7 +219,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     if (select_std) {
         flags |= (ISO14B_SELECT_STD | ISO14B_CLEARTRACE);
         if (verbose)
-            PrintAndLogEx(INFO, "using standard select");
+            PrintAndLogEx(INFO, "using ISO14443-B select");
     } else if (select_sr) {
         flags |= (ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
         if (verbose)
@@ -268,6 +269,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     }
 
     bool success = true;    
+
     // Select, device will send back iso14b_card_select_t, don't print it.
     if (select_std) {
         success = wait_cmd_14b(verbose, true);
@@ -651,7 +653,7 @@ static bool HF14B_Std_Info(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         switch_off_field_14b();
         return is_success;
     }
@@ -691,7 +693,7 @@ static bool HF14B_ST_Info(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
@@ -735,7 +737,7 @@ static bool HF14B_st_reader(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return is_success;
     }
 
@@ -775,7 +777,7 @@ static bool HF14B_std_reader(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
 
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
@@ -818,7 +820,7 @@ static bool HF14B_ask_ct_reader(bool verbose) {
     PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
@@ -860,7 +862,7 @@ static bool HF14B_other_reader(bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
 
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         switch_off_field_14b();
         return false;
     }
@@ -884,7 +886,7 @@ static bool HF14B_other_reader(bool verbose) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         switch_off_field_14b();
         return false;
     }
@@ -908,7 +910,7 @@ static bool HF14B_other_reader(bool verbose) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         switch_off_field_14b();
         return false;
     }
