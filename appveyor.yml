@@ -2,7 +2,7 @@ version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
 cache:
-  - C:\cache
+  - C:\cache -> appveyor.yml
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
@@ -152,7 +152,7 @@ clone_script:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Copy-Item -Path "C:\cache\*" -Destination "$env:proxspace_path\msys2\var\cache\pacman\pkg" -Recurse -Force
+    Move-Item -Path "C:\cache" -Destination "$env:proxspace_path\msys2\var\cache" -Force
     
     Get-ChildItem "C:\cache\"
     
@@ -265,15 +265,11 @@ build_script:
     
     ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
     
-    #Remove-Item -Recurse -Force -Path "C:\cache\*" -ErrorAction SilentlyContinue
-    
     Get-ChildItem "C:\cache\"
     
-    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
+    Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\" 
     
-    New-Item -ItemType Directory -Force -Path "C:\cache"
-    
-    Copy-Item -Path "$env:proxspace_path\msys2\var\cache\pacman\pkg\*" -Destination "C:\cache" -Recurse -Force
+    Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "C:\cache" -Force
     
     Get-ChildItem "C:\cache\"
     
