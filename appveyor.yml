@@ -176,7 +176,7 @@ install:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force -ErrorAction SilentlyContinue
+    #Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
@@ -265,6 +265,18 @@ build_script:
     
     #ProxSpace
     
+    Write-Host "ProxSpace: create new cache..." -NoNewLine
+    
+    cd $env:proxspace_path
+    
+    #./runme64.bat -c "yes | pacman -Sc > /dev/null 2>&1"
+    
+    #Remove-Item -Recurse -Force -Path "$env:proxspace_cache_path" -ErrorAction SilentlyContinue
+    
+    #Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "$env:proxspace_cache_path" -Force
+    
+    Write-Host "[ OK ]" -ForegroundColor Gree 
+    
     Write-Host "---------- PS make ----------" -ForegroundColor Yellow
     
     $TestTime=[System.Environment]::TickCount  
@@ -301,6 +313,8 @@ build_script:
     
     ExecMinGWCmd 'mkdir -p client/build; cd client/build; cmake -G""MSYS Makefiles"" ..; make VERBOSE=1;'
     
+    ExecMinGWCmd 'cat /pm3/proxmark/client/build/CMakeFiles/CMakeOutput.log'
+    
     Write-Host "---------- PS cmake tests ----------" -ForegroundColor Yellow
 
     ExecMinGWCmd './tools/pm3_tests.sh --clientbin client/build/proxmark3.exe client'
@@ -323,19 +337,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: >-
-    
-    # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-    
-    Write-Host "ProxSpace: create new cache..." -NoNewLine
-    
-    cd $env:proxspace_path
-    
-    ./runme64.bat -c "yes | pacman -Sc > /dev/null 2>&1"
-    
-    Remove-Item -Recurse -Force -Path "$env:proxspace_cache_path" -ErrorAction SilentlyContinue
-    
-    Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "$env:proxspace_cache_path" -Force
-    
-    Write-Host "[ OK ]" -ForegroundColor Gree 
-    
+- ps: # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
