@@ -7,6 +7,7 @@
 //-----------------------------------------------------------------------------
 // GUI (QT)
 //-----------------------------------------------------------------------------
+#define __STDC_FORMAT_MACROS  
 #include "proxguiqt.h"
 #include <inttypes.h>
 #include <stdbool.h>
@@ -251,7 +252,8 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     QString ct = QString("[*]Slider [ %1 ]").arg(conn.serial_port_name);
     controlWidget->setWindowTitle(ct);
 
-    controlWidget->show();
+    // The hide/show event functions should take care of this.
+    //  controlWidget->show();
 
     // now that is up, reset pos/size change flags
     session.window_changed = false;
@@ -289,7 +291,10 @@ void ProxWidget::hideEvent(QHideEvent *event) {
     plot->hide();
 }
 void ProxWidget::showEvent(QShowEvent *event) {
-    controlWidget->show();
+    if (session.overlay_sliders)
+        controlWidget->show();
+    else
+        controlWidget->hide();
     plot->show();
 }
 void ProxWidget::moveEvent(QMoveEvent *event) {
@@ -485,6 +490,8 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     //Graph annotations
     painter->drawPath(penPath);
     char str[200];
+//    sprintf(str, "max=%d  min=%d  mean=%llu  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
+//            vMax, vMin, vMean, GraphStop - GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
     sprintf(str, "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
             vMax, vMin, vMean, GraphStop - GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
     painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
