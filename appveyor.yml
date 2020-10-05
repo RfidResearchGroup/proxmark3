@@ -1,13 +1,17 @@
 version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
+cache:
+  - C:\cache -> appveyor.yml
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
   proxspace_zip_folder_name: ProxSpace-*
-  proxspace_path: \ProxSpace
+  proxspace_path: C:\ProxSpace
   proxspace_home_path: \ProxSpace\pm3
+  proxspace_cache_path: C:\cache
   wsl_git_path: C:\proxmark
+  APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
 init:
 - ps: >-
@@ -34,39 +38,19 @@ init:
 clone_script:
 - ps: >-
     
-    Function ExecUpdate($Text, $firstStart) {
-        Write-Host "$Text"
-        Start-Process "cmd.exe"  "/c ""cd /D $env:proxspace_path && runme64.bat -c ""exit"""""
-        $StartTime=[System.Environment]::TickCount
-        Start-Sleep -s 10
-        while($true) {
-            $cmdprocess = Get-Process "cmd" -ErrorAction SilentlyContinue
-            
-            if (!$cmdprocess -Or $cmdprocess.HasExited) {
-                Write-Host "$Text" -NoNewLine 
-                Write-Host "[ OK ]" -ForegroundColor Green
-                break
-            }
-            
-            if ($firstStart -And (Test-Path "$env:proxspace_path\msys2\etc\pacman.conf.pacnew")) {
-                Start-Sleep -s 5
-                $tmp = $cmdprocess.CloseMainWindow()
-                Start-Sleep -s 5
-                Stop-Process -Name "cmd" -Force -ErrorAction SilentlyContinue
-                Write-Host "$Text" -NoNewLine 
-                Write-Host "Exit by pacman.conf" -ForegroundColor Green
-                break           
-            }
-            
-            if ([System.Environment]::TickCount-$StartTime -gt 1000000) {
-                Write-Host "$Text" -NoNewLine 
-                Write-host "Exit by timeout" -ForegroundColor Yellow
-                break
-            }
-            
-            Start-Sleep -s 5
-            Receive-Job -Job $WSLjob
+    Function GitClone($Text, $Folder) {
+        Write-Host "$Text" -NoNewLine
+        if(-not $env:appveyor_pull_request_number) {
+            git clone -q --branch=$env:appveyor_repo_branch https://github.com/$env:appveyor_repo_name.git $Folder
+            cd $Folder
+            git checkout -qf $env:appveyor_repo_commit
+        } else {
+            git clone -q https://github.com/$env:appveyor_repo_name.git $Folder
+            cd $Folder
+            git fetch -q origin +refs/pull/$env:appveyor_pull_request_number/merge:
+            git checkout -qf FETCH_HEAD
         }
+        Write-Host "[ OK ]" -ForegroundColor Green 
     }
     
     $WSLjob = Start-Job -Name WSLInstall -ScriptBlock { 
@@ -86,6 +70,94 @@ clone_script:
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
     }
     
+    $env:PSInstallTime=[System.Environment]::TickCount
+    
+    Write-Host "ProxSpace: Removing folder..." -NoNewLine
+    
+    cd \
+    
+    Remove-Item -Recurse -Force -Path $env:proxspace_path -ErrorAction SilentlyContinue
+    
+    Write-Host "[ OK ]" -ForegroundColor Green
+
+    Write-Host "ProxSpace: downloading..." -NoNewLine
+    
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    
+    Invoke-WebRequest "$env:proxspace_url" -outfile "$env:proxspace_zip_file"
+    
+    Write-Host "[ OK ]" -ForegroundColor Green
+    
+    Write-Host "ProxSpace: extracting..." -NoNewLine
+    
+    Expand-Archive -LiteralPath "$env:proxspace_zip_file" -DestinationPath "\"
+    
+    Remove-Item "$env:proxspace_zip_file"
+    
+    Write-Host "[ OK ]" -ForegroundColor Green
+    
+    Write-Host "ProxSpace: renaming folder..." -NoNewLine
+    
+    Get-ChildItem -Path "\$env:proxspace_zip_folder_name" | Rename-Item -NewName (Split-Path $env:proxspace_path -Leaf)
+    
+    Write-Host "[ OK ]" -ForegroundColor Gree 
+    
+    $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
+    
+    Write-Host "ProxSpace version: $psversion" -ForegroundColor Yellow
+    
+    GitClone "ProxSpace: Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." $env:appveyor_build_folder
+    
+    GitClone "WSL: Cloning repository <$env:appveyor_repo_name> to $env:wsl_git_path ..." $env:wsl_git_path
+    
+
+install:
+- ps: >-
+    
+    Function ExecUpdate($Text, $firstStart) {
+        Write-Host "$Text"
+        
+        $PSjob = Start-Job -Name PSInstall -ScriptBlock { 
+            cd $env:proxspace_path
+            ./runme64.bat -c "exit"
+        }
+        
+        $StartTime=[System.Environment]::TickCount
+        Start-Sleep -s 10
+        while($true) {            
+            if ($PSjob.State -eq 'Completed') {
+                Write-Host "$Text" -NoNewLine 
+                Write-Host "[ OK ]" -ForegroundColor Green
+                break
+            }
+            
+            if ($PSjob.State -eq 'Failed') {
+                Write-Host "$Text" -NoNewLine 
+                Write-Host "[ Failed ]" -ForegroundColor Red
+                break
+            }
+            
+            if ($firstStart -And (Test-Path "$env:proxspace_path\msys2\etc\pacman.conf.pacnew")) {
+                Start-Sleep -s 5
+                Stop-Job -Job $PSjob
+                Start-Sleep -s 5
+                Write-Host "$Text" -NoNewLine 
+                Write-Host "Exit by pacman.conf" -ForegroundColor Green
+                break           
+            }
+            
+            if ([System.Environment]::TickCount-$StartTime -gt 1000000) {
+                Stop-Job -Job $PSjob
+                Write-Host "$Text" -NoNewLine 
+                Write-host "Exit by timeout" -ForegroundColor Yellow
+                break
+            }
+            
+            Start-Sleep -s 5
+            Receive-Job -Name WSLInstall
+        }
+    }
+    
     Function GitClone($Text, $Folder) {
         Write-Host "$Text" -NoNewLine
         if(-not $env:appveyor_pull_request_number) {
@@ -101,63 +173,18 @@ clone_script:
         Write-Host "[ OK ]" -ForegroundColor Green 
     }
     
-    Write-Host "ProxSpace: Removing folder..." -NoNewLine
+    Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    $PSInstallTime=[System.Environment]::TickCount
-    
-    cd \
-
-    Remove-Item -Recurse -Force -Path $env:proxspace_path
-
-    Write-Host "[ OK ]" -ForegroundColor Green
-    
-    Receive-Job -Job $WSLjob
-
-    Write-Host "ProxSpace: downloading..." -NoNewLine
-    
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    
-    Invoke-WebRequest "$env:proxspace_url" -outfile "$env:proxspace_zip_file"
-    
-    Write-Host "[ OK ]" -ForegroundColor Green
-    
-    Receive-Job -Job $WSLjob
-    
-    Write-Host "ProxSpace: extracting..." -NoNewLine
-    
-    Expand-Archive -LiteralPath "$env:proxspace_zip_file" -DestinationPath "\"
-    
-    Remove-Item "$env:proxspace_zip_file"
-    
-    Write-Host "[ OK ]" -ForegroundColor Green
-    
-    Receive-Job -Job $WSLjob
-    
-    Write-Host "ProxSpace: renaming folder..." -NoNewLine
-    
-    Get-ChildItem -Path "\$env:proxspace_zip_folder_name" | Rename-Item -NewName (Split-Path $env:proxspace_path -Leaf)
+    Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
     ExecUpdate "ProxSpace: initial msys2 startup..." $true
     
-    ExecUpdate "ProxSpace: installing required packages..." $false
+    ExecUpdate "ProxSpace: installing required packages..." $false    
     
-    
-    $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "$env:proxspace_path\msys2\ps\09-proxspace_setup.post").Line.Split("""")[1]
-    
-    Write-Host "ProxSpace version: $psversion" -ForegroundColor Yellow
-    
-    Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$PSInstallTime) / 1000) sec" -Category Information
-    
-    GitClone "ProxSpace: Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." $env:appveyor_build_folder
-    
-    Receive-Job -Wait -Job $WSLjob
-    
-    GitClone "WSL: Cloning repository <$env:appveyor_repo_name> to $env:wsl_git_path ..." $env:wsl_git_path
-    
+    Add-AppveyorMessage -Message "ProxSpace download and update took $(([System.Environment]::TickCount-$env:PSInstallTime) / 1000) sec" -Category Information
 
-install:
 build_script:
 - ps: >-
 
@@ -202,6 +229,9 @@ build_script:
                 throw "Tests error."
             }
         }
+        
+        #WSL: wait for installation to finish
+        Receive-Job -Wait -Name WSLInstall
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
@@ -233,6 +263,16 @@ build_script:
     }
     
     #ProxSpace
+    
+    Write-Host "ProxSpace: create new cache..." -NoNewLine
+    
+    ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
+    
+    Remove-Item -Recurse -Force -Path "$env:proxspace_cache_path" -ErrorAction SilentlyContinue
+    
+    Move-Item -Path "$env:proxspace_path\msys2\var\cache" -Destination "$env:proxspace_cache_path" -Force
+    
+    Write-Host "[ OK ]" -ForegroundColor Gree 
     
     Write-Host "---------- PS make ----------" -ForegroundColor Yellow
     
