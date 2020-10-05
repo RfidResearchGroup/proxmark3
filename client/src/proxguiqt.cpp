@@ -689,13 +689,19 @@ void Plot::Move(int offset) {
 
 void Plot::Trim(void) {
     uint32_t lref, rref;
+    const double zoom_offset = 1.148698354997035; // 2**(1/5)
     if ((CursorAPos == 0) || (CursorBPos == 0)) { // if we don't have both cursors set
         lref = GraphStart;
         rref = GraphStop;
     } else {
         lref = CursorAPos < CursorBPos ? CursorAPos : CursorBPos;
         rref = CursorAPos < CursorBPos ? CursorBPos : CursorAPos;
-        GraphPixelsPerPoint = GraphPixelsPerPoint * (GraphStop - GraphStart) / (rref - lref);
+        // GraphPixelsPerPoint mush remain a power of zoom_offset
+        double GPPPtarget = GraphPixelsPerPoint * (GraphStop - GraphStart) / (rref - lref);
+        while (GraphPixelsPerPoint < GPPPtarget) {
+            GraphPixelsPerPoint *= zoom_offset;
+        }
+        GraphPixelsPerPoint /= zoom_offset;
         CursorAPos -= lref;
         CursorBPos -= lref;
     }
