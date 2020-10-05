@@ -232,7 +232,7 @@ build_script:
         }
         
         #WSL: wait for installation to finish
-        Receive-Job -Wait -Name WSLInstall
+        Receive-Job -Wait -Name WSLInstall -ErrorAction SilentlyContinue
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
