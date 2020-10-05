@@ -271,6 +271,8 @@ build_script:
     
     Get-ChildItem "$env:proxspace_path\msys2\var\cache\pacman\pkg\"
     
+    New-Item -ItemType Directory -Force -Path "C:\cache"
+    
     Copy-Item -Path "$env:proxspace_path\msys2\var\cache\pacman\pkg\*" -Destination "C:\cache" -Recurse -Force
     
     Get-ChildItem "C:\cache\"
