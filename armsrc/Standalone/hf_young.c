@@ -89,6 +89,9 @@ void RunMod(void) {
                 }
 
                 if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0, true)) {
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    LED_D_OFF();
+                    SpinDelay(500);
                     continue;
                 } else {
                     Dbprintf("Read UID:");
