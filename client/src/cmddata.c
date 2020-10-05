@@ -1906,8 +1906,8 @@ static int CmdScale(const char *Cmd) {
                   "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful.\n"
                   "once the scale is set, the differential reading between brackets can become a time duration.",
                   "data scale --sr 125   -u ms  -> for LF sampled at 125 kHz. Reading will be in milliseconds\n"
-                  "data scale --sr 1.695 -u us  -> for HF sampled at 1.695 MHz. Reading will be in microseconds\n"
-                  "data scale --sr 16    -u ETU -> for HF with 16 samples per ETU. Reading will be in ETUs"
+                  "data scale --sr 1.695 -u us  -> for HF sampled at 16 * fc/128. Reading will be in microseconds\n"
+                  "data scale --sr 16    -u ETU -> for HF with 16 samples per ETU (fc/128). Reading will be in ETUs"
                   );
     void *argtable[] = {
         arg_param_begin,
