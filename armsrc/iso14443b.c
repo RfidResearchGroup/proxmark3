@@ -784,6 +784,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {
                 if (((ABS(Demod.sumI) > ABS(Demod.sumQ)) && (((ci > 0) && (Demod.sumI > 0)) || ((ci < 0) && (Demod.sumI < 0)))) ||  // signal closer to horizontal, polarity check based on on I
                     ((ABS(Demod.sumI) <= ABS(Demod.sumQ)) && (((cq > 0) && (Demod.sumQ > 0)) || ((cq < 0) && (Demod.sumQ < 0))))) { // signal closer to vertical, polarity check based on on Q
+
                     if (Demod.posCount < 10) {  // refine signal approximation during first 10 samples
                         Demod.sumI += ci;
                         Demod.sumQ += cq;
@@ -1103,7 +1104,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     
     // Send SOF
     // 10-11 ETUs of ZERO
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < 11; i++) {
         tosend_stuffbit(0);
     }
     // 2-3 ETUs of ONE
@@ -1132,23 +1133,21 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
         // EGT extra guard time  1 ETU = 9us
         // For PCD it ranges 0-57us === 0 - 6 ETU
         // FOR PICC it ranges 0-19us == 0 - 2 ETU
-        
     }
 
     // Send EOF
     // 10-11 ETUs of ZERO
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < 11; i++) {
         tosend_stuffbit(0);
     }
 
-	tosend_stuffbit(1);    
     /* Transition time. TR0 - guard time
     *   TR0 - 8 ETU's minimum.
     *   TR0 - 32 ETU's maximum for ATQB only
     *   TR0 - FWT for all other commands
     *       32,64,128,256,512, ... , 262144, 524288 ETU
     */
-    int pad = (12 + (len * 10) + 11) & 0x7;
+    int pad = (11 + 2 + (len * 10) + 11) & 0x7;
 
     for (i = 0; i < 16 - pad; ++i)
         tosend_stuffbit(1);
@@ -1524,7 +1523,7 @@ void iso14443b_setup(void) {
 
     // Signal field is on with the appropriate LED
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
-    SpinDelay(100);
+    SpinDelay(50);
 
     // Start the timer
     StartCountSspClk();
@@ -1841,17 +1840,21 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
 
     if ((param & ISO14B_CONNECT) == ISO14B_CONNECT) {
         iso14443b_setup();
-        clear_trace();
     }
 
-    if ((param & ISO14B_SET_TIMEOUT))
+    if ((param & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) { 
         iso14b_set_timeout(timeout);
-
+    }
+    
+    if ((param & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
+        clear_trace();
+    }
     set_tracing(true);
 
     int status;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
     iso14b_card_select_t card;
+    memset((void*)&card, 0x00, sizeof(card));
 
     if ((param & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
         status = iso14443b_select_card(&card);
