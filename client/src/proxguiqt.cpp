@@ -490,8 +490,6 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     //Graph annotations
     painter->drawPath(penPath);
     char str[200];
-//    sprintf(str, "max=%d  min=%d  mean=%llu  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
-//            vMax, vMin, vMean, GraphStop - GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
     sprintf(str, "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
             vMax, vMin, vMean, GraphStop - GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
     painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
