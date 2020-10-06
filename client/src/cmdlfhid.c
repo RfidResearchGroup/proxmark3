@@ -37,6 +37,7 @@
 #include "util_posix.h"
 #include "lfdemod.h"
 #include "wiegand_formats.h"
+#include "wiegand_formatutils.h"
 
 #ifndef BITS
 # define BITS 96
@@ -135,61 +136,8 @@ int demodHID(bool verbose) {
         return PM3_ESOFT;
     }
 
-    if (hi2 != 0) { //extra large HID tags
-        PrintAndLogEx(SUCCESS, "HID Prox - " _GREEN_("%x%08x%08x (%u)"), hi2, hi, lo, (lo >> 1) & 0xFFFF);
-    } else {  //standard HID tags <38 bits
-        uint8_t fmtLen = 0;
-        uint32_t cc = 0;
-        uint32_t fc = 0;
-        uint32_t cardnum = 0;
-        uint8_t oem = 0;
-        if (((hi >> 5) & 1) == 1) {//if bit 38 is set then < 37 bit format is used
-            uint32_t lo2 = 0;
-            lo2 = (((hi & 31) << 12) | (lo >> 20)); //get bits 21-37 to check for format len bit
-            uint8_t idx3 = 1;
-            while (lo2 > 1) { //find last bit set to 1 (format len bit)
-                lo2 >>= 1;
-                idx3++;
-            }
-            fmtLen = idx3 + 19;
-            fc = 0;
-            cardnum = 0;
-            if (fmtLen == 26) {
-                cardnum = (lo >> 1) & 0xFFFF;
-                fc = (lo >> 17) & 0xFF;
-            }
-            if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
-                cardnum = (lo >> 1) & 0xFFFF;
-                fc = (lo >> 17) & 0xFF;
-                cc = (lo >> 25) & 0x1F;
-            }
-            if (fmtLen == 34) {
-                cardnum = (lo >> 1) & 0xFFFF;
-                fc = ((hi & 1) << 15) | (lo >> 17);
-            }
-            if (fmtLen == 35) {
-                cardnum = (lo >> 1) & 0xFFFFF;
-                fc = ((hi & 1) << 11) | (lo >> 21);
-            }
-            if (fmtLen == 36) {
-                oem = (lo >> 1) & 0x3;
-                cardnum = (lo >> 3) & 0xFFFF;
-                fc = (hi & 0x7) << 13 | ((lo >> 19) & 0xFFFF);
-            }
-        } else { //if bit 38 is not set then 37 bit format is used
-            fmtLen = 37;
-            cardnum = (lo >> 1) & 0x7FFFF;
-            fc = ((hi & 0xF) << 12) | (lo >> 20);
-        }
-        if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
-            PrintAndLogEx(SUCCESS,
-                          "HID Prox (Kastle format) - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("32") " bit CC: " _GREEN_("%u") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u"), hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
-        } else {
-            PrintAndLogEx(SUCCESS,
-                          "HID Prox - " _GREEN_("%x%08x (%u)") " - len: " _GREEN_("%u") " bit - OEM: " _GREEN_("%03u") " FC: " _GREEN_("%u")" Card: " _GREEN_("%u"),
-                          hi, lo, cardnum, fmtLen, oem, fc, cardnum);
-        }
-    }
+    wiegand_message_t packed = initialize_message_object(hi2, hi, lo);
+    HIDTryUnpack(&packed, false);
 
     PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer: ", idx, size);
     if (g_debugMode)
