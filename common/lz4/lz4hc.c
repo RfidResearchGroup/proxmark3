@@ -1015,7 +1015,10 @@ int LZ4_freeStreamHC(LZ4_streamHC_t *LZ4_streamHCPtr) {
     return 0;
 }
 
-
+// Skip AddressSanitizer which breaks compilation strangely on
+// lz4/lz4hc.c: error: writing 2 bytes into a region of size 1 [-Werror=stringop-overflow=]
+//  |     LZ4_streamHCPtr->internal_donotuse.favorDecSpeed = 0;
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 LZ4_streamHC_t *LZ4_initStreamHC(void *buffer, size_t size) {
     LZ4_streamHC_t *const LZ4_streamHCPtr = (LZ4_streamHC_t *)buffer;
     if (buffer == NULL) return NULL;
