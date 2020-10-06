@@ -322,6 +322,8 @@ while true; do
     if $TESTALL || $TESTCLIENT; then
       echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN:=./client/proxmark3}"
       if ! CheckFileExist "proxmark3 exists"               "$CLIENTBIN"; then break; fi
+      # Avoid mangling history and logs
+      CLIENTBIN="$CLIENTBIN --incognito"
       echo -e "\n${C_BLUE}Testing basic help:${C_NC}"
       if ! CheckExecute "proxmark help"                    "$CLIENTBIN -h" "wait"; then break; fi
       if ! CheckExecute "proxmark help text ISO7816"       "$CLIENTBIN -t 2>&1" "ISO7816"; then break; fi

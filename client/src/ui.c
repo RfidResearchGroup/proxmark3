@@ -305,6 +305,9 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     pthread_mutex_lock(&print_lock);
     bool linefeed = true;
 
+    if (logging && session.incognito) {
+        logging = 0;
+    }
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
         char *my_logfile_path = NULL;
         char filename[40];
