@@ -841,6 +841,14 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             Move(-offset);
             break;
 
+        case Qt::Key_Greater:
+            g_DemodStartIdx += 1;
+            break;
+
+        case Qt::Key_Less:
+            g_DemodStartIdx -= 1;
+            break;
+
         case Qt::Key_G:
             if (PlotGridX || PlotGridY) {
                 PlotGridX = 0;
@@ -874,9 +882,10 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("h"), "Show this help");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Trim:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("t"), "Trim data on window or on cursors if defined");
-            PrintAndLogEx(NORMAL, "\n" _GREEN_("Grid:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("g"), "Toggle grid display");
+            PrintAndLogEx(NORMAL, "\n" _GREEN_("Grid and demod:"));
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("g"), "Toggle grid and demodulation plot display");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("l"), "Toggle lock grid relative to samples");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9+9, _RED_("<") "/" _RED_(">"), "Move demodulation left/right relative to samples");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Misc:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _YELLOW_("Left mouse click"), "Set yellow cursor");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _YELLOW_("Right mouse click"), "Set purple cursor");
