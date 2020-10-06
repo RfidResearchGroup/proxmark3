@@ -649,8 +649,7 @@ static int Cmdaskmandemod(const char *Cmd) {
     size_t maxLen = 0;
 
     if (slen) {
-        
-        
+
         if (Cmd[0] == 's') {
             st = true;
             Cmd++;
