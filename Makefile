@@ -259,6 +259,8 @@ style:
 	    --keep-one-line-blocks --max-instatement-indent=60 \
 	    --style=google --pad-oper --unpad-paren --pad-header \
 	    --align-pointer=name {} \;
+	# Update commands.md
+	[ -x client/proxmark3 ] && client/proxmark3 -m > doc/commands.md
 
 # Detecting weird codepages and tabs.
 miscchecks:
