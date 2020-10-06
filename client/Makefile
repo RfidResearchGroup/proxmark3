@@ -272,7 +272,6 @@ PM3CFLAGS = $(CFLAGS)
 PM3CFLAGS += -I./src -I../include -I../common -I../common_fpga $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
-PM3CFLAGS += -g
 
 PREFIX ?= /usr/local
 ifneq (,$(findstring MINGW,$(platform)))
