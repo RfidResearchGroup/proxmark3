@@ -241,70 +241,32 @@ Check column "offline" for their availability.
 ### hf iclass
 
  { ICLASS RFIDs...                  }
+          
+|command                  |offline |description          
+|-------                  |------- |-----------          
+|`hf iclass help         `|Y       |`This help`          
+|`hf iclass calcnewkey   `|Y       |`[options..] Calc diversified keys (blocks 3 & 4) to write new keys`          
+|`hf iclass chk          `|Y       |`[options..] Check keys`          
+|`hf iclass clone        `|N       |`[options..] Restore a dump file onto a iClass tag`          
+|`hf iclass decrypt      `|Y       |`[options..] Decrypt given block data or tag dump file`          
+|`hf iclass dump         `|N       |`[options..] Dump iClass tag to file`          
+|`hf iclass eload        `|N       |`[f <fname>] Load iClass dump file into emulator memory`          
+|`hf iclass encrypt      `|Y       |`[options..] Encrypt given block data`          
+|`hf iclass info         `|Y       |`            Tag information`          
+|`hf iclass list         `|Y       |`            List iClass history`          
+|`hf iclass loclass      `|Y       |`[options..] Use loclass to perform bruteforce reader attack`          
+|`hf iclass lookup       `|Y       |`[options..] Uses authentication trace to check for key in dictionary file`          
+|`hf iclass managekeys   `|Y       |`[options..] Manage keys to use with iClass`          
+|`hf iclass permute      `|N       |`            Permute function from 'heart of darkness' paper`          
+|`hf iclass rdbl         `|N       |`[options..] Read iClass block`          
+|`hf iclass reader       `|N       |`            Act like an iClass reader`          
+|`hf iclass readtagfile  `|Y       |`[options..] Display content from tag dump file`          
+|`hf iclass replay       `|N       |`<mac>       Read iClass tag via replay attack`          
+|`hf iclass sim          `|N       |`[options..] Simulate iClass tag`          
+|`hf iclass sniff        `|N       |`            Eavesdrop iClass communication`          
+|`hf iclass wrbl         `|N       |`[options..] Write iClass block`          
 
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf iclass help         `|Y       |`This help`
-|`hf iclass dump         `|N       |`[options..] Dump Picopass / iCLASS tag to file`
-|`hf iclass info         `|Y       |`            Tag information`
-|`hf iclass list         `|Y       |`            List iclass history`
-|`hf iclass rdbl         `|N       |`[options..] Read Picopass / iCLASS block`
-|`hf iclass reader       `|N       |`            Act like an Picopass / iCLASS reader`
-|`hf iclass restore      `|N       |`[options..] Restore a dump file onto a Picopass / iCLASS tag`
-|`hf iclass sniff        `|N       |`            Eavesdrop Picopass / iCLASS communication`
-|`hf iclass wrbl         `|N       |`[options..] Write Picopass / iCLASS block`
-|`hf iclass chk          `|Y       |`[options..] Check keys`
-|`hf iclass loclass      `|Y       |`[options..] Use loclass to perform bruteforce reader attack`
-|`hf iclass lookup       `|Y       |`[options..] Uses authentication trace to check for key in dictionary file`
-|`hf iclass replay       `|N       |`<mac>       Read Picopass / iCLASS tag via replay attack`
-|`hf iclass sim          `|N       |`[options..] Simulate iCLASS tag`
-|`hf iclass eload        `|N       |`[f <fn>   ] Load Picopass / iCLASS dump file into emulator memory`
-|`hf iclass esave        `|N       |`[f <fn>   ] Save emulator memory to file`
-|`hf iclass eview        `|N       |`[options..] View emulator memory`
-|`hf iclass calcnewkey   `|Y       |`[options..] Calc diversified keys (blocks 3 & 4) to write new keys`
-|`hf iclass encrypt      `|Y       |`[options..] Encrypt given block data`
-|`hf iclass decrypt      `|Y       |`[options..] Decrypt given block data or tag dump file`
-|`hf iclass managekeys   `|Y       |`[options..] Manage keys to use with iclass commands`
-|`hf iclass permutekey   `|N       |`            Permute function from 'heart of darkness' paper`
-|`hf iclass view         `|Y       |`[options..] Display content from tag dump file`
-
-
-### hf legic
-
- { LEGIC RFIDs...                   }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf legic help          `|Y       |`This help`
-|`hf legic list          `|Y       |`List LEGIC history`
-|`hf legic reader        `|N       |`LEGIC Prime Reader UID and tag info`
-|`hf legic info          `|N       |`Display deobfuscated and decoded LEGIC Prime tag data`
-|`hf legic dump          `|N       |`Dump LEGIC Prime tag to binary file`
-|`hf legic restore       `|N       |`Restore a dump file onto a LEGIC Prime tag`
-|`hf legic rdbl          `|N       |`Read bytes from a LEGIC Prime tag`
-|`hf legic sim           `|N       |`Start tag simulator`
-|`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
-|`hf legic crc           `|Y       |`Calculate Legic CRC over given bytes`
-|`hf legic eload         `|Y       |`Load binary dump to emulator memory`
-|`hf legic esave         `|Y       |`Save emulator memory to binary file`
-|`hf legic wipe          `|N       |`Wipe a LEGIC Prime tag`
-
-
-### hf lto
-
- { LTO Cartridge Memory RFIDs...    }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf lto help            `|Y       |`This help`
-|`hf lto dump            `|N       |`Dump LTO-CM tag to file`
-|`hf lto restore         `|N       |`Restore dump file to LTO-CM tag`
-|`hf lto info            `|N       |`Tag information`
-|`hf lto rdbl            `|N       |`Read block`
-|`hf lto wrbl            `|N       |`Write block`
-|`hf lto list            `|Y       |`List LTO-CM history`
-
-
+          
 ### hf mf
 
  { MIFARE RFIDs...                  }

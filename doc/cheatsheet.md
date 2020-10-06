@@ -46,9 +46,10 @@ Reverse permute iCLASS master key
 ```
 Options
 ---
-r          reverse permuted key
+-r  --reverse      : reverse permuted key
+    --key <bytes>  : input key
 
-pm3 --> hf iclass permute r 3F90EBF0910F7B6F
+pm3 --> hf iclass permute --reverse --key 3F90EBF0910F7B6F
 ```
 
 iCLASS Reader

@@ -2661,10 +2661,10 @@ static int CmdHFiClassView(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f",  "file", "<filename>",  "filename of dump"),
-        arg_int0(NULL, "startblock", "<dec>", "print from this block (default block6)"),        
-        arg_int0(NULL, "endblock", "<dec>",   "end printing at this block (default 0, ALL)"),
-        arg_lit0("v",  "verbose",             "verbose output"),
+        arg_str1("f", "file", "<filename>",  "filename of dump"),
+        arg_int0("s", "startblock", "<dec>", "print from this block (default block6)"),        
+        arg_int0("e", "endblock", "<dec>",   "end printing at this block (default 0, ALL)"),
+        arg_lit0("v", "verbose",             "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3492,7 +3492,7 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "reverse",        "reverse permuted key"),       
+        arg_lit0("r",  "reverse",        "reverse permuted key"),       
         arg_str1(NULL, "key", "<bytes>", "input key"),
         arg_param_end
     };
@@ -3550,7 +3550,7 @@ static command_t CommandTable[] = {
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
     {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iclass commands"},
-    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
+    {"permute",     CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
     {"view",        CmdHFiClassView,            AlwaysAvailable, "[options..] Display content from tag dump file"},
 
     {NULL, NULL, NULL, NULL}
