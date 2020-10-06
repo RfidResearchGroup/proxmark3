@@ -1898,27 +1898,27 @@ int CmdSave(const char *Cmd) {
         return saveFilePM3(filename, GraphBuffer, GraphTraceLen);
 }
 
-static int CmdScale(const char *Cmd) {
+static int CmdTimeScale(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "data scale",
-                  "Set cursor display scale.\n"
-                  "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful.\n"
-                  "once the scale is set, the differential reading between brackets can become a time duration.",
-                  "data scale --sr 125   -u ms  -> for LF sampled at 125 kHz. Reading will be in milliseconds\n"
-                  "data scale --sr 1.695 -u us  -> for HF sampled at 16 * fc/128. Reading will be in microseconds\n"
-                  "data scale --sr 16    -u ETU -> for HF with 16 samples per ETU (fc/128). Reading will be in ETUs"
+    CLIParserInit(&ctx, "data timescale",
+                  "Set cursor display timescale.\n"
+                  "Setting the timescale makes the differential `dt` reading between the yellow and purple markers meaningful.\n"
+                  "once the timescale is set, the differential reading between brackets can become a time duration.",
+                  "data timescale --sr 125   -u ms  -> for LF sampled at 125 kHz. Reading will be in milliseconds\n"
+                  "data timescale --sr 1.695 -u us  -> for HF sampled at 16 * fc/128. Reading will be in microseconds\n"
+                  "data timescale --sr 16    -u ETU -> for HF with 16 samples per ETU (fc/128). Reading will be in ETUs"
                   );
     void *argtable[] = {
         arg_param_begin,
-        arg_dbl1(NULL,  "sr", "<float>", "sets scale according to sampling rate"),
+        arg_dbl1(NULL,  "sr", "<float>", "sets timescale factor according to sampling rate"),
         arg_str0("u", "unit", "<string>", "time unit to display (max 10 chars)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CursorScaleFactor = arg_get_dbl_def(ctx, 1, 1);
     if (CursorScaleFactor <= 0) {
-        PrintAndLogEx(FAILED, "bad, can't have negative or zero scale");
+        PrintAndLogEx(FAILED, "bad, can't have negative or zero timescale factor");
         CursorScaleFactor = 1;
     }
     int len = 0;
@@ -2328,7 +2328,7 @@ static command_t CommandTable[] = {
     {"samples",         CmdSamples,              IfPm3Present,    "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
     {"save",            CmdSave,                 AlwaysAvailable, "Save trace (from graph window)"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable, "[orange_marker] [blue_marker] (in graph window)"},
-    {"scale",           CmdScale,                AlwaysAvailable, "<int> -- Set cursor display scale in carrier frequency expressed in kHz"},
+    {"timescale",       CmdTimeScale,            AlwaysAvailable, "Set a timescale to get a differential reading between the yellow and purple markers as time duration\n"},
     {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable, "<0|1|2> -- Set Debugging Level on client side"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
     {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
