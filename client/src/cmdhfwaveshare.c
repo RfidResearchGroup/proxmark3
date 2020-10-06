@@ -984,7 +984,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         arg_param_begin,
         arg_int1("m", NULL, "<nr>", modeldesc),
         arg_lit0("s", "save", "save dithered version in filename-[n].bmp, only for RGB BMP"),
-        arg_strx1("f", "file", "<filename>", "filename[.bmp] to upload to tag"),
+        arg_str1("f", "file", "<filename>", "filename[.bmp] to upload to tag"),
         arg_param_end
     };    
 
