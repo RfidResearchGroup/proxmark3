@@ -356,7 +356,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     va_start(argptr, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
-    if (buffer[strlen(buffer) - 1] == NOLF[0]) {
+    if (strlen(buffer) > 0 && buffer[strlen(buffer) - 1] == NOLF[0]) {
         linefeed = false;
         buffer[strlen(buffer) - 1] = 0;
     }
