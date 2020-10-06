@@ -98,7 +98,7 @@ static int usage_hf_waveshare_loadbmp(void) {
     PrintAndLogEx(NORMAL, "  m <nr>  : " _YELLOW_("model number") " of your tag");
     PrintAndLogEx(NORMAL, "  s       : save dithered version in filename-[n].bmp, only for RGB BMP");
     for (uint8_t i = 0; i < MEND; i++) {
-        PrintAndLogEx(NORMAL, "  m %2i    : %s", i, models[i].desc);
+        PrintAndLogEx(NORMAL, "  m %2i    : %-30s (%i*%i)", i, models[i].desc, models[i].width, models[i].height);
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -138,9 +138,15 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t mod
     uint8_t color_flag = pbmpheader->Color_1;
     // Get BMP file data pointer
     uint32_t offset = pbmpheader->offset;
+    uint16_t width = pbmpheader->BMP_Width;
+    uint16_t height = pbmpheader->BMP_Height;
+    if ((width + 8) * height > WSMAPSIZE * 8) {
+        PrintAndLogEx(WARNING, "The file is too large, aborting!");
+        return PM3_ESOFT;
+    }
 
     uint16_t X, Y;
-    uint16_t Image_Width_Byte = (pbmpheader->BMP_Width % 8 == 0) ? (pbmpheader->BMP_Width / 8) : (pbmpheader->BMP_Width / 8 + 1);
+    uint16_t Image_Width_Byte = (width % 8 == 0) ? (width / 8) : (width / 8 + 1);
     uint16_t Bmp_Width_Byte = (Image_Width_Byte % 4 == 0) ? Image_Width_Byte : ((Image_Width_Byte / 4 + 1) * 4);
 
     *black = calloc(WSMAPSIZE, sizeof(uint8_t));
@@ -148,10 +154,10 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t mod
         return PM3_EMALLOC;
     }
     // Write data into RAM
-    for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
+    for (Y = 0; Y < height; Y++) { // columns
         for (X = 0; X < Bmp_Width_Byte; X++) { // lines
-            if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
-                (*black)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
+            if ((X < Image_Width_Byte) && ((X + (height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
+                (*black)[X + (height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
             }
             offset++;
         }
@@ -381,6 +387,10 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
     uint32_t offset = pbmpheader->offset;
     uint16_t width = pbmpheader->BMP_Width;
     uint16_t height = pbmpheader->BMP_Height;
+    if ((width + 8) * height > WSMAPSIZE * 8) {
+        PrintAndLogEx(WARNING, "The file is too large, aborting!");
+        return PM3_ESOFT;
+    }
 
     int16_t *chanR = calloc(width * height, sizeof(int16_t));
     if (chanR == NULL) {
@@ -1042,7 +1052,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         free(bmp);
         return PM3_ESOFT;
     } else {
-        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported", depth);
+        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Must be 1 (BW) or 24 (RGB)", depth);
         free(bmp);
         return PM3_ESOFT;
     }
