@@ -816,14 +816,16 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
         return PM3_ESOFT;
     }
 
-    struct p *payload = calloc(1, sizeof(struct p) + size);
+    size_t paylen = sizeof(struct p) + size;
+    struct p *payload = calloc(1, paylen);
+    
     payload->blockno = blockNum;
     payload->blockcnt = blocksCount;
     payload->blockwidth = blockBtWidth;
     memcpy(payload->data, data, size);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_EML_MEMSET, (uint8_t *)payload, sizeof(payload) + size);
+    SendCommandNG(CMD_HF_MIFARE_EML_MEMSET, (uint8_t *)payload, paylen);
     free(payload);
     return PM3_SUCCESS;
 }
