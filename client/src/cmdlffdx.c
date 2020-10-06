@@ -589,7 +589,7 @@ int detectFDXB(uint8_t *dest, size_t *size) {
     uint8_t preamble[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
         return -2; //preamble not found
-    if (*size != 128) return -3; //wrong demoded size
+    if (*size < 128) return -3; //wrong demoded size
     //return start position
     return (int)startIdx;
 }
