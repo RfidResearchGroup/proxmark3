@@ -257,15 +257,15 @@ static int CmdHIDSim(const char *Cmd) {
 static int CmdHIDClone(const char *Cmd) {
     int idlen = 0;
     uint8_t id[10] = {0};
-
-    uint32_t hi2 = 0, hi = 0, lo = 0;
-    uint32_t i = 0;
+    uint32_t hi2 = 0, hi = 0, lo = 0, i = 0;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid clone",
                   "Clone HID to T55x7. Tag must be on antenna!",
-                  "lf hid clone 2006ec0c86\n"
-                  "lf hid clone -l 2006ec0c86"
+                  "lf hid clone 2006ec0c86        -> HID 10301 26 bit\n"
+                  "lf hid clone 2e0ec00c87        -> HID Corporate 35 bit\n"
+                  "lf hid clone -l 01f0760643c3   -> HID P10001 40 bit\n"
+                  "lf hid clone -l 01400076000c86 -> HID Corporate 48 bit"
                  );
 
     void *argtable[] = {
@@ -275,11 +275,8 @@ static int CmdHIDClone(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
     bool long_id = arg_get_lit(ctx, 1);
-
     CLIGetHexWithReturn(ctx, 2, id, &idlen);
-
     CLIParserFree(ctx);
 
     uint8_t longid[1] = {0};

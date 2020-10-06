@@ -379,9 +379,9 @@ while true; do
       if ! CheckExecute slow "lf T55 hid test"                   "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid.pm3; lf search 1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid test2"                  "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid.pm3; lf hid demod'" \
                                                                      "HID H10301 26-bit;  FC: 118  CN: 1603"; then break; fi
-      if ! CheckExecute slow "lf T55 hid_84 test"                "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid_84.pm3; lf search 1'" "HID Prox ID found"; then break; fi
-      if ! CheckExecute slow "lf T55 hid_84 test2"               "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid_84.pm3; lf hid demod'" \
-                                                                     "HID Prox - 9e000000000022006ec0c86 (1603)"; then break; fi
+      if ! CheckExecute slow "lf T55 hid_48 test"                "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid_48.pm3; lf search 1'" "HID Prox ID found"; then break; fi
+      if ! CheckExecute slow "lf T55 hid_48 test2"               "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid_48.pm3; lf hid demod'" \
+                                                                     "HID Corporate 1000 48-bit"; then break; fi
       if ! CheckExecute slow "lf T55 indala_hedem test"          "$CLIENTBIN -c 'data load traces/lf_ATA5577_indala_hedem.pm3; lf search 1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala_hedem test2"         "$CLIENTBIN -c 'data load traces/lf_ATA5577_indala_hedem.pm3; lf indala demod'" \
                                                                      "Heden-2L    \| 888"; then break; fi
