@@ -303,9 +303,6 @@ static void *brute_thread(void *arguments) {
             pthread_mutex_unlock(&print_lock);
         }
     }
-    if (revstate)
-        free(revstate);
-
     free(args);
     return NULL;
 }
