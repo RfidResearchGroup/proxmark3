@@ -309,6 +309,7 @@ ifeq ($(QT_FOUND),1)
     endif
 endif
 
+LDFLAGS ?= $(DEFLDFLAGS)
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
     PM3LDFLAGS += -framework Foundation -framework AppKit
