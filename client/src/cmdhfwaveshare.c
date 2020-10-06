@@ -231,7 +231,7 @@ static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, u
             int16_t oldR = chanR[XX + Y * width];
             int16_t oldG = chanG[XX + Y * width];
             int16_t oldB = chanB[XX + Y * width];
-            uint8_t newR, newG, newB;
+            uint8_t newR = 0, newG = 0, newB = 0;
             nearest_color(oldR, oldG, oldB, palette, palettelen, &newR, &newG, &newB);
             chanR[XX + Y * width] = newR;
             chanG[XX + Y * width] = newG;
