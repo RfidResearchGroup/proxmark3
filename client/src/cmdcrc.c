@@ -25,6 +25,7 @@
 #include "reveng.h"
 #include "ui.h"
 #include "util.h"
+#include "pm3_cmd.h"
 
 #define MAX_ARGS 20
 
@@ -497,12 +498,12 @@ static int CmdrevengSearch(const char *Cmd) {
 }
 
 int CmdCrc(const char *Cmd) {
-    char name[] = {"reveng "};
-    char Cmd2[100 + 7];
-    memcpy(Cmd2, name, 7);
-    memcpy(Cmd2 + 7, Cmd, 100);
+    char c[100 + 7];
+    snprintf(c, sizeof(c), "reveng ");
+    snprintf(c + strlen(c), sizeof(c) - strlen(c), Cmd, strlen(Cmd));
+
     char *argv[MAX_ARGS];
-    int argc = split(Cmd2, argv);
+    int argc = split(c, argv);
 
     if (argc == 3 && memcmp(argv[1], "-g", 2) == 0) {
         CmdrevengSearch(argv[2]);
@@ -512,6 +513,6 @@ int CmdCrc(const char *Cmd) {
     for (int i = 0; i < argc; ++i) {
         free(argv[i]);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
