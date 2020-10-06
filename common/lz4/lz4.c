@@ -247,6 +247,7 @@ static int g_debuglog_enable = 1;
 /*-************************************
 *  Types
 **************************************/
+#include <limits.h>
 #if defined(__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */)
 # include <stdint.h>
 typedef  uint8_t BYTE;
@@ -256,7 +257,6 @@ typedef  int32_t S32;
 typedef uint64_t U64;
 typedef uintptr_t uptrval;
 #else
-# include <limits.h>
 # if UINT_MAX != 4294967295UL
 #   error "LZ4 code (when not C++ or C99) assumes that sizeof(int) == 4"
 # endif
@@ -322,8 +322,6 @@ static void LZ4_write32(void *memPtr, U32 value) { *(U32 *)memPtr = value; }
 typedef union { U16 u16; U32 u32; reg_t uArch; } __attribute__((packed)) unalign;
 
 static U16 LZ4_read16(const void *ptr) { return ((const unalign *)ptr)->u16; }
-// Tolerate reads on buffer boundary
-ATTRIBUTE_NO_SANITIZE_ADDRESS
 static U32 LZ4_read32(const void *ptr) { return ((const unalign *)ptr)->u32; }
 static reg_t LZ4_read_ARCH(const void *ptr) { return ((const unalign *)ptr)->uArch; }
 
@@ -1184,13 +1182,14 @@ _last_literals:
             if (outputDirective == fillOutput) {
                 /* adapt lastRun to fill 'dst' */
                 assert(olimit >= op);
-                lastRun  = (size_t)(olimit - op) - 1;
-                lastRun -= (lastRun + 240) / 255;
+                lastRun  = (size_t)(olimit - op) - 1/*token*/;
+                lastRun -= (lastRun + 256 - RUN_MASK) / 256;  /*additional length tokens*/
             } else {
                 assert(outputDirective == limitedOutput);
                 return 0;   /* cannot compress within `dst` budget. Stored indexes in hash table are nonetheless fine */
             }
         }
+        DEBUGLOG(6, "Final literal run : %i literals", (int)lastRun);
         if (lastRun >= RUN_MASK) {
             size_t accumulator = lastRun - RUN_MASK;
             *op++ = RUN_MASK << ML_BITS;
@@ -1668,7 +1667,9 @@ typedef enum { decode_full_block = 0, partial_decode = 1 } earlyEnd_directive;
  */
 typedef enum { loop_error = -2, initial_error = -1, ok = 0 } variable_length_error;
 LZ4_FORCE_INLINE unsigned
-read_variable_length(const BYTE **ip, const BYTE *lencheck, int loop_check, int initial_check, variable_length_error *error) {
+read_variable_length(const BYTE **ip, const BYTE *lencheck,
+                     int loop_check, int initial_check,
+                     variable_length_error *error) {
     U32 length = 0;
     U32 s;
     if (initial_check && unlikely((*ip) >= lencheck)) {    /* overflow detection */
@@ -1688,16 +1689,13 @@ read_variable_length(const BYTE **ip, const BYTE *lencheck, int loop_check, int 
     return length;
 }
 
-int LZ4_decompress_generic(const char *const src, char *const dst, int srcSize, int outputSize, endCondition_directive endOnInput, earlyEnd_directive partialDecoding,
-                           dict_directive dict, const BYTE *const lowPrefix, const BYTE *const dictStart, const size_t dictSize);
-
 /*! LZ4_decompress_generic() :
  *  This generic decompression function covers all use cases.
  *  It shall be instantiated several times, using different sets of directives.
  *  Note that it is important for performance that this function really get inlined,
  *  in order to remove useless branches during compilation optimization.
  */
-int
+LZ4_FORCE_INLINE int
 LZ4_decompress_generic(
     const char *const src,
     char *const dst,
@@ -1769,7 +1767,7 @@ LZ4_decompress_generic(
             /* decode literal length */
             if (length == RUN_MASK) {
                 variable_length_error error = ok;
-                length += read_variable_length(&ip, iend - RUN_MASK, endOnInput, endOnInput, &error);
+                length += read_variable_length(&ip, iend - RUN_MASK, (int)endOnInput, (int)endOnInput, &error);
                 if (error == initial_error) { goto _output_error; }
                 if ((safeDecode) && unlikely((uptrval)(op) + length < (uptrval)(op))) { goto _output_error; } /* overflow detection */
                 if ((safeDecode) && unlikely((uptrval)(ip) + length < (uptrval)(ip))) { goto _output_error; } /* overflow detection */
@@ -1817,7 +1815,7 @@ LZ4_decompress_generic(
             if (length == ML_MASK) {
                 variable_length_error error = ok;
                 if ((checkOffset) && (unlikely(match + dictSize < lowPrefix))) { goto _output_error; } /* Error : offset outside buffers */
-                length += read_variable_length(&ip, iend - LASTLITERALS + 1, endOnInput, 0, &error);
+                length += read_variable_length(&ip, iend - LASTLITERALS + 1, (int)endOnInput, 0, &error);
                 if (error != ok) { goto _output_error; }
                 if ((safeDecode) && unlikely((uptrval)(op) + length < (uptrval)op)) { goto _output_error; } /* overflow detection */
                 length += MINMATCH;
@@ -1846,7 +1844,7 @@ LZ4_decompress_generic(
                 }
             }
 
-            if ((checkOffset) && (unlikely(match + dictSize < lowPrefix))) { goto _output_error; } /* Error : offset outside buffers */
+            if (checkOffset && (unlikely(match + dictSize < lowPrefix))) { goto _output_error; } /* Error : offset outside buffers */
             /* match starting within external dictionary */
             if ((dict == usingExtDict) && (match < lowPrefix)) {
                 if (unlikely(op + length > oend - LASTLITERALS)) {
@@ -1948,7 +1946,7 @@ safe_decode:
             /* decode literal length */
             if (length == RUN_MASK) {
                 variable_length_error error = ok;
-                length += read_variable_length(&ip, iend - RUN_MASK, endOnInput, endOnInput, &error);
+                length += read_variable_length(&ip, iend - RUN_MASK, (int)endOnInput, (int)endOnInput, &error);
                 if (error == initial_error) { goto _output_error; }
                 if ((safeDecode) && unlikely((uptrval)(op) + length < (uptrval)(op))) { goto _output_error; } /* overflow detection */
                 if ((safeDecode) && unlikely((uptrval)(ip) + length < (uptrval)(ip))) { goto _output_error; } /* overflow detection */
@@ -1999,7 +1997,12 @@ safe_literal_copy:
                     /* We must be on the last sequence (or invalid) because of the parsing limitations
                      * so check that we exactly consume the input and don't overrun the output buffer.
                      */
-                    if ((endOnInput) && ((ip + length != iend) || (cpy > oend))) { goto _output_error; }
+                    if ((endOnInput) && ((ip + length != iend) || (cpy > oend))) {
+                        DEBUGLOG(6, "should have been last run of literals")
+                        DEBUGLOG(6, "ip(%p) + length(%i) = %p != iend (%p)", ip, (int)length, ip + length, iend);
+                        DEBUGLOG(6, "or cpy(%p) > oend(%p)", cpy, oend);
+                        goto _output_error;
+                    }
                 }
                 memmove(op, ip, length);  /* supports overlapping memory regions; only matters for in-place decompression scenarios */
                 ip += length;
@@ -2029,7 +2032,7 @@ safe_literal_copy:
 _copy_match:
             if (length == ML_MASK) {
                 variable_length_error error = ok;
-                length += read_variable_length(&ip, iend - LASTLITERALS + 1, endOnInput, 0, &error);
+                length += read_variable_length(&ip, iend - LASTLITERALS + 1, (int)endOnInput, 0, &error);
                 if (error != ok) goto _output_error;
                 if ((safeDecode) && unlikely((uptrval)(op) + length < (uptrval)op)) goto _output_error; /* overflow detection */
             }

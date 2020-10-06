@@ -42,11 +42,6 @@ extern "C" {
 /* --- Dependency --- */
 #include <stddef.h>   /* size_t */
 
-#if defined(__clang__) || defined (__GNUC__)
-# define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
-#else
-# define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#endif
 
 /**
   Introduction
@@ -105,7 +100,7 @@ extern "C" {
 /*------   Version   ------*/
 #define LZ4_VERSION_MAJOR    1    /* for breaking interface changes  */
 #define LZ4_VERSION_MINOR    9    /* for new (non-breaking) interface capabilities */
-#define LZ4_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
+#define LZ4_VERSION_RELEASE  3    /* for tweaks, bug-fixes, or development */
 
 #define LZ4_VERSION_NUMBER (LZ4_VERSION_MAJOR *100*100 + LZ4_VERSION_MINOR *100 + LZ4_VERSION_RELEASE)
 
