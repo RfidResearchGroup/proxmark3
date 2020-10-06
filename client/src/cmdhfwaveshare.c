@@ -13,6 +13,7 @@
 #include "util.h"
 #include "fileutils.h"
 #include "util_posix.h"     // msleep
+#include "cliparser.h"
 
 // Currently the largest pixel 880*528 only needs 58.08K bytes
 #define WSMAPSIZE 60000
@@ -89,23 +90,6 @@ static model_t models[] = {
 };
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_hf_waveshare_loadbmp(void) {
-    PrintAndLogEx(NORMAL, "Load BMP file to Waveshare NFC ePaper.");
-    PrintAndLogEx(NORMAL, "Usage:  hf waveshare loadbmp [h] f <filename[.bmp]> m <model_nr> [s]");
-    PrintAndLogEx(NORMAL, "  Options :");
-    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename[.bmp]") " to upload to tag");
-    PrintAndLogEx(NORMAL, "  m <nr>  : " _YELLOW_("model number") " of your tag");
-    PrintAndLogEx(NORMAL, "  s       : save dithered version in filename-[n].bmp, only for RGB BMP");
-    for (uint8_t i = 0; i < MEND; i++) {
-        PrintAndLogEx(NORMAL, "  m %2i    : %-30s (%i*%i)", i, models[i].desc, models[i].width, models[i].height);
-    }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf waveshare loadbmp m 0 f myfile"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uint8_t model_nr) {
     if (bmpsize < sizeof(BMP_HEADER))
@@ -976,50 +960,59 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
 
 static int CmdHF14AWSLoadBmp(const char *Cmd) {
 
-    char filename[FILE_PATH_SIZE] = {0};
-    uint8_t cmdp = 0;
-    bool errors = false;
-    size_t filenamelen = 0;
-    uint8_t model_nr = 0xff;
-    bool save_conversions = false;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_waveshare_loadbmp();
-            case 'f':
-                filenamelen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (filenamelen > FILE_PATH_SIZE - 5)
-                    filenamelen = FILE_PATH_SIZE - 5;
-                cmdp += 2;
-                break;
-            case 'm':
-                model_nr = param_get8(Cmd, cmdp + 1);
-                cmdp += 2;
-                break;
-            case 's':
-                save_conversions = true;
-                cmdp += 1;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    char desc[800] = {0};
+    for (uint8_t i = 0; i < MEND; i++) {
+        snprintf(desc + strlen(desc),
+            sizeof(desc) - strlen(desc),
+            "hf waveshare loadbmp -f myfile -m %2u -> %s ( %u, %u )\n",
+            i,
+            models[i].desc,
+            models[i].width,
+            models[i].height
+            );
     }
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf waveshare loadbmp",
+                  "Load BMP file to Waveshare NFC ePaper.",
+                  desc
+                );
+    
+    char modeldesc[40];
+    snprintf(modeldesc, sizeof(modeldesc), "model number [0 - %u] of your tag", MEND - 1);
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("m", NULL, "<nr>", modeldesc),
+        arg_lit0("s", "save", "save dithered version in filename-[n].bmp, only for RGB BMP"),
+        arg_strx0("f", "file", "<filename>", "filename[.bmp] to upload to tag"),
+        arg_param_end
+    };    
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int model_nr = arg_get_int_def(ctx, 1, -1);
+    bool save_conversions = arg_get_lit(ctx, 2);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t*)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
     //Validations
-    if (filenamelen < 1) {
+    if (fnlen < 1) {
         PrintAndLogEx(WARNING, "Missing filename");
-        errors = true;
+        return PM3_EINVARG;
     }
-    if (model_nr == 0xff) {
+    if (model_nr == -1) {
         PrintAndLogEx(WARNING, "Missing model");
-        errors = true;
-    } else if (model_nr >= MEND) {
+        return PM3_EINVARG;
+    }    
+    if (model_nr >= MEND) {
         PrintAndLogEx(WARNING, "Unknown model");
-        errors = true;
+        return PM3_EINVARG;
     }
-    if (errors || cmdp == 0) return usage_hf_waveshare_loadbmp();
+
 
     uint8_t *bmp = NULL;
     uint8_t *black = NULL;
