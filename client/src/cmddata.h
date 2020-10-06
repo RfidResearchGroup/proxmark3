@@ -86,7 +86,7 @@ extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
 
 extern int g_DemodClock;
-extern size_t g_DemodStartIdx;
+extern int32_t g_DemodStartIdx;
 
 #ifdef __cplusplus
 }

@@ -703,6 +703,16 @@ void Plot::Trim(void) {
     if ((CursorAPos == 0) || (CursorBPos == 0)) { // if we don't have both cursors set
         lref = GraphStart;
         rref = GraphStop;
+        if (CursorAPos >= lref) {
+            CursorAPos -= lref;
+        } else {
+            CursorAPos = 0;
+        }
+        if (CursorBPos >= lref) {
+            CursorBPos -= lref;
+        } else {
+            CursorBPos = 0;
+        }
     } else {
         lref = CursorAPos < CursorBPos ? CursorAPos : CursorBPos;
         rref = CursorAPos < CursorBPos ? CursorBPos : CursorAPos;
@@ -715,6 +725,7 @@ void Plot::Trim(void) {
         CursorAPos -= lref;
         CursorBPos -= lref;
     }
+    g_DemodStartIdx -= lref;
     for (uint32_t i = lref; i < rref; ++i)
         GraphBuffer[i - lref] = GraphBuffer[i];
     GraphTraceLen = rref - lref;

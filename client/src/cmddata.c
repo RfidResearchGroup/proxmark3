@@ -30,7 +30,7 @@
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
-size_t g_DemodStartIdx = 0;
+int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
@@ -1789,6 +1789,7 @@ int CmdLtrim(const char *Cmd) {
         GraphBuffer[i - ds] = GraphBuffer[i];
 
     GraphTraceLen -= ds;
+    g_DemodStartIdx -= ds;
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
