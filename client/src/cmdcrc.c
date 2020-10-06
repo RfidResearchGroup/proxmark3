@@ -254,7 +254,6 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 
     int ibperhx = 8, obperhx = 8;
 //    int rflags = 0; // search flags
-    int c;
     poly_t apoly, crc;
 
     char *string;
@@ -266,7 +265,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
 
     SETBMP();
     //set model
-    c = mbynam(&model, inModel);
+    int c = mbynam(&model, inModel);
     if (!c) {
         PrintAndLogEx(ERR, "error: preset model '%s' not found.  Use reveng -D to list presets. [%d]", inModel, c);
         return 0;
@@ -406,7 +405,7 @@ static int CmdrevengSearch(const char *Cmd) {
 
 #define NMODELS 106
 
-    char inHexStr[100] = {0x00};
+    char inHexStr[256] = {0x00};
     int dataLen = param_getstr(Cmd, 0, inHexStr, sizeof(inHexStr));
     if (dataLen < 4) return 0;
 
@@ -419,7 +418,12 @@ static int CmdrevengSearch(const char *Cmd) {
     char revResult[30];
     int ans = GetModels(Models, &count, width);
     bool found = false;
-    if (!ans) return 0;
+    if (!ans) {
+        for (int i = 0; i < count; i++) {
+            free(Models[i]);
+        }
+        return 0;
+    }
 
     // try each model and get result
     for (int i = 0; i < count; i++) {
@@ -430,8 +434,10 @@ static int CmdrevengSearch(const char *Cmd) {
         // round up to # of characters in this model's crc
         uint8_t crcChars = ((width[i] + 7) / 8) * 2;
         // can't test a model that has more crc digits than our data
-        if (crcChars >= dataLen)
+        if (crcChars >= dataLen) {
+            free(Models[i]);
             continue;
+        }
 
         PrintAndLogEx(DEBUG
                       , "DEBUG: dataLen %d, crcChars %u,  width[i] %u"
@@ -440,8 +446,10 @@ static int CmdrevengSearch(const char *Cmd) {
                       , width[i]
                      );
 
-        if (crcChars == 0)
+        if (crcChars == 0) {
+            free(Models[i]);            
             continue;
+        }
 
         memset(result, 0, 30);
         char *inCRC = calloc(crcChars + 1, sizeof(char));
@@ -493,8 +501,10 @@ static int CmdrevengSearch(const char *Cmd) {
         free(Models[i]);
     }
 
-    if (!found) PrintAndLogEx(FAILED, "\nno matches found\n");
-    return 1;
+    if (found == false)
+        PrintAndLogEx(FAILED, "\nno matches found\n");
+
+    return PM3_SUCCESS;
 }
 
 int CmdCrc(const char *Cmd) {
@@ -510,6 +520,7 @@ int CmdCrc(const char *Cmd) {
     } else {
         reveng_main(argc, argv);
     }
+
     for (int i = 0; i < argc; ++i) {
         free(argv[i]);
     }
