@@ -51,6 +51,12 @@ endif
 DEFCXXFLAGS = -Wall -Werror -O3 -pipe
 DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
 DEFLDFLAGS =
+# Next ones are activated only if SANITIZE=1
+ifeq ($(SANITIZE),1)
+  DEFCFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
+  DEFCXXFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
+  DEFLDFLAGS += -g -fsanitize=address
+endif
 # Some more warnings we want as errors:
 DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits -Wold-style-definition
 # Some more warnings we need first to eliminate, so temporarely tolerated:
