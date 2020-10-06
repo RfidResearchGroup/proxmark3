@@ -227,7 +227,7 @@ void preferences_save_callback(json_t *root) {
 
 void preferences_load_callback(json_t *root) {
     json_error_t up_error = {0};
-    bool b1;
+    int b1;
     int i1;
     const char *s1;
     char tempStr [500]; // to use str_lower() since json unpack uses const char *
@@ -273,7 +273,7 @@ void preferences_load_callback(json_t *root) {
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.overlay.wsize", &i1) == 0)
         session.overlay.w = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "window.overlay.sliders", &b1) == 0)
-        session.overlay_sliders = b1;
+        session.overlay_sliders = (bool)b1;
 
     // show options
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "show.emoji", &s1) == 0) {
@@ -286,10 +286,10 @@ void preferences_load_callback(json_t *root) {
     }
 
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "show.hints", &b1) == 0)
-        session.show_hints = b1;
+        session.show_hints = (bool)b1;
 
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "os.supports.colors", &b1) == 0)
-        session.supports_colors = b1;
+        session.supports_colors = (bool)b1;
     /*
         // Logging Level
         if (json_unpack_ex(root, &up_error, 0, "{s:s}", "device.debug.level", &s1) == 0) {
