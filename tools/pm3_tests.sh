@@ -376,7 +376,7 @@ while true; do
                                                                      "G-Prox-II - len: 26 FC: 123 Card: 11223, Raw: f98c7038c63356c7ac26398c"; then break; fi
       if ! CheckExecute slow "lf T55 hid test"                   "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid.pm3; lf search 1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid test2"                  "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid.pm3; lf hid demod'" \
-                                                                     "HID Prox - 2006ec0c86 (1603) - len: 26 bit - OEM: 000 FC: 118 Card: 1603"; then break; fi
+                                                                     "HID H10301 26-bit;  FC: 118  CN: 1603"; then break; fi
       if ! CheckExecute slow "lf T55 hid_84 test"                "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid_84.pm3; lf search 1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 hid_84 test2"               "$CLIENTBIN -c 'data load traces/lf_ATA5577_hid_84.pm3; lf hid demod'" \
                                                                      "HID Prox - 9e000000000022006ec0c86 (1603)"; then break; fi
