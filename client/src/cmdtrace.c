@@ -159,10 +159,8 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
             char temp_str2[3] = {0};
 
             sprintf(data_len_str, "%04x", hdr->data_len);
-            strncat(temp_str1, data_len_str, 2);
-            temp_str1[2] = '\0';
-            strncat(temp_str2, data_len_str + 2, 2);
-            temp_str2[2] = '\0';
+            memmove(temp_str1, data_len_str, 2);
+            memmove(temp_str2, data_len_str + 2, 2);
 
             PrintAndLogEx(NORMAL, "0.%010u", hdr->timestamp);
             PrintAndLogEx(NORMAL, "000000 00 %s %s %s %s",
