@@ -752,26 +752,26 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
 // The soft decision on the bit uses an estimate of just the
 // quadrant of the reference angle, not the exact angle.
 #define MAKE_SOFT_DECISION() { \
-		if(Demod.sumI > 0) { \
-			v = ci; \
-		} else { \
-			v = -ci; \
-		} \
-		if(Demod.sumQ > 0) { \
-			v += cq; \
-		} else { \
-			v -= cq; \
-		} \
-	}
+        if(Demod.sumI > 0) { \
+            v = ci; \
+        } else { \
+            v = -ci; \
+        } \
+        if(Demod.sumQ > 0) { \
+            v += cq; \
+        } else { \
+            v -= cq; \
+        } \
+    }
 
-#define SUBCARRIER_DETECT_THRESHOLD	 8
+#define SUBCARRIER_DETECT_THRESHOLD  8
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
 #define AMPLITUDE(ci,cq) (MAX(ABS(ci),ABS(cq)) + (MIN(ABS(ci),ABS(cq))/2))
 
     switch (Demod.state) {
 
         case DEMOD_UNSYNCD: {
-            if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {	// subcarrier detected
+            if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {  // subcarrier detected
                 Demod.state = DEMOD_PHASE_REF_TRAINING;
                 Demod.sumI = ci;
                 Demod.sumQ = cq;
@@ -799,7 +799,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                     } else {
                         // at this point it can be start of 14b' data or start of 14b SOF
                         MAKE_SOFT_DECISION();
-                        Demod.posCount = 1;				// this was the first half
+                        Demod.posCount = 1;             // this was the first half
                         Demod.thisBit = v;
                         Demod.shiftReg = 0;
                         Demod.state = DEMOD_RECEIVING_DATA;
@@ -815,7 +815,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             Demod.posCount++;
             MAKE_SOFT_DECISION();
             if (v > 0) {
-                if (Demod.posCount > 3 * 2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
+                if (Demod.posCount > 3 * 2) {       // max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
                     LED_C_OFF();
                     if (Demod.bitCount == 0 && Demod.len == 0) { // received SOF only, this is valid for iClass/Picopass
                         return true;
@@ -823,8 +823,8 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                         Demod.state = DEMOD_UNSYNCD;
                     }
                 }
-            } else {							// start bit detected
-                Demod.posCount = 1;				// this was the first half
+            } else {                            // start bit detected
+                Demod.posCount = 1;             // this was the first half
                 Demod.thisBit = v;
                 Demod.shiftReg = 0;
                 Demod.state = DEMOD_RECEIVING_DATA;
@@ -857,14 +857,14 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
 
             MAKE_SOFT_DECISION();
 
-            if (Demod.posCount == 0) { 			// first half of bit
+            if (Demod.posCount == 0) {          // first half of bit
                 Demod.thisBit = v;
                 Demod.posCount = 1;
-            } else {							// second half of bit
+            } else {                            // second half of bit
                 Demod.thisBit += v;
 
                 Demod.shiftReg >>= 1;
-                if (Demod.thisBit > 0) {	// logic '1'
+                if (Demod.thisBit > 0) {    // logic '1'
                     Demod.shiftReg |= 0x200;
                 }
 

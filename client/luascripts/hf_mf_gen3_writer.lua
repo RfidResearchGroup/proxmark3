@@ -34,7 +34,7 @@ version = 'v1.0.0'
 desc = [[
     This script gives you an easy way to write your *.eml dumps into normal MIFARE Classic and Magic Gen3 cards.
 
-	Works with both 4 and 7 bytes NXP MIFARE Classic 1K cards.
+    Works with both 4 and 7 bytes NXP MIFARE Classic 1K cards.
     The script also has the possibility to change UID and permanent lock uid on magic Gen3 cards.
 
     It supports the following functionality.
@@ -47,18 +47,18 @@ desc = [[
 
     Script works in a wizard styled way.
 
-	Author Youtube channel: https://yev.ooo/
+    Author Youtube channel: https://yev.ooo/
 
-	Many Thanks,
-	Best Regards
+    Many Thanks,
+    Best Regards
 ]]
 example = [[
     1. script run mfc_gen3_writer
 ]]
 usage = [[
-	Give script to know if you uses an Windows OS
+    Give script to know if you uses an Windows OS
     Select your *.eml dump from list to write to the card.
-	Follow the wizard.
+    Follow the wizard.
 ]]
 --
 ---
@@ -163,9 +163,9 @@ end
 --
 local function KeyAB()
     if default_key_type == '00' then
-    	return 'KeyA'
+        return 'KeyA'
     else
-    	return 'KeyB'
+        return 'KeyB'
     end
 end
 --
@@ -265,7 +265,7 @@ local function main(args)
             eml_file_uid_end = 22
             eml_file_lengt = 31
         else
-	        eml_file_uid_start = 9
+            eml_file_uid_start = 9
             eml_file_uid_end = 16
             eml_file_lengt = 25
         end
@@ -366,7 +366,7 @@ local function main(args)
     print(tab)
     --
     if checkkey() == true then
-    	print(tab)
+        print(tab)
         if (utils.confirm(' Card is Empty. Write selected dump to card ?') == true) then
             for i = 1, #eml do
                 core.console(string.format(cmd_wrbl_b, (i-1), default_key, eml[i]))

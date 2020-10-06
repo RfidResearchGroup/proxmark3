@@ -154,22 +154,22 @@ wire [3:0] minor_mode = conf_word[3:0];
 
 // 000 - HF reader
 hi_reader hr(
-	ck_1356megb,
-	hr_pwr_lo, hr_pwr_hi, hr_pwr_oe1, hr_pwr_oe2, hr_pwr_oe3, hr_pwr_oe4,
-	adc_d, hr_adc_clk,
-	hr_ssp_frame, hr_ssp_din, ssp_dout, hr_ssp_clk,
-	hr_dbg,
-	subcarrier_frequency, minor_mode
+    ck_1356megb,
+    hr_pwr_lo, hr_pwr_hi, hr_pwr_oe1, hr_pwr_oe2, hr_pwr_oe3, hr_pwr_oe4,
+    adc_d, hr_adc_clk,
+    hr_ssp_frame, hr_ssp_din, ssp_dout, hr_ssp_clk,
+    hr_dbg,
+    subcarrier_frequency, minor_mode
 );
 
 // 001 - HF simulated tag
 hi_simulate hs(
-	ck_1356meg,
+    ck_1356meg,
     hs_pwr_lo, hs_pwr_hi, hs_pwr_oe1, hs_pwr_oe2, hs_pwr_oe3, hs_pwr_oe4,
     adc_d, hs_adc_clk,
     hs_ssp_frame, hs_ssp_din, ssp_dout, hs_ssp_clk,
     hs_dbg,
-	minor_mode
+    minor_mode
 );
 
 // 011 - HF sniff
@@ -192,9 +192,9 @@ hi_flite hfl(
 
 // 101 - HF get trace
 hi_get_trace gt(
-	ck_1356megb,
-	adc_d, trace_enable, major_mode,
-	gt_ssp_frame, gt_ssp_din, gt_ssp_clk
+    ck_1356megb,
+    adc_d, trace_enable, major_mode,
+    gt_ssp_frame, gt_ssp_din, gt_ssp_clk
 );
 
 // Major modes:
