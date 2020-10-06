@@ -272,6 +272,7 @@ PM3CFLAGS = $(CFLAGS)
 PM3CFLAGS += -I./src -I../include -I../common -I../common_fpga $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
+PM3CFLAGS += -g
 
 PREFIX ?= /usr/local
 ifneq (,$(findstring MINGW,$(platform)))
@@ -505,7 +506,6 @@ SRCS =  aidsearch.c \
 		flash.c \
 		generator.c \
 		graph.c \
-		jansson_path.c \
 		loclass/cipher.c \
 		loclass/cipherutils.c \
 		loclass/elite_crack.c \
