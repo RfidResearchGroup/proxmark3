@@ -76,7 +76,7 @@ int CmdWiegandEncode(const char *Cmd) {
         arg_u64_1(NULL, "cn", "<dec>", "card number"),
         arg_u64_0(NULL, "issue", "<dec>", "issue level"),
         arg_u64_0(NULL, "oem", "<dec>", "OEM code"),
-        arg_strx1("w", "wiegand", "<format>", "see `wiegand list` for available formats"),        
+        arg_str1("w", "wiegand", "<format>", "see `wiegand list` for available formats"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
