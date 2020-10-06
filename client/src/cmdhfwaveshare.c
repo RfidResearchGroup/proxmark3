@@ -957,7 +957,6 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     return PM3_SUCCESS;
 }
 
-
 static int CmdHF14AWSLoadBmp(const char *Cmd) {
 
     char desc[800] = {0};
@@ -985,7 +984,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         arg_param_begin,
         arg_int1("m", NULL, "<nr>", modeldesc),
         arg_lit0("s", "save", "save dithered version in filename-[n].bmp, only for RGB BMP"),
-        arg_strx0("f", "file", "<filename>", "filename[.bmp] to upload to tag"),
+        arg_strx1("f", "file", "<filename>", "filename[.bmp] to upload to tag"),
         arg_param_end
     };    
 
@@ -1012,7 +1011,6 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         PrintAndLogEx(WARNING, "Unknown model");
         return PM3_EINVARG;
     }
-
 
     uint8_t *bmp = NULL;
     uint8_t *black = NULL;
