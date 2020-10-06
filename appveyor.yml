@@ -2,14 +2,14 @@ version: 3.0.1.{build}
 image: Visual Studio 2019
 clone_folder: C:\ProxSpace\pm3\proxmark
 cache:
-  - C:\cache -> appveyor.yml
+  - C:\ps-cache -> appveyor.yml
 environment:
   proxspace_url: https://github.com/Gator96100/ProxSpace/archive/master.zip
   proxspace_zip_file: \proxspace.zip
   proxspace_zip_folder_name: ProxSpace-*
   proxspace_path: C:\ProxSpace
   proxspace_home_path: \ProxSpace\pm3
-  proxspace_cache_path: C:\cache
+  proxspace_cache_path: C:\ps-cache
   wsl_git_path: C:\proxmark
   APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
@@ -28,7 +28,6 @@ init:
     }
 
     $releasename+=$env:APPVEYOR_BUILD_VERSION + " [" + $env:APPVEYOR_REPO_COMMIT_SHORT + "]"
-
 
     Write-Host "repository: $env:appveyor_repo_name branch:$env:APPVEYOR_REPO_BRANCH release: $releasename" -ForegroundColor Yellow
 
@@ -68,6 +67,7 @@ clone_script:
         WSLExec "WSL install..." "sudo apt-get -y install --reinstall --no-install-recommends git ca-certificates build-essential pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev cmake 1>/dev/null" 
         WSLExec "WSL QT fix..." "sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5"
         Add-AppveyorMessage -Message "WSL setup took $(([System.Environment]::TickCount-$WSLInstallTime) / 1000) sec" -Category Information
+        New-Item -ItemType "file" -Path "C:\WSL-Finished.txt" -Force | Out-Null
     }
     
     $env:PSInstallTime=[System.Environment]::TickCount
@@ -154,8 +154,9 @@ install:
             }
             
             Start-Sleep -s 5
-            Receive-Job -Name WSLInstall
+            Receive-Job -Name WSLInstall -ErrorAction SilentlyContinue
         }
+        #Receive-Job -Wait -Name PSInstall
     }
     
     Function GitClone($Text, $Folder) {
@@ -175,7 +176,9 @@ install:
     
     Write-Host "ProxSpace: move cache..." -NoNewLine
     
-    Move-Item -Path "$env:proxspace_cache_path" -Destination "$env:proxspace_path\msys2\var\cache" -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path "$env:proxspace_path\msys2\var\cache\" | Out-Null
+    
+    Copy-Item -Path "$env:proxspace_cache_path\*" -Destination "$env:proxspace_path\msys2\var\cache\" -Force -Recurse -ErrorAction SilentlyContinue
     
     Write-Host "[ OK ]" -ForegroundColor Gree 
 
@@ -212,6 +215,7 @@ build_script:
     
     $WSLjob = Start-Job -Name WSLCompile -ScriptBlock { 
         Function ExecWSLCmd($Cmd) {
+            cd $env:wsl_git_path   
             wsl -- bash -c $Cmd
         }
         
@@ -231,11 +235,17 @@ build_script:
         }
         
         #WSL: wait for installation to finish
-        Receive-Job -Wait -Name WSLInstall
+        if(!(Test-Path "C:\WSL-Finished.txt")){
+            Write-Host "Waiting for WSL installation to finish..." -NoNewLine
+            while(!(Test-Path "C:\WSL-Finished.txt")) {
+                Start-Sleep -s 5
+            }
+            Remove-Item -Force "C:\WSL-Finished.txt" -ErrorAction SilentlyContinue
+            Write-Host "$Name [ OK ]" -ForegroundColor Green       
+        }
     
         #Windows Subsystem for Linux (WSL)
         Write-Host "---------- WSL make ----------" -ForegroundColor Yellow   
-        cd $env:wsl_git_path   
         $TestTime=[System.Environment]::TickCount
         ExecWSLCmd "make clean;make V=1"  
         #some checks
@@ -266,7 +276,9 @@ build_script:
     
     Write-Host "ProxSpace: create new cache..." -NoNewLine
     
-    ExecMinGWCmd 'yes | pacman -Sc > /dev/null 2>&1'
+    cd $env:proxspace_path
+    
+    ./runme64.bat -c "yes | pacman -Sc > /dev/null 2>&1"
     
     Remove-Item -Recurse -Force -Path "$env:proxspace_cache_path" -ErrorAction SilentlyContinue
     
@@ -316,8 +328,9 @@ build_script:
     
     ExecCheck "PS cmake Tests"
     
+    Receive-Job -Wait -Name WSLInstall -ErrorAction SilentlyContinue
+    
     Receive-Job -Wait -Job $WSLjob
-
     
 test_script:
 - ps: >-
