@@ -333,7 +333,7 @@ ipqx:
                 mbynum(&model, --args);
                 ufound(&model);
             } while (args);
-             mfree(&model);
+            mfree(&model);
             break;
         case 'd': /* d  dump CRC model */
             /* maybe we don't want to do this:

@@ -268,15 +268,13 @@ static void *brute_thread(void *arguments) {
                 printf("CMD enc(%08x)\n", cmd_enc);
                 printf("    dec(%08x)\t", decrypted);
 
-                uint8_t isOK = 0;
                 // check if cmd exists
-                isOK = checkValidCmd(decrypted);
+                uint8_t isOK = checkValidCmd(decrypted);
                 (void)isOK;
 
                 // Add a crc-check.
                 isOK = checkCRC(decrypted);
-
-                if (!isOK) {
+                if (isOK == false) {
                     printf("<-- not a valid cmd\n");
                     pthread_mutex_unlock(&print_lock);
                     free(revstate);
@@ -305,8 +303,10 @@ static void *brute_thread(void *arguments) {
             pthread_mutex_unlock(&print_lock);
         }
     }
+    if (revstate)
+        free(revstate);
 
-    free(args);    
+    free(args);
     return NULL;
 }
 

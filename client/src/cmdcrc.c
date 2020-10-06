@@ -447,7 +447,7 @@ static int CmdrevengSearch(const char *Cmd) {
                      );
 
         if (crcChars == 0) {
-            free(Models[i]);            
+            free(Models[i]);
             continue;
         }
 

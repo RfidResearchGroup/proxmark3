@@ -745,7 +745,7 @@ static int unpack(scanner_t *s, json_t *root, va_list *ap) {
                           json_error_wrong_type,
                           "Expected true or false, got %s",
                           type_name(root)
-                );
+                         );
                 return -1;
             }
 

@@ -1366,7 +1366,7 @@ static int waitCmd(uint8_t iSelect, uint32_t timeout) {
                           data[len - 2],
                           data[len - 1],
                           (crc) ? _GREEN_("ok") : _RED_("fail")
-                        );
+                         );
         } else {
             PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
         }

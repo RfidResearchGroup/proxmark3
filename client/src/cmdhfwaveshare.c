@@ -962,31 +962,31 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
     char desc[800] = {0};
     for (uint8_t i = 0; i < MEND; i++) {
         snprintf(desc + strlen(desc),
-            sizeof(desc) - strlen(desc),
-            "hf waveshare loadbmp -f myfile -m %2u -> %s ( %u, %u )\n",
-            i,
-            models[i].desc,
-            models[i].width,
-            models[i].height
-            );
+                 sizeof(desc) - strlen(desc),
+                 "hf waveshare loadbmp -f myfile -m %2u -> %s ( %u, %u )\n",
+                 i,
+                 models[i].desc,
+                 models[i].width,
+                 models[i].height
+                );
     }
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf waveshare loadbmp",
                   "Load BMP file to Waveshare NFC ePaper.",
                   desc
-                );
-    
+                 );
+
     char modeldesc[40];
     snprintf(modeldesc, sizeof(modeldesc), "model number [0 - %u] of your tag", MEND - 1);
-    
+
     void *argtable[] = {
         arg_param_begin,
         arg_int1("m", NULL, "<nr>", modeldesc),
         arg_lit0("s", "save", "save dithered version in filename-[n].bmp, only for RGB BMP"),
         arg_str1("f", "file", "<filename>", "filename[.bmp] to upload to tag"),
         arg_param_end
-    };    
+    };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
@@ -995,7 +995,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t*)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     //Validations
@@ -1006,7 +1006,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
     if (model_nr == -1) {
         PrintAndLogEx(WARNING, "Missing model");
         return PM3_EINVARG;
-    }    
+    }
     if (model_nr >= MEND) {
         PrintAndLogEx(WARNING, "Unknown model");
         return PM3_EINVARG;

@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 // GUI (QT)
 //-----------------------------------------------------------------------------
-#define __STDC_FORMAT_MACROS  
+#define __STDC_FORMAT_MACROS
 #include "proxguiqt.h"
 #include <inttypes.h>
 #include <stdbool.h>
@@ -820,13 +820,13 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         case Qt::Key_Up:
             if (event->modifiers() & Qt::ShiftModifier) {
                 if (event->modifiers() & Qt::ControlModifier) {
-                    Zoom(1.0/zoom_offset, CursorBPos);
+                    Zoom(1.0 / zoom_offset, CursorBPos);
                 } else {
                     Zoom(0.5, CursorBPos);
                 }
             } else {
                 if (event->modifiers() & Qt::ControlModifier) {
-                    Zoom(1.0/zoom_offset, CursorAPos);
+                    Zoom(1.0 / zoom_offset, CursorAPos);
                 } else {
                     Zoom(0.5, CursorAPos);
                 }
@@ -868,29 +868,29 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             g_printAndLog = PRINTANDLOG_PRINT;
             PrintAndLogEx(NORMAL, "\n\n" _CYAN_("PLOT window keystrokes and mouse events"));
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Move:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9+9, _RED_("Home") "/" _RED_("End"), "Move to the start/end of the graph");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _YELLOW_("Mouse wheel"), "Move left/right");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9+9, _RED_("Left") "/" _RED_("Right"), "Move left/right");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, " + " _RED_("Ctrl"), "... by 1 sample");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, " + " _RED_("Shift"), "... by 1 window");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9+9, _RED_("PgUp") "/" _RED_("PgDown"), "Move left/right by 1 window");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Home") "/" _RED_("End"), "Move to the start/end of the graph");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Mouse wheel"), "Move left/right");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Left") "/" _RED_("Right"), "Move left/right");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 1 sample");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Shift"), "... by 1 window");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("PgUp") "/" _RED_("PgDown"), "Move left/right by 1 window");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Zoom:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9+9, _RED_("Shift") " + " _YELLOW_("Mouse wheel"), "Zoom in/out around mouse cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9+9, _RED_("Down") "/" _RED_("Up"), "Zoom in/out around yellow cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, " + " _RED_("Ctrl"), "... with smaller increment");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, " + " _RED_("Shift"), "... around purple cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("h"), "Show this help");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Shift") " + " _YELLOW_("Mouse wheel"), "Zoom in/out around mouse cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Down") "/" _RED_("Up"), "Zoom in/out around yellow cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... with smaller increment");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Shift"), "... around purple cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("h"), "Show this help");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Trim:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("t"), "Trim data on window or on cursors if defined");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("t"), "Trim data on window or on cursors if defined");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Grid and demod:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("g"), "Toggle grid and demodulation plot display");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("l"), "Toggle lock grid relative to samples");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9+9, _RED_("<") "/" _RED_(">"), "Move demodulation left/right relative to samples");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("g"), "Toggle grid and demodulation plot display");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("l"), "Toggle lock grid relative to samples");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("<") "/" _RED_(">"), "Move demodulation left/right relative to samples");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Misc:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _YELLOW_("Left mouse click"), "Set yellow cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _YELLOW_("Right mouse click"), "Set purple cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("h"), "Show this help");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25+9, _RED_("q"), "Close plot window");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Left mouse click"), "Set yellow cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set purple cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("h"), "Show this help");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("q"), "Close plot window");
             g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
             break;
 

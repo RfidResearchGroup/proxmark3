@@ -1812,7 +1812,7 @@ static int CmdMtrim(const char *Cmd) {
     uint32_t start = 0, stop = 0;
     sscanf(Cmd, "%u %u", &start, &stop);
 
-    if (start > GraphTraceLen || stop > GraphTraceLen || start >= stop) 
+    if (start > GraphTraceLen || stop > GraphTraceLen || start >= stop)
         return PM3_ESOFT;
 
     // leave start position sample
@@ -1909,7 +1909,7 @@ static int CmdTimeScale(const char *Cmd) {
                   "data timescale --sr 125   -u ms  -> for LF sampled at 125 kHz. Reading will be in milliseconds\n"
                   "data timescale --sr 1.695 -u us  -> for HF sampled at 16 * fc/128. Reading will be in microseconds\n"
                   "data timescale --sr 16    -u ETU -> for HF with 16 samples per ETU (fc/128). Reading will be in ETUs"
-                  );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_dbl1(NULL,  "sr", "<float>", "sets timescale factor according to sampling rate"),
@@ -1924,7 +1924,7 @@ static int CmdTimeScale(const char *Cmd) {
     }
     int len = 0;
     CursorScaleFactorUnit[0] = '\x00';
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t*)CursorScaleFactorUnit, sizeof(CursorScaleFactorUnit), &len);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)CursorScaleFactorUnit, sizeof(CursorScaleFactorUnit), &len);
     CLIParserFree(ctx);
     RepaintGraphWindow();
     return PM3_SUCCESS;

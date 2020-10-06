@@ -957,7 +957,7 @@ static command_t setCommandTable[] = {
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     //  {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
     {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
-    {"plotsliders",setCmdPlotSliders,         AlwaysAvailable, "Set plot slider display"},
+    {"plotsliders", setCmdPlotSliders,         AlwaysAvailable, "Set plot slider display"},
     //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
     {NULL, NULL, NULL, NULL}
 };

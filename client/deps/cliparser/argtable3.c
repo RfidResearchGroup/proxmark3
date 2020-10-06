@@ -2231,9 +2231,9 @@ struct arg_int *arg_intn(
 #include <limits.h>
 #include <inttypes.h>
 static uint64_t strtollu0X(const char *str,
-                         const char * *endptr,
-                         char X,
-                         int base) {
+                           const char * *endptr,
+                           char X,
+                           int base) {
     uint64_t val;               /* stores result */
     int s = 1;                    /* sign is +1 or -1 */
     const char *ptr = str;        /* ptr to current position in str */
@@ -4529,11 +4529,11 @@ static void arg_cat_optionv(char *dest,
     }
 
     if (datatype) {
-/*        if (longopts)
-            arg_cat(&dest, "=", &ndest);
-        else if (shortopts)
-            arg_cat(&dest, " ", &ndest);
-*/
+        /*        if (longopts)
+                    arg_cat(&dest, "=", &ndest);
+                else if (shortopts)
+                    arg_cat(&dest, " ", &ndest);
+        */
         if (longopts)
             arg_cat(&dest, " ", &ndest);
         else if (shortopts)

@@ -2662,7 +2662,7 @@ static int CmdHFiClassView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>",  "filename of dump"),
-        arg_int0("s", "startblock", "<dec>", "print from this block (default block6)"),        
+        arg_int0("s", "startblock", "<dec>", "print from this block (default block6)"),
         arg_int0("e", "endblock", "<dec>",   "end printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose",             "verbose output"),
         arg_param_end
@@ -2671,13 +2671,13 @@ static int CmdHFiClassView(const char *Cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t*)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     int startblock = arg_get_int_def(ctx, 2, 0);
     int endblock = arg_get_int_def(ctx, 3, 0);
     bool verbose = arg_get_lit(ctx, 4);
 
-    CLIParserFree(ctx);        
+    CLIParserFree(ctx);
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
@@ -3492,17 +3492,17 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("r",  "reverse",        "reverse permuted key"),       
+        arg_lit0("r",  "reverse",        "reverse permuted key"),
         arg_str1(NULL, "key", "<bytes>", "input key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     isReverse = arg_get_lit(ctx, 1);
-       
+
     CLIGetHexWithReturn(ctx, 2, data, &len);
 
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     memcpy(key, data, 8);
 
