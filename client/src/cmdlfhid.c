@@ -154,7 +154,7 @@ static int CmdHIDDemod(const char *Cmd) {
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdHIDRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    lf_read(false, 12000);
+    lf_read(false, 16000);
     return demodHID(true);
 }
 
