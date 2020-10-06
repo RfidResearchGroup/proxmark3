@@ -322,6 +322,8 @@ static void LZ4_write32(void *memPtr, U32 value) { *(U32 *)memPtr = value; }
 typedef union { U16 u16; U32 u32; reg_t uArch; } __attribute__((packed)) unalign;
 
 static U16 LZ4_read16(const void *ptr) { return ((const unalign *)ptr)->u16; }
+// Tolerate reads on buffer boundary
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 static U32 LZ4_read32(const void *ptr) { return ((const unalign *)ptr)->u32; }
 static reg_t LZ4_read_ARCH(const void *ptr) { return ((const unalign *)ptr)->uArch; }
 
