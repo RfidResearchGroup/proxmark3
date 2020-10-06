@@ -505,6 +505,7 @@ SRCS =  aidsearch.c \
 		flash.c \
 		generator.c \
 		graph.c \
+		jansson_path.c \
 		loclass/cipher.c \
 		loclass/cipherutils.c \
 		loclass/elite_crack.c \

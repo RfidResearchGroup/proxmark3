@@ -13,8 +13,7 @@ MYSRCS = \
 	strbuffer.c \
 	strconv.c \
 	utf.c \
-	value.c \
-    jansson_path.c
+	value.c
 
 LIB_A = libjansson.a
 
