@@ -241,7 +241,7 @@ Check column "offline" for their availability.
 ### hf iclass
 
  { ICLASS RFIDs...                  }
-
+          
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf iclass help         `|Y       |`This help`
@@ -265,8 +265,8 @@ Check column "offline" for their availability.
 |`hf iclass encrypt      `|Y       |`[options..] Encrypt given block data`
 |`hf iclass decrypt      `|Y       |`[options..] Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`[options..] Manage keys to use with iclass commands`
-|`hf iclass permutekey   `|N       |`            Permute function from 'heart of darkness' paper`
-|`hf iclass view         `|Y       |`[options..] Display content from tag dump file`
+|`hf iclass permute      `|N       |`            Permute function from 'heart of darkness' paper`
+|`hf iclass view         `|Y       |`[options..] Display content from tag dump file`   
 
 
 ### hf legic
@@ -304,7 +304,7 @@ Check column "offline" for their availability.
 |`hf lto wrbl            `|N       |`Write block`
 |`hf lto list            `|Y       |`List LTO-CM history`
 
-
+          
 ### hf mf
 
  { MIFARE RFIDs...                  }

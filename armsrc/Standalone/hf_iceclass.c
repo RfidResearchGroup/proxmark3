@@ -125,7 +125,7 @@ static void download_instructions(uint8_t t) {
         case ICE_STATE_FULLSIM: {
             DbpString("The emulator memory was saved to SPIFFS");
             DbpString("1. " _YELLOW_("mem spiffs dump o " HF_ICLASS_FULLSIM_MOD_BIN " f " HF_ICLASS_FULLSIM_MOD" e"));
-            DbpString("2. " _YELLOW_("hf iclass view f " HF_ICLASS_FULLSIM_MOD_BIN));
+            DbpString("2. " _YELLOW_("hf iclass view -f " HF_ICLASS_FULLSIM_MOD_BIN));
             break;
         }
         case ICE_STATE_ATTACK: {
