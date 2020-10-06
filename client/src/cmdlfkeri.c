@@ -186,7 +186,7 @@ static int CmdKeriRead(const char *Cmd) {
 static int CmdKeriClone(const char *Cmd) {
 
     bool q5 = false;
-    
+
     uint8_t keritype[2] = {'i'}; // default to internalid
     int typeLen = 0;
     uint32_t fc = 0;
@@ -213,14 +213,14 @@ static int CmdKeriClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("q",  "q5",            "specify writing to Q5/T5555 tag"),        
+        arg_lit0("q",  "q5",            "specify writing to Q5/T5555 tag"),
         arg_str0("t",  "type", "<m|i>", "Type m - MS, i - Internal ID"),
         arg_int0(NULL, "fc",   "<dec>", "Facility Code"),
         arg_int1(NULL, "id",   "<dec>", "Keri ID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-   
+
     if (arg_get_lit(ctx, 1)) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
         q5 = true;
@@ -268,8 +268,8 @@ static int CmdKeriSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf keri sim",
                   "Enables simulation of KERI card with card number.",
                   "lf keri sim --id 112233"
-                );
-    
+                 );
+
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "id", "<dec>", "KERI Internal ID"),
@@ -280,7 +280,7 @@ static int CmdKeriSim(const char *Cmd) {
     uint64_t internalid = arg_get_int_def(ctx, 1, 0);
 
     CLIParserFree(ctx);
-    
+
     internalid |= 0x80000000;
     internalid <<= 3;
     internalid += 7;

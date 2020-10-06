@@ -167,8 +167,8 @@ static int CmdHIDWatch(const char *Cmd) {
                   "Enables HID compatible reader mode printing details.\n"
                   "By default, values are printed and logged until the button is pressed or another USB command is issued.\n",
                   "lf hid watch"
-                );
-    
+                 );
+
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -198,8 +198,8 @@ static int CmdHIDSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf hid sim",
                   "Enables simulation of HID card with card number.",
                   "lf hid sim 2006ec0c86"
-                );
-    
+                 );
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("l", "long", "Simulate HID tag with long ID"),
@@ -215,7 +215,7 @@ static int CmdHIDSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (long_id) {
-        for (i=0; i < idlen; ++i) {
+        for (i = 0; i < idlen; ++i) {
             hi2 = (hi2 << 4) | (hi >> 28);
             hi = (hi << 4) | (lo >> 28);
             lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
@@ -227,7 +227,7 @@ static int CmdHIDSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Simulating HID tag with long ID: " _GREEN_("%x%08x%08x"), hi2, hi, lo);
         payload.longFMT = 1;
     } else {
-        for (i=0; i < idlen; ++i) {
+        for (i = 0; i < idlen; ++i) {
             hi = (hi << 4) | (lo >> 28);
             lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
 
@@ -266,8 +266,8 @@ static int CmdHIDClone(const char *Cmd) {
                   "Clone HID to T55x7. Tag must be on antenna!",
                   "lf hid clone 2006ec0c86\n"
                   "lf hid clone -l 2006ec0c86"
-                );
-    
+                 );
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("l", "long", "84bit HID long ID"),
@@ -285,7 +285,7 @@ static int CmdHIDClone(const char *Cmd) {
     uint8_t longid[1] = {0};
 
     if (long_id) {
-        for (i=0; i < idlen; ++i) {
+        for (i = 0; i < idlen; ++i) {
             hi2 = (hi2 << 4) | (hi >> 28);
             hi = (hi << 4) | (lo >> 28);
             lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
@@ -298,7 +298,7 @@ static int CmdHIDClone(const char *Cmd) {
 
         longid[0] = 1;
     } else {
-        for (i=0; i < idlen; ++i) {
+        for (i = 0; i < idlen; ++i) {
             hi = (hi << 4) | (lo >> 28);
             lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
 
@@ -350,8 +350,8 @@ static int CmdHIDBrute(const char *Cmd) {
                   "lf hid brute -w H10301 -f 224\n"
                   "lf hid brute -w H10301 -f 21 -d 2000\n"
                   "lf hid brute -v -w H10301 -f 21 -c 200 -d 2000\n"
-                );
-    
+                 );
+
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose",           "verbose logging, show all tries"),
@@ -360,18 +360,18 @@ static int CmdHIDBrute(const char *Cmd) {
         arg_int0("c", "cn",      "dec",    "card number to start with"),
         arg_int0("i", NULL,      "dec",    "issue level"),
         arg_int0("o", "oem",     "dec",    "OEM code"),
-        arg_int0("d", "delay",   "dec",    "delay betweens attempts in ms. Default 1000ms"), 
+        arg_int0("d", "delay",   "dec",    "delay betweens attempts in ms. Default 1000ms"),
         arg_lit0(NULL, "up",               "direction to increment card number. (default is both directions)"),
-        arg_lit0(NULL, "down",             "direction to decrement card number. (default is both directions)"),        
+        arg_lit0(NULL, "down",             "direction to decrement card number. (default is both directions)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool verbose = arg_get_lit(ctx, 1);
-    
+
     CLIGetStrWithReturn(ctx, 2, format, &formatLen);
 
-    format_idx = HIDFindCardFormat((char*) format);
+    format_idx = HIDFindCardFormat((char *) format);
     if (format_idx == -1) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         CLIParserFree(ctx);
