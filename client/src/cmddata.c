@@ -638,28 +638,38 @@ int ASKDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool 
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
 static int Cmdaskmandemod(const char *Cmd) {
+
+    size_t slen = strlen(Cmd);
+
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 45 || cmdp == 'h') return usage_data_rawdemod_am();
-    bool st = false;
-    if (Cmd[0] == 's') {
-        st = true;
-        Cmd++;
-    } else if (Cmd[1] == 's') {
-        st = true;
-        Cmd += 2;
-    }
-    int clk = 0;
-    int invert = 0;
-    int maxErr = 100;
+    if (slen > 45 || cmdp == 'h') return usage_data_rawdemod_am();
+
+    bool st = false, amplify = false;
+    int clk = 0, invert = 0, maxErr = 100;
     size_t maxLen = 0;
-    bool amplify = false;
-    char amp = tolower(param_getchar(Cmd, 0));
-    sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
-    amplify = amp == 'a';
+
+    if (slen) {
+        
+        
+        if (Cmd[0] == 's') {
+            st = true;
+            Cmd++;
+        } else if (slen > 1 && Cmd[1] == 's') {
+            st = true;
+            Cmd += 2;
+        }
+    
+        char amp = tolower(param_getchar(Cmd, 0));
+        sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
+
+        amplify = (amp == 'a');
+    }
+
     if (clk == 1) {
         invert = 1;
         clk = 0;
     }
+
     if (invert != 0 && invert != 1) {
         PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
         return PM3_EINVARG;
