@@ -75,7 +75,8 @@ Check column "offline" for their availability.
 |`data samples           `|N       |`[512 - 40000] -- Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save trace (from graph window)`
 |`data setgraphmarkers   `|Y       |`[orange_marker] [blue_marker] (in graph window)`
-|`data scale             `|Y       |`<int> -- Set cursor display scale in carrier frequency expressed in kHz`
+|`data timescale         `|Y       |`Set a timescale to get a differential reading between the yellow and purple markers as time duration
+`
 |`data setdebugmode      `|Y       |`<0|1|2> -- Set Debugging Level on client side`
 |`data shiftgraphzero    `|Y       |`<shift> -- Shift 0 for Graphed wave + or - shift value`
 |`data dirthreshold      `|Y       |`<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
@@ -241,7 +242,7 @@ Check column "offline" for their availability.
 ### hf iclass
 
  { ICLASS RFIDs...                  }
-          
+
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf iclass help         `|Y       |`This help`
@@ -266,7 +267,7 @@ Check column "offline" for their availability.
 |`hf iclass decrypt      `|Y       |`[options..] Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`[options..] Manage keys to use with iclass commands`
 |`hf iclass permute      `|N       |`            Permute function from 'heart of darkness' paper`
-|`hf iclass view         `|Y       |`[options..] Display content from tag dump file`   
+|`hf iclass view         `|Y       |`[options..] Display content from tag dump file`
 
 
 ### hf legic
@@ -304,7 +305,7 @@ Check column "offline" for their availability.
 |`hf lto wrbl            `|N       |`Write block`
 |`hf lto list            `|Y       |`List LTO-CM history`
 
-          
+
 ### hf mf
 
  { MIFARE RFIDs...                  }

@@ -1691,8 +1691,8 @@ read_variable_length(const BYTE **ip, const BYTE *lencheck,
     return length;
 }
 
-int LZ4_decompress_generic(const char* const src, char* const dst, int srcSize, int outputSize, endCondition_directive endOnInput, earlyEnd_directive partialDecoding,
-                 dict_directive dict, const BYTE* const lowPrefix, const BYTE* const dictStart, const size_t dictSize );
+int LZ4_decompress_generic(const char *const src, char *const dst, int srcSize, int outputSize, endCondition_directive endOnInput, earlyEnd_directive partialDecoding,
+                           dict_directive dict, const BYTE *const lowPrefix, const BYTE *const dictStart, const size_t dictSize);
 
 /*! LZ4_decompress_generic() :
  *  This generic decompression function covers all use cases.

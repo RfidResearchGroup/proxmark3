@@ -546,7 +546,7 @@ assign ssp_din = bit_to_arm;
 wire sub_carrier;
 assign sub_carrier = ~sub_carrier_cnt[3];
 
-// in FPGA_HF_ISO14443A_READER_MOD: drop carrier for mod_sig_coil == 1 (pause); 
+// in FPGA_HF_ISO14443A_READER_MOD: drop carrier for mod_sig_coil == 1 (pause);
 // in FPGA_HF_ISO14443A_READER_LISTEN: carrier always on; in other modes: carrier always off
 assign pwr_hi = (ck_1356meg & (((mod_type == `FPGA_HF_ISO14443A_READER_MOD) & ~mod_sig_coil) || (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)));
 

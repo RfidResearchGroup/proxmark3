@@ -253,14 +253,14 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
             session.history_path = NULL;
         } else {
 
-    #  if defined(_WIN32)
-    //        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
-    #  else
+#  if defined(_WIN32)
+            //        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
+#  else
             struct sigaction action;
             memset(&action, 0, sizeof(action));
             action.sa_handler = &terminate_handler;
             sigaction(SIGINT, &action, &old_action);
-    #  endif
+#  endif
             rl_catch_signals = 1;
             rl_set_signals();
             read_history(session.history_path);
