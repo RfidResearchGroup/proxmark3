@@ -954,6 +954,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd);
             break;
         }
+        case CMD_LF_EM4X_PROTECTWORD: {
+            struct p {
+                uint32_t password;
+                uint32_t data;
+                uint8_t usepwd;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EM4xProtectWord(payload->data, payload->password, payload->usepwd);
+            break;
+        }
         case CMD_LF_AWID_WATCH:  {
             uint32_t high, low;
             int res = lf_awid_watch(0, &high, &low);

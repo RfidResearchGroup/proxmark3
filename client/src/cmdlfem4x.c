@@ -164,7 +164,7 @@ static int usage_lf_em4x05_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_write [h] <address> <data> <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       address   - memory address to write to. (0-15)");
+    PrintAndLogEx(NORMAL, "       address   - memory address to write to. (0-13, 99 for Protection Words)");
     PrintAndLogEx(NORMAL, "       data      - data to write (hex)");
     PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -857,7 +857,6 @@ static int demodEM4x05resp(uint32_t *word) {
     *word = 0;
     if (detectASK_MAN() && doPreambleSearch(&idx))
         return setDemodBufferEM(word, idx);
-
     if (detectASK_BI() && doPreambleSearch(&idx))
         return setDemodBufferEM(word, idx);
 
@@ -1101,37 +1100,62 @@ static int CmdEM4x05Write(const char *Cmd) {
     data = param_get32ex(Cmd, 1, 0, 16);
     pwd =  param_get32ex(Cmd, 2, 0xFFFFFFFF, 16);
 
-    if (addr > 15) {
-        PrintAndLogEx(NORMAL, "Address must be between 0 and 15");
+    if ((addr > 13) && (addr != 99)) {
+        PrintAndLogEx(NORMAL, "Address must be between 0 and 13");
         return PM3_EINVARG;
     }
-    if (pwd == 0xFFFFFFFF)
-        PrintAndLogEx(NORMAL, "Writing address %d data %08X", addr, data);
-    else {
+    if (pwd == 0xFFFFFFFF) {
+        if (addr == 99)
+            PrintAndLogEx(NORMAL, "Writing protection words data %08X", addr, data);
+        else
+            PrintAndLogEx(NORMAL, "Writing address %d data %08X", addr, data);
+    } else {
         usePwd = true;
-        PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
+        if (addr == 99)
+            PrintAndLogEx(NORMAL, "Writing protection words data %08X using password %08X", addr, data, pwd);
+        else
+            PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-    struct {
-        uint32_t password;
-        uint32_t data;
-        uint8_t address;
-        uint8_t usepwd;
-    } PACKED payload;
+    if (addr == 99) { // set Protect Words
+        struct {
+            uint32_t password;
+            uint32_t data;
+            uint8_t usepwd;
+        } PACKED payload;
 
-    payload.password = pwd;
-    payload.data = data;
-    payload.address = addr;
-    payload.usepwd = usePwd;
+        payload.password = pwd;
+        payload.data = data;
+        payload.usepwd = usePwd;
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X_WRITEWORD, &resp, 2000)) {
-        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-        return PM3_ETIMEOUT;
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X_PROTECTWORD, (uint8_t *)&payload, sizeof(payload));
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_LF_EM4X_PROTECTWORD, &resp, 2000)) {
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+            return PM3_ETIMEOUT;
+        }
+    } else {
+        struct {
+            uint32_t password;
+            uint32_t data;
+            uint8_t address;
+            uint8_t usepwd;
+        } PACKED payload;
+
+        payload.password = pwd;
+        payload.data = data;
+        payload.address = addr;
+        payload.usepwd = usePwd;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_LF_EM4X_WRITEWORD, &resp, 2000)) {
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+            return PM3_ETIMEOUT;
+        }
     }
-
     if (!downloadSamplesEM())
         return PM3_ENODATA;
 
