@@ -960,8 +960,6 @@ static int CmdEM4x05Dump(const char *Cmd) {
     uint32_t pwd = 0;
     bool usePwd = false;
     bool needReadPwd = true;
-    bool gotWord14 = false;
-    bool gotWord15 = false;
     uint8_t cmdp = 0;
     uint8_t bytes[4] = {0};
     uint32_t data[16];
@@ -991,7 +989,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     }
 
     int success = PM3_SUCCESS;
-    int status;
+    int status, status14, status15;
     uint32_t lock_bits = 0x00; // no blocks locked
     bool gotLockBits = false;
     bool lockInPW2 = false;
@@ -1011,8 +1009,8 @@ static int CmdEM4x05Dump(const char *Cmd) {
 
     // To flag any blocks locked we need to read blocks 14 and 15 first
     // dont swap endin until we get block lock flags.
-    status = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
-    if (status == PM3_SUCCESS) {
+    status14 = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
+    if (status14 == PM3_SUCCESS) {
         if (!usePwd)
             needReadPwd = false;
         if (word != 0x00) {
@@ -1020,19 +1018,17 @@ static int CmdEM4x05Dump(const char *Cmd) {
             gotLockBits = true;
         }
         data[14] = word;
-        gotWord14 = true;
     } else {
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
     }
-    status = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
-    if (status == PM3_SUCCESS) {
+    status15 = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
+    if (status15 == PM3_SUCCESS) {
         if (word != 0x00) { // assume block 15 is the current lock block
             lock_bits = word;
             gotLockBits = true;
             lockInPW2 = true;
         }
         data[15] = word;
-        gotWord15 = true;
     } else {
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
     }
@@ -1048,11 +1044,11 @@ static int CmdEM4x05Dump(const char *Cmd) {
                     PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
                 } else {
                     // The pwd is not needed for Login so we're not sure what's the actual content of that block
-                    PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _RED_("cannot read"), addr, info[addr]);
+                    PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
                 }
             } else {
                 data[addr] = 0x00; // Unknown password, but not used to set to zeros
-                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _RED_("cannot read"), addr, info[addr]);
+                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
             }
         } else {
             // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
@@ -1064,24 +1060,24 @@ static int CmdEM4x05Dump(const char *Cmd) {
                 num_to_bytes(word, 4, bytes);
                 PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
             } else
-                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _RED_("cannot read"), addr, info[addr]);
+                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
         }
     }
     // Print blocks 14 and 15
     // Both lock bits are protected with bit idx 14 (special case)
-    if (gotWord14) {
+    if (status14 == PM3_SUCCESS) {
         addr = 14;
         lockbit = (lock_bits >> addr) & 1;
         PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? "" : _GREEN_("active"));
     } else {
-        PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _RED_("cannot read"), addr, info[addr]);
+        PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status14 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
     }
-    if (gotWord15) {
+    if (status15 == PM3_SUCCESS) {
         addr = 15;
         lockbit = (lock_bits >> 14) & 1; // beware lock bit of word15 is pr14
-        PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? _GREEN_("active") : "");
+        PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? _GREEN_("active") : "");
     } else {
-        PrintAndLogEx(NORMAL, "  %02d |          |       |   | %-10s " _RED_("cannot read"), addr, info[addr]);
+        PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status15 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
     }
     // Update endian for files
     data[14] = BSWAP_32(data[14]);
