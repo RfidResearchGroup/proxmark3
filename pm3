@@ -23,7 +23,11 @@ else
 # hope it's installed somehow, still not sure where fw images are...
     CLIENT="proxmark3"
 fi
-
+EVALENV=""
+# LeakSanitizer suppressions
+if [ -e .lsan_suppressions ]; then
+  EVALENV="export LSAN_OPTIONS=suppressions=.lsan_suppressions"
+fi
 PM3LIST=()
 SHOWLIST=false
 
@@ -212,7 +216,7 @@ function get_pm3_list_WSL {
 SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "pm3" ]; then
-  CMD() { $CLIENT "$@"; }
+  CMD() { eval "$EVALENV"; $CLIENT "$@"; }
   HELP() {
       cat << EOF
 
