@@ -93,7 +93,7 @@ static int usage_lf_em4x50_wipe(void) {
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_wwipe p 11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_wipe p 11223344"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
