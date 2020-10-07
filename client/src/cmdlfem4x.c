@@ -1444,11 +1444,13 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
         PrintAndLogEx(SUCCESS, "\n  Serial #: " _YELLOW_("%08X"), serial);
 }
 
-static void printEM4x05ProtectionBits(uint32_t word) {
+static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
+    PrintAndLogEx(INFO, "ProtectionWord: %08X (Word %i)\n", word, addr);
+    PrintAndLogEx(INFO, "Protection Breakdown:");
     for (uint8_t i = 0; i < 15; i++) {
-        PrintAndLogEx(INFO, "      Word:  %02u | %s", i, (((1 << i) & word) || i < 2) ? _RED_("write Locked") : "unlocked");
+        PrintAndLogEx(INFO, "      Word:  %02u | %s", i, ((1 << i) & word) ? _RED_("write Locked") : "unlocked");
         if (i == 14)
-            PrintAndLogEx(INFO, "      Word:  %02u | %s", i + 1, (((1 << i) & word) || i < 2) ? _RED_("write locked") : "unlocked");
+            PrintAndLogEx(INFO, "      Word:  %02u | %s", i + 1, ((1 << i) & word) ? _RED_("write locked") : "unlocked");
     }
 }
 
@@ -1495,19 +1497,19 @@ static int CmdEM4x05Info(const char *Cmd) {
     if (EM4x05ReadWord_ext(EM_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
-    // if status bit says this is not the used protection word
-    if (!(word & 0x8000)) {
+    if (word & 0x8000) {
+        printEM4x05ProtectionBits(word, EM_PROT1_BLOCK);
+        return PM3_SUCCESS;
+    } else { // if status bit says this is not the used protection word
         if (EM4x05ReadWord_ext(EM_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
             return PM3_ESOFT;
+        if (word & 0x8000) {
+            printEM4x05ProtectionBits(word, EM_PROT2_BLOCK);
+            return PM3_SUCCESS;
+        }
     }
-
     //something went wrong
-    if (!(word & 0x8000))
-        return PM3_ESOFT;
-
-    printEM4x05ProtectionBits(word);
-
-    return PM3_SUCCESS;
+    return PM3_ESOFT;
 }
 
 static command_t CommandTable[] = {
