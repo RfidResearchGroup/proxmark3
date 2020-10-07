@@ -739,8 +739,9 @@ static int doPreambleSearch(size_t *startIdx) {
         return PM3_ESOFT;
     }
 
-    // set size to 20 to only test first 14 positions for the preamble
-    size_t size = (20 > DemodBufferLen) ? DemodBufferLen : 20;
+    // set size to 9 to only test first 3 positions for the preamble
+    // do not set it too long else an error preamble followed by 010 could be seen as success.
+    size_t size = (9 > DemodBufferLen) ? DemodBufferLen : 9;
     *startIdx = 0;
     // skip first two 0 bits as they might have been missed in the demod
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 1, 0, 1, 0};
