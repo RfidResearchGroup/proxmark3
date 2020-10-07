@@ -2574,7 +2574,8 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
     SendForward(len);
 
     // Wait 20ms for write to complete?
-    WaitUS(10820); // tPC+tWEE
+    // No, when write is denied, err preamble comes much sooner
+    //WaitUS(10820); // tPC+tWEE
 
     DoPartialAcquisition(0, false, 6000, 1000);
 
@@ -2610,7 +2611,8 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
     SendForward(len);
 
     // Wait 20ms for write to complete?
-    WaitUS(13640); // tPC+tPR
+    // No, when write is denied, err preamble comes much sooner
+    //WaitUS(13640); // tPC+tPR
 
     DoPartialAcquisition(0, false, 6000, 1000);
 

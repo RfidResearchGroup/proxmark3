@@ -731,12 +731,12 @@ static bool downloadSamplesEM(void) {
 }
 
 // em_demod
-static bool doPreambleSearch(size_t *startIdx) {
+static int doPreambleSearch(size_t *startIdx) {
 
     // sanity check
     if (DemodBufferLen < EM_PREAMBLE_LEN) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 demodbuffer too small");
-        return false;
+        return PM3_ESOFT;
     }
 
     // set size to 20 to only test first 14 positions for the preamble
@@ -746,10 +746,14 @@ static bool doPreambleSearch(size_t *startIdx) {
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 1, 0, 1, 0};
 
     if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
-        return false;
+        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 1};
+        if (!preambleSearchEx(DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
+            PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
+            return PM3_ESOFT;
+        }
+        return PM3_EFAILED; // Error preamble found
     }
-    return true;
+    return PM3_SUCCESS;
 }
 
 static bool detectFSK(void) {
@@ -793,7 +797,7 @@ static bool detectPSK(void) {
 // try manchester - NOTE: ST only applies to T55x7 tags.
 static bool detectASK_MAN(void) {
     bool stcheck = false;
-    if (ASKDemod_ext(0, 0, 0, 0, false, false, false, 1, &stcheck) != PM3_SUCCESS) {
+    if (ASKDemod_ext(0, 0, 50, 0, false, false, false, 1, &stcheck) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
         return false;
     }
@@ -852,29 +856,67 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE, NRZ
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
-static int demodEM4x05resp(uint32_t *word) {
+static int demodEM4x05resp(uint32_t *word, bool onlyPreamble) {
     size_t idx = 0;
     *word = 0;
-    if (detectASK_MAN() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
-    if (detectASK_BI() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
+    bool found_err = false;
+    int res = PM3_SUCCESS;
+    do {
+        if (detectASK_MAN()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                // go on, maybe it's false positive and another modulation will work
+                found_err = true;
+        }
+        if (detectASK_BI()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (detectNRZ()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (detectFSK()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (detectPSK()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
 
-    if (detectNRZ() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
-
-    if (detectFSK() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
-
-    if (detectPSK()) {
-        if (doPreambleSearch(&idx))
-            return setDemodBufferEM(word, idx);
-
-        psk1TOpsk2(DemodBuffer, DemodBufferLen);
-        if (doPreambleSearch(&idx))
-            return setDemodBufferEM(word, idx);
-    }
-    return PM3_ESOFT;
+            psk1TOpsk2(DemodBuffer, DemodBufferLen);
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (found_err)
+            return PM3_EFAILED;
+        return PM3_ESOFT;
+    } while (0);
+    if (onlyPreamble)
+        return PM3_SUCCESS;
+    res = setDemodBufferEM(word, idx);
+    if (res == PM3_SUCCESS)
+        return res;
+    if (found_err)
+        return PM3_EFAILED;
+    return res;
 }
 
 //////////////// 4205 / 4305 commands
@@ -902,14 +944,14 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     if (downloadSamplesEM() == false) {
         return PM3_ESOFT;
     }
-    return demodEM4x05resp(word);
+    return demodEM4x05resp(word, false);
 }
 
 static int CmdEM4x05Demod(const char *Cmd) {
 //    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
 //   if (ctmp == 'h') return usage_lf_em4x05_demod();
-    uint32_t word = 0;
-    return demodEM4x05resp(&word);
+    uint32_t dummy = 0;
+    return demodEM4x05resp(&dummy, false);
 }
 
 static int CmdEM4x05Dump(const char *Cmd) {
@@ -1069,22 +1111,24 @@ static int CmdEM4x05Read(const char *Cmd) {
     pwd =  param_get32ex(Cmd, 1, 0xFFFFFFFF, 16);
 
     if (addr > 15) {
-        PrintAndLogEx(NORMAL, "Address must be between 0 and 15");
+        PrintAndLogEx(WARNING, "Address must be between 0 and 15");
         return PM3_ESOFT;
     }
     if (pwd == 0xFFFFFFFF) {
         PrintAndLogEx(NORMAL, "Reading address %02u", addr);
     } else {
         usePwd = true;
-        PrintAndLogEx(NORMAL, "Reading address %02u | password %08X", addr, pwd);
+        PrintAndLogEx(NORMAL, "Reading address %02u using password %08X", addr, pwd);
     }
 
     uint32_t word = 0;
     int status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
     if (status == PM3_SUCCESS)
-        PrintAndLogEx(NORMAL, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
+        PrintAndLogEx(SUCCESS, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
+    else if (status == PM3_EFAILED)
+        PrintAndLogEx(ERR, "Tag denied Read operation");
     else
-        PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_("Fail"), addr);
+        PrintAndLogEx(WARNING, "No answer from tag");
     return status;
 }
 
@@ -1099,25 +1143,26 @@ static int CmdEM4x05Write(const char *Cmd) {
     addr = param_get8ex(Cmd, 0, 50, 10);
     data = param_get32ex(Cmd, 1, 0, 16);
     pwd =  param_get32ex(Cmd, 2, 0xFFFFFFFF, 16);
+    bool protectOperation = addr == 99; // will do better with cliparser...
 
-    if ((addr > 13) && (addr != 99)) {
-        PrintAndLogEx(NORMAL, "Address must be between 0 and 13");
+    if ((addr > 13) && (!protectOperation)) {
+        PrintAndLogEx(WARNING, "Address must be between 0 and 13");
         return PM3_EINVARG;
     }
     if (pwd == 0xFFFFFFFF) {
-        if (addr == 99)
-            PrintAndLogEx(NORMAL, "Writing protection words data %08X", addr, data);
+        if (protectOperation)
+            PrintAndLogEx(NORMAL, "Writing protection words data %08X", data);
         else
             PrintAndLogEx(NORMAL, "Writing address %d data %08X", addr, data);
     } else {
         usePwd = true;
-        if (addr == 99)
-            PrintAndLogEx(NORMAL, "Writing protection words data %08X using password %08X", addr, data, pwd);
+        if (protectOperation)
+            PrintAndLogEx(NORMAL, "Writing protection words data %08X using password %08X", data, pwd);
         else
             PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-    if (addr == 99) { // set Protect Words
+    if (protectOperation) { // set Protect Words
         struct {
             uint32_t password;
             uint32_t data;
@@ -1159,13 +1204,14 @@ static int CmdEM4x05Write(const char *Cmd) {
     if (!downloadSamplesEM())
         return PM3_ENODATA;
 
-    //need 0 bits demoded (after preamble) to verify write cmd
     uint32_t dummy = 0;
-    int status = demodEM4x05resp(&dummy);
+    int status = demodEM4x05resp(&dummy, true);
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
-
-    PrintAndLogEx(SUCCESS, "Done");
+    else if (status == PM3_EFAILED)
+        PrintAndLogEx(ERR, "Tag denied %s operation", protectOperation ? "Protect" : "Write");
+    else
+        PrintAndLogEx(WARNING, "No answer from tag");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05_read`") " to verify");
     return status;
 }
