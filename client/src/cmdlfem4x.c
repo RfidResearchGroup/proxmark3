@@ -976,10 +976,10 @@ static int CmdEM4x05Dump(const char *Cmd) {
             if (usePwd) {
                 data[addr] = BSWAP_32(pwd);
                 num_to_bytes(pwd, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %c | password", addr, pwd, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? 'x' : ' ');
+                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | Password", addr, pwd, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? _RED_("x") : " ");
             } else {
                 data[addr] = 0x00; // Unknown password, but not used to set to zeros
-                PrintAndLogEx(NORMAL, "  02 |          |       |   | " _RED_("cannot read"));
+                PrintAndLogEx(NORMAL, "  02 |          |       |   | %-10s " _RED_("cannot read"), "Password");
             }
         } else {
             // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
@@ -987,11 +987,12 @@ static int CmdEM4x05Dump(const char *Cmd) {
             if (status != PM3_SUCCESS)
                 success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
             data[addr] = BSWAP_32(word);
+            const char *info[] = {"Info/User", "UID", "", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
             if (status == PM3_SUCCESS) {
                 num_to_bytes(word, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c |", addr, word, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? 'x' : ' ');
+                PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? _RED_("x") : " ", info[addr]);
             } else
-                PrintAndLogEx(NORMAL, "  %02d |          |       |   | " _RED_("Fail"), addr);
+                PrintAndLogEx(NORMAL, "  %02d |          |       |   | %-10s " _RED_("cannot read"), addr, info[addr]);
         }
     }
     // Print blocks 14 and 15
