@@ -1020,7 +1020,7 @@ int main(int argc, char *argv[]) {
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if (!session.preferences_loaded) {
+    if ((!session.preferences_loaded) && (!session.incognito)) {
         PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         session.preferences_loaded = true;

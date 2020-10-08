@@ -12,7 +12,7 @@
 //      Add the new setting to the session_arg_t; in ui.h
 //      Add the default value for the setting in the settings_load page below
 //      Update the preferences_load_callback to load your setting into the stucture
-//      Update the preferences_save_callback to enusre your setting gets saved when needed.
+//      Update the preferences_save_callback to ensure your setting gets saved when needed.
 //      use the preference as needed : session.<preference name>
 //      Can use (session.preferences_loaded) to check if json settings file was used
 //-----------------------------------------------------------------------------
@@ -709,7 +709,7 @@ static int setCmdDeviceDebug (const char *Cmd)
                     showDeviceDebugState (prefShowOLD);
                     session.device_debug_level = newValue;
                     showDeviceDebugState (prefShowNEW);
-                    preferences_save ();
+                    preferences_save();
                 } else {
                     PrintAndLogEx(INFO,"nothing changed");
                     showDeviceDebugState (prefShowNone);
