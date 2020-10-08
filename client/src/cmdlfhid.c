@@ -298,9 +298,6 @@ static int CmdHIDClone(const char *Cmd) {
     int raw_len = 0;
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
-    if (raw_len > 0) {
-        PrintAndLogEx(INFO, "RAW %s", raw);
-    }
 
     //bool q5 = arg_get_lit(ctx, 7);
     CLIParserFree(ctx); 
@@ -328,8 +325,12 @@ static int CmdHIDClone(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Preparing to clone HID tag");    
-    HIDTryUnpack(&packed, false);
+    if (raw_len == 0) {
+        PrintAndLogEx(INFO, "Preparing to clone HID tag"); 
+        HIDTryUnpack(&packed, false);
+    } else {
+        PrintAndLogEx(INFO, "Preparing to clone HID tag using raw " _YELLOW_("%s"),  raw); 
+    }
 
     lf_hidsim_t payload;
     payload.hi2 = packed.Top;
