@@ -134,11 +134,36 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("[a] Anticol override......%i: %s%s%s", hf14aconfig.forceanticol, (hf14aconfig.forceanticol == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forceanticol == 1) ? _RED_("Yes: Always do anticol") : "", (hf14aconfig.forceanticol == 2) ? _RED_("Yes: Always skip anticol") : "");
-    Dbprintf("[b] BCC override..........%i: %s%s%s", hf14aconfig.forcebcc, (hf14aconfig.forcebcc == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcebcc == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcebcc == 2) ? _RED_("Yes: Always use card BCC") : "");
-    Dbprintf("[2] CL2 override..........%i: %s%s%s", hf14aconfig.forcecl2, (hf14aconfig.forcecl2 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl2 == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2 == 2) ? _RED_("Yes: Always skip CL2") : "");
-    Dbprintf("[3] CL3 override..........%i: %s%s%s", hf14aconfig.forcecl3, (hf14aconfig.forcecl3 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl3 == 1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3 == 2) ? _RED_("Yes: Always skip CL3") : "");
-    Dbprintf("[r] RATS override.........%i: %s%s%s", hf14aconfig.forcerats, (hf14aconfig.forcerats == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcerats == 1) ? _RED_("Yes: Always do RATS") : "", (hf14aconfig.forcerats == 2) ? _RED_("Yes: Always skip RATS") : "");
+    Dbprintf("  [a] Anticol override....%i %s%s%s",
+        hf14aconfig.forceanticol,
+        (hf14aconfig.forceanticol == 0) ? "( " _GREEN_("No") " ) follow standard " : "",
+        (hf14aconfig.forceanticol == 1) ? "( " _RED_("Yes") " ) always do anticol" : "",
+        (hf14aconfig.forceanticol == 2) ? "( " _RED_("Yes") " ) always skip anticol" : ""
+        );
+    Dbprintf("  [b] BCC override........%i %s%s%s",
+        hf14aconfig.forcebcc,
+        (hf14aconfig.forcebcc == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
+        (hf14aconfig.forcebcc == 1) ? "( " _RED_("Yes") " ) always do CL2" : "",
+        (hf14aconfig.forcebcc == 2) ? "( " _RED_("Yes") " ) always use card BCC" : ""
+        );
+    Dbprintf("  [2] CL2 override........%i %s%s%s",
+        hf14aconfig.forcecl2,
+        (hf14aconfig.forcecl2 == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
+        (hf14aconfig.forcecl2 == 1) ? "( " _RED_("Yes") " ) always do CL2" : "",
+        (hf14aconfig.forcecl2 == 2) ? "( " _RED_("Yes") " ) always skip CL2" : ""
+        );
+    Dbprintf("  [3] CL3 override........%i %s%s%s",
+        hf14aconfig.forcecl3,
+        (hf14aconfig.forcecl3 == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
+        (hf14aconfig.forcecl3 == 1) ? "( " _RED_("Yes") " ) always do CL3" : "",
+        (hf14aconfig.forcecl3 == 2) ? "( " _RED_("Yes") " ) always skip CL3" : ""
+        );
+    Dbprintf("  [r] RATS override.......%i %s%s%s",
+        hf14aconfig.forcerats,
+        (hf14aconfig.forcerats == 0) ? "( " _GREEN_("No") " q follow standard " : "",
+        (hf14aconfig.forcerats == 1) ? "( " _RED_("Yes") " ) always do RATS" : "",
+        (hf14aconfig.forcerats == 2) ? "( " _RED_("Yes") " ) always skip RATS" : ""
+        );
 }
 
 /**
