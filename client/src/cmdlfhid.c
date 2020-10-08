@@ -213,6 +213,10 @@ static int CmdHIDSim(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, id, &idlen);
 
     CLIParserFree(ctx);
+    
+    wiegand_message_t packed = initialize_message_object(hi2, hi, lo);
+    HIDTryUnpack(&packed, false);
+    
 
     if (long_id) {
         for (i = 0; i < idlen; ++i) {
@@ -255,59 +259,86 @@ static int CmdHIDSim(const char *Cmd) {
 }
 
 static int CmdHIDClone(const char *Cmd) {
-    int idlen = 0;
-    uint8_t id[10] = {0};
-    uint32_t hi2 = 0, hi = 0, lo = 0, i = 0;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid clone",
                   "Clone HID to T55x7. Tag must be on antenna!",
-                  "lf hid clone 2006ec0c86        -> HID 10301 26 bit\n"
-                  "lf hid clone 2e0ec00c87        -> HID Corporate 35 bit\n"
-                  "lf hid clone -l 01f0760643c3   -> HID P10001 40 bit\n"
-                  "lf hid clone -l 01400076000c86 -> HID Corporate 48 bit"
+                  "lf hid clone -r 2006ec0c86                -> HID 10301 26 bit\n"
+                  "lf hid clone -r 2e0ec00c87                -> HID Corporate 35 bit\n"
+                  "lf hid clone -r 01f0760643c3              -> HID P10001 40 bit\n"
+                  "lf hid clone -r 01400076000c86            -> HID Corporate 48 bit\n"
+                  "lf hid clone -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit\n"
                  );
+
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("l", "long", "84bit HID long ID"),
-        arg_str1(NULL, NULL, "<hex>", "HID tag ID"),
+        arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_u64_0(NULL, "fc",      "<dec>", "facility code"),
+        arg_u64_0(NULL, "cn",      "<dec>", "card number"), 
+        arg_int0("i",    NULL,     "<dec>", "issue level"),
+        arg_int0("o",   "oem",     "<dec>", "OEM code"),
+        arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
+//        arg_lit0("q",   "Q5",               "optional - specify writing to Q5/T5555 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    bool long_id = arg_get_lit(ctx, 1);
-    CLIGetHexWithReturn(ctx, 2, id, &idlen);
-    CLIParserFree(ctx);
 
-    uint8_t longid[1] = {0};
-
-    if (long_id) {
-        for (i = 0; i < idlen; ++i) {
-            hi2 = (hi2 << 4) | (hi >> 28);
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
-
-            hi2 = (hi2 << 4) | (hi >> 28);
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
-        }
-        PrintAndLogEx(INFO, "Preparing to clone HID tag with long ID: " _GREEN_("%x%08x%08x"), hi2, hi, lo);
-
-        longid[0] = 1;
-    } else {
-        for (i = 0; i < idlen; ++i) {
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
-
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
-        }
-        PrintAndLogEx(INFO, "Preparing to clone HID tag with ID: " _GREEN_("%x%08x"), hi, lo);
-        hi2 = 0;
+    char format[16] = {0};
+    int format_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &format_len);
+    
+    wiegand_card_t card;
+    memset(&card, 0, sizeof(wiegand_card_t));
+    card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
+    card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+    card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
+    card.OEM = arg_get_u32_def(ctx, 5, 0);
+    
+    int raw_len = 0;
+    char raw[40] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
+    if (raw_len > 0) {
+        PrintAndLogEx(INFO, "RAW %s", raw);
     }
 
+    //bool q5 = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx); 
+
+    wiegand_message_t packed;
+    memset(&packed, 0, sizeof(wiegand_message_t));
+ 
+    // format validation
+    int format_idx = HIDFindCardFormat((char *)format);
+    if (format_idx == -1 && raw_len == 0) {
+        PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
+        return PM3_EINVARG;
+    }
+
+    if (raw_len) {
+        uint32_t top = 0, mid = 0, bot = 0;
+        hexstring_to_u96(&top, &mid, &bot, raw);
+        packed.Top = top;
+        packed.Mid = mid;
+        packed.Bot = bot;
+    } else {
+        if (HIDPack(format_idx, &card, &packed) == false) {
+            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
+            return PM3_ESOFT;
+        }
+    }
+
+    PrintAndLogEx(INFO, "Preparing to clone HID tag");    
+    HIDTryUnpack(&packed, false);
+
+    lf_hidsim_t payload;
+    payload.hi2 = packed.Top;
+    payload.hi = packed.Mid;
+    payload.lo = packed.Bot;
+    payload.longFMT = (packed.Mid > 0xFFF);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_HID_CLONE, hi2, hi, lo, longid, sizeof(longid));
+    SendCommandNG(CMD_LF_HID_CLONE, (uint8_t *)&payload, sizeof(payload));
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid read`") " to verify");
     return PM3_SUCCESS;
@@ -344,22 +375,22 @@ static int CmdHIDBrute(const char *Cmd) {
                   "Enables bruteforce of HID readers with specified facility code.\n"
                   "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step\n"
                   "if cardnumber is not given, it starts with 1 and goes up to 65535",
-                  "lf hid brute -w H10301 -f 224\n"
-                  "lf hid brute -w H10301 -f 21 -d 2000\n"
-                  "lf hid brute -v -w H10301 -f 21 -c 200 -d 2000\n"
+                  "lf hid brute -w H10301 --fc 224\n"
+                  "lf hid brute -w H10301 --fc 21 -d 2000\n"
+                  "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose",           "verbose logging, show all tries"),
-        arg_str1("w", "wiegand", "format", "see " _YELLOW_("`wiegand list`") " for available formats"),
-        arg_int0("f", "fn",      "dec",    "facility code"),
-        arg_int0("c", "cn",      "dec",    "card number to start with"),
-        arg_int0("i", NULL,      "dec",    "issue level"),
-        arg_int0("o", "oem",     "dec",    "OEM code"),
-        arg_int0("d", "delay",   "dec",    "delay betweens attempts in ms. Default 1000ms"),
-        arg_lit0(NULL, "up",               "direction to increment card number. (default is both directions)"),
-        arg_lit0(NULL, "down",             "direction to decrement card number. (default is both directions)"),
+        arg_lit0("v", "verbose",             "verbose logging, show all tries"),
+        arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_int0(NULL, "fn",     "<dec>",    "facility code"),
+        arg_int0(NULL, "cn",     "<dec>",    "card number to start with"),
+        arg_int0("i",  "issue",  "<dec>",    "issue level"),
+        arg_int0("o", "oem",     "<dec>",    "OEM code"),
+        arg_int0("d", "delay",   "<dec>",    "delay betweens attempts in ms. Default 1000ms"),
+        arg_lit0(NULL, "up",                 "direction to increment card number. (default is both directions)"),
+        arg_lit0(NULL, "down",               "direction to decrement card number. (default is both directions)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
