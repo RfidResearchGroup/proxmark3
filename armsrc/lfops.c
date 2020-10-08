@@ -2573,15 +2573,20 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     SendForward(len);
 
-    // Wait 20ms for write to complete?
-    // No, when write is denied, err preamble comes much sooner
-    //WaitUS(10820); // tPC+tWEE
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        StopTicks();
+        reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_ETEAROFF, NULL, 0);
+    } else {
+        // Wait 20ms for write to complete?
+        // No, when write is denied, err preamble comes much sooner
+        //WaitUS(10820); // tPC+tWEE
 
-    DoPartialAcquisition(0, false, 6000, 1000);
+        DoPartialAcquisition(0, false, 6000, 1000);
 
-    StopTicks();
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
+        StopTicks();
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
+    }
     LEDsoff();
 }
 
@@ -2610,15 +2615,19 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     SendForward(len);
 
-    // Wait 20ms for write to complete?
-    // No, when write is denied, err preamble comes much sooner
-    //WaitUS(13640); // tPC+tPR
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        StopTicks();
+        reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_ETEAROFF, NULL, 0);
+    } else {
+        // Wait 20ms for write to complete?
+        // No, when write is denied, err preamble comes much sooner
+        //WaitUS(13640); // tPC+tPR
 
-    DoPartialAcquisition(0, false, 6000, 1000);
-
-    StopTicks();
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_SUCCESS, NULL, 0);
+        DoPartialAcquisition(0, false, 6000, 1000);
+        StopTicks();
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_SUCCESS, NULL, 0);
+    }
     LEDsoff();
 }
 

@@ -68,6 +68,24 @@ extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
+static uint32_t tearoff_delay_us = 0;
+static bool tearoff_enabled = false;
+
+int tearoff_hook(void) {
+    if (tearoff_enabled) {
+        if (tearoff_delay_us == 0) {
+            Dbprintf(_RED_("No tear-off delay configured!"));
+            return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
+        }
+        WaitUS(tearoff_delay_us);
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        tearoff_enabled = false;
+        Dbprintf(_YELLOW_("Tear-off triggered!"));
+        return PM3_ETEAROFF;
+    } else {
+        return PM3_SUCCESS;     // SUCCESS = the hook didn't do anything
+    }
+}
 
 void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
@@ -729,6 +747,24 @@ static void PacketReceived(PacketCommandNG *packet) {
             DBGLEVEL = packet->data.asBytes[0];
             print_debug_level();
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+        case CMD_SET_TEAROFF: {
+            struct p {
+                uint32_t delay_us;
+                bool on;
+                bool off;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            if (payload->on && payload->off)
+                reply_ng(CMD_SET_TEAROFF, PM3_EINVARG, NULL, 0);
+            if (payload->on)
+                tearoff_enabled = true;
+            if (payload->off)
+                tearoff_enabled = false;
+            if (payload->delay_us > 0)
+                tearoff_delay_us = payload->delay_us;
+            reply_ng(CMD_SET_TEAROFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         // always available
