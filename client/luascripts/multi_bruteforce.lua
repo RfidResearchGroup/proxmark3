@@ -214,7 +214,7 @@ local function main(args)
         end
         facilityrequired = 0              -- Disable the FC required check, as we used it for type instead of FC
     elseif rfidtag == 'hid' then
-        consolecommand = 'lf hid sim'
+        consolecommand = 'lf hid sim -r'
         rfidtagname = 'HID'
         facilityrequired = 1
     else                                  -- Display error and exit out if bad RFID tag was supplied
