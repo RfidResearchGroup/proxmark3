@@ -79,6 +79,11 @@ int preferences_load(void) {
             setDefaultPath (spTrace, ".");
     */
 
+    if (session.incognito) {
+        PrintAndLogEx(INFO, "No preferences file will be loaded");
+        return PM3_SUCCESS;
+    }
+
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
     uint8_t dummyData = 0x00;
@@ -101,7 +106,10 @@ int preferences_load(void) {
 // Save all settings from memory (struct) to file
 int preferences_save(void) {
     // Note sure if backup has value ?
-
+    if (session.incognito) {
+        PrintAndLogEx(INFO, "No preferences file will be saved");
+        return PM3_SUCCESS;
+    }
     PrintAndLogEx(INFO, "Saving preferences...");
 
     char *fn = prefGetFilename();
@@ -986,8 +994,7 @@ static int CmdPrefShow(const char *Cmd) {
         PrintAndLogEx(INFO, "Using "_YELLOW_("%s"), fn);
         free(fn);
     } else {
-        PrintAndLogEx(ERR, "Preferences not loaded");
-        return PM3_ESOFT;
+        PrintAndLogEx(WARNING, "Preferences file not loaded");
     }
 
     PrintAndLogEx(INFO, "Current settings");
