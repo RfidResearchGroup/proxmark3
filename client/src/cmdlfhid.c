@@ -187,66 +187,85 @@ static int CmdHIDWatch(const char *Cmd) {
 }
 
 static int CmdHIDSim(const char *Cmd) {
-    int idlen = 0;
-    uint8_t id[10] = {0};
-    lf_hidsim_t payload;
-    payload.longFMT = 0;
-    uint32_t hi2 = 0, hi = 0, lo = 0;
-    uint32_t i = 0;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid sim",
                   "Enables simulation of HID card with card number.",
-                  "lf hid sim 2006ec0c86"
+                  "lf hid sim -r 2006ec0c86                -> HID 10301 26 bit\n"
+                  "lf hid sim -r 2e0ec00c87                -> HID Corporate 35 bit\n"
+                  "lf hid sim -r 01f0760643c3              -> HID P10001 40 bit\n"
+                  "lf hid sim -r 01400076000c86            -> HID Corporate 48 bit\n"
+                  "lf hid sim -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("l", "long", "Simulate HID tag with long ID"),
-        arg_str1(NULL, NULL, "<hex>", "HID tag ID"),
+        arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_u64_0(NULL, "fc",      "<dec>", "facility code"),
+        arg_u64_0(NULL, "cn",      "<dec>", "card number"), 
+        arg_int0("i",    NULL,     "<dec>", "issue level"),
+        arg_int0("o",   "oem",     "<dec>", "OEM code"),
+        arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
+//        arg_lit0("q",   "Q5",               "optional - specify writing to Q5/T5555 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool long_id = arg_get_lit(ctx, 1);
-
-    CLIGetHexWithReturn(ctx, 2, id, &idlen);
-
-    CLIParserFree(ctx);
+    char format[16] = {0};
+    int format_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &format_len);
     
-    wiegand_message_t packed = initialize_message_object(hi2, hi, lo);
-    HIDTryUnpack(&packed, false);
+    wiegand_card_t card;
+    memset(&card, 0, sizeof(wiegand_card_t));
+    card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
+    card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+    card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
+    card.OEM = arg_get_u32_def(ctx, 5, 0);
     
+    int raw_len = 0;
+    char raw[40] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
 
-    if (long_id) {
-        for (i = 0; i < idlen; ++i) {
-            hi2 = (hi2 << 4) | (hi >> 28);
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
+    //bool q5 = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx); 
 
-            hi2 = (hi2 << 4) | (hi >> 28);
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
-        }
-        PrintAndLogEx(INFO, "Simulating HID tag with long ID: " _GREEN_("%x%08x%08x"), hi2, hi, lo);
-        payload.longFMT = 1;
+    wiegand_message_t packed;
+    memset(&packed, 0, sizeof(wiegand_message_t));
+ 
+    // format validation
+    int format_idx = HIDFindCardFormat((char *)format);
+    if (format_idx == -1 && raw_len == 0) {
+        PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
+        return PM3_EINVARG;
+    }
+
+    if (raw_len) {
+        uint32_t top = 0, mid = 0, bot = 0;
+        hexstring_to_u96(&top, &mid, &bot, raw);
+        packed.Top = top;
+        packed.Mid = mid;
+        packed.Bot = bot;
     } else {
-        for (i = 0; i < idlen; ++i) {
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] >> 4);  //get first 4 bits
-
-            hi = (hi << 4) | (lo >> 28);
-            lo = (lo << 4) | (id[i] & 0xf); //get last 4 bits
+        if (HIDPack(format_idx, &card, &packed) == false) {
+            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
+            return PM3_ESOFT;
         }
-        PrintAndLogEx(SUCCESS, "Simulating HID tag with ID: " _GREEN_("%x%08x"), hi, lo);
-        hi2 = 0;
+    }
+
+    if (raw_len == 0) {
+        PrintAndLogEx(INFO, "Simulating HID tag"); 
+        HIDTryUnpack(&packed, false);
+    } else {
+        PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"),  raw); 
     }
 
     PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
 
-    payload.hi2 = hi2;
-    payload.hi = hi;
-    payload.lo = lo;
+    lf_hidsim_t payload;
+    payload.hi2 = packed.Top;
+    payload.hi = packed.Mid;
+    payload.lo = packed.Bot;
+    payload.longFMT = (packed.Mid > 0xFFF);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
@@ -255,6 +274,7 @@ static int CmdHIDSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
+
     return PM3_SUCCESS;
 }
 

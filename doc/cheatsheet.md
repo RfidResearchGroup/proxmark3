@@ -370,12 +370,14 @@ pm3 --> lf hid demod
 Simulate Prox card
 ```
 
-pm3 --> lf hid sim 200670012d
+pm3 --> lf hid sim -r 200670012d
+pm3 --> lf hid sim -w H10301 --fc 10 --cn 1337
 ```
 
 Clone Prox to T5577 card
 ```
-pm3 --> lf hid clone 200670012d
+pm3 --> lf hid clone -r 200670012d
+pm3 --> lf hid clone -w H10301 --fc 10 --cn 1337
 ```
 
 Brute force HID reader
