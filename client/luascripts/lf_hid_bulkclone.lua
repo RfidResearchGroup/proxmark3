@@ -192,7 +192,7 @@ local function main(args)
         print('Press enter to program card '..cardnum..':'..facility..' (hex: '..card..')')
         --This would be better with 'press Enter', but we'll take what we can get.
         io.read()
-        core.console( ('lf hid clone %s'):format(card) )
+        core.console( ('lf hid clone -r %s'):format(card) )
     end
 end
 
