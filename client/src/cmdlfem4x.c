@@ -1402,14 +1402,11 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
         case 9:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4305");
             break;
-        case 8:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");
-            break;
-        case 4:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "Unknown");
-            break;
         case 2:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4469");
+            break;
+        case 1:
+            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");
             break;
         //add more here when known
         default:
