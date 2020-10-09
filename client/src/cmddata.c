@@ -237,15 +237,6 @@ static int usage_data_autocorr(void) {
     PrintAndLogEx(NORMAL, "       g              save back to GraphBuffer (overwrite)");
     return PM3_SUCCESS;
 }
-static int usage_data_undecimate(void) {
-    PrintAndLogEx(NORMAL, "Usage: data undec [factor]");
-    PrintAndLogEx(NORMAL, "This function performs un-decimation, by repeating each sample N times");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       factor       The number of times to repeat each sample.[default:2]");
-    PrintAndLogEx(NORMAL, "Example: 'data undec 3'");
-    return PM3_SUCCESS;
-}
 static int usage_data_detectclock(void) {
     PrintAndLogEx(NORMAL, "Usage:  data detectclock [modulation] <clock>");
     PrintAndLogEx(NORMAL, "     [modulation as char], specify the modulation type you want to detect the clock of");
@@ -1009,12 +1000,29 @@ static int CmdBuffClear(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdDec(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    for (size_t i = 0; i < (GraphTraceLen / 2); ++i)
-        GraphBuffer[i] = GraphBuffer[i * 2];
-    GraphTraceLen /= 2;
-    PrintAndLogEx(NORMAL, "decimated by 2");
+static int CmdDecimate(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data decimate",
+                  "Decimate samples in the grapbuf. Good for PSK\n",
+                  "data decimate\n"
+                  "data decimate 4"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, NULL, "<dec>", "number to decimate, 2,"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int n = arg_get_int_def(ctx, 1, 2);
+    CLIParserFree(ctx);  
+
+    for (size_t i = 0; i < (GraphTraceLen / n); ++i)
+        GraphBuffer[i] = GraphBuffer[i * n];
+    
+    GraphTraceLen /= n;
+    PrintAndLogEx(SUCCESS, "decimated by " _GREEN_("%u"), n);
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1025,19 +1033,34 @@ static int CmdDec(const char *Cmd) {
  * @param Cmd
  * @return
  */
-static int CmdUndec(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_data_undecimate();
+static int CmdUndecimate(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data undecimate",
+                  "This function performs un-decimation, by repeating each sample N times in the graphbuf",
+                  "data undecimate\n"
+                  "data undecimate 4\n"
+                  );
 
-    uint8_t factor = param_get8ex(Cmd, 0, 2, 10);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, NULL, "<dec>", "The number of times to repeat each sample (default 2)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int factor = arg_get_int_def(ctx, 1, 2);
+    CLIParserFree(ctx);  
 
     //We have memory, don't we?
     int swap[MAX_GRAPH_TRACE_LEN] = {0};
     uint32_t g_index = 0, s_index = 0;
     while (g_index < GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
-        for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++)
-            swap[s_index + count] = ((double)(factor - count)/(factor - 1))*GraphBuffer[g_index] + ((double)count/factor)*GraphBuffer[g_index + 1];
+        for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++) {
+            swap[s_index + count] = (
+                        (double)(factor - count) / (factor - 1)) * GraphBuffer[g_index] +
+                        ((double)count / factor) * GraphBuffer[g_index + 1]
+                        ;
+        }
         s_index += count;
         g_index++;
     }
@@ -2446,11 +2469,11 @@ static int try_detect_modulation(void) {
     }
 }
 
-static int CmdDataModeSearch(const char *Cmd) {
+static int CmdDataModulationSearch(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "data modesearch",
+    CLIParserInit(&ctx, "data modulation",
                   "search LF signal after clock and modulation\n",
-                  "data modesearch"
+                  "data modulation"
                   );
 
     void *argtable[] = {
@@ -2458,10 +2481,8 @@ static int CmdDataModeSearch(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-    
-    try_detect_modulation();
-    return PM3_SUCCESS;
+    CLIParserFree(ctx);    
+    return try_detect_modulation();
 }
 
 static command_t CommandTable[] = {
@@ -2473,7 +2494,7 @@ static command_t CommandTable[] = {
     {"bitsamples",      CmdBitsamples,           IfPm3Present,    "Get raw samples as bitstring"},
     {"buffclear",       CmdBuffClear,            AlwaysAvailable, "Clears bigbuff on deviceside and graph window"},
     {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable, "Convert GraphBuffer's 0/1 values to 127 / -127"},
-    {"dec",             CmdDec,                  AlwaysAvailable, "Decimate samples"},
+    {"decimate",        CmdDecimate,             AlwaysAvailable, "Decimate samples"},
     {"detectclock",     CmdDetectClockRate,      AlwaysAvailable, "[<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
     {"fsktonrz",        CmdFSKToNRZ,             AlwaysAvailable, "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable, "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
@@ -2499,11 +2520,11 @@ static command_t CommandTable[] = {
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
     {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
     {"tune",            CmdTuneSamples,          IfPm3Present,    "Get hw tune samples for graph window"},
-    {"undec",           CmdUndec,                AlwaysAvailable, "Un-decimate samples by 2"},
+    {"undecimate",      CmdUndecimate,           AlwaysAvailable, "Un-decimate samples by 2"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
     {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
     {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
-    {"modesearch",      CmdDataModeSearch,       AlwaysAvailable,  "Search LF signal for clock, modulation"},
+    {"modesearch",      CmdDataModulationSearch, AlwaysAvailable,  "Search LF signal for clock, modulation"},
     {NULL, NULL, NULL, NULL}
 };
 
