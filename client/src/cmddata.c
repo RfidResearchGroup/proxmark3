@@ -1749,6 +1749,8 @@ int CmdTuneSamples(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d is %.2f kHz, %d is %.2f kHz.\n\n",
                       LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134), LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
         GraphTraceLen = 256;
+        CursorCPos = LF_DIVISOR_125;
+        CursorDPos = LF_DIVISOR_134;
         ShowGraphWindow();
         RepaintGraphWindow();
     } else {
