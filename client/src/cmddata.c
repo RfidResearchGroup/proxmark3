@@ -2313,11 +2313,34 @@ static int CmdDataNDEF(const char *Cmd) {
 typedef struct {
     t55xx_modulation modulation;
     int bitrate;
+    int carrier;
+    uint8_t fc1;
+    uint8_t fc2;
 } lf_modulation_t;
 
 static int print_modulation(lf_modulation_t b) {
-    PrintAndLogEx(INFO, " Modulation... " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
-    PrintAndLogEx(INFO, " Bit Rate..... " _GREEN_("RF/%u"), b.bitrate);
+    PrintAndLogEx(INFO, " Modulation.... " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
+    PrintAndLogEx(INFO, " Bit clock..... " _GREEN_("RF/%d"), b.bitrate);
+    switch (b.modulation) {
+        case DEMOD_PSK1:
+        case DEMOD_PSK2:
+        case DEMOD_PSK3:
+            PrintAndLogEx(SUCCESS, " Carrier rate.. %d", b.carrier);
+            break;
+        case DEMOD_FSK:
+        case DEMOD_FSK1:
+        case DEMOD_FSK1a:
+        case DEMOD_FSK2:
+        case DEMOD_FSK2a:
+            PrintAndLogEx(SUCCESS, " Field Clocks.. FC/%u, FC/%u", b.fc1, b.fc2);
+            break;
+        case DEMOD_NRZ:
+        case DEMOD_ASK:
+        case DEMOD_BI:
+        case DEMOD_BIa:
+        default:
+            break;
+    }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -2326,7 +2349,8 @@ static int try_detect_modulation(void) {
 
     lf_modulation_t tests[6];
     int clk = 0, firstClockEdge = 0;
-    uint8_t hits = 0, fc1 = 0, fc2 = 0, ans = 0;
+    uint8_t hits = 0, ans = 0;
+    uint8_t fc1 = 0, fc2 = 0;
     bool st = false;
 
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
@@ -2335,11 +2359,15 @@ static int try_detect_modulation(void) {
 
         if ((FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS)) {
             tests[hits].modulation = DEMOD_FSK;
-            if (fc1 == 8 && fc2 == 5)
+            if (fc1 == 8 && fc2 == 5) {
                 tests[hits].modulation = DEMOD_FSK1a;
-            else if (fc1 == 10 && fc2 == 8)
+            } else if (fc1 == 10 && fc2 == 8) {
                 tests[hits].modulation = DEMOD_FSK2;
+            }
+
             tests[hits].bitrate = clk;
+            tests[hits].fc1 = fc1;
+            tests[hits].fc2 = fc2;
             ++hits;
         }
 
@@ -2380,13 +2408,11 @@ static int try_detect_modulation(void) {
             }
         }
         clk = GetNrzClock("", false);
-        if (clk > 8) { //clock of rf/8 is likely a false positive, so don't use it.
             if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS)) {
                 tests[hits].modulation = DEMOD_NRZ;
                 tests[hits].bitrate = clk;
                 ++hits;
             }
-        }
 
         clk = GetPskClock("", false);
         if (clk > 0) {
@@ -2398,6 +2424,9 @@ static int try_detect_modulation(void) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = clk;
                 ++hits;
+                
+                // get psk carrier
+                tests[hits].carrier = GetPskCarrier(false);
             }
             //undo trim samples
             save_restoreGB(GRAPH_RESTORE);

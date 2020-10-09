@@ -27,11 +27,11 @@ void convertGraphFromBitstream(void);
 void convertGraphFromBitstreamEx(int hi, int low);
 bool isGraphBitstream(void);
 
-int GetAskClock(const char *str, bool printAns);
-int GetPskClock(const char *str, bool printAns);
-uint8_t GetPskCarrier(const char *str, bool printAns);
-int GetNrzClock(const char *str, bool printAns);
-int GetFskClock(const char *str, bool printAns);
+int GetAskClock(const char *str, bool verbose);
+int GetPskClock(const char *str, bool verbose);
+int GetPskCarrier(bool verbose);
+int GetNrzClock(const char *str, bool verbose);
+int GetFskClock(const char *str, bool verbose);
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 
 #define MAX_GRAPH_TRACE_LEN (40000 * 8)
