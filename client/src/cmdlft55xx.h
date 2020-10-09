@@ -105,8 +105,7 @@ typedef struct {
     uint32_t dw;
 } t5555_tracedata_t;
 
-typedef struct {
-    enum {
+typedef enum {
         DEMOD_NRZ  = 0x00,
         DEMOD_PSK1 = 0x01,
         DEMOD_PSK2 = 0x02,
@@ -119,7 +118,10 @@ typedef struct {
         DEMOD_ASK  = 0x08,
         DEMOD_BI   = 0x10,
         DEMOD_BIa  = 0x18,
-    }  modulation;
+} t55xx_modulation;
+
+typedef struct {
+    t55xx_modulation modulation;
     bool inverted;
     uint8_t offset;
     uint32_t block0;

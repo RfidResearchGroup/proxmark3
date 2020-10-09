@@ -27,6 +27,7 @@
 #include "fileutils.h"           // searchFile
 #include "mifare/ndef.h"
 #include "cliparser.h"
+#include "cmdlft55xx.h"          // print...
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -2309,6 +2310,131 @@ static int CmdDataNDEF(const char *Cmd) {
     return res;
 }
 
+typedef struct {
+    t55xx_modulation modulation;
+    int bitrate;
+} lf_modulation_t;
+
+static int print_modulation(lf_modulation_t b) {
+    PrintAndLogEx(INFO, " Modulation... " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
+    PrintAndLogEx(INFO, " Bit Rate..... " _GREEN_("RF/%u"), b.bitrate);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int try_detect_modulation(void) {
+
+    lf_modulation_t tests[6];
+    int clk = 0, firstClockEdge = 0;
+    uint8_t hits = 0, fc1 = 0, fc2 = 0, ans = 0;
+    bool st = false;
+
+    ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
+
+    if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
+
+        if ((FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS)) {
+            tests[hits].modulation = DEMOD_FSK;
+            if (fc1 == 8 && fc2 == 5)
+                tests[hits].modulation = DEMOD_FSK1a;
+            else if (fc1 == 10 && fc2 == 8)
+                tests[hits].modulation = DEMOD_FSK2;
+            tests[hits].bitrate = clk;
+            ++hits;
+        }
+
+    } else {
+        clk = GetAskClock("", false);
+        if (clk > 0) {
+            // 0 = auto clock
+            // 0 = no invert 
+            // 1 = maxError 1
+            // 0 = max len
+            // false = no amplify  
+            // false = no verbose
+            // false = no emSearch
+            // 1 = Ask/Man
+            // st = true
+            if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_ASK;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+            // "0 0 1 " == clock auto, invert true, maxError 1.
+            // false = no verbose
+            // false = no emSearch
+            // 1 = Ask/Man
+            // st = true
+            
+            // ASK / biphase
+            if ((ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_BI;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+            // ASK / Diphase
+            if ((ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_BIa;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+        }
+        clk = GetNrzClock("", false);
+        if (clk > 8) { //clock of rf/8 is likely a false positive, so don't use it.
+            if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_NRZ;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+        }
+
+        clk = GetPskClock("", false);
+        if (clk > 0) {
+            // allow undo
+            save_restoreGB(GRAPH_SAVE);
+            // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+            CmdLtrim("160");
+            if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_PSK1;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+            //undo trim samples
+            save_restoreGB(GRAPH_RESTORE);
+        }
+    }
+
+    if (hits) {
+        PrintAndLogEx(SUCCESS, "Found [%d] possible matches for modulation.", hits);
+        for (int i = 0; i < hits; ++i) {
+           PrintAndLogEx(INFO, "--[%d]---------------", i + 1);
+           print_modulation(tests[i]);
+        }
+        return PM3_SUCCESS;
+    } else {
+        PrintAndLogEx(INFO, "Signal doesn't match");
+        return PM3_ESOFT;
+    }
+}
+
+static int CmdDataModeSearch(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data modesearch",
+                  "search LF signal after clock and modulation\n",
+                  "data modesearch"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    
+    try_detect_modulation();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable, "This help"},
     {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable, "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
@@ -2348,6 +2474,7 @@ static command_t CommandTable[] = {
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
     {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
     {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
+    {"modesearch",      CmdDataModeSearch,       AlwaysAvailable,  "Search LF signal for clock, modulation"},
     {NULL, NULL, NULL, NULL}
 };
 
