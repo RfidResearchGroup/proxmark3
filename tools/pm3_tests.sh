@@ -334,8 +334,8 @@ while true; do
       if ! CheckExecute "reveng -g test"          "$CLIENTBIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
       if ! CheckExecute "reveng -w test"          "$CLIENTBIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
-      if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load traces/hf_14a_mfu.trace; trace list 1;'" "READBLOCK(8)"; then break; fi
-      if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load traces/hf_14a_mfu.trace; trace list x 1;'" "0.0101840425"; then break; fi
+      if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK(8)"; then break; fi
+      if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -x1 -t 14a;'" "0.0101840425"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
       if ! CheckExecute "lf AWID test"          "$CLIENTBIN -c 'data load traces/lf_AWID-15-259.pm3;lf search 1'" "AWID ID found"; then break; fi
