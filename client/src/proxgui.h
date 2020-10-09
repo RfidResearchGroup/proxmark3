@@ -28,7 +28,7 @@ void ExitGraphics(void);
 
 extern double CursorScaleFactor;
 extern char CursorScaleFactorUnit[11];
-extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
+extern double PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
 extern uint32_t CursorCPos, CursorDPos;
 extern int CommandFinished;
 extern int offline;

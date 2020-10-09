@@ -503,13 +503,13 @@ void Plot::plotGridLines(QPainter *painter, QRect r) {
     // set GridOffset
     if (PlotGridX <= 0) return;
 
-    int offset = GridOffset;
+    double offset = GridOffset;
     if (GridLocked && PlotGridX) {
-        offset = GridOffset + PlotGridX - (GraphStart % PlotGridX);
+        offset = GridOffset + PlotGridX - fmod(GraphStart, PlotGridX);
     } else if (!GridLocked && GraphStart > 0 && PlotGridX) {
-        offset = PlotGridX - ((GraphStart - offset) % PlotGridX) + GraphStart - unlockStart;
+        offset = PlotGridX - fmod(GraphStart - offset, PlotGridX) + GraphStart - unlockStart;
     }
-    offset %= PlotGridX;
+    offset = fmod(offset, PlotGridX);
     if (offset < 0) offset += PlotGridX;
 
     double i;
@@ -610,7 +610,7 @@ void Plot::paintEvent(QPaintEvent *event) {
             sprintf(scalestr, "[%2.2f %s] ", ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor, CursorScaleFactorUnit);
         }
     }
-    sprintf(str, "@%u..%u  dt=%i %szoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
+    sprintf(str, "@%u..%u  dt=%i %szoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%lf  GridY=%lf (%s) GridXoffset=%lf",
             GraphStart,
             GraphStop,
             CursorBPos - CursorAPos,
@@ -790,7 +790,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
     if (event->modifiers() & Qt::ShiftModifier) {
         if (PlotGridX)
-            offset = PageWidth - (PageWidth % PlotGridX);
+            offset = PageWidth - fmod(PageWidth, PlotGridX);
         else
             offset = PageWidth;
     } else {

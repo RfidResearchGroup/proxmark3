@@ -1448,7 +1448,7 @@ void setClockGrid(uint32_t clk, int offset) {
 }
 
 int CmdGrid(const char *Cmd) {
-    sscanf(Cmd, "%i %i", &PlotGridX, &PlotGridY);
+    sscanf(Cmd, "%lf %lf", &PlotGridX, &PlotGridY);
     PlotGridXdefault = PlotGridX;
     PlotGridYdefault = PlotGridY;
     RepaintGraphWindow();
