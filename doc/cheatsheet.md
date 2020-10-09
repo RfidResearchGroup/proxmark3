@@ -541,12 +541,12 @@ pm3 --> data samples <size>
 
 Save samples to file
 ```
-pm3 --> data save <filename>
+pm3 --> data save -f <filename>
 ```
 
 Load samples from file
 ```
-pm3 --> data load <filename>
+pm3 --> data load -f <filename>
 ```
 
 ## Lua Scripts

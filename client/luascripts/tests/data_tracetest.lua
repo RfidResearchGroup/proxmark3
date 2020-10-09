@@ -77,7 +77,7 @@ local function main(args)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
 
-    local cmdDataLoad = 'data load %s';
+    local cmdDataLoad = 'data load -f %s';
     local cwd = core.cwd();
 
     local tracesEM = "find '"..cwd.."/traces/ ' -iname 'em*.pm3' -type f"
