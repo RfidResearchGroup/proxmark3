@@ -184,25 +184,37 @@ arg_get_u64_def(\<context\>, \<opt index\>, \<default value\>);
     cardnumber = arg_get_u64_def(ctx, 2, 0);
 
 
-**hex option**
+**hex option with return**
 CLIGetHexWithReturn(\<context\>, \<opt index\>, \<store variable\>, \<ptr to stored length\>);
     ?? as an array of uint_8 ??
+    If failed to retrieve hexbuff, it will exit fct
 
     uint8_t aid[2] = {0};
     int aidlen;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
 
-**hex option returning ???**
+
+**hex option**
 
     uint8_t key[24] = {0};
     int keylen = 0;
     int res_klen = CLIParamHexToBuf(arg_get_str(ctx, 3), key, 24, &keylen);
+
     quick test : seems res_keylen == 0 when ok so not key len ???
 
-**string option**
+**string option return**
 CLIGetStrWithReturn(\<context\>,\<opt index\>, \<unsigned char \*\>, \<int \*\>);
+    If failed to retrieve string, it will exit fct
 
-    uint8_t Buffer[100];
-    int BufLen;
-    CLIGetStrWithReturn(ctx,7, Buffer, &BufLen);
+    uint8_t buffer[100];
+    int slen = 0;
+    CLIGetStrWithReturn(ctx, 1, buffer, &slen);
 
+**string option**     
+Getting a char array 
+
+    int slen = 0;
+    char format[16] = {0};
+    int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &slen);
+
+    quick test : seem res == 0, then ok.  compare res == slen to see how many chars 
