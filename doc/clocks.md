@@ -98,7 +98,7 @@ Maximal value: 0x7fffffff = 2147 s
 
 Can't be used at the same time as CountSspClk or Ticks functions.
 
-## Occasional TC0+TC1 SSP_CLK from FPGA / CountSspClk functions
+## Occasional TC0+TC1+TC2 SSP_CLK from FPGA / CountSspClk functions
 
 cf `armsrc/ticks.c`
 
