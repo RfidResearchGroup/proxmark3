@@ -1342,9 +1342,11 @@ static int CmdHF15Dump(const char *Cmd) {
 }
 
 static int CmdHF15List(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("15");
-    return PM3_SUCCESS;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 15");
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHF15Raw(const char *Cmd) {

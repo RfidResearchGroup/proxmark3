@@ -149,9 +149,12 @@ static int usage_hitag_checkchallenges(void) {
 }
 
 static int CmdLFHitagList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("hitag2");
-    return PM3_SUCCESS;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t hitag2");
+    }
+    return CmdTraceList(args);
+
 
     /*
     uint8_t *got = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));

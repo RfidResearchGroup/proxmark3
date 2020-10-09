@@ -36,10 +36,19 @@
 #include "emv/dump.h"
 #include "ui.h"
 #include "cmdhf14a.h"
+#include "cmdtrace.h"
 
 static int CmdHelp(const char *Cmd);
 
-static int CmdHFFidoInfo(const char *cmd) {
+static int cmd_hf_fido_list(const char *Cmd) {
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 14a");
+    }
+    return CmdTraceList(args);
+}
+
+static int cmd_hf_fido_info(const char *cmd) {
 
     if (cmd && strlen(cmd) > 0)
         PrintAndLogEx(WARNING, "WARNING: command doesn't have any parameters.\n");
@@ -150,7 +159,7 @@ static json_t *OpenJson(CLIParserContext *ctx, int paramnum, char *fname, void *
     return root;
 }
 
-static int CmdHFFidoRegister(const char *cmd) {
+static int cmd_hf_fido_register(const char *cmd) {
     uint8_t data[64] = {0};
     int chlen = 0;
     uint8_t cdata[250] = {0};
@@ -386,7 +395,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFFidoAuthenticate(const char *cmd) {
+static int cmd_hf_fido_authenticate(const char *cmd) {
     uint8_t data[512] = {0};
     uint8_t hdata[250] = {0};
     bool public_key_loaded = false;
@@ -652,7 +661,7 @@ static int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFile
     return PM3_SUCCESS;
 }
 
-static int CmdHFFido2MakeCredential(const char *cmd) {
+static int cmd_hf_fido_2make_credential(const char *cmd) {
     json_error_t error;
     char fname[FILE_PATH_SIZE] = {0};
 
@@ -777,7 +786,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFFido2GetAssertion(const char *cmd) {
+static int cmd_hf_fido_2get_assertion(const char *cmd) {
     json_error_t error;
     char fname[FILE_PATH_SIZE] = {0};
 
@@ -903,13 +912,14 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",      CmdHelp,                    AlwaysAvailable, "This help."},
-    {"info",      CmdHFFidoInfo,              IfPm3Iso14443a,  "Info about FIDO tag."},
-    {"reg",       CmdHFFidoRegister,          IfPm3Iso14443a,  "FIDO U2F Registration Message."},
-    {"auth",      CmdHFFidoAuthenticate,      IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
-    {"make",      CmdHFFido2MakeCredential,   IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
-    {"assert",    CmdHFFido2GetAssertion,     IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
-    {NULL,        NULL,                       0, NULL}
+    {"help",      CmdHelp,                      AlwaysAvailable, "This help."},    
+    {"info",      cmd_hf_fido_list,             IfPm3Iso14443a,  "List ISO 14443A history"},
+    {"info",      cmd_hf_fido_info,             IfPm3Iso14443a,  "Info about FIDO tag."},
+    {"reg",       cmd_hf_fido_register,         IfPm3Iso14443a,  "FIDO U2F Registration Message."},
+    {"auth",      cmd_hf_fido_authenticate,     IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
+    {"make",      cmd_hf_fido_2make_credential, IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
+    {"assert",    cmd_hf_fido_2get_assertion,   IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
+    {NULL, NULL, 0, NULL}
 };
 
 int CmdHFFido(const char *Cmd) {

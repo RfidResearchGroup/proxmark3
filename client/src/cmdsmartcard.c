@@ -844,9 +844,11 @@ static int CmdSmartSetClock(const char *Cmd) {
 }
 
 static int CmdSmartList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("7816");
-    return PM3_SUCCESS;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 7816");
+    }
+    return CmdTraceList(args);
 }
 
 static void smart_brute_prim(void) {

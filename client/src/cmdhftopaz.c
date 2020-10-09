@@ -481,9 +481,11 @@ static int CmdHFTopazCmdRaw(const char *Cmd) {
 }
 
 static int CmdHFTopazList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("topaz");
-    return PM3_SUCCESS;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t topaz");
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHelp(const char *Cmd);

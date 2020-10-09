@@ -604,9 +604,11 @@ static void print_picopass_header(const picopass_hdr *hdr) {
 }
 
 static int CmdHFiClassList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("iclass");
-    return PM3_SUCCESS;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t iclass");
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHFiClassSniff(const char *Cmd) {

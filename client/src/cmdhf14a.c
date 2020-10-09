@@ -269,9 +269,11 @@ static int usage_hf_14a_reader(void) {
 }
 
 static int CmdHF14AList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("14a");
-    return 0;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 14a");
+    }
+    return CmdTraceList(args);
 }
 
 int hf14a_getconfig(hf14a_config *config) {

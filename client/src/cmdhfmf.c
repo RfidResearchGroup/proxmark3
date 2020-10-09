@@ -5196,8 +5196,11 @@ static int CmdHFMFPersonalize(const char *cmd) {
 }
 
 static int CmdHF14AMfList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return CmdTraceList("mf");
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t mf");
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHf14AGen3UID(const char *Cmd) {

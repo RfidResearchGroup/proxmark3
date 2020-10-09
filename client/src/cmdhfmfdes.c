@@ -4470,8 +4470,11 @@ static int CmdHF14aDesChk(const char *Cmd) {
 }
 
 static int CmdHF14ADesList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return CmdTraceList("des");
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t des");
+    }
+    return CmdTraceList(args);
 }
 
 /*

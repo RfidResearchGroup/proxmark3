@@ -115,9 +115,11 @@ static int switch_off_field_cryptorf(void) {
 }
 
 static int CmdHFCryptoRFList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("cryptorf");
-    return PM3_SUCCESS;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t cryptorf");
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHFCryptoRFSim(const char *Cmd) {

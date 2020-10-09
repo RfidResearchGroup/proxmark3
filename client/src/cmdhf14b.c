@@ -116,9 +116,11 @@ static bool wait_cmd_14b(bool verbose, bool is_select) {
 }
 
 static int CmdHF14BList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("14b");
-    return PM3_SUCCESS;
+    char args[128];
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 14b");
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHF14BSim(const char *Cmd) {
