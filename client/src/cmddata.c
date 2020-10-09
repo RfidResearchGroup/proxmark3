@@ -36,23 +36,8 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_data_save(void) {
-    PrintAndLogEx(NORMAL, "Save trace from graph window , i.e. the GraphBuffer");
-    PrintAndLogEx(NORMAL, "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file");
-    PrintAndLogEx(NORMAL, "Filename should be without file extension");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: data save [h] [w] [f <filename w/o ext>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              this help");
-    PrintAndLogEx(NORMAL, "       w              save as wave format (.wav)");
-    PrintAndLogEx(NORMAL, "       f <filename>   save file name");
-    PrintAndLogEx(NORMAL, "Samples:");
-    PrintAndLogEx(NORMAL, "       data save f mytrace      - save graphbuffer to file");
-    PrintAndLogEx(NORMAL, "       data save f mytrace w    - save graphbuffer to wave file");
-    return PM3_SUCCESS;
-}
 static int usage_data_printdemodbuf(void) {
-    PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
+    PrintAndLogEx(NORMAL, "Usage: data print x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          this help");
     PrintAndLogEx(NORMAL, "       i          invert Demodbuffer before printing");
@@ -261,7 +246,7 @@ static int usage_data_bin2hex(void) {
 }
 static int usage_data_buffclear(void) {
     PrintAndLogEx(NORMAL, "This function clears the bigbuff on deviceside");
-    PrintAndLogEx(NORMAL, "Usage: data buffclear [h]");
+    PrintAndLogEx(NORMAL, "Usage: data clear [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
     return PM3_SUCCESS;
@@ -1762,16 +1747,26 @@ int CmdTuneSamples(const char *Cmd) {
 }
 
 static int CmdLoad(const char *Cmd) {
-    char filename[FILE_PATH_SIZE] = {0x00};
-    int len = 0;
 
-    len = strlen(Cmd);
-    if (len == 0) return PM3_EFILE;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data load",
+                  "This command loads the contents of a pm3 file into graph window\n",
+                  "data load -f myfilename"
+                 );
 
-    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-    memcpy(filename, Cmd, len);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("f", "file", "<filename>", "file to load"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    char *path;
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
+    char *path = NULL;
     if (searchFile(&path, TRACES_SUBDIR, filename, ".pm3", true) != PM3_SUCCESS) {
         if (searchFile(&path, TRACES_SUBDIR, filename, "", false) != PM3_SUCCESS) {
             return PM3_EFILE;
@@ -1795,7 +1790,6 @@ static int CmdLoad(const char *Cmd) {
         if (GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
             break;
     }
-
     fclose(f);
 
     PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", GraphTraceLen);
@@ -1895,39 +1889,29 @@ int CmdPlot(const char *Cmd) {
 
 int CmdSave(const char *Cmd) {
 
-    int len = 0;
-    char filename[FILE_PATH_SIZE] = {0x00};
-    uint8_t cmdp = 0;
-    bool errors = false, as_wave = false, has_name = false;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data save",
+                  "Save trace from graph window , i.e. the GraphBuffer\n"
+                  "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file\n"
+                  "Filename should be without file extension",
+                  "data save -f myfilename         -> save graph buffer to file\n"
+                  "data save --wave -f myfilename  -> save graph buffer to wave file"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        char ctmp = tolower(param_getchar(Cmd, cmdp));
-        switch (ctmp) {
-            case 'h':
-                return usage_data_save();
-            case 'f':
-                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (len < 1) {
-                    errors = true;
-                    break;
-                }
-                has_name = true;
-                cmdp += 2;
-                break;
-            case 'w':
-                as_wave = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("w", "wave", "save as wave format (.wav)"),
+        arg_strx0("f", "file", "<fn w/o ext>", "save file name"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (!has_name) errors = true;
-
-    if (errors || cmdp == 0) return usage_data_save();
+    bool as_wave = arg_get_lit(ctx, 1);
+    
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIGetStrWithReturn(ctx, 2, (uint8_t*)filename, &fnlen);
+    CLIParserFree(ctx);
 
     if (as_wave)
         return saveFileWAVE(filename, GraphBuffer, GraphTraceLen);
@@ -2489,44 +2473,52 @@ static int CmdDataModulationSearch(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
-    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
-    {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
-    {"biphaserawdecode", CmdBiphaseDecodeRaw,    AlwaysAvailable,  "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
-    {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "<digits> -- Converts binary to hexadecimal"},
-    {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
-    {"buffclear",       CmdBuffClear,            AlwaysAvailable,  "Clears bigbuff on deviceside and graph window"},
-    {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
-    {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
-    {"detectclock",     CmdDetectClockRate,      AlwaysAvailable,  "[<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
+    
+    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Modulation") "-------------------------"},
+    {"biphaserawdecode", CmdBiphaseDecodeRaw,    AlwaysAvailable,  "Biphase decode bin stream in DemodBuffer"},
+    {"detectclock",     CmdDetectClockRate,      AlwaysAvailable,  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
     {"fsktonrz",        CmdFSKToNRZ,             AlwaysAvailable,  "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},
-    {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
-    {"grid",            CmdGrid,                 AlwaysAvailable,  "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
-    {"hexsamples",      CmdHexsamples,           IfPm3Present,     "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
-    {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "<hexadecimal> -- Converts hexadecimal to binary"},
+    {"manrawdecode",    Cmdmandecoderaw,         AlwaysAvailable,  "Manchester decode binary stream in DemodBuffer"},
+    {"modulation",      CmdDataModulationSearch, AlwaysAvailable,  "Identify LF signal for clock and modulation"},
+    {"rawdemod",        CmdRawDemod,             AlwaysAvailable,  "Demodulate the data in the GraphBuffer and output binary"},
+        
+    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
+    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
+    {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
+    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
+    {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
+    {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
     {"hpf",             CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},
-    {"load",            CmdLoad,                 AlwaysAvailable,  "<filename> -- Load trace (to graph window"},
+    {"iir",             CmdDataIIR,              AlwaysAvailable,  "apply IIR buttersworth filter on plotdata"},
+    {"grid",            CmdGrid,                 AlwaysAvailable,  "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
     {"ltrim",           CmdLtrim,                AlwaysAvailable,  "<samples> -- Trim samples from left of trace"},
-    {"rtrim",           CmdRtrim,                AlwaysAvailable,  "<location to end trace> -- Trim samples from right of trace"},
     {"mtrim",           CmdMtrim,                AlwaysAvailable,  "<start> <stop> -- Trim out samples from the specified start to the specified stop"},
-    {"manrawdecode",    Cmdmandecoderaw,         AlwaysAvailable,  "[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer"},
     {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
     {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window (hit 'h' in window for keystroke help)"},
-    {"printdemodbuffer", CmdPrintDemodBuff,      AlwaysAvailable,  "[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output"},
-    {"rawdemod",        CmdRawDemod,             AlwaysAvailable,  "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},
-    {"samples",         CmdSamples,              IfPm3Present,     "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
-    {"save",            CmdSave,                 AlwaysAvailable,  "Save trace (from graph window)"},
+    {"rtrim",           CmdRtrim,                AlwaysAvailable,  "<location to end trace> -- Trim samples from right of trace"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "[orange_marker] [blue_marker] (in graph window)"},
-    {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration\n"},
-    {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable,  "<0|1|2> -- Set Debugging Level on client side"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "<shift> -- Shift 0 for Graphed wave + or - shift value"},
-    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
-    {"tune",            CmdTuneSamples,          IfPm3Present,     "Measure tuning of device antenna. Results shown in graph window"},
-    {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
+    {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration\n"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
-    {"iir",             CmdDataIIR,              AlwaysAvailable,  "apply IIR buttersworth filter on plotdata"},
+
+    {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
+    {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
+  
+
+    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
+    {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
+    {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
+    {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
+    {"hexsamples",      CmdHexsamples,           IfPm3Present,     "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
+    {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
+    {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
     {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
-    {"modesearch",      CmdDataModulationSearch, AlwaysAvailable,  "Search LF signal for clock, modulation"},
+    {"print",           CmdPrintDemodBuff,       AlwaysAvailable,  "print the data in the DemodBuffer"},
+    {"samples",         CmdSamples,              IfPm3Present,     "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
+    {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data  (from graph window)"},
+    {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable,  "<0|1|2> -- Set Debugging Level on client side"},
+    {"tune",            CmdTuneSamples,          IfPm3Present,     "Measure tuning of device antenna. Results shown in graph window"},
     {NULL, NULL, NULL, NULL}
 };
 
