@@ -596,7 +596,7 @@ void Plot::paintEvent(QPaintEvent *event) {
         painter.drawLine(xCoordOf(CursorCPos, plotRect), plotRect.top(), xCoordOf(CursorCPos, plotRect), plotRect.bottom());
     }
     if (CursorDPos > GraphStart && xCoordOf(CursorDPos, plotRect) < plotRect.right()) {
-        painter.setPen(QColor(0, 0, 205)); //light blue
+        painter.setPen(QColor(100, 209, 246)); //light blue
         painter.drawLine(xCoordOf(CursorDPos, plotRect), plotRect.top(), xCoordOf(CursorDPos, plotRect), plotRect.bottom());
     }
 
