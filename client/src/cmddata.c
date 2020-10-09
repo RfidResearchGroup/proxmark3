@@ -1037,7 +1037,7 @@ static int CmdUndec(const char *Cmd) {
     while (g_index < GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
         for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++)
-            swap[s_index + count] = GraphBuffer[g_index];
+            swap[s_index + count] = ((double)(factor - count)/(factor - 1))*GraphBuffer[g_index] + ((double)count/factor)*GraphBuffer[g_index + 1];
         s_index += count;
         g_index++;
     }
