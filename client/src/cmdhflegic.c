@@ -1401,9 +1401,11 @@ static int CmdLegicWipe(const char *Cmd) {
 }
 
 static int CmdLegicList(const char *Cmd) {
-    char args[128];
+    char args[128] = {0};
     if (strlen(Cmd) == 0) {
         snprintf(args, sizeof(args), "-t legic");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
     }
     return CmdTraceList(args);
 }

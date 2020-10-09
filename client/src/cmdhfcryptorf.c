@@ -115,9 +115,11 @@ static int switch_off_field_cryptorf(void) {
 }
 
 static int CmdHFCryptoRFList(const char *Cmd) {
-    char args[128];
+    char args[128] = {0};
     if (strlen(Cmd) == 0) {
         snprintf(args, sizeof(args), "-t cryptorf");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
     }
     return CmdTraceList(args);
 }

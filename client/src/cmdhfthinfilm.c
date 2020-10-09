@@ -225,9 +225,11 @@ static int CmdHfThinFilmSim(const char *Cmd) {
 }
 
 static int CmdHfThinFilmList(const char *Cmd) {
-    char args[128];
+    char args[128] = {0};
     if (strlen(Cmd) == 0) {
         snprintf(args, sizeof(args), "-t thinfilm");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
     }
     return CmdTraceList(args);
 }

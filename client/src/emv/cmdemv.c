@@ -1772,8 +1772,13 @@ static int CmdEMVScan(const char *Cmd) {
 }
 
 static int CmdEMVList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return CmdTraceList("7816");
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 7816");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdEMVTest(const char *Cmd) {

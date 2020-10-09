@@ -41,9 +41,11 @@
 static int CmdHelp(const char *Cmd);
 
 static int cmd_hf_fido_list(const char *Cmd) {
-    char args[128];
+    char args[128] = {0};
     if (strlen(Cmd) == 0) {
         snprintf(args, sizeof(args), "-t 14a");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
     }
     return CmdTraceList(args);
 }

@@ -116,9 +116,11 @@ static bool wait_cmd_14b(bool verbose, bool is_select) {
 }
 
 static int CmdHF14BList(const char *Cmd) {
-    char args[128];
+    char args[128] = {0};
     if (strlen(Cmd) == 0) {
         snprintf(args, sizeof(args), "-t 14b");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
     }
     return CmdTraceList(args);
 }
