@@ -512,8 +512,8 @@ void Plot::plotGridLines(QPainter *painter, QRect r) {
     offset %= PlotGridX;
     if (offset < 0) offset += PlotGridX;
 
-    int i;
-    int grid_delta_x = (int)(PlotGridX * GraphPixelsPerPoint);
+    double i;
+    double grid_delta_x = PlotGridX * GraphPixelsPerPoint;
     int grid_delta_y = PlotGridY;
 
     if ((PlotGridX > 0) && ((PlotGridX * GraphPixelsPerPoint) > 1)) {
