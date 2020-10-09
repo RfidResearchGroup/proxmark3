@@ -922,7 +922,7 @@ static int demodEM4x05resp(uint32_t *word, bool onlyPreamble) {
 
 //////////////// 4205 / 4305 commands
 #include "util_posix.h"  // msclock
-static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
+int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
 
     struct {
         uint32_t password;

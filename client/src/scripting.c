@@ -36,6 +36,7 @@
 #include "fileutils.h"    // searchfile
 #include "cmdlf.h"        // lf_config
 #include "generator.h"
+#include "cmdlfem4x.h"    // read 4305
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
@@ -1088,6 +1089,46 @@ static int l_T55xx_detect(lua_State *L) {
 }
 
 //
+static int l_em4x05_read(lua_State *L) {
+
+    bool use_pwd = false;
+    uint32_t addr, password = 0;
+
+    //Check number of arguments
+    //int n = lua_gettop(L);
+
+    // get addr
+    size_t size = 0;
+    const char *p_addr = luaL_checklstring(L, 1, &size);
+    sscanf(p_addr, "%u", &addr);
+
+    // get password
+    const char *p_pwd = luaL_checklstring(L, 2, &size);
+    if (size == 0) {
+        use_pwd = false;
+    } else {
+        if (size != 8)
+            return returnToLuaWithError(L, "Wrong size of password, got %zu , expected 8", size);
+
+        sscanf(p_pwd, "%08x", &password);
+        use_pwd = true;
+    }
+
+    PrintAndLogEx(INFO, "Addr %u", addr);
+    if (use_pwd)
+        PrintAndLogEx(INFO, " Pwd %08X", password);
+
+    uint32_t word = 0;
+    int res = EM4x05ReadWord_ext(addr, password, use_pwd, &word);
+    if (res != PM3_SUCCESS) {
+        return returnToLuaWithError(L, "Failed to read EM4x05 data");        
+    }
+    
+    lua_pushinteger(L, word);
+    return 1;
+}
+
+//
 static int l_ndefparse(lua_State *L) {
 
     size_t size;
@@ -1278,6 +1319,7 @@ int set_pm3_libraries(lua_State *L) {
         {"ewd",                         l_ewd},
         {"ud",                          l_ud},
         {"rem",                         l_remark},
+        {"em4x05_read",                 l_em4x05_read},
         {NULL, NULL}
     };
 
