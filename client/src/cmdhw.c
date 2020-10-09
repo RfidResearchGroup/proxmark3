@@ -520,14 +520,15 @@ static int CmdTearoff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tearoff",
                   "Configure a tear-off hook for the next write command supporting tear-off\n"
-                  "After having been triggered by a write command, the tear-off hook is deactivated",
+                  "After having been triggered by a write command, the tear-off hook is deactivated\n"
+                  "Delay (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
                   "hw tearoff --delay 1200 --> define delay of 1200us\n"
                   "hw tearoff --on --> (re)activate a previously defined delay\n"
                   "hw tearoff --off --> deactivate a previously activated but not yet triggered hook\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "delay", "<decimal>", "Delay in us before triggering tear-off, must be > 0"),
+        arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 43000"),
         arg_lit0(NULL, "on", "Activate tear-off hook"),
         arg_lit0(NULL, "off", "Deactivate tear-off hook"),
         arg_param_end
@@ -535,14 +536,23 @@ static int CmdTearoff(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     struct {
-        uint32_t delay_us;
+        uint16_t delay_us;
         bool on;
         bool off;
     } PACKED params;
-    params.delay_us = arg_get_u32_def(ctx, 1, 0);
+    int delay = arg_get_int_def(ctx, 1, -1);
     params.on = arg_get_lit(ctx, 2);
     params.off = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
+    if (delay != -1) {
+        if ((delay < 1) || (delay > 43000)) {
+            PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+            return PM3_EINVARG;
+        }
+    } else {
+        delay = 0; // will be ignored by ARM
+    }
+    params.delay_us = delay;
     if (params.on && params.off) {
         PrintAndLogEx(WARNING, "You can't set both --on and --off!");
         return PM3_EINVARG;

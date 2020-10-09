@@ -68,7 +68,7 @@ extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
-static uint32_t tearoff_delay_us = 0;
+static uint16_t tearoff_delay_us = 0;
 static bool tearoff_enabled = false;
 
 int tearoff_hook(void) {
@@ -77,7 +77,7 @@ int tearoff_hook(void) {
             Dbprintf(_RED_("No tear-off delay configured!"));
             return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
         }
-        WaitUS(tearoff_delay_us);
+        SpinDelayUsPrecision(tearoff_delay_us);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         tearoff_enabled = false;
         Dbprintf(_YELLOW_("Tear-off triggered!"));
@@ -751,7 +751,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SET_TEAROFF: {
             struct p {
-                uint32_t delay_us;
+                uint16_t delay_us;
                 bool on;
                 bool off;
             } PACKED;
