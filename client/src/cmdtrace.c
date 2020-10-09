@@ -606,8 +606,8 @@ int CmdTraceList(const char *Cmd) {
                 "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") " communications\n"
                 "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") " communications\n"
                 "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") " communitcations\n"
-                "trace list 14a f       -> show frame delay times\n"
-                "trace list 14a 1       -> use trace buffer "
+                "trace list -t 14a f    -> show frame delay times\n"
+                "trace list -t 14a 1    -> use trace buffer "
                 );
 
     void *argtable[] = {
