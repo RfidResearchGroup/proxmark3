@@ -1694,6 +1694,37 @@ int CmdTuneSamples(const char *Cmd) {
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
         PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->peak_f));
 
+    double vdd = IfPm3Rdv4Fw() ? 9000 : 5400; // Empirical measures in mV
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0) {
+
+        // Q measure with Q=f/delta_f
+        double v_3db_scaled = (double)(package->peak_v * 0.707) / 512; // /512 == >>9
+        uint32_t s2=0, s4=0;
+        for (int i = 1; i < 256; i++) {
+            if ((s2 == 0) && (package->results[i] > v_3db_scaled)) {
+                s2 = i;
+            }
+            if ((s2 != 0) && (package->results[i] < v_3db_scaled)) {
+                s4 = i;
+                break;
+            }
+        }
+        if (s4 != 0) { // we got all our points of interest
+            double a = package->results[s2 - 1];
+            double b = package->results[s2];
+            double f1 = LF_DIV2FREQ(s2 - 1 + (v_3db_scaled - a)/(b-a));
+            double c = package->results[s4 - 1];
+            double d = package->results[s4];
+            double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled)/(c-d));
+            double q = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
+            PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by frequency bandwidth measurement", q);
+        }
+
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double q = (double)package->peak_v * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", q);
+    }
+
     char judgement[20];
     memset(judgement, 0, sizeof(judgement));
     // LF evaluation
@@ -1713,6 +1744,11 @@ int CmdTuneSamples(const char *Cmd) {
 
     memset(judgement, 0, sizeof(judgement));
 
+    if (package->v_hf >= HF_UNUSABLE_V) {
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double q = (double)package->v_hf * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", q);
+    }
     if (package->v_hf < HF_UNUSABLE_V)
         sprintf(judgement, _RED_("UNUSABLE"));
     else if (package->v_hf < HF_MARGINAL_V)
@@ -1721,6 +1757,7 @@ int CmdTuneSamples(const char *Cmd) {
         sprintf(judgement, _GREEN_("OK"));
 
     PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s", judgement);
+    PrintAndLogEx(NORMAL, "\n(*) Q factor must be measured without tag on the antenna");
 
     // graph LF measurements
     // even here, these values has 3% error.
@@ -1731,7 +1768,7 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d is %.2f kHz, %d is %.2f kHz.\n\n",
+        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d (blue) is %.2f kHz, %d (red) is %.2f kHz.\n\n",
                       LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134), LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
         GraphTraceLen = 256;
         CursorCPos = LF_DIVISOR_125;
