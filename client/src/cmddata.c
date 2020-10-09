@@ -1694,7 +1694,9 @@ int CmdTuneSamples(const char *Cmd) {
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
         PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->peak_f));
 
-    double vdd = IfPm3Rdv4Fw() ? 9000 : 5400; // Empirical measures in mV
+    const double vdd_rdv4 = 9000;
+    const double vdd_other = 5400; // Empirical measures in mV
+    double vdd = IfPm3Rdv4Fw() ? vdd_rdv4 : vdd_other;
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0) {
 
         // Q measure with Q=f/delta_f
@@ -1709,6 +1711,7 @@ int CmdTuneSamples(const char *Cmd) {
                 break;
             }
         }
+        double lfq1 = 0;
         if (s4 != 0) { // we got all our points of interest
             double a = package->results[s2 - 1];
             double b = package->results[s2];
@@ -1716,13 +1719,21 @@ int CmdTuneSamples(const char *Cmd) {
             double c = package->results[s4 - 1];
             double d = package->results[s4];
             double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled)/(c-d));
-            double q = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
-            PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by frequency bandwidth measurement", q);
+            lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
+            PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by frequency bandwidth measurement", lfq1);
         }
 
         // Q measure with Vlr=Q*(2*Vdd/pi)
-        double q = (double)package->peak_v * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", q);
+        double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", lfq2);
+        // cross-check results
+        if (lfq1 > 3) {
+            double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
+            if ((approx_vdd > (vdd_rdv4 + vdd_other) / 2) && (! IfPm3Rdv4Fw()))
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_OTHER firmware on a RDV4") ", please check your setup");
+            if ((approx_vdd < (vdd_rdv4 + vdd_other) / 2) && (IfPm3Rdv4Fw()))
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a non-RDV4") ", please check your setup");
+        }
     }
 
     char judgement[20];
@@ -1746,8 +1757,8 @@ int CmdTuneSamples(const char *Cmd) {
 
     if (package->v_hf >= HF_UNUSABLE_V) {
         // Q measure with Vlr=Q*(2*Vdd/pi)
-        double q = (double)package->v_hf * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", q);
+        double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", hfq);
     }
     if (package->v_hf < HF_UNUSABLE_V)
         sprintf(judgement, _RED_("UNUSABLE"));
