@@ -1195,7 +1195,7 @@ int CmdLFpskSim(const char *Cmd) {
         if (clk == 0) clk = GetPskClock("", false);
         PrintAndLogEx(INFO, "clk: %d", clk);
 
-        if (!carrier) carrier = GetPskCarrier("", false);
+        if (!carrier) carrier = GetPskCarrier(false);
         PrintAndLogEx(INFO, "carrier: %d", carrier);
 
     } else {
