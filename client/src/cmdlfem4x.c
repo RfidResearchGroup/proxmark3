@@ -1112,10 +1112,10 @@ static int CmdEM4x05Read(const char *Cmd) {
         return PM3_ESOFT;
     }
     if (pwd == 0xFFFFFFFF) {
-        PrintAndLogEx(NORMAL, "Reading address %02u", addr);
+        PrintAndLogEx(INFO, "Reading address %02u", addr);
     } else {
         usePwd = true;
-        PrintAndLogEx(NORMAL, "Reading address %02u using password %08X", addr, pwd);
+        PrintAndLogEx(INFO, "Reading address %02u using password %08X", addr, pwd);
     }
 
     uint32_t word = 0;
@@ -1148,15 +1148,15 @@ static int CmdEM4x05Write(const char *Cmd) {
     }
     if (pwd == 0xFFFFFFFF) {
         if (protectOperation)
-            PrintAndLogEx(NORMAL, "Writing protection words data %08X", data);
+            PrintAndLogEx(INFO, "Writing protection words data %08X", data);
         else
-            PrintAndLogEx(NORMAL, "Writing address %d data %08X", addr, data);
+            PrintAndLogEx(INFO, "Writing address %d data %08X", addr, data);
     } else {
         usePwd = true;
         if (protectOperation)
-            PrintAndLogEx(NORMAL, "Writing protection words data %08X using password %08X", data, pwd);
+            PrintAndLogEx(INFO, "Writing protection words data %08X using password %08X", data, pwd);
         else
-            PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
+            PrintAndLogEx(INFO, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
     if (protectOperation) { // set Protect Words
@@ -1373,8 +1373,10 @@ static void printEM4x05config(uint32_t wordData) {
     uint8_t disable = (wordData & EM4x05_DISABLE_ALLOWED) >> 23;
     uint8_t rtf = (wordData & EM4x05_READER_TALK_FIRST) >> 24;
     uint8_t pigeon = (wordData & (1 << 26)) >> 26;
-    PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)\n", wordData);
-    PrintAndLogEx(INFO, "Config Breakdown:");
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Config Information") " ---------------------------");
+    PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)", wordData);
     PrintAndLogEx(INFO, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
     PrintAndLogEx(INFO, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
     PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
@@ -1387,7 +1389,7 @@ static void printEM4x05config(uint32_t wordData) {
     PrintAndLogEx(INFO, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
     PrintAndLogEx(INFO, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
     PrintAndLogEx(INFO, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
-    PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s\n", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
+    PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
 }
 
 static void printEM4x05info(uint32_t block0, uint32_t serial) {
@@ -1396,8 +1398,10 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
     uint8_t cap = (block0 >> 5) & 3;
     uint16_t custCode = (block0 >> 9) & 0x3FF;
 
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+
     char ctstr[50];
-    snprintf(ctstr, sizeof(ctstr), "\n Chip Type:   %u | ", chipType);
+    snprintf(ctstr, sizeof(ctstr), " Chip Type:   %u | ", chipType);
     switch (chipType) {
         case 9:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4305");
@@ -1435,12 +1439,13 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     PrintAndLogEx(SUCCESS, " Cust Code: %03u | %s", custCode, (custCode == 0x200) ? "Default" : "Unknown");
     if (serial != 0)
-        PrintAndLogEx(SUCCESS, "\n  Serial #: " _YELLOW_("%08X"), serial);
+        PrintAndLogEx(SUCCESS, "  Serial #: " _YELLOW_("%08X"), serial);
 }
 
 static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
-    PrintAndLogEx(INFO, "ProtectionWord: %08X (Word %i)\n", word, addr);
-    PrintAndLogEx(INFO, "Protection Breakdown:");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Protection") " ---------------------------");
+    PrintAndLogEx(INFO, "ProtectionWord: %08X (Word %i)", word, addr);
     for (uint8_t i = 0; i < 15; i++) {
         PrintAndLogEx(INFO, "      Word:  %02u | %s", i, ((1 << i) & word) ? _RED_("write Locked") : "unlocked");
         if (i == 14)
