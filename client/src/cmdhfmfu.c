@@ -168,17 +168,13 @@ static int usage_hf_mfu_sim(void) {
 }
 
 static int usage_hf_mfu_ucauth(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth k <key number>");
-    PrintAndLogEx(NORMAL, "      0 (default): 3DES standard key");
-    PrintAndLogEx(NORMAL, "      1 : all 0x00 key");
-    PrintAndLogEx(NORMAL, "      2 : 0x00-0x0F key");
-    PrintAndLogEx(NORMAL, "      3 : nfc key");
-    PrintAndLogEx(NORMAL, "      4 : all 0x01 key");
-    PrintAndLogEx(NORMAL, "      5 : all 0xff key");
-    PrintAndLogEx(NORMAL, "      6 : 0x00-0xFF key");
+    PrintAndLogEx(NORMAL, "Tests 3DES password on Mifare Ultralight-C tag.");
+    PrintAndLogEx(NORMAL, "If password is not specified, a set of known defaults will be tested.");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth <password (32 hex symbols)>");
+    PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth k"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth k 3"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth 000102030405060708090a0b0c0d0e0f"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -405,6 +401,18 @@ static int ulc_authentication(uint8_t *key, bool switch_off_field) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 0;
     if (resp.oldarg[0] == 1) return 1;
 
+    return 0;
+}
+
+static int try_default_3des_keys(uint8_t **correct_key) {
+    PrintAndLogEx(INFO, "Trying some default 3des keys");
+    for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
+        uint8_t *key = default_3des_keys[i];
+        if (ulc_authentication(key, true)) {
+            *correct_key = key;
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -1317,16 +1325,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             if (hasAuthKey) return PM3_SUCCESS;
 
             // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-            PrintAndLogEx(INFO, "Trying some default 3des keys");
-            for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
-                key = default_3des_keys[i];
-                if (ulc_authentication(key, true)) {
-                    PrintAndLogEx(SUCCESS, "Found default 3des key: ");
-                    uint8_t keySwap[16];
-                    memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
-                    ulc_print_3deskey(keySwap);
-                    return PM3_SUCCESS;
-                }
+            if (try_default_3des_keys(&key)) {
+                PrintAndLogEx(SUCCESS, "Found default 3des key: ");
+                uint8_t keySwap[16];
+                memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
+                ulc_print_3deskey(keySwap);
             }
             return PM3_SUCCESS;
         }
@@ -2389,28 +2392,33 @@ static int CmdHF14AMfUSim(const char *Cmd) {
 //-------------------------------------------------------------------------------
 
 //
-// Ultralight C Authentication Demo {currently uses hard-coded key}
+// Ultralight C Authentication
 //
+
 static int CmdHF14AMfUCAuth(const char *Cmd) {
-
-    uint8_t keyNo = 3;
-    bool errors = false;
-
     char cmdp = tolower(param_getchar(Cmd, 0));
-
-    //Change key to user defined one
-    if (cmdp == 'k') {
-        keyNo = param_get8(Cmd, 1);
-        if (keyNo >= ARRAYLEN(default_3des_keys))
-            errors = true;
+    if (cmdp == 'h') {
+        return usage_hf_mfu_ucauth();
     }
 
-    if (cmdp == 'h') errors = true;
+    uint8_t key_buf[16];
+    uint8_t * key;
+    int succeeded;
 
-    if (errors) return usage_hf_mfu_ucauth();
+    // If no hex key is specified, try all known ones
+    if (strlen(Cmd) == 0) {
+        succeeded = try_default_3des_keys(&key);
+    // Else try user-supplied
+    } else {
+        if (param_gethex(Cmd, 0, key_buf, 32)) {
+            PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
+            return PM3_EINVARG;
+        }
+        succeeded = ulc_authentication(key_buf, true);
+        key = key_buf;
+    }
 
-    uint8_t *key = default_3des_keys[keyNo];
-    if (ulc_authentication(key, true))
+    if (succeeded)
         PrintAndLogEx(SUCCESS, "Authentication successful. 3des key: %s", sprint_hex(key, 16));
     else
         PrintAndLogEx(WARNING, "Authentication failed");
