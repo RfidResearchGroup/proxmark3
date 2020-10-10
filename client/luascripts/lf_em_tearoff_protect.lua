@@ -128,7 +128,7 @@ local function main(args)
         -- increase loop
         sd = sd + n
         
-        if tries == 20 then
+        if (tries == 20) and (n == 0) then
             tries = 0
             sd = sd + 1
             ed = ed + 1 
