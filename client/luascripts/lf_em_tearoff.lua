@@ -11,7 +11,7 @@ example = [[
     1. script run tearoff -n 2 -s 200 -e 400 -a 5
 ]]
 usage = [[
-script run tearoff [-h] [-n <steps us>] [-a <addr>]  [-p <pwd>]  [-s <start us>]  [-e <end us>]
+script run tearoff [-h] [-n <steps us>] [-a <addr>] [-p <pwd>] [-s <start us>] [-e <end us>] [-r <read>] [-w <write>]
 ]]
 arguments = [[
     -h                 This help
@@ -20,6 +20,8 @@ arguments = [[
     -p <pwd>           (optional) use a password
     -s <delay us>      inital start delay
     -e <delay us>      end delay, must be larger than start delay
+    -r <read value>    4 hex bytes value to be read
+    -w <write value>   4 hex bytes value to be written
     end
 ]]
 
@@ -59,18 +61,21 @@ local function main(args)
         core.em4x05_read(addr, password)
     
     --]]
-    local n, addr, password, sd, ed
+    local n, addr, password, sd, ed, wr_value, rd_value
     
-    for o, a in getopt.getopt(args, 'he:s:a:p:n:') do
+    for o, a in getopt.getopt(args, 'he:s:a:p:n:r:w:') do
         if o == 'h' then return help() end
         if o == 'n' then n = a end
         if o == 'a' then addr = a end
         if o == 'p' then password = a end
         if o == 'e' then ed = tonumber(a) end
         if o == 's' then sd = tonumber(a) end
+        if o == 'w' then wr_value = a end
+        if o == 'r' then rd_value = a end
     end
 
-   
+    rd_value = rd_value or 'FFFFFFFF'
+    wr_value = wr_value or 'FFFFFFFF'
     addr = addr or 5
     password = password or ''
     n = n or 2
@@ -79,6 +84,14 @@ local function main(args)
 
     if #password ~= 8 then
         password = ''
+    end
+    
+    if #wr_value ~= 8 then
+        wr_value = 'FFFFFFFF'
+    end
+
+    if #rd_value ~= 8 then
+        rd_value = 'FFFFFFFF'
     end
     
     if sd > ed then
@@ -91,14 +104,17 @@ local function main(args)
         print('target pwd', password)
     end
     print('target stepping', n)
-    print('target delay')
-    print('', sd, ed)
+    print('target delay', sd ,ed)
+    print('read value', rd_value)
+    print('write value', wr_value)
     
     local res_tear = 0
     local res_nowrite = 0
     
     local set_tearoff_delay = 'hw tearoff --delay %d'
     local enable_tearoff = 'hw tearoff --on'
+    
+    local wr_template = 'lf em 4x05_write %s %s %s'
     
     for step = sd, ed, n do
     
@@ -109,23 +125,25 @@ local function main(args)
         end
 
         core.clearCommandBuffer()
+        c = wr_template:format(addr, wr_value, password)
+        core.console(c)
         
         local c = set_tearoff_delay:format(step)
         core.console(c);
         core.console(enable_tearoff)
-        if #password == 8 then
-            c = ('lf em 4x05_write %s ffffffff %s'):format(addr, password)
-        else
-            c = ('lf em 4x05_write %s ffffffff'):format(addr)
-        end        
+                
+        c = wr_template:format(addr, wr_value, password)
         core.console(c)
+
         local word, err =  core.em4x05_read(addr, password)
         if err then
             return oops(err)
         end
         
-        if word ~= 0xFFFFFFFF then
-            if word ~= 0 then
+        local wordstr = ('%08X'):format(word)
+
+        if wordstr ~= wr_value then
+            if wordstr ~= rd_value then
                 print((ansicolors.red..'TEAR OFF occured:'..ansicolors.reset..' %08X'):format(word))
                 res_tear = res_tear + 1
             else
@@ -135,13 +153,7 @@ local function main(args)
         else
             print((ansicolors.green..'Good write occured:'..ansicolors.reset..' %08X'):format(word))
         end
-        
-        if password then
-            c = ('lf em 4x05_write %s 00000000 %s'):format(addr, password)
-        else
-            c = ('lf em 4x05_write %s 00000000'):format(addr)
-        end  
-        core.console(c)
+
         
         if res_tear == 5 then
             print(('No of no writes %d'):format(res_nowrite))
