@@ -1114,9 +1114,9 @@ static int l_em4x05_read(lua_State *L) {
         use_pwd = true;
     }
 
-    PrintAndLogEx(INFO, "Addr %u", addr);
+    PrintAndLogEx(DEBUG, "Addr %u", addr);
     if (use_pwd)
-        PrintAndLogEx(INFO, " Pwd %08X", password);
+        PrintAndLogEx(DEBUG, " Pwd %08X", password);
 
     uint32_t word = 0;
     int res = EM4x05ReadWord_ext(addr, password, use_pwd, &word);
