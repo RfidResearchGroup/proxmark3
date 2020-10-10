@@ -24,7 +24,7 @@
 
 
 #define MAX_UL_BLOCKS       0x0F
-#define MAX_ULC_BLOCKS      0x2B
+#define MAX_ULC_BLOCKS      0x2F
 #define MAX_ULEV1a_BLOCKS   0x13
 #define MAX_ULEV1b_BLOCKS   0x28
 #define MAX_NTAG_203        0x29
