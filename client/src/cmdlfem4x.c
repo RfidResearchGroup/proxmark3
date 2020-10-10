@@ -1208,7 +1208,8 @@ static int CmdEM4x05Write(const char *Cmd) {
     else if (status == PM3_EFAILED)
         PrintAndLogEx(ERR, "Tag denied %s operation", protectOperation ? "Protect" : "Write");
     else
-        PrintAndLogEx(WARNING, "No answer from tag");
+        PrintAndLogEx(DEBUG, "No answer from tag");
+
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05_read`") " to verify");
     return status;
 }
