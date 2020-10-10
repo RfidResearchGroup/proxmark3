@@ -566,11 +566,11 @@ static int CmdTearoff(const char *Cmd) {
     }
     if (resp.status == PM3_SUCCESS) {
         if (params.delay_us > 0)
-            PrintAndLogEx(INFO, "Tear-off hook configured with delay of %ius.", params.delay_us);
+            PrintAndLogEx(INFO, "Tear-off hook configured with delay of " _GREEN_("%ius"), params.delay_us);
         if (params.on)
-            PrintAndLogEx(INFO, "Tear-off hook enabled.");
+            PrintAndLogEx(INFO, "Tear-off hook " _GREEN_("enabled"));
         if (params.off)
-            PrintAndLogEx(INFO, "Tear-off hook disabled.");
+            PrintAndLogEx(INFO, "Tear-off hook " _RED_("disabled"));
         return PM3_SUCCESS;
     }
     PrintAndLogEx(WARNING, "Tear-off command failed.");
