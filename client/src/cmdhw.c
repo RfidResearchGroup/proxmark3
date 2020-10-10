@@ -531,6 +531,7 @@ static int CmdTearoff(const char *Cmd) {
         arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 43000"),
         arg_lit0(NULL, "on", "Activate tear-off hook"),
         arg_lit0(NULL, "off", "Deactivate tear-off hook"),
+        arg_lit0("s", "silent", "less verbose output"),
         arg_param_end
     };
 
@@ -543,7 +544,9 @@ static int CmdTearoff(const char *Cmd) {
     int delay = arg_get_int_def(ctx, 1, -1);
     params.on = arg_get_lit(ctx, 2);
     params.off = arg_get_lit(ctx, 3);
+    bool silent = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
     if (delay != -1) {
         if ((delay < 1) || (delay > 43000)) {
             PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
@@ -552,28 +555,35 @@ static int CmdTearoff(const char *Cmd) {
     } else {
         delay = 0; // will be ignored by ARM
     }
+
     params.delay_us = delay;
     if (params.on && params.off) {
         PrintAndLogEx(WARNING, "You can't set both --on and --off!");
         return PM3_EINVARG;
     }
+
     clearCommandBuffer();
     SendCommandNG(CMD_SET_TEAROFF, (uint8_t *)&params, sizeof(params));
     PacketResponseNG resp;
+
     if (WaitForResponseTimeout(CMD_SET_TEAROFF, &resp, 500) == false) {
         PrintAndLogEx(WARNING, "Tear-off command timeout.");
         return PM3_ETIMEOUT;
     }
+
     if (resp.status == PM3_SUCCESS) {
         if (params.delay_us > 0)
             PrintAndLogEx(INFO, "Tear-off hook configured with delay of " _GREEN_("%i us"), params.delay_us);
-        if (params.on)
+        if (params.on && silent == false)
             PrintAndLogEx(INFO, "Tear-off hook " _GREEN_("enabled"));
-        if (params.off)
+        if (params.off && silent == false)
             PrintAndLogEx(INFO, "Tear-off hook " _RED_("disabled"));
         return PM3_SUCCESS;
     }
-    PrintAndLogEx(WARNING, "Tear-off command failed.");
+
+    if (silent == false)
+        PrintAndLogEx(WARNING, "Tear-off command failed.");
+
     return resp.status;
 }
 
