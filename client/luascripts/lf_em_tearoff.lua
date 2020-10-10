@@ -165,12 +165,6 @@ local function main(args)
         else
             print((ansicolors.green..'Good write occurred:'..ansicolors.reset..' %08X'):format(word))
         end
-
-        
-        if res_tear == 5 then
-            print(('Number of no writes %d'):format(res_nowrite))
-            return oops('five times tear off,  shutting down')
-        end
     end
 end
 
