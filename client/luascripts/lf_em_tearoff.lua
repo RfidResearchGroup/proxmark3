@@ -15,10 +15,10 @@ script run tearoff [-h] [-n <steps us>] [-a <addr>] [-p <pwd>] [-s <start us>] [
 ]]
 arguments = [[
     -h                 This help
-    -n <steps us>      steps in mili seconds for each tearoff
+    -n <steps us>      steps in milliseconds for each tearoff
     -a <addr>          address to target on card
     -p <pwd>           (optional) use a password
-    -s <delay us>      inital start delay
+    -s <delay us>      initial start delay
     -e <delay us>      end delay, must be larger than start delay
     -r <read value>    4 hex bytes value to be read
     -w <write value>   4 hex bytes value to be written
@@ -95,7 +95,7 @@ local function main(args)
     end
     
     if sd > ed then
-        return oops('start delay cant be larger than end delay', sd, ed)
+        return oops('start delay can\'t be larger than end delay', sd, ed)
     end
     
     print('Starting EM4x05 tear off')
@@ -144,19 +144,19 @@ local function main(args)
 
         if wordstr ~= wr_value then
             if wordstr ~= rd_value then
-                print((ansicolors.red..'TEAR OFF occured:'..ansicolors.reset..' %08X'):format(word))
+                print((ansicolors.red..'TEAR OFF occurred:'..ansicolors.reset..' %08X'):format(word))
                 res_tear = res_tear + 1
             else
-                print((ansicolors.cyan..'TEAR OFF occured:'..ansicolors.reset..' %08X'):format(word))
+                print((ansicolors.cyan..'TEAR OFF occurred:'..ansicolors.reset..' %08X'):format(word))
                 res_nowrite = res_nowrite + 1
             end
         else
-            print((ansicolors.green..'Good write occured:'..ansicolors.reset..' %08X'):format(word))
+            print((ansicolors.green..'Good write occurred:'..ansicolors.reset..' %08X'):format(word))
         end
 
         
         if res_tear == 5 then
-            print(('No of no writes %d'):format(res_nowrite))
+            print(('Nr of no writes %d'):format(res_nowrite))
             return oops('five times tear off,  shutting down')
         end
     end
