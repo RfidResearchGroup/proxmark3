@@ -1013,7 +1013,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     if (status14 == PM3_SUCCESS) {
         if (!usePwd)
             needReadPwd = false;
-        if (word != 0x00) {
+        if ((word & 0x00008000) != 0x00) {
             lock_bits = word;
             gotLockBits = true;
         }
@@ -1023,7 +1023,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     }
     status15 = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
     if (status15 == PM3_SUCCESS) {
-        if (word != 0x00) { // assume block 15 is the current lock block
+        if ((word & 0x00008000) != 0x00) { // assume block 15 is the current lock block
             lock_bits = word;
             gotLockBits = true;
             lockInPW2 = true;
