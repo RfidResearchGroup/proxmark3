@@ -116,6 +116,14 @@ local function main(args)
     
     local wr_template = 'lf em 4x05_write %s %s %s'
     
+    -- init addr to value
+    core.console(wr_template:format(addr, wr_value, password))
+    
+    if sd == ed then
+       ed = n
+       n = 0
+    end
+    
     for step = sd, ed, n do
     
         io.flush()
@@ -125,8 +133,12 @@ local function main(args)
         end
 
         core.clearCommandBuffer()
+
+        -- reset addr to known value, if not locked into.
+        if n ~= 0 then
         c = wr_template:format(addr, wr_value, password)
         core.console(c)
+        end
         
         local c = set_tearoff_delay:format(step)
         core.console(c);
@@ -156,7 +168,7 @@ local function main(args)
 
         
         if res_tear == 5 then
-            print(('Nr of no writes %d'):format(res_nowrite))
+            print(('Number of no writes %d'):format(res_nowrite))
             return oops('five times tear off,  shutting down')
         end
     end
