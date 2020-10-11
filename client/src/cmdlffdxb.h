@@ -11,6 +11,11 @@
 
 #include "common.h"
 
+typedef struct {
+    uint16_t code;
+    const char *desc;
+} fdxbCountryMapping_t;
+
 int CmdLFFdxB(const char *Cmd);
 int detectFDXB(uint8_t *dest, size_t *size);
 int demodFDXB(bool verbose);
