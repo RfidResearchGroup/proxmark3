@@ -104,7 +104,12 @@ local function main(args)
     if err15 then
         return oops(err15)
     end
-    local rd_value = ('%08X'):format(bit.bor(word14,word15))
+    local bit15 = bit.band(0x00008000, word15)
+    if bit15 == 0x00008000 then
+        rd_value = ('%08X'):format(word15)
+    else
+        rd_value = ('%08X'):format(word14)
+    end
     local wr_value = '00000000'
     n = n or 2
     sd = sd or 2000
@@ -187,7 +192,7 @@ local function main(args)
                 print(('[!] '..ansicolors.red..'TEAR OFF bitflip: '..ansicolors.reset..' 14: %08X  15: %08X'):format(word14, word15))
                 
                 
-                local bit15 = bit.band(0x00008000, word15)
+                bit15 = bit.band(0x00008000, word15)
                 if bit15 == 0x00008000 then
                     return exit_msg()
                 else
