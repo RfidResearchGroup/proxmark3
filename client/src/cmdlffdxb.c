@@ -253,18 +253,34 @@ int demodFDXB(bool verbose) {
 
     //got a good demod
     uint8_t offset;
+    // ISO: bits 27..64
     uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(DemodBuffer + 32, 6)) << 32) | bytebits_to_byteLSBF(DemodBuffer, 32);
 
     offset = 38;
+    // ISO: bits 17..26
     uint16_t countryCode = bytebits_to_byteLSBF(DemodBuffer + offset, 10);
 
     offset += 10;
+    // ISO: bits 16
     uint8_t dataBlockBit = DemodBuffer[offset];
 
     offset++;
-    uint32_t reservedCode = bytebits_to_byteLSBF(DemodBuffer + offset, 14);
+    // ISO: bits 15
+    uint8_t rudiBit = DemodBuffer[offset];
 
-    offset += 14;
+    offset++;
+    // ISO: bits 10..14
+    uint32_t reservedCode = bytebits_to_byteLSBF(DemodBuffer + offset, 5);
+
+    offset += 5;
+    // ISO: bits 5..9
+    uint32_t userInfo = bytebits_to_byteLSBF(DemodBuffer + offset, 5);
+
+    offset += 5;
+    // ISO: bits 2..4
+    uint32_t replacementNr = bytebits_to_byteLSBF(DemodBuffer + offset, 3);
+
+    offset += 3;
     uint8_t animalBit = DemodBuffer[offset];
 
     offset++;
@@ -289,6 +305,9 @@ int demodFDXB(bool verbose) {
     PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x%04X)", reservedCode,  reservedCode);
     PrintAndLogEx(SUCCESS, "  Animal bit set?  %s", animalBit ? _YELLOW_("True") : "False");
     PrintAndLogEx(SUCCESS, "      Data block?  %s  [value 0x%X]", dataBlockBit ? _YELLOW_("True") : "False", extended);
+    PrintAndLogEx(SUCCESS, "        RUDI bit?  %s", rudiBit ? _YELLOW_("True") " (advanced transponder)" : "False");
+    PrintAndLogEx(SUCCESS, "       User Info?  %u %s", userInfo, userInfo == 0 ? "(RFU)":"");
+    PrintAndLogEx(SUCCESS, "  Replacement No?  %u %s", replacementNr, replacementNr == 0 ? "(RFU)":"");
 
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
