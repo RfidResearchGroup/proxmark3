@@ -2838,10 +2838,10 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 break;
             case 'i':
                 interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
-                if (interval == 0) {
-                    PrintAndLogEx(WARNING, "Wrong interval number");
-                    errors = true;
-                }
+                //if (interval == 0) {
+                //    PrintAndLogEx(WARNING, "Wrong interval number");
+                    //errors = true;
+                //}
                 cmdp += 2;
                 break;
             case 'l':
@@ -2887,16 +2887,22 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
     if (errors) return usage_hf_mfu_otp_tearoff();
 
+    PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Tear off") " ---------------------");
     PrintAndLogEx(INFO, "Starting Tear-off test");
     PrintAndLogEx(INFO, "Target block no: %u", blockNoUint);
-
-
+    PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(teardata, 4));
+    PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata + 4, 4));
+    PrintAndLogEx(INFO, "----------------------------------------------------");
     uint8_t isOK;
-    bool got_pre = false, got_post = false;
+    bool got_pre = false, got_post = false, lock_on = false;
     uint8_t pre[4] = {0};
     uint8_t post[4] = {0};
     uint32_t actualTime = startTime;
 
+    int phase_clear = -1;
+    int phase_newwr = -1;
+
+    uint8_t retries = 0;
     while (actualTime <= (timeLimit - interval)) {
 
         if (kbd_enter_pressed()) {
@@ -2938,19 +2944,43 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         }
 
         if (got_pre && got_post) {
+
+            char prestr[20] = {0};
+            snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
+            char poststr[20] = {0};
+            snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
             
-            char post_res[30] = {0};
-            if (memcmp(pre, post, sizeof(pre)) == 0)
-                snprintf(post_res, sizeof(post_res) - 1, "%s", sprint_hex_inrow(post, sizeof(post)));
-            else
-                snprintf(post_res, sizeof(post_res) - 1, _CYAN_("%s"), sprint_hex_inrow(post, sizeof(post)));
+            if (memcmp(pre, post, sizeof(pre)) == 0) {
                 
-            PrintAndLogEx(INFO, "Result   %02d/0x%02X |  %s vs %s"
+                PrintAndLogEx(INFO, "Current %02d (0x%02X) %s"
                     , blockNoUint
                     , blockNoUint
-                    , sprint_hex_inrow(pre, sizeof(pre))
-                    , post_res
+                    , poststr
                     );
+            } else {
+
+                // skip first message, since its the reset write.
+                if ( actualTime == startTime ) {
+                    PrintAndLogEx(INFO, "Inital write");
+                } else {
+                    PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %02d (0x%02X) %s vs " _RED_("%s")
+                        , blockNoUint
+                        , blockNoUint
+                        , prestr
+                        , poststr
+                        );
+                        
+                    lock_on = true;
+
+                    if (phase_clear == -1)
+                        phase_clear = actualTime;
+
+                    // new write phase must be atleast 100us later..
+                    if (phase_clear > -1 && phase_newwr == -1 && actualTime > (phase_clear + 100))
+                        phase_newwr = actualTime;
+                }
+            }
+
         } else {
             if (got_pre == false)
                 PrintAndLogEx(FAILED, "Failed to read block BEFORE");
@@ -2970,8 +3000,29 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                     PrintAndLogEx(NORMAL, "---------------------------------\n");
                 }
         */
-        actualTime += interval;
+        if (startTime != timeLimit) {
+            actualTime += interval;
+        } else {
+            if (lock_on == false) {
+                if (++retries == 20) {
+                    actualTime++;
+                    timeLimit++;
+                    startTime++;
+                    retries = 0;
+                    PrintAndLogEx(INFO, _CYAN_("Retried %u times, increased delay with 1us"), retries);
+                }
+            }
+        }
     }
+
+    PrintAndLogEx(INFO, "----------------------------------------------------");
+    if (phase_clear > - 1) {
+        PrintAndLogEx(INFO, "phase 1 (erase eeprom) could be " _YELLOW_("%d") " us" , phase_clear);
+    }
+    if (phase_newwr > - 1) {
+        PrintAndLogEx(INFO, "phase 2 (new write) could be " _YELLOW_("%d") " us" , phase_newwr);
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 

@@ -2708,6 +2708,8 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
     if (tearOffTime > 43000)
         tearOffTime = 43000;
 
+    MifareUWriteBlock(blockNo, 0, data_fullwrite);
+
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
@@ -2716,9 +2718,6 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
     // write cmd to send, include CRC
     // 1b write, 1b block, 4b data, 2 crc
     uint8_t cmd[] = {MIFARE_ULC_WRITE, blockNo, data_testwrite[0], data_testwrite[1], data_testwrite[2], data_testwrite[3], 0, 0};
-
-    MifareUWriteBlock(blockNo, 0, data_fullwrite);
-
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     // anticollision / select card
@@ -2734,7 +2733,7 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
     LED_D_ON();
 
     SpinDelayUsPrecision(tearOffTime);
-    if (DBGLEVEL >= DBG_ERROR) Dbprintf(_YELLOW_("OTP tear-off triggered!"));
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf(_YELLOW_("OTP tear-off triggered!"));
     switch_off();
 
     reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_SUCCESS, NULL, 0);
