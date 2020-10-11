@@ -2819,7 +2819,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     uint8_t blockNoUint = 8;
     uint8_t cmdp = 0;
-    bool errors = 0;
+    bool errors = 0, use_match = false;
     uint8_t match[4] = {0x00};
     uint8_t teardata[8] = {0x00};
     uint32_t interval = 500; // time in us
@@ -2879,6 +2879,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             case 'm':
                 if (param_gethex(Cmd, cmdp + 1, match, 8)) {
                     PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
+                    use_match = true;
                     errors = true;
                 }
                 cmdp += 2;
@@ -2986,7 +2987,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 }
             }
 
-            if (memcmp(pre, match, sizeof(pre)) == 0) {
+            if (use_match && memcmp(pre, match, sizeof(pre)) == 0) {
                 PrintAndLogEx(SUCCESS, "Block matches!\n");
                 break;
             }
