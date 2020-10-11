@@ -2877,7 +2877,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'm':
-                if (param_gethex(Cmd, cmdp + 1, match, 4)) {
+                if (param_gethex(Cmd, cmdp + 1, match, 8)) {
                     PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
                     errors = true;
                 }
