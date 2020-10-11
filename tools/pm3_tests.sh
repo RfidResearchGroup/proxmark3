@@ -342,7 +342,7 @@ while true; do
       if ! CheckExecute "lf EM410x test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search 1'" "EM410x ID found"; then break; fi
       if ! CheckExecute "lf EM4x05 test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4x05.pm3;lf search 1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf FDX-B test"         "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search 1'" "FDX-B ID found"; then break; fi
-      if ! CheckExecute "lf FDX/BioThermo test" "$CLIENTBIN -c 'data load -f traces/lf_FDX_Bio-Thermo.pm3; lf fdxb demod'" "95.2 F / 35.1 C"; then break; fi
+      if ! CheckExecute "lf FDX/BioThermo test" "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.2 F / 35.1 C"; then break; fi
       if ! CheckExecute "lf GPROXII test"       "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search 1'" "Guardall G-Prox II ID found"; then break; fi
       if ! CheckExecute "lf HID Prox test"      "$CLIENTBIN -c 'data load -f traces/lf_HID-proxCardII-05512-11432784-1.pm3;lf search 1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute "lf IDTECK test"        "$CLIENTBIN -c 'data load -f traces/lf_IDTECK_4944544BAC40E069.pm3; lf search 1'" "Idteck ID found"; then break; fi
