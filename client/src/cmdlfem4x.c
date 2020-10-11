@@ -30,6 +30,7 @@
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
+#include "generator.h"
 
 static uint64_t g_em410xid = 0;
 
@@ -1512,6 +1513,134 @@ static int CmdEM4x05Info(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+static int usage_4x05_chk(void) {
+    PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
+    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
+    PrintAndLogEx(NORMAL, "Usage: lf en 4x05_chk [h] [f <*.dic>] [e <em4100 id>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     h            - this help");
+    PrintAndLogEx(NORMAL, "     f <*.dic>    - loads a default keys dictionary file <*.dic>");
+    PrintAndLogEx(NORMAL, "     e <EM4100>   - will try the calculated password from some cloners based on EM4100 ID");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk chk f t55xx_default_pwds"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk chk e aa11223344"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static bool is_cancelled(void) {
+    if (kbd_enter_pressed()) {
+        PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+        return true;
+    }
+    return false;
+}
+// load a default pwd file.
+static int CmdEM4x05Chk(const char *Cmd) {
+
+    char filename[FILE_PATH_SIZE] = {0};
+    uint8_t *keyBlock = NULL;
+    bool found = false, use_pwd_file = false;
+    bool use_card_pwd = false;
+    bool errors = false;
+    uint8_t cmdp = 0;
+    uint32_t card_pwd = 0x00;
+    uint64_t cardID = 0x00;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_4x05_chk();
+            case 'f':
+                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
+                    PrintAndLogEx(ERR, "Error, no filename after 'f' was found");
+                    errors = true;
+                }
+                use_pwd_file = true;
+                cmdp += 2;
+                break;
+            case 'e':
+                // White cloner password based on EM4100 ID
+                use_card_pwd = true;
+                cardID = param_get64ex(Cmd, cmdp + 1, 0, 16);
+                uint32_t card32Bit = cardID & 0xFFFFFFFF;
+                card_pwd = lf_t55xx_white_pwdgen(card32Bit);
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_4x05_chk();
+
+    uint64_t t1 = msclock();
+     
+    uint8_t addr = 4;
+    uint32_t word = 0;
+
+    // try calculated password
+    if (use_card_pwd) {
+
+        PrintAndLogEx(INFO, "Testing %08"PRIX32" generated ", card_pwd);
+        int status = EM4x05ReadWord_ext(addr, card_pwd, use_card_pwd, &word);
+        if (status == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Found valid password : [ " _GREEN_("%08"PRIX32) " ]", card_pwd);
+            found = true;
+        }
+    }
+
+    if (found == false && use_pwd_file) {
+        word = 0;
+        uint32_t keycount = 0;
+
+        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
+        if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
+            PrintAndLogEx(WARNING, "No keys found in file");
+            if (keyBlock != NULL)
+                free(keyBlock);
+
+            return PM3_ESOFT;
+        }
+
+        for (uint32_t c = 0; c < keycount; ++c) {
+
+            if (!session.pm3_present) {
+                PrintAndLogEx(WARNING, "Device offline\n");
+                free(keyBlock);
+                return PM3_ENODATA;
+            }
+
+            if (is_cancelled()) {
+                free(keyBlock);
+                return PM3_EOPABORTED;
+            }
+
+            uint32_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
+
+            PrintAndLogEx(INFO, "Testing %08"PRIX32, curr_password);
+
+            int status = EM4x05ReadWord_ext(addr, curr_password, 1, &word);
+            if (status == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Found valid password : [ " _GREEN_("%08"PRIX32) " ]", curr_password);
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (found == false)
+        PrintAndLogEx(WARNING, "Check pwd failed");
+
+    free(keyBlock);
+
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 410x") " -----------------------"},
@@ -1524,6 +1653,7 @@ static command_t CommandTable[] = {
     {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
     {"410x_clone",  CmdEM410xClone,       IfPm3Lf,         "write EM410x UID to T55x7 or Q5/T5555 tag"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "-------------------- " _CYAN_("EM 4x05 / 4x69") " -------------------"},
+    {"4x05_chk",    CmdEM4x05Chk,         IfPm3Lf,         "Check passwords from dictionary"},
     {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
     {"4x05_wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},
