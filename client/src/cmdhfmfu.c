@@ -240,12 +240,14 @@ static int usage_hf_mfu_otp_tearoff(void) {
     PrintAndLogEx(NORMAL, "  s <time>  : (optional) start time to run the test - default 0 us");
     PrintAndLogEx(NORMAL, "  d <data>  : (optional) data to full-write before trying the OTP test - default 0x00");
     PrintAndLogEx(NORMAL, "  t <data>  : (optional) data to write while running the OTP test - default 0x00");
+    PrintAndLogEx(NORMAL, "  m <data>  : (optional) exit criteria, if block matches this value");    
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 3");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 8 i 100 l 3000 s 1000");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 1 l 200");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE m 00000000    -> such quite when OTP is reset");
     return PM3_SUCCESS;
 }
 
@@ -2818,6 +2820,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     uint8_t blockNoUint = 8;
     uint8_t cmdp = 0;
     bool errors = 0;
+    uint8_t match[4] = {0x00};
     uint8_t teardata[8] = {0x00};
     uint32_t interval = 500; // time in us
     uint32_t timeLimit = 3000; // time in us
@@ -2829,7 +2832,6 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 return usage_hf_mfu_otp_tearoff();
             case 'b':
                 blockNoUint = param_get8(Cmd, cmdp + 1);
-                //iceman,  which blocks can be targeted? UID blocks?
                 if (blockNoUint < 2) {
                     PrintAndLogEx(WARNING, "Wrong block number");
                     errors = true;
@@ -2838,10 +2840,6 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 break;
             case 'i':
                 interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
-                //if (interval == 0) {
-                //    PrintAndLogEx(WARNING, "Wrong interval number");
-                //errors = true;
-                //}
                 cmdp += 2;
                 break;
             case 'l':
@@ -2878,6 +2876,13 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 }
                 cmdp += 2;
                 break;
+            case 'm':
+                if (param_gethex(Cmd, cmdp + 1, match, 4)) {
+                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;            
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -2979,6 +2984,11 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                     if (phase_clear > -1 && phase_newwr == -1 && actualTime > (phase_clear + 100))
                         phase_newwr = actualTime;
                 }
+            }
+
+            if (memcmp(pre, match, sizeof(pre)) == 0) {
+                PrintAndLogEx(SUCCESS, "Block matches!\n");
+                break;
             }
 
         } else {
