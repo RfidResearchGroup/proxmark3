@@ -56,8 +56,7 @@ end
 local function exit_msg()
     print('')
     print('================= '..ansicolors.green..'verify with'..ansicolors.reset..' =================')
-    print('1.  lf em 4x05_write 99 00000000')
-    print('2.  lf em 4x05_dump')
+    print('    lf em 4x05_dump')
     print('===============================================')    
     return nil
 end
@@ -205,14 +204,51 @@ local function main(args)
                     end
                 end
                 reset(wr_value, password)
+                -- it could still happen that a bitflip got committed, let's check...
+                local word14b, err14b =  core.em4x05_read(14, password)
+                if err14b then
+                    return oops(err14b)
+                end
+                local wordstr14b = ('%08X'):format(word14b)
+                if (wordstr14b ~= rd_value) then
+                    print(('[=] Status: new definitive value!       => '..ansicolors.red..'SUCCESS:   '..ansicolors.reset..'14: '..ansicolors.cyan..'%08X'..ansicolors.reset..'  15: %08X'):format(word14b, word15b))
+                    return exit_msg()
+                end
                 if not locked_on then  
                     tries = 0
                 end
             else
                 bit15 = bit.band(0x00008000, word15)
                 if bit15 == 0x00008000 then
-                    print(('[=] Status: 15 bitflipped and active    => '..ansicolors.red..'SUCCESS: '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
-                    return exit_msg()
+                    print(('[=] Status: 15 bitflipped and active    => '..ansicolors.red..'SUCCESS?:  '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
+                    print('[+] Committing results...')
+                    reset(wr_value, password)
+                    local word14b, err14b =  core.em4x05_read(14, password)
+                    if err14b then
+                        return oops(err14b)
+                    end
+                    local wordstr14b = ('%08X'):format(word14b)
+                    local word15b, err15b =  core.em4x05_read(15, password)
+                    if err15b then
+                        return oops(err15b)
+                    end
+                    local wordstr15b = ('%08X'):format(word15b)
+                    print(('[=] ref:'..rd_value..' 14:%08X 15:%08X '):format(word14b, word15b))
+
+                    bit15 = bit.band(0x00008000, word14b)
+                    if bit15 == 0x00008000 then
+                        if (wordstr14b == wordstr15) then
+                            print(('[=] Status: confirmed                   => '..ansicolors.red..'SUCCESS:   '..ansicolors.reset..'14: '..ansicolors.cyan..'%08X'..ansicolors.reset..'  15: %08X'):format(word14b, word15b))
+                            return exit_msg()
+                        end
+                        if (wordstr14b ~= rd_value) then
+                            print(('[=] Status: new definitive value!       => '..ansicolors.red..'SUCCESS:   '..ansicolors.reset..'14: '..ansicolors.cyan..'%08X'..ansicolors.reset..'  15: %08X'):format(word14b, word15b))
+                            return exit_msg()
+                        end
+                        print(('[=] Status: failed to commit bitflip        => '..ansicolors.red..'FAIL:      '..ansicolors.reset..'14: %08X  15: %08X'):format(word14b, word15b))
+                    else
+                        print(('[=] Status: failed to commit                => '..ansicolors.red..'FAIL:      '..ansicolors.reset..'14: %08X  15: %08X'):format(word14b, word15b))
+                    end
                 else
                     print(('[=] Status: 15 bitflipped but inactive  => '..ansicolors.yellow..'PROMISING: '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
                     print('[+] locked on to this delay')
