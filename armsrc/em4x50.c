@@ -15,50 +15,6 @@
 #include "commonutil.h"
 #include "em4x50.h"
 
-// 4 data bytes
-// + byte with row parities
-// + column parity byte
-// + byte with stop bit
-
-static em4x50_tag_t tag = {
-    .sectors = {
-        [0]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // password
-        [1]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // protection word
-        [2]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // control word
-        [3]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [4]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [5]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [6]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [7]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [8]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [9]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [10] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [11] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [12] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [13] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [14] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [15] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [17] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [18] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [19] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [20] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [21] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [22] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [23] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [24] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [25] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [26] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [27] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [28] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [29] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [30] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [31] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // user
-        [32] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // device serial number
-        [33] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // device identification
-    },
-};
-
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // EM4x50 units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
@@ -93,6 +49,7 @@ static em4x50_tag_t tag = {
 #define EM4X50_COMMAND_TIMEOUT              5000
 #define FPGA_TIMER_0                        0
 
+static uint32_t em4x50_tag[34] = {0x0};
 int gHigh = 0;
 int gLow = 0;
 
@@ -100,27 +57,7 @@ int gLow = 0;
 
 static void init_tag(void) {
 
-    // iceman: memset(tag.sectors, 0x00, sizeof));
-
-    // initialize global tag structure
-    for (int i = 0; i < 34; i++)
-        for (int j = 0; j < 7; j++)
-            tag.sectors[i][j] = 0x00;
-}
-
-static uint8_t bits2byte(uint8_t *bits, int length) {
-
-    // converts <length> separate bits into a single "byte"
-    uint8_t byte = 0;
-    for (int i = 0; i < length; i++) {
-
-        byte |= bits[i];
-
-        if (i != length - 1)
-            byte <<= 1;
-    }
-
-    return byte;
+    memset(em4x50_tag, 0x00, sizeof(em4x50_tag));
 }
 
 static void msb2lsb_word(uint8_t *word) {
@@ -137,31 +74,6 @@ static void msb2lsb_word(uint8_t *word) {
     word[1] = buff[1];
     word[2] = buff[2];
     word[3] = buff[3];
-}
-
-static void save_word(int pos, uint8_t bits[EM4X50_TAG_WORD]) {
-
-    // split "raw" word into data, row and column parity bits and stop bit and
-    // save them in global tag structure
-    uint8_t row_parity[4];
-    uint8_t col_parity[8];
-
-    // data and row parities
-    for (int i = 0; i < 4; i++) {
-        tag.sectors[pos][i] = bits2byte(&bits[9 * i], 8);
-        row_parity[i] = bits[9 * i + 8];
-    }
-
-    tag.sectors[pos][4] = bits2byte(row_parity, 4);
-
-    // column parities
-    for (int i = 0; i < 8; i++)
-        col_parity[i] = bits[36 + i];
-
-    tag.sectors[pos][5] = bits2byte(col_parity, 8);
-
-    // stop bit
-    tag.sectors[pos][6] = bits[44];
 }
 
 static void wait_timer(int timer, uint32_t period) {
@@ -316,8 +228,6 @@ static int get_next_bit(void) {
 
 static uint32_t get_pulse_length(void) {
 
-//    Dbprintf( _CYAN_("4x50 get_pulse_length A") );
-
     int32_t timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
     // iterates pulse length (low -> high -> low)
@@ -354,6 +264,7 @@ static uint32_t get_pulse_length(void) {
 }
 
 static bool check_pulse_length(uint32_t pl, int length) {
+    
     // check if pulse length <pl> corresponds to given length <length>
     return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
 }
@@ -612,9 +523,7 @@ bool em4x50_sim_send_word(uint32_t word) {
 
 bool em4x50_sim_send_listen_window(void) {
 
-    //int i = 0;
     uint16_t check = 0;
-    //uint8_t test[100] = {0};
 
     for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
 
@@ -643,7 +552,7 @@ bool em4x50_sim_send_listen_window(void) {
 
         check = 0;
 
-        //wait until SSC_CLK goes LOW
+        // wait until SSC_CLK goes LOW
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
             if (check == 1000) {
@@ -671,8 +580,7 @@ static int request_receive_mode(void) {
     // To issue a command we have to find a listen window first.
     // Because identification and sychronization at the same time is not
     // possible when using pulse lengths a double listen window is used.
-    bool bcommand = true;
-    return find_double_listen_window(bcommand);
+    return find_double_listen_window(true);
 }
 
 static bool check_ack(bool bliw) {
@@ -728,90 +636,146 @@ static bool check_ack(bool bliw) {
     return false;
 }
 
-static int get_word_from_bitstream(uint8_t bits[EM4X50_TAG_WORD]) {
+static bool extract_parities(uint64_t word, uint32_t *data) {
+    
+    // extract and check parities
+    // return result of parity check and extracted plain data
+    
+    uint8_t row_parities = 0x0, col_parities = 0x0;
+    uint8_t row_parities_calculated = 0x0, col_parities_calculated = 0x0;
+    
+    *data = 0x0;
+    
+    // extract plain data (32 bits) from raw word (45 bits)
+    for (int i = 0; i < 4; i++) {
+        *data <<= 8;
+        *data |= (word >> ((4 - i) * 9 + 1)) & 0xFF;
+    }
+    
+    // extract row parities (4 bits + stop bit) from raw word (45 bits)
+    for (int i = 0; i < 5; i++) {
+        row_parities <<= 1;
+        row_parities |= (word >> ((4 - i) * 9)) & 0x1;
+    }
+
+    // extract col_parities (8 bits, no stop bit) from raw word (45 bits)
+    col_parities = (word >> 1) & 0xFF;
+
+    // check extracted parities against extracted data
+
+    // calculate row parities from data
+    for (int i = 0; i < 4; i++) {
+        row_parities_calculated <<= 1;
+        for (int j = 0; j < 8; j++) {
+            row_parities_calculated ^= (*data >> ((3 - i) * 8 + (7 - j))) & 0x1;
+        }
+    }
+
+    // add stop bit (always zero)
+    row_parities_calculated <<= 1;
+
+    // calculate column parities from data
+    for (int i = 0; i < 8; i++) {
+        col_parities_calculated <<= 1;
+        for (int j = 0; j < 4; j++) {
+            col_parities_calculated ^= (*data >> ((3 - j) * 8 + (7 - i))) & 0x1;
+        }
+    }
+    
+    if ((row_parities == row_parities_calculated) && (col_parities == col_parities_calculated))
+        return true;
+
+    return false;
+}
+
+static int get_word_from_bitstream(uint32_t *data) {
 
     // decodes one word by evaluating pulse lengths and previous bit;
     // word must have 45 bits in total:
     // 32 data bits + 4 row parity bits + 8 column parity bits + 1 stop bit
 
-    bool bbitchange = false;
-    int i = 0;
+    bool bitchange = false;
+    int cnt = 0;
     uint32_t pl = 0;
+    uint64_t word = 0x0;
+    
+    *data = 0x0;
 
     // initial bit value depends on last pulse length of listen window
     pl = get_pulse_length();
     if (check_pulse_length(pl, 3 * EM4X50_T_TAG_HALF_PERIOD)) {
 
         // pulse length = 1.5
-        bits[0] = 1;
+        word = 0x1;
 
     } else if (check_pulse_length(pl, 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
         // pulse length = 2
-        bits[0] = 0;
-        bbitchange = true;
+        bitchange = true;
 
     } else {
 
         // pulse length = 2.5
-        bits[0] = 0;
-        bits[1] = 1;
-        i++;
+        word = 0x1;
+        cnt++;
     }
 
     // identify remaining bits based on pulse lengths
     // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
-    while (BUTTON_PRESS() == false) {
+    while (true) {
 
-        i++;
+        cnt++;
+        word <<= 1;
+        
         pl = get_pulse_length();
 
         if (check_pulse_length(pl, EM4X50_T_TAG_FULL_PERIOD)) {
 
             // pulse length = 1 -> keep former bit value
-            bits[i] = bits[i - 1];
+            word |= (word >> 1) & 0x1;
 
         } else if (check_pulse_length(pl, 3 * EM4X50_T_TAG_HALF_PERIOD)) {
 
             // pulse length = 1.5 -> decision on bit change
 
-            if (bbitchange) {
+            if (bitchange) {
 
                 // if number of pulse lengths with 1.5 periods is even -> add bit
-                bits[i] = (bits[i - 1] == 1) ? 1 : 0;
+                word |= (word >> 1) & 0x1;
+                word <<= 1;
 
                 // pulse length of 1.5 changes bit value
-                bits[i + 1] = (bits[i] == 1) ? 0 : 1;
-                i++;
+                word |= ((word >> 1) & 0x1) ^ 0x1;
+                cnt++;
 
                 // next time add only one bit
-                bbitchange = false;
+                bitchange = false;
 
             } else {
 
-                bits[i] = (bits[i - 1] == 1) ? 0 : 1;
+                word |= ((word >> 1) & 0x1) ^ 0x1;
 
                 // next time two bits have to be added
-                bbitchange = true;
+                bitchange = true;
             }
 
         } else if (check_pulse_length(pl, 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
             // pulse length of 2 means: adding 2 bits "01"
-            bits[i] = 0;
-            bits[i + 1] = 1;
-            i++;
+            cnt++;
+
+            word <<= 1;
+            word |= 0x1;
 
         } else if (check_pulse_length(pl, 3 * EM4X50_T_TAG_FULL_PERIOD)) {
 
             // pulse length of 3 indicates listen window -> clear last
-            // bit (= 0) and return
-            return --i;
+            // bit (= 0) and return (without parities)
+            word >>= 2;
+            return (extract_parities(word, data)) ? --cnt : 0;
 
         }
     }
-
-    return 0;
 }
 
 //==============================================================================
@@ -877,14 +841,14 @@ static bool standard_read(int *now) {
     // (standard read mode); number of read words is saved in <now>
 
     int fwr = *now;
-    uint8_t bits[EM4X50_TAG_WORD] = {0};
+    uint32_t data = 0x0;
 
     // start with the identification of two succsessive listening windows
     if (find_double_listen_window(false)) {
 
         // read and save words until following double listen window is detected
-        while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD)
-            save_word((*now)++, bits);
+        while (get_word_from_bitstream(&data) == EM4X50_TAG_WORD)
+            em4x50_tag[(*now)++] = data;
 
         // number of detected words
         *now -= fwr;
@@ -942,7 +906,6 @@ void em4x50_info(em4x50_data_t *etd) {
     bool bsuccess = false, blogin = false;
     uint8_t status = 0;
     uint8_t addresses[] = {0x00, 0x00, 0x21, 0x00}; // fwr = 0, lwr = 33
-    uint8_t password[] = {0x00, 0x00, 0x00, 0x00};  // default password
 
     init_tag();
     em4x50_setup_read();
@@ -955,11 +918,6 @@ void em4x50_info(em4x50_data_t *etd) {
             // try to login with given password
             blogin = login(etd->password);
 
-        } else {
-
-            // if no password is given, try to login with "0x00000000"
-            blogin = login(password);
-
         }
 
         bsuccess = selective_read(addresses);
@@ -967,8 +925,11 @@ void em4x50_info(em4x50_data_t *etd) {
 
     status = (bsuccess << 1) + blogin;
 
+    for (int i = 0; i < 34; i++)
+        Dbprintf("em4x5_tag[%i] = %08x", i, em4x50_tag[i]);
+    
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_ACK, status, (uint8_t *)em4x50_tag, 136);
 }
 
 void em4x50_read(em4x50_data_t *etd) {
@@ -1013,7 +974,7 @@ void em4x50_read(em4x50_data_t *etd) {
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_ACK, status, (uint8_t *)em4x50_tag, 136);
 }
 
 //==============================================================================
@@ -1102,7 +1063,8 @@ void em4x50_write(em4x50_data_t *etd) {
 
     bool bsuccess = false, blogin = false;
     uint8_t status = 0;
-    uint8_t word[4] = {0x00, 0x00, 0x00, 0x00};
+    //uint8_t word[4] = {0x00, 0x00, 0x00, 0x00};
+    uint32_t word = 0x0;
     uint8_t addresses[4] = {0x00, 0x00, 0x00, 0x00};
 
     init_tag();
@@ -1133,15 +1095,27 @@ void em4x50_write(em4x50_data_t *etd) {
                 if (selective_read(addresses)) {
 
                     // compare with given word
+                    word = em4x50_tag[etd->address];
+                    /*
                     word[0] = tag.sectors[etd->address][0];
                     word[1] = tag.sectors[etd->address][1];
                     word[2] = tag.sectors[etd->address][2];
                     word[3] = tag.sectors[etd->address][3];
-                    msb2lsb_word(word);
+                     */
+                    reflect32(word);
 
-                    bsuccess = true;
-                    for (int i = 0; i < 4; i++)
-                        bsuccess &= (word[i] == etd->word[i]) ? true : false;
+                    //bsuccess = true;
+                    //for (int i = 0; i < 4; i++)
+                    //    bsuccess &= (word[i] == etd->word[i]) ? true : false;
+                    uint32_t tmp = 0x0;
+                    tmp = etd->word[0];
+                    tmp <<= 8;
+                    tmp |= etd->word[1];
+                    tmp <<= 8;
+                    tmp |= etd->word[2];
+                    tmp <<= 8;
+                    tmp |= etd->word[3];
+                    bsuccess = (word == tmp);
 
                 }
             }
@@ -1151,7 +1125,7 @@ void em4x50_write(em4x50_data_t *etd) {
     status = (bsuccess << 1) + blogin;
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_ACK, status, (uint8_t *)em4x50_tag, 136);
 }
 
 void em4x50_write_password(em4x50_data_t *etd) {
@@ -1223,8 +1197,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
                     // check if everything is zero
                     bsuccess = true;
                     for (int i = 1; i <= EM4X50_NO_WORDS - 3; i++)
-                        for (int j = 0; j < 4; j++)
-                            bsuccess &= (tag.sectors[i][j] == 0) ? true : false;
+                        bsuccess &= (em4x50_tag[i] == 0) ? true : false;
 
                 }
 
@@ -1244,7 +1217,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_ACK, bsuccess, (uint8_t *)em4x50_tag, 136);
 }
 
 void em4x50_reset(void) {
@@ -1364,49 +1337,33 @@ int em4x50_standalone_brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
 
     em4x50_setup_read();
 
-    if (get_signalproperties() && find_em4x50_tag()) {
+    if (get_signalproperties() && find_em4x50_tag())
         status = brute(start, stop, pwd);
-    } else {
+    else
         status = PM3_ETIMEOUT;
-    }
 
     lf_finalize();
 
     return status;
 }
 
-int em4x50_standalone_read(uint64_t *words) {
+int em4x50_standalone_read(uint32_t *words) {
 
     int now = 0;
-    uint8_t bits[EM4X50_TAG_WORD];
 
     em4x50_setup_read();
 
-    if (get_signalproperties() && find_em4x50_tag()) {
-
-        if (find_double_listen_window(false)) {
-
-            memset(bits, 0, sizeof(bits));
-
-            while (get_word_from_bitstream(bits) == EM4X50_TAG_WORD) {
-                words[now] = 0;
-
-                for (int i = 0; i < EM4X50_TAG_WORD; i++) {
-                    words[now] <<= 1;
-                    words[now] += bits[i] & 1;
-                }
-
+    if (get_signalproperties() && find_em4x50_tag())
+        if (find_double_listen_window(false))
+            while (get_word_from_bitstream(&words[now]) == EM4X50_TAG_WORD)
                 now++;
-            }
-        }
-    }
 
     return now;
 }
 
 void em4x50_watch() {
 
-    // reads continuously and displays standard reads of tag
+    // read continuously and display standard reads of tag
 
     int now = 0;
     
@@ -1429,16 +1386,8 @@ void em4x50_watch() {
                 for (int i = 0; i < now; i++) {
                     
                     Dbprintf("EM4x50 TAG ID: "
-                             _GREEN_("%02x%02x%02x%02x") " (msb) - "
-                             _GREEN_("%02x%02x%02x%02x") " (lsb)",
-                             tag.sectors[i][0],
-                             tag.sectors[i][1],
-                             tag.sectors[i][2],
-                             tag.sectors[i][3],
-                             reflect8(tag.sectors[i][3]),
-                             reflect8(tag.sectors[i][2]),
-                             reflect8(tag.sectors[i][1]),
-                             reflect8(tag.sectors[i][0]));
+                             _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
+                             em4x50_tag[i], reflect32(em4x50_tag[i]));
                 }
             }
         }

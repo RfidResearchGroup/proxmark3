@@ -44,11 +44,8 @@ typedef struct {
     bool addr_given;
     bool pwd_given;
     bool newpwd_given;
-    uint8_t carrier;
-    uint8_t byte;
     uint8_t password[4];
     uint8_t new_password[4];
-    uint8_t addresses[4];
     uint8_t address;
     uint8_t word[4];
     uint32_t start_password;
@@ -58,13 +55,6 @@ typedef struct {
 
 typedef struct {
     uint8_t byte[4];
-    uint8_t row_parity[4];
-    uint8_t col_parity;
-    uint8_t stopbit;
-    bool rparity[4];
-    bool cparity[8];
-    bool stopparity;
-    bool parity;
 } em4x50_word_t;
 
 #endif /* EM4X50_H__ */

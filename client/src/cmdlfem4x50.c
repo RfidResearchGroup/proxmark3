@@ -145,60 +145,13 @@ static int usage_lf_em4x50_watch(void) {
     return PM3_SUCCESS;
 }
 
-static void prepare_result(const uint8_t *byte, int fwr, int lwr, em4x50_word_t *words) {
+static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
-    // restructure received result in "em4x50_word_t" structure and check all
-    // parities including stop bit; result of each check is stored in structure
+    // restructure received result in "em4x50_word_t" structure
 
-    int p = 0, c[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-
-    for (int i = fwr; i <= lwr; i++) {
-
-        words[i].stopparity = true;
-        words[i].parity = true;
-
-        for (int j = 0; j < 8; j++)
-            c[j] = 0;
-
-        for (int j = 0; j < 4; j++) {
-            words[i].byte[j] = byte[i * 7 + j];
-            words[i].row_parity[j] = (byte[i * 7 + 4] >> (3 - j)) & 1;
-
-            // collect parities
-            p = 0;
-
-            for (int k = 0; k < 8; k++) {
-
-                // row parity
-                p ^= (words[i].byte[j] >> k) & 1;
-
-                // column parity
-                c[k] ^= (words[i].byte[j] >> (7 - k)) & 1;
-            }
-
-            // check row parities
-            words[i].rparity[j] = (words[i].row_parity[j] == p) ? true : false;
-
-            if (!words[i].rparity[j])
-                words[i].parity = false;
-        }
-
-        // check column parities
-        words[i].col_parity = byte[i * 7 + 5];
-
-        for (int j = 0; j < 8; j++) {
-            words[i].cparity[j] = (((words[i].col_parity >> (7 - j)) & 1) == c[j]) ? true : false;
-
-            if (!words[i].cparity[j])
-                words[i].parity = false;
-        }
-
-        // check stop bit
-        words[i].stopbit = byte[i * 7 + 6] & 1;
-
-        if (words[i].stopbit == 1)
-            words[i].stopparity = false;
-    }
+    for (int i = fwr; i <= lwr; i++)
+        for (int j = 0; j < 4; j++)
+            words[i].byte[j] = data[i * 4 + (3 - j)];
 }
 
 static void print_result(const em4x50_word_t *words, int fwr, int lwr) {

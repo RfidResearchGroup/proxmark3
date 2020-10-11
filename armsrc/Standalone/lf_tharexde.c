@@ -80,53 +80,6 @@ static void DownloadLogInstructions(const char *logfile) {
     Dbprintf(_YELLOW_("3.") " cat %s", logfile);
 }
 
-static bool strip_check_parities(uint64_t data, uint32_t *word) {
-
-    uint8_t rparity = 0, cparity = 0;
-    uint8_t rparity_m = 0, cparity_m = 0, stop_bit_m = 0;
-
-    // strip parities
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 8; j++) {
-            *word <<= 1;
-            *word += (data >> (EM4X50_TAG_WORD - 1 - 9 * i - j)) & 1;
-        }
-    }
-
-    // calculate row parities
-    for (int i = 0; i < 4; i++) {
-        rparity <<= 1;
-        for (int j = 0; j < 8; j++) {
-            rparity ^= (*word >> (31 - 8 * i - j)) & 1;
-        }
-    }
-
-    // calculate column parities
-    for (int i = 0; i < 8; i++) {
-        cparity <<= 1;
-        for (int j = 0; j < 4; j++) {
-            cparity ^= (*word >> (31 - 8 * j - i)) & 1;
-        }
-    }
-
-    // measured row parities
-    for (int i = 0; i < 4; i++) {
-        rparity_m <<= 1;
-        rparity_m += (data >> (EM4X50_TAG_WORD - 9 * (i + 1))) & 1;
-    }
-
-    // measured column parities
-    cparity_m = (data >> 1) & 0xFF;
-
-    // measured stop bit
-    stop_bit_m = data & 1;
-
-    if ((cparity_m == cparity) && (rparity_m == rparity) && (stop_bit_m == 0))
-        return true;
-
-    return false;
-}
-
 static int get_input_data_from_file(uint32_t *words, char *inputfile) {
 
     size_t now = 0;
@@ -173,8 +126,6 @@ void RunMod(void) {
 
     bool state_change = true;//, password_found = false;
     int pwd_found = false;
-    //int cnt = 0;
-    //int iterprint = 0;
     uint8_t state = STATE_SIM;
     // declarations for simulating
     uint32_t words[33] = {0x0};
@@ -183,8 +134,7 @@ void RunMod(void) {
     size_t now = 0;
     // declarations for reading
     int no_words = 0;
-    uint64_t data[EM4X50_TAG_WORD];
-    uint32_t word = 0;//, pwd = 0x0, rpwd = 0x0;
+    //uint32_t words[EM4X50_TAG_WORD];
     uint8_t entry[81];
 
     rdv40_spiffs_lazy_mount();
@@ -273,14 +223,14 @@ void RunMod(void) {
                 Dbprintf(_YELLOW_("switched to EM4x50 reading mode"));
 
                 memset(entry, 0, sizeof(entry));
-                memset(data, 0, sizeof(data));
+                memset(words, 0, sizeof(words));
 
                 log_exists = exists_in_spiffs(LF_EM4X50COLLECT_LOGFILE);
 
                 state_change = false;
             }
 
-            no_words = em4x50_standalone_read(data);
+            no_words = em4x50_standalone_read(words);
 
             if (no_words > 0) {
 
@@ -293,11 +243,7 @@ void RunMod(void) {
 
                 for (int i = 0; i < no_words; i++) {
 
-                    if (strip_check_parities(data[i], &word))
-                        sprintf((char *)entry, "  %2i -> 0x%08"PRIx32"  (parity check ok)", i + 1, word);
-                    else
-                        sprintf((char *)entry, "  %2i -> 0x%08"PRIx32"  (parity check failed)", i + 1, word);
-
+                    sprintf((char *)entry, "  %2i -> 0x%08"PRIx32"", i + 1, words[i]);
                     Dbprintf("%s", entry);
                     strcat((char *)entry, "\n");
                     append(LF_EM4X50COLLECT_LOGFILE, entry, strlen((char *)entry));
