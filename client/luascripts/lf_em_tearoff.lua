@@ -51,18 +51,18 @@ local function main(args)
 
     --[[
     Basically do the following,
-    
+
     1. hw tear
-    2. lf em 4x05_write 
+    2. lf em 4x05_write
     3. lf em 4x05_read
-    
+
     The first two commands doesn't need a feedback from the system, so going with core.console commands.
     Since the read needs demodulation of signal I opted to add that function from cmdlfem4x.c to the core lua scripting
         core.em4x05_read(addr, password)
-    
+
     --]]
     local n, addr, password, sd, ed, wr_value, rd_value
-    
+
     for o, a in getopt.getopt(args, 'he:s:a:p:n:r:w:') do
         if o == 'h' then return help() end
         if o == 'n' then n = a end
@@ -85,7 +85,7 @@ local function main(args)
     if #password ~= 8 then
         password = ''
     end
-    
+
     if #wr_value ~= 8 then
         wr_value = 'FFFFFFFF'
     end
@@ -93,11 +93,11 @@ local function main(args)
     if #rd_value ~= 8 then
         rd_value = 'FFFFFFFF'
     end
-    
+
     if sd > ed then
         return oops('start delay can\'t be larger than end delay', sd, ed)
     end
-    
+
     print('Starting EM4x05 tear off')
     print('target addr', addr)
     if password then
@@ -107,25 +107,25 @@ local function main(args)
     print('target delay', sd ,ed)
     print('read value', rd_value)
     print('write value', wr_value)
-    
+
     local res_tear = 0
     local res_nowrite = 0
-    
+
     local set_tearoff_delay = 'hw tearoff --delay %d'
     local enable_tearoff = 'hw tearoff --on'
-    
+
     local wr_template = 'lf em 4x05_write %s %s %s'
-    
+
     -- init addr to value
     core.console(wr_template:format(addr, wr_value, password))
-    
+
     if sd == ed then
        ed = n
        n = 0
     end
-    
+
     for step = sd, ed, n do
-    
+
         io.flush()
         if core.kbd_enter_pressed() then
             print("aborted by user")
@@ -139,11 +139,11 @@ local function main(args)
         c = wr_template:format(addr, wr_value, password)
         core.console(c)
         end
-        
+
         local c = set_tearoff_delay:format(step)
         core.console(c);
         core.console(enable_tearoff)
-                
+
         c = wr_template:format(addr, wr_value, password)
         core.console(c)
 
@@ -151,7 +151,7 @@ local function main(args)
         if err then
             return oops(err)
         end
-        
+
         local wordstr = ('%08X'):format(word)
 
         if wordstr ~= wr_value then

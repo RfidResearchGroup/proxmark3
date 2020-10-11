@@ -57,7 +57,7 @@ local function exit_msg()
     print('')
     print('================= '..ansicolors.green..'verify with'..ansicolors.reset..' =================')
     print('    lf em 4x05_dump')
-    print('===============================================')    
+    print('===============================================')
     return nil
 end
 
@@ -70,18 +70,18 @@ local function main(args)
 
     --[[
     Basically it does the following,
-    
+
     1. hw tear
-    2. lf em 4x05_write 
+    2. lf em 4x05_write
     3. lf em 4x05_read
-    
+
     The first two commands dont need a feedback from the system, so going with core.console commands.
     Since the read needs demodulation of signal I opted to add that function from cmdlfem4x.c to the core lua scripting
         core.em4x05_read(addr, password)
-    
+
     --]]
     local n, password, sd, ed
-    
+
     for o, a in getopt.getopt(args, 'he:s:p:n:') do
         if o == 'h' then return help() end
         if o == 'n' then n = tonumber(a) end
@@ -94,7 +94,7 @@ local function main(args)
     if #password ~= 8 then
         password = ''
     end
-    
+
     local word14, err14 =  core.em4x05_read(14, password)
     if err14 then
         return oops(err14)
@@ -143,11 +143,11 @@ local function main(args)
     print('target delay', sd ,ed)
     print('read value', rd_value)
     print('write value', wr_value)
-    print('==========================================')    
-    
+    print('==========================================')
+
     local res_tear = 0
     local res_nowrite = 0
-    
+
     -- fix at one specific delay
     if sd == ed then
        n = 0
@@ -157,7 +157,7 @@ local function main(args)
     local soon = 0
     local late = 0
     while sd <= ed do
-    
+
         if auto and n < 1 then -- n is a float
             print('[!] Reached n < 1                       => '..ansicolors.yellow..'disabling automatic mode'..ansicolors.reset)
             ed = sd
@@ -181,7 +181,7 @@ local function main(args)
             soon = 0
             late = 0
         end
-    
+
         io.flush()
         if core.kbd_enter_pressed() then
             print("aborted by user")
@@ -200,16 +200,16 @@ local function main(args)
         if err14 then
             return oops(err14)
         end
-        
+
         local wordstr14 = ('%08X'):format(word14)
 
         word15, err15 =  core.em4x05_read(15, password)
         if err15 then
             return oops(err15)
         end
-        
+
         local wordstr15 = ('%08X'):format(word15)
-        
+
         print(('[=] ref:'..rd_value..' 14:%08X 15:%08X '):format(word14, word15))
 
 

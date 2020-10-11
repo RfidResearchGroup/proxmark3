@@ -914,7 +914,7 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",      CmdHelp,                      AlwaysAvailable, "This help."},    
+    {"help",      CmdHelp,                      AlwaysAvailable, "This help."},
     {"info",      cmd_hf_fido_list,             IfPm3Iso14443a,  "List ISO 14443A history"},
     {"info",      cmd_hf_fido_info,             IfPm3Iso14443a,  "Info about FIDO tag."},
     {"reg",       cmd_hf_fido_register,         IfPm3Iso14443a,  "FIDO U2F Registration Message."},

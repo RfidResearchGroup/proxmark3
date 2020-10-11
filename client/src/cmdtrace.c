@@ -587,28 +587,28 @@ static int CmdTraceSave(const char *Cmd) {
 int CmdTraceList(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "trace list",
-                "Annotate trace buffer with selected protocol data\n"
-                "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n",
-                "trace list -t raw      -> just show raw data without annotations\n"
-                "trace list -t 14a      -> interpret as " _YELLOW_("ISO14443-A") " communications\n"
-                "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") " communications\n"
-                "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") " communications\n"
-                "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " communications and decrypt crypto1 stream\n"
-                "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") " communications\n"
-                "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") " communications\n"
-                "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") " communications\n"
-                "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") " communications\n"
-                "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") " communications\n"
-                "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") " communications\n"
-                "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") " communications\n"
-                "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") " communications\n"
-                "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") " communications\n"
-                "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") " communications\n"
-                "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") " communications\n"
-                "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") " communitcations\n"
-                "trace list -t 14a f    -> show frame delay times\n"
-                "trace list -t 14a 1    -> use trace buffer "
-                );
+                  "Annotate trace buffer with selected protocol data\n"
+                  "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n",
+                  "trace list -t raw      -> just show raw data without annotations\n"
+                  "trace list -t 14a      -> interpret as " _YELLOW_("ISO14443-A") " communications\n"
+                  "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") " communications\n"
+                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") " communications\n"
+                  "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " communications and decrypt crypto1 stream\n"
+                  "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") " communications\n"
+                  "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") " communications\n"
+                  "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") " communications\n"
+                  "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") " communications\n"
+                  "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") " communications\n"
+                  "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") " communications\n"
+                  "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") " communications\n"
+                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") " communications\n"
+                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") " communications\n"
+                  "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") " communications\n"
+                  "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") " communications\n"
+                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") " communitcations\n"
+                  "trace list -t 14a f    -> show frame delay times\n"
+                  "trace list -t 14a 1    -> use trace buffer "
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -618,24 +618,24 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("r", NULL, "show relative times (gap and duration)"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
-                            "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_strx0("t", "type", NULL, "protocol to annotate the trace"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    
+
     bool use_buffer = arg_get_lit(ctx, 1);
     bool show_wait_cycles = arg_get_lit(ctx, 2);
     bool mark_crc = arg_get_lit(ctx, 3);
     bool use_relative = arg_get_lit(ctx, 4);
-    bool use_us = arg_get_lit(ctx, 5);    
+    bool use_us = arg_get_lit(ctx, 5);
     bool show_hex = arg_get_lit(ctx, 6);
 
     int tlen = 0;
     char type[10] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)type, sizeof(type), &tlen);
     str_lower(type);
-    
+
     CLIParserFree(ctx);
 
     clearCommandBuffer();
@@ -660,9 +660,9 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
     else if (strcmp(type, "lto") == 0)      protocol = LTO;
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
-    else if (strcmp(type, "raw") == 0)      protocol = -1; 
+    else if (strcmp(type, "raw") == 0)      protocol = -1;
 
-    if (use_buffer == false || (g_traceLen == 0) ) {
+    if (use_buffer == false || (g_traceLen == 0)) {
         download_trace();
     }
 
@@ -761,7 +761,7 @@ int CmdTraceList(const char *Cmd) {
                 break;
         }
     }
-    
+
     if (show_hex)
         PrintAndLogEx(HINT, "syntax to use: " _YELLOW_("`text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`"));
 

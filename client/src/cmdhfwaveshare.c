@@ -641,10 +641,10 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     uint8_t progress = 0;
     uint8_t step0[2] = {0xcd, 0x0d};
     uint8_t step1[3] = {0xcd, 0x00, 10};  // select e-paper type and reset e-paper
-        //  4 :2.13inch e-Paper
-        //  7 :2.9inch e-Paper
-        // 10 :4.2inch e-Paper
-        // 14 :7.5inch e-Paper
+    //  4 :2.13inch e-Paper
+    //  7 :2.9inch e-Paper
+    // 10 :4.2inch e-Paper
+    // 14 :7.5inch e-Paper
     uint8_t step2[2] = {0xcd, 0x01};      // e-paper normal mode  type：
     uint8_t step3[2] = {0xcd, 0x02};      // e-paper config1
     uint8_t step4[2] = {0xcd, 0x03};      // e-paper power on
@@ -652,11 +652,11 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     uint8_t step6[2] = {0xcd, 0x06};      // EDP load to main
     uint8_t step7[2] = {0xcd, 0x07};      // Data preparation
 
-    uint8_t step8[123] = {0xcd, 0x08, 0x64};  // Data start command 
-        // 2.13inch(0x10:Send 16 data at a time)
-        // 2.9inch(0x10:Send 16 data at a time)
-        // 4.2inch(0x64:Send 100 data at a time)
-        // 7.5inch(0x78:Send 120 data at a time)
+    uint8_t step8[123] = {0xcd, 0x08, 0x64};  // Data start command
+    // 2.13inch(0x10:Send 16 data at a time)
+    // 2.9inch(0x10:Send 16 data at a time)
+    // 4.2inch(0x64:Send 100 data at a time)
+    // 7.5inch(0x78:Send 120 data at a time)
     uint8_t step9[2] = {0xcd, 0x18};      // e-paper power on
     uint8_t step10[2] = {0xcd, 0x09};     // Refresh e-paper
     uint8_t step11[2] = {0xcd, 0x0a};     // wait for ready

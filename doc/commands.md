@@ -47,44 +47,45 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`data help              `|Y       |`This help`
-|`data askedgedetect     `|Y       |`[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)`
-|`data autocorr          `|Y       |`[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)`
-|`data biphaserawdecode  `|Y       |`[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)`
-|`data bin2hex           `|Y       |`<digits> -- Converts binary to hexadecimal`
-|`data bitsamples        `|N       |`Get raw samples as bitstring`
-|`data buffclear         `|Y       |`Clears bigbuff on deviceside and graph window`
-|`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
-|`data dec               `|Y       |`Decimate samples`
-|`data detectclock       `|Y       |`[<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer`
+|`data biphaserawdecode  `|Y       |`Biphase decode bin stream in DemodBuffer`
+|`data detectclock       `|Y       |`Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer`
 |`data fsktonrz          `|Y       |`Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)`
-|`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
-|`data grid              `|Y       |`<x> <y> -- overlay grid on graph window, use zero value to turn off either`
-|`data hexsamples        `|N       |`<bytes> [<offset>] -- Dump big buffer as hex bytes`
-|`data hex2bin           `|Y       |`<hexadecimal> -- Converts hexadecimal to binary`
+|`data manrawdecode      `|Y       |`Manchester decode binary stream in DemodBuffer`
+|`data modulation        `|Y       |`Identify LF signal for clock and modulation`
+|`data rawdemod          `|Y       |`Demodulate the data in the GraphBuffer and output binary`
+|`data askedgedetect     `|Y       |`[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)`
+|`data autocorr          `|Y       |`Autocorrelation over window`
+|`data dirthreshold      `|Y       |`<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
+|`data decimate          `|Y       |`Decimate samples`
+|`data undecimate        `|Y       |`Un-decimate samples`
 |`data hide              `|Y       |`Hide graph window`
 |`data hpf               `|Y       |`Remove DC offset from trace`
-|`data load              `|Y       |`<filename> -- Load trace (to graph window`
+|`data iir               `|Y       |`apply IIR buttersworth filter on plotdata`
+|`data grid              `|Y       |`<x> <y> -- overlay grid on graph window, use zero value to turn off either`
 |`data ltrim             `|Y       |`<samples> -- Trim samples from left of trace`
-|`data rtrim             `|Y       |`<location to end trace> -- Trim samples from right of trace`
 |`data mtrim             `|Y       |`<start> <stop> -- Trim out samples from the specified start to the specified stop`
-|`data manrawdecode      `|Y       |`[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer`
 |`data norm              `|Y       |`Normalize max/min to +/-128`
 |`data plot              `|Y       |`Show graph window (hit 'h' in window for keystroke help)`
-|`data printdemodbuffer  `|Y       |`[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output`
-|`data rawdemod          `|Y       |`[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary`
-|`data samples           `|N       |`[512 - 40000] -- Get raw samples for graph window (GraphBuffer)`
-|`data save              `|Y       |`Save trace (from graph window)`
+|`data rtrim             `|Y       |`<location to end trace> -- Trim samples from right of trace`
 |`data setgraphmarkers   `|Y       |`[orange_marker] [blue_marker] (in graph window)`
+|`data shiftgraphzero    `|Y       |`<shift> -- Shift 0 for Graphed wave + or - shift value`
 |`data timescale         `|Y       |`Set a timescale to get a differential reading between the yellow and purple markers as time duration
 `
-|`data setdebugmode      `|Y       |`<0|1|2> -- Set Debugging Level on client side`
-|`data shiftgraphzero    `|Y       |`<shift> -- Shift 0 for Graphed wave + or - shift value`
-|`data dirthreshold      `|Y       |`<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
-|`data tune              `|N       |`Get hw tune samples for graph window`
-|`data undec             `|Y       |`Un-decimate samples by 2`
 |`data zerocrossings     `|Y       |`Count time between zero-crossings`
-|`data iir               `|Y       |`apply IIR buttersworth filter on plotdata`
+|`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
+|`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
+|`data bin2hex           `|Y       |`Converts binary to hexadecimal`
+|`data bitsamples        `|N       |`Get raw samples as bitstring`
+|`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
+|`data hexsamples        `|N       |`<bytes> [<offset>] -- Dump big buffer as hex bytes`
+|`data hex2bin           `|Y       |`Converts hexadecimal to binary`
+|`data load              `|Y       |`Load contents of file into graph window`
 |`data ndef              `|Y       |`Decode NDEF records`
+|`data print             `|Y       |`print the data in the DemodBuffer`
+|`data samples           `|N       |`[512 - 40000] -- Get raw samples for graph window (GraphBuffer)`
+|`data save              `|Y       |`Save signal trace data  (from graph window)`
+|`data setdebugmode      `|Y       |`<0|1|2> -- Set Debugging Level on client side`
+|`data tune              `|N       |`Measure tuning of device antenna. Results shown in graph window`
 
 
 ### emv
@@ -232,6 +233,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf fido help           `|Y       |`This help.`
+|`hf fido info           `|N       |`List ISO 14443A history`
 |`hf fido info           `|N       |`Info about FIDO tag.`
 |`hf fido reg            `|N       |`FIDO U2F Registration Message.`
 |`hf fido auth           `|N       |`FIDO U2F Authentication Message.`
@@ -502,6 +504,7 @@ Check column "offline" for their availability.
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Jump to the standalone mode`
 |`hw status              `|N       |`Show runtime status information about the connected Proxmark3`
+|`hw tearoff             `|N       |`Program a tearoff hook for the next command supporting tearoff`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
 |`hw tune                `|N       |`Measure antenna tuning`
 |`hw version             `|N       |`Show version information about the connected Proxmark3`
@@ -581,17 +584,17 @@ Check column "offline" for their availability.
 |`lf em 4x50_wipe        `|N       |`wipe data from EM4x50`
 
 
-### lf fdx
+### lf fdxb
 
  { FDX-B RFIDs...             }
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf fdx help            `|Y       |`this help`
-|`lf fdx demod           `|Y       |`demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
-|`lf fdx read            `|N       |`attempt to read at 134kHz and extract tag data`
-|`lf fdx clone           `|N       |`clone animal ID tag to T55x7 or Q5/T5555`
-|`lf fdx sim             `|N       |`simulate Animal ID tag`
+|`lf fdxb help           `|Y       |`this help`
+|`lf fdxb demod          `|Y       |`demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
+|`lf fdxb read           `|N       |`attempt to read at 134kHz and extract tag data`
+|`lf fdxb clone          `|N       |`clone animal ID tag to T55x7 or Q5/T5555`
+|`lf fdxb sim            `|N       |`simulate Animal ID tag`
 
 
 ### lf gallagher

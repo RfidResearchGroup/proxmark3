@@ -818,7 +818,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 
     size_t paylen = sizeof(struct p) + size;
     struct p *payload = calloc(1, paylen);
-    
+
     payload->blockno = blockNum;
     payload->blockcnt = blocksCount;
     payload->blockwidth = blockBtWidth;

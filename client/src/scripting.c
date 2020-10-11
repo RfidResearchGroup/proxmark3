@@ -1121,9 +1121,9 @@ static int l_em4x05_read(lua_State *L) {
     uint32_t word = 0;
     int res = EM4x05ReadWord_ext(addr, password, use_pwd, &word);
     if (res != PM3_SUCCESS) {
-        return returnToLuaWithError(L, "Failed to read EM4x05 data");        
+        return returnToLuaWithError(L, "Failed to read EM4x05 data");
     }
-    
+
     lua_pushinteger(L, word);
     return 1;
 }
@@ -1244,10 +1244,10 @@ static int l_cwd(lua_State *L) {
 // ref:  https://github.com/RfidResearchGroup/proxmark3/issues/891
 // redirect LUA's print to Proxmark3 PrintAndLogEx
 static int l_printandlogex(lua_State *L) {
-    int n = lua_gettop(L);   
+    int n = lua_gettop(L);
     for (int i = 1; i <= n; i++) {
         if (lua_isstring(L, i)) {
-            PrintAndLogEx(NORMAL, "%s\t" NOLF, lua_tostring(L, i) );
+            PrintAndLogEx(NORMAL, "%s\t" NOLF, lua_tostring(L, i));
         }
     }
     PrintAndLogEx(NORMAL, "");

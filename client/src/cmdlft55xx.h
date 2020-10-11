@@ -106,18 +106,18 @@ typedef struct {
 } t5555_tracedata_t;
 
 typedef enum {
-        DEMOD_NRZ  = 0x00,
-        DEMOD_PSK1 = 0x01,
-        DEMOD_PSK2 = 0x02,
-        DEMOD_PSK3 = 0x03,
-        DEMOD_FSK1  = 0x04,
-        DEMOD_FSK1a = 0x05,
-        DEMOD_FSK2  = 0x06,
-        DEMOD_FSK2a = 0x07,
-        DEMOD_FSK   = 0xF0, //generic FSK (auto detect FCs)
-        DEMOD_ASK  = 0x08,
-        DEMOD_BI   = 0x10,
-        DEMOD_BIa  = 0x18,
+    DEMOD_NRZ  = 0x00,
+    DEMOD_PSK1 = 0x01,
+    DEMOD_PSK2 = 0x02,
+    DEMOD_PSK3 = 0x03,
+    DEMOD_FSK1  = 0x04,
+    DEMOD_FSK1a = 0x05,
+    DEMOD_FSK2  = 0x06,
+    DEMOD_FSK2a = 0x07,
+    DEMOD_FSK   = 0xF0, //generic FSK (auto detect FCs)
+    DEMOD_ASK  = 0x08,
+    DEMOD_BI   = 0x10,
+    DEMOD_BIa  = 0x18,
 } t55xx_modulation;
 
 typedef struct {

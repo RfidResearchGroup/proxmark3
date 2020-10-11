@@ -173,11 +173,11 @@ static inline uint32_t next_state(uint32_t *bitarray, uint32_t state) {
         line <<= 1;
     }
     index++;
-    while (state < (1 << 24) && bitarray[index] == 0x00000000 ) {
+    while (state < (1 << 24) && bitarray[index] == 0x00000000) {
         index++;
         state += 0x20;
     }
-    
+
     if (state >= (1 << 24)) {
         return (1 << 24);
     }

@@ -635,7 +635,7 @@ static int Cmdaskmandemod(const char *Cmd) {
             st = true;
             Cmd += 2;
         }
-    
+
         char amp = tolower(param_getchar(Cmd, 0));
         sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
@@ -992,7 +992,7 @@ static int CmdDecimate(const char *Cmd) {
                   "Performs decimation, by reducing samples N times in the grapbuf. Good for PSK\n",
                   "data decimate\n"
                   "data decimate 4"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1001,11 +1001,11 @@ static int CmdDecimate(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int n = arg_get_int_def(ctx, 1, 2);
-    CLIParserFree(ctx);  
+    CLIParserFree(ctx);
 
     for (size_t i = 0; i < (GraphTraceLen / n); ++i)
         GraphBuffer[i] = GraphBuffer[i * n];
-    
+
     GraphTraceLen /= n;
     PrintAndLogEx(SUCCESS, "decimated by " _GREEN_("%u"), n);
     RepaintGraphWindow();
@@ -1024,7 +1024,7 @@ static int CmdUndecimate(const char *Cmd) {
                   "Performs un-decimation, by repeating each sample N times in the graphbuf",
                   "data undecimate\n"
                   "data undecimate 4\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1033,7 +1033,7 @@ static int CmdUndecimate(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int factor = arg_get_int_def(ctx, 1, 2);
-    CLIParserFree(ctx);  
+    CLIParserFree(ctx);
 
     //We have memory, don't we?
     int swap[MAX_GRAPH_TRACE_LEN] = {0};
@@ -1042,9 +1042,9 @@ static int CmdUndecimate(const char *Cmd) {
         int count = 0;
         for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++) {
             swap[s_index + count] = (
-                        (double)(factor - count) / (factor - 1)) * GraphBuffer[g_index] +
-                        ((double)count / factor) * GraphBuffer[g_index + 1]
-                        ;
+                                        (double)(factor - count) / (factor - 1)) * GraphBuffer[g_index] +
+                                    ((double)count / factor) * GraphBuffer[g_index + 1]
+                                    ;
         }
         s_index += count;
         g_index++;
@@ -1701,7 +1701,7 @@ int CmdTuneSamples(const char *Cmd) {
 
         // Q measure with Q=f/delta_f
         double v_3db_scaled = (double)(package->peak_v * 0.707) / 512; // /512 == >>9
-        uint32_t s2=0, s4=0;
+        uint32_t s2 = 0, s4 = 0;
         for (int i = 1; i < 256; i++) {
             if ((s2 == 0) && (package->results[i] > v_3db_scaled)) {
                 s2 = i;
@@ -1715,10 +1715,10 @@ int CmdTuneSamples(const char *Cmd) {
         if (s4 != 0) { // we got all our points of interest
             double a = package->results[s2 - 1];
             double b = package->results[s2];
-            double f1 = LF_DIV2FREQ(s2 - 1 + (v_3db_scaled - a)/(b-a));
+            double f1 = LF_DIV2FREQ(s2 - 1 + (v_3db_scaled - a) / (b - a));
             double c = package->results[s4 - 1];
             double d = package->results[s4];
-            double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled)/(c-d));
+            double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled) / (c - d));
             lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
             PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by frequency bandwidth measurement", lfq1);
         }
@@ -1955,10 +1955,10 @@ int CmdSave(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool as_wave = arg_get_lit(ctx, 1);
-    
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIGetStrWithReturn(ctx, 2, (uint8_t*)filename, &fnlen);
+    CLIGetStrWithReturn(ctx, 2, (uint8_t *)filename, &fnlen);
     CLIParserFree(ctx);
 
     if (as_wave)
@@ -2432,10 +2432,10 @@ static int try_detect_modulation(void) {
         clk = GetAskClock("", false);
         if (clk > 0) {
             // 0 = auto clock
-            // 0 = no invert 
+            // 0 = no invert
             // 1 = maxError 1
             // 0 = max len
-            // false = no amplify  
+            // false = no amplify
             // false = no verbose
             // false = no emSearch
             // 1 = Ask/Man
@@ -2450,7 +2450,7 @@ static int try_detect_modulation(void) {
             // false = no emSearch
             // 1 = Ask/Man
             // st = true
-            
+
             // ASK / biphase
             if ((ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS)) {
                 tests[hits].modulation = DEMOD_BI;
@@ -2465,11 +2465,11 @@ static int try_detect_modulation(void) {
             }
         }
         clk = GetNrzClock("", false);
-            if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS)) {
-                tests[hits].modulation = DEMOD_NRZ;
-                tests[hits].bitrate = clk;
-                ++hits;
-            }
+        if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS)) {
+            tests[hits].modulation = DEMOD_NRZ;
+            tests[hits].bitrate = clk;
+            ++hits;
+        }
 
         clk = GetPskClock("", false);
         if (clk > 0) {
@@ -2481,7 +2481,7 @@ static int try_detect_modulation(void) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = clk;
                 ++hits;
-                
+
                 // get psk carrier
                 tests[hits].carrier = GetPskCarrier(false);
             }
@@ -2493,8 +2493,8 @@ static int try_detect_modulation(void) {
     if (hits) {
         PrintAndLogEx(SUCCESS, "Found [%d] possible matches for modulation.", hits);
         for (int i = 0; i < hits; ++i) {
-           PrintAndLogEx(INFO, "--[%d]---------------", i + 1);
-           print_modulation(tests[i]);
+            PrintAndLogEx(INFO, "--[%d]---------------", i + 1);
+            print_modulation(tests[i]);
         }
         return PM3_SUCCESS;
     } else {
@@ -2508,20 +2508,20 @@ static int CmdDataModulationSearch(const char *Cmd) {
     CLIParserInit(&ctx, "data modulation",
                   "search LF signal after clock and modulation\n",
                   "data modulation"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);    
+    CLIParserFree(ctx);
     return try_detect_modulation();
 }
 
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
-    
+
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Modulation") "-------------------------"},
     {"biphaserawdecode", CmdBiphaseDecodeRaw,    AlwaysAvailable,  "Biphase decode bin stream in DemodBuffer"},
     {"detectclock",     CmdDetectClockRate,      AlwaysAvailable,  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
@@ -2529,7 +2529,7 @@ static command_t CommandTable[] = {
     {"manrawdecode",    Cmdmandecoderaw,         AlwaysAvailable,  "Manchester decode binary stream in DemodBuffer"},
     {"modulation",      CmdDataModulationSearch, AlwaysAvailable,  "Identify LF signal for clock and modulation"},
     {"rawdemod",        CmdRawDemod,             AlwaysAvailable,  "Demodulate the data in the GraphBuffer and output binary"},
-        
+
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
     {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
     {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
@@ -2552,7 +2552,7 @@ static command_t CommandTable[] = {
 
     {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
-  
+
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},

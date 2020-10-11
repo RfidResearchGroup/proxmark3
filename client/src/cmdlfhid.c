@@ -202,7 +202,7 @@ static int CmdHIDSim(const char *Cmd) {
         arg_param_begin,
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_u64_0(NULL, "fc",      "<dec>", "facility code"),
-        arg_u64_0(NULL, "cn",      "<dec>", "card number"), 
+        arg_u64_0(NULL, "cn",      "<dec>", "card number"),
         arg_int0("i",    NULL,     "<dec>", "issue level"),
         arg_int0("o",   "oem",     "<dec>", "OEM code"),
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
@@ -214,24 +214,24 @@ static int CmdHIDSim(const char *Cmd) {
     char format[16] = {0};
     int format_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &format_len);
-    
+
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
     card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
     card.CardNumber = arg_get_u32_def(ctx, 3, 0);
     card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
     card.OEM = arg_get_u32_def(ctx, 5, 0);
-    
+
     int raw_len = 0;
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
 
     //bool q5 = arg_get_lit(ctx, 7);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
- 
+
     // format validation
     int format_idx = HIDFindCardFormat((char *)format);
     if (format_idx == -1 && raw_len == 0) {
@@ -253,10 +253,10 @@ static int CmdHIDSim(const char *Cmd) {
     }
 
     if (raw_len == 0) {
-        PrintAndLogEx(INFO, "Simulating HID tag"); 
+        PrintAndLogEx(INFO, "Simulating HID tag");
         HIDTryUnpack(&packed, false);
     } else {
-        PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"),  raw); 
+        PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"),  raw);
     }
 
     PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
@@ -295,7 +295,7 @@ static int CmdHIDClone(const char *Cmd) {
         arg_param_begin,
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_u64_0(NULL, "fc",      "<dec>", "facility code"),
-        arg_u64_0(NULL, "cn",      "<dec>", "card number"), 
+        arg_u64_0(NULL, "cn",      "<dec>", "card number"),
         arg_int0("i",    NULL,     "<dec>", "issue level"),
         arg_int0("o",   "oem",     "<dec>", "OEM code"),
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
@@ -307,24 +307,24 @@ static int CmdHIDClone(const char *Cmd) {
     char format[16] = {0};
     int format_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &format_len);
-    
+
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
     card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
     card.CardNumber = arg_get_u32_def(ctx, 3, 0);
     card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
     card.OEM = arg_get_u32_def(ctx, 5, 0);
-    
+
     int raw_len = 0;
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
 
     //bool q5 = arg_get_lit(ctx, 7);
-    CLIParserFree(ctx); 
+    CLIParserFree(ctx);
 
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
- 
+
     // format validation
     int format_idx = HIDFindCardFormat((char *)format);
     if (format_idx == -1 && raw_len == 0) {
@@ -346,10 +346,10 @@ static int CmdHIDClone(const char *Cmd) {
     }
 
     if (raw_len == 0) {
-        PrintAndLogEx(INFO, "Preparing to clone HID tag"); 
+        PrintAndLogEx(INFO, "Preparing to clone HID tag");
         HIDTryUnpack(&packed, false);
     } else {
-        PrintAndLogEx(INFO, "Preparing to clone HID tag using raw " _YELLOW_("%s"),  raw); 
+        PrintAndLogEx(INFO, "Preparing to clone HID tag using raw " _YELLOW_("%s"),  raw);
     }
 
     lf_hidsim_t payload;

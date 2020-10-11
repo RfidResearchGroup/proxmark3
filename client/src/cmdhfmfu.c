@@ -2402,13 +2402,13 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     }
 
     uint8_t key_buf[16];
-    uint8_t * key;
+    uint8_t *key;
     int succeeded;
 
     // If no hex key is specified, try all known ones
     if (strlen(Cmd) == 0) {
         succeeded = try_default_3des_keys(&key);
-    // Else try user-supplied
+        // Else try user-supplied
     } else {
         if (param_gethex(Cmd, 0, key_buf, 32)) {
             PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
@@ -2840,7 +2840,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
                 //if (interval == 0) {
                 //    PrintAndLogEx(WARNING, "Wrong interval number");
-                    //errors = true;
+                //errors = true;
                 //}
                 cmdp += 2;
                 break;
@@ -2940,7 +2940,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             if (isOK) {
                 memcpy(post, resp.data.asBytes, sizeof(post));
                 got_post = true;
-           }
+            }
         }
 
         if (got_pre && got_post) {
@@ -2949,27 +2949,27 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
             char poststr[20] = {0};
             snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
-            
+
             if (memcmp(pre, post, sizeof(pre)) == 0) {
-                
+
                 PrintAndLogEx(INFO, "Current %02d (0x%02X) %s"
-                    , blockNoUint
-                    , blockNoUint
-                    , poststr
-                    );
+                              , blockNoUint
+                              , blockNoUint
+                              , poststr
+                             );
             } else {
 
                 // skip first message, since its the reset write.
-                if ( actualTime == startTime ) {
+                if (actualTime == startTime) {
                     PrintAndLogEx(INFO, "Inital write");
                 } else {
                     PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %02d (0x%02X) %s vs " _RED_("%s")
-                        , blockNoUint
-                        , blockNoUint
-                        , prestr
-                        , poststr
-                        );
-                        
+                                  , blockNoUint
+                                  , blockNoUint
+                                  , prestr
+                                  , poststr
+                                 );
+
                     lock_on = true;
 
                     if (phase_clear == -1)
@@ -3017,10 +3017,10 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
     PrintAndLogEx(INFO, "----------------------------------------------------");
     if (phase_clear > - 1) {
-        PrintAndLogEx(INFO, "phase 1 (erase eeprom) could be " _YELLOW_("%d") " us" , phase_clear);
+        PrintAndLogEx(INFO, "phase 1 (erase eeprom) could be " _YELLOW_("%d") " us", phase_clear);
     }
     if (phase_newwr > - 1) {
-        PrintAndLogEx(INFO, "phase 2 (new write) could be " _YELLOW_("%d") " us" , phase_newwr);
+        PrintAndLogEx(INFO, "phase 2 (new write) could be " _YELLOW_("%d") " us", phase_newwr);
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
