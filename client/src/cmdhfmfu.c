@@ -2850,6 +2850,10 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                     PrintAndLogEx(WARNING, "Wrong time limit number");
                     errors = true;
                 }
+                if (timeLimit > 43000) {
+                    PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+                    errors = true;
+                }
                 cmdp += 2;
                 break;
             case 's':
@@ -2941,14 +2945,12 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             else
                 snprintf(post_res, sizeof(post_res) - 1, _CYAN_("%s"), sprint_hex_inrow(post, sizeof(post)));
                 
-            
             PrintAndLogEx(INFO, "Result   %02d/0x%02X |  %s vs %s"
                     , blockNoUint
                     , blockNoUint
                     , sprint_hex_inrow(pre, sizeof(pre))
                     , post_res
                     );
-            
         } else {
             if (got_pre == false)
                 PrintAndLogEx(FAILED, "Failed to read block BEFORE");
