@@ -31,6 +31,7 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 #include "generator.h"
+#include "cliparser.h"
 
 static uint64_t g_em410xid = 0;
 
@@ -1533,21 +1534,6 @@ static int CmdEM4x05Info(const char *Cmd) {
     return PM3_ESOFT;
 }
 
-static int usage_4x05_chk(void) {
-    PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
-    PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "Usage: lf en 4x05_chk [h] [f <*.dic>] [e <em4100 id>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     h            - this help");
-    PrintAndLogEx(NORMAL, "     f <*.dic>    - loads a default keys dictionary file <*.dic>");
-    PrintAndLogEx(NORMAL, "     e <EM4100>   - will try the calculated password from some cloners based on EM4100 ID");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk f t55xx_default_pwds"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk e aa11223344"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static bool is_cancelled(void) {
     if (kbd_enter_pressed()) {
         PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
@@ -1558,67 +1544,64 @@ static bool is_cancelled(void) {
 // load a default pwd file.
 static int CmdEM4x05Chk(const char *Cmd) {
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05_chk",
+                  "This command uses a dictionary attack against EM4205/4305/4469/4569",
+                  "lf em 4x05_chk\n"
+                  "lf em 4x05_chk -e aa11223344\n"
+                  "lf em 4x05_chk -f t55xx_default_pwds"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("f", "file", "<*.dic>", "loads a default keys dictionary file <*.dic>"),
+        arg_u64_0("e", "em", "<EM4100>", "try the calculated password from some cloners based on EM4100 ID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    snprintf(filename, sizeof(filename), "t55xx_default_pwds");
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    uint64_t card_id = arg_get_u64_def(ctx, 2, 0);
+    CLIParserFree(ctx);
 
-    uint8_t *keyBlock = NULL;
-    bool found = false, use_card_pwd = false;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    uint32_t card_pwd = 0x00;
-    uint64_t cardID = 0x00;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_4x05_chk();
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
-                    PrintAndLogEx(ERR, "Error, no filename after 'f' was found");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'e':
-                // White cloner password based on EM4100 ID
-                use_card_pwd = true;
-                cardID = param_get64ex(Cmd, cmdp + 1, 0, 16);
-                uint32_t card32Bit = cardID & 0xFFFFFFFF;
-                card_pwd = lf_t55xx_white_pwdgen(card32Bit);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    if (strlen(filename) == 0) {
+        snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
 
-    if (errors || cmdp == 0) return usage_4x05_chk();
-
-    uint64_t t1 = msclock();
-     
+    PrintAndLogEx(NORMAL, "");
+    
     uint8_t addr = 4;
     uint32_t word = 0;
+    bool found = false;
 
-    // try calculated password
-    if (use_card_pwd) {
+    uint64_t t1 = msclock();
+    
+    // White cloner password based on EM4100 ID
+    if ( card_id > 0 ) {
 
-        PrintAndLogEx(INFO, "Testing %08"PRIX32" generated ", card_pwd);
-        int status = EM4x05ReadWord_ext(addr, card_pwd, use_card_pwd, &word);
+        uint32_t pwd = lf_t55xx_white_pwdgen(card_id & 0xFFFFFFFF);
+        PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", pwd);
+
+        int status = EM4x05ReadWord_ext(addr, pwd, true, &word);
         if (status == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Found valid password : [ " _GREEN_("%08"PRIX32) " ]", card_pwd);
+            PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
         }
     }
 
+    // Loop dictionary
+    uint8_t *keyBlock = NULL;
     if (found == false) {
+
+        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+
         word = 0;
         uint32_t keycount = 0;
 
         int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
         if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
-            PrintAndLogEx(WARNING, "No keys found in file");
+            PrintAndLogEx(WARNING, "no keys found in file");
             if (keyBlock != NULL)
                 free(keyBlock);
 
@@ -1628,7 +1611,7 @@ static int CmdEM4x05Chk(const char *Cmd) {
         for (uint32_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {
-                PrintAndLogEx(WARNING, "Device offline\n");
+                PrintAndLogEx(WARNING, "device offline\n");
                 free(keyBlock);
                 return PM3_ENODATA;
             }
@@ -1640,11 +1623,11 @@ static int CmdEM4x05Chk(const char *Cmd) {
 
             uint32_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
-            PrintAndLogEx(INFO, "Testing %08"PRIX32, curr_password);
+            PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
 
             int status = EM4x05ReadWord_ext(addr, curr_password, 1, &word);
             if (status == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "Found valid password : [ " _GREEN_("%08"PRIX32) " ]", curr_password);
+                PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                 found = true;
                 break;
             }
@@ -1652,7 +1635,7 @@ static int CmdEM4x05Chk(const char *Cmd) {
     }
 
     if (found == false)
-        PrintAndLogEx(WARNING, "Check pwd failed");
+        PrintAndLogEx(WARNING, "check pwd failed");
 
     free(keyBlock);
 
