@@ -2894,6 +2894,12 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     uint32_t actualTime = startTime;
 
     while (actualTime <= (timeLimit - interval)) {
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(INFO, "\naborted via keyboard!\n");
+            break;
+        }
+
         PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actualTime);
 
         clearCommandBuffer();
