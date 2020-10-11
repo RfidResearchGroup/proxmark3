@@ -60,9 +60,9 @@ typedef struct {
     uint64_t uid;
     int mask; // how many MSB bits used
     const char *desc;
-} productName;
+} productName_t;
 
-const productName uidmapping[] = {
+const productName_t uidmapping[] = {
 
     // UID, #significant Bits, "Vendor(+Product)"
     { 0xE001000000000000LL, 16, "Motorola UK" },
