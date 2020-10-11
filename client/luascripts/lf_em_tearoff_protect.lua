@@ -63,7 +63,7 @@ local function exit_msg()
 end
 
 local function reset(wr_value, password)
-    print('[=] '..ansicolors.red..'reseting the active lock block'..ansicolors.reset)
+    print('[=] '..ansicolors.red..'resetting the active lock block'..ansicolors.reset)
     core.console(wr_template:format(99, wr_value, password))
 end
 
@@ -107,6 +107,7 @@ local function main(args)
     local bit15 = bit.band(0x00008000, word15)
     if bit15 == 0x00008000 then
         rd_value = ('%08X'):format(word15)
+        reset(wr_value, password)
     else
         rd_value = ('%08X'):format(word14)
     end
@@ -183,35 +184,38 @@ local function main(args)
         
         local wordstr15 = ('%08X'):format(word15)
         
-        if wordstr14 == rd_value and wordstr15 ~= wr_value then
-            print(('[!] '..ansicolors.cyan..'TEAR OFF'..ansicolors.reset..' occurred: 14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
-        end
-        
-        if wordstr14 == rd_value then
-            if wordstr15 ~= rd_value and  wordstr15 ~= wr_value then
-                print(('[!] '..ansicolors.red..'TEAR OFF bitflip: '..ansicolors.reset..' 14: %08X  15: %08X'):format(word14, word15))
-                
-                
-                bit15 = bit.band(0x00008000, word15)
-                if bit15 == 0x00008000 then
-                    return exit_msg()
-                else
-                    reset(wr_value, password)
-                    print('[+] locked on to this delay')
-                    locked_on = true
-                end
-            end
-            
+        print(('[=] ref:'..rd_value..' 14:%08X 15:%08X '):format(word14, word15))
+
+
+        if wordstr14 == rd_value and wordstr15 == '00000000' then
+            print('[=] Status: Nothing happened            => '..ansicolors.green..'tearing too soon'..ansicolors.reset)
+        else
             if wordstr15 == rd_value then
+                if wordstr14 == '00000000' then
+                    print('[=] Status: Protect succeeded           => '..ansicolors.green..'tearing too late'..ansicolors.reset)
+                else
+                    if wordstr14 == rd_value then
+                        print('[=] Status: 15 ok, 14 not yet erased    => '..ansicolors.green..'tearing too late'..ansicolors.reset)
+                    else
+                        print('[=] Status: 15 ok, 14 partially erased  => '..ansicolors.green..'tearing too late'..ansicolors.reset)
+                    end
+                end
                 reset(wr_value, password)
                 if not locked_on then  
                     tries = 0
                 end
+            else
+                bit15 = bit.band(0x00008000, word15)
+                if bit15 == 0x00008000 then
+                    print(('[=] Status: 15 bitflipped and active    => '..ansicolors.red..'SUCCESS: '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
+                    return exit_msg()
+                else
+                    print(('[=] Status: 15 bitflipped but inactive  => '..ansicolors.yellow..'PROMISING: '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
+                    print('[+] locked on to this delay')
+                    locked_on = true
+                end
             end
-        else        
-            print('...write ok, erase not done', wordstr14, rd_value)
         end
-        
         if not locked_on then 
             tries = tries + 1
         end
