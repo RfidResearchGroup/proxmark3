@@ -111,6 +111,10 @@ local function main(args)
     else
         rd_value = ('%08X'):format(word14)
     end
+    if rd_value == '00008000' then
+        print('Tag already fully unlocked, nothing to do')
+        return nil
+    end
     local wr_value = '00000000'
     n = n or 2
     sd = sd or 2000
