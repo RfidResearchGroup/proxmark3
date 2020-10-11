@@ -11,10 +11,18 @@ desc = [[
 This is scripts loops though a tear attack and reads expected value.
 ]]
 example = [[
+    Full automatic, with password:
+    script run lf_em_tearoff_protect -p 50524F58
+
+    Manual fix increment over specified range:
     script run lf_em_tearoff_protect -n 2 -s 200 -e 400
 
     Trying repeatedly for a fixed timing, forever or till success:
     script run lf_em_tearoff_protect -s 400 -e 400
+
+    Tips:
+        Use a low Q antenna
+        Move card somehow away from the antenna to a position where it still works
 ]]
 usage = [[
 script run lf_em_tearoff_protect [-h] [-n <steps us>] [-p <pwd>] [-s <start us>] [-e <end us>]
