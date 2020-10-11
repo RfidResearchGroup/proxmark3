@@ -1399,7 +1399,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     uint8_t chipType = (block0 >> 1) & 0xF;
     uint8_t cap = (block0 >> 5) & 3;
-    uint16_t custCode = (block0 >> 9) & 0x3FF;    
+    uint16_t custCode = (block0 >> 9) & 0x2FF;    
 
     PrintAndLogEx(INFO, "   block0: %X", block0);
     PrintAndLogEx(INFO, " chiptype: %X", chipType);
@@ -1414,6 +1414,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
     //  9 - 18 customer code
     //  19,  rfu
     
+       98765432109876543210
        001000000000
     // 00100000000001111000
     //                1100
@@ -1548,8 +1549,8 @@ static int CmdEM4x05Chk(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x05_chk",
                   "This command uses a dictionary attack against EM4205/4305/4469/4569",
                   "lf em 4x05_chk\n"
-                  "lf em 4x05_chk -e aa11223344\n"
-                  "lf em 4x05_chk -f t55xx_default_pwds"
+                  "lf em 4x05_chk -e 0x00000022B8        -> remember to use 0x for hex\n"
+                  "lf em 4x05_chk -f t55xx_default_pwds  -> use T55xx default dictionary"
                  );
 
     void *argtable[] = {
@@ -1568,13 +1569,11 @@ static int CmdEM4x05Chk(const char *Cmd) {
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
-
     PrintAndLogEx(NORMAL, "");
     
     uint8_t addr = 4;
     uint32_t word = 0;
     bool found = false;
-
     uint64_t t1 = msclock();
     
     // White cloner password based on EM4100 ID
