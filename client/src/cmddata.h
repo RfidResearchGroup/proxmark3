@@ -60,7 +60,7 @@ int CmdPlot(const char *Cmd);                                                   
 int CmdSave(const char *Cmd);                                                                   // used by cmd auto
 int CmdTuneSamples(const char *Cmd);                                                            // used by cmd lf hw
 
-int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose);                 // used by cmd lf em4x, lf fdx, lf guard, lf jablotron, lf nedap, lf t55xx
+int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose);                 // used by cmd lf em4x, lf fdxb, lf guard, lf jablotron, lf nedap, lf t55xx
 int ASKDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType);                    // used by cmd lf em4x, lf t55xx, lf viking
 int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType, bool *stCheck); // used by cmd lf, lf em4x, lf noralsy, le presco, lf securekey, lf t55xx, lf visa2k
 int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bool verbose);    // used by cmd lf, lf em4x, lf t55xx

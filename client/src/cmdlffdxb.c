@@ -8,7 +8,7 @@
 // Differential Biphase, rf/32, 128 bits (known)
 //-----------------------------------------------------------------------------
 
-#include "cmdlffdx.h"
+#include "cmdlffdxb.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -48,9 +48,9 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lf_fdx_clone(void) {
+static int usage_lf_fdxb_clone(void) {
     PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "Usage: lf fdx clone [h] [c <country code>] [a <national code>] [e <extended>] <s> <Q5>");
+    PrintAndLogEx(NORMAL, "Usage: lf fdxb clone [h] [c <country code>] [a <national code>] [e <extended>] <s> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               : This help");
     PrintAndLogEx(NORMAL, "      c <country>     : (dec) Country code");
@@ -60,15 +60,15 @@ static int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "      <Q5>            : Specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx clone c 999 n 112233 s"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx clone c 999 n 112233 e 16a"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb clone c 999 n 112233 s"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb clone c 999 n 112233 e 16a"));
     return PM3_SUCCESS;
 }
 
-static int usage_lf_fdx_read(void) {
+static int usage_lf_fdxb_read(void) {
     PrintAndLogEx(NORMAL, "Read FDX-B animal tag");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf fdx read [h] [@]");
+    PrintAndLogEx(NORMAL, "Usage:  lf fdxb read [h] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               : This help");
     PrintAndLogEx(NORMAL, "      @               : run continuously until a key is pressed (optional)");
@@ -76,11 +76,11 @@ static int usage_lf_fdx_read(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_lf_fdx_sim(void) {
+static int usage_lf_fdxb_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of FDX-B animal tag");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf fdx sim [h] [c <country code>] [n <national code>] [e <extended>] <s> <Q5>");
+    PrintAndLogEx(NORMAL, "Usage:  lf fdxb sim [h] [c <country code>] [n <national code>] [e <extended>] <s> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               : This help");
     PrintAndLogEx(NORMAL, "      c <country>     : (dec) Country code");
@@ -90,8 +90,8 @@ static int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "      <Q5>            : Specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx sim c 999 n 112233 s"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdx sim c 999 n 112233 e 16a"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb sim c 999 n 112233 s"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb sim c 999 n 112233 e 16a"));
     return PM3_SUCCESS;
 }
 
@@ -217,7 +217,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
 
 //see ASKDemod for what args are accepted
 //almost the same demod as cmddata.c/CmdFDXBdemodBI
-int demodFDX(bool verbose) {
+int demodFDXB(bool verbose) {
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
     if (ASKbiphaseDemod(0, 32, 1, 100, false) != PM3_SUCCESS) {
@@ -321,12 +321,12 @@ int demodFDX(bool verbose) {
     return PM3_SUCCESS;
 }
 
-static int CmdFdxDemod(const char *Cmd) {
+static int CmdFdxBDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    return demodFDX(true);
+    return demodFDXB(true);
 }
 
-static int CmdFdxRead(const char *Cmd) {
+static int CmdFdxBRead(const char *Cmd) {
     sample_config config;
     memset(&config, 0, sizeof(sample_config));
     int retval = lf_getconfig(&config);
@@ -341,7 +341,7 @@ static int CmdFdxRead(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_lf_fdx_read();
+                return usage_lf_fdxb_read();
             case '@':
                 continuous = true;
                 cmdp++;
@@ -354,7 +354,7 @@ static int CmdFdxRead(const char *Cmd) {
     }
 
     //Validations
-    if (errors) return usage_lf_fdx_read();
+    if (errors) return usage_lf_fdxb_read();
     int16_t tmp_div = config.divisor;
     if (tmp_div != LF_DIVISOR_134) {
         config.divisor = LF_DIVISOR_134;
@@ -375,7 +375,7 @@ static int CmdFdxRead(const char *Cmd) {
             PrintAndLogEx(ERR, "failed to get LF read from device");
             return retval;
         }
-        ret = demodFDX(!continuous); // be verbose only if not in continuous mode
+        ret = demodFDXB(!continuous); // be verbose only if not in continuous mode
         if (kbd_enter_pressed()) {
             break;
         }
@@ -392,7 +392,7 @@ static int CmdFdxRead(const char *Cmd) {
     return ret;
 }
 
-static int CmdFdxClone(const char *Cmd) {
+static int CmdFdxBClone(const char *Cmd) {
 
     uint32_t country_code = 0, extended = 0;
     uint64_t national_code = 0;
@@ -402,7 +402,7 @@ static int CmdFdxClone(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_lf_fdx_clone();
+                return usage_lf_fdxb_clone();
             case 'c': {
                 country_code = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
@@ -436,7 +436,7 @@ static int CmdFdxClone(const char *Cmd) {
             }
         }
     }
-    if (errors || strlen(Cmd) == 0) return usage_lf_fdx_clone();
+    if (errors || strlen(Cmd) == 0) return usage_lf_fdxb_clone();
 
     verify_values(&national_code, &country_code, &extended, &is_animal);
 
@@ -448,7 +448,7 @@ static int CmdFdxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "               RFU 0");
 
     uint8_t *bits = calloc(128, sizeof(uint8_t));
-    if (getFDXBits(national_code, country_code, is_animal, has_extended, extended, bits) != PM3_SUCCESS) {
+    if (getFDXBBits(national_code, country_code, is_animal, has_extended, extended, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bits);
         return PM3_ESOFT;
@@ -473,11 +473,11 @@ static int CmdFdxClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdx read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdxb read`") " to verify");
     return res;
 }
 
-static int CmdFdxSim(const char *Cmd) {
+static int CmdFdxBSim(const char *Cmd) {
 
     uint32_t country_code = 0, extended = 0;
     uint64_t national_code = 0;
@@ -487,7 +487,7 @@ static int CmdFdxSim(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_lf_fdx_sim();
+                return usage_lf_fdxb_sim();
             case 'c': {
                 country_code = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
@@ -516,7 +516,7 @@ static int CmdFdxSim(const char *Cmd) {
             }
         }
     }
-    if (errors) return usage_lf_fdx_sim();
+    if (errors) return usage_lf_fdxb_sim();
 
     verify_values(&national_code, &country_code, &extended, &is_animal);
 
@@ -530,7 +530,7 @@ static int CmdFdxSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _GREEN_("%04u-%"PRIu64), country_code, national_code);
 
     uint8_t *bits = calloc(128, sizeof(uint8_t));
-    if (getFDXBits(national_code, country_code, is_animal, (extended > 0), extended, bits) != PM3_SUCCESS) {
+    if (getFDXBBits(national_code, country_code, is_animal, (extended > 0), extended, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bits);
         return PM3_ESOFT;
@@ -562,10 +562,10 @@ static int CmdFdxSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,     AlwaysAvailable, "this help"},
-    {"demod",   CmdFdxDemod, AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
-    {"read",    CmdFdxRead,  IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
-    {"clone",   CmdFdxClone, IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
-    {"sim",     CmdFdxSim,   IfPm3Lf,         "simulate Animal ID tag"},
+    {"demod",   CmdFdxBDemod, AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
+    {"read",    CmdFdxBRead,  IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
+    {"clone",   CmdFdxBClone, IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdFdxBSim,   IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -575,7 +575,7 @@ static int CmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdLFFdx(const char *Cmd) {
+int CmdLFFdxB(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
@@ -594,7 +594,7 @@ int detectFDXB(uint8_t *dest, size_t *size) {
     return (int)startIdx;
 }
 
-int getFDXBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits) {
+int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits) {
 
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
@@ -634,7 +634,7 @@ int getFDXBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal,
         raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
 
     init_table(CRC_11784);
-    uint16_t crc = crc16_fdx(raw, 8);
+    uint16_t crc = crc16_fdxb(raw, 8);
     num_to_bytebitsLSBF(crc >> 0, 8, bits + 83);
     num_to_bytebitsLSBF(crc >> 8, 8, bits + 92);
 

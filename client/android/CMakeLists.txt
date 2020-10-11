@@ -127,7 +127,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlfcotag.c
         ${PM3_ROOT}/client/src/cmdlfem4x.c
         ${PM3_ROOT}/client/src/cmdlfem4x50.c
-        ${PM3_ROOT}/client/src/cmdlffdx.c
+        ${PM3_ROOT}/client/src/cmdlffdxb.c
         ${PM3_ROOT}/client/src/cmdlfgallagher.c
         ${PM3_ROOT}/client/src/cmdlfguard.c
         ${PM3_ROOT}/client/src/cmdlfhid.c

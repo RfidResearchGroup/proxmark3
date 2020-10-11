@@ -6,15 +6,15 @@
 //-----------------------------------------------------------------------------
 // Low frequency fdx-b tag commands
 //-----------------------------------------------------------------------------
-#ifndef CMDLFFDX_H__
-#define CMDLFFDX_H__
+#ifndef CMDLFFDXB_H__
+#define CMDLFFDXB_H__
 
 #include "common.h"
 
-int CmdLFFdx(const char *Cmd);
+int CmdLFFdxB(const char *Cmd);
 int detectFDXB(uint8_t *dest, size_t *size);
-int demodFDX(bool verbose);
-int getFDXBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits);
+int demodFDXB(bool verbose);
+int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits);
 
 #endif
 

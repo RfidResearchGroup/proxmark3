@@ -18,7 +18,7 @@ desc = [[
  \     /                                                       \     /
   `---'                                                         `---'
 
-*SUPPORTED TAGS: pyramid, awid, fdx, jablotron, noralsy, presco, visa2000, 14a, hid
+*SUPPORTED TAGS: pyramid, awid, fdxb, jablotron, noralsy, presco, visa2000, 14a, hid
 
 This script uses the Proxmark3 implementations of simulation to bruteforce given ranges of id.
 It uses both LF and HF simulations.
@@ -42,7 +42,7 @@ arguments = [[
     -r       *see below           RFID Tag: the RFID tag to emulate
              pyramid
              awid
-             fdx
+             fdxb
              jablotron
              noralsy
              presco
@@ -180,8 +180,8 @@ local function main(args)
         consolecommand = 'lf awid sim'
         rfidtagname = 'AWID'
         facilityrequired = 1
-    elseif rfidtag == 'fdx' then          -- I'm not sure why you would need to bruteforce this ¯\_(ツ)_/¯
-        consolecommand = 'lf fdx sim'
+    elseif rfidtag == 'fdxb' then         -- I'm not sure why you would need to bruteforce this ¯\_(ツ)_/¯
+        consolecommand = 'lf fdxb sim'
         rfidtagname = 'FDX-B'
         facilityrequired = 1
     elseif rfidtag == 'jablotron' then

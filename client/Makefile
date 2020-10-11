@@ -443,7 +443,7 @@ SRCS =  aidsearch.c \
 		cmdlfcotag.c \
 		cmdlfem4x.c \
 		cmdlfem4x50.c \
-		cmdlffdx.c \
+		cmdlffdxb.c \
 		cmdlfguard.c \
 		cmdlfgallagher.c \
 		cmdlfhid.c \

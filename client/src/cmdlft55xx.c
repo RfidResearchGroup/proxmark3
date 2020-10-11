@@ -383,7 +383,7 @@ static int usage_t55xx_clonehelp(void) {
 // todo:  implement restore
 //    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x05_write"));
 //    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x50_write"));
-    PrintAndLogEx(NORMAL, _GREEN_("lf fdx clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf fdxb clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gallagher clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gproxii clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf hid clone"));
