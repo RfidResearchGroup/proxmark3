@@ -1398,8 +1398,28 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     uint8_t chipType = (block0 >> 1) & 0xF;
     uint8_t cap = (block0 >> 5) & 3;
-    uint16_t custCode = (block0 >> 9) & 0x3FF;
+    uint16_t custCode = (block0 >> 9) & 0x3FF;    
 
+    PrintAndLogEx(INFO, "   block0: %X", block0);
+    PrintAndLogEx(INFO, " chiptype: %X", chipType);
+    PrintAndLogEx(INFO, "capacitor: %X", cap);
+    PrintAndLogEx(INFO, " custcode: %X", custCode);
+    
+    /* bits
+    //  0,   rfu
+    //  1,2,3,4  chip type
+    //  5,6  resonant cap
+    //  7,8, rfu
+    //  9 - 18 customer code
+    //  19,  rfu
+    
+       001000000000
+    // 00100000000001111000
+    //                1100
+    //             011
+    // 00100000000
+    */
+    
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
 
     char ctstr[50];
@@ -1408,10 +1428,10 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
         case 9:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4305");
             break;
-        case 2:
+        case 4:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4469");
             break;
-        case 1:
+        case 8:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");
             break;
         //add more here when known
@@ -1523,8 +1543,8 @@ static int usage_4x05_chk(void) {
     PrintAndLogEx(NORMAL, "     e <EM4100>   - will try the calculated password from some cloners based on EM4100 ID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk chk f t55xx_default_pwds"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk chk e aa11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk f t55xx_default_pwds"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf 4x05_chk e aa11223344"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -1539,9 +1559,10 @@ static bool is_cancelled(void) {
 static int CmdEM4x05Chk(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0};
+    snprintf(filename, sizeof(filename), "t55xx_default_pwds");
+
     uint8_t *keyBlock = NULL;
-    bool found = false, use_pwd_file = false;
-    bool use_card_pwd = false;
+    bool found = false, use_card_pwd = false;
     bool errors = false;
     uint8_t cmdp = 0;
     uint32_t card_pwd = 0x00;
@@ -1556,7 +1577,6 @@ static int CmdEM4x05Chk(const char *Cmd) {
                     PrintAndLogEx(ERR, "Error, no filename after 'f' was found");
                     errors = true;
                 }
-                use_pwd_file = true;
                 cmdp += 2;
                 break;
             case 'e':
@@ -1592,7 +1612,7 @@ static int CmdEM4x05Chk(const char *Cmd) {
         }
     }
 
-    if (found == false && use_pwd_file) {
+    if (found == false) {
         word = 0;
         uint32_t keycount = 0;
 
