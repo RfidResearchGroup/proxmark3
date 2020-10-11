@@ -1065,15 +1065,15 @@ static int CmdEM4x05Dump(const char *Cmd) {
     }
     // Print blocks 14 and 15
     // Both lock bits are protected with bit idx 14 (special case)
+    addr = 14;
     if (status14 == PM3_SUCCESS) {
-        addr = 14;
         lockbit = (lock_bits >> addr) & 1;
         PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? "" : _GREEN_("active"));
     } else {
         PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status14 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
     }
+    addr = 15;
     if (status15 == PM3_SUCCESS) {
-        addr = 15;
         lockbit = (lock_bits >> 14) & 1; // beware lock bit of word15 is pr14
         PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? _GREEN_("active") : "");
     } else {
