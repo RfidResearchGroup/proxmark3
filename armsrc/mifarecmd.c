@@ -2706,7 +2706,7 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
     if (DBGLEVEL >= DBG_DEBUG) DbpString("Preparing OTP tear-off");
 
     if (tearOffTime > 43000)
-        tearOffTime == 43000;
+        tearOffTime = 43000;
 
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
