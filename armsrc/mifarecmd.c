@@ -2704,7 +2704,7 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
     memcpy(data_testwrite, datain + 4, 4);
 // optional authentication before?
 
-    if (DBGLEVEL >= DBG_ERROR) DbpString("Preparing OTP tear-off");
+    if (DBGLEVEL >= DBG_DEBUG) DbpString("Preparing OTP tear-off");
 
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -2720,7 +2720,7 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
     MifareUWriteBlock(blockNo, 0, data_fullwrite);
 
     AddCrc14A(cmd, sizeof(cmd) - 2);
-    if (DBGLEVEL >= DBG_ERROR) DbpString("Transmitting");
+
     // anticollision / select card
     if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
@@ -2733,10 +2733,9 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
     // Wait before cutting power.  aka tear-off
     LED_D_ON();
     WaitUS(tearOffTime);
+    if (DBGLEVEL >= DBG_ERROR) Dbprintf(_YELLOW_("OTP tear-off triggered!"));
     switch_off();
 
     reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_SUCCESS, NULL, 0);
     StopTicks();
-
-    if (DBGLEVEL >= DBG_ERROR) DbpString("Done");
 }

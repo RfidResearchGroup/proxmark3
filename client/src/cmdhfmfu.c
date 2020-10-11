@@ -2883,50 +2883,71 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
     if (errors) return usage_hf_mfu_otp_tearoff();
 
-    PrintAndLogEx(INFO, "Starting TearOff test - Selected Block no: %u", blockNoUint);
+    PrintAndLogEx(INFO, "Starting Tear-off test");
+    PrintAndLogEx(INFO, "Target block no: %u", blockNoUint);
 
 
+    uint8_t isOK;
+    bool got_pre = false, got_post = false;
+    uint8_t pre[4] = {0};
+    uint8_t post[4] = {0};
     uint32_t actualTime = startTime;
 
     while (actualTime <= (timeLimit - interval)) {
-        PrintAndLogEx(INFO, "Using tear-off at: %" PRIu32 " us", actualTime);
-        PrintAndLogEx(INFO, "Reading block BEFORE attack");
+        PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actualTime);
 
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
+        got_pre = false;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK = resp.oldarg[0] & 0xff;
+            isOK = resp.oldarg[0] & 0xFF;
             if (isOK) {
-                uint8_t *d = resp.data.asBytes;
-                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
-                PrintAndLogEx(NORMAL, "-----------------------------");
-                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
+                memcpy(pre, resp.data.asBytes, sizeof(pre));
+                got_pre = true;
             }
         }
 
-        PrintAndLogEx(INFO, ".....");
         clearCommandBuffer();
-
         SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
-        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
+        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 2000)) {
             PrintAndLogEx(WARNING, "Failed");
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "Reading block AFTER attack");
-
+        got_post = false;
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK = resp.oldarg[0] & 0xff;
+            isOK = resp.oldarg[0] & 0xFF;
             if (isOK) {
-                uint8_t *d = resp.data.asBytes;
-                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
-                PrintAndLogEx(NORMAL, "-----------------------------");
-                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
-            }
+                memcpy(post, resp.data.asBytes, sizeof(post));
+                got_post = true;
+           }
+        }
+
+        if (got_pre && got_post) {
+            
+            char post_res[30] = {0};
+            if (memcmp(pre, post, sizeof(pre)) == 0)
+                snprintf(post_res, sizeof(post_res) - 1, "%s", sprint_hex_inrow(post, sizeof(post)));
+            else
+                snprintf(post_res, sizeof(post_res) - 1, _CYAN_("%s"), sprint_hex_inrow(post, sizeof(post)));
+                
+            
+            PrintAndLogEx(INFO, "Result   %02d/0x%02X |  %s vs %s"
+                    , blockNoUint
+                    , blockNoUint
+                    , sprint_hex_inrow(pre, sizeof(pre))
+                    , post_res
+                    );
+            
+        } else {
+            if (got_pre == false)
+                PrintAndLogEx(FAILED, "Failed to read block BEFORE");
+            if (got_post == false)
+                PrintAndLogEx(FAILED, "Failed to read block AFTER");
         }
 
         /*  TEMPORALLY DISABLED
