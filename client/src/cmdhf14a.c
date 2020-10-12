@@ -1362,7 +1362,7 @@ static int waitCmd(uint8_t iSelect, uint32_t timeout) {
 
         uint8_t *data = resp.data.asBytes;
 
-        if (len >= 3) {
+        if (iSelect == 0 && len >= 3) {
             bool crc = check_crc(CRC_14443_A, data, len);
 
             PrintAndLogEx(SUCCESS, "%s[%02X %02X] %s",
