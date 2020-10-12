@@ -3028,10 +3028,10 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
     PrintAndLogEx(INFO, "----------------------------------------------------");
     if (phase_clear > - 1) {
-        PrintAndLogEx(INFO, "phase 1 (erase eeprom) could be " _YELLOW_("%d") " us", phase_clear);
+        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_clear);
     }
     if (phase_newwr > - 1) {
-        PrintAndLogEx(INFO, "phase 2 (new write) could be " _YELLOW_("%d") " us", phase_newwr);
+        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_newwr);
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
