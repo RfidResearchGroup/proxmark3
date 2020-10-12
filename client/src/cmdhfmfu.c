@@ -3105,7 +3105,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             break;
         }
 
-        PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actual_time);
+        PrintAndLogEx(INPLACE, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actual_time);
 
         if (ul_select(&card) == 0)
             return PM3_ESOFT;
@@ -3130,7 +3130,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         PacketResponseNG resp;
         SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
         if (!WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000)) {
-            PrintAndLogEx(WARNING, "Failed");
+            PrintAndLogEx(WARNING, "\ntear off command failed");
             return PM3_ESOFT;
         }
 
@@ -3153,17 +3153,22 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
 
             if (memcmp(pre, post, sizeof(pre)) == 0) {
-                PrintAndLogEx(INFO, "Current %d - %s", cnt_no, poststr);
+//                PrintAndLogEx(INFO, "Current %d - %s", cnt_no, poststr);
             } else {
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %d  %s vs " _RED_("%s")
                               , cnt_no, prestr, poststr);
             }
 
         } else {
-            if (got_pre == false)
+            if (got_pre == false) {
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "Failed to read Counter BEFORE");
-            if (got_post == false)
+            }
+            if (got_post == false) {
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "Failed to read Counter AFTER");
+            }
         }
 
         actual_time += interval;
