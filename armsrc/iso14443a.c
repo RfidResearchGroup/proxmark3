@@ -2929,10 +2929,15 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 ReaderTransmit(cmd, len, NULL);                                         // 8 bits, odd parity
             }
         }
-        arg0 = ReaderReceive(buf, par);
-        FpgaDisableTracing();
 
-        reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+            FpgaDisableTracing();
+            reply_old(CMD_ACK, 0, 0, 0, NULL, 0);
+        } else {
+            arg0 = ReaderReceive(buf, par);
+            FpgaDisableTracing();
+            reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+        }
     }
 
     if ((param & ISO14A_REQUEST_TRIGGER))
