@@ -1473,6 +1473,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareU_Otp_Tearoff(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
+        case CMD_HF_MFU_COUNTER_TEAROFF: {            
+            struct p {
+                uint8_t counter;
+                uint32_t tearoff_time;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;             
+            MifareU_Counter_Tearoff(payload->counter, payload->tearoff_time);
+            break;
+        }
         case CMD_HF_MIFARE_STATIC_NONCE: {
             MifareHasStaticNonce();
             break;

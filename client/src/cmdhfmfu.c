@@ -878,7 +878,7 @@ static int ulev1_print_counters(void) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counters"));
     uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
-    uint16_t len = 0;
+    int len = 0;
     for (uint8_t i = 0; i < 3; ++i) {
         ulev1_readTearing(i, tear, sizeof(tear));
         len = ulev1_readCounter(i, counter, sizeof(counter));
@@ -2832,10 +2832,12 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 return usage_hf_mfu_otp_tearoff();
             case 'b':
                 blockNoUint = param_get8(Cmd, cmdp + 1);
+/*
                 if (blockNoUint < 2) {
                     PrintAndLogEx(WARNING, "Wrong block number");
                     errors = true;
                 }
+*/
                 cmdp += 2;
                 break;
             case 'i':
@@ -3037,6 +3039,141 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu countertear",
+                  "Tear-off test against a Ev1 counter",
+                  "hf mfu countertear\n"
+                  "hf mfu countertear -s 200 -l 2500      -> target counter 0, start delay 200\n"
+                  "hf mfu countertear -i 2 -s 200 -l 400  -> target counter 0, start delay 200\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("c", "cnt", "<0,1,2>", "Target this EV1 counter (0,1,2)"),
+        arg_int0("i", "inc", "<dec>", "time interval to increase in each iteration - default 10 us"),
+        arg_int0("l", "limit", "<dec>", "test upper limit time - default 3000 us"),
+        arg_int0("s", "start", "<dec>", "test start time - default 0 us"),        
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int counter = arg_get_int_def(ctx, 1, 0);
+    int interval = arg_get_int_def(ctx, 2, 10);
+    int time_limit = arg_get_int_def(ctx, 3, 3000);
+    int start_time = arg_get_int_def(ctx, 4, 0);
+    CLIParserFree(ctx);
+    
+    // Validations
+    if (start_time > (time_limit - interval)) {
+        PrintAndLogEx(WARNING, "Wrong start time number");
+        return PM3_EINVARG;
+    }
+    if (time_limit < interval) {
+        PrintAndLogEx(WARNING, "Wrong time limit number");
+        return PM3_EINVARG;
+    }
+    if (time_limit > 43000) {
+        PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+        return PM3_EINVARG;
+    }
+    uint8_t cnt_no = 0;
+    if (counter < 0 || counter > 2) {
+        PrintAndLogEx(WARNING, "Counter must 0, 1 or 2");
+        return PM3_EINVARG;
+    }
+    cnt_no = (uint8_t)counter;
+    
+
+    PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Ev1 Counter Tear off") " ---------------------");
+    PrintAndLogEx(INFO, "Starting counter tear-off test");
+    PrintAndLogEx(INFO, "Target counter no: %u", counter);
+    PrintAndLogEx(INFO, "----------------------------------------------------");
+
+    bool got_pre = false, got_post = false;
+    uint8_t pre[3] = {0};
+    uint8_t post[3] = {0};
+    uint32_t actual_time = start_time;
+
+    iso14a_card_select_t card;
+
+    while (actual_time <= (time_limit - interval)) {
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(INFO, "\naborted via keyboard!\n");
+            break;
+        }
+
+        PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actual_time);
+
+        if (ul_select(&card) == 0)
+            return PM3_ESOFT;
+
+        got_pre = false;        
+        uint8_t cntresp[3] = {0, 0, 0};
+        int rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp));
+        if ( rlen == sizeof(cntresp) ) {
+            memcpy(pre, cntresp, sizeof(pre));
+            got_pre = true;
+        }
+        DropField();
+
+        struct p {
+            uint8_t counter;
+            uint32_t tearoff_time;
+        } PACKED payload;
+        payload.counter = cnt_no;
+        payload.tearoff_time = actual_time;
+
+        clearCommandBuffer();
+        PacketResponseNG resp;
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+        if (!WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000)) {
+            PrintAndLogEx(WARNING, "Failed");
+            return PM3_ESOFT;
+        }
+
+        got_post = false;
+        if (ul_select(&card) == 0)
+            return PM3_ESOFT;
+
+        rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp));
+        if ( rlen == sizeof(cntresp) ) {
+            memcpy(post, cntresp, sizeof(post));
+            got_post = true;
+        }
+        DropField();
+
+        if (got_pre && got_post) {
+
+            char prestr[20] = {0};
+            snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
+            char poststr[20] = {0};
+            snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
+
+            if (memcmp(pre, post, sizeof(pre)) == 0) {
+                PrintAndLogEx(INFO, "Current %d - %s", cnt_no, poststr);
+            } else {
+                PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %d  %s vs " _RED_("%s")
+                              , cnt_no, prestr, poststr);
+            }
+
+        } else {
+            if (got_pre == false)
+                PrintAndLogEx(FAILED, "Failed to read Counter BEFORE");
+            if (got_post == false)
+                PrintAndLogEx(FAILED, "Failed to read Counter AFTER");
+        }
+
+        actual_time += interval;
+    }
+    DropField();
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+
 static int CmdHF14MfuNDEF(const char *Cmd) {
 
     int keylen;
@@ -3167,6 +3304,7 @@ static command_t CommandTable[] = {
     {"gen",     CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3des mifare diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
+    {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1 Counter bits"},        
     {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };

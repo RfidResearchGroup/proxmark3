@@ -650,6 +650,9 @@ typedef struct {
 
 // MFU OTP TearOff
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
+// MFU_Ev1 Counter TearOff
+#define CMD_HF_MFU_COUNTER_TEAROFF                                        0x0741
+
 
 #define CMD_HF_SNIFF                                                      0x0800
 #define CMD_HF_PLOT                                                       0x0801
