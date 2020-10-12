@@ -36,6 +36,7 @@
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
 #include "cmdlfcotag.h"     // for COTAG meny
+#include "cmdlfdestron.h"   // for FDX-A FECAVA Destron menu
 #include "cmdlffdxb.h"      // for FDX-B menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 #include "cmdlfguard.h"     // for gproxii menu
@@ -1447,6 +1448,7 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (demodVisa2k(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") " found!"); goto out;}
+    if (demodDestron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-A FECAVA Destron ID") " found!"); goto out;} // to do before HID
     if (demodHID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!"); goto out;}
     if (demodAWID(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("AWID ID") " found!"); goto out;}
     if (demodIOProx(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("IO Prox ID") " found!"); goto out;}
@@ -1526,6 +1528,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,            AlwaysAvailable, "-------------- " _CYAN_("Direct") " --------------"},
     {"awid",        CmdLFAWID,          AlwaysAvailable, "{ AWID RFIDs...              }"},
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
+    {"destron",     CmdLFDestron,       AlwaysAvailable, "{ FDX-A Destron RFIDs...     }"},
     {"em",          CmdLFEM4X,          AlwaysAvailable, "{ EM4X CHIPs & RFIDs...      }"},
     {"fdxb",        CmdLFFdxB,          AlwaysAvailable, "{ FDX-B RFIDs...             }"},
     {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
