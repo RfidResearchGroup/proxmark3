@@ -245,22 +245,26 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
 #ifdef HAVE_READLINE
     session.history_path = NULL;
-    if (searchHomeFilePath(&session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "No history will be recorded");
-        session.history_path = NULL;
+    if (session.incognito) {
+        PrintAndLogEx(INFO, "No history will be recorded");
     } else {
+        if (searchHomeFilePath(&session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "No history will be recorded");
+            session.history_path = NULL;
+        } else {
 
 #  if defined(_WIN32)
-//        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
+            //        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
 #  else
-        struct sigaction action;
-        memset(&action, 0, sizeof(action));
-        action.sa_handler = &terminate_handler;
-        sigaction(SIGINT, &action, &old_action);
+            struct sigaction action;
+            memset(&action, 0, sizeof(action));
+            action.sa_handler = &terminate_handler;
+            sigaction(SIGINT, &action, &old_action);
 #  endif
-        rl_catch_signals = 1;
-        rl_set_signals();
-        read_history(session.history_path);
+            rl_catch_signals = 1;
+            rl_set_signals();
+            read_history(session.history_path);
+        }
     }
 #endif
 
@@ -565,6 +569,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
         PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
+        PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
         PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
         PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
         PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash or --flash-info)");
@@ -698,6 +703,7 @@ int main(int argc, char *argv[]) {
 
     session.pm3_present = false;
     session.help_dump_mode = false;
+    session.incognito = false;
     bool waitCOMPort = false;
     bool addLuaExec = false;
     bool stayInCommandLoop = false;
@@ -903,6 +909,12 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // do not use history nor log files
+        if (strcmp(argv[i], "--incognito") == 0) {
+            session.incognito = true;
+            continue;
+        }
+
         // go to flash mode
         if (strcmp(argv[i], "--flash") == 0) {
             flash_mode = true;
@@ -1008,7 +1020,7 @@ int main(int argc, char *argv[]) {
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if (!session.preferences_loaded) {
+    if ((!session.preferences_loaded) && (!session.incognito)) {
         PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         session.preferences_loaded = true;

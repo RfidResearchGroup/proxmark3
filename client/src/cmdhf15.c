@@ -60,9 +60,9 @@ typedef struct {
     uint64_t uid;
     int mask; // how many MSB bits used
     const char *desc;
-} productName;
+} productName_t;
 
-const productName uidmapping[] = {
+const productName_t uidmapping[] = {
 
     // UID, #significant Bits, "Vendor(+Product)"
     { 0xE001000000000000LL, 16, "Motorola UK" },
@@ -1342,9 +1342,13 @@ static int CmdHF15Dump(const char *Cmd) {
 }
 
 static int CmdHF15List(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("15");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 15");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHF15Raw(const char *Cmd) {

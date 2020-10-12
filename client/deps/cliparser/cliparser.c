@@ -70,7 +70,7 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
         PrintAndLogEx(NORMAL, "\n"_SectionTagColor_("usage:"));
         PrintAndLogEx(NORMAL, "    "_CommandColor_("%s")NOLF, ctx->programName);
         arg_print_syntax(stdout, ctx->argtable, "\n\n");
-        
+
         PrintAndLogEx(NORMAL, _SectionTagColor_("options:"));
 
         arg_print_glossary(stdout, ctx->argtable, "    "_ArgColor_("%-30s")" "_ArgHelpColor_("%s")"\n");

@@ -752,26 +752,26 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
 // The soft decision on the bit uses an estimate of just the
 // quadrant of the reference angle, not the exact angle.
 #define MAKE_SOFT_DECISION() { \
-		if(Demod.sumI > 0) { \
-			v = ci; \
-		} else { \
-			v = -ci; \
-		} \
-		if(Demod.sumQ > 0) { \
-			v += cq; \
-		} else { \
-			v -= cq; \
-		} \
-	}
+        if(Demod.sumI > 0) { \
+            v = ci; \
+        } else { \
+            v = -ci; \
+        } \
+        if(Demod.sumQ > 0) { \
+            v += cq; \
+        } else { \
+            v -= cq; \
+        } \
+    }
 
-#define SUBCARRIER_DETECT_THRESHOLD	 8
+#define SUBCARRIER_DETECT_THRESHOLD  8
 // Subcarrier amplitude v = sqrt(ci^2 + cq^2), approximated here by max(abs(ci),abs(cq)) + 1/2*min(abs(ci),abs(cq)))
 #define AMPLITUDE(ci,cq) (MAX(ABS(ci),ABS(cq)) + (MIN(ABS(ci),ABS(cq))/2))
 
     switch (Demod.state) {
 
         case DEMOD_UNSYNCD: {
-            if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {	// subcarrier detected
+            if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {  // subcarrier detected
                 Demod.state = DEMOD_PHASE_REF_TRAINING;
                 Demod.sumI = ci;
                 Demod.sumQ = cq;
@@ -783,7 +783,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             // While we get a constant signal
             if (AMPLITUDE(ci, cq) > SUBCARRIER_DETECT_THRESHOLD) {
                 if (((ABS(Demod.sumI) > ABS(Demod.sumQ)) && (((ci > 0) && (Demod.sumI > 0)) || ((ci < 0) && (Demod.sumI < 0)))) ||  // signal closer to horizontal, polarity check based on on I
-                    ((ABS(Demod.sumI) <= ABS(Demod.sumQ)) && (((cq > 0) && (Demod.sumQ > 0)) || ((cq < 0) && (Demod.sumQ < 0))))) { // signal closer to vertical, polarity check based on on Q
+                        ((ABS(Demod.sumI) <= ABS(Demod.sumQ)) && (((cq > 0) && (Demod.sumQ > 0)) || ((cq < 0) && (Demod.sumQ < 0))))) { // signal closer to vertical, polarity check based on on Q
 
                     if (Demod.posCount < 10) {  // refine signal approximation during first 10 samples
                         Demod.sumI += ci;
@@ -799,7 +799,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                     } else {
                         // at this point it can be start of 14b' data or start of 14b SOF
                         MAKE_SOFT_DECISION();
-                        Demod.posCount = 1;				// this was the first half
+                        Demod.posCount = 1;             // this was the first half
                         Demod.thisBit = v;
                         Demod.shiftReg = 0;
                         Demod.state = DEMOD_RECEIVING_DATA;
@@ -815,7 +815,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             Demod.posCount++;
             MAKE_SOFT_DECISION();
             if (v > 0) {
-                if (Demod.posCount > 3 * 2) { 		// max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
+                if (Demod.posCount > 3 * 2) {       // max 19us between characters = 16 1/fs, max 3 etu after low phase of SOF = 24 1/fs
                     LED_C_OFF();
                     if (Demod.bitCount == 0 && Demod.len == 0) { // received SOF only, this is valid for iClass/Picopass
                         return true;
@@ -823,8 +823,8 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                         Demod.state = DEMOD_UNSYNCD;
                     }
                 }
-            } else {							// start bit detected
-                Demod.posCount = 1;				// this was the first half
+            } else {                            // start bit detected
+                Demod.posCount = 1;             // this was the first half
                 Demod.thisBit = v;
                 Demod.shiftReg = 0;
                 Demod.state = DEMOD_RECEIVING_DATA;
@@ -857,14 +857,14 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
 
             MAKE_SOFT_DECISION();
 
-            if (Demod.posCount == 0) { 			// first half of bit
+            if (Demod.posCount == 0) {          // first half of bit
                 Demod.thisBit = v;
                 Demod.posCount = 1;
-            } else {							// second half of bit
+            } else {                            // second half of bit
                 Demod.thisBit += v;
 
                 Demod.shiftReg >>= 1;
-                if (Demod.thisBit > 0) {	// logic '1'
+                if (Demod.thisBit > 0) {    // logic '1'
                     Demod.shiftReg |= 0x200;
                 }
 
@@ -927,12 +927,12 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  */
 static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeout, uint32_t *eof_time) {
-    
+
     int samples = 0, ret = 0;
 
     // Set up the demodulator for tag -> reader responses.
     Demod14bInit(response, max_len);
-    
+
     // Setup and start DMA.
     //FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
@@ -996,7 +996,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, int timeo
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
 
-            *eof_time = dma_start_time + (samples ) - DELAY_TAG_TO_ARM; // end of EOF
+            *eof_time = dma_start_time + (samples) - DELAY_TAG_TO_ARM;  // end of EOF
 
             if (Demod.len > Demod.max_len) {
                 ret = -2; // overflow
@@ -1044,7 +1044,7 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
     if (GetCountSspClk() > *start_time) { // we may miss the intended time
         *start_time = (GetCountSspClk() + 32) & 0xfffffff0; // next possible time
     }
-    
+
     // wait
     while (GetCountSspClk() < *start_time);
 
@@ -1068,7 +1068,7 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
     LED_B_OFF();
 
     *start_time += DELAY_ARM_TO_TAG;
-    
+
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) {};
 }
@@ -1093,7 +1093,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     *
     *   QUESTION:  how long is a 1 or 0 in pulses in the xcorr_848 mode?
     *              1 "stuffbit" = 1ETU (9us)
-    * 
+    *
     *   TR2  -  After the PICC response, the PCD is required to wait the Frame Delay Time (TR2)
                 before transmission of the next command. The minimum frame delay time required for
                 all commands is 14 ETUs
@@ -1101,7 +1101,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     */
     int i;
     tosend_reset();
-    
+
     // Send SOF
     // 10-11 ETUs of ZERO
     for (i = 0; i < 11; i++) {
@@ -1185,7 +1185,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         real_cmd[0] = 0xA2; // r-block + ACK
         real_cmd[0] |= iso14b_pcb_blocknum;
     }
-    
+
     AddCrc14B(real_cmd, msg_len + 1);
 
     // send
@@ -1269,7 +1269,7 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     AddCrc14B(cmdLSBUID, 1);
 
     uint8_t r[8];
-    
+
     uint32_t start_time = 0;
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(cmdINIT, sizeof(cmdINIT), &start_time, &eof_time);
@@ -1842,10 +1842,10 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         iso14443b_setup();
     }
 
-    if ((param & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) { 
+    if ((param & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) {
         iso14b_set_timeout(timeout);
     }
-    
+
     if ((param & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
         clear_trace();
     }
@@ -1854,7 +1854,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     int status;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
     iso14b_card_select_t card;
-    memset((void*)&card, 0x00, sizeof(card));
+    memset((void *)&card, 0x00, sizeof(card));
 
     if ((param & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
         status = iso14443b_select_card(&card);
@@ -1877,7 +1877,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&cts, sendlen);
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
-    }    
+    }
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
         uint8_t res;

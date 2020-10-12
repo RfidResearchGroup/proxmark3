@@ -51,7 +51,7 @@ class Plot: public QWidget {
   protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
-    void Zoom(double factor, int refX);
+    void Zoom(double factor, uint32_t refX);
     void Move(int offset);
     void Trim(void);
     void wheelEvent(QWheelEvent *event);

@@ -309,6 +309,7 @@ ifeq ($(QT_FOUND),1)
     endif
 endif
 
+LDFLAGS ?= $(DEFLDFLAGS)
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
     PM3LDFLAGS += -framework Foundation -framework AppKit
@@ -442,7 +443,7 @@ SRCS =  aidsearch.c \
 		cmdlfcotag.c \
 		cmdlfem4x.c \
 		cmdlfem4x50.c \
-		cmdlffdx.c \
+		cmdlffdxb.c \
 		cmdlfguard.c \
 		cmdlfgallagher.c \
 		cmdlfhid.c \

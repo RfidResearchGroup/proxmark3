@@ -1002,6 +1002,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
             return PM3_ESOFT;
 
         strcpy(keyFilename, fptr);
+        free(fptr);
     }
 
     if ((f = fopen(keyFilename, "rb")) == NULL) {
@@ -1163,6 +1164,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
             return PM3_ESOFT;
 
         strcpy(dataFilename, fptr);
+        free(fptr);
     }
 
     uint16_t bytes = 16 * (FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1));
@@ -1226,6 +1228,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             return 1;
 
         strcpy(keyFilename, fptr);
+        free(fptr);
     }
 
     if ((fkeys = fopen(keyFilename, "rb")) == NULL) {
@@ -1260,6 +1263,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             return 1;
 
         strcpy(dataFilename, fptr);
+        free(fptr);
     }
 
     if ((fdump = fopen(dataFilename, "rb")) == NULL) {
@@ -1570,8 +1574,10 @@ jumptoend:
             if (createMfcKeyDump(fptr, SectorsCnt, e_sector) != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Failed to save keys to file");
                 free(e_sector);
+                free(fptr);
                 return PM3_ESOFT;
             }
+            free(fptr);
         }
         free(e_sector);
     }
@@ -1775,8 +1781,10 @@ jumptoend:
         if (createMfcKeyDump(fptr, SectorsCnt, e_sector) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to save keys to file");
             free(e_sector);
+            free(fptr);
             return PM3_ESOFT;
         }
+        free(fptr);
     }
     free(e_sector);
 
@@ -2013,7 +2021,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint8_t block[16] = {0x00};
     uint8_t *dump;
     int bytes;
-    char *fnameptr = filename;
     // Settings
     bool slow = false;
     bool legacy_mfchk = false;
@@ -2136,7 +2143,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // read uid to generate a filename for the key file
     char *fptr = GenerateFilename("hf-mf-", "-key.bin");
 
-
     // check if tag doesn't have static nonce
     has_staticnonce = detect_classic_static_nonce();
 
@@ -2146,6 +2152,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         if (prng_type < 0) {
             PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error");
             free(e_sector);
+            free(fptr);
             return prng_type;
         }
     }
@@ -2259,6 +2266,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
         if (keyBlock == NULL) {
             free(e_sector);
+            free(fptr);
             return PM3_EMALLOC;
         }
 
@@ -2403,6 +2411,7 @@ noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
             free(keyBlock);
             free(e_sector);
+            free(fptr);
             return PM3_ESOFT;
         }
     }
@@ -2516,11 +2525,13 @@ tryNested:
                             case PM3_ETIMEOUT: {
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
                                 free(e_sector);
+                                free(fptr);
                                 return PM3_ESOFT;
                             }
                             case PM3_EOPABORTED: {
                                 PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
                                 free(e_sector);
+                                free(fptr);
                                 return PM3_EOPABORTED;
                             }
                             case PM3_EFAILED: {
@@ -2551,6 +2562,7 @@ tryNested:
                             default: {
                                 PrintAndLogEx(ERR, "unknown Error.\n");
                                 free(e_sector);
+                                free(fptr);
                                 return PM3_ESOFT;
                             }
                         }
@@ -2582,6 +2594,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                 }
                             }
                             free(e_sector);
+                            free(fptr);
                             return PM3_ESOFT;
                         }
 
@@ -2606,11 +2619,13 @@ tryStaticnested:
                             case PM3_ETIMEOUT: {
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
                                 free(e_sector);
+                                free(fptr);
                                 return PM3_ESOFT;
                             }
                             case PM3_EOPABORTED: {
                                 PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
                                 free(e_sector);
+                                free(fptr);
                                 return PM3_EOPABORTED;
                             }
                             case PM3_SUCCESS: {
@@ -2676,6 +2691,7 @@ all_found:
     if (!dump) {
         PrintAndLogEx(ERR, "Fail, cannot allocate memory");
         free(e_sector);
+        free(fptr);
         return PM3_EMALLOC;
     }
     memset(dump, 0, bytes);
@@ -2685,16 +2701,19 @@ all_found:
         PrintAndLogEx(ERR, "Fail, transfer from device time-out");
         free(e_sector);
         free(dump);
+        free(fptr);
         return PM3_ETIMEOUT;
     }
 
-    fnameptr = GenerateFilename("hf-mf-", "-dump");
+    char *fnameptr = GenerateFilename("hf-mf-", "-dump");
     if (fnameptr == NULL) {
         free(dump);
         free(e_sector);
+        free(fptr);
         return PM3_ESOFT;
     }
     strcpy(filename, fnameptr);
+    free(fnameptr);
 
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
@@ -2706,6 +2725,7 @@ all_found:
 
     free(dump);
     free(e_sector);
+    free(fptr);
     return PM3_SUCCESS;
 }
 
@@ -2982,6 +3002,7 @@ out:
             if (createMfcKeyDump(fptr, sectorsCnt, e_sector) != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Failed to save keys to file");
             }
+            free(fptr);
         }
     }
 
@@ -3285,6 +3306,7 @@ out:
         if (createMfcKeyDump(fptr, SectorsCnt, e_sector) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to save keys to file");
         }
+        free(fptr);
     }
 
     free(keyBlock);
@@ -4040,7 +4062,6 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
         char *fptr = filename;
         fptr += snprintf(fptr, sizeof(filename), "hf-mf-");
         FillFileNameByUID(fptr + strlen(fptr), uid, "-key", sizeof(uid));
-
         createMfcKeyDump(filename, sectors_cnt, e_sector);
     }
 
@@ -4732,6 +4753,7 @@ static int CmdHF14AMfice(const char *Cmd) {
         if (fptr == NULL)
             return PM3_EFILE;
         strcpy(filename, fptr);
+        free(fptr);
     }
 
     PrintAndLogEx(NORMAL, "Collecting "_YELLOW_("%u")" nonces \n", limit);
@@ -5174,8 +5196,13 @@ static int CmdHFMFPersonalize(const char *cmd) {
 }
 
 static int CmdHF14AMfList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return CmdTraceList("mf");
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t mf");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHf14AGen3UID(const char *Cmd) {

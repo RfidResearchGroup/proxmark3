@@ -46,9 +46,10 @@ Reverse permute iCLASS master key
 ```
 Options
 ---
-r          reverse permuted key
+-r  --reverse      : reverse permuted key
+    --key <bytes>  : input key
 
-pm3 --> hf iclass permute r 3F90EBF0910F7B6F
+pm3 --> hf iclass permute --reverse --key 3F90EBF0910F7B6F
 ```
 
 iCLASS Reader
@@ -369,12 +370,14 @@ pm3 --> lf hid demod
 Simulate Prox card
 ```
 
-pm3 --> lf hid sim 200670012d
+pm3 --> lf hid sim -r 200670012d
+pm3 --> lf hid sim -w H10301 --fc 10 --cn 1337
 ```
 
 Clone Prox to T5577 card
 ```
-pm3 --> lf hid clone 200670012d
+pm3 --> lf hid clone -r 200670012d
+pm3 --> lf hid clone -w H10301 --fc 10 --cn 1337
 ```
 
 Brute force HID reader
@@ -538,12 +541,12 @@ pm3 --> data samples <size>
 
 Save samples to file
 ```
-pm3 --> data save <filename>
+pm3 --> data save -f <filename>
 ```
 
 Load samples from file
 ```
-pm3 --> data load <filename>
+pm3 --> data load -f <filename>
 ```
 
 ## Lua Scripts

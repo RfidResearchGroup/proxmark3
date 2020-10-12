@@ -15,6 +15,7 @@
 #include <ctype.h>
 
 #include "cmdparser.h"    // command_t
+#include "cliparser.h"
 #include "comms.h"
 #include "usart_defs.h"
 #include "ui.h"
@@ -515,6 +516,77 @@ static int CmdStatus(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdTearoff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw tearoff",
+                  "Configure a tear-off hook for the next write command supporting tear-off\n"
+                  "After having been triggered by a write command, the tear-off hook is deactivated\n"
+                  "Delay (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+                  "hw tearoff --delay 1200 --> define delay of 1200us\n"
+                  "hw tearoff --on --> (re)activate a previously defined delay\n"
+                  "hw tearoff --off --> deactivate a previously activated but not yet triggered hook\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 43000"),
+        arg_lit0(NULL, "on", "Activate tear-off hook"),
+        arg_lit0(NULL, "off", "Deactivate tear-off hook"),
+        arg_lit0("s", "silent", "less verbose output"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    struct {
+        uint16_t delay_us;
+        bool on;
+        bool off;
+    } PACKED params;
+    int delay = arg_get_int_def(ctx, 1, -1);
+    params.on = arg_get_lit(ctx, 2);
+    params.off = arg_get_lit(ctx, 3);
+    bool silent = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (delay != -1) {
+        if ((delay < 1) || (delay > 43000)) {
+            PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+            return PM3_EINVARG;
+        }
+    } else {
+        delay = 0; // will be ignored by ARM
+    }
+
+    params.delay_us = delay;
+    if (params.on && params.off) {
+        PrintAndLogEx(WARNING, "You can't set both --on and --off!");
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_TEAROFF, (uint8_t *)&params, sizeof(params));
+    PacketResponseNG resp;
+
+    if (WaitForResponseTimeout(CMD_SET_TEAROFF, &resp, 500) == false) {
+        PrintAndLogEx(WARNING, "Tear-off command timeout.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        if (params.delay_us > 0)
+            PrintAndLogEx(INFO, "Tear-off hook configured with delay of " _GREEN_("%i us"), params.delay_us);
+        if (params.on && silent == false)
+            PrintAndLogEx(INFO, "Tear-off hook " _GREEN_("enabled"));
+        if (params.off && silent == false)
+            PrintAndLogEx(INFO, "Tear-off hook " _RED_("disabled"));
+        return PM3_SUCCESS;
+    }
+
+    if (silent == false)
+        PrintAndLogEx(WARNING, "Tear-off command failed.");
+
+    return resp.status;
+}
+
 static int CmdTia(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition (TIA)...");
@@ -621,6 +693,7 @@ static command_t CommandTable[] = {
     {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
     {"standalone",    CmdStandalone,   IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
+    {"tearoff",       CmdTearoff,      IfPm3Present,    "Program a tearoff hook for the next command supporting tearoff"},
     {"tia",           CmdTia,          IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"tune",          CmdTune,         IfPm3Present,    "Measure antenna tuning"},
     {"version",       CmdVersion,      IfPm3Present,    "Show version information about the connected Proxmark3"},

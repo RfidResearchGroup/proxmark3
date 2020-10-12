@@ -13,11 +13,11 @@
 #include "common.h"
 
 typedef enum FELICA_COMMAND {
-    FELICA_CONNECT =        (1 << 0),
-    FELICA_NO_DISCONNECT =  (1 << 1),
-    FELICA_RAW =            (1 << 3),
-    FELICA_APPEND_CRC =     (1 << 5),
-    FELICA_NO_SELECT =      (1 << 6),
+    FELICA_CONNECT = (1 << 0),
+    FELICA_NO_DISCONNECT = (1 << 1),
+    FELICA_RAW = (1 << 3),
+    FELICA_APPEND_CRC = (1 << 5),
+    FELICA_NO_SELECT = (1 << 6),
 } felica_command_t;
 
 //-----------------------------------------------------------------------------

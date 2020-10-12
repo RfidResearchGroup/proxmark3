@@ -114,7 +114,7 @@ local function main(args)
         local c = string.format( command, n )
         print('Running: "'..c..'"')
         core.console(c)
-		core.console('msleep '..timeout);
+        core.console('msleep '..timeout);
         core.console('hw ping')
     end
 

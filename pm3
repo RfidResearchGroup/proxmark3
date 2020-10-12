@@ -23,7 +23,11 @@ else
 # hope it's installed somehow, still not sure where fw images are...
     CLIENT="proxmark3"
 fi
-
+EVALENV=""
+# LeakSanitizer suppressions
+if [ -e .lsan_suppressions ]; then
+  EVALENV="export LSAN_OPTIONS=suppressions=.lsan_suppressions"
+fi
 PM3LIST=()
 SHOWLIST=false
 
@@ -152,10 +156,7 @@ function get_pm3_list_WSL {
     # Need to look for this first,  the call to Win32_serialport "crashes" then native bt serial port.  Don't ask why.
     #BT direct SERIAL PORTS (COM)
     if $FINDBTRFCOMM; then
-        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | awk 'match($0,/COM([0-9]+)/,m){print m[1]}'); do
-
-            DEV=${DEV/ */}
-            DEV="/dev/ttyS${DEV#COM}"
+        for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | sed -nr 's#.*\bCOM([0-9]+)\b.*#/dev/ttyS\1#p'); do
             # ttyS counterpart takes some more time to appear
             if [ -e "$DEV" ]; then
                 PM3LIST+=("$DEV")
@@ -172,9 +173,7 @@ function get_pm3_list_WSL {
     fi
 
     # Normal SERIAL PORTS (COM)
-    for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
-        DEV=${DEV/ */}
-        DEV="/dev/ttyS${DEV#COM}"
+    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_9AC4&PID_4B8F*' | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
             PM3LIST+=("$DEV")
@@ -190,9 +189,7 @@ function get_pm3_list_WSL {
 
     #white BT dongle SERIAL PORTS (COM)
     if $FINDBTDONGLE; then
-        for DEV in $(powershell.exe -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null | awk '/^COM/{print $1}'); do
-            DEV=${DEV/ */}
-            DEV="/dev/ttyS${DEV#COM}"
+        for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
             # ttyS counterpart takes some more time to appear
             if [ -e "$DEV" ]; then
                 PM3LIST+=("$DEV")
@@ -212,7 +209,7 @@ function get_pm3_list_WSL {
 SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "pm3" ]; then
-  CMD() { $CLIENT "$@"; }
+  CMD() { eval "$EVALENV"; $CLIENT "$@"; }
   HELP() {
       cat << EOF
 
@@ -392,11 +389,20 @@ fi
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
     if uname -a|grep -q Microsoft; then
-        # Test presence of wmic
-        if ! wmic.exe computersystem get name >/dev/null 2>&1; then
-            echo >&2 "[!!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
+        # First try finding it using the PATH environment variable
+        PSHEXE=$(which powershell.exe 2>/dev/null)
+
+        # If it fails (such as if WSLENV is not set), try using the default installation path
+        if [ -z "$PSHEXE" ]; then
+            PSHEXE=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+        fi
+
+        # Finally test if PowerShell is working
+        if ! "$PSHEXE" exit >/dev/null 2>&1; then
+            echo >&2 "[!!] Cannot run powershell.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
             exit 1
         fi
+
         GETPM3LIST=get_pm3_list_WSL
     else
         GETPM3LIST=get_pm3_list_Linux

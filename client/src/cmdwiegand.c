@@ -26,30 +26,30 @@
 static int CmdHelp(const char *Cmd);
 
 static void print_wiegand_code(wiegand_message_t *packed) {
-    const char* s = "Encoded wiegand: ";
+    const char *s = "Encoded wiegand: ";
     if (packed->Top != 0) {
         PrintAndLogEx(SUCCESS, "%s" _GREEN_("%X%08X%08X"),
-                    s,
-                    (uint32_t)packed->Top,
-                    (uint32_t)packed->Mid,
-                    (uint32_t)packed->Bot
-        );
+                      s,
+                      (uint32_t)packed->Top,
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot
+                     );
     } else {
         PrintAndLogEx(SUCCESS, "%s" _YELLOW_("%X%08X"),
-                    s,
-                    (uint32_t)packed->Mid,
-                    (uint32_t)packed->Bot
-        );
+                      s,
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot
+                     );
     }
 }
 
 int CmdWiegandList(const char *Cmd) {
-    
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "wiegand info",
                   "List available wiegand formats",
                   "wiegand list"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -68,7 +68,7 @@ int CmdWiegandEncode(const char *Cmd) {
     CLIParserInit(&ctx, "wiegand encode",
                   "Encode wiegand formatted number to raw hex",
                   "wiegand encode -w H10301 --fc 101 --cn 1337"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -76,22 +76,22 @@ int CmdWiegandEncode(const char *Cmd) {
         arg_u64_1(NULL, "cn", "<dec>", "card number"),
         arg_u64_0(NULL, "issue", "<dec>", "issue level"),
         arg_u64_0(NULL, "oem", "<dec>", "OEM code"),
-        arg_strx1("w", "wiegand", "<format>", "see `wiegand list` for available formats"),        
+        arg_str1("w", "wiegand", "<format>", "see `wiegand list` for available formats"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     wiegand_card_t data;
     memset(&data, 0, sizeof(wiegand_card_t));
-    
+
     data.FacilityCode = arg_get_u32_def(ctx, 1, 0);
     data.CardNumber = arg_get_u64_def(ctx, 2, 0);
     data.IssueLevel = arg_get_u32_def(ctx, 3, 0);
     data.OEM = arg_get_u32_def(ctx, 4, 0);
-    
+
     int len = 0;
     char format[16] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t*)format, sizeof(format), &len);
+    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)format, sizeof(format), &len);
     CLIParserFree(ctx);
 
     int idx = HIDFindCardFormat(format);
@@ -118,7 +118,7 @@ int CmdWiegandDecode(const char *Cmd) {
     CLIParserInit(&ctx, "wiegand decode",
                   "Decode raw hex to wiegand format",
                   "wiegand decode --raw 2006f623ae"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -128,19 +128,19 @@ int CmdWiegandDecode(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool ignore_parity = arg_get_lit(ctx, 1);    
+    bool ignore_parity = arg_get_lit(ctx, 1);
     int len = 0;
     char hex[40] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t*)hex, sizeof(hex), &len);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &len);
     CLIParserFree(ctx);
-    
+
     if (len == 0) {
         PrintAndLogEx(ERR, "empty input");
         return PM3_EINVARG;
     }
-   
+
     uint32_t top = 0, mid = 0, bot = 0;
-    hexstring_to_u96(&top, &mid, &bot, hex);        
+    hexstring_to_u96(&top, &mid, &bot, hex);
 
     wiegand_message_t packed = initialize_message_object(top, mid, bot);
     HIDTryUnpack(&packed, ignore_parity);

@@ -1401,9 +1401,13 @@ static int CmdLegicWipe(const char *Cmd) {
 }
 
 static int CmdLegicList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("legic");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t legic");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static command_t CommandTable[] =  {

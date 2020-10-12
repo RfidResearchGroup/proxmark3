@@ -44,7 +44,7 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n);
 uint16_t crc16_ccitt(uint8_t const *d, size_t n);
 
 // Calculate CRC-16/KERMIT (FDX-B ISO11784/85)  LF
-uint16_t crc16_fdx(uint8_t const *d, size_t n);
+uint16_t crc16_fdxb(uint8_t const *d, size_t n);
 
 // Calculate CRC-16/KERMIT
 uint16_t crc16_kermit(uint8_t const *d, size_t n);

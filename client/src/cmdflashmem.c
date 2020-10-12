@@ -27,7 +27,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int CmdFlashmemSpiBaudrate(const char *Cmd) {
-    
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mem baudrate",
                   "Set the baudrate for the SPI flash memory communications.\n"
@@ -35,8 +35,8 @@ static int CmdFlashmemSpiBaudrate(const char *Cmd) {
                   "Unless you know what you are doing, please stay at 24MHz.\n"
                   "If >= 24MHz, FASTREADS instead of READS instruction will be used.",
                   "mem baudrate --mhz 48"
-                );
-    
+                 );
+
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "mhz", "<24|48>", "SPI baudrate in MHz"),
@@ -72,7 +72,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
                   "mem load -f mfc_default_keys -m    -> upload MFC keys\n"
                   "mem load -f t55xx_default_pwds -t  -> upload T55XX passwords\n"
                   "mem load -f iclass_default_keys -i -> upload iCLASS keys\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -88,10 +88,10 @@ static int CmdFlashMemLoad(const char *Cmd) {
     int offset = arg_get_int_def(ctx, 1, 0);
     bool is_mfc = arg_get_lit(ctx, 2);
     bool is_iclass = arg_get_lit(ctx, 3);
-    bool is_t55xx = arg_get_lit(ctx, 4);    
+    bool is_t55xx = arg_get_lit(ctx, 4);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t*)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     Dictionary_t d = DICTIONARY_NONE;
@@ -227,7 +227,7 @@ static int CmdFlashMemDump(const char *Cmd) {
                   "mem dump -f myfile                           -> download all flashmem to file\n"
                   "mem dump --view -o 262015 --len 128          -> display 128 bytes from offset 262015 (RSA sig)\n"
                   "mem dump --view -f myfile -o 241664 --len 58 -> display 58 bytes from offset 241664 and save to file"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -244,7 +244,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     bool view = arg_get_lit(ctx, 3);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t*)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
@@ -282,7 +282,7 @@ static int CmdFlashMemWipe(const char *Cmd) {
                   _WHITE_("[ ") _RED_("!!! OBS") " ] use with caution",
                   "mem wipe -p 0 -> wipes first page"
 //                  "mem wipe -i -> inital total wipe"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -297,7 +297,7 @@ static int CmdFlashMemWipe(const char *Cmd) {
 //    initalwipe = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if (page < 0 || page > 2 ) {
+    if (page < 0 || page > 2) {
         PrintAndLogEx(WARNING, "page must be 0, 1 or 2");
         return PM3_EINVARG;
     }
@@ -309,8 +309,8 @@ static int CmdFlashMemWipe(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-    
-    const char* msg = "Flash WIPE ";
+
+    const char *msg = "Flash WIPE ";
     uint8_t isok  = resp.oldarg[0] & 0xFF;
     if (isok)
         PrintAndLogEx(SUCCESS, "%s ( " _GREEN_("ok")" )", msg);
@@ -329,7 +329,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
                   "Collect signature and verify it from flash memory",
                   "mem info"
 //                  "mem info -s"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -375,7 +375,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("RDV4 RSA signature") " ---------------");
     for (int i = 0; i < (sizeof(mem.signature) / 32); i++) {
-        PrintAndLogEx(INFO, " %s", sprint_hex_inrow(mem.signature + (i * 32), 32));    
+        PrintAndLogEx(INFO, " %s", sprint_hex_inrow(mem.signature + (i * 32), 32));
     }
 
 //-------------------------------------------------------------------------------
@@ -453,13 +453,13 @@ static int CmdFlashMemInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("RDV4 RSA Public key") " --------------");
 
-    char str_exp[10];    
+    char str_exp[10];
     char str_pk[261];
     size_t exlen = 0, pklen = 0;
     mbedtls_mpi_write_string(&rsa.E, 16, str_exp, sizeof(str_exp), &exlen);
     mbedtls_mpi_write_string(&rsa.N, 16, str_pk, sizeof(str_pk), &pklen);
 
-    PrintAndLogEx(INFO, "Len.................. %u", rsa.len);
+    PrintAndLogEx(INFO, "Len.................. %"PRIu64, rsa.len);
     PrintAndLogEx(INFO, "Exponent............. %s", str_exp);
     PrintAndLogEx(INFO, "Public key modulus N");
     PrintAndLogEx(INFO, " %.64s", str_pk);
@@ -468,7 +468,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     PrintAndLogEx(INFO, " %.64s", str_pk + 192);
 
     PrintAndLogEx(NORMAL, "");
-    const char *msgkey = "RSA key validation... "; 
+    const char *msgkey = "RSA key validation... ";
     if (is_keyok)
         PrintAndLogEx(SUCCESS, "%s( " _GREEN_("ok") " )", msgkey);
     else
@@ -511,7 +511,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
         }
         PrintAndLogEx(INFO, "Signed");
         for (int i = 0; i < (sizeof(sign) / 32); i++) {
-            PrintAndLogEx(INFO, " %s", sprint_hex_inrow(sign + (i * 32), 32));    
+            PrintAndLogEx(INFO, " %s", sprint_hex_inrow(sign + (i * 32), 32));
         }
     }
 

@@ -13,6 +13,7 @@
 #include "util.h"
 #include "fileutils.h"
 #include "util_posix.h"     // msleep
+#include "cliparser.h"
 
 // Currently the largest pixel 880*528 only needs 58.08K bytes
 #define WSMAPSIZE 60000
@@ -90,23 +91,6 @@ static model_t models[] = {
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_waveshare_loadbmp(void) {
-    PrintAndLogEx(NORMAL, "Load BMP file to Waveshare NFC ePaper.");
-    PrintAndLogEx(NORMAL, "Usage:  hf waveshare loadbmp [h] f <filename[.bmp]> m <model_nr> [s]");
-    PrintAndLogEx(NORMAL, "  Options :");
-    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename[.bmp]") " to upload to tag");
-    PrintAndLogEx(NORMAL, "  m <nr>  : " _YELLOW_("model number") " of your tag");
-    PrintAndLogEx(NORMAL, "  s       : save dithered version in filename-[n].bmp, only for RGB BMP");
-    for (uint8_t i = 0; i < MEND; i++) {
-        PrintAndLogEx(NORMAL, "  m %2i    : %s", i, models[i].desc);
-    }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf waveshare loadbmp m 0 f myfile"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uint8_t model_nr) {
     if (bmpsize < sizeof(BMP_HEADER))
         return PM3_ESOFT;
@@ -138,9 +122,15 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t mod
     uint8_t color_flag = pbmpheader->Color_1;
     // Get BMP file data pointer
     uint32_t offset = pbmpheader->offset;
+    uint16_t width = pbmpheader->BMP_Width;
+    uint16_t height = pbmpheader->BMP_Height;
+    if ((width + 8) * height > WSMAPSIZE * 8) {
+        PrintAndLogEx(WARNING, "The file is too large, aborting!");
+        return PM3_ESOFT;
+    }
 
     uint16_t X, Y;
-    uint16_t Image_Width_Byte = (pbmpheader->BMP_Width % 8 == 0) ? (pbmpheader->BMP_Width / 8) : (pbmpheader->BMP_Width / 8 + 1);
+    uint16_t Image_Width_Byte = (width % 8 == 0) ? (width / 8) : (width / 8 + 1);
     uint16_t Bmp_Width_Byte = (Image_Width_Byte % 4 == 0) ? Image_Width_Byte : ((Image_Width_Byte / 4 + 1) * 4);
 
     *black = calloc(WSMAPSIZE, sizeof(uint8_t));
@@ -148,10 +138,10 @@ static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t mod
         return PM3_EMALLOC;
     }
     // Write data into RAM
-    for (Y = 0; Y < pbmpheader->BMP_Height; Y++) { // columns
+    for (Y = 0; Y < height; Y++) { // columns
         for (X = 0; X < Bmp_Width_Byte; X++) { // lines
-            if ((X < Image_Width_Byte) && ((X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
-                (*black)[X + (pbmpheader->BMP_Height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
+            if ((X < Image_Width_Byte) && ((X + (height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
+                (*black)[X + (height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
             }
             offset++;
         }
@@ -241,7 +231,7 @@ static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, u
             int16_t oldR = chanR[XX + Y * width];
             int16_t oldG = chanG[XX + Y * width];
             int16_t oldB = chanB[XX + Y * width];
-            uint8_t newR, newG, newB;
+            uint8_t newR = 0, newG = 0, newB = 0;
             nearest_color(oldR, oldG, oldB, palette, palettelen, &newR, &newG, &newB);
             chanR[XX + Y * width] = newR;
             chanG[XX + Y * width] = newG;
@@ -381,6 +371,10 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
     uint32_t offset = pbmpheader->offset;
     uint16_t width = pbmpheader->BMP_Width;
     uint16_t height = pbmpheader->BMP_Height;
+    if ((width + 8) * height > WSMAPSIZE * 8) {
+        PrintAndLogEx(WARNING, "The file is too large, aborting!");
+        return PM3_ESOFT;
+    }
 
     int16_t *chanR = calloc(width * height, sizeof(int16_t));
     if (chanR == NULL) {
@@ -565,7 +559,7 @@ static int transceive_blocking(uint8_t *txBuf, uint16_t txBufLen, uint8_t *rxBuf
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             if (resp.oldarg[0] > rxBufLen) {
-                PrintAndLogEx(WARNING, "Received %"PRIu32 " bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
+                PrintAndLogEx(WARNING, "Received %"PRIu64 " bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
                 memcpy(rxBuf, resp.data.asBytes, rxBufLen);
                 *actLen = rxBufLen;
                 return PM3_ESOFT;
@@ -646,21 +640,30 @@ static int start_drawing_1in54B(uint8_t model_nr, uint8_t *black, uint8_t *red) 
 static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     uint8_t progress = 0;
     uint8_t step0[2] = {0xcd, 0x0d};
-    uint8_t step1[3] = {0xcd, 0x00, 10};    //select e-paper type and reset e-paper        4:2.13inch e-Paper   7:2.9inch e-Paper  10:4.2inch e-Paper  14:7.5inch e-Paper
-    uint8_t step2[2] = {0xcd, 0x01};      //e-paper normal mode  type：
-    uint8_t step3[2] = {0xcd, 0x02};      //e-paper config1
-    uint8_t step4[2] = {0xcd, 0x03};      //e-paper power on
-    uint8_t step5[2] = {0xcd, 0x05};      //e-paper config2
-    uint8_t step6[2] = {0xcd, 0x06};      //EDP load to main
-    uint8_t step7[2] = {0xcd, 0x07};      //Data preparation
-    uint8_t step8[123] = {0xcd, 0x08, 0x64};  //Data start command   2.13inch(0x10:Send 16 data at a time)    2.9inch(0x10:Send 16 data at a time)     4.2inch(0x64:Send 100 data at a time)  7.5inch(0x78:Send 120 data at a time)
-    uint8_t step9[2] = {0xcd, 0x18};     //e-paper power on
-    uint8_t step10[2] = {0xcd, 0x09};     //Refresh e-paper
-    uint8_t step11[2] = {0xcd, 0x0a};     //wait for ready
-    uint8_t step12[2] = {0xcd, 0x04};     //e-paper power off command
+    uint8_t step1[3] = {0xcd, 0x00, 10};  // select e-paper type and reset e-paper
+    //  4 :2.13inch e-Paper
+    //  7 :2.9inch e-Paper
+    // 10 :4.2inch e-Paper
+    // 14 :7.5inch e-Paper
+    uint8_t step2[2] = {0xcd, 0x01};      // e-paper normal mode  type：
+    uint8_t step3[2] = {0xcd, 0x02};      // e-paper config1
+    uint8_t step4[2] = {0xcd, 0x03};      // e-paper power on
+    uint8_t step5[2] = {0xcd, 0x05};      // e-paper config2
+    uint8_t step6[2] = {0xcd, 0x06};      // EDP load to main
+    uint8_t step7[2] = {0xcd, 0x07};      // Data preparation
+
+    uint8_t step8[123] = {0xcd, 0x08, 0x64};  // Data start command
+    // 2.13inch(0x10:Send 16 data at a time)
+    // 2.9inch(0x10:Send 16 data at a time)
+    // 4.2inch(0x64:Send 100 data at a time)
+    // 7.5inch(0x78:Send 120 data at a time)
+    uint8_t step9[2] = {0xcd, 0x18};      // e-paper power on
+    uint8_t step10[2] = {0xcd, 0x09};     // Refresh e-paper
+    uint8_t step11[2] = {0xcd, 0x0a};     // wait for ready
+    uint8_t step12[2] = {0xcd, 0x04};     // e-paper power off command
     uint8_t step13[124] = {0xcd, 0x19, 121};
-// uint8_t step13[2]={0xcd,0x0b};     //Judge whether the power supply is turned off successfully
-// uint8_t step14[2]={0xcd,0x0c};     //The end of the transmission
+// uint8_t step13[2]={0xcd,0x0b};     // Judge whether the power supply is turned off successfully
+// uint8_t step14[2]={0xcd,0x0c};     // The end of the transmission
     uint8_t rx[20];
     uint16_t actrxlen[20], i = 0;
 
@@ -963,53 +966,60 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     return PM3_SUCCESS;
 }
 
-
 static int CmdHF14AWSLoadBmp(const char *Cmd) {
 
-    char filename[FILE_PATH_SIZE] = {0};
-    uint8_t cmdp = 0;
-    bool errors = false;
-    size_t filenamelen = 0;
-    uint8_t model_nr = 0xff;
-    bool save_conversions = false;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_waveshare_loadbmp();
-            case 'f':
-                filenamelen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (filenamelen > FILE_PATH_SIZE - 5)
-                    filenamelen = FILE_PATH_SIZE - 5;
-                cmdp += 2;
-                break;
-            case 'm':
-                model_nr = param_get8(Cmd, cmdp + 1);
-                cmdp += 2;
-                break;
-            case 's':
-                save_conversions = true;
-                cmdp += 1;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    char desc[800] = {0};
+    for (uint8_t i = 0; i < MEND; i++) {
+        snprintf(desc + strlen(desc),
+                 sizeof(desc) - strlen(desc),
+                 "hf waveshare loadbmp -f myfile -m %2u -> %s ( %u, %u )\n",
+                 i,
+                 models[i].desc,
+                 models[i].width,
+                 models[i].height
+                );
     }
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf waveshare loadbmp",
+                  "Load BMP file to Waveshare NFC ePaper.",
+                  desc
+                 );
+
+    char modeldesc[40];
+    snprintf(modeldesc, sizeof(modeldesc), "model number [0 - %u] of your tag", MEND - 1);
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("m", NULL, "<nr>", modeldesc),
+        arg_lit0("s", "save", "save dithered version in filename-[n].bmp, only for RGB BMP"),
+        arg_str1("f", "file", "<filename>", "filename[.bmp] to upload to tag"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int model_nr = arg_get_int_def(ctx, 1, -1);
+    bool save_conversions = arg_get_lit(ctx, 2);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
     //Validations
-    if (filenamelen < 1) {
+    if (fnlen < 1) {
         PrintAndLogEx(WARNING, "Missing filename");
-        errors = true;
+        return PM3_EINVARG;
     }
-    if (model_nr == 0xff) {
+    if (model_nr == -1) {
         PrintAndLogEx(WARNING, "Missing model");
-        errors = true;
-    } else if (model_nr >= MEND) {
-        PrintAndLogEx(WARNING, "Unknown model");
-        errors = true;
+        return PM3_EINVARG;
     }
-    if (errors || cmdp == 0) return usage_hf_waveshare_loadbmp();
+    if (model_nr >= MEND) {
+        PrintAndLogEx(WARNING, "Unknown model");
+        return PM3_EINVARG;
+    }
 
     uint8_t *bmp = NULL;
     uint8_t *black = NULL;
@@ -1042,7 +1052,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         free(bmp);
         return PM3_ESOFT;
     } else {
-        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported", depth);
+        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Must be 1 (BW) or 24 (RGB)", depth);
         free(bmp);
         return PM3_ESOFT;
     }

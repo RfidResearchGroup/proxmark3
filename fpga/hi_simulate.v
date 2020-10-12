@@ -35,8 +35,8 @@ module hi_simulate(
 
 // Power amp goes between LOW and tri-state, so pwr_hi (and pwr_lo) can
 // always be low.
-assign pwr_hi = 1'b0;		 // HF antenna connected to GND
-assign pwr_lo = 1'b0;		 // LF antenna connected to GND
+assign pwr_hi = 1'b0;        // HF antenna connected to GND
+assign pwr_lo = 1'b0;        // LF antenna connected to GND
 
 // This one is all LF, so doesn't matter
 assign pwr_oe2 = 1'b0;
@@ -53,7 +53,7 @@ begin
     if (& adc_d[7:5]) after_hysteresis <= 1'b1;           // if (adc_d >= 224)
     else if (~(| adc_d[7:5])) after_hysteresis <= 1'b0;   // if (adc_d <= 31)
 
-	if (adc_d >= 224)
+    if (adc_d >= 224)
     begin
         has_been_low_for <= 12'd0;
     end
@@ -65,9 +65,9 @@ begin
             after_hysteresis <= 1'b1;
         end
         else
-		begin
+        begin
             has_been_low_for <= has_been_low_for + 1;
-		end
+        end
     end
 end
 
@@ -100,20 +100,20 @@ end
 reg ssp_frame;
 always @(negedge adc_clk)
 begin
-	if (mod_type == `FPGA_HF_SIMULATOR_MODULATE_212K)
-	begin
-		if (ssp_clk_divider[8:5] == 4'd1)
-			ssp_frame <= 1'b1;
-		if (ssp_clk_divider[8:5] == 4'd5)
-			ssp_frame <= 1'b0;
-	end
+    if (mod_type == `FPGA_HF_SIMULATOR_MODULATE_212K)
+    begin
+        if (ssp_clk_divider[8:5] == 4'd1)
+            ssp_frame <= 1'b1;
+        if (ssp_clk_divider[8:5] == 4'd5)
+            ssp_frame <= 1'b0;
+    end
     else
-	begin
-		if (ssp_clk_divider[7:4] == 4'd1)
-			ssp_frame <= 1'b1;
-		if (ssp_clk_divider[7:4] == 4'd5)
-			ssp_frame <= 1'b0;
-	end
+    begin
+        if (ssp_clk_divider[7:4] == 4'd1)
+            ssp_frame <= 1'b1;
+        if (ssp_clk_divider[7:4] == 4'd5)
+            ssp_frame <= 1'b0;
+    end
 end
 
 
@@ -143,6 +143,6 @@ always @(*)
 assign pwr_oe1 = 1'b0;                  // 33 Ohms Load
 assign pwr_oe4 = modulating_carrier;    // 33 Ohms Load
 // This one is always on, so that we can watch the carrier.
-assign pwr_oe3 = 1'b0;		            // 10k Load
+assign pwr_oe3 = 1'b0;                  // 10k Load
 
 endmodule

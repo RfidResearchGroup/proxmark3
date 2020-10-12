@@ -147,14 +147,18 @@ void RunMod(void) {
         int state = STATE_SEARCH;
 
         DbpString("Scanning...");
+        int button_pressed = BUTTON_NO_CLICK;
         for (;;) {
             // Was our button held down or pressed?
-            int button_pressed = BUTTON_HELD(1000);
+            button_pressed = BUTTON_HELD(1000);
 
             if (button_pressed != BUTTON_NO_CLICK || data_available())
                 break;
             else if (state == STATE_SEARCH) {
                 if (!iso14443a_select_card(NULL, &card, NULL, true, 0, true)) {
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    LED_D_OFF();
+                    SpinDelay(500);
                     continue;
                 } else {
                     if (card.sak == SAK && card.atqa[0] == ATQA0 && card.atqa[1] == ATQA1 && card.uidlen == 7) {
@@ -245,6 +249,8 @@ void RunMod(void) {
                 state = STATE_SEARCH;
             }
         }
+        if (button_pressed  == BUTTON_HOLD)        //Holding down the button
+            break;
     }
 
     DbpString("exiting");

@@ -218,7 +218,7 @@ static void *brute_thread(void *arguments) {
     //int shift = (int)arg;
     struct thread_args *args = (struct thread_args *) arguments;
 
-    struct Crypto1State *revstate;
+    struct Crypto1State *revstate = NULL;
     uint64_t key;     // recovered key candidate
     uint32_t ks2;     // keystream used to encrypt reader response
     uint32_t ks3;     // keystream used to encrypt tag response
@@ -234,7 +234,9 @@ static void *brute_thread(void *arguments) {
     for (count = args->idx; count < 0xFFFF; count += thread_count - 1) {
 
         found = global_found;
-        if (found) break;
+        if (found) {
+            break;
+        }
 
         nt = count << 16 | prng_successor(count, 16);
 
@@ -266,17 +268,16 @@ static void *brute_thread(void *arguments) {
                 printf("CMD enc(%08x)\n", cmd_enc);
                 printf("    dec(%08x)\t", decrypted);
 
-                uint8_t isOK = 0;
                 // check if cmd exists
-                isOK = checkValidCmd(decrypted);
+                uint8_t isOK = checkValidCmd(decrypted);
                 (void)isOK;
 
                 // Add a crc-check.
                 isOK = checkCRC(decrypted);
-
-                if (!isOK) {
+                if (isOK == false) {
                     printf("<-- not a valid cmd\n");
                     pthread_mutex_unlock(&print_lock);
+                    free(revstate);
                     continue;
                 } else {
                     printf("<-- Valid cmd\n");
@@ -302,6 +303,7 @@ static void *brute_thread(void *arguments) {
             pthread_mutex_unlock(&print_lock);
         }
     }
+    free(args);
     return NULL;
 }
 

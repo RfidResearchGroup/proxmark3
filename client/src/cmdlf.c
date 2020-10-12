@@ -36,7 +36,7 @@
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
 #include "cmdlfcotag.h"     // for COTAG meny
-#include "cmdlffdx.h"       // for fdx-b menu
+#include "cmdlffdxb.h"      // for FDX-B menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 #include "cmdlfguard.h"     // for gproxii menu
 #include "cmdlfindala.h"    // for indala menu
@@ -1195,7 +1195,7 @@ int CmdLFpskSim(const char *Cmd) {
         if (clk == 0) clk = GetPskClock("", false);
         PrintAndLogEx(INFO, "clk: %d", clk);
 
-        if (!carrier) carrier = GetPskCarrier("", false);
+        if (!carrier) carrier = GetPskCarrier(false);
         PrintAndLogEx(INFO, "carrier: %d", carrier);
 
     } else {
@@ -1454,7 +1454,7 @@ int CmdLFfind(const char *Cmd) {
     if (demodNexWatch(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("NexWatch ID") " found!"); goto out;}
     if (demodIndala(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");  goto out;}
     if (demodEM410x(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!"); goto out;}
-    if (demodFDX(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
+    if (demodFDXB(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("FDX-B ID") " found!"); goto out;}
     if (demodGuard(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Guardall G-Prox II ID") " found!"); goto out; }
     if (demodIdteck(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!"); goto out;}
     if (demodJablotron(true) == PM3_SUCCESS) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Jablotron ID") " found!"); goto out;}
@@ -1527,7 +1527,7 @@ static command_t CommandTable[] = {
     {"awid",        CmdLFAWID,          AlwaysAvailable, "{ AWID RFIDs...              }"},
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
     {"em",          CmdLFEM4X,          AlwaysAvailable, "{ EM4X CHIPs & RFIDs...      }"},
-    {"fdx",         CmdLFFdx,           AlwaysAvailable, "{ FDX-B RFIDs...             }"},
+    {"fdxb",        CmdLFFdxB,          AlwaysAvailable, "{ FDX-B RFIDs...             }"},
     {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
     {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},

@@ -299,8 +299,8 @@ static int cmd_hf_st_info(const char *Cmd) {
     CLIParserInit(&ctx, "hf st info",
                   "Get info about ST25TA tag",
                   "hf st info"
-                );
-    
+                 );
+
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -471,7 +471,7 @@ static int cmd_hf_st_protect(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("e",  "enable",            "enable protection"),
-        arg_lit0("d",  "disable",           "disable protection (default)"),        
+        arg_lit0("d",  "disable",           "disable protection (default)"),
         arg_lit0("r",  "read",              "change read protection"),
         arg_lit0("w",  "write",             "change write protection (default)"),
         arg_str1("p", "password", "<hex>", "16 byte write password"),
@@ -484,7 +484,7 @@ static int cmd_hf_st_protect(const char *Cmd) {
     read_protection = arg_get_lit(ctx, 3);
     write_protection = arg_get_lit(ctx, 4);
     CLIGetHexWithReturn(ctx, 5, pwd, &pwdlen);
-    CLIParserFree(ctx);        
+    CLIParserFree(ctx);
 
     //Validations
     if (enable_protection && disable_protection) {
@@ -625,7 +625,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, pwd, &pwdlen);
     CLIGetHexWithReturn(ctx, 4, newpwd, &newpwdlen);
     CLIParserFree(ctx);
-    
+
     if (change_read_password && change_write_password) {
         PrintAndLogEx(ERR, "Must specify either read or write, not both");
         return PM3_EINVARG;
@@ -646,7 +646,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
         PrintAndLogEx(ERR, "New password must be 16 hex bytes");
         return PM3_EINVARG;
     }
-    
+
     bool activate_field = true;
     bool keep_field_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE];
@@ -724,9 +724,13 @@ static int cmd_hf_st_pwd(const char *Cmd) {
 }
 
 static int cmd_hf_st_list(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("7816");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 7816");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static command_t CommandTable[] = {

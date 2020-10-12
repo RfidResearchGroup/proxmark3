@@ -2369,6 +2369,7 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
 #define FWD_CMD_LOGIN   0xC
 #define FWD_CMD_WRITE   0xA
 #define FWD_CMD_READ    0x9
+#define FWD_CMD_PROTECT 0x3
 #define FWD_CMD_DISABLE 0x5
 
 static uint8_t forwardLink_data[64]; //array of forwarded bits
@@ -2572,14 +2573,61 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     SendForward(len);
 
-    // Wait 20ms for write to complete?
-    WaitMS(7);
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        StopTicks();
+        reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_ETEAROFF, NULL, 0);
+    } else {
+        // Wait 20ms for write to complete?
+        // No, when write is denied, err preamble comes much sooner
+        //WaitUS(10820); // tPC+tWEE
 
-    DoPartialAcquisition(20, false, 6000, 1000);
+        DoPartialAcquisition(0, false, 6000, 1000);
 
-    StopTicks();
+        StopTicks();
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
+    }
+    LEDsoff();
+}
+
+void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
+
+    StartTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
+    WaitMS(50);
+
+    LED_A_ON();
+
+    // clear buffer now so it does not interfere with timing later
+    BigBuf_Clear_ext(false);
+
+    /* should we read answer from Logincommand?
+    *
+    * should receive
+    * 0000 1010 ok.
+    * 0000 0001 fail
+    **/
+    if (usepwd) EM4xLogin(pwd);
+
+    forward_ptr = forwardLink_data;
+    uint8_t len = Prepare_Cmd(FWD_CMD_PROTECT);
+    len += Prepare_Data(data & 0xFFFF, data >> 16);
+
+    SendForward(len);
+
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        StopTicks();
+        reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_ETEAROFF, NULL, 0);
+    } else {
+        // Wait 20ms for write to complete?
+        // No, when write is denied, err preamble comes much sooner
+        //WaitUS(13640); // tPC+tPR
+
+        DoPartialAcquisition(0, false, 6000, 1000);
+        StopTicks();
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        reply_ng(CMD_LF_EM4X_PROTECTWORD, PM3_SUCCESS, NULL, 0);
+    }
     LEDsoff();
 }
 

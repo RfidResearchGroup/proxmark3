@@ -401,6 +401,7 @@ typedef struct {
 #define CMD_WTX                                                           0x0116
 #define CMD_TIA                                                           0x0117
 #define CMD_BREAK_LOOP                                                    0x0118
+#define CMD_SET_TEAROFF                                                   0x0119
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_WRITE                                                0x0121
@@ -486,6 +487,7 @@ typedef struct {
 #define CMD_LF_PCF7931_WRITE                                              0x0223
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
+#define CMD_LF_EM4X_PROTECTWORD                                           0x021B
 #define CMD_LF_IO_WATCH                                                   0x021A
 #define CMD_LF_EM410X_WATCH                                               0x021C
 #define CMD_LF_EM4X50_INFO                                                0x0240
@@ -773,8 +775,10 @@ typedef struct {
 
 // execute pm3 cmd failed               client/pm3: when one of our pm3 cmd tries and fails. opposite from PM3_SUCCESS
 #define PM3_EFAILED           -21
-// partial success                      client/pm3: when tring to dump a tag and fails on some blocks.  Partial dump.
+// partial success                      client/pm3: when trying to dump a tag and fails on some blocks.  Partial dump.
 #define PM3_EPARTIAL          -22
+// tearoff occured                      client/pm3: when a tearoff hook was called and a tearoff actually happened
+#define PM3_ETEAROFF          -23
 
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98

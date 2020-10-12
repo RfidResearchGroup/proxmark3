@@ -118,7 +118,6 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
     return PM3_SUCCESS;
 }
 
-
 static int CmdHfThinFilmInfo(const char *Cmd) {
 
     uint8_t cmdp = 0;
@@ -226,9 +225,13 @@ static int CmdHfThinFilmSim(const char *Cmd) {
 }
 
 static int CmdHfThinFilmList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("thinfilm");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t thinfilm");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static command_t CommandTable[] = {

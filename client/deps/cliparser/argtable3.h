@@ -192,19 +192,19 @@ struct arg_int *arg_int1(const char *shortopts, const char *longopts, const char
 struct arg_int *arg_intn(const char *shortopts, const char *longopts, const char *datatype, int mincount, int maxcount, const char *glossary);
 
 struct arg_u64 *arg_u64_0(const char *shortopts,
-                         const char *longopts,
-                         const char *datatype,
-                         const char *glossary);
+                          const char *longopts,
+                          const char *datatype,
+                          const char *glossary);
 struct arg_u64 *arg_u64_1(const char *shortopts,
-                         const char *longopts,
-                         const char *datatype,
-                         const char *glossary);
+                          const char *longopts,
+                          const char *datatype,
+                          const char *glossary);
 struct arg_u64 *arg_u64_n(const char *shortopts,
-                         const char *longopts,
-                         const char *datatype,
-                         int mincount,
-                         int maxcount,
-                         const char *glossary);
+                          const char *longopts,
+                          const char *datatype,
+                          int mincount,
+                          int maxcount,
+                          const char *glossary);
 
 
 struct arg_dbl *arg_dbl0(const char *shortopts,

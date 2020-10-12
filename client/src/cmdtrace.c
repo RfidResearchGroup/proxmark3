@@ -19,62 +19,13 @@
 #include "fileutils.h"          // for saveFile
 #include "cmdlfhitag.h"         // annotate hitag
 #include "pm3_cmd.h"            // tracelog_hdr_t
+#include "cliparser.h"          // args..
 
 static int CmdHelp(const char *Cmd);
 
 // trace pointer
 static uint8_t *g_trace;
 static long g_traceLen = 0;
-
-static int usage_trace_list(void) {
-    PrintAndLogEx(NORMAL, "List protocol data in trace buffer.");
-    PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
-    PrintAndLogEx(NORMAL, "    f      - show frame delay times as well");
-    PrintAndLogEx(NORMAL, "    c      - mark CRC bytes");
-    PrintAndLogEx(NORMAL, "    r      - show relative times (gap and duration)");
-    PrintAndLogEx(NORMAL, "    u      - display times in microseconds instead of clock cycles");
-    PrintAndLogEx(NORMAL, "    x      - show hexdump to convert to pcap(ng) or to import into Wireshark using encapsulation type \"ISO 14443\"");
-    PrintAndLogEx(NORMAL, "             syntax to use: `text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`");
-    PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try to collect a trace from Proxmark3 device.");
-    PrintAndLogEx(NORMAL, "Supported <protocol> values:");
-    PrintAndLogEx(NORMAL, "    raw      - just show raw data without annotations");
-    PrintAndLogEx(NORMAL, "    14a      - interpret data as iso14443a communications");
-    PrintAndLogEx(NORMAL, "    thinfilm - interpret data as Thinfilm communications");
-    PrintAndLogEx(NORMAL, "    topaz    - interpret data as Topaz communications");
-    PrintAndLogEx(NORMAL, "    mf       - interpret data as iso14443a communications and decrypt crypto1 stream");
-    PrintAndLogEx(NORMAL, "    des      - interpret data as DESFire communications");
-    PrintAndLogEx(NORMAL, "    14b      - interpret data as iso14443b communications");
-    PrintAndLogEx(NORMAL, "    7816     - interpret data as iso7816-4 communications");
-    PrintAndLogEx(NORMAL, "    15       - interpret data as iso15693 communications");
-    PrintAndLogEx(NORMAL, "    iclass   - interpret data as iclass communications");
-    PrintAndLogEx(NORMAL, "    legic    - interpret data as LEGIC communications");
-    PrintAndLogEx(NORMAL, "    felica   - interpret data as ISO18092 / FeliCa communications");
-    PrintAndLogEx(NORMAL, "    hitag1   - interpret data as Hitag1 communications");
-    PrintAndLogEx(NORMAL, "    hitag2   - interpret data as Hitag2 communications");
-    PrintAndLogEx(NORMAL, "    hitags   - interpret data as HitagS communications");
-    PrintAndLogEx(NORMAL, "    lto      - interpret data as LTO-CM communications");
-    PrintAndLogEx(NORMAL, "    cryptorf - interpret data as CryptoRF communitcations");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        trace list 14a f"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        trace list iclass"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        trace list 14a 1"));
-    return PM3_SUCCESS;
-}
-static int usage_trace_load(void) {
-    PrintAndLogEx(NORMAL, "Load protocol data from binary file to trace buffer");
-    PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        trace load mytracefile.trace"));
-    return PM3_SUCCESS;
-}
-static int usage_trace_save(void) {
-    PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to binary file");
-    PrintAndLogEx(NORMAL, "Usage:  trace save <filename>");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        trace save mytracefile.trace"));
-    return PM3_SUCCESS;
-}
 
 static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
     return ((tracepos + TRACELOG_HDR_LEN) >= traceLen);
@@ -159,10 +110,8 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
             char temp_str2[3] = {0};
 
             sprintf(data_len_str, "%04x", hdr->data_len);
-            strncat(temp_str1, data_len_str, 2);
-            temp_str1[2] = '\0';
-            strncat(temp_str2, data_len_str + 2, 2);
-            temp_str2[2] = '\0';
+            memmove(temp_str1, data_len_str, 2);
+            memmove(temp_str2, data_len_str + 2, 2);
 
             PrintAndLogEx(NORMAL, "0.%010u", hdr->timestamp);
             PrintAndLogEx(NORMAL, "000000 00 %s %s %s %s",
@@ -203,7 +152,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     data_len = hdr->data_len;
 
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
-        PrintAndLogEx(DEBUG, "trace pos offset %"PRIu32 " larger than reported tracelen %u", tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr), traceLen);
+        PrintAndLogEx(DEBUG, "trace pos offset %"PRIu64 " larger than reported tracelen %u", tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr), traceLen);
         return traceLen;
     }
 
@@ -211,7 +160,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (protocol == ICLASS || protocol == ISO_15693) {
         duration *= 32;
     }
-
 
     uint8_t *frame = hdr->frame;
     uint8_t *parityBytes = hdr->frame + data_len;
@@ -568,11 +516,24 @@ static int SanityOfflineCheck( bool useTraceBuffer ){
 
 static int CmdTraceLoad(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_load();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "trace load",
+                  "Load protocol data from binary file to trace buffer\n"
+                  "File extension is (.trace)",
+                  "trace load -f mytracefile"
+                 );
 
-    char filename[FILE_PATH_SIZE];
-    param_getstr(Cmd, 0, filename, sizeof(filename));
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("f", "file", "<filename>", "trace file to load"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
 
     if (g_trace)
         free(g_trace);
@@ -591,8 +552,24 @@ static int CmdTraceLoad(const char *Cmd) {
 
 static int CmdTraceSave(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || (strlen(Cmd) == 1 && cmdp == 'h')) return usage_trace_save();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "trace save",
+                  "Save protocol data from trace buffer to binary file\n"
+                  "File extension is (.trace)",
+                  "trace save -f mytracefile"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("f", "file", "<filename>", "trace file to load"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
 
     if (g_traceLen == 0) {
         download_trace();
@@ -603,99 +580,89 @@ static int CmdTraceSave(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    char filename[FILE_PATH_SIZE];
-    param_getstr(Cmd, 0, filename, sizeof(filename));
     saveFile(filename, ".trace", g_trace, g_traceLen);
     return PM3_SUCCESS;
 }
 
 int CmdTraceList(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "trace list",
+                  "Annotate trace buffer with selected protocol data\n"
+                  "You can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n",
+                  "trace list -t raw      -> just show raw data without annotations\n"
+                  "trace list -t 14a      -> interpret as " _YELLOW_("ISO14443-A") " communications\n"
+                  "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") " communications\n"
+                  "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") " communications\n"
+                  "trace list -t mf       -> interpret as " _YELLOW_("MIFARE Classic") " communications and decrypt crypto1 stream\n"
+                  "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") " communications\n"
+                  "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") " communications\n"
+                  "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") " communications\n"
+                  "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") " communications\n"
+                  "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") " communications\n"
+                  "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") " communications\n"
+                  "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") " communications\n"
+                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") " communications\n"
+                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") " communications\n"
+                  "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") " communications\n"
+                  "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") " communications\n"
+                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") " communitcations\n"
+                  "trace list -t 14a f    -> show frame delay times\n"
+                  "trace list -t 14a 1    -> use trace buffer "
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", "buffer", "use data from trace buffer"),
+        arg_lit0("f", NULL, "show frame delay times"),
+        arg_lit0("c", NULL, "mark CRC bytes"),
+        arg_lit0("r", NULL, "show relative times (gap and duration)"),
+        arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
+        arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+        arg_strx0("t", "type", NULL, "protocol to annotate the trace"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool use_buffer = arg_get_lit(ctx, 1);
+    bool show_wait_cycles = arg_get_lit(ctx, 2);
+    bool mark_crc = arg_get_lit(ctx, 3);
+    bool use_relative = arg_get_lit(ctx, 4);
+    bool use_us = arg_get_lit(ctx, 5);
+    bool show_hex = arg_get_lit(ctx, 6);
+
+    int tlen = 0;
+    char type[10] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)type, sizeof(type), &tlen);
+    str_lower(type);
+
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
 
-    bool showWaitCycles = false, markCRCBytes = false;
-    bool showHex = false, isOnline = true;
-    bool use_us = false, use_relative = false;
-    bool errors = false;
-    uint8_t protocol = 0;
-    char type[10] = {0};
-    char cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+    // no crc, no annotations
+    uint8_t protocol = -1;
 
-        int slen = param_getstr(Cmd, cmdp, type, sizeof(type));
-        if (slen == 1) {
+    // validate type of output
+    if (strcmp(type,      "iclass") == 0)   protocol = ICLASS;
+    else if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
+    else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
+    else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
+    else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
+    else if (strcmp(type, "des") == 0)      protocol = MFDES;
+    else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
+    else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
+    else if (strcmp(type, "felica") == 0)   protocol = FELICA;
+    else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
+    else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
+    else if (strcmp(type, "hitag2") == 0)   protocol = PROTO_HITAG2;
+    else if (strcmp(type, "hitags") == 0)   protocol = PROTO_HITAGS;
+    else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
+    else if (strcmp(type, "lto") == 0)      protocol = LTO;
+    else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
+    else if (strcmp(type, "raw") == 0)      protocol = -1;
 
-            switch (tolower(param_getchar(Cmd, cmdp))) {
-                case 'h':
-                    return usage_trace_list();
-                case 'f':
-                    showWaitCycles = true;
-                    cmdp++;
-                    break;
-                case 'c':
-                    markCRCBytes = true;
-                    cmdp++;
-                    break;
-                case 'x':
-                    showHex = true;
-                    cmdp++;
-                    break;
-                case '0':
-                    isOnline = true;
-                    cmdp++;
-                    break;
-                case '1':
-                    isOnline = false;
-                    cmdp++;
-                    break;
-                case 'r':
-                    use_relative = true;
-                    cmdp++;
-                    break;
-                case 'u':
-                    use_us = true;
-                    cmdp++;
-                    break;
-                default:
-                    PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                    errors = true;
-                    break;
-            }
-
-        } else {
-
-            str_lower(type);
-
-            // validate type of output
-            if (strcmp(type,      "iclass") == 0)   protocol = ICLASS;
-            else if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
-            else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
-            else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
-            else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
-            else if (strcmp(type, "des") == 0)      protocol = MFDES;
-            else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
-            else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
-            else if (strcmp(type, "felica") == 0)   protocol = FELICA;
-            else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
-            else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
-            else if (strcmp(type, "hitag2") == 0)   protocol = PROTO_HITAG2;
-            else if (strcmp(type, "hitags") == 0)   protocol = PROTO_HITAGS;
-            else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
-            else if (strcmp(type, "lto") == 0)      protocol = LTO;
-            else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
-            else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
-            else errors = true;
-
-            cmdp++;
-        }
-    }
-
-    //if (!SanityOfflineCheck(isOnline)) return 1;
-
-    //Validations
-    if (errors) return usage_trace_list();
-
-    if (isOnline) {
+    if (use_buffer == false || (g_traceLen == 0)) {
         download_trace();
     }
 
@@ -711,7 +678,7 @@ int CmdTraceList(const char *Cmd) {
         printFelica(g_traceLen, g_trace);
     } */
 
-    if (showHex) {
+    if (show_hex) {
         while (tracepos < g_traceLen) {
             tracepos = printHexLine(tracepos, g_traceLen, g_trace, protocol);
         }
@@ -788,12 +755,16 @@ int CmdTraceList(const char *Cmd) {
         }
 
         while (tracepos < g_traceLen) {
-            tracepos = printTraceLine(tracepos, g_traceLen, g_trace, protocol, showWaitCycles, markCRCBytes, prev_EOT, use_us);
+            tracepos = printTraceLine(tracepos, g_traceLen, g_trace, protocol, show_wait_cycles, mark_crc, prev_EOT, use_us);
 
             if (kbd_enter_pressed())
                 break;
         }
     }
+
+    if (show_hex)
+        PrintAndLogEx(HINT, "syntax to use: " _YELLOW_("`text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`"));
+
     return PM3_SUCCESS;
 }
 

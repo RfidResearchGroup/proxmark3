@@ -656,6 +656,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
             if (getIndalaBits(fc, cn, bits) != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+                free(bits);
                 return PM3_ESOFT;
             }
 

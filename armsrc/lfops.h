@@ -58,6 +58,7 @@ void TurnReadLFOn(uint32_t delay);
 
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
 void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd);
+void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd);
 
 void Cotag(uint32_t arg0);
 void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c);

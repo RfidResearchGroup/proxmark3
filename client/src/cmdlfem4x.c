@@ -30,6 +30,8 @@
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
+#include "generator.h"
+#include "cliparser.h"
 
 static uint64_t g_em410xid = 0;
 
@@ -164,7 +166,7 @@ static int usage_lf_em4x05_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_write [h] <address> <data> <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       address   - memory address to write to. (0-15)");
+    PrintAndLogEx(NORMAL, "       address   - memory address to write to. (0-13, 99 for Protection Words)");
     PrintAndLogEx(NORMAL, "       data      - data to write (hex)");
     PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -731,25 +733,30 @@ static bool downloadSamplesEM(void) {
 }
 
 // em_demod
-static bool doPreambleSearch(size_t *startIdx) {
+static int doPreambleSearch(size_t *startIdx) {
 
     // sanity check
     if (DemodBufferLen < EM_PREAMBLE_LEN) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 demodbuffer too small");
-        return false;
+        return PM3_ESOFT;
     }
 
-    // set size to 20 to only test first 14 positions for the preamble
-    size_t size = (20 > DemodBufferLen) ? DemodBufferLen : 20;
+    // set size to 9 to only test first 3 positions for the preamble
+    // do not set it too long else an error preamble followed by 010 could be seen as success.
+    size_t size = (9 > DemodBufferLen) ? DemodBufferLen : 9;
     *startIdx = 0;
     // skip first two 0 bits as they might have been missed in the demod
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 1, 0, 1, 0};
 
     if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
-        return false;
+        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 1};
+        if (!preambleSearchEx(DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
+            PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
+            return PM3_ESOFT;
+        }
+        return PM3_EFAILED; // Error preamble found
     }
-    return true;
+    return PM3_SUCCESS;
 }
 
 static bool detectFSK(void) {
@@ -793,7 +800,7 @@ static bool detectPSK(void) {
 // try manchester - NOTE: ST only applies to T55x7 tags.
 static bool detectASK_MAN(void) {
     bool stcheck = false;
-    if (ASKDemod_ext(0, 0, 0, 0, false, false, false, 1, &stcheck) != PM3_SUCCESS) {
+    if (ASKDemod_ext(0, 0, 50, 0, false, false, false, 1, &stcheck) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: ASK/Manchester Demod failed");
         return false;
     }
@@ -852,35 +859,72 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE, NRZ
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
-static int demodEM4x05resp(uint32_t *word) {
+static int demodEM4x05resp(uint32_t *word, bool onlyPreamble) {
     size_t idx = 0;
     *word = 0;
-    if (detectASK_MAN() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
+    bool found_err = false;
+    int res = PM3_SUCCESS;
+    do {
+        if (detectASK_MAN()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                // go on, maybe it's false positive and another modulation will work
+                found_err = true;
+        }
+        if (detectASK_BI()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (detectNRZ()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (detectFSK()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (detectPSK()) {
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
 
-    if (detectASK_BI() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
-
-    if (detectNRZ() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
-
-    if (detectFSK() && doPreambleSearch(&idx))
-        return setDemodBufferEM(word, idx);
-
-    if (detectPSK()) {
-        if (doPreambleSearch(&idx))
-            return setDemodBufferEM(word, idx);
-
-        psk1TOpsk2(DemodBuffer, DemodBufferLen);
-        if (doPreambleSearch(&idx))
-            return setDemodBufferEM(word, idx);
-    }
-    return PM3_ESOFT;
+            psk1TOpsk2(DemodBuffer, DemodBufferLen);
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+            if (res == PM3_EFAILED)
+                found_err = true;
+        }
+        if (found_err)
+            return PM3_EFAILED;
+        return PM3_ESOFT;
+    } while (0);
+    if (onlyPreamble)
+        return PM3_SUCCESS;
+    res = setDemodBufferEM(word, idx);
+    if (res == PM3_SUCCESS)
+        return res;
+    if (found_err)
+        return PM3_EFAILED;
+    return res;
 }
 
 //////////////// 4205 / 4305 commands
 #include "util_posix.h"  // msclock
-static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
+int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
 
     struct {
         uint32_t password;
@@ -903,20 +947,21 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     if (downloadSamplesEM() == false) {
         return PM3_ESOFT;
     }
-    return demodEM4x05resp(word);
+    return demodEM4x05resp(word, false);
 }
 
 static int CmdEM4x05Demod(const char *Cmd) {
 //    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
 //   if (ctmp == 'h') return usage_lf_em4x05_demod();
-    uint32_t word = 0;
-    return demodEM4x05resp(&word);
+    uint32_t dummy = 0;
+    return demodEM4x05resp(&dummy, false);
 }
 
 static int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     bool usePwd = false;
+    bool needReadPwd = true;
     uint8_t cmdp = 0;
     uint8_t bytes[4] = {0};
     uint32_t data[16];
@@ -946,40 +991,66 @@ static int CmdEM4x05Dump(const char *Cmd) {
     }
 
     int success = PM3_SUCCESS;
-    int status;
+    int status, status14, status15;
     uint32_t lock_bits = 0x00; // no blocks locked
-
+    bool gotLockBits = false;
+    bool lockInPW2 = false;
     uint32_t word = 0;
+    const char *info[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
+
+    if (usePwd) {
+        // Test first if a password is required
+        status = EM4x05ReadWord_ext(14, pwd, false, &word);
+        if (status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Note that password doesn't seem to be needed");
+            needReadPwd = false;
+        }
+    }
     PrintAndLogEx(NORMAL, "Addr | data     | ascii |lck| info");
     PrintAndLogEx(NORMAL, "-----+----------+-------+---+-----");
 
     // To flag any blocks locked we need to read blocks 14 and 15 first
     // dont swap endin until we get block lock flags.
-    status = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
-    if (status != PM3_SUCCESS)
+    status14 = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
+    if (status14 == PM3_SUCCESS) {
+        if (!usePwd)
+            needReadPwd = false;
+        if ((word & 0x00008000) != 0x00) {
+            lock_bits = word;
+            gotLockBits = true;
+        }
+        data[14] = word;
+    } else {
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-    if (word != 0x00)
-        lock_bits = word;
-    data[14] = word;
-
-    status = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
-    if (status != PM3_SUCCESS)
+    }
+    status15 = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
+    if (status15 == PM3_SUCCESS) {
+        if ((word & 0x00008000) != 0x00) { // assume block 15 is the current lock block
+            lock_bits = word;
+            gotLockBits = true;
+            lockInPW2 = true;
+        }
+        data[15] = word;
+    } else {
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-    if (word != 0x00) // assume block 15 is the current lock block
-        lock_bits = word;
-    data[15] = word;
-
+    }
+    uint32_t lockbit;
     // Now read blocks 0 - 13 as we have 14 and 15
     for (; addr < 14; addr++) {
-
+        lockbit = (lock_bits >> addr) & 1;
         if (addr == 2) {
             if (usePwd) {
-                data[addr] = BSWAP_32(pwd);
-                num_to_bytes(pwd, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %c | password", addr, pwd, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? 'x' : ' ');
+                if ((needReadPwd) && (success != PM3_ESOFT)) {
+                    data[addr] = BSWAP_32(pwd);
+                    num_to_bytes(pwd, 4, bytes);
+                    PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
+                } else {
+                    // The pwd is not needed for Login so we're not sure what's the actual content of that block
+                    PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
+                }
             } else {
                 data[addr] = 0x00; // Unknown password, but not used to set to zeros
-                PrintAndLogEx(NORMAL, "  02 |          |       |   | " _RED_("cannot read"));
+                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
             }
         } else {
             // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
@@ -989,15 +1060,27 @@ static int CmdEM4x05Dump(const char *Cmd) {
             data[addr] = BSWAP_32(word);
             if (status == PM3_SUCCESS) {
                 num_to_bytes(word, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c |", addr, word, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? 'x' : ' ');
+                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
             } else
-                PrintAndLogEx(NORMAL, "  %02d |          |       |   | " _RED_("Fail"), addr);
+                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
         }
     }
     // Print blocks 14 and 15
     // Both lock bits are protected with bit idx 14 (special case)
-    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 14, data[14], sprint_ascii(bytes, 4), ((lock_bits >> 14) & 1) ? 'x' : ' ');
-    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 15, data[15], sprint_ascii(bytes, 4), ((lock_bits >> 14) & 1) ? 'x' : ' ');
+    addr = 14;
+    if (status14 == PM3_SUCCESS) {
+        lockbit = (lock_bits >> addr) & 1;
+        PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? "" : _GREEN_("active"));
+    } else {
+        PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status14 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
+    }
+    addr = 15;
+    if (status15 == PM3_SUCCESS) {
+        lockbit = (lock_bits >> 14) & 1; // beware lock bit of word15 is pr14
+        PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? _GREEN_("active") : "");
+    } else {
+        PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status15 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
+    }
     // Update endian for files
     data[14] = BSWAP_32(data[14]);
     data[15] = BSWAP_32(data[15]);
@@ -1027,22 +1110,24 @@ static int CmdEM4x05Read(const char *Cmd) {
     pwd =  param_get32ex(Cmd, 1, 0xFFFFFFFF, 16);
 
     if (addr > 15) {
-        PrintAndLogEx(NORMAL, "Address must be between 0 and 15");
+        PrintAndLogEx(WARNING, "Address must be between 0 and 15");
         return PM3_ESOFT;
     }
     if (pwd == 0xFFFFFFFF) {
-        PrintAndLogEx(NORMAL, "Reading address %02u", addr);
+        PrintAndLogEx(INFO, "Reading address %02u", addr);
     } else {
         usePwd = true;
-        PrintAndLogEx(NORMAL, "Reading address %02u | password %08X", addr, pwd);
+        PrintAndLogEx(INFO, "Reading address %02u using password %08X", addr, pwd);
     }
 
     uint32_t word = 0;
     int status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
     if (status == PM3_SUCCESS)
-        PrintAndLogEx(NORMAL, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
+        PrintAndLogEx(SUCCESS, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
+    else if (status == PM3_EFAILED)
+        PrintAndLogEx(ERR, "Tag denied Read operation");
     else
-        PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_("Fail"), addr);
+        PrintAndLogEx(WARNING, "No answer from tag");
     return status;
 }
 
@@ -1057,48 +1142,76 @@ static int CmdEM4x05Write(const char *Cmd) {
     addr = param_get8ex(Cmd, 0, 50, 10);
     data = param_get32ex(Cmd, 1, 0, 16);
     pwd =  param_get32ex(Cmd, 2, 0xFFFFFFFF, 16);
+    bool protectOperation = addr == 99; // will do better with cliparser...
 
-    if (addr > 15) {
-        PrintAndLogEx(NORMAL, "Address must be between 0 and 15");
+    if ((addr > 13) && (!protectOperation)) {
+        PrintAndLogEx(WARNING, "Address must be between 0 and 13");
         return PM3_EINVARG;
     }
-    if (pwd == 0xFFFFFFFF)
-        PrintAndLogEx(NORMAL, "Writing address %d data %08X", addr, data);
-    else {
+    if (pwd == 0xFFFFFFFF) {
+        if (protectOperation)
+            PrintAndLogEx(INFO, "Writing protection words data %08X", data);
+        else
+            PrintAndLogEx(INFO, "Writing address %d data %08X", addr, data);
+    } else {
         usePwd = true;
-        PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
+        if (protectOperation)
+            PrintAndLogEx(INFO, "Writing protection words data %08X using password %08X", data, pwd);
+        else
+            PrintAndLogEx(INFO, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-    struct {
-        uint32_t password;
-        uint32_t data;
-        uint8_t address;
-        uint8_t usepwd;
-    } PACKED payload;
+    if (protectOperation) { // set Protect Words
+        struct {
+            uint32_t password;
+            uint32_t data;
+            uint8_t usepwd;
+        } PACKED payload;
 
-    payload.password = pwd;
-    payload.data = data;
-    payload.address = addr;
-    payload.usepwd = usePwd;
+        payload.password = pwd;
+        payload.data = data;
+        payload.usepwd = usePwd;
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X_WRITEWORD, &resp, 2000)) {
-        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-        return PM3_ETIMEOUT;
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X_PROTECTWORD, (uint8_t *)&payload, sizeof(payload));
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_LF_EM4X_PROTECTWORD, &resp, 2000)) {
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+            return PM3_ETIMEOUT;
+        }
+    } else {
+        struct {
+            uint32_t password;
+            uint32_t data;
+            uint8_t address;
+            uint8_t usepwd;
+        } PACKED payload;
+
+        payload.password = pwd;
+        payload.data = data;
+        payload.address = addr;
+        payload.usepwd = usePwd;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_LF_EM4X_WRITEWORD, &resp, 2000)) {
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+            return PM3_ETIMEOUT;
+        }
     }
-
     if (!downloadSamplesEM())
         return PM3_ENODATA;
 
-    //need 0 bits demoded (after preamble) to verify write cmd
     uint32_t dummy = 0;
-    int status = demodEM4x05resp(&dummy);
+    int status = demodEM4x05resp(&dummy, true);
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
+    else if (status == PM3_EFAILED)
+        PrintAndLogEx(ERR, "Tag denied %s operation", protectOperation ? "Protect" : "Write");
+    else
+        PrintAndLogEx(DEBUG, "No answer from tag");
 
-    PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05_read`") " to verify");
     return status;
 }
@@ -1263,8 +1376,10 @@ static void printEM4x05config(uint32_t wordData) {
     uint8_t disable = (wordData & EM4x05_DISABLE_ALLOWED) >> 23;
     uint8_t rtf = (wordData & EM4x05_READER_TALK_FIRST) >> 24;
     uint8_t pigeon = (wordData & (1 << 26)) >> 26;
-    PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)\n", wordData);
-    PrintAndLogEx(INFO, "Config Breakdown:");
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Config Information") " ---------------------------");
+    PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)", wordData);
     PrintAndLogEx(INFO, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
     PrintAndLogEx(INFO, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
     PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
@@ -1277,29 +1392,49 @@ static void printEM4x05config(uint32_t wordData) {
     PrintAndLogEx(INFO, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
     PrintAndLogEx(INFO, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
     PrintAndLogEx(INFO, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
-    PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s\n", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
+    PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
 }
 
 static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     uint8_t chipType = (block0 >> 1) & 0xF;
     uint8_t cap = (block0 >> 5) & 3;
-    uint16_t custCode = (block0 >> 9) & 0x3FF;
+    uint16_t custCode = (block0 >> 9) & 0x2FF;    
+
+    PrintAndLogEx(INFO, "   block0: %X", block0);
+    PrintAndLogEx(INFO, " chiptype: %X", chipType);
+    PrintAndLogEx(INFO, "capacitor: %X", cap);
+    PrintAndLogEx(INFO, " custcode: %X", custCode);
+    
+    /* bits
+    //  0,   rfu
+    //  1,2,3,4  chip type
+    //  5,6  resonant cap
+    //  7,8, rfu
+    //  9 - 18 customer code
+    //  19,  rfu
+    
+       98765432109876543210
+       001000000000
+    // 00100000000001111000
+    //                1100
+    //             011
+    // 00100000000
+    */
+    
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
 
     char ctstr[50];
-    snprintf(ctstr, sizeof(ctstr), "\n Chip Type:   %u | ", chipType);
+    snprintf(ctstr, sizeof(ctstr), " Chip Type:   %u | ", chipType);
     switch (chipType) {
         case 9:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4305");
             break;
+        case 4:
+            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4469");
+            break;
         case 8:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");
-            break;
-        case 4:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "Unknown");
-            break;
-        case 2:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4469");
             break;
         //add more here when known
         default:
@@ -1328,14 +1463,17 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     PrintAndLogEx(SUCCESS, " Cust Code: %03u | %s", custCode, (custCode == 0x200) ? "Default" : "Unknown");
     if (serial != 0)
-        PrintAndLogEx(SUCCESS, "\n  Serial #: " _YELLOW_("%08X"), serial);
+        PrintAndLogEx(SUCCESS, "  Serial #: " _YELLOW_("%08X"), serial);
 }
 
-static void printEM4x05ProtectionBits(uint32_t word) {
+static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Protection") " ---------------------------");
+    PrintAndLogEx(INFO, "ProtectionWord: %08X (Word %i)", word, addr);
     for (uint8_t i = 0; i < 15; i++) {
-        PrintAndLogEx(INFO, "      Word:  %02u | %s", i, (((1 << i) & word) || i < 2) ? _RED_("write Locked") : "unlocked");
+        PrintAndLogEx(INFO, "      Word:  %02u | %s", i, ((1 << i) & word) ? _RED_("write Locked") : "unlocked");
         if (i == 14)
-            PrintAndLogEx(INFO, "      Word:  %02u | %s", i + 1, (((1 << i) & word) || i < 2) ? _RED_("write locked") : "unlocked");
+            PrintAndLogEx(INFO, "      Word:  %02u | %s", i + 1, ((1 << i) & word) ? _RED_("write locked") : "unlocked");
     }
 }
 
@@ -1382,18 +1520,126 @@ static int CmdEM4x05Info(const char *Cmd) {
     if (EM4x05ReadWord_ext(EM_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
-    // if status bit says this is not the used protection word
-    if (!(word & 0x8000)) {
+    if (word & 0x8000) {
+        printEM4x05ProtectionBits(word, EM_PROT1_BLOCK);
+        return PM3_SUCCESS;
+    } else { // if status bit says this is not the used protection word
         if (EM4x05ReadWord_ext(EM_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
             return PM3_ESOFT;
+        if (word & 0x8000) {
+            printEM4x05ProtectionBits(word, EM_PROT2_BLOCK);
+            return PM3_SUCCESS;
+        }
+    }
+    //something went wrong
+    return PM3_ESOFT;
+}
+
+static bool is_cancelled(void) {
+    if (kbd_enter_pressed()) {
+        PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+        return true;
+    }
+    return false;
+}
+// load a default pwd file.
+static int CmdEM4x05Chk(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05_chk",
+                  "This command uses a dictionary attack against EM4205/4305/4469/4569",
+                  "lf em 4x05_chk\n"
+                  "lf em 4x05_chk -e 0x00000022B8        -> remember to use 0x for hex\n"
+                  "lf em 4x05_chk -f t55xx_default_pwds  -> use T55xx default dictionary"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("f", "file", "<*.dic>", "loads a default keys dictionary file <*.dic>"),
+        arg_u64_0("e", "em", "<EM4100>", "try the calculated password from some cloners based on EM4100 ID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    uint64_t card_id = arg_get_u64_def(ctx, 2, 0);
+    CLIParserFree(ctx);
+
+    if (strlen(filename) == 0) {
+        snprintf(filename, sizeof(filename), "t55xx_default_pwds");
+    }
+    PrintAndLogEx(NORMAL, "");
+    
+    uint8_t addr = 4;
+    uint32_t word = 0;
+    bool found = false;
+    uint64_t t1 = msclock();
+    
+    // White cloner password based on EM4100 ID
+    if ( card_id > 0 ) {
+
+        uint32_t pwd = lf_t55xx_white_pwdgen(card_id & 0xFFFFFFFF);
+        PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", pwd);
+
+        int status = EM4x05ReadWord_ext(addr, pwd, true, &word);
+        if (status == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
+            found = true;
+        }
     }
 
-    //something went wrong
-    if (!(word & 0x8000))
-        return PM3_ESOFT;
+    // Loop dictionary
+    uint8_t *keyBlock = NULL;
+    if (found == false) {
 
-    printEM4x05ProtectionBits(word);
+        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
+        word = 0;
+        uint32_t keycount = 0;
+
+        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
+        if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
+            PrintAndLogEx(WARNING, "no keys found in file");
+            if (keyBlock != NULL)
+                free(keyBlock);
+
+            return PM3_ESOFT;
+        }
+
+        for (uint32_t c = 0; c < keycount; ++c) {
+
+            if (!session.pm3_present) {
+                PrintAndLogEx(WARNING, "device offline\n");
+                free(keyBlock);
+                return PM3_ENODATA;
+            }
+
+            if (is_cancelled()) {
+                free(keyBlock);
+                return PM3_EOPABORTED;
+            }
+
+            uint32_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
+
+            PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
+
+            int status = EM4x05ReadWord_ext(addr, curr_password, 1, &word);
+            if (status == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", curr_password);
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (found == false)
+        PrintAndLogEx(WARNING, "check pwd failed");
+
+    free(keyBlock);
+
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
 
@@ -1409,6 +1655,7 @@ static command_t CommandTable[] = {
     {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
     {"410x_clone",  CmdEM410xClone,       IfPm3Lf,         "write EM410x UID to T55x7 or Q5/T5555 tag"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "-------------------- " _CYAN_("EM 4x05 / 4x69") " -------------------"},
+    {"4x05_chk",    CmdEM4x05Chk,         IfPm3Lf,         "Check passwords from dictionary"},
     {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
     {"4x05_wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},

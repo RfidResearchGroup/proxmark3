@@ -573,16 +573,16 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
     if (res) {
         PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), fileName);
-        json_decref(root);
         retval = 200;
         goto out;
     }
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
 
-    json_decref(root);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
+    }
 
 out:
+    json_decref(root);
     free(fileName);
     return retval;
 }

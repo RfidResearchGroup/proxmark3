@@ -39,11 +39,11 @@ session_arg_t session;
 
 double CursorScaleFactor = 1;
 char CursorScaleFactorUnit[11] = {0};
-int PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
+double PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
 uint32_t CursorCPos = 0, CursorDPos = 0;
 double GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = 0;
-int GridOffset = 0;
+double GridOffset = 0;
 bool GridLocked = false;
 bool showDemod = true;
 
@@ -305,6 +305,9 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     pthread_mutex_lock(&print_lock);
     bool linefeed = true;
 
+    if (logging && session.incognito) {
+        logging = 0;
+    }
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
         char *my_logfile_path = NULL;
         char filename[40];
@@ -356,7 +359,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     va_start(argptr, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
-    if (buffer[strlen(buffer) - 1] == NOLF[0]) {
+    if (strlen(buffer) > 0 && buffer[strlen(buffer) - 1] == NOLF[0]) {
         linefeed = false;
         buffer[strlen(buffer) - 1] = 0;
     }

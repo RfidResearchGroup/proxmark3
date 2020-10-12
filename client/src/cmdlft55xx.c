@@ -383,7 +383,7 @@ static int usage_t55xx_clonehelp(void) {
 // todo:  implement restore
 //    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x05_write"));
 //    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x50_write"));
-    PrintAndLogEx(NORMAL, _GREEN_("lf fdx clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf fdxb clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gallagher clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gproxii clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf hid clone"));
@@ -598,7 +598,7 @@ bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0,
         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
             continue;
 
-        if (tryDetectModulationEx(m, verbose, known_block0, (usepwd) ? password : -1) == false)
+        if (t55xxTryDetectModulationEx(m, verbose, known_block0, (usepwd) ? password : -1) == false)
             continue;
 
         config.downlink_mode = m;
@@ -861,7 +861,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
             if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode) == false)
                 return PM3_ERFTRANS;
 
-            if (tryDetectModulationEx(downlink_mode, false, 0, password) == false) {
+            if (t55xxTryDetectModulationEx(downlink_mode, false, 0, password) == false) {
                 PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
                 return PM3_EWRONGANSWER;
             } else {
@@ -1081,7 +1081,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                     if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, (try_with_pwd && usepwd), password, m) == false)
                         continue;
 
-                    if (tryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
+                    if (t55xxTryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
                         continue;
 
                     found = true;
@@ -1090,7 +1090,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                 }
             } else {
                 if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
-                    found = tryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
+                    found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
                 }
             }
 
@@ -1105,7 +1105,7 @@ static int CmdT55xxDetect(const char *Cmd) {
         } while (try_with_pwd);
 
     } else {
-        found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
+        found = t55xxTryDetectModulation(downlink_mode, T55XX_PrintConfig);
     }
 
     if (found == false) {
@@ -1117,11 +1117,11 @@ static int CmdT55xxDetect(const char *Cmd) {
 }
 
 // detect configuration?
-bool tryDetectModulation(uint8_t downlink_mode, bool print_config) {
-    return tryDetectModulationEx(downlink_mode, print_config, 0, -1);
+bool t55xxTryDetectModulation(uint8_t downlink_mode, bool print_config) {
+    return t55xxTryDetectModulationEx(downlink_mode, print_config, 0, -1);
 }
 
-bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd) {
+bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd) {
 
     t55xx_conf_block_t tests[15];
     int bitRate = 0, clk = 0, firstClockEdge = 0;
@@ -3079,7 +3079,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX32) " ]", packet->candidate);
 
             if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, packet->candidate, downlink_mode)) {
-                found = tryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, packet->candidate);
+                found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, packet->candidate);
                 if (found) {
                     PrintAndLogEx(SUCCESS, "Found valid password [ " _GREEN_("%08"PRIX32) " ]", packet->candidate);
 
@@ -3105,7 +3105,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 continue;
             }
 
-            found = tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, cardPassword);
+            found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, cardPassword);
             if (found) {
                 PrintAndLogEx(SUCCESS, "Found valid password : [ " _GREEN_("%08"PRIX32) " ]", cardPassword);
                 dl_mode = 4; // Exit other downlink mode checks
@@ -3150,7 +3150,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                     continue;
                 }
 
-                found = tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
+                found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
                 if (found) {
                     PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                     dl_mode = 4; // Exit other downlink mode checks
@@ -3267,7 +3267,7 @@ uint8_t tryOnePassword(uint32_t password, uint8_t downlink_mode) {
         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, dl_mode)) {
             //  if (getSignalProperties()->isnoise == false) {
             //  } else {
-            if (tryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, password)) {
+            if (t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, password)) {
                 return 1 + (dl_mode << 1);
             }
             //  }

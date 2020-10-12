@@ -24,7 +24,7 @@
 
 
 #define MAX_UL_BLOCKS       0x0F
-#define MAX_ULC_BLOCKS      0x2B
+#define MAX_ULC_BLOCKS      0x2F
 #define MAX_ULEV1a_BLOCKS   0x13
 #define MAX_ULEV1b_BLOCKS   0x28
 #define MAX_NTAG_203        0x29
@@ -168,17 +168,13 @@ static int usage_hf_mfu_sim(void) {
 }
 
 static int usage_hf_mfu_ucauth(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth k <key number>");
-    PrintAndLogEx(NORMAL, "      0 (default): 3DES standard key");
-    PrintAndLogEx(NORMAL, "      1 : all 0x00 key");
-    PrintAndLogEx(NORMAL, "      2 : 0x00-0x0F key");
-    PrintAndLogEx(NORMAL, "      3 : nfc key");
-    PrintAndLogEx(NORMAL, "      4 : all 0x01 key");
-    PrintAndLogEx(NORMAL, "      5 : all 0xff key");
-    PrintAndLogEx(NORMAL, "      6 : 0x00-0xFF key");
+    PrintAndLogEx(NORMAL, "Tests 3DES password on Mifare Ultralight-C tag.");
+    PrintAndLogEx(NORMAL, "If password is not specified, a set of known defaults will be tested.");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth <password (32 hex symbols)>");
+    PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth k"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth k 3"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth 000102030405060708090a0b0c0d0e0f"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -244,12 +240,14 @@ static int usage_hf_mfu_otp_tearoff(void) {
     PrintAndLogEx(NORMAL, "  s <time>  : (optional) start time to run the test - default 0 us");
     PrintAndLogEx(NORMAL, "  d <data>  : (optional) data to full-write before trying the OTP test - default 0x00");
     PrintAndLogEx(NORMAL, "  t <data>  : (optional) data to write while running the OTP test - default 0x00");
+    PrintAndLogEx(NORMAL, "  m <data>  : (optional) exit criteria, if block matches this value");    
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 3");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 8 i 100 l 3000 s 1000");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 1 l 200");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE m 00000000    -> such quite when OTP is reset");
     return PM3_SUCCESS;
 }
 
@@ -405,6 +403,18 @@ static int ulc_authentication(uint8_t *key, bool switch_off_field) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 0;
     if (resp.oldarg[0] == 1) return 1;
 
+    return 0;
+}
+
+static int try_default_3des_keys(uint8_t **correct_key) {
+    PrintAndLogEx(INFO, "Trying some default 3des keys");
+    for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
+        uint8_t *key = default_3des_keys[i];
+        if (ulc_authentication(key, true)) {
+            *correct_key = key;
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -1317,16 +1327,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             if (hasAuthKey) return PM3_SUCCESS;
 
             // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-            PrintAndLogEx(INFO, "Trying some default 3des keys");
-            for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
-                key = default_3des_keys[i];
-                if (ulc_authentication(key, true)) {
-                    PrintAndLogEx(SUCCESS, "Found default 3des key: ");
-                    uint8_t keySwap[16];
-                    memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
-                    ulc_print_3deskey(keySwap);
-                    return PM3_SUCCESS;
-                }
+            if (try_default_3des_keys(&key)) {
+                PrintAndLogEx(SUCCESS, "Found default 3des key: ");
+                uint8_t keySwap[16];
+                memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
+                ulc_print_3deskey(keySwap);
             }
             return PM3_SUCCESS;
         }
@@ -2389,28 +2394,33 @@ static int CmdHF14AMfUSim(const char *Cmd) {
 //-------------------------------------------------------------------------------
 
 //
-// Ultralight C Authentication Demo {currently uses hard-coded key}
+// Ultralight C Authentication
 //
+
 static int CmdHF14AMfUCAuth(const char *Cmd) {
-
-    uint8_t keyNo = 3;
-    bool errors = false;
-
     char cmdp = tolower(param_getchar(Cmd, 0));
-
-    //Change key to user defined one
-    if (cmdp == 'k') {
-        keyNo = param_get8(Cmd, 1);
-        if (keyNo >= ARRAYLEN(default_3des_keys))
-            errors = true;
+    if (cmdp == 'h') {
+        return usage_hf_mfu_ucauth();
     }
 
-    if (cmdp == 'h') errors = true;
+    uint8_t key_buf[16];
+    uint8_t *key;
+    int succeeded;
 
-    if (errors) return usage_hf_mfu_ucauth();
+    // If no hex key is specified, try all known ones
+    if (strlen(Cmd) == 0) {
+        succeeded = try_default_3des_keys(&key);
+        // Else try user-supplied
+    } else {
+        if (param_gethex(Cmd, 0, key_buf, 32)) {
+            PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
+            return PM3_EINVARG;
+        }
+        succeeded = ulc_authentication(key_buf, true);
+        key = key_buf;
+    }
 
-    uint8_t *key = default_3des_keys[keyNo];
-    if (ulc_authentication(key, true))
+    if (succeeded)
         PrintAndLogEx(SUCCESS, "Authentication successful. 3des key: %s", sprint_hex(key, 16));
     else
         PrintAndLogEx(WARNING, "Authentication failed");
@@ -2809,7 +2819,8 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     uint8_t blockNoUint = 8;
     uint8_t cmdp = 0;
-    bool errors = 0;
+    bool errors = 0, use_match = false;
+    uint8_t match[4] = {0x00};
     uint8_t teardata[8] = {0x00};
     uint32_t interval = 500; // time in us
     uint32_t timeLimit = 3000; // time in us
@@ -2821,7 +2832,6 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 return usage_hf_mfu_otp_tearoff();
             case 'b':
                 blockNoUint = param_get8(Cmd, cmdp + 1);
-                //iceman,  which blocks can be targeted? UID blocks?
                 if (blockNoUint < 2) {
                     PrintAndLogEx(WARNING, "Wrong block number");
                     errors = true;
@@ -2830,16 +2840,16 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 break;
             case 'i':
                 interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
-                if (interval == 0) {
-                    PrintAndLogEx(WARNING, "Wrong interval number");
-                    errors = true;
-                }
                 cmdp += 2;
                 break;
             case 'l':
                 timeLimit = param_get32ex(Cmd, cmdp + 1, timeLimit, 10);
                 if (timeLimit < interval) {
                     PrintAndLogEx(WARNING, "Wrong time limit number");
+                    errors = true;
+                }
+                if (timeLimit > 43000) {
+                    PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
                     errors = true;
                 }
                 cmdp += 2;
@@ -2866,6 +2876,14 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 }
                 cmdp += 2;
                 break;
+            case 'm':
+                if (param_gethex(Cmd, cmdp + 1, match, 8)) {
+                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
+                    errors = true;
+                }
+                use_match = true;
+                cmdp += 2;
+                break;            
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -2875,50 +2893,110 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
     if (errors) return usage_hf_mfu_otp_tearoff();
 
-    PrintAndLogEx(INFO, "Starting TearOff test - Selected Block no: %u", blockNoUint);
-
-
+    PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Tear off") " ---------------------");
+    PrintAndLogEx(INFO, "Starting Tear-off test");
+    PrintAndLogEx(INFO, "Target block no: %u", blockNoUint);
+    PrintAndLogEx(INFO, "Target inital block data : %s", sprint_hex_inrow(teardata, 4));
+    PrintAndLogEx(INFO, "Target write block data  : %s", sprint_hex_inrow(teardata + 4, 4));
+    PrintAndLogEx(INFO, "----------------------------------------------------");
+    uint8_t isOK;
+    bool got_pre = false, got_post = false, lock_on = false;
+    uint8_t pre[4] = {0};
+    uint8_t post[4] = {0};
     uint32_t actualTime = startTime;
 
+    int phase_clear = -1;
+    int phase_newwr = -1;
+
+    uint8_t retries = 0;
     while (actualTime <= (timeLimit - interval)) {
-        PrintAndLogEx(INFO, "Using tear-off at: %" PRIu32 " us", actualTime);
-        PrintAndLogEx(INFO, "Reading block BEFORE attack");
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(INFO, "\naborted via keyboard!\n");
+            break;
+        }
+
+        PrintAndLogEx(INFO, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actualTime);
 
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
+        got_pre = false;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK = resp.oldarg[0] & 0xff;
+            isOK = resp.oldarg[0] & 0xFF;
             if (isOK) {
-                uint8_t *d = resp.data.asBytes;
-                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
-                PrintAndLogEx(NORMAL, "-----------------------------");
-                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
+                memcpy(pre, resp.data.asBytes, sizeof(pre));
+                got_pre = true;
             }
         }
 
-        PrintAndLogEx(INFO, ".....");
         clearCommandBuffer();
-
         SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
-        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
+        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 2000)) {
             PrintAndLogEx(WARNING, "Failed");
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "Reading block AFTER attack");
-
+        got_post = false;
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK = resp.oldarg[0] & 0xff;
+            isOK = resp.oldarg[0] & 0xFF;
             if (isOK) {
-                uint8_t *d = resp.data.asBytes;
-                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
-                PrintAndLogEx(NORMAL, "-----------------------------");
-                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
+                memcpy(post, resp.data.asBytes, sizeof(post));
+                got_post = true;
             }
+        }
+
+        if (got_pre && got_post) {
+
+            char prestr[20] = {0};
+            snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
+            char poststr[20] = {0};
+            snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
+
+            if (memcmp(pre, post, sizeof(pre)) == 0) {
+
+                PrintAndLogEx(INFO, "Current %02d (0x%02X) %s"
+                              , blockNoUint
+                              , blockNoUint
+                              , poststr
+                             );
+            } else {
+
+                // skip first message, since its the reset write.
+                if (actualTime == startTime) {
+                    PrintAndLogEx(INFO, "Inital write");
+                } else {
+                    PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %02d (0x%02X) %s vs " _RED_("%s")
+                                  , blockNoUint
+                                  , blockNoUint
+                                  , prestr
+                                  , poststr
+                                 );
+
+                    lock_on = true;
+
+                    if (phase_clear == -1)
+                        phase_clear = actualTime;
+
+                    // new write phase must be atleast 100us later..
+                    if (phase_clear > -1 && phase_newwr == -1 && actualTime > (phase_clear + 100))
+                        phase_newwr = actualTime;
+                }
+            }
+
+            if (use_match && memcmp(pre, match, sizeof(pre)) == 0) {
+                PrintAndLogEx(SUCCESS, "Block matches!\n");
+                break;
+            }
+
+        } else {
+            if (got_pre == false)
+                PrintAndLogEx(FAILED, "Failed to read block BEFORE");
+            if (got_post == false)
+                PrintAndLogEx(FAILED, "Failed to read block AFTER");
         }
 
         /*  TEMPORALLY DISABLED
@@ -2933,8 +3011,29 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                     PrintAndLogEx(NORMAL, "---------------------------------\n");
                 }
         */
-        actualTime += interval;
+        if (startTime != timeLimit) {
+            actualTime += interval;
+        } else {
+            if (lock_on == false) {
+                if (++retries == 20) {
+                    actualTime++;
+                    timeLimit++;
+                    startTime++;
+                    retries = 0;
+                    PrintAndLogEx(INFO, _CYAN_("Retried %u times, increased delay with 1us"), retries);
+                }
+            }
+        }
     }
+
+    PrintAndLogEx(INFO, "----------------------------------------------------");
+    if (phase_clear > - 1) {
+        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_clear);
+    }
+    if (phase_newwr > - 1) {
+        PrintAndLogEx(INFO, "New phase boundary around " _YELLOW_("%d") " us", phase_newwr);
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 

@@ -396,11 +396,13 @@ int main(int argc, char **argv) {
             return (EXIT_FAILURE);
         }
         if (generate_version_file) {
-            if (generate_fpga_version_info(infiles, infile_names, num_input_files, outfile)) {
-                free(infile_names);
-                free(infiles);
+            int ret = generate_fpga_version_info(infiles, infile_names, num_input_files, outfile);
+            free(infile_names);
+            free(infiles);
+            if (ret) {
                 return (EXIT_FAILURE);
             }
+            return (ret);
         } else {
             int ret = zlib_compress(infiles, num_input_files, outfile);
             free(infile_names);

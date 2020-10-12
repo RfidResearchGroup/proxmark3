@@ -36,6 +36,7 @@
 #include "fileutils.h"    // searchfile
 #include "cmdlf.h"        // lf_config
 #include "generator.h"
+#include "cmdlfem4x.h"    // read 4305
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
@@ -1001,7 +1002,7 @@ static int l_T55xx_readblock(lua_State *L) {
                 return returnToLuaWithError(L, "Failed to read config block");
             }
 
-            if (!tryDetectModulation(0, true)) { // Default to prev. behaviour (default dl mode and print config)
+            if (!t55xxTryDetectModulation(0, true)) { // Default to prev. behaviour (default dl mode and print config)
                 PrintAndLogEx(NORMAL, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
                 return 0;
             } else {
@@ -1077,7 +1078,7 @@ static int l_T55xx_detect(lua_State *L) {
         }
     }
 
-    isok = tryDetectModulation(0, true); // Default to prev. behaviour (default dl mode and print config)
+    isok = t55xxTryDetectModulation(0, true); // Default to prev. behaviour (default dl mode and print config)
     if (isok == false) {
         return returnToLuaWithError(L, "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
     }
@@ -1085,6 +1086,46 @@ static int l_T55xx_detect(lua_State *L) {
     lua_pushinteger(L, isok);
     lua_pushstring(L, "Success");
     return 2;
+}
+
+//
+static int l_em4x05_read(lua_State *L) {
+
+    bool use_pwd = false;
+    uint32_t addr, password = 0;
+
+    //Check number of arguments
+    //int n = lua_gettop(L);
+
+    // get addr
+    size_t size = 0;
+    const char *p_addr = luaL_checklstring(L, 1, &size);
+    sscanf(p_addr, "%u", &addr);
+
+    // get password
+    const char *p_pwd = luaL_checklstring(L, 2, &size);
+    if (size == 0) {
+        use_pwd = false;
+    } else {
+        if (size != 8)
+            return returnToLuaWithError(L, "Wrong size of password, got %zu , expected 8", size);
+
+        sscanf(p_pwd, "%08x", &password);
+        use_pwd = true;
+    }
+
+    PrintAndLogEx(DEBUG, "Addr %u", addr);
+    if (use_pwd)
+        PrintAndLogEx(DEBUG, " Pwd %08X", password);
+
+    uint32_t word = 0;
+    int res = EM4x05ReadWord_ext(addr, password, use_pwd, &word);
+    if (res != PM3_SUCCESS) {
+        return returnToLuaWithError(L, "Failed to read EM4x05 data");
+    }
+
+    lua_pushinteger(L, word);
+    return 1;
 }
 
 //
@@ -1203,13 +1244,13 @@ static int l_cwd(lua_State *L) {
 // ref:  https://github.com/RfidResearchGroup/proxmark3/issues/891
 // redirect LUA's print to Proxmark3 PrintAndLogEx
 static int l_printandlogex(lua_State *L) {
-
     int n = lua_gettop(L);
     for (int i = 1; i <= n; i++) {
         if (lua_isstring(L, i)) {
-            PrintAndLogEx(NORMAL, "%s", lua_tostring(L, i));
+            PrintAndLogEx(NORMAL, "%s\t" NOLF, lua_tostring(L, i));
         }
     }
+    PrintAndLogEx(NORMAL, "");
     return 0;
 }
 
@@ -1278,6 +1319,7 @@ int set_pm3_libraries(lua_State *L) {
         {"ewd",                         l_ewd},
         {"ud",                          l_ud},
         {"rem",                         l_remark},
+        {"em4x05_read",                 l_em4x05_read},
         {NULL, NULL}
     };
 

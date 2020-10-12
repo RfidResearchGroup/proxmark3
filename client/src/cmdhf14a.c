@@ -269,9 +269,13 @@ static int usage_hf_14a_reader(void) {
 }
 
 static int CmdHF14AList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("14a");
-    return 0;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 14a");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 int hf14a_getconfig(hf14a_config *config) {
@@ -1267,14 +1271,14 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                 *buf = 0;
                 if (++datalen >= sizeof(data)) {
                     if (crc)
-                        PrintAndLogEx(NORMAL, "Buffer is full, we can't add CRC to your data");
+                        PrintAndLogEx(FAILED, "Buffer is full, we can't add CRC to your data");
                     break;
                 }
             }
             continue;
         }
-        PrintAndLogEx(NORMAL, "Invalid char on input");
-        return 0;
+        PrintAndLogEx(FAILED, "Invalid char on input");
+        return PM3_ESOFT;
     }
 
     if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
@@ -1301,7 +1305,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         flags |= ISO14A_SET_TIMEOUT;
         if (timeout > MAX_TIMEOUT) {
             timeout = MAX_TIMEOUT;
-            PrintAndLogEx(NORMAL, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+            PrintAndLogEx(INFO, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
         argtimeout = 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
@@ -1345,18 +1349,32 @@ static int waitCmd(uint8_t iSelect, uint32_t timeout) {
         if (iSelect) {
             len = (resp.oldarg[1] & 0xFFFF);
             if (len) {
-                PrintAndLogEx(NORMAL, "Card selected. UID[%i]:", len);
+                PrintAndLogEx(SUCCESS, "Card selected. UID[%u]:", len);
             } else {
                 PrintAndLogEx(WARNING, "Can't select card.");
             }
         } else {
-            PrintAndLogEx(NORMAL, "received %i bytes", len);
+            PrintAndLogEx(SUCCESS, "received " _YELLOW_("%u") " bytes", len);
         }
 
         if (!len)
             return 1;
 
-        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
+        uint8_t *data = resp.data.asBytes;
+
+        if (len >= 3) {
+            bool crc = check_crc(CRC_14443_A, data, len);
+
+            PrintAndLogEx(SUCCESS, "%s[%02X %02X] %s",
+                          sprint_hex(data, len - 2),
+                          data[len - 2],
+                          data[len - 1],
+                          (crc) ? _GREEN_("ok") : _RED_("fail")
+                         );
+        } else {
+            PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
+        }
+
     } else {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return 3;
@@ -1954,6 +1972,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
     } else {
         PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
+        if ((card.sak & 0x20) == 0x20) {
+            PrintAndLogEx(INFO, "SAK incorrectly claims that card supports RATS");
+        }
     }
 
     int isMagic = 0;
