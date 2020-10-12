@@ -629,6 +629,10 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h': {
+                errors = true;
+                break;
+            }
             case 'd': {
                 // peek at length of the input string so we can
                 // figure out how many elements to malloc in "data"
@@ -679,10 +683,6 @@ static int CmdLegicWrbl(const char *Cmd) {
                 cmdp += 2;
                 break;
             }
-            case 'h': {
-                errors = true;
-                break;
-            }
             case 'y': {
                 autoconfirm = true;
                 break;
@@ -695,6 +695,13 @@ static int CmdLegicWrbl(const char *Cmd) {
         }
     }
 
+    //Validations
+    if (errors || cmdp == 0) {
+        if (data)
+            free(data);
+        return usage_legic_wrbl();
+    }
+
     // OUT-OF-BOUNDS checks
     // UID 4+1 bytes can't be written to.
     if (offset < 5) {
@@ -702,13 +709,6 @@ static int CmdLegicWrbl(const char *Cmd) {
             free(data);
         PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
         return PM3_EOUTOFBOUND;
-    }
-
-    //Validations
-    if (errors || cmdp == 0) {
-        if (data)
-            free(data);
-        return usage_legic_wrbl();
     }
 
     // tagtype
