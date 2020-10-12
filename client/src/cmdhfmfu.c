@@ -3083,20 +3083,33 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         PrintAndLogEx(WARNING, "Counter must 0, 1 or 2");
         return PM3_EINVARG;
     }
+
     cnt_no = (uint8_t)counter;
+
+    iso14a_card_select_t card;
+
+    if (ul_select(&card) == 0) {
+        PrintAndLogEx(WARNING, "Failed to select card");
+        return PM3_ESOFT;
+    }
     
+    uint8_t inital_cnt[3] = {0, 0, 0};
+    int len = ulev1_readCounter(cnt_no, inital_cnt, sizeof(inital_cnt));
+    DropField();
+    if ( len != sizeof(inital_cnt) ) {
+        PrintAndLogEx(WARNING, "Failed to read counter");
+        return PM3_ESOFT;
+    }
 
     PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Ev1 Counter Tear off") " ---------------------");
-    PrintAndLogEx(INFO, "Starting counter tear-off test");
-    PrintAndLogEx(INFO, "Target counter no: %u", counter);
+    PrintAndLogEx(INFO, "Target counter no     " _GREEN_("%u"), counter);
+    PrintAndLogEx(INFO, "Target initial value  " _GREEN_("%s"), sprint_hex_inrow(inital_cnt, sizeof(inital_cnt)));    
     PrintAndLogEx(INFO, "----------------------------------------------------");
 
     bool got_pre = false, got_post = false;
     uint8_t pre[3] = {0};
     uint8_t post[3] = {0};
     uint32_t actual_time = start_time;
-
-    iso14a_card_select_t card;
 
     while (actual_time <= (time_limit - interval)) {
 
