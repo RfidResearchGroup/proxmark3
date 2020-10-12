@@ -170,7 +170,8 @@ static int usage_hf_mfu_sim(void) {
 static int usage_hf_mfu_ucauth(void) {
     PrintAndLogEx(NORMAL, "Tests 3DES password on Mifare Ultralight-C tag.");
     PrintAndLogEx(NORMAL, "If password is not specified, a set of known defaults will be tested.");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth <password (32 hex symbols)>");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu cauth [k] <password (32 hex symbols)>");
+    PrintAndLogEx(NORMAL, "       k          - keep field on (only if a password is provided too)");
     PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu cauth"));
@@ -2398,9 +2399,15 @@ static int CmdHF14AMfUSim(const char *Cmd) {
 //
 
 static int CmdHF14AMfUCAuth(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') {
+    uint8_t cmdp = 0;
+    char c = tolower(param_getchar(Cmd, 0));
+    if (c == 'h') {
         return usage_hf_mfu_ucauth();
+    }
+    bool keep_field_on = false;
+    if (c == 'k') {
+        keep_field_on = true;
+        cmdp++;
     }
 
     uint8_t key_buf[16];
@@ -2408,15 +2415,15 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     int succeeded;
 
     // If no hex key is specified, try all known ones
-    if (strlen(Cmd) == 0) {
+    if (strlen(Cmd + cmdp) == 0) {
         succeeded = try_default_3des_keys(&key);
         // Else try user-supplied
     } else {
-        if (param_gethex(Cmd, 0, key_buf, 32)) {
+        if (param_gethex(Cmd, cmdp, key_buf, 32)) {
             PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
             return PM3_EINVARG;
         }
-        succeeded = ulc_authentication(key_buf, true);
+        succeeded = ulc_authentication(key_buf, ! keep_field_on);
         key = key_buf;
     }
 
