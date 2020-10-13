@@ -323,7 +323,7 @@ static int usage_15_raw(void) {
     return PM3_SUCCESS;
 }
 static int usage_15_read(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf 15 read    [options] <uid|s|u|*> <page>\n"
+    PrintAndLogEx(NORMAL, "Usage:  hf 15 rdbl    [options] <uid|s|u|*> <page>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"
                   "\tuid (either): \n"
@@ -334,7 +334,7 @@ static int usage_15_read(void) {
     return PM3_SUCCESS;
 }
 static int usage_15_write(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf 15 write    [options] <uid|s|u|*> <page> <hexdata>\n"
+    PrintAndLogEx(NORMAL, "Usage:  hf 15 wrbl    [options] <uid|s|u|*> <page> <hexdata>\n"
                   "Options:\n"
                   "\t-2        use slower '1 out of 256' mode\n"
                   "\t-o        set OPTION Flag (needed for TI)\n"
@@ -816,6 +816,10 @@ static int NxpSysInfo(uint8_t *uid) {
     DropField();
 
     int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
+    
     if (status < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to NXP systeminfo command");
         return PM3_EWRONGANSWER;
@@ -975,6 +979,9 @@ static int CmdHF15Info(const char *Cmd) {
     DropField();
 
     int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
     if (status < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command (%d)", status);
         return PM3_EWRONGANSWER;
@@ -1153,8 +1160,12 @@ static int CmdHF15WriteAfi(const char *Cmd) {
         DropField();
         return PM3_ETIMEOUT;
     }
-
     DropField();
+
+    int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
 
     uint8_t *data = resp.data.asBytes;
 
@@ -1212,6 +1223,10 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     }
 
     DropField();
+    int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
 
     uint8_t *data = resp.data.asBytes;
 
@@ -1296,6 +1311,9 @@ static int CmdHF15Dump(const char *Cmd) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
             int len = resp.oldarg[0];
+            if (len == PM3_ETEAROFF) {
+                continue;
+            }
             if (len < 2) {
                 PrintAndLogEx(FAILED, "iso15693 command failed");
                 continue;
@@ -1321,6 +1339,7 @@ static int CmdHF15Dump(const char *Cmd) {
             blocknum++;
 
             PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
         }
     }
 
@@ -1419,6 +1438,10 @@ static int CmdHF15Raw(const char *Cmd) {
     if (reply) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             int len = resp.oldarg[0];
+            if (len == PM3_ETEAROFF) {
+                DropField();
+                return len;
+            }
             if (len < 2) {
                 PrintAndLogEx(WARNING, "command failed");
             } else {
@@ -1491,6 +1514,10 @@ static int CmdHF15Readmulti(const char *Cmd) {
     DropField();
 
     int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
+
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 card readmulti failed");
         return PM3_EWRONGANSWER;
@@ -1574,6 +1601,9 @@ static int CmdHF15Read(const char *Cmd) {
     DropField();
 
     int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
     if (status < 2) {
         PrintAndLogEx(ERR, "iso15693 command failed");
         return PM3_EWRONGANSWER;
@@ -1661,6 +1691,10 @@ static int CmdHF15Write(const char *Cmd) {
     DropField();
 
     int status = resp.oldarg[0];
+    if (status == PM3_ETEAROFF) {
+        return status;
+    }
+
     if (status < 2) {
         PrintAndLogEx(FAILED, "iso15693 command failed");
         return PM3_EWRONGANSWER;
@@ -1876,13 +1910,13 @@ static command_t CommandTable[] = {
     {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
     {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
     {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
-    {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
+    {"rdbl",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
     {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
     {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
     {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
     {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
     {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},
-    {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
+    {"wrbl",        CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
     {"-----------", CmdHF15Help,        IfPm3Iso15693,  "----------------------- " _CYAN_("afi") " -----------------------"},
     {"findafi",     CmdHF15FindAfi,     IfPm3Iso15693,   "Brute force AFI of an ISO15693 tag"},
     {"writeafi",    CmdHF15WriteAfi,    IfPm3Iso15693,   "Writes the AFI on an ISO15693 tag"},

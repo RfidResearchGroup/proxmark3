@@ -1913,9 +1913,8 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bo
 
     if (resp.status != PM3_SUCCESS) {
         if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
-        return PM3_EWRONGANSWER;
+        return resp.status;
     }
-
     return (resp.data.asBytes[0] == 1) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
@@ -2012,10 +2011,18 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
 
     int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose);
-    if (isok == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Wrote block %02X successful", blockno);
-    else
-        PrintAndLogEx(FAILED, "Writing failed");
+    switch(isok) {
+        case PM3_SUCCESS:
+            PrintAndLogEx(SUCCESS, "Wrote block %02X successful", blockno);
+            break;
+        case PM3_ETEAROFF:
+            if (verbose)
+                PrintAndLogEx(INFO, "Writing tear off triggered");
+            break;
+        default:
+            PrintAndLogEx(FAILED, "Writing failed");
+            break;
+    }
     return isok;
 }
 

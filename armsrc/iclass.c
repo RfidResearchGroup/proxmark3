@@ -1864,8 +1864,34 @@ void iClass_WriteBlock(uint8_t *msg) {
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
     uint8_t resp[10] = {0};
-    res = iclass_send_cmd_with_retries(write, sizeof(write), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_UPDATE, &eof_time);
-    if (res == false) {
+
+    uint8_t tries = 3;
+    while (tries-- > 0) {
+
+        iclass_send_as_reader(write, sizeof(write), &start_time, &eof_time);
+
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+                res = false;
+                switch_off();
+                if (payload->req.send_reply)
+                    reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
+                return;
+        } else {
+
+            if (resp == NULL) {
+                res = true;
+                break;
+            }
+
+            if (GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time) == 10) {
+                res = true;
+                break;
+            }
+        }
+    }
+    
+    if (tries == 0) {
+        res = false;
         goto out;
     }
 
