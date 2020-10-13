@@ -16,7 +16,7 @@
 #include "em4x50.h"
 
 static int usage_lf_em4x50_info(void) {
-    PrintAndLogEx(NORMAL, "Read all information of EM4x50. Tag nust be on antenna.");
+    PrintAndLogEx(NORMAL, "Read all information of EM4x50. Tag must be on antenna.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_info [h] [v] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
