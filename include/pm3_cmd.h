@@ -306,6 +306,7 @@ typedef struct {
     bool use_raw;
     bool use_elite;
     bool use_credit_key;
+    bool use_replay;
     bool send_reply;
     bool do_auth;
     uint8_t blockno;
@@ -564,7 +565,6 @@ typedef struct {
 #define CMD_HF_ICLASS_SNIFF                                               0x0392
 #define CMD_HF_ICLASS_SIMULATE                                            0x0393
 #define CMD_HF_ICLASS_READER                                              0x0394
-#define CMD_HF_ICLASS_REPLAY                                              0x0395
 #define CMD_HF_ICLASS_READBL                                              0x0396
 #define CMD_HF_ICLASS_WRITEBL                                             0x0397
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398

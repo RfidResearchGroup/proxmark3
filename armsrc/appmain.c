@@ -1512,20 +1512,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_SIMULATE: {
-            SimulateIClass(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
-            break;
-        }
-        case CMD_HF_ICLASS_READER: {
-            ReaderIClass(packet->oldarg[0]);
-            break;
-        }
-        case CMD_HF_ICLASS_REPLAY: {
+/*
             struct p {
                 uint8_t reader[4];
                 uint8_t mac[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            ReaderIClass_Replay(payload->reader, payload->mac);
+*/
+
+            SimulateIClass(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_ICLASS_READER: {
+            ReaderIClass(packet->oldarg[0]);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {
