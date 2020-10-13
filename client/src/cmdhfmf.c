@@ -627,6 +627,76 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
     }
 }
 
+
+static uint16_t NumOfBlocks(char card) {
+    switch (card) {
+        case '0' :
+            return MIFARE_MINI_MAXBLOCK;
+        case '1' :
+            return MIFARE_1K_MAXBLOCK;
+        case '2' :
+            return MIFARE_2K_MAXBLOCK;
+        case '4' :
+            return MIFARE_4K_MAXBLOCK;
+        default  :
+            return 0;
+    }
+}
+
+static uint8_t NumOfSectors(char card) {
+    switch (card) {
+        case '0' :
+            return MIFARE_MINI_MAXSECTOR;
+        case '1' :
+            return MIFARE_1K_MAXSECTOR;
+        case '2' :
+            return MIFARE_2K_MAXSECTOR;
+        case '4' :
+            return MIFARE_4K_MAXSECTOR;
+        default  :
+            return 0;
+    }
+}
+
+static uint8_t FirstBlockOfSector(uint8_t sectorNo) {
+    if (sectorNo < 32) {
+        return sectorNo * 4;
+    } else {
+        return 32 * 4 + (sectorNo - 32) * 16;
+    }
+}
+
+static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
+    if (sectorNo < 32) {
+        return 4;
+    } else {
+        return 16;
+    }
+}
+
+static uint8_t GetSectorFromBlockNo(uint8_t blockNo) {
+    if (blockNo < 128)
+        return blockNo / 4;
+    else
+        return 32 + ((128 - blockNo) / 16);
+}
+
+static char GetFormatFromSector(uint8_t sectorNo) {
+    switch (sectorNo) {
+        case MIFARE_MINI_MAXSECTOR:
+            return '0';
+        case MIFARE_1K_MAXSECTOR:
+            return '1';
+        case MIFARE_2K_MAXSECTOR:
+            return '2';
+        case MIFARE_4K_MAXSECTOR:
+            return '4';
+        default  :
+            return ' ';
+    }
+}
+
+
 static int CmdHF14AMfDarkside(const char *Cmd) {
     uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
     uint64_t key = 0;
@@ -838,74 +908,6 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     }
 
     return PM3_SUCCESS;
-}
-
-static uint16_t NumOfBlocks(char card) {
-    switch (card) {
-        case '0' :
-            return MIFARE_MINI_MAXBLOCK;
-        case '1' :
-            return MIFARE_1K_MAXBLOCK;
-        case '2' :
-            return MIFARE_2K_MAXBLOCK;
-        case '4' :
-            return MIFARE_4K_MAXBLOCK;
-        default  :
-            return 0;
-    }
-}
-
-static uint8_t NumOfSectors(char card) {
-    switch (card) {
-        case '0' :
-            return MIFARE_MINI_MAXSECTOR;
-        case '1' :
-            return MIFARE_1K_MAXSECTOR;
-        case '2' :
-            return MIFARE_2K_MAXSECTOR;
-        case '4' :
-            return MIFARE_4K_MAXSECTOR;
-        default  :
-            return 0;
-    }
-}
-
-static uint8_t FirstBlockOfSector(uint8_t sectorNo) {
-    if (sectorNo < 32) {
-        return sectorNo * 4;
-    } else {
-        return 32 * 4 + (sectorNo - 32) * 16;
-    }
-}
-
-static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
-    if (sectorNo < 32) {
-        return 4;
-    } else {
-        return 16;
-    }
-}
-
-static uint8_t GetSectorFromBlockNo(uint8_t blockNo) {
-    if (blockNo < 128)
-        return blockNo / 4;
-    else
-        return 32 + ((128 - blockNo) / 16);
-}
-
-static char GetFormatFromSector(uint8_t sectorNo) {
-    switch (sectorNo) {
-        case MIFARE_MINI_MAXSECTOR:
-            return '0';
-        case MIFARE_1K_MAXSECTOR:
-            return '1';
-        case MIFARE_2K_MAXSECTOR:
-            return '2';
-        case MIFARE_4K_MAXSECTOR:
-            return '4';
-        default  :
-            return ' ';
-    }
 }
 
 static int FastDumpWithEcFill(uint8_t numsectors) {
