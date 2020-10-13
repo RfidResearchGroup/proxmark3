@@ -825,12 +825,9 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
         if (isOK) {
 
-            uint8_t blocks = 4;
-            uint8_t start = sectorNo * 4;
-            if (sectorNo >= 32) {
-                blocks = 16;
-                start = 128 + (sectorNo - 32) * 16;
-            }
+            uint8_t blocks = NumBlocksPerSector(sectorNo);
+            uint8_t start = FirstBlockOfSector(sectorNo);
+
             for (int i = 0; i < blocks; i++) {
                 PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data + (i * 16), 16));
             }
