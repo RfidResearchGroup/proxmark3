@@ -827,7 +827,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
             uint8_t blocks = 4;
             uint8_t start = sectorNo * 4;
-            if (sectorNo > 32) {
+            if (sectorNo >= 32) {
                 blocks = 16;
                 start = 128 + (sectorNo - 32) * 16;
             }
