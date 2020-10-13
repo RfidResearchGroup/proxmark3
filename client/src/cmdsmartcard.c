@@ -27,7 +27,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_sm_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc raw [h|r|c] d <0A 0B 0C ... hex>");
+    PrintAndLogEx(NORMAL, "Usage: smart raw [h|r|c] d <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       r          :  do not read response");
     PrintAndLogEx(NORMAL, "       a          :  active smartcard without select (reset sc module)");
@@ -37,58 +37,58 @@ static int usage_sm_raw(void) {
     PrintAndLogEx(NORMAL, "       d <bytes>  :  bytes to send");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
-    PrintAndLogEx(NORMAL, "        sc raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
-    PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000041010              - Mastercard");
-    PrintAndLogEx(NORMAL, "        sc raw 0 t d 00a4040007a0000000031010                - Visa");
+    PrintAndLogEx(NORMAL, "        smart raw s 0 d 00a404000e315041592e5359532e4444463031  - `1PAY.SYS.DDF01` PPSE directory with get ATR");
+    PrintAndLogEx(NORMAL, "        smart raw 0 d 00a404000e325041592e5359532e4444463031    - `2PAY.SYS.DDF01` PPSE directory");
+    PrintAndLogEx(NORMAL, "        smart raw 0 t d 00a4040007a0000000041010              - Mastercard");
+    PrintAndLogEx(NORMAL, "        smart raw 0 t d 00a4040007a0000000031010                - Visa");
     return PM3_SUCCESS;
 }
 static int usage_sm_reader(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc reader [h|s]");
+    PrintAndLogEx(NORMAL, "Usage: smart reader [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc reader");
+    PrintAndLogEx(NORMAL, "        smart reader");
     return PM3_SUCCESS;
 }
 static int usage_sm_info(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc info [h|s]");
+    PrintAndLogEx(NORMAL, "Usage: smart info [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc info");
+    PrintAndLogEx(NORMAL, "        smart info");
     return PM3_SUCCESS;
 }
 static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "Upgrade RDV4.0 Sim module firmware");
-    PrintAndLogEx(NORMAL, "Usage:  sc upgrade f <file name>");
+    PrintAndLogEx(NORMAL, "Usage:  smart upgrade f <file name>");
     PrintAndLogEx(NORMAL, "       h               :  this help");
     PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/sim011.bin");
+    PrintAndLogEx(NORMAL, "        smart upgrade f ../tools/simmodule/sim011.bin");
     return PM3_SUCCESS;
 }
 static int usage_sm_setclock(void) {
-    PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
+    PrintAndLogEx(NORMAL, "Usage: smart setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz) ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc setclock c 2");
+    PrintAndLogEx(NORMAL, "        smart setclock c 2");
     return PM3_SUCCESS;
 }
 static int usage_sm_brute(void) {
     PrintAndLogEx(NORMAL, "Tries to bruteforce SFI, using a known list of AID's ");
-    PrintAndLogEx(NORMAL, "Usage: sc brute [h]");
+    PrintAndLogEx(NORMAL, "Usage: smart brute [h]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       t          :  executes TLV decoder if it possible");
 //  PrintAndLogEx(NORMAL, "       0          :  use protocol T=0");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc brute t");
+    PrintAndLogEx(NORMAL, "        smart brute t");
     return PM3_SUCCESS;
 }
 
@@ -465,9 +465,10 @@ static int CmdSmartRaw(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_raw();
 
-    uint8_t flags = 0;
+    uint8_t flags = SC_LOG;
     if (active || active_select) {
-        flags |= SC_CONNECT;
+
+        flags |= (SC_CONNECT | SC_CLEARLOG);
         if (active_select)
             flags |= SC_SELECT;
     }
@@ -843,9 +844,13 @@ static int CmdSmartSetClock(const char *Cmd) {
 }
 
 static int CmdSmartList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("7816");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 7816");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static void smart_brute_prim(void) {
@@ -884,7 +889,7 @@ static void smart_brute_prim(void) {
 static int smart_brute_sfi(bool decodeTLV) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-    if (!buf)
+    if (buf == NULL)
         return 1;
 
     int len;
@@ -894,8 +899,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
     for (uint8_t sfi = 1; sfi <= 31; sfi++) {
 
-        printf(".");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "." NOLF);
 
         for (uint16_t rec = 1; rec <= 255; rec++) {
 
@@ -1023,8 +1027,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     for (int i = 0; i < json_array_size(root); i++) {
 
-        printf("+");
-        fflush(stdout);
+        PrintAndLogEx(NORMAL, "+" NOLF);
 
         if (caid)
             free(caid);
@@ -1032,21 +1035,21 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         json_t *data, *jaid;
 
         data = json_array_get(root, i);
-        if (!json_is_object(data)) {
-            PrintAndLogEx(ERR, "data %d is not an object\n", i + 1);
+        if (json_is_object(data) == false) {
+            PrintAndLogEx(ERR, "\ndata %d is not an object\n", i + 1);
             json_decref(root);
             return PM3_ESOFT;
         }
 
         jaid = json_object_get(data, "AID");
-        if (!json_is_string(jaid)) {
-            PrintAndLogEx(ERR, "AID data [%d] is not a string", i + 1);
+        if (json_is_string(jaid) == false) {
+            PrintAndLogEx(ERR, "\nAID data [%d] is not a string", i + 1);
             json_decref(root);
             return PM3_ESOFT;
         }
 
         const char *aid = json_string_value(jaid);
-        if (!aid)
+        if (aid == false)
             continue;
 
         size_t aidlen = strlen(aid);
@@ -1068,7 +1071,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
         json_t *jvendor, *jname;
         jvendor = json_object_get(data, "Vendor");
-        if (!json_is_string(jvendor)) {
+        if (json_is_string(jvendor) == false) {
             PrintAndLogEx(ERR, "Vendor data [%d] is not a string", i + 1);
             continue;
         }
@@ -1078,7 +1081,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
             continue;
 
         jname = json_object_get(data, "Name");
-        if (!json_is_string(jname)) {
+        if (json_is_string(jname) == false) {
             PrintAndLogEx(ERR, "Name data [%d] is not a string", i + 1);
             continue;
         }
@@ -1201,4 +1204,5 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
 
     return true;
 }
+
 

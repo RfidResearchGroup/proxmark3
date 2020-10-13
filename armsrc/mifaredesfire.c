@@ -118,6 +118,7 @@ void MifareDesfireGetInformation(void) {
     struct p {
         uint8_t isOK;
         uint8_t uid[7];
+        uint8_t uidlen;
         uint8_t versionHW[7];
         uint8_t versionSW[7];
         uint8_t details[14];
@@ -148,15 +149,9 @@ void MifareDesfireGetInformation(void) {
         return;
     }
 
-    if (card.uidlen != 7) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Wrong UID size. Expected 7byte got %d", card.uidlen);
-        payload.isOK = 2;  // 2 == WRONG UID
-        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
-        switch_off();
-        return;
-    }
     // add uid.
-    memcpy(payload.uid, card.uid, sizeof(payload.uid));
+    memcpy(payload.uid, card.uid, card.uidlen);
+    payload.uidlen = card.uidlen;
 
     LED_A_ON();
     uint8_t cmd[] = {0x90, MFDES_GET_VERSION, 0x00, 0x00, 0x00};

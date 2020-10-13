@@ -37,8 +37,8 @@ static int usage_lf_cotag_read(void) {
 
 // COTAG demod should be able to use GraphBuffer,
 // when data load samples
-static int CmdCOTAGDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodCOTAG(bool verbose) {
+    (void) verbose; // unused so far
 
     uint8_t bits[COTAG_BITS] = {0};
     size_t bitlen = COTAG_BITS;
@@ -73,25 +73,42 @@ static int CmdCOTAGDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdCOTAGDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodCOTAG(true);
+}
 // When reading a COTAG.
 // 0 = HIGH/LOW signal - maxlength bigbuff
 // 1 = translation for HI/LO into bytes with manchester 0,1 - length 300
 // 2 = raw signal -  maxlength bigbuff
 static int CmdCOTAGRead(const char *Cmd) {
 
-    if (tolower(Cmd[0]) == 'h') return usage_lf_cotag_read();
+    if (tolower(Cmd[0]) == 'h')
+        return usage_lf_cotag_read();
 
-    uint32_t rawsignal = 1;
-    sscanf(Cmd, "%u", &rawsignal);
+    struct p {
+        uint8_t mode;
+    } PACKED payload;
+    payload.mode = param_get8ex(Cmd, 0, 1, 10);
 
+    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_COTAG_READ, rawsignal, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_LF_COTAG_READ, NULL, 7000)) {
-        PrintAndLogEx(WARNING, "command execution time out");
-        return PM3_ETIMEOUT;
+    SendCommandNG(CMD_LF_COTAG_READ, (uint8_t *)&payload, sizeof(payload));
+
+    uint8_t timeout = 3;
+    while (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 2000)) {
+        timeout--;
+        PrintAndLogEx(NORMAL, "." NOLF);
+        if (timeout == 0) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
     }
 
-    switch (rawsignal) {
+    if (timeout != 3)
+        PrintAndLogEx(NORMAL, "");
+
+    switch (payload.mode) {
         case 0:
         case 2: {
             CmdPlot("");
@@ -100,13 +117,9 @@ static int CmdCOTAGRead(const char *Cmd) {
             break;
         }
         case 1: {
-
-            if (!GetFromDevice(BIG_BUF, DemodBuffer, COTAG_BITS, 0, NULL, 0, NULL, 1000, false)) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-                return PM3_ETIMEOUT;
-            }
-            DemodBufferLen = COTAG_BITS;
-            return CmdCOTAGDemod("");
+            memcpy(DemodBuffer, resp.data.asBytes, resp.length);
+            DemodBufferLen = resp.length;
+            return demodCOTAG(true);
         }
     }
     return PM3_SUCCESS;
@@ -128,10 +141,6 @@ static int CmdHelp(const char *Cmd) {
 int CmdLFCOTAG(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-}
-
-int demodCOTAG(void) {
-    return CmdCOTAGDemod("");
 }
 
 int readCOTAGUid(void) {

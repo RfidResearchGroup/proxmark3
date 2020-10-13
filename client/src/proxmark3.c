@@ -34,8 +34,8 @@
 #include "flash.h"
 #include "preferences.h"
 
-#define BANNERMSG1 "    :snowflake:  iceman@icesql.net"
-#define BANNERMSG2 "  bleeding edge :coffee:"
+#define BANNERMSG1 "      Iceman :coffee:"
+#define BANNERMSG2 "  :snowflake: bleeding edge"
 #define BANNERMSG3 "  https://github.com/rfidresearchgroup/proxmark3/"
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
@@ -108,7 +108,7 @@ static void showBanner(void) {
 #endif
 //    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
 //    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
-//    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
+//    PrintAndLogEx(NORMAL, "\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     PrintAndLogEx(NORMAL, "");
     fflush(stdout);
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
@@ -136,18 +136,16 @@ static int check_comm(void) {
 #endif
         CloseProxmark();
     }
+    msleep(10);
     return 0;
 }
-static void flush_history(void) {
 #ifdef HAVE_READLINE
+static void flush_history(void) {
     if (session.history_path) {
         write_history(session.history_path);
         free(session.history_path);
     }
-#endif
 }
-
-#ifdef HAVE_READLINE
 
 #  if defined(_WIN32)
 /*
@@ -247,22 +245,26 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
 #ifdef HAVE_READLINE
     session.history_path = NULL;
-    if (searchHomeFilePath(&session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "No history will be recorded");
-        session.history_path = NULL;
+    if (session.incognito) {
+        PrintAndLogEx(INFO, "No history will be recorded");
     } else {
+        if (searchHomeFilePath(&session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "No history will be recorded");
+            session.history_path = NULL;
+        } else {
 
 #  if defined(_WIN32)
-//        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
+            //        SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
 #  else
-        struct sigaction action;
-        memset(&action, 0, sizeof(action));
-        action.sa_handler = &terminate_handler;
-        sigaction(SIGINT, &action, &old_action);
+            struct sigaction action;
+            memset(&action, 0, sizeof(action));
+            action.sa_handler = &terminate_handler;
+            sigaction(SIGINT, &action, &old_action);
 #  endif
-        rl_catch_signals = 1;
-        rl_set_signals();
-        read_history(session.history_path);
+            rl_catch_signals = 1;
+            rl_set_signals();
+            read_history(session.history_path);
+        }
     }
 #endif
 
@@ -351,6 +353,7 @@ check_script:
                     prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+                    g_pendingPrompt = true;
 #ifdef HAVE_READLINE
                     cmd = readline(prompt_filtered);
 #else
@@ -413,6 +416,7 @@ check_script:
                 }
 #endif
                 // process cmd
+                g_pendingPrompt = false;
                 int ret = CommandReceived(cmd);
                 // exit or quit
                 if (ret == PM3_EFATAL)
@@ -565,6 +569,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
         PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
+        PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
         PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
         PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
         PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash or --flash-info)");
@@ -678,63 +683,18 @@ finish2:
     return ret;
 }
 
-// Check if windows AnsiColor Support is enabled in the registery
-// [HKEY_CURRENT_USER\Console]
-//     "VirtualTerminalLevel"=dword:00000001
-// 2nd Key needs to be enabled...  This key takes the console out of legacy mode.
-// [HKEY_CURRENT_USER\Console]
-//     "ForceV2"=dword:00000001
-
 #if defined(_WIN32)
 static bool DetectWindowsAnsiSupport(void) {
-    HKEY hKey = NULL;
-    bool virtualTerminalLevelSet = false;
-    bool forceV2Set = false;
-
-    if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
-        DWORD dwType = REG_SZ;
-        BYTE KeyValue[sizeof(dwType)];
-        DWORD len = sizeof(KeyValue);
-
-        if (RegQueryValueEx(hKey, "VirtualTerminalLevel", NULL, &dwType, KeyValue, &len) != ERROR_FILE_NOT_FOUND) {
-            uint8_t i;
-            uint32_t Data = 0;
-            for (i = 0; i < 4; i++)
-                Data += KeyValue[i] << (8 * i);
-
-            if (Data == 1) { // Reg key is set to 1, Ansi Color Enabled
-                virtualTerminalLevelSet = true;
-            }
-        }
-        RegCloseKey(hKey);
-    }
-
-    if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
-        DWORD dwType = REG_SZ;
-        BYTE KeyValue[sizeof(dwType)];
-        DWORD len = sizeof(KeyValue);
-
-        if (RegQueryValueEx(hKey, "ForceV2", NULL, &dwType, KeyValue, &len) != ERROR_FILE_NOT_FOUND) {
-            uint8_t i;
-            uint32_t Data = 0;
-            for (i = 0; i < 4; i++)
-                Data += KeyValue[i] << (8 * i);
-
-            if (Data == 1) { // Reg key is set to 1, Not using legacy Mode.
-                forceV2Set = true;
-            }
-        }
-        RegCloseKey(hKey);
-    }
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
 
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD dwMode = 0;
     GetConsoleMode(hOut, &dwMode);
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hOut, dwMode);
 
-    // If both VirtualTerminalLevel and ForceV2 is set, AnsiColor should work
-    return virtualTerminalLevelSet && forceV2Set;
+    return SetConsoleMode(hOut, dwMode) ? true : false;
 }
 #endif
 
@@ -743,6 +703,7 @@ int main(int argc, char *argv[]) {
 
     session.pm3_present = false;
     session.help_dump_mode = false;
+    session.incognito = false;
     bool waitCOMPort = false;
     bool addLuaExec = false;
     bool stayInCommandLoop = false;
@@ -948,6 +909,12 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // do not use history nor log files
+        if (strcmp(argv[i], "--incognito") == 0) {
+            session.incognito = true;
+            continue;
+        }
+
         // go to flash mode
         if (strcmp(argv[i], "--flash") == 0) {
             flash_mode = true;
@@ -1053,7 +1020,7 @@ int main(int argc, char *argv[]) {
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if (!session.preferences_loaded) {
+    if ((!session.preferences_loaded) && (!session.incognito)) {
         PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         session.preferences_loaded = true;

@@ -50,10 +50,13 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
         if (total_size >= num_infiles * FPGA_CONFIG_SIZE) {
             fprintf(stderr,
                     "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
-                    , num_infiles * FPGA_CONFIG_SIZE);
+                    , num_infiles * FPGA_CONFIG_SIZE
+                   );
+
             for (uint16_t j = 0; j < num_infiles; j++) {
                 fclose(infile[j]);
             }
+
             free(fpga_config);
             return (EXIT_FAILURE);
         }
@@ -188,8 +191,10 @@ static int zlib_decompress(FILE *infile, FILE *outfile) {
  * length.
  */
 static int bitparse_find_section(FILE *infile, char section_name, unsigned int *section_length) {
-    int result = 0;
+
 #define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
+
+    int result = 0;
     uint16_t numbytes = 0;
     while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
         char current_name = (char)fgetc(infile);
@@ -252,6 +257,8 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
         strncat(dst, "LF", len - strlen(dst) - 1);
     else if (!memcmp("fpga_hf", basename(infile_name), 7))
         strncat(dst, "HF", len - strlen(dst) - 1);
+    else if (!memcmp("fpga_felica", basename(infile_name), 7))
+        strncat(dst, "HF FeliCa", len - strlen(dst) - 1);
 
     strncat(dst, " image built", len - strlen(dst) - 1);
     if (bitparse_find_section(infile, 'b', &fpga_info_len)) {
@@ -389,11 +396,13 @@ int main(int argc, char **argv) {
             return (EXIT_FAILURE);
         }
         if (generate_version_file) {
-            if (generate_fpga_version_info(infiles, infile_names, num_input_files, outfile)) {
-                free(infile_names);
-                free(infiles);
+            int ret = generate_fpga_version_info(infiles, infile_names, num_input_files, outfile);
+            free(infile_names);
+            free(infiles);
+            if (ret) {
                 return (EXIT_FAILURE);
             }
+            return (ret);
         } else {
             int ret = zlib_compress(infiles, num_input_files, outfile);
             free(infile_names);

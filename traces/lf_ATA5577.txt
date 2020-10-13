@@ -1,0 +1,121 @@
+These traces have been generated with a T5577:
+
+lf awid clone 26 224 1337
+lf read s 10000
+data save f lf_ATA5577_awid_26
+
+lf awid clone 50 2001 13371337
+lf read s 10000
+data save f lf_ATA5577_awid_50
+
+lf em 410x_write 0F0368568B 1
+lf read s 10000
+data save f lf_ATA5577_em410x
+
+lf fdx clone c 999 n 112233 s
+lf read s 10000
+data save f lf_ATA5577_fdx_animal
+
+lf fdx clone c 999 n 112233 e 16a
+lf read s 10000
+data save f lf_ATA5577_fdx_extended
+
+lf gallagher clone b 0FFD5461A9DA1346B2D1AC32
+lf read s 10000
+data save f lf_ATA5577_gallagher
+
+lf gproxii clone 26 123 11223
+lf read s 10000
+data save f lf_ATA5577_gproxii
+
+lf hid clone 2006ec0c86
+lf read s 10000
+data save f lf_ATA5577_hid
+
+lf hid clone -l 01400076000c86
+lf read s 20000
+data save f lf_ATA5577_hid_48
+
+lf indala clone --heden 888
+lf read s 10000
+data save f lf_ATA5577_indala_hedem
+
+lf indala clone --fc 123 --cn 1337
+lf read s 10000
+data save f lf_ATA5577_indala
+
+lf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5 
+lf read s 10000
+data save f lf_ATA5577_indala_224
+
+lf io clone 01 101 1337
+lf read s 10000
+data save f lf_ATA5577_io
+
+lf jablotron clone 112233
+lf read s 16000
+data save f lf_ATA5577_jablotron
+
+lf keri clone --id 112233
+lf read s 10000
+data save f lf_ATA5577_keri
+
+lf keri clone -t i --fc 6 --id 12345
+lf read s 10000
+data save f lf_ATA5577_keri_internalid
+
+lf keri clone -t m --fc 6 --id 12345
+lf read s 10000
+data save f lf_ATA5577_keri_msid
+
+lf motorola clone a0000000a0002021
+lf read s 10000
+data save f lf_ATA5577_motorola
+
+lf nedap clone s 1 c 123 i 12345
+lf read s 16000
+data save f lf_ATA5577_nedap
+
+lf nexwatch clone r 5600000000213C9F8F150C
+lf read s 10000
+data save f lf_ATA5577_nexwatch
+
+lf nexwatch clone c 521512301 m 1 n
+lf read s 10000
+data save f lf_ATA5577_nexwatch_nexkey
+
+lf nexwatch clone c 521512301 m 1 q
+lf read s 10000
+data save f lf_ATA5577_nexwatch_quadrakey
+
+lf noralsy clone 112233
+lf read s 10000
+data save f lf_ATA5577_noralsy
+
+lf pac clone c CD4F5552 
+lf read s 10000
+data save f lf_ATA5577_pac
+
+lf paradox clone b 0f55555695596a6a9999a59a
+lf read s 10000
+data save f lf_ATA5577_paradox
+
+lf presco clone d 123456789
+lf read s 12000
+data save f lf_ATA5577_presco
+
+lf pyramid clone 123 11223
+lf read s 10000
+data save f lf_ATA5577_pyramid
+
+lf securakey clone b 7FCB400001ADEA5344300000
+lf read s 10000
+data save f lf_ATA5577_securakey
+
+lf viking clone 1A337
+lf read s 10000
+data save f lf_ATA5577_viking
+
+lf visa2000 clone 112233
+lf read s 10000
+data save f lf_ATA5577_visa2000

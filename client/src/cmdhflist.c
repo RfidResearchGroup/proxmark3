@@ -23,6 +23,7 @@
 #include "crc16.h"
 #include "crapto1/crapto1.h"
 #include "protocols.h"
+#include "cmdhficlass.h"
 
 enum MifareAuthSeq {
     masNone,
@@ -214,6 +215,9 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case ISO14443A_CMD_RATS:
             snprintf(exp, size, "RATS");
             break;
+        case ISO14443A_CMD_PPS:
+            snprintf(exp, size, "PPS");
+            break;
         case ISO14443A_CMD_OPTS:
             snprintf(exp, size, "OPTIONAL TIMESLOT");
             break;
@@ -326,192 +330,248 @@ void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     applyIso14443a(exp, size, cmd, cmdsize);
 }
 
-void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
-    uint8_t c = cmd[0] & 0x0F;
-    uint8_t parity = 0;
-    for (uint8_t i = 0; i < 7; i++) {
-        parity ^= (cmd[0] >> i) & 1;
-    }
+void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse) {
 
-    switch (c) {
-        case ICLASS_CMD_HALT:
-            snprintf(exp, size, "HALT");
-            break;
-        case ICLASS_CMD_SELECT:
-            snprintf(exp, size, "SELECT");
-            break;
-        case ICLASS_CMD_ACTALL:
-            snprintf(exp, size, "ACTALL");
-            break;
-        case ICLASS_CMD_DETECT:
-            snprintf(exp, size, "DETECT");
-            break;
-        case ICLASS_CMD_CHECK:
-            snprintf(exp, size, "CHECK");
-            break;
-        case ICLASS_CMD_READ4:
-            snprintf(exp, size, "READ4(%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_READ_OR_IDENTIFY: {
-            if (cmdsize > 1) {
-                snprintf(exp, size, "READ(%d)", cmd[1]);
-            } else {
-                snprintf(exp, size, "IDENTIFY");
-            }
-            break;
+    enum pico_state {PICO_NONE, PICO_SELECT, PICO_AUTH_EPURSE, PICO_AUTH_MACS };
+    static enum pico_state curr_state = PICO_NONE;
+    static uint8_t csn[8];
+    static uint8_t epurse[8];
+    static uint8_t rmac[4];
+    static uint8_t tmac[4];
+
+    if (isResponse == false)  {
+        uint8_t c = cmd[0] & 0x0F;
+        uint8_t parity = 0;
+        for (uint8_t i = 0; i < 7; i++) {
+            parity ^= (cmd[0] >> i) & 1;
         }
-        case ICLASS_CMD_PAGESEL:
-            snprintf(exp, size, "PAGESEL(%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_UPDATE:
-            snprintf(exp, size, "UPDATE(%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_READCHECK:
-            if (ICLASS_CREDIT(cmd[0])) {
-                snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
-            } else {
-                snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);
+
+        switch (c) {
+            case ICLASS_CMD_HALT:
+                snprintf(exp, size, "HALT");
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_SELECT:
+                snprintf(exp, size, "SELECT");
+                curr_state = PICO_SELECT;
+                break;
+            case ICLASS_CMD_ACTALL:
+                snprintf(exp, size, "ACTALL");
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_DETECT:
+                snprintf(exp, size, "DETECT");
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_CHECK:
+                snprintf(exp, size, "CHECK");
+                curr_state = PICO_AUTH_MACS;
+                memcpy(rmac, cmd + 1, 4);
+                memcpy(tmac, cmd + 5, 4);
+                break;
+            case ICLASS_CMD_READ4:
+                snprintf(exp, size, "READ4(%d)", cmd[1]);
+                break;
+            case ICLASS_CMD_READ_OR_IDENTIFY: {
+
+                if (cmdsize > 1) {
+                    snprintf(exp, size, "READ(%d)", cmd[1]);
+                } else {
+                    snprintf(exp, size, "IDENTIFY");
+                }
+                break;
             }
-            break;
-        case ICLASS_CMD_ACT:
-            snprintf(exp, size, "ACT");
-            break;
-        default:
-            snprintf(exp, size, "?");
-            break;
+            case ICLASS_CMD_PAGESEL:
+                snprintf(exp, size, "PAGESEL(%d)", cmd[1]);
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_UPDATE:
+                snprintf(exp, size, "UPDATE(%d)", cmd[1]);
+                curr_state = PICO_NONE;
+                break;
+            case ICLASS_CMD_READCHECK:
+                if (ICLASS_CREDIT(cmd[0])) {
+                    snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
+                    curr_state = PICO_AUTH_EPURSE;
+                } else {
+                    snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);
+                    curr_state = PICO_AUTH_EPURSE;
+                }
+                break;
+            case ICLASS_CMD_ACT:
+                snprintf(exp, size, "ACT");
+                curr_state = PICO_NONE;
+                break;
+            default:
+                snprintf(exp, size, "?");
+                curr_state = PICO_NONE;
+                break;
+        }
+
+    } else {
+
+        if (curr_state == PICO_SELECT) {
+            memcpy(csn, cmd, 8);
+            curr_state = PICO_NONE;
+        } else if (curr_state == PICO_AUTH_EPURSE) {
+            memcpy(epurse, cmd, 8);
+        } else if (curr_state == PICO_AUTH_MACS) {
+
+            uint8_t key[8];
+            if (check_known_default(csn, epurse, rmac, tmac, key)) {
+                snprintf(exp, size, "( " _GREEN_("%s") ")", sprint_hex(key, 8));
+            }
+            curr_state = PICO_NONE;
+        }
     }
     return;
 }
 
 void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
-    switch (cmd[1]) {
-        case ISO15693_INVENTORY:
-            snprintf(exp, size, "INVENTORY");
-            return;
-        case ISO15693_STAYQUIET:
-            snprintf(exp, size, "STAY_QUIET");
-            return;
-        case ISO15693_READBLOCK:
-            snprintf(exp, size, "READBLOCK");
-            return;
-        case ISO15693_WRITEBLOCK:
-            snprintf(exp, size, "WRITEBLOCK");
-            return;
-        case ISO15693_LOCKBLOCK:
-            snprintf(exp, size, "LOCKBLOCK");
-            return;
-        case ISO15693_READ_MULTI_BLOCK:
-            snprintf(exp, size, "READ_MULTI_BLOCK");
-            return;
-        case ISO15693_WRITE_MULTI_BLOCK:
-            snprintf(exp, size, "WRITE_MULTI_BLOCK");
-            return;
-        case ISO15693_SELECT:
-            snprintf(exp, size, "SELECT");
-            return;
-        case ISO15693_RESET_TO_READY:
-            snprintf(exp, size, "RESET_TO_READY");
-            return;
-        case ISO15693_WRITE_AFI:
-            snprintf(exp, size, "WRITE_AFI");
-            return;
-        case ISO15693_LOCK_AFI:
-            snprintf(exp, size, "LOCK_AFI");
-            return;
-        case ISO15693_WRITE_DSFID:
-            snprintf(exp, size, "WRITE_DSFID");
-            return;
-        case ISO15693_LOCK_DSFID:
-            snprintf(exp, size, "LOCK_DSFID");
-            return;
-        case ISO15693_GET_SYSTEM_INFO:
-            snprintf(exp, size, "GET_SYSTEM_INFO");
-            return;
-        case ISO15693_READ_MULTI_SECSTATUS:
-            snprintf(exp, size, "READ_MULTI_SECSTATUS");
-            return;
-        case ISO15693_INVENTORY_READ:
-            snprintf(exp, size, "INVENTORY_READ");
-            return;
-        case ISO15693_FAST_INVENTORY_READ:
-            snprintf(exp, size, "FAST_INVENTORY_READ");
-            return;
-        case ISO15693_SET_EAS:
-            snprintf(exp, size, "SET_EAS");
-            return;
-        case ISO15693_RESET_EAS:
-            snprintf(exp, size, "RESET_EAS");
-            return;
-        case ISO15693_LOCK_EAS:
-            snprintf(exp, size, "LOCK_EAS");
-            return;
-        case ISO15693_EAS_ALARM:
-            snprintf(exp, size, "EAS_ALARM");
-            return;
-        case ISO15693_PASSWORD_PROTECT_EAS:
-            snprintf(exp, size, "PASSWORD_PROTECT_EAS");
-            return;
-        case ISO15693_WRITE_EAS_ID:
-            snprintf(exp, size, "WRITE_EAS_ID");
-            return;
-        case ISO15693_READ_EPC:
-            snprintf(exp, size, "READ_EPC");
-            return;
-        case ISO15693_GET_NXP_SYSTEM_INFO:
-            snprintf(exp, size, "GET_NXP_SYSTEM_INFO");
-            return;
-        case ISO15693_INVENTORY_PAGE_READ:
-            snprintf(exp, size, "INVENTORY_PAGE_READ");
-            return;
-        case ISO15693_FAST_INVENTORY_PAGE_READ:
-            snprintf(exp, size, "FAST_INVENTORY_PAGE_READ");
-            return;
-        case ISO15693_GET_RANDOM_NUMBER:
-            snprintf(exp, size, "GET_RANDOM_NUMBER");
-            return;
-        case ISO15693_SET_PASSWORD:
-            snprintf(exp, size, "SET_PASSWORD");
-            return;
-        case ISO15693_WRITE_PASSWORD:
-            snprintf(exp, size, "WRITE_PASSWORD");
-            return;
-        case ISO15693_LOCK_PASSWORD:
-            snprintf(exp, size, "LOCK_PASSWORD");
-            return;
-        case ISO15693_PROTECT_PAGE:
-            snprintf(exp, size, "PROTECT_PAGE");
-            return;
-        case ISO15693_LOCK_PAGE_PROTECTION:
-            snprintf(exp, size, "LOCK_PAGE_PROTECTION");
-            return;
-        case ISO15693_GET_MULTI_BLOCK_PROTECTION:
-            snprintf(exp, size, "GET_MULTI_BLOCK_PROTECTION");
-            return;
-        case ISO15693_DESTROY:
-            snprintf(exp, size, "DESTROY");
-            return;
-        case ISO15693_ENABLE_PRIVACY:
-            snprintf(exp, size, "ENABLE_PRIVACY");
-            return;
-        case ISO15693_64BIT_PASSWORD_PROTECTION:
-            snprintf(exp, size, "64BIT_PASSWORD_PROTECTION");
-            return;
-        case ISO15693_STAYQUIET_PERSISTENT:
-            snprintf(exp, size, "STAYQUIET_PERSISTENT");
-            return;
-        case ISO15693_READ_SIGNATURE:
-            snprintf(exp, size, "READ_SIGNATURE");
-            return;
-        default:
-            break;
-    }
+    if (cmdsize >= 2) {
+        switch (cmd[1]) {
+            case ISO15693_INVENTORY:
+                snprintf(exp, size, "INVENTORY");
+                return;
+            case ISO15693_STAYQUIET:
+                snprintf(exp, size, "STAY_QUIET");
+                return;
+            case ISO15693_READBLOCK: {
 
-    if (cmd[1] >= 0x2D && cmd[1] <= 0x9F) snprintf(exp, size, "Optional RFU");
-    else if (cmd[1] >= 0xA0 && cmd[1] <= 0xDF) snprintf(exp, size, "Cust IC MFG dependent");
-    else if (cmd[1] >= 0xE0) snprintf(exp, size, "Proprietary IC MFG dependent");
-    else
-        snprintf(exp, size, "?");
+                uint8_t block = 0;
+                if (cmdsize == 13)
+                    block = cmd[10];
+                else if (cmdsize == 5)
+                    block = cmd[2];
+
+                snprintf(exp, size, "READBLOCK(%d)", block);
+                return;
+            }
+            case ISO15693_WRITEBLOCK: {
+                uint8_t block = 0;
+                if (cmdsize == 9)
+                    block = cmd[2];
+                snprintf(exp, size, "WRITEBLOCK(%d)", block);
+                return;
+            }
+            case ISO15693_LOCKBLOCK:
+                snprintf(exp, size, "LOCKBLOCK");
+                return;
+            case ISO15693_READ_MULTI_BLOCK:
+                snprintf(exp, size, "READ_MULTI_BLOCK");
+                return;
+            case ISO15693_WRITE_MULTI_BLOCK:
+                snprintf(exp, size, "WRITE_MULTI_BLOCK");
+                return;
+            case ISO15693_SELECT:
+                snprintf(exp, size, "SELECT");
+                return;
+            case ISO15693_RESET_TO_READY:
+                snprintf(exp, size, "RESET_TO_READY");
+                return;
+            case ISO15693_WRITE_AFI:
+                snprintf(exp, size, "WRITE_AFI");
+                return;
+            case ISO15693_LOCK_AFI:
+                snprintf(exp, size, "LOCK_AFI");
+                return;
+            case ISO15693_WRITE_DSFID:
+                snprintf(exp, size, "WRITE_DSFID");
+                return;
+            case ISO15693_LOCK_DSFID:
+                snprintf(exp, size, "LOCK_DSFID");
+                return;
+            case ISO15693_GET_SYSTEM_INFO:
+                snprintf(exp, size, "GET_SYSTEM_INFO");
+                return;
+            case ISO15693_READ_MULTI_SECSTATUS:
+                snprintf(exp, size, "READ_MULTI_SECSTATUS");
+                return;
+            case ISO15693_INVENTORY_READ:
+                snprintf(exp, size, "INVENTORY_READ");
+                return;
+            case ISO15693_FAST_INVENTORY_READ:
+                snprintf(exp, size, "FAST_INVENTORY_READ");
+                return;
+            case ISO15693_SET_EAS:
+                snprintf(exp, size, "SET_EAS");
+                return;
+            case ISO15693_RESET_EAS:
+                snprintf(exp, size, "RESET_EAS");
+                return;
+            case ISO15693_LOCK_EAS:
+                snprintf(exp, size, "LOCK_EAS");
+                return;
+            case ISO15693_EAS_ALARM:
+                snprintf(exp, size, "EAS_ALARM");
+                return;
+            case ISO15693_PASSWORD_PROTECT_EAS:
+                snprintf(exp, size, "PASSWORD_PROTECT_EAS");
+                return;
+            case ISO15693_WRITE_EAS_ID:
+                snprintf(exp, size, "WRITE_EAS_ID");
+                return;
+            case ISO15693_READ_EPC:
+                snprintf(exp, size, "READ_EPC");
+                return;
+            case ISO15693_GET_NXP_SYSTEM_INFO:
+                snprintf(exp, size, "GET_NXP_SYSTEM_INFO");
+                return;
+            case ISO15693_INVENTORY_PAGE_READ:
+                snprintf(exp, size, "INVENTORY_PAGE_READ");
+                return;
+            case ISO15693_FAST_INVENTORY_PAGE_READ:
+                snprintf(exp, size, "FAST_INVENTORY_PAGE_READ");
+                return;
+            case ISO15693_GET_RANDOM_NUMBER:
+                snprintf(exp, size, "GET_RANDOM_NUMBER");
+                return;
+            case ISO15693_SET_PASSWORD:
+                snprintf(exp, size, "SET_PASSWORD");
+                return;
+            case ISO15693_WRITE_PASSWORD:
+                snprintf(exp, size, "WRITE_PASSWORD");
+                return;
+            case ISO15693_LOCK_PASSWORD:
+                snprintf(exp, size, "LOCK_PASSWORD");
+                return;
+            case ISO15693_PROTECT_PAGE:
+                snprintf(exp, size, "PROTECT_PAGE");
+                return;
+            case ISO15693_LOCK_PAGE_PROTECTION:
+                snprintf(exp, size, "LOCK_PAGE_PROTECTION");
+                return;
+            case ISO15693_GET_MULTI_BLOCK_PROTECTION:
+                snprintf(exp, size, "GET_MULTI_BLOCK_PROTECTION");
+                return;
+            case ISO15693_DESTROY:
+                snprintf(exp, size, "DESTROY");
+                return;
+            case ISO15693_ENABLE_PRIVACY:
+                snprintf(exp, size, "ENABLE_PRIVACY");
+                return;
+            case ISO15693_64BIT_PASSWORD_PROTECTION:
+                snprintf(exp, size, "64BIT_PASSWORD_PROTECTION");
+                return;
+            case ISO15693_STAYQUIET_PERSISTENT:
+                snprintf(exp, size, "STAYQUIET_PERSISTENT");
+                return;
+            case ISO15693_READ_SIGNATURE:
+                snprintf(exp, size, "READ_SIGNATURE");
+                return;
+            default:
+                break;
+        }
+
+        if (cmd[1] > ISO15693_STAYQUIET && cmd[1] < ISO15693_READBLOCK) snprintf(exp, size, "Mandatory RFU");
+        else if (cmd[1] > ISO15693_READ_MULTI_SECSTATUS && cmd[1] <= 0x9F) snprintf(exp, size, "Optional RFU");
+        //    else if (cmd[1] >= 0xA0 && cmd[1] <= 0xDF) snprintf(exp, size, "Cust IC MFG dependent");
+        else if (cmd[1] > ISO15693_READ_SIGNATURE && cmd[1] <= 0xDF) snprintf(exp, size, "Cust IC MFG dependent");
+        else if (cmd[1] >= 0xE0) snprintf(exp, size, "Proprietary IC MFG dependent");
+        else
+            snprintf(exp, size, "?");
+    }
 }
 
 void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
@@ -557,6 +617,10 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
 // iso 7816-3
 void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    if (cmdsize < 2)
+        return;
+
     // S-block
     if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
         switch ((cmd[0] & 0x3f)) {
@@ -664,7 +728,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 snprintf(exp, size, "GET RESPONSE");
                 break;
             default:
-                snprintf(exp, size, "?");
+                //snprintf(exp, size, "?");
                 break;
         }
     }
@@ -847,7 +911,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 **/
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     switch (cmd[0]) {
-        case ISO14443B_REQB           : {
+        case ISO14443B_REQB : {
 
             switch (cmd[2] & 0x07) {
                 case 0:
@@ -913,6 +977,47 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
     }
 }
+
+// CryptoRF which is based on ISO-14443B
+void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    switch (cmd[0]) {
+        case CRYPTORF_SET_USER_ZONE:
+            snprintf(exp, size, "SET USR ZONE");
+            break;
+        case CRYPTORF_READ_USER_ZONE:
+            snprintf(exp, size, "READ USR ZONE");
+            break;
+        case CRYPTORF_WRITE_USER_ZONE:
+            snprintf(exp, size, "WRITE USR ZONE");
+            break;
+        case CRYPTORF_WRITE_SYSTEM_ZONE:
+            snprintf(exp, size, "WRITE SYSTEM ZONE");
+            break;
+        case CRYPTORF_READ_SYSTEM_ZONE:
+            snprintf(exp, size, "READ SYSTEM ZONE");
+            break;
+        case CRYPTORF_VERIFY_CRYPTO:
+            snprintf(exp, size, "VERIFY CRYPTO");
+            break;
+        case CRYPTORF_SEND_CHECKSUM:
+            snprintf(exp, size, "SEND CHKSUM");
+            break;
+        case CRYPTORF_DESELECT:
+            snprintf(exp, size, "DESELECT");
+            break;
+        case CRYPTORF_IDLE:
+            snprintf(exp, size, "IDLE");
+            break;
+        case CRYPTORF_CHECK_PASSWORD:
+            snprintf(exp, size, "CHECK PWD");
+            break;
+        default:
+            snprintf(exp, size, "?");
+            break;
+    }
+}
+
 
 // LEGIC
 // 1 = read

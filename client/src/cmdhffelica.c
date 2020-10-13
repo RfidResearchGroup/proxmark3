@@ -21,7 +21,7 @@
 #include "crc16.h"
 #include "util.h"
 #include "ui.h"
-#include "mifare.h"     // felica_card_select_t struct
+#include "iso18.h"     // felica_card_select_t struct
 #include "des.h"
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
@@ -84,11 +84,11 @@ static int usage_hf_felica_dumplite(void) {
 }
 
 static int usage_hf_felica_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
+    PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-k] [-a] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -r    do not read response");
     PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -p    leave the signal field ON after receive");
+    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
     PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
     PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
     return PM3_SUCCESS;
@@ -407,9 +407,13 @@ static bool add_last_IDm(uint8_t position, uint8_t *data) {
 }
 
 static int CmdHFFelicaList(const char *Cmd) {
-    (void)Cmd;
-    CmdTraceList("felica");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t felica");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHFFelicaReader(const char *Cmd) {
@@ -1630,27 +1634,30 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         timeout++;
-        printf(".");
+        PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "aborted via keyboard!\n");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             DropField();
             return PM3_EOPABORTED;
         }
-        if (timeout > 100) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        if (timeout > 10) {
+            PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
             DropField();
             return PM3_ETIMEOUT;
         }
     }
+
+    PrintAndLogEx(NORMAL, "");
+
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
+        PrintAndLogEx(WARNING, "Button pressed, aborted");
         return PM3_EOPABORTED;
     }
 
     uint32_t tracelen = resp.oldarg[1];
     if (tracelen == 0) {
-        PrintAndLogEx(WARNING, "\nNo trace data! Maybe not a FeliCa Lite card?");
+        PrintAndLogEx(WARNING, "No trace data! Maybe not a FeliCa Lite card?");
         return PM3_ESOFT;
     }
 
@@ -1684,7 +1691,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
     bool reply = 1;
     bool crc = false;
-    bool power = false;
+    bool keep_field_on = false;
     bool active = false;
     bool active_select = false;
     uint16_t numbits = 0;
@@ -1711,8 +1718,8 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
                 case 'c':
                     crc = true;
                     break;
-                case 'p':
-                    power = true;
+                case 'k':
+                    keep_field_on = true;
                     break;
                 case 'a':
                     active = true;
@@ -1768,7 +1775,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
             flags |= FELICA_NO_SELECT;
     }
 
-    if (power) {
+    if (keep_field_on) {
         flags |= FELICA_NO_DISCONNECT;
     }
 

@@ -40,6 +40,8 @@ typedef struct {
     bool window_changed; // track if plot/overlay pos/size changed to save on exit
     qtWindow_t plot;
     qtWindow_t overlay;
+    bool overlay_sliders;
+    bool incognito;
 //    char *defaultPaths[spItemCount]; // Array should allow loop searching for files
     clientdebugLevel_t client_debug_level;
 //    uint8_t device_debug_level;
@@ -53,6 +55,7 @@ extern bool showDemod;
 #endif
 #define MAX_PRINT_BUFFER 2048
 
+#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          \r")
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetFlushAfterWrite(bool value);

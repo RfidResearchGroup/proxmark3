@@ -1,1 +1,0 @@
-run -ifn fpga_nfc.v -ifmt Verilog -ofn fpga_nfc.ngc -ofmt NGC -p xc2s30-5-vq100 -top fpga_nfc -opt_mode area -opt_level 2 -resource_sharing yes -fsm_style bram -fsm_encoding compact

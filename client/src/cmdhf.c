@@ -35,6 +35,8 @@
 #include "cmdhfthinfilm.h"  // Thinfilm
 #include "cmdhflto.h"       // LTO-CM
 #include "cmdhfcryptorf.h"  // CryptoRF
+#include "cmdhfst.h"        // ST rothult
+#include "cmdhfwaveshare.h" // Waveshare
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
 #include "proxgui.h"
@@ -84,8 +86,6 @@ static int usage_hf_tune(void) {
     return PM3_SUCCESS;
 }
 
-#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          ")
-
 int CmdHFSearch(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -123,8 +123,17 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
-        if (readHF15Uid(false)) {
+        if (readHF15Uid(false, false)) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for iCLASS / PicoPass tag...");
+    if (IfPm3Iclass()) {
+        if (read_iclass_csn(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -147,16 +156,27 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    // 14b  is the longest test (put last)
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
-    if (IfPm3Felica()) {
-        if (readFelicaUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
+    if (IfPm3Iso14443b()) {
+        if (readHF14B(false) == 1) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
+
     /*
-        // 14b and iclass is the longest test (put last)
+        PROMPT_CLEARLINE;
+        PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+        if (IfPm3Felica()) {
+            if (readFelicaUid(false) == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+                res = PM3_SUCCESS;
+            }
+        }
+    */
+    /*
         PROMPT_CLEARLINE;
         PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
         if (IfPm3Iso14443b()) {
@@ -167,32 +187,13 @@ int CmdHFSearch(const char *Cmd) {
         }
     */
 
-    // 14b and iclass is the longest test (put last)
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
-    if (IfPm3Iso14443b()) {
-        if (readHF14B(false) == 1) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for iClass / PicoPass tag...");
-    if (IfPm3Iclass()) {
-        if (readIclass(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
 
-        PrintAndLogEx(INPLACE, _RED_("No known/supported 13.56 MHz tags found"));
+        PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         res = PM3_ESOFT;
     }
-    printf("\n");
+
     return res;
 }
 
@@ -285,16 +286,16 @@ int CmdHFSniff(const char *Cmd) {
                     uint16_t len;
                 } PACKED;
                 struct r *retval = (struct r *)resp.data.asBytes;
-            
+
                 PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
 
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data hpf") "` to remove offset");
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data plot") "` to view");
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("data save") "` to save");
 
-                // download bigbuf_malloc:d.  
+                // download bigbuf_malloc:d.
                 // it reserve memory from the higher end.
-                // At the moment, sniff takes all free memory in bigbuff. If this changes, 
+                // At the moment, sniff takes all free memory in bigbuff. If this changes,
                 // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
                 uint32_t start = pm3_capabilities.bigbuf_size - retval->len;
                 int res = getSamplesEx(start, start, false);
@@ -364,8 +365,10 @@ static command_t CommandTable[] = {
     {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...             }"},
     {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...       }"},
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...          }"},
+    {"st",          CmdHF_ST,         AlwaysAvailable, "{ ST Rothult RFIDs...              }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
+    {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...          }"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},

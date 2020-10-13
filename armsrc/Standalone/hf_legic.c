@@ -22,7 +22,6 @@
 #include "legic.h"          // legic_card_select_t struct
 #include "spiffs.h"         // flashmem
 
-
 /*
  * To list all dump files from flash:
  *
@@ -106,6 +105,7 @@ void RunMod(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     Dbprintf("[=] >>  HF Legic Prime Read/Simulate Started  <<");
     DbpString("[=] press and HOLD button to exit standalone mode");
+
     for (;;) {
         WDT_HIT();
 
@@ -163,7 +163,7 @@ void RunMod(void) {
             }
 
             // The read data is migrated to a MIM1024 card
-            LegicRfSimulate(ct);
+            LegicRfSimulate(ct, false);
         }
     }
 

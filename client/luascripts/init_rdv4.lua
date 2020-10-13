@@ -74,9 +74,9 @@ function main(args)
     -- Upload dictionaries
     print('Uploading dictionaries to RDV4 flashmemory')
     print(dash)
-    core.console('mem load f mfc_default_keys m')
-    core.console('mem load f t55xx_default_pwds t')
-    core.console('mem load f iclass_default_keys i')
+    core.console('mem load -f mfc_default_keys --mfc')
+    core.console('mem load -f t55xx_default_pwds --t55xx')
+    core.console('mem load -f iclass_default_keys --iclass')
     print(dash)
 
     -- T55x7 Device configuration

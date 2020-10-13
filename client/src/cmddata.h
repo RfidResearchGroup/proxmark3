@@ -59,12 +59,13 @@ int CmdNorm(const char *Cmd);                                                   
 int CmdPlot(const char *Cmd);                                                                   // used by cmd lf cotag
 int CmdSave(const char *Cmd);                                                                   // used by cmd auto
 int CmdTuneSamples(const char *Cmd);                                                            // used by cmd lf hw
-int ASKbiphaseDemod(const char *Cmd, bool verbose);                                             // used by cmd lf em4x, lf fdx, lf guard, lf jablotron, lf nedap, lf t55xx
-int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType);                    // used by cmd lf em4x, lf t55xx, lf viking
-int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, bool *stCheck); // used by cmd lf, lf em4x, lf noralsy, le presco, lf securekey, lf t55xx, lf visa2k
-int FSKrawDemod(const char *Cmd, bool verbose);                                                 // used by cmd lf, lf em4x, lf t55xx
-int PSKDemod(const char *Cmd, bool verbose);                                                    // used by cmd lf em4x, lf indala, lf keri, lf nexwatch, lf t55xx
-int NRZrawDemod(const char *Cmd, bool verbose);                                                 // used by cmd lf pac, lf t55xx
+
+int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose);                 // used by cmd lf em4x, lf fdxb, lf guard, lf jablotron, lf nedap, lf t55xx
+int ASKDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType);                    // used by cmd lf em4x, lf t55xx, lf viking
+int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType, bool *stCheck); // used by cmd lf, lf em4x, lf noralsy, le presco, lf securekey, lf t55xx, lf visa2k
+int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bool verbose);    // used by cmd lf, lf em4x, lf t55xx
+int PSKDemod(int clk, int invert, int maxErr, bool verbose);                                    // used by cmd lf em4x, lf indala, lf keri, lf nexwatch, lf t55xx
+int NRZrawDemod(int clk, int invert, int maxErr, bool verbose);                                 // used by cmd lf pac, lf t55xx
 
 
 void printDemodBuff(void);
@@ -79,14 +80,13 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose);
 void setClockGrid(uint32_t clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
 int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-int demodIdteck(void);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)
 extern uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 extern size_t DemodBufferLen;
 
 extern int g_DemodClock;
-extern size_t g_DemodStartIdx;
+extern int32_t g_DemodStartIdx;
 
 #ifdef __cplusplus
 }

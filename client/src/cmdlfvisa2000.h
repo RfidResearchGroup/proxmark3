@@ -14,7 +14,7 @@
 int CmdLFVisa2k(const char *Cmd);
 
 int getvisa2kBits(uint64_t fullcode, uint8_t *bits);
-int demodVisa2k(void);
+int demodVisa2k(bool verbose);
 int detectVisa2k(uint8_t *dest, size_t *size);
 
 #endif

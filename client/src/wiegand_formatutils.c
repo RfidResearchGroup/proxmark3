@@ -134,7 +134,6 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
         hfmt = 0;
         len = 37;
     } else if ((data->Mid & 0x0000001F) > 0) { // 36-32 bits
-        printf("a\n");
         hfmt = data->Mid & 0x0000001F;
         len = 32;
     } else {

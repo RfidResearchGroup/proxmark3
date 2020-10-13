@@ -26,6 +26,12 @@ bool IfPm3Present(void) {
     return session.pm3_present;
 }
 
+bool IfPm3Rdv4Fw(void) {
+    if (!IfPm3Present())
+        return false;
+    return (pm3_capabilities.compiled_with_flash) || (pm3_capabilities.compiled_with_smartcard);
+}
+
 bool IfPm3Flash(void) {
     if (!IfPm3Present())
         return false;
@@ -168,7 +174,11 @@ void CmdsHelp(const command_t Commands[]) {
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {
             g_printAndLog = PRINTANDLOG_PRINT;
-            PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
+            if (Commands[i].Name[0] == '-' || Commands[i].Name[0] == ' ') {
+                PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
+            } else {
+                PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
+            }
             g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
         }
         ++i;
@@ -184,6 +194,12 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     // Markdown help dump children
     if (strcmp(Cmd, "XX_internal_command_dump_markdown_XX") == 0) {
         dumpCommandsRecursive(Commands, 1);
+        return PM3_SUCCESS;
+    }
+
+    if (strcmp(Cmd, "coffee") == 0) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(NORMAL, "    ((\n     ))\n" _YELLOW_("  .______.\n  |      |]\n  \\      /\n   `----´\n\n"));
         return PM3_SUCCESS;
     }
 

@@ -15,8 +15,7 @@
 
 #include "pm3_cmd.h" // struct
 
-void AcquireRawAdcSamples125k(int divisor);
-void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command);
+void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint16_t period_1, uint8_t *symbol_extra, uint16_t *period_extra, uint8_t *command, bool verbose, uint32_t samples);
 void ReadTItag(void);
 void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc);
 
@@ -59,6 +58,7 @@ void TurnReadLFOn(uint32_t delay);
 
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
 void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd);
+void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd);
 
 void Cotag(uint32_t arg0);
 void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c);

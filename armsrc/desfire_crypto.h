@@ -69,8 +69,6 @@ enum DESFIRE_AUTH_SCHEME {
     AS_NEW
 };
 
-
-
 #define DESFIRE_KEY(key) ((struct desfire_key *) key)
 struct desfire_key {
     enum DESFIRE_CRYPTOALGO type;

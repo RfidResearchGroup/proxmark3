@@ -60,9 +60,21 @@ uint32_t reflect(uint32_t v, int b) {
     return v;
 }
 
+// https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
+
+// Reverse the bits in a byte with 3 operations (64-bit multiply and modulus division):
+uint8_t reflect8(uint8_t b) {
+    return (b * 0x0202020202ULL & 0x010884422010ULL) % 1023;
+}
+
+
+// Reverse the bits in a byte with 4 operations (64-bit multiply, no division):
+/*
 uint8_t reflect8(uint8_t b) {
     return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 }
+*/
+
 uint16_t reflect16(uint16_t b) {
     uint16_t v = 0;
     v |= (b & 0x8000) >> 15;
@@ -117,13 +129,28 @@ void lsl(uint8_t *data, size_t len) {
     data[len - 1] <<= 1;
 }
 
+
+// BSWAP24 of array[3]
 uint32_t le24toh(uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
+// BSWAP24, take u32, output array
 void htole24(uint32_t val, uint8_t data[3]) {
     data[0] = (uint8_t) val;
     data[1] = (uint8_t)(val >> 8);
     data[2] = (uint8_t)(val >> 16);
 }
 
+
+// ROL on u32
+uint32_t rotl(uint32_t a, uint8_t n) {
+    n &= 31;
+    return (a << n) | (a >> (32 - n));
+}
+
+// ROR on u32
+uint32_t rotr(uint32_t a, uint8_t n) {
+    n &= 31;
+    return (a >> n) | (a << (32 - n));
+}

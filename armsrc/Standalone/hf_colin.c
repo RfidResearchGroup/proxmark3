@@ -484,22 +484,18 @@ failtag:
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     SpinOff(50);
     LED_A_ON();
-    uint8_t ticker = 0;
 
     while (!iso14443a_select_card(cjuid, &p_card, &cjcuid, true, 0, true)) {
         WDT_HIT();
-
-        ticker++;
-        if (ticker % 64 == 0) {
-            LED_A_INV();
-        }
-
         if (BUTTON_HELD(10) == BUTTON_HOLD) {
             WDT_HIT();
             DbprintfEx(FLAG_NEWLINE, "\t\t\t[    READING FLASH   ]");
             ReadLastTagFromFlash();
             goto readysim;
         }
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        SpinDelay(500);
+        LED_A_INV();
     }
 
     SpinOff(50);

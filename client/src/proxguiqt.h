@@ -32,6 +32,7 @@ class Plot: public QWidget {
   private:
     QWidget *master;
     uint32_t GraphStart; // Starting point/offset for the left side of the graph
+    uint32_t GraphStop;  // Stop point/offset for the right side of the graph
     double GraphPixelsPerPoint; // How many visual pixels are between each sample point (x axis)
     uint32_t CursorAPos;
     uint32_t CursorBPos;
@@ -50,6 +51,10 @@ class Plot: public QWidget {
   protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
+    void Zoom(double factor, uint32_t refX);
+    void Move(int offset);
+    void Trim(void);
+    void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event) { mouseMoveEvent(event); }
     void keyPressEvent(QKeyEvent *event);

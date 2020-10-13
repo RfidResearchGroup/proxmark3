@@ -78,7 +78,6 @@ size_t   removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pTyp
 int detectAWID(uint8_t *dest, size_t *size, int *waveStartIdx);
 int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, uint64_t *lo);
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
-int detectIdteck(uint8_t *dest, size_t *size);
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx);
 
 #endif

@@ -305,6 +305,8 @@ void RunMod(void) {
                     DbpString("\n"_YELLOW_("!!") "Waiting for a card reader...");
                 }
             }
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            LED_D_OFF();
         } else if (state == STATE_EMU) {
             LED_A_OFF();
             LED_C_ON();

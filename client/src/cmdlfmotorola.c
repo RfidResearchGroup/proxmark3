@@ -28,16 +28,10 @@
 
 static int CmdHelp(const char *Cmd);
 
-//see PSKDemod for what args are accepted
-static int CmdMotorolaDemod(const char *Cmd) {
-    (void)Cmd;
-    return demodMotorola();
-}
-
-int demodMotorola(void) {
-    
+int demodMotorola(bool verbose) {
+    (void) verbose; // unused so far
     //PSK1
-    if (PSKDemod("32 1", true) != PM3_SUCCESS) {
+    if (PSKDemod(32, 1, 100, true) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
         return PM3_ESOFT;
     }
@@ -118,10 +112,16 @@ int demodMotorola(void) {
     checksum |= DemodBuffer[62] << 1; // b2
     checksum |= DemodBuffer[63] << 0; // b1
 
-    
+
     PrintAndLogEx(SUCCESS, "Motorola - fmt: " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08X%08X", fc, csn, raw1, raw2);
     PrintAndLogEx(DEBUG, "checksum: " _GREEN_("%1d%1d"), checksum >> 1 & 0x01, checksum & 0x01);
     return PM3_SUCCESS;
+}
+
+//see PSKDemod for what args are accepted
+static int CmdMotorolaDemod(const char *Cmd) {
+    (void)Cmd;
+    return demodMotorola(true);
 }
 
 static int CmdMotorolaRead(const char *Cmd) {
@@ -145,7 +145,7 @@ static int CmdMotorolaRead(const char *Cmd) {
     sc.divisor = LF_DIVISOR_125;
     sc.samples_to_skip = 0;
     lf_config(&sc);
-    return demodMotorola();
+    return demodMotorola(true);
 }
 
 static int CmdMotorolaClone(const char *Cmd) {
@@ -155,12 +155,10 @@ static int CmdMotorolaClone(const char *Cmd) {
     int datalen = 0;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf indala clone",
+    CLIParserInit(&ctx, "lf motorola clone",
                   "Enables cloning of Motorola card with specified uid onto T55x7\n"
-                  "defaults to 64.\n",
-                  "\n"
-                  "Samples:\n"
-                  _YELLOW_("\tlf motorola clone a0000000a0002021") "\n"
+                  "defaults to 64.",
+                  "lf motorola clone a0000000a0002021"
                  );
 
     void *argtable[] = {
@@ -173,7 +171,7 @@ static int CmdMotorolaClone(const char *Cmd) {
     CLIParserFree(ctx);
 
     //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+    // data[0] = T5555_FIXED | T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
 
     // config for Motorola 64 format (RF/32;PSK1 with RF/2; Maxblock=2)
     PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit tag with RawID %s", sprint_hex(data, datalen));

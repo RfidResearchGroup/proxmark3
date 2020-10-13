@@ -174,7 +174,7 @@ crack_states_thread(void *x) {
                 char progress_text[80];
                 char keystr[19];
                 sprintf(keystr, "%012" PRIx64 "  ", key);
-                sprintf(progress_text, "Brute force phase completed. Key found: " _YELLOW_("%s"), keystr);
+                sprintf(progress_text, "Brute force phase completed.  Key found: " _YELLOW_("%s"), keystr);
                 hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
                 break;
             } else if (keys_found) {

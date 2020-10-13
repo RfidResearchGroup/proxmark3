@@ -167,8 +167,9 @@ int reveng_main(int argc, char *argv[]) {
                 pkchop(&model.spoly);
                 width = plen(model.spoly);
                 rflags |= R_HAVEP;
-                if (c == 'P')
+                if (c == 'P') {
                     prcp(&model.spoly);
+                }
                 mnovel(&model);
                 break;
             case 'l': /* l  little-endian input and output */
@@ -332,6 +333,7 @@ ipqx:
                 mbynum(&model, --args);
                 ufound(&model);
             } while (args);
+            mfree(&model);
             break;
         case 'd': /* d  dump CRC model */
             /* maybe we don't want to do this:
@@ -387,6 +389,10 @@ ipqx:
             apolys = calloc(args * sizeof(poly_t), sizeof(char));
             if (!apolys) {
                 uerror("cannot allocate memory for argument list");
+                pfree(&model.spoly);
+                pfree(&model.init);
+                pfree(&model.xorout);
+                mfree(&model);
                 return 0;
             }
 
@@ -421,16 +427,20 @@ ipqx:
                             continue;
                         if (rflags & R_HAVEX && psncmp(&model.xorout, &pset.xorout))
                             continue;
+
                         apoly = pclone(pset.xorout);
-                        if (pset.flags & P_REFOUT)
+                        if (pset.flags & P_REFOUT) {
                             prev(&apoly);
+                        }
+
                         for (qptr = apolys; qptr < pptr; ++qptr) {
                             crc = pcrc(*qptr, pset.spoly, pset.init, apoly, 0);
                             if (ptst(crc)) {
                                 pfree(&crc);
                                 break;
-                            } else
+                            } else {
                                 pfree(&crc);
+                            }
                         }
                         pfree(&apoly);
                         if (qptr == pptr) {
@@ -444,14 +454,19 @@ ipqx:
                     /* toggle refIn/refOut and reflect arguments */
                     if (~rflags & R_HAVERI) {
                         model.flags ^= P_REFIN | P_REFOUT;
-                        for (qptr = apolys; qptr < pptr; ++qptr)
+                        for (qptr = apolys; qptr < pptr; ++qptr) {
                             prevch(qptr, ibperhx);
+                        }
                     }
                 } while (~rflags & R_HAVERI && ++pass < 2);
             }
+
             if (uflags & C_RESULT) {
-                for (qptr = apolys; qptr < pptr; ++qptr)
+                for (qptr = apolys; qptr < pptr; ++qptr) {
                     pfree(qptr);
+                }
+                free(apolys);
+                mfree(&model);
                 return 1;
                 //exit(EXIT_SUCCESS);
             }
@@ -467,8 +482,10 @@ ipqx:
             pass = 0;
             do {
                 mptr = candmods = reveng(&model, qpoly, rflags, args, apolys);
-                if (mptr && plen(mptr->spoly))
+                if (mptr && plen(mptr->spoly)) {
                     uflags |= C_RESULT;
+                }
+
                 while (mptr && plen(mptr->spoly)) {
                     /* results were printed by the callback
                      * string = mtostr(mptr);
@@ -478,26 +495,31 @@ ipqx:
                     mfree(mptr++);
                 }
                 free(candmods);
+
                 if (~rflags & R_HAVERI) {
                     model.flags ^= P_REFIN | P_REFOUT;
-                    for (qptr = apolys; qptr < pptr; ++qptr)
+                    for (qptr = apolys; qptr < pptr; ++qptr) {
                         prevch(qptr, ibperhx);
+                    }
                 }
             } while (~rflags & R_HAVERI && ++pass < 2);
-            for (qptr = apolys; qptr < pptr; ++qptr)
+
+            for (qptr = apolys; qptr < pptr; ++qptr) {
                 pfree(qptr);
+            }
+
             free(apolys);
+
             if (~uflags & C_RESULT)
                 uerror("no models found");
+
             break;
         default:  /* no mode specified */
             fprintf(stderr, "%s: no mode switch specified. Use %s -h for help.\n", myname, myname);
             return 0;
-            //exit(EXIT_FAILURE);
     }
 
     return 1;
-    //exit(EXIT_SUCCESS);
 }
 
 void

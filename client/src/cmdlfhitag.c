@@ -149,9 +149,14 @@ static int usage_hitag_checkchallenges(void) {
 }
 
 static int CmdLFHitagList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("hitag2");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t hitag2");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
+
 
     /*
     uint8_t *got = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
@@ -641,7 +646,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
     }
 
     //Validations
-    if (errors) {
+    if (errors || strlen(Cmd) == 0) {
         free(data);
         return usage_hitag_checkchallenges();
     }
@@ -734,43 +739,61 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
 
 // Annotate HITAG protocol
-void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_reader) {
 }
 
-void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
-    uint8_t cmdbits = (cmd[0] & 0xC0) >> 6;
+    // iceman: live decrypt of trace?
+    if (is_response) {
 
-    if (cmdsize == 1) {
-        if (cmdbits == HITAG2_START_AUTH) {
-            snprintf(exp, size, "START AUTH");
+
+        uint8_t cmdbits = (cmd[0] & 0xC0) >> 6;
+
+        if (cmdsize == 1) {
+            if (cmdbits == HITAG2_START_AUTH) {
+                snprintf(exp, size, "START AUTH");
+                return;
+            }
+            if (cmdbits == HITAG2_HALT) {
+                snprintf(exp, size, "HALT");
+                return;
+            }
+        }
+
+        if (cmdsize == 3) {
+            if (cmdbits == HITAG2_START_AUTH) {
+                // C     1     C   0
+                // 1100 0 00 1 1100 000
+                uint8_t page = (cmd[0] & 0x38) >> 3;
+                uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+                snprintf(exp, size, "READ page(%x) %x", page, inv_page);
+                return;
+            }
+            if (cmdbits == HITAG2_WRITE_PAGE) {
+                uint8_t page = (cmd[0] & 0x38) >> 3;
+                uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+                snprintf(exp, size, "WRITE page(%x) %x", page, inv_page);
+                return;
+            }
+        }
+
+        if (cmdsize == 9)  {
+            snprintf(exp, size, "Nr Ar Is response");
             return;
         }
-        if (cmdbits == HITAG2_HALT) {
-            snprintf(exp, size, "HALT");
+    } else {
+
+        if (cmdsize == 9)  {
+            snprintf(exp, size, "Nr Ar");
             return;
         }
     }
 
-    if (cmdsize == 2) {
-        if (cmdbits == HITAG2_START_AUTH) {
-            // C     1     C   0
-            // 1100 0 00 1 1100 000
-            uint8_t page = (cmd[0] & 0x38) >> 3;
-            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
-            snprintf(exp, size, "READ page(%x) %x", page, inv_page);
-            return;
-        }
-        if (cmdbits == HITAG2_WRITE_PAGE) {
-            uint8_t page = (cmd[0] & 0x38) >> 3;
-            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
-            snprintf(exp, size, "WRITE page(%x) %x", page, inv_page);
-            return;
-        }
-    }
 }
 
-void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_reader) {
 }
 
 static command_t CommandTable[] = {

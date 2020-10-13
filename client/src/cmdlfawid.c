@@ -60,7 +60,7 @@ static int usage_lf_awid_sim(void) {
 }
 
 static int usage_lf_awid_clone(void) {
-    PrintAndLogEx(NORMAL, "Enables cloning of AWID card with specified facility-code and card number onto T55x7.");
+    PrintAndLogEx(NORMAL, "Enables cloning of AWID card with specified facility-code and card number onto T55x7 or Q5/T5555.");
     PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf awid clone [h] <format> <facility-code> <card-number> [Q5]");
@@ -69,7 +69,7 @@ static int usage_lf_awid_clone(void) {
     PrintAndLogEx(NORMAL, "         <format> :  format length 26|34|37|50");
     PrintAndLogEx(NORMAL, "  <facility-code> :  8|16bit value facility code");
     PrintAndLogEx(NORMAL, "    <card number> :  16|32-bit value card number");
-    PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
+    PrintAndLogEx(NORMAL, "               Q5 :  optional - specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf awid clone 26 224 1337"));
@@ -196,9 +196,8 @@ static int CmdAWIDWatch(const char *Cmd) {
 //by marshmellow
 //AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
-static int CmdAWIDDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
+int demodAWID(bool verbose) {
+    (void) verbose; // unused so far
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID failed to allocate memory");
@@ -337,10 +336,16 @@ static int CmdAWIDDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdAWIDDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodAWID(true);
+}
+
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdAWIDRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 12000);
-    return CmdAWIDDemod(Cmd);
+    return demodAWID(true);
 }
 
 static int CmdAWIDSim(const char *Cmd) {
@@ -405,9 +410,10 @@ static int CmdAWIDClone(const char *Cmd) {
 
     uint32_t blocks[4] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
 
-    if (tolower(param_getchar(Cmd, 3)) == 'q')
+    bool q5 = tolower(param_getchar(Cmd, 3)) == 'q';
+    if (q5)
         //t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
+        blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
 
     verify_values(&fmtlen, &fc, &cn);
 
@@ -425,7 +431,7 @@ static int CmdAWIDClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
+    PrintAndLogEx(INFO, "Preparing to clone AWID %u to " _YELLOW_("%s") " with FC: %u, CN: %u", fmtlen, (q5) ? "Q5/T5555" : "T55x7", fc, cn);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -532,7 +538,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdAWIDDemod,   AlwaysAvailable, "demodulate an AWID FSK tag from the GraphBuffer"},
     {"read",    CmdAWIDRead,    IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdAWIDClone,   IfPm3Lf,         "clone AWID tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdAWIDClone,   IfPm3Lf,         "clone AWID tag to T55x7 or Q5/T5555"},
     {"sim",     CmdAWIDSim,     IfPm3Lf,         "simulate AWID tag"},
     {"brute",   CmdAWIDBrute,   IfPm3Lf,         "Bruteforce card number against reader"},
     {"watch",   CmdAWIDWatch,   IfPm3Lf,         "continuously watch for cards.  Reader mode"},
@@ -603,8 +609,4 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
     PrintAndLogEx(SUCCESS, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
 
     return PM3_SUCCESS;
-}
-
-int demodAWID(void) {
-    return CmdAWIDDemod("");
 }

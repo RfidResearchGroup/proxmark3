@@ -27,13 +27,13 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_presco_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Presco tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf presco clone [h] d <Card-ID> c <hex-ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  h             : this help");
     PrintAndLogEx(NORMAL, "  d <Card-ID>   : 9 digit presco card ID");
     PrintAndLogEx(NORMAL, "  c <hex-ID>    : 8 digit hex card number");
-    PrintAndLogEx(NORMAL, "  <Q5>          : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "  <Q5>          : specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf presco clone d 123456789"));
@@ -57,10 +57,10 @@ static int usage_lf_presco_sim(void) {
 }
 
 //see ASKDemod for what args are accepted
-static int CmdPrescoDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodPresco(bool verbose) {
+    (void) verbose; // unused so far
     bool st = true;
-    if (ASKDemod_ext("32 0 0 0 0 a", false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(32, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
         return PM3_ESOFT;
     }
@@ -97,11 +97,17 @@ static int CmdPrescoDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdPrescoDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodPresco(true);
+}
+
 //see ASKDemod for what args are accepted
 static int CmdPrescoRead(const char *Cmd) {
     // Presco Number: 123456789 --> Sitecode 30 | usercode 8665
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 12000);
-    return CmdPrescoDemod(Cmd);
+    return demodPresco(true);
 }
 
 // takes base 12 ID converts to hex
@@ -116,7 +122,7 @@ static int CmdPrescoClone(const char *Cmd) {
     if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == PM3_EINVARG) return usage_lf_presco_clone();
 
     if (Q5)
-        blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT | T5555_ST_TERMINATOR;
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT | T5555_ST_TERMINATOR;
 
     if ((sitecode & 0xFF) != sitecode) {
         sitecode &= 0xFF;
@@ -133,7 +139,7 @@ static int CmdPrescoClone(const char *Cmd) {
     blocks[3] = 0x00000000;
     blocks[4] = fullcode;
 
-    PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
+    PrintAndLogEx(INFO, "Preparing to clone Presco to " _YELLOW_("%s") " with SiteCode: %u, UserCode: %u, FullCode: %08x", (Q5) ? "Q5/T5555" : "T55x7", sitecode, usercode, fullcode);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -178,8 +184,9 @@ static int CmdPrescoSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
+    {"demod",   CmdPrescoDemod, AlwaysAvailable, "demodulate Presco tag from the GraphBuffer"},
     {"read",    CmdPrescoRead,  IfPm3Lf,         "Attempt to read and Extract tag data"},
-    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag to T55x7 or Q5/T5555"},
     {"sim",     CmdPrescoSim,   IfPm3Lf,         "simulate presco tag"},
     {NULL, NULL, NULL, NULL}
 };
@@ -277,8 +284,3 @@ int getPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
     num_to_bytebits(fullcode, 32, prescoBits + 96);
     return PM3_SUCCESS;
 }
-
-int demodPresco(void) {
-    return CmdPrescoDemod("");
-}
-

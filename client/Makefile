@@ -309,6 +309,7 @@ ifeq ($(QT_FOUND),1)
     endif
 endif
 
+LDFLAGS ?= $(DEFLDFLAGS)
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
     PM3LDFLAGS += -framework Foundation -framework AppKit
@@ -326,9 +327,9 @@ ifeq ($(SKIPQT),1)
 else
     ifeq ($(QT_FOUND),1)
         ifeq ($(QT5_FOUND),1)
-            $(info GUI support:       QT5 found, enabled)
+            $(info GUI support:       QT5 found, enabled ($(shell QT_SELECT=5 qmake -v 2>/dev/null|grep -o 'Qt version.*')))
         else
-            $(info GUI support:       QT4 found, enabled)
+            $(info GUI support:       QT4 found, enabled ($(shell QT_SELECT=4 qmake -v 2>/dev/null|grep -o 'Qt version.*')))
         endif
     else
         $(info GUI support:       QT not found, disabled)
@@ -432,19 +433,23 @@ SRCS =  aidsearch.c \
 		cmdhfmfhard.c \
 		cmdhfmfu.c \
 		cmdhfmfp.c \
+		cmdhfst.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
+		cmdhfwaveshare.c \
 		cmdhw.c \
 		cmdlf.c \
 		cmdlfawid.c \
 		cmdlfcotag.c \
+		cmdlfdestron.c \
 		cmdlfem4x.c \
 		cmdlfem4x50.c \
-		cmdlffdx.c \
+		cmdlffdxb.c \
 		cmdlfguard.c \
 		cmdlfgallagher.c \
 		cmdlfhid.c \
 		cmdlfhitag.c \
+		cmdlfidteck.c \
 		cmdlfindala.c \
 		cmdlfio.c \
 		cmdlfjablotron.c \

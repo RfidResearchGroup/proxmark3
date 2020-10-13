@@ -27,45 +27,17 @@
 #include "fileutils.h"           // searchFile
 #include "mifare/ndef.h"
 #include "cliparser.h"
+#include "cmdlft55xx.h"          // print...
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
-size_t g_DemodStartIdx = 0;
+int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_data_save(void) {
-    PrintAndLogEx(NORMAL, "Save trace from graph window , i.e. the GraphBuffer");
-    PrintAndLogEx(NORMAL, "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file");
-    PrintAndLogEx(NORMAL, "Filename should be without file extension");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: data save [h] [w] [f <filename w/o ext>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h              this help");
-    PrintAndLogEx(NORMAL, "       w              save as wave format (.wav)");
-    PrintAndLogEx(NORMAL, "       f <filename>   save file name");
-    PrintAndLogEx(NORMAL, "Samples:");
-    PrintAndLogEx(NORMAL, "       data save f mytrace      - save graphbuffer to file");
-    PrintAndLogEx(NORMAL, "       data save f mytrace w    - save graphbuffer to wave file");
-    return PM3_SUCCESS;
-}
-static int usage_data_scale(void) {
-    PrintAndLogEx(NORMAL, "Set cursor display scale.");
-    PrintAndLogEx(NORMAL, "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful. ");
-    PrintAndLogEx(NORMAL, "once the scale is set, the differential reading between brackets is the time duration in seconds.");
-    PrintAndLogEx(NORMAL, "For example, if acquiring in 125kHz, use scale 125.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: data scale [h] <kHz>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          this help");
-    PrintAndLogEx(NORMAL, "       <kHz>      sets scale of carrier frequency expressed in kHz");
-    PrintAndLogEx(NORMAL, "Samples:");
-    PrintAndLogEx(NORMAL, "       data scale 125      - if sampled in 125kHz");
-    return PM3_SUCCESS;
-}
 static int usage_data_printdemodbuf(void) {
-    PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
+    PrintAndLogEx(NORMAL, "Usage: data print x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          this help");
     PrintAndLogEx(NORMAL, "       i          invert Demodbuffer before printing");
@@ -250,15 +222,6 @@ static int usage_data_autocorr(void) {
     PrintAndLogEx(NORMAL, "       g              save back to GraphBuffer (overwrite)");
     return PM3_SUCCESS;
 }
-static int usage_data_undecimate(void) {
-    PrintAndLogEx(NORMAL, "Usage: data undec [factor]");
-    PrintAndLogEx(NORMAL, "This function performs un-decimation, by repeating each sample N times");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       factor       The number of times to repeat each sample.[default:2]");
-    PrintAndLogEx(NORMAL, "Example: 'data undec 3'");
-    return PM3_SUCCESS;
-}
 static int usage_data_detectclock(void) {
     PrintAndLogEx(NORMAL, "Usage:  data detectclock [modulation] <clock>");
     PrintAndLogEx(NORMAL, "     [modulation as char], specify the modulation type you want to detect the clock of");
@@ -283,7 +246,7 @@ static int usage_data_bin2hex(void) {
 }
 static int usage_data_buffclear(void) {
     PrintAndLogEx(NORMAL, "This function clears the bigbuff on deviceside");
-    PrintAndLogEx(NORMAL, "Usage: data buffclear [h]");
+    PrintAndLogEx(NORMAL, "Usage: data clear [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
     return PM3_SUCCESS;
@@ -557,27 +520,12 @@ static int CmdConvertBitStream(const char *Cmd) {
 //verbose will print results and demoding messages
 //emSearch will auto search for EM410x format in bitstream
 //askType switches decode: ask/raw = 0, ask/manchester = 1
-int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, bool *stCheck) {
-    int invert = 0;
-    int clk = 0;
-    int maxErr = 100;
-    size_t maxLen = 0;
+int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType, bool *stCheck) {
+    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) clk %i invert %i maxErr %i maxLen %zu amplify %i verbose %i emSearch %i askType %i ", clk, invert, maxErr, maxLen, amplify, verbose, emSearch, askType);
     uint8_t askamp = 0;
-    char amp = tolower(param_getchar(Cmd, 0));
-
-    sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
     if (!maxLen) maxLen = pm3_capabilities.bigbuf_size;
 
-    if (invert != 0 && invert != 1) {
-        PrintAndLogEx(WARNING, "Invalid argument: %s", Cmd);
-        return PM3_EINVARG;
-    }
-
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
         return PM3_EMALLOC;
@@ -597,7 +545,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     int foundclk = 0;
 
     //amplify signal before ST check
-    if (amp == 'a') {
+    if (amplify) {
         askAmp(bits, BitLen);
     }
 
@@ -658,9 +606,9 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     free(bits);
     return PM3_SUCCESS;
 }
-int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType) {
+int ASKDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, bool verbose, bool emSearch, uint8_t askType) {
     bool st = false;
-    return ASKDemod_ext(Cmd, verbose, emSearch, askType, &st);
+    return ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, verbose, emSearch, askType, &st);
 }
 
 //by marshmellow
@@ -668,21 +616,47 @@ int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType) {
 //attempts to demodulate ask while decoding manchester
 //prints binary found and saves in graphbuffer for further commands
 static int Cmdaskmandemod(const char *Cmd) {
+
+    size_t slen = strlen(Cmd);
+
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) > 45 || cmdp == 'h') return usage_data_rawdemod_am();
+    if (slen > 45 || cmdp == 'h') return usage_data_rawdemod_am();
 
-    bool st = true;
-    if (Cmd[0] == 's')
-        return ASKDemod_ext(Cmd++, true, true, 1, &st);
-    else if (Cmd[1] == 's')
-        return ASKDemod_ext(Cmd += 2, true, true, 1, &st);
+    bool st = false, amplify = false;
+    int clk = 0, invert = 0, maxErr = 100;
+    size_t maxLen = 0;
 
-    return ASKDemod(Cmd, true, true, 1);
+    if (slen) {
+
+        if (Cmd[0] == 's') {
+            st = true;
+            Cmd++;
+        } else if (slen > 1 && Cmd[1] == 's') {
+            st = true;
+            Cmd += 2;
+        }
+
+        char amp = tolower(param_getchar(Cmd, 0));
+        sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
+
+        amplify = (amp == 'a');
+    }
+
+    if (clk == 1) {
+        invert = 1;
+        clk = 0;
+    }
+
+    if (invert != 0 && invert != 1) {
+        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
+        return PM3_EINVARG;
+    }
+    return ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, true, true, 1, &st);
 }
 
 //by marshmellow
 //manchester decode
-//stricktly take 10 and 01 and convert to 0 and 1
+//strictly take 10 and 01 and convert to 0 and 1
 static int Cmdmandecoderaw(const char *Cmd) {
     size_t size = 0;
     int high = 0, low = 0;
@@ -785,10 +759,8 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 
 //by marshmellow
 // - ASK Demod then Biphase decode GraphBuffer samples
-int ASKbiphaseDemod(const char *Cmd, bool verbose) {
+int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     //ask raw demod GraphBuffer first
-    int offset = 0, clk = 0, invert = 0, maxErr = 50;
-    sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
     uint8_t BitStream[MAX_DEMOD_BUF_LEN];
     size_t size = getFromGraphBuf(BitStream);
@@ -828,16 +800,33 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose) {
 static int Cmdaskbiphdemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 25 || cmdp == 'h') return usage_data_rawdemod_ab();
-
-    return ASKbiphaseDemod(Cmd, true);
+    int offset = 0, clk = 0, invert = 0, maxErr = 50;
+    sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
+    return ASKbiphaseDemod(offset, clk, invert, maxErr, true);
 }
 
 //by marshmellow - see ASKDemod
 static int Cmdaskrawdemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 25 || cmdp == 'h') return usage_data_rawdemod_ar();
-
-    return ASKDemod(Cmd, true, false, 0);
+    bool st = false;
+    int clk = 0;
+    int invert = 0;
+    int maxErr = 100;
+    size_t maxLen = 0;
+    bool amplify = false;
+    char amp = tolower(param_getchar(Cmd, 0));
+    sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
+    amplify = amp == 'a';
+    if (clk == 1) {
+        invert = 1;
+        clk = 0;
+    }
+    if (invert != 0 && invert != 1) {
+        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
+        return PM3_EINVARG;
+    }
+    return ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, true, false, 0, &st);
 }
 
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose) {
@@ -996,12 +985,29 @@ static int CmdBuffClear(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdDec(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    for (size_t i = 0; i < (GraphTraceLen / 2); ++i)
-        GraphBuffer[i] = GraphBuffer[i * 2];
-    GraphTraceLen /= 2;
-    PrintAndLogEx(NORMAL, "decimated by 2");
+static int CmdDecimate(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data decimate",
+                  "Performs decimation, by reducing samples N times in the grapbuf. Good for PSK\n",
+                  "data decimate\n"
+                  "data decimate 4"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, NULL, "<dec>", "factor to reduce sample set (default 2)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int n = arg_get_int_def(ctx, 1, 2);
+    CLIParserFree(ctx);
+
+    for (size_t i = 0; i < (GraphTraceLen / n); ++i)
+        GraphBuffer[i] = GraphBuffer[i * n];
+
+    GraphTraceLen /= n;
+    PrintAndLogEx(SUCCESS, "decimated by " _GREEN_("%u"), n);
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1012,19 +1018,34 @@ static int CmdDec(const char *Cmd) {
  * @param Cmd
  * @return
  */
-static int CmdUndec(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_data_undecimate();
+static int CmdUndecimate(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data undecimate",
+                  "Performs un-decimation, by repeating each sample N times in the graphbuf",
+                  "data undecimate\n"
+                  "data undecimate 4\n"
+                 );
 
-    uint8_t factor = param_get8ex(Cmd, 0, 2, 10);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, NULL, "<dec>", "factor to repeat each sample (default 2)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int factor = arg_get_int_def(ctx, 1, 2);
+    CLIParserFree(ctx);
 
     //We have memory, don't we?
     int swap[MAX_GRAPH_TRACE_LEN] = {0};
     uint32_t g_index = 0, s_index = 0;
     while (g_index < GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
-        for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++)
-            swap[s_index + count] = GraphBuffer[g_index];
+        for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++) {
+            swap[s_index + count] = (
+                                        (double)(factor - count) / (factor - 1)) * GraphBuffer[g_index] +
+                                    ((double)count / factor) * GraphBuffer[g_index + 1]
+                                    ;
+        }
         s_index += count;
         g_index++;
     }
@@ -1140,24 +1161,8 @@ static char *GetFSKType(uint8_t fchigh, uint8_t fclow, uint8_t invert) {
 //fsk raw demod and print binary
 //takes 4 arguments - Clock, invert, fchigh, fclow
 //defaults: clock = 50, invert=1, fchigh=10, fclow=8 (RF/10 RF/8 (fsk2a))
-int FSKrawDemod(const char *Cmd, bool verbose) {
+int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bool verbose) {
     //raw fsk demod  no manchester decoding no start bit finding just get binary from wave
-    uint8_t rfLen, invert, fchigh, fclow;
-
-    //set defaults
-    //set options from parameters entered with the command
-    rfLen = param_get8(Cmd, 0);
-    invert = param_get8(Cmd, 1);
-    fchigh = param_get8(Cmd, 2);
-    fclow = param_get8(Cmd, 3);
-
-    if (strlen(Cmd) > 0 && strlen(Cmd) <= 2) {
-        if (rfLen == 1) {
-            invert = 1;   //if invert option only is used
-            rfLen = 0;
-        }
-    }
-
     if (getSignalProperties()->isnoise)
         return PM3_ESOFT;
 
@@ -1218,26 +1223,27 @@ out:
 static int CmdFSKrawdemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 20 || cmdp == 'h') return usage_data_rawdemod_fs();
+    uint8_t rfLen, invert, fchigh, fclow;
 
-    return FSKrawDemod(Cmd, true);
+    //set defaults
+    //set options from parameters entered with the command
+    rfLen = param_get8(Cmd, 0);
+    invert = param_get8(Cmd, 1);
+    fchigh = param_get8(Cmd, 2);
+    fclow = param_get8(Cmd, 3);
+
+    if (strlen(Cmd) > 0 && strlen(Cmd) <= 2) {
+        if (rfLen == 1) {
+            invert = 1;   //if invert option only is used
+            rfLen = 0;
+        }
+    }
+    return FSKrawDemod(rfLen, invert, fchigh, fclow, true);
 }
 
 //by marshmellow
 //attempt to psk1 demod graph buffer
-int PSKDemod(const char *Cmd, bool verbose) {
-    int invert = 0, clk = 0, maxErr = 100;
-
-    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
-
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
-    if (invert != 0 && invert != 1) {
-        if (g_debugMode || verbose) PrintAndLogEx(WARNING, "Invalid argument: %s", Cmd);
-        return PM3_EINVARG;
-    }
-
+int PSKDemod(int clk, int invert, int maxErr, bool verbose) {
     if (getSignalProperties()->isnoise)
         return PM3_ESOFT;
 
@@ -1276,91 +1282,13 @@ int PSKDemod(const char *Cmd, bool verbose) {
     return PM3_SUCCESS;
 }
 
-int demodIdteck(void) {
-
-    if (PSKDemod("", false) != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
-        return PM3_ESOFT;
-    }
-    size_t size = DemodBufferLen;
-
-    //get binary from PSK1 wave
-    int idx = detectIdteck(DemodBuffer, &size);
-    if (idx < 0) {
-
-        if (idx == -1)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: not enough samples");
-        else if (idx == -2)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: just noise");
-        else if (idx == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: preamble not found");
-        else if (idx == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %zu", size);
-        else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d", idx);
-
-        // if didn't find preamble try again inverting
-        if (PSKDemod("1", false) != PM3_SUCCESS) {
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
-            return PM3_ESOFT;
-        }
-        idx = detectIdteck(DemodBuffer, &size);
-        if (idx < 0) {
-
-            if (idx == -1)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: not enough samples");
-            else if (idx == -2)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: just noise");
-            else if (idx == -3)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: preamble not found");
-            else if (idx == -4)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %zu", size);
-            else
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d", idx);
-
-            return PM3_ESOFT;
-        }
-    }
-    setDemodBuff(DemodBuffer, 64, idx);
-
-    //got a good demod
-    uint32_t id = 0;
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-
-    //parity check (TBD)
-    //checksum check (TBD)
-
-    //output
-    PrintAndLogEx(SUCCESS, "IDTECK Tag Found: Card ID %u ,  Raw: %08X%08X", id, raw1, raw2);
-    return PM3_SUCCESS;
-}
-
-/*
-static int CmdIdteckDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodIdteck();
-}
-*/
-
 // by marshmellow
 // takes 3 arguments - clock, invert, maxErr as integers
 // attempts to demodulate nrz only
 // prints binary found and saves in demodbuffer for further commands
-int NRZrawDemod(const char *Cmd, bool verbose) {
+int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     int errCnt = 0, clkStartIdx = 0;
-    int invert = 0, clk = 0, maxErr = 100;
-    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
-    if (clk == 1) {
-        invert = 1;
-        clk = 0;
-    }
-
-    if (invert != 0 && invert != 1) {
-        PrintAndLogEx(WARNING, "(NRZrawDemod) Invalid argument: %s", Cmd);
-        return PM3_EINVARG;
-    }
 
     if (getSignalProperties()->isnoise)
         return PM3_ESOFT;
@@ -1409,8 +1337,18 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
 static int CmdNRZrawDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_nr();
+    int invert = 0, clk = 0, maxErr = 100;
+    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+    if (clk == 1) {
+        invert = 1;
+        clk = 0;
+    }
 
-    return NRZrawDemod(Cmd, true);
+    if (invert != 0 && invert != 1) {
+        PrintAndLogEx(WARNING, "(NRZrawDemod) Invalid argument: %s", Cmd);
+        return PM3_EINVARG;
+    }
+    return NRZrawDemod(clk, invert, maxErr, true);
 }
 
 // by marshmellow
@@ -1420,8 +1358,17 @@ static int CmdNRZrawDemod(const char *Cmd) {
 int CmdPSK1rawDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p1();
-
-    int ans = PSKDemod(Cmd, true);
+    int clk = 0, invert = 0, maxErr = 100;
+    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+    if (clk == 1) {
+        invert = 1;
+        clk = 0;
+    }
+    if (invert != 0 && invert != 1) {
+        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
+        return PM3_EINVARG;
+    }
+    int ans = PSKDemod(clk, invert, maxErr, true);
     //output
     if (ans != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
@@ -1438,8 +1385,17 @@ int CmdPSK1rawDemod(const char *Cmd) {
 static int CmdPSK2rawDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p2();
-
-    int ans = PSKDemod(Cmd, true);
+    int clk = 0, invert = 0, maxErr = 100;
+    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+    if (clk == 1) {
+        invert = 1;
+        clk = 0;
+    }
+    if (invert != 0 && invert != 1) {
+        PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
+        return PM3_EINVARG;
+    }
+    int ans = PSKDemod(clk, invert, maxErr, true);
     if (ans != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
         return PM3_ESOFT;
@@ -1500,7 +1456,7 @@ void setClockGrid(uint32_t clk, int offset) {
 }
 
 int CmdGrid(const char *Cmd) {
-    sscanf(Cmd, "%i %i", &PlotGridX, &PlotGridY);
+    sscanf(Cmd, "%lf %lf", &PlotGridX, &PlotGridY);
     PlotGridXdefault = PlotGridX;
     PlotGridYdefault = PlotGridY;
     RepaintGraphWindow();
@@ -1738,6 +1694,48 @@ int CmdTuneSamples(const char *Cmd) {
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
         PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->peak_f));
 
+    const double vdd_rdv4 = 9000;
+    const double vdd_other = 5400; // Empirical measures in mV
+    double vdd = IfPm3Rdv4Fw() ? vdd_rdv4 : vdd_other;
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0) {
+
+        // Q measure with Q=f/delta_f
+        double v_3db_scaled = (double)(package->peak_v * 0.707) / 512; // /512 == >>9
+        uint32_t s2 = 0, s4 = 0;
+        for (int i = 1; i < 256; i++) {
+            if ((s2 == 0) && (package->results[i] > v_3db_scaled)) {
+                s2 = i;
+            }
+            if ((s2 != 0) && (package->results[i] < v_3db_scaled)) {
+                s4 = i;
+                break;
+            }
+        }
+        double lfq1 = 0;
+        if (s4 != 0) { // we got all our points of interest
+            double a = package->results[s2 - 1];
+            double b = package->results[s2];
+            double f1 = LF_DIV2FREQ(s2 - 1 + (v_3db_scaled - a) / (b - a));
+            double c = package->results[s4 - 1];
+            double d = package->results[s4];
+            double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled) / (c - d));
+            lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
+            PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by frequency bandwidth measurement", lfq1);
+        }
+
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", lfq2);
+        // cross-check results
+        if (lfq1 > 3) {
+            double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
+            if ((approx_vdd > (vdd_rdv4 + vdd_other) / 2) && (! IfPm3Rdv4Fw()))
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_OTHER firmware on a RDV4") ", please check your setup");
+            if ((approx_vdd < (vdd_rdv4 + vdd_other) / 2) && (IfPm3Rdv4Fw()))
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a non-RDV4") ", please check your setup");
+        }
+    }
+
     char judgement[20];
     memset(judgement, 0, sizeof(judgement));
     // LF evaluation
@@ -1757,6 +1755,11 @@ int CmdTuneSamples(const char *Cmd) {
 
     memset(judgement, 0, sizeof(judgement));
 
+    if (package->v_hf >= HF_UNUSABLE_V) {
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", hfq);
+    }
     if (package->v_hf < HF_UNUSABLE_V)
         sprintf(judgement, _RED_("UNUSABLE"));
     else if (package->v_hf < HF_MARGINAL_V)
@@ -1765,6 +1768,7 @@ int CmdTuneSamples(const char *Cmd) {
         sprintf(judgement, _GREEN_("OK"));
 
     PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s", judgement);
+    PrintAndLogEx(NORMAL, "\n(*) Q factor must be measured without tag on the antenna");
 
     // graph LF measurements
     // even here, these values has 3% error.
@@ -1775,9 +1779,11 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d is %.2f kHz, %d is %.2f kHz.\n\n",
+        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d (blue) is %.2f kHz, %d (red) is %.2f kHz.\n\n",
                       LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134), LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
         GraphTraceLen = 256;
+        CursorCPos = LF_DIVISOR_125;
+        CursorDPos = LF_DIVISOR_134;
         ShowGraphWindow();
         RepaintGraphWindow();
     } else {
@@ -1789,16 +1795,26 @@ int CmdTuneSamples(const char *Cmd) {
 }
 
 static int CmdLoad(const char *Cmd) {
-    char filename[FILE_PATH_SIZE] = {0x00};
-    int len = 0;
 
-    len = strlen(Cmd);
-    if (len == 0) return PM3_EFILE;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data load",
+                  "This command loads the contents of a pm3 file into graph window\n",
+                  "data load -f myfilename"
+                 );
 
-    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-    memcpy(filename, Cmd, len);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("f", "file", "<filename>", "file to load"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    char *path;
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
+    char *path = NULL;
     if (searchFile(&path, TRACES_SUBDIR, filename, ".pm3", true) != PM3_SUCCESS) {
         if (searchFile(&path, TRACES_SUBDIR, filename, "", false) != PM3_SUCCESS) {
             return PM3_EFILE;
@@ -1822,7 +1838,6 @@ static int CmdLoad(const char *Cmd) {
         if (GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
             break;
     }
-
     fclose(f);
 
     PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", GraphTraceLen);
@@ -1852,6 +1867,7 @@ int CmdLtrim(const char *Cmd) {
         GraphBuffer[i - ds] = GraphBuffer[i];
 
     GraphTraceLen -= ds;
+    g_DemodStartIdx -= ds;
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1874,7 +1890,8 @@ static int CmdMtrim(const char *Cmd) {
     uint32_t start = 0, stop = 0;
     sscanf(Cmd, "%u %u", &start, &stop);
 
-    if (start > GraphTraceLen || stop > GraphTraceLen || start > stop) return PM3_ESOFT;
+    if (start > GraphTraceLen || stop > GraphTraceLen || start >= stop)
+        return PM3_ESOFT;
 
     // leave start position sample
     start++;
@@ -1920,39 +1937,31 @@ int CmdPlot(const char *Cmd) {
 
 int CmdSave(const char *Cmd) {
 
-    int len = 0;
-    char filename[FILE_PATH_SIZE] = {0x00};
-    uint8_t cmdp = 0;
-    bool errors = false, as_wave = false, has_name = false;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data save",
+                  "Save trace from graph window , i.e. the GraphBuffer\n"
+                  "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file\n"
+                  "Filename should be without file extension",
+                  "data save -f myfilename         -> save graph buffer to file\n"
+                  "data save --wave -f myfilename  -> save graph buffer to wave file"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        char ctmp = tolower(param_getchar(Cmd, cmdp));
-        switch (ctmp) {
-            case 'h':
-                return usage_data_save();
-            case 'f':
-                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (len < 1) {
-                    errors = true;
-                    break;
-                }
-                has_name = true;
-                cmdp += 2;
-                break;
-            case 'w':
-                as_wave = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("w", "wave", "save as wave format (.wav)"),
+        arg_str1("f", "file", "<fn w/o ext>", "save file name"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (!has_name) errors = true;
+    bool as_wave = arg_get_lit(ctx, 1);
 
-    if (errors || cmdp == 0) return usage_data_save();
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    // CLIGetStrWithReturn(ctx, 2, (uint8_t *)filename, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
 
     if (as_wave)
         return saveFileWAVE(filename, GraphBuffer, GraphTraceLen);
@@ -1960,15 +1969,33 @@ int CmdSave(const char *Cmd) {
         return saveFilePM3(filename, GraphBuffer, GraphTraceLen);
 }
 
-static int CmdScale(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_data_scale();
+static int CmdTimeScale(const char *Cmd) {
 
-    CursorScaleFactor = atoi(Cmd);
-    if (CursorScaleFactor == 0) {
-        PrintAndLogEx(FAILED, "bad, can't have zero scale");
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data timescale",
+                  "Set cursor display timescale.\n"
+                  "Setting the timescale makes the differential `dt` reading between the yellow and purple markers meaningful.\n"
+                  "once the timescale is set, the differential reading between brackets can become a time duration.",
+                  "data timescale --sr 125   -u ms  -> for LF sampled at 125 kHz. Reading will be in milliseconds\n"
+                  "data timescale --sr 1.695 -u us  -> for HF sampled at 16 * fc/128. Reading will be in microseconds\n"
+                  "data timescale --sr 16    -u ETU -> for HF with 16 samples per ETU (fc/128). Reading will be in ETUs"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_dbl1(NULL,  "sr", "<float>", "sets timescale factor according to sampling rate"),
+        arg_str0("u", "unit", "<string>", "time unit to display (max 10 chars)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CursorScaleFactor = arg_get_dbl_def(ctx, 1, 1);
+    if (CursorScaleFactor <= 0) {
+        PrintAndLogEx(FAILED, "bad, can't have negative or zero timescale factor");
         CursorScaleFactor = 1;
     }
+    int len = 0;
+    CursorScaleFactorUnit[0] = '\x00';
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)CursorScaleFactorUnit, sizeof(CursorScaleFactorUnit), &len);
+    CLIParserFree(ctx);
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2104,11 +2131,10 @@ static int Cmdhex2bin(const char *Cmd) {
         else
             continue;
 
-        //Uses printf instead of PrintAndLog since the latter adds linebreaks to each printout
         for (int i = 0 ; i < 4 ; ++i)
-            printf("%d", (x >> (3 - i)) & 1);
+            PrintAndLogEx(NORMAL, "%d" NOLF, (x >> (3 - i)) & 1);
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -2314,15 +2340,14 @@ static int CmdDataNDEF(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data ndef",
                   "Decode and print NFC Data Exchange Format (NDEF)",
-                  "Samples:\n"
-                  _YELLOW_("\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n")
-                  _YELLOW_("\tdata ndef -d 0103d020240203e02c040300fe\n")
-                  );
+                  "data ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n"
+                  "data ndef -d 0103d020240203e02c040300fe\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
-        arg_lit0("vV",  "verbose", "verbose mode"),
+        arg_strx0("d",  "data", "<hex>", "NDEF data to decode"),
+        arg_lit0("v",  "verbose", "verbose mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2344,45 +2369,206 @@ static int CmdDataNDEF(const char *Cmd) {
     return res;
 }
 
+typedef struct {
+    t55xx_modulation modulation;
+    int bitrate;
+    int carrier;
+    uint8_t fc1;
+    uint8_t fc2;
+} lf_modulation_t;
+
+static int print_modulation(lf_modulation_t b) {
+    PrintAndLogEx(INFO, " Modulation.... " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
+    PrintAndLogEx(INFO, " Bit clock..... " _GREEN_("RF/%d"), b.bitrate);
+    switch (b.modulation) {
+        case DEMOD_PSK1:
+        case DEMOD_PSK2:
+        case DEMOD_PSK3:
+            PrintAndLogEx(SUCCESS, " Carrier rate.. %d", b.carrier);
+            break;
+        case DEMOD_FSK:
+        case DEMOD_FSK1:
+        case DEMOD_FSK1a:
+        case DEMOD_FSK2:
+        case DEMOD_FSK2a:
+            PrintAndLogEx(SUCCESS, " Field Clocks.. FC/%u, FC/%u", b.fc1, b.fc2);
+            break;
+        case DEMOD_NRZ:
+        case DEMOD_ASK:
+        case DEMOD_BI:
+        case DEMOD_BIa:
+        default:
+            break;
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int try_detect_modulation(void) {
+
+    lf_modulation_t tests[6];
+    int clk = 0, firstClockEdge = 0;
+    uint8_t hits = 0, ans = 0;
+    uint8_t fc1 = 0, fc2 = 0;
+    bool st = false;
+
+    ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
+
+    if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
+
+        if ((FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS)) {
+            tests[hits].modulation = DEMOD_FSK;
+            if (fc1 == 8 && fc2 == 5) {
+                tests[hits].modulation = DEMOD_FSK1a;
+            } else if (fc1 == 10 && fc2 == 8) {
+                tests[hits].modulation = DEMOD_FSK2;
+            }
+
+            tests[hits].bitrate = clk;
+            tests[hits].fc1 = fc1;
+            tests[hits].fc2 = fc2;
+            ++hits;
+        }
+
+    } else {
+        clk = GetAskClock("", false);
+        if (clk > 0) {
+            // 0 = auto clock
+            // 0 = no invert
+            // 1 = maxError 1
+            // 0 = max len
+            // false = no amplify
+            // false = no verbose
+            // false = no emSearch
+            // 1 = Ask/Man
+            // st = true
+            if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_ASK;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+            // "0 0 1 " == clock auto, invert true, maxError 1.
+            // false = no verbose
+            // false = no emSearch
+            // 1 = Ask/Man
+            // st = true
+
+            // ASK / biphase
+            if ((ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_BI;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+            // ASK / Diphase
+            if ((ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_BIa;
+                tests[hits].bitrate = clk;
+                ++hits;
+            }
+        }
+        clk = GetNrzClock("", false);
+        if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS)) {
+            tests[hits].modulation = DEMOD_NRZ;
+            tests[hits].bitrate = clk;
+            ++hits;
+        }
+
+        clk = GetPskClock("", false);
+        if (clk > 0) {
+            // allow undo
+            save_restoreGB(GRAPH_SAVE);
+            // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+            CmdLtrim("160");
+            if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS)) {
+                tests[hits].modulation = DEMOD_PSK1;
+                tests[hits].bitrate = clk;
+                ++hits;
+
+                // get psk carrier
+                tests[hits].carrier = GetPskCarrier(false);
+            }
+            //undo trim samples
+            save_restoreGB(GRAPH_RESTORE);
+        }
+    }
+
+    if (hits) {
+        PrintAndLogEx(SUCCESS, "Found [%d] possible matches for modulation.", hits);
+        for (int i = 0; i < hits; ++i) {
+            PrintAndLogEx(INFO, "--[%d]---------------", i + 1);
+            print_modulation(tests[i]);
+        }
+        return PM3_SUCCESS;
+    } else {
+        PrintAndLogEx(INFO, "Signal doesn't match");
+        return PM3_ESOFT;
+    }
+}
+
+static int CmdDataModulationSearch(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data modulation",
+                  "search LF signal after clock and modulation\n",
+                  "data modulation"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    return try_detect_modulation();
+}
+
 static command_t CommandTable[] = {
-    {"help",            CmdHelp,                 AlwaysAvailable, "This help"},
-    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable, "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
-    {"autocorr",        CmdAutoCorr,             AlwaysAvailable, "[window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)"},
-    {"biphaserawdecode", CmdBiphaseDecodeRaw,    AlwaysAvailable, "[offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)"},
-    {"bin2hex",         Cmdbin2hex,              AlwaysAvailable, "<digits> -- Converts binary to hexadecimal"},
-    {"bitsamples",      CmdBitsamples,           IfPm3Present,    "Get raw samples as bitstring"},
-    {"buffclear",       CmdBuffClear,            AlwaysAvailable, "Clears bigbuff on deviceside and graph window"},
-    {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable, "Convert GraphBuffer's 0/1 values to 127 / -127"},
-    {"dec",             CmdDec,                  AlwaysAvailable, "Decimate samples"},
-    {"detectclock",     CmdDetectClockRate,      AlwaysAvailable, "[<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
-    {"fsktonrz",        CmdFSKToNRZ,             AlwaysAvailable, "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},
-    {"getbitstream",    CmdGetBitStream,         AlwaysAvailable, "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
-    {"grid",            CmdGrid,                 AlwaysAvailable, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
-    {"hexsamples",      CmdHexsamples,           IfPm3Present,    "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
-    {"hex2bin",         Cmdhex2bin,              AlwaysAvailable, "<hexadecimal> -- Converts hexadecimal to binary"},
-    {"hide",            CmdHide,                 AlwaysAvailable, "Hide graph window"},
-    {"hpf",             CmdHpf,                  AlwaysAvailable, "Remove DC offset from trace"},
-    {"load",            CmdLoad,                 AlwaysAvailable, "<filename> -- Load trace (to graph window"},
-    {"ltrim",           CmdLtrim,                AlwaysAvailable, "<samples> -- Trim samples from left of trace"},
-    {"rtrim",           CmdRtrim,                AlwaysAvailable, "<location to end trace> -- Trim samples from right of trace"},
-    {"mtrim",           CmdMtrim,                AlwaysAvailable, "<start> <stop> -- Trim out samples from the specified start to the specified stop"},
-    {"manrawdecode",    Cmdmandecoderaw,         AlwaysAvailable, "[invert] [maxErr] -- Manchester decode binary stream in DemodBuffer"},
-    {"norm",            CmdNorm,                 AlwaysAvailable, "Normalize max/min to +/-128"},
-    {"plot",            CmdPlot,                 AlwaysAvailable, "Show graph window (hit 'h' in window for keystroke help)"},
-    {"printdemodbuffer", CmdPrintDemodBuff,      AlwaysAvailable, "[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output"},
-    {"rawdemod",        CmdRawDemod,             AlwaysAvailable, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},
-    {"samples",         CmdSamples,              IfPm3Present,    "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
-    {"save",            CmdSave,                 AlwaysAvailable, "Save trace (from graph window)"},
-    {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable, "[orange_marker] [blue_marker] (in graph window)"},
-    {"scale",           CmdScale,                AlwaysAvailable, "<int> -- Set cursor display scale in carrier frequency expressed in kHz"},
-    {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable, "<0|1|2> -- Set Debugging Level on client side"},
-    {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
-    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
-    {"tune",            CmdTuneSamples,          IfPm3Present,    "Get hw tune samples for graph window"},
-    {"undec",           CmdUndec,                AlwaysAvailable, "Un-decimate samples by 2"},
-    {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
-    {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
+    {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
+
+    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Modulation") "-------------------------"},
+    {"biphaserawdecode", CmdBiphaseDecodeRaw,    AlwaysAvailable,  "Biphase decode bin stream in DemodBuffer"},
+    {"detectclock",     CmdDetectClockRate,      AlwaysAvailable,  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
+    {"fsktonrz",        CmdFSKToNRZ,             AlwaysAvailable,  "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},
+    {"manrawdecode",    Cmdmandecoderaw,         AlwaysAvailable,  "Manchester decode binary stream in DemodBuffer"},
+    {"modulation",      CmdDataModulationSearch, AlwaysAvailable,  "Identify LF signal for clock and modulation"},
+    {"rawdemod",        CmdRawDemod,             AlwaysAvailable,  "Demodulate the data in the GraphBuffer and output binary"},
+
+    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
+    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
+    {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
+    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
+    {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
+    {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
+    {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
+    {"hpf",             CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},
+    {"iir",             CmdDataIIR,              AlwaysAvailable,  "apply IIR buttersworth filter on plotdata"},
+    {"grid",            CmdGrid,                 AlwaysAvailable,  "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
+    {"ltrim",           CmdLtrim,                AlwaysAvailable,  "<samples> -- Trim samples from left of trace"},
+    {"mtrim",           CmdMtrim,                AlwaysAvailable,  "<start> <stop> -- Trim out samples from the specified start to the specified stop"},
+    {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
+    {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window (hit 'h' in window for keystroke help)"},
+    {"rtrim",           CmdRtrim,                AlwaysAvailable,  "<location to end trace> -- Trim samples from right of trace"},
+    {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "[orange_marker] [blue_marker] (in graph window)"},
+    {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "<shift> -- Shift 0 for Graphed wave + or - shift value"},
+    {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration\n"},
+    {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
+
+    {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
+    {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
+
+
+    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
+    {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
+    {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
+    {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
+    {"hexsamples",      CmdHexsamples,           IfPm3Present,     "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
+    {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
+    {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
     {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
+    {"print",           CmdPrintDemodBuff,       AlwaysAvailable,  "print the data in the DemodBuffer"},
+    {"samples",         CmdSamples,              IfPm3Present,     "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
+    {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data  (from graph window)"},
+    {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable,  "<0|1|2> -- Set Debugging Level on client side"},
+    {"tune",            CmdTuneSamples,          IfPm3Present,     "Measure tuning of device antenna. Results shown in graph window"},
     {NULL, NULL, NULL, NULL}
 };
 

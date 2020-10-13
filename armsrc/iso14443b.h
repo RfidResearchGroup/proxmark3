@@ -15,7 +15,7 @@
 
 #include "common.h"
 
-#include "mifare.h"
+#include "iso14b.h"
 #include "pm3_cmd.h"
 
 #ifndef AddCrc14A
@@ -27,20 +27,17 @@
 #endif
 
 void iso14443b_setup(void);
-uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
-uint8_t iso14443b_select_card(iso14b_card_select_t *card);
-uint8_t iso14443b_select_card_srx(iso14b_card_select_t *card);
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res);
 
-void SimulateIso14443bTag(uint32_t pupi);
+int iso14443b_select_card(iso14b_card_select_t *card);
+int iso14443b_select_card_srx(iso14b_card_select_t *card);
+
+void SimulateIso14443bTag(uint8_t *pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
-void ReadSTMemoryIso14443b(uint8_t numofblocks);
-void RAMFUNC SniffIso14443b(void);
+void ReadSTMemoryIso14443b(uint16_t numofblocks);
+void SniffIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 void SendRawCommand14443B_Ex(PacketCommandNG *c);
-
-// testfunctions
-void WaitForFpgaDelayQueueIsEmpty(uint16_t delay);
-void ClearFpgaShiftingRegisters(void);
 
 // States for 14B SIM command
 #define SIM_NOFIELD     0

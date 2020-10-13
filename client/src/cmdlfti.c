@@ -23,8 +23,8 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int CmdTIDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodTI(bool verbose) {
+    (void) verbose; // unused so far
     /* MATLAB as follows:
       f_s = 2000000;  % sampling frequency
       f_l = 123200;   % low FSK tone
@@ -271,6 +271,11 @@ out:
     return retval;
 }
 
+static int CmdTIDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodTI(true);
+}
+
 // read a TI tag and return its ID
 static int CmdTIRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -317,8 +322,3 @@ int CmdLFTI(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
-int demodTI(void) {
-    return CmdTIDemod("");
-}
-

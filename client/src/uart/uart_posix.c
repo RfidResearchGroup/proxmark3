@@ -359,7 +359,7 @@ void uart_close(const serial_port sp) {
     int err = fcntl(spu->fd, F_SETLK, &fl);
     if (err == -1) {
         //silent error message as it can be called from uart_open failing modes, e.g. when waiting for port to appear
-        //printf("[!] UART error while closing port\n");
+        //PrintAndLogEx(ERR, "UART error while closing port");
     }
     close(spu->fd);
     free(sp);
@@ -401,12 +401,12 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 
         // Retrieve the count of the incoming bytes
         res = ioctl(((serial_port_unix *)sp)->fd, FIONREAD, &byteCount);
-//        printf("UART:: RX ioctl res %d byteCount %u\n", res, byteCount);
+//        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
         if (res < 0) return PM3_ENOTTY;
 
         // Cap the number of bytes, so we don't overrun the buffer
         if (pszMaxRxLen - (*pszRxLen) < byteCount) {
-//            printf("UART:: RX prevent overrun (have %u, need %u)\n", pszMaxRxLen - (*pszRxLen), byteCount);
+//            PrintAndLogEx(ERR, "UART:: RX prevent overrun (have %u, need %u)", pszMaxRxLen - (*pszRxLen), byteCount);
             byteCount = pszMaxRxLen - (*pszRxLen);
         }
 
@@ -443,13 +443,13 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
 
         // Write error
         if (res < 0) {
-            printf("UART:: write error (%d)\n", res);
+            PrintAndLogEx(ERR, "UART:: write error (%d)", res);
             return PM3_ENOTTY;
         }
 
         // Write time-out
         if (res == 0) {
-            printf("UART:: write time-out\n");
+            PrintAndLogEx(ERR, "UART:: write time-out");
             return PM3_ETIMEOUT;
         }
 

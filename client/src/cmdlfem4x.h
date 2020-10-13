@@ -15,11 +15,12 @@
 
 int CmdLFEM4X(const char *Cmd);
 
-int demodEM410x(void);
+int demodEM410x(bool verbose);
 bool EM4x05IsBlock0(uint32_t *word);
+int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word);
 
 void printEM410x(uint32_t hi, uint64_t id);
 int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo);
-int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
+int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose);
 
 #endif

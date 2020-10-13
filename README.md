@@ -3,9 +3,9 @@
 
 
 
-| Releases     | Linux & OSX CI       | Windows CI | Coverity    |
-| ------------------- |:-------------------:| -------------------:| -------------------:|
-| [![Latest release](https://img.shields.io/github/v/release/rfidresearchgroup/proxmark3)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://api.travis-ci.org/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.org/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) | [![Coverity Status](https://scan.coverity.com/projects/19334/badge.svg)](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo)|
+| Releases     | Linux & OSX CI       | Windows CI | Coverity    | Contributors |
+| ------------------- |:-------------------:| -------------------:| -------------------:| -------------------:|
+| [![Latest release](https://img.shields.io/github/v/release/rfidresearchgroup/proxmark3)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://api.travis-ci.com/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.com/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) | [![Coverity Status](https://scan.coverity.com/projects/19334/badge.svg)](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo)| ![GitHub contributors](https://img.shields.io/github/contributors/rfidresearchgroup/proxmark3) |
 
 
 
@@ -30,11 +30,11 @@
 | ------------------- |:-------------------:| -------------------:|
 |[Notes on UART](/doc/uart_notes.md)|[Notes on Termux / Android](/doc/termux_notes.md)|[Notes on paths](/doc/path_notes.md)|
 |[Notes on frame format](/doc/new_frame_format.md)|[Notes on tracelog / wireshark](/doc/trace_notes.md)|[Notes on EMV](/doc/emv_notes.md)|
-|[Notes on external flash](/doc/ext_flash_notes.md)|[Notes on loclass](/doc/loclass_notes.md)|[Notes on Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md)|
+|[Notes on external flash](/doc/ext_flash_notes.md)|[Notes on loclass](/doc/loclass_notes.md)|[Notes on Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-and-Run.md)|
 |[Notes on file formats used with Proxmark3](/doc/extensions_notes.md)|[Notes on MFU binary format](/doc/mfu_binary_format_notes.md)|[Notes on FPGA & ARM](/doc/fpga_arm_notes.md)|
-|[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)||
-|[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|
-
+|[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic cards](/doc/magic_cards_notes.md)|
+|[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
+|[Notes on cliparser usage](/doc/cliparser.md)|||
 
 ## Build for non-RDV4 Proxmark3 platforms
 
@@ -57,14 +57,14 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 This repo compiles nicely on 
    - Proxspace v3.x
-     - [latest release v3.4](https://github.com/Gator96100/ProxSpace/releases)
+     - [latest release v3.7](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/mingw environment with Qt5.6.1 & GCC 4.9
-   - Ubuntu 1604 -> 2004
+   - Ubuntu 16.04 -> 20.04
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian
    - Rasbian
    - Android / Termux
    - Mac OS X / Homebrew
-   - WSL, WSL2  (Windows subsystem linux) on Windows 10
+   - WSL1  (Windows subsystem linux) on Windows 10
    - Docker container
       - [ RRG / Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)
@@ -73,7 +73,7 @@ Hardware to run client on
    - PC
    - Android
    - Raspberry Pi & Raspberry Pi Zero
-   - Jetson Nano
+   - Nvidia Jetson Nano
 
 ## Precompiled binaries
 We don't maintain any precompiled binaries in this repo. There is community effort over at the Proxmark3 forum where @gator96100 has set up a google drive with many mingw binaries which is up-to-date. We link to these files here as to make it easier for users.
@@ -81,14 +81,15 @@ If you are having troubles with these files, contact the package maintainer @gat
 
 
 Ref:
-
+For Proxmark3 RDV4
 - [Precompiled builds for RDV40 dedicated x86](https://drive.google.com/open?id=13zUs-aiQkYaSl5KWrBtuW5IWCoHJPsue)
 - [Precompiled builds for RDV40 dedicated x64](https://drive.google.com/open?id=1SyPB8t5Vo8O0Lh7PjNm3Kv-mO4BNbxjX)
 
+For Proxmark3 RDV4 with blueshark addon
 - [Precompiled builds for RDV40 dedicated with Bluetooth addon x86](https://drive.google.com/open?id=1TqWYctkRvkLshQ1ZRBHPLDzYHR-asuMO)
 - [Precompiled builds for RDV40 dedicated with Bluetooth addon x64](https://drive.google.com/open?id=17ful7u2QyYmMQzQzc5fAf8nJvyoDJfSL)
 
-Generice Proxmark3 devices (non RDV4)
+Generice Proxmark3 devices (non RDV4),  for Proxmark3 Easy,  RDV1, RDV2, RDV3, etc etc
 - [Precompiled builds for RRG / Iceman repository x86](https://drive.google.com/open?id=1PI3Xr1mussPBPnYGu4ZjWzGPARK4N7JR)
 - [Precompiled builds for RRG / Iceman repository x64](https://drive.google.com/open?id=1uX9RtYGinuFrpHybu4xq_BE3HrobI20e)
 
@@ -101,16 +102,18 @@ We usually merge your contributions fast since we do like the idea of getting a 
 
 
 ## Issues & Troubleshooting
-Please search the [issues](https://github.com/rfidresearchgroup/proxmark3/issues) page here and see if your issue is listed in the first instance.  Next place to visit is the [Proxmark Forum](http://www.proxmark.org/forum/index.php). Learn to search it well and finally Google / duckduckgo is your friend :)    You will find many blogposts, youtube videos, tweets, reddit
-
+Please search the [issues](https://github.com/rfidresearchgroup/proxmark3/issues) page here and see if your issue is listed in the first instance.
 Read the [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) guide to weed out most known problems.
 
-Offical channels
+Next place to visit is the [Proxmark Forum](http://www.proxmark.org/forum/index.php). Learn to search it well and finally Google / duckduckgo is your friend :)    You will find many blogposts, youtube videos, tweets, reddit
+
+### Offical channels
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Twitter](https://twitter.com/proxmark3/)
-   
- _no discord or slack channel_
+   - [Proxmark3 community discord server](https://discord.gg/zjxc8ZB)
+ 
+ _no slack channel_
 
 Iceman has quite a few videos on his [youtube channel](https://www.youtube.com/c/ChrisHerrmann1001)
 
@@ -130,7 +133,7 @@ The separation from official Proxmark3 repo gives us a lot of freedom to create 
 ## Proxmark3 GUI
 
 The official PM3-GUI from Gaucho will not work.
-The new universal GUI will work. [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) Almost, change needed in order to show helptext when client isn't connected to a device.
+The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers.
 
 ## The end
 

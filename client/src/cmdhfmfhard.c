@@ -143,11 +143,9 @@ static inline void clear_bitarray24(uint32_t *bitarray) {
     memset(bitarray, 0x00, sizeof(uint32_t) * (1 << 19));
 }
 
-
 static inline void set_bitarray24(uint32_t *bitarray) {
     memset(bitarray, 0xff, sizeof(uint32_t) * (1 << 19));
 }
-
 
 static inline void set_bit24(uint32_t *bitarray, uint32_t index) {
     bitarray[index >> 5] |= 0x80000000 >> (index & 0x0000001f);
@@ -157,36 +155,46 @@ static inline uint32_t test_bit24(uint32_t *bitarray, uint32_t index) {
     return bitarray[index >> 5] & (0x80000000 >> (index & 0x0000001f));
 }
 
-
 static inline uint32_t next_state(uint32_t *bitarray, uint32_t state) {
-    if (++state == 1 << 24) return 1 << 24;
+    if (++state == (1 << 24)) {
+        return (1 << 24);
+    }
+
     uint32_t index = state >> 5;
-    uint_fast8_t bit = state & 0x1f;
+    uint_fast8_t bit = state & 0x1F;
     uint32_t line = bitarray[index] << bit;
-    while (bit <= 0x1f) {
-        if (line & 0x80000000) return state;
+
+    while (bit <= 0x1F) {
+        if (line & 0x80000000) {
+            return state;
+        }
         state++;
         bit++;
         line <<= 1;
     }
     index++;
-    while (bitarray[index] == 0x00000000 && state < 1 << 24) {
+    while (state < (1 << 24) && bitarray[index] == 0x00000000) {
         index++;
         state += 0x20;
     }
-    if (state >= 1 << 24) return 1 << 24;
+
+    if (state >= (1 << 24)) {
+        return (1 << 24);
+    }
 #if defined __GNUC__
     return state + __builtin_clz(bitarray[index]);
 #else
     bit = 0x00;
     line = bitarray[index];
-    while (bit <= 0x1f) {
-        if (line & 0x80000000) return state;
+    while (bit <= 0x1F) {
+        if (line & 0x80000000) {
+            return state;
+        }
         state++;
         bit++;
         line <<= 1;
     }
-    return 1 << 24;
+    return (1 << 24);
 #endif
 }
 
@@ -1664,14 +1672,6 @@ static inline bool bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_e
     return true;
 }
 
-/*
-static uint_fast8_t reverse(uint_fast8_t b) {
-    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-    return b;
-}
-*/
 static uint_fast8_t reverse(uint_fast8_t b) {
     return (b * 0x0202020202ULL & 0x010884422010ULL) % 1023;
 }

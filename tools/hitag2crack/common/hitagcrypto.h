@@ -132,7 +132,7 @@
 
 
 #ifndef HITAGCRYPTO_H
-#define	HITAGCRYPTO_H
+#define HITAGCRYPTO_H
 
 #include <stdint.h>
 
@@ -163,5 +163,5 @@ void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, ui
 
 uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps);
 
-#endif	/* HITAGCRYPTO_H */
+#endif  /* HITAGCRYPTO_H */
 

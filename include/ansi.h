@@ -1,6 +1,9 @@
 #ifndef __ANSI_H
 #define __ANSI_H
 
+// Not ANSI but dirty trick to specify we don't want a \n
+#define NOLF "\xff"
+
 #define AEND  "\x1b[0m"
 
 #define _BLUE_(s) "\x1b[34m" s AEND
@@ -10,6 +13,9 @@
 #define _MAGENTA_(s) "\x1b[35m" s AEND
 #define _CYAN_(s) "\x1b[36m" s AEND
 #define _WHITE_(s) "\x1b[37m" s AEND
+
+#define _CLEAR_ "\x1b[2J"
+#define _TOP_   "\x1b[1;1f"
 
 // https://wiki.hackzine.org/development/misc/readline-color-prompt.html
 // Applications may indicate that the prompt contains

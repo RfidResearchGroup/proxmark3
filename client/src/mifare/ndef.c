@@ -497,7 +497,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Message") " ---");
                 if (len == 0) {
-                    PrintAndLogEx(SUCCESS, "Found NDEF message w zero length");                    
+                    PrintAndLogEx(SUCCESS, "Found NDEF message w zero length");
                 } else {
                     PrintAndLogEx(SUCCESS, "Found NDEF message (%d bytes)", len);
 
@@ -505,7 +505,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                     if (res != PM3_SUCCESS)
                         return res;
                 }
-                
+
                 indx += len;
                 break;
             }

@@ -47,6 +47,9 @@
 #include "commonutil.h"
 #include "proxmark3.h"
 #include "util.h"
+#include "cmdhficlass.h"  // pagemap
+#include "protocols.h"    // iclass defines
+
 #ifdef _WIN32
 #include "scandir.h"
 #include <direct.h>
@@ -426,15 +429,28 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         }
         case jsfIclass: {
             JsonSaveStr(root, "FileType", "iclass");
-            uint8_t csn[8] = {0};
-            memcpy(csn, data, 8);
-            JsonSaveBufAsHexCompact(root, "$.Card.CSN", csn, sizeof(csn));
+
+            picopass_hdr *hdr = (picopass_hdr *)data;
+            JsonSaveBufAsHexCompact(root, "$.Card.CSN", hdr->csn, sizeof(hdr->csn));
+            JsonSaveBufAsHexCompact(root, "$.Card.Configuration", (uint8_t *)&hdr->conf, sizeof(hdr->conf));
+
+            uint8_t pagemap = get_pagemap(hdr);
+            if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+                picopass_ns_hdr *ns_hdr = (picopass_ns_hdr *)data;
+                JsonSaveBufAsHexCompact(root, "$.Card.AIA", ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area));
+            } else {
+                JsonSaveBufAsHexCompact(root, "$.Card.Epurse", hdr->epurse, sizeof(hdr->epurse));
+                JsonSaveBufAsHexCompact(root, "$.Card.Kd", hdr->key_d, sizeof(hdr->key_d));
+                JsonSaveBufAsHexCompact(root, "$.Card.Kc", hdr->key_c, sizeof(hdr->key_c));
+                JsonSaveBufAsHexCompact(root, "$.Card.AIA", hdr->app_issuer_area, sizeof(hdr->app_issuer_area));
+            }
 
             for (size_t i = 0; i < (datalen / 8); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 8), 8);
             }
+
             break;
         }
         case jsfT55x7: {
@@ -557,16 +573,16 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
     if (res) {
         PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), fileName);
-        json_decref(root);
         retval = 200;
         goto out;
     }
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
 
-    json_decref(root);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
+    }
 
 out:
+    json_decref(root);
     free(fileName);
     return retval;
 }
@@ -1439,21 +1455,56 @@ int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
     }
 }
 
-static int filelist(const char *path, const char *ext, bool last, bool tentative) {
+static int filelist(const char *path, const char *ext, uint8_t last, bool tentative, uint8_t indent, uint16_t strip) {
     struct dirent **namelist;
     int n;
 
     n = scandir(path, &namelist, NULL, alphasort);
     if (n == -1) {
-        if (!tentative)
-            PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
+
+        if (tentative == false) {
+
+            for (uint8_t j = 0; j < indent; j++) {
+                PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+            }
+            PrintAndLogEx(NORMAL, "%s── "_GREEN_("%s"), last ? "└" : "├", &path[strip]);
+        }
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
+    for (uint8_t j = 0; j < indent; j++) {
+        PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+    }
+
+    PrintAndLogEx(NORMAL, "%s── "_GREEN_("%s"), last ? "└" : "├", &path[strip]);
+
     for (uint16_t i = 0; i < n; i++) {
-        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
-            PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " " : "│", i == n - 1 ? "└" : "├", namelist[i]->d_name);
+
+        char tmp_fullpath[1024] = {0};
+        strncat(tmp_fullpath, path, sizeof(tmp_fullpath) - 1);
+        tmp_fullpath[1023] = 0x00;
+        strncat(tmp_fullpath, namelist[i]->d_name, strlen(tmp_fullpath) - 1);
+
+        if (is_directory(tmp_fullpath)) {
+
+            char newpath[1024];
+            if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
+                continue;
+
+            snprintf(newpath, sizeof(newpath), "%s", path);
+            strncat(newpath, namelist[i]->d_name, sizeof(newpath) - strlen(newpath) - 1);
+            strncat(newpath, "/", sizeof(newpath) - strlen(newpath) - 1);
+
+            filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
+        } else {
+
+            if ((ext == NULL) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
+
+                for (uint8_t j = 0; j < indent + 1; j++) {
+                    PrintAndLogEx(NORMAL, "%s   " NOLF, ((last >> j) & 1) ? " " : "│");
+                }
+                PrintAndLogEx(NORMAL, "%s── %-21s", i == n - 1 ? "└" : "├", namelist[i]->d_name);
+            }
         }
         free(namelist[i]);
     }
@@ -1468,7 +1519,7 @@ int searchAndList(const char *pm3dir, const char *ext) {
         char script_directory_path[strlen(get_my_executable_directory()) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, get_my_executable_directory());
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false, true);
+        filelist(script_directory_path, ext, false, true, 0, 0);
     }
     // try pm3 dirs in user .proxmark3 (user mode)
     const char *user_path = get_my_user_directory();
@@ -1477,7 +1528,7 @@ int searchAndList(const char *pm3dir, const char *ext) {
         strcpy(script_directory_path, user_path);
         strcat(script_directory_path, PM3_USER_DIRECTORY);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false, false);
+        filelist(script_directory_path, ext, false, false, 0, 0);
     }
     // try pm3 dirs in pm3 installation dir (install mode)
     const char *exec_path = get_my_executable_directory();
@@ -1486,7 +1537,7 @@ int searchAndList(const char *pm3dir, const char *ext) {
         strcpy(script_directory_path, exec_path);
         strcat(script_directory_path, PM3_SHARE_RELPATH);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, true, false);
+        filelist(script_directory_path, ext, true, false, 0, 0);
     }
     return PM3_SUCCESS;
 }

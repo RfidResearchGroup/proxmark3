@@ -59,16 +59,16 @@ static int usage_lf_io_sim(void) {
 }
 
 static int usage_lf_io_clone(void) {
-    PrintAndLogEx(NORMAL, "Enables cloning of IOProx card with specified facility-code and card number onto T55x7.");
+    PrintAndLogEx(NORMAL, "Enables cloning of IOProx card with specified facility-code and card number onto T55x7 or Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf io clone [h] <version> <facility-code> <card-number> [Q5]");
+    PrintAndLogEx(NORMAL, "Usage:  lf io clone [h] <version> <facility-code> <card-number> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "                h :  This help");
     PrintAndLogEx(NORMAL, "        <version> :  8bit version (" _YELLOW_("decimal") ")");
     PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (" _YELLOW_("hex") ")");
     PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (" _YELLOW_("decimal") ")");
-    PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
+    PrintAndLogEx(NORMAL, "             <Q5> :  optional - specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf io clone 01 101 1337"));
@@ -95,8 +95,8 @@ static int CmdIOProxWatch(const char *Cmd) {
 //by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioprox ID and some format details
-static int CmdIOProxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+int demodIOProx(bool verbose) {
+    (void) verbose; // unused so far
     int idx = 0, retval = PM3_SUCCESS;
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -172,7 +172,7 @@ static int CmdIOProxDemod(const char *Cmd) {
     char crc_str[36] = {0};
 
     if (crc == calccrc) {
-        snprintf(crc_str, sizeof(crc_str), "(" _GREEN_("ok") ")" );
+        snprintf(crc_str, sizeof(crc_str), "(" _GREEN_("ok") ")");
     } else {
         snprintf(crc_str, sizeof(crc_str), "(" _RED_("fail") ") 0x%02X != 0x%02X", crc, calccrc);
         retval = PM3_ESOFT;
@@ -190,10 +190,15 @@ static int CmdIOProxDemod(const char *Cmd) {
     return retval;
 }
 
+static int CmdIOProxDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodIOProx(true);
+}
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdIOProxRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 12000);
-    return CmdIOProxDemod(Cmd);
+    return demodIOProx(true);
 }
 static int CmdIOProxSim(const char *Cmd) {
     uint16_t cn = 0;
@@ -274,13 +279,14 @@ static int CmdIOProxClone(const char *Cmd) {
 
     uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 
-    if (tolower(param_getchar(Cmd, 3) == 'q'))
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
+    bool q5 = tolower(param_getchar(Cmd, 3) == 'q');
+    if (q5)
+        blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
     blocks[1] = bytebits_to_byte(bits, 32);
     blocks[2] = bytebits_to_byte(bits + 32, 32);
 
-    PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
+    PrintAndLogEx(INFO, "Preparing to clone IOProx to " _YELLOW_("%s") " with Version: %u FC: %u, CN: %u", (q5) ? "Q5/T5555" : "T55x7", version, fc, cn);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -293,7 +299,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdIOProxDemod, AlwaysAvailable, "demodulate an IOProx tag from the GraphBuffer"},
     {"read",    CmdIOProxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdIOProxClone, IfPm3Lf,         "clone IOProx tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdIOProxClone, IfPm3Lf,         "clone IOProx tag to T55x7 or Q5/T5555"},
     {"sim",     CmdIOProxSim,   IfPm3Lf,         "simulate IOProx tag"},
     {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards. Reader mode"},
     {NULL, NULL, NULL, NULL}
@@ -308,10 +314,6 @@ static int CmdHelp(const char *Cmd) {
 int CmdLFIO(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-}
-
-int demodIOProx(void) {
-    return CmdIOProxDemod("");
 }
 
 //Index map

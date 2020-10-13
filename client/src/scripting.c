@@ -36,6 +36,7 @@
 #include "fileutils.h"    // searchfile
 #include "cmdlf.h"        // lf_config
 #include "generator.h"
+#include "cmdlfem4x.h"    // read 4305
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
@@ -55,7 +56,7 @@ static int l_clearCommandBuffer(lua_State *L) {
 }
 
 /**
- * Enable / Disable fast push mode for lua scripts like mfckeys
+ * Enable / Disable fast push mode for lua scripts like hf_mf_keycheck
  * The following params expected:
  *
  *@brief l_fast_push_mode
@@ -129,6 +130,7 @@ static int l_SendCommandOLD(lua_State *L) {
         }
     }
 
+    clearCommandBuffer();
     SendCommandOLD(cmd, arg0, arg1, arg2, data, len);
     lua_pushboolean(L, true);
     return 1;
@@ -176,6 +178,7 @@ static int l_SendCommandMIX(lua_State *L) {
         }
     }
 
+    clearCommandBuffer();
     SendCommandMIX(cmd, arg0, arg1, arg2, data, len);
     lua_pushboolean(L, true);
     return 1;
@@ -215,6 +218,7 @@ static int l_SendCommandNG(lua_State *L) {
         }
     }
 
+    clearCommandBuffer();
     SendCommandNG(cmd, data, len);
     lua_pushboolean(L, true);
     return 1;
@@ -387,8 +391,9 @@ static int l_WaitForResponseTimeout(lua_State *L) {
         ms_timeout = luaL_checkunsigned(L, 2);
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false)
+    if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false) {
         return returnToLuaWithError(L, "No response from the device");
+    }
 
     char foo[sizeof(PacketResponseNG)];
     n = 0;
@@ -426,7 +431,6 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     //Push it as a string
     lua_pushlstring(L, (const char *)&foo, sizeof(foo));
-
     return 1;
 }
 
@@ -474,14 +478,14 @@ static int l_mfDarkside(lua_State *L) {
 static int l_foobar(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
-    printf("foobar called with %d arguments", n);
+    PrintAndLogEx(INFO, "foobar called with %d arguments", n);
     lua_settop(L, 0);
-    printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
+    PrintAndLogEx(INFO, "Arguments discarded, stack now contains %d elements", lua_gettop(L));
 
     // todo: this is not used, where was it intended for?
     // PacketCommandOLD response =  {CMD_HF_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
 
-    printf("Now returning a uint64_t as a string");
+    PrintAndLogEx(INFO, "Now returning a uint64_t as a string");
     uint64_t x = 0xDEADC0DE;
     uint8_t destination[8];
     num_to_bytes(x, sizeof(x), destination);
@@ -998,7 +1002,7 @@ static int l_T55xx_readblock(lua_State *L) {
                 return returnToLuaWithError(L, "Failed to read config block");
             }
 
-            if (!tryDetectModulation(0, true)) { // Default to prev. behaviour (default dl mode and print config)
+            if (!t55xxTryDetectModulation(0, true)) { // Default to prev. behaviour (default dl mode and print config)
                 PrintAndLogEx(NORMAL, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
                 return 0;
             } else {
@@ -1046,7 +1050,7 @@ static int l_T55xx_detect(lua_State *L) {
 
             sscanf(p_gb, "%u", &gb);
             useGB = (gb) ? true : false;
-            printf("p_gb size  %zu | %c \n", size, useGB ? 'Y' : 'N');
+            PrintAndLogEx(INFO, "p_gb size  %zu | %c", size, useGB ? 'Y' : 'N');
         }
         case 1: {
             const char *p_pwd = luaL_checklstring(L, 1, &size);
@@ -1074,7 +1078,7 @@ static int l_T55xx_detect(lua_State *L) {
         }
     }
 
-    isok = tryDetectModulation(0, true); // Default to prev. behaviour (default dl mode and print config)
+    isok = t55xxTryDetectModulation(0, true); // Default to prev. behaviour (default dl mode and print config)
     if (isok == false) {
         return returnToLuaWithError(L, "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
     }
@@ -1082,6 +1086,46 @@ static int l_T55xx_detect(lua_State *L) {
     lua_pushinteger(L, isok);
     lua_pushstring(L, "Success");
     return 2;
+}
+
+//
+static int l_em4x05_read(lua_State *L) {
+
+    bool use_pwd = false;
+    uint32_t addr, password = 0;
+
+    //Check number of arguments
+    //int n = lua_gettop(L);
+
+    // get addr
+    size_t size = 0;
+    const char *p_addr = luaL_checklstring(L, 1, &size);
+    sscanf(p_addr, "%u", &addr);
+
+    // get password
+    const char *p_pwd = luaL_checklstring(L, 2, &size);
+    if (size == 0) {
+        use_pwd = false;
+    } else {
+        if (size != 8)
+            return returnToLuaWithError(L, "Wrong size of password, got %zu , expected 8", size);
+
+        sscanf(p_pwd, "%08x", &password);
+        use_pwd = true;
+    }
+
+    PrintAndLogEx(DEBUG, "Addr %u", addr);
+    if (use_pwd)
+        PrintAndLogEx(DEBUG, " Pwd %08X", password);
+
+    uint32_t word = 0;
+    int res = EM4x05ReadWord_ext(addr, password, use_pwd, &word);
+    if (res != PM3_SUCCESS) {
+        return returnToLuaWithError(L, "Failed to read EM4x05 data");
+    }
+
+    lua_pushinteger(L, word);
+    return 1;
 }
 
 //
@@ -1129,9 +1173,7 @@ static int l_remark(lua_State *L) {
     }
 
     size_t size;
-    // data
     const char *s = luaL_checklstring(L, 1, &size);
-
     int res = CmdRem(s);
     lua_pushinteger(L, res);
     return 1;
@@ -1199,6 +1241,19 @@ static int l_cwd(lua_State *L) {
     return 1;
 }
 
+// ref:  https://github.com/RfidResearchGroup/proxmark3/issues/891
+// redirect LUA's print to Proxmark3 PrintAndLogEx
+static int l_printandlogex(lua_State *L) {
+    int n = lua_gettop(L);
+    for (int i = 1; i <= n; i++) {
+        if (lua_isstring(L, i)) {
+            PrintAndLogEx(NORMAL, "%s\t" NOLF, lua_tostring(L, i));
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+    return 0;
+}
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -1264,26 +1319,30 @@ int set_pm3_libraries(lua_State *L) {
         {"ewd",                         l_ewd},
         {"ud",                          l_ud},
         {"rem",                         l_remark},
+        {"em4x05_read",                 l_em4x05_read},
         {NULL, NULL}
     };
 
     lua_pushglobaltable(L);
     // Core library is in this table. Contains '
-    //this is 'pm3' table
+    // this is 'pm3' table
     lua_newtable(L);
 
-    //Put the function into the hash table.
+    // put the function into the hash table.
     for (int i = 0; libs[i].name; i++) {
         lua_pushcfunction(L, libs[i].func);
         lua_setfield(L, -2, libs[i].name);//set the name, pop stack
     }
-    //Name of 'core'
+    // Name of 'core'
     lua_setfield(L, -2, "core");
 
-    //-- remove the global environment table from the stack
+    // remove the global environment table from the stack
     lua_pop(L, 1);
 
-    //--add to the LUA_PATH (package.path in lua)
+    // print redirect here
+    lua_register(L, "print", l_printandlogex);
+
+    // add to the LUA_PATH (package.path in lua)
     // so we can load scripts from various places:
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {

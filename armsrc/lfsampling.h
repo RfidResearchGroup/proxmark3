@@ -21,8 +21,8 @@ typedef struct {
 * acquisition of Cotag LF signal. Similar to other LF,  since the Cotag has such long datarate RF/384
 * and is Manchester?,  we directly gather the manchester data into bigbuff
 **/
-void doCotagAcquisition(size_t sample_size);
-uint32_t doCotagAcquisitionManchester(void);
+void doCotagAcquisition(void);
+uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen);
 
 /**
 * acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
@@ -40,7 +40,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size);
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF(void);
+uint32_t SniffLF(bool verbose, uint32_t sample_size);
 
 uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
                        bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip);
@@ -99,7 +99,7 @@ void setSamplingConfig(sample_config *sc);
 
 sample_config *getSamplingConfig(void);
 
-void printConfig(void);
+void printLFConfig(void);
 void printSamples(void);
 
 #endif // __LFSAMPLING_H

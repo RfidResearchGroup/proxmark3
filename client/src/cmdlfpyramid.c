@@ -31,7 +31,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_pyramid_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Farpointe/Pyramid tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Farpointe/Pyramid tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
     PrintAndLogEx(NORMAL, "Currently only works on 26bit");
     PrintAndLogEx(NORMAL, "");
@@ -40,7 +40,7 @@ static int usage_lf_pyramid_clone(void) {
     PrintAndLogEx(NORMAL, "  h               : this help");
     PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
     PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
-    PrintAndLogEx(NORMAL, "  Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
+    PrintAndLogEx(NORMAL, "  Q5              : optional - specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf pyramid clone 123 11223"));
@@ -64,14 +64,10 @@ static int usage_lf_pyramid_sim(void) {
     return PM3_SUCCESS;
 }
 
-static int CmdPyramidDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodPyramid();
-}
-
 //Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
 //print full Farpointe Data/Pyramid Prox ID and some bit format details if found
-int demodPyramid(void) {
+int demodPyramid(bool verbose) {
+    (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
@@ -213,9 +209,15 @@ int demodPyramid(void) {
     return PM3_SUCCESS;
 }
 
+static int CmdPyramidDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodPyramid(true);
+}
+
 static int CmdPyramidRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 15000);
-    return CmdPyramidDemod(Cmd);
+    return demodPyramid(true);
 }
 
 static int CmdPyramidClone(const char *Cmd) {
@@ -242,8 +244,9 @@ static int CmdPyramidClone(const char *Cmd) {
     blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4 << T55x7_MAXBLOCK_SHIFT;
 
     // Q5
-    if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
-        blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 4 << T5555_MAXBLOCK_SHIFT;
+    bool q5 = tolower(param_getchar(Cmd, 2)) == 'q';
+    if (q5)
+        blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 4 << T5555_MAXBLOCK_SHIFT;
 
     blocks[1] = bytebits_to_byte(bs, 32);
     blocks[2] = bytebits_to_byte(bs + 32, 32);
@@ -252,7 +255,7 @@ static int CmdPyramidClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
+    PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to " _YELLOW_("%s") "  with Facility Code: %u, Card Number: %u", (q5) ? "Q5/T5555" : "T55x7", facilitycode, cardnumber);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -308,7 +311,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "this help"},
     {"demod",   CmdPyramidDemod, AlwaysAvailable, "demodulate a Pyramid FSK tag from the GraphBuffer"},
     {"read",    CmdPyramidRead,  IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdPyramidClone, IfPm3Lf,         "clone pyramid tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdPyramidClone, IfPm3Lf,         "clone pyramid tag to T55x7 or Q5/T5555"},
     {"sim",     CmdPyramidSim,   IfPm3Lf,         "simulate pyramid tag"},
     {NULL, NULL, NULL, NULL}
 };

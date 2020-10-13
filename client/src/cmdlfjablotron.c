@@ -30,12 +30,12 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_jablotron_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Jablotron tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "clone a Jablotron tag to a T55x7 or Q5/T5555 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf jablotron clone [h] <card ID> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h          : This help");
     PrintAndLogEx(NORMAL, "      <card ID>  : jablotron card ID");
-    PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "      <Q5>       : specify writing to Q5/T5555 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron clone 112233"));
@@ -78,16 +78,11 @@ static uint64_t getJablontronCardId(uint64_t rawcode) {
     return id;
 }
 
-//see ASKDemod for what args are accepted
-static int CmdJablotronDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return demodJablotron();
-}
-
-int demodJablotron(void) {
+int demodJablotron(bool verbose) {
+    (void) verbose; // unused so far
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
-    if (ASKbiphaseDemod("0 64 1 0", false) != PM3_SUCCESS) {
+    if (ASKbiphaseDemod(0, 64, 1, 0, false) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron ASKbiphaseDemod failed");
         return PM3_ESOFT;
     }
@@ -137,9 +132,16 @@ int demodJablotron(void) {
     return PM3_SUCCESS;
 }
 
+//see ASKDemod for what args are accepted
+static int CmdJablotronDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodJablotron(true);
+}
+
 static int CmdJablotronRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 16000);
-    return demodJablotron();
+    return demodJablotron(true);
 }
 
 static int CmdJablotronClone(const char *Cmd) {
@@ -153,8 +155,9 @@ static int CmdJablotronClone(const char *Cmd) {
     fullcode = param_get64ex(Cmd, 0, 0, 16);
 
     //Q5
-    if (tolower(param_getchar(Cmd, 1)) == 'q')
-        blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
+    bool q5 = tolower(param_getchar(Cmd, 1)) == 'q';
+    if (q5)
+        blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
     // clearing the topbit needed for the preambl detection.
     if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
@@ -178,7 +181,7 @@ static int CmdJablotronClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone Jablotron to T55x7 with FullCode: %"PRIx64, fullcode);
+    PrintAndLogEx(INFO, "Preparing to clone Jablotron to " _YELLOW_("%s") " with FullCode: %"PRIx64, (q5) ? "Q5/T5555" : "T55x7", fullcode);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
@@ -234,7 +237,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"demod",   CmdJablotronDemod,  AlwaysAvailable, "Demodulate an Jablotron tag from the GraphBuffer"},
     {"read",    CmdJablotronRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdJablotronClone,  IfPm3Lf,         "clone jablotron tag to T55x7 (or to q5/T5555)"},
+    {"clone",   CmdJablotronClone,  IfPm3Lf,         "clone jablotron tag to T55x7 or Q5/T5555"},
     {"sim",     CmdJablotronSim,    IfPm3Lf,         "simulate jablotron tag"},
     {NULL, NULL, NULL, NULL}
 };

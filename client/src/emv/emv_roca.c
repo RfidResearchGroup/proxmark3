@@ -71,7 +71,8 @@ static mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
     if (X->n == 1 && X->s > 0) {
         return X->p[0];
     }
-    printf("ZERRRRO!!!\n");
+
+    PrintAndLogEx(WARNING, "ZERRRRO!!!\n");
     return 0;
 }
 
@@ -82,7 +83,7 @@ static void print_mpi(const char *msg, int radix, const mbedtls_mpi *X) {
     size_t len = 0;
 
     mbedtls_mpi_write_string(X, radix, Xchar, sizeof(Xchar), &len);
-    printf("%s[%zu] %s\n", msg, len, Xchar);
+    PrintAndLogEx(INFO, "%s[%zu] %s\n", msg, len, Xchar);
 }
 */
 bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
@@ -118,15 +119,17 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
 
         MBEDTLS_MPI_CHK(mbedtls_mpi_shift_l(&g_one, mpi_get_uint(&t_temp)));
 
-        if (bitand_is_zero(&g_one, &prints[i])) {
-            if (verbose)
-                PrintAndLogEx(FAILED, "No fingerprint found.\n");
-            goto cleanup;
-        }
-
-        mbedtls_mpi_free(&g_one);
         mbedtls_mpi_free(&t_temp);
         mbedtls_mpi_free(&t_prime);
+
+        if (bitand_is_zero(&g_one, &prints[i])) {
+            if (verbose) {
+                PrintAndLogEx(FAILED, "No fingerprint found.\n");
+            }
+            mbedtls_mpi_free(&g_one);
+            goto cleanup;
+        }
+        mbedtls_mpi_free(&g_one);
     }
 
     ret = true;

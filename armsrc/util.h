@@ -63,7 +63,7 @@
 #endif
 
 #ifndef REV64
-#define REV64(x)        (REV32(x) + (REV32((x) >> 32) << 32))
+#define REV64(x)        (REV32(x) + ((uint64_t)(REV32((x) >> 32) << 32)))
 #endif
 
 #ifndef BIT32

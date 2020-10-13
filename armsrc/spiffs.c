@@ -67,30 +67,33 @@ static s32_t rdv40_spiffs_llwrite(u32_t addr, u32_t size, u8_t *src) {
 }
 
 static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
-
-
     uint8_t erased = 0;
 
     if (!FlashInit()) {
         return 130;
     }
-    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
+
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
+
     uint8_t block, sector = 0;
     block = addr / RDV40_LLERASE_BLOCKSIZE;
     if (block) {
         addr = addr - (block * RDV40_LLERASE_BLOCKSIZE);
     }
-    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
+
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
+
     sector = addr / SPIFFS_CFG_LOG_BLOCK_SZ;
     Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
-    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
-    erased = Flash_Erase4k(block, sector);
 
+    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
+
+    erased = Flash_Erase4k(block, sector);
     Flash_CheckBusy(BUSY_TIMEOUT);
     FlashStop();
 
-    return SPIFFS_OK == erased ;
+    return (SPIFFS_OK == erased);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -252,7 +255,7 @@ static RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
             filetype = RDV40_SPIFFS_FILETYPE_SYMLINK;
         }
     }
-    if (DBGLEVEL > 1) {
+    if (DBGLEVEL >= DBG_DEBUG) {
         switch (filetype) {
             case RDV40_SPIFFS_FILETYPE_REAL:
                 Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_REAL");
@@ -472,14 +475,21 @@ int rdv40_spiffs_is_symlink(const char *s) {
 // ATTENTION : you must NOT provide the whole filename (so please do not include the .lnk extension)
 // TODO : integrate in read_function
 int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
-    RDV40_SPIFFS_SAFE_FUNCTION(                 //
-        char linkdest[SPIFFS_OBJ_NAME_LEN];     //
-        char linkfilename[SPIFFS_OBJ_NAME_LEN]; //
+
+    RDV40_SPIFFS_SAFE_FUNCTION(
+        char linkdest[SPIFFS_OBJ_NAME_LEN];
+        char linkfilename[SPIFFS_OBJ_NAME_LEN];
         sprintf(linkfilename, "%s.lnk", filename);
-        if (DBGLEVEL > 1) Dbprintf("Linkk real filename is  destination is : %s", linkfilename);
+
+        if (DBGLEVEL >= DBG_DEBUG)
+        Dbprintf("Linkk real filename is : " _YELLOW_("%s"), linkfilename);
+
         read_from_spiffs((char *)linkfilename, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
-        if (DBGLEVEL > 1) Dbprintf("Symlink destination is : %s", linkdest);
-            read_from_spiffs((char *)linkdest, (uint8_t *)dst, size); //
+
+        if (DBGLEVEL >= DBG_DEBUG)
+            Dbprintf("Symlink destination is : " _YELLOW_("%s"), linkdest);
+
+            read_from_spiffs((char *)linkdest, (uint8_t *)dst, size);
         )
         }
 
@@ -496,10 +506,10 @@ int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RD
 //   rdv40_spiffs_read_as_symlink((uint8_t *)"world",(uint8_t *) buffer, orig_file_size, RDV40_SPIFFS_SAFETY_SAFE);
 // TODO : FORBID creating a symlink with a basename (before.lnk) which already exists as a file !
 int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyLevel level) {
-    RDV40_SPIFFS_SAFE_FUNCTION(                 //
-        char linkfilename[SPIFFS_OBJ_NAME_LEN]; //
+    RDV40_SPIFFS_SAFE_FUNCTION(
+        char linkfilename[SPIFFS_OBJ_NAME_LEN];
         sprintf(linkfilename, "%s.lnk", filename);
-        write_to_spiffs((char *)linkfilename, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN); //
+        write_to_spiffs((char *)linkfilename, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
     )
 }
 
@@ -510,8 +520,8 @@ int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyL
 // preexistance, avoiding a link being created if filename exists, or avoiding a file being created if
 // symlink exists with same name
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
-    RDV40_SPIFFS_SAFE_FUNCTION(                                              //
-        RDV40SpiFFSFileType filetype = filetype_in_spiffs((char *)filename); //
+    RDV40_SPIFFS_SAFE_FUNCTION(
+        RDV40SpiFFSFileType filetype = filetype_in_spiffs((char *)filename);
     switch (filetype) {
     case RDV40_SPIFFS_FILETYPE_REAL:
         rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
@@ -523,7 +533,7 @@ int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, R
         case RDV40_SPIFFS_FILETYPE_UNKNOWN:
         default:
             ;
-    } //
+    }
     )
 }
 
@@ -552,7 +562,7 @@ void rdv40_spiffs_safe_print_fsinfo(void) {
     Dbprintf("  Max Path Length............" _YELLOW_("%d")" chars", fsinfo.maxPathLength);
     DbpString("");
     Dbprintf("  filesystem    size      used        available    use%    mounted");
-    Dbprintf("  spiffs        %6d B      %6d B    %6d B"_YELLOW_("%2d%")"    /"
+    Dbprintf("  spiffs        %6d B %6d B    %6d B      " _YELLOW_("%2d%")"     /"
              , fsinfo.totalBytes
              , fsinfo.usedBytes
              , fsinfo.freeBytes
@@ -601,6 +611,37 @@ void rdv40_spiffs_safe_print_tree(uint8_t banner) {
     rdv40_spiffs_lazy_mount_rollback(changed);
 }
 
+void rdv40_spiffs_safe_wipe(void) {
+
+    int changed = rdv40_spiffs_lazy_mount();
+
+    spiffs_DIR d;
+    struct spiffs_dirent e;
+    struct spiffs_dirent *pe = &e;
+    SPIFFS_opendir(&fs, "/", &d);
+
+    while ((pe = SPIFFS_readdir(&d, pe))) {
+
+        if (rdv40_spiffs_is_symlink((const char *)pe->name)) {
+
+            char linkdest[SPIFFS_OBJ_NAME_LEN];
+            read_from_spiffs((char *)pe->name, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
+
+            remove_from_spiffs(linkdest);
+            Dbprintf(".lnk removed %s", pe->name);
+
+            remove_from_spiffs((char *)pe->name);
+            Dbprintf("removed %s", linkdest);
+
+        } else {
+            remove_from_spiffs((char *)pe->name);
+            Dbprintf("removed %s", pe->name);
+        }
+    }
+
+    SPIFFS_closedir(&d);
+    rdv40_spiffs_lazy_mount_rollback(changed);
+}
 
 // Selftest function
 void test_spiffs(void) {

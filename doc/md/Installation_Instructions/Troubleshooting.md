@@ -127,9 +127,9 @@ proxmark3 <YOUR_PORT_HERE> --flash --image /usr/local/share/proxmark3/firmware/f
 <>
 proxmark3 <YOUR_PORT_HERE> --flash --image /usr/share/proxmark3/firmware/fullimage.elf
 
-pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
+pm3 --> smart upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
 <>
-pm3 --> sc upgrade f /usr/share/proxmark3/firmware/sim011.bin
+pm3 --> smart upgrade f /usr/share/proxmark3/firmware/sim011.bin
 ```
 
 If you didn't install the PRoxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
@@ -152,9 +152,9 @@ client/proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 <>
 ./proxmark3 <YOUR_PORT_HERE> --flash --image ../armsrc/obj/fullimage.elf
 
-pm3 --> sc upgrade f tools/simmodule/sim011.bin
+pm3 --> smart upgrade f tools/simmodule/sim011.bin
 <>
-pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
+pm3 --> smart upgrade f ../tools/simmodule/sim011.bin
 ```
 
 etc.

@@ -9,9 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "emvjson.h"
-
 #include <string.h>
-
 #include "commonutil.h"  // ARRAYLEN
 #include "ui.h"
 #include "util.h"
@@ -75,7 +73,7 @@ int JsonSaveJsonObject(json_t *root, const char *path, json_t *value) {
         return 1;
 
     if (path[0] == '$') {
-        if (json_path_set(root, path, value, 0, &error)) {
+        if (json_path_set_new(root, path, value, 0, &error)) {
             PrintAndLogEx(ERR, "ERROR: can't set json path: %s", error.text);
             return 2;
         } else {

@@ -15,6 +15,9 @@ ISO14443A (usually NFC tags)
     95 20 = Anticollision of cascade level2
     95 70 = Select of cascade level2
     50 00 = Halt (usage: 5000+2bytes ISO14443A-CRC - no answer from card)
+
+    E0 = RATS
+    D0 = PPS
 Mifare
     60 = Authenticate with KeyA
     61 = Authenticate with KeyB
@@ -135,7 +138,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ICLASS_CMD_ACT              0xE
 
 #define ICLASS_CREDIT(x)            (((x) & 0x10) == 0x10)
-#define ICLASS_DEBIT(x)             !(ICLASS_CREDIT(x))
+#define ICLASS_DEBIT(x)             (((x) & 0x80) == 0x80)
 
 
 #define ISO14443A_CMD_REQA          0x26
@@ -148,6 +151,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443A_CMD_WRITEBLOCK    0xA0
 #define ISO14443A_CMD_HALT          0x50
 #define ISO14443A_CMD_RATS          0xE0
+#define ISO14443A_CMD_PPS           0xD0
 #define ISO14443A_CMD_NXP_DESELECT  0xC2
 
 #define MIFARE_SELECT_CT            0x88
@@ -211,10 +215,13 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_SINGLE                (MAGIC_WUPC | MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
 
 // by CMD_HF_MIFARE_CIDENT
-#define MAGIC_GEN_1A 1
-#define MAGIC_GEN_1B 2
-#define MAGIC_GEN_2  4
-#define MAGIC_GEN_UNFUSED 5
+#define MAGIC_GEN_1A        1
+#define MAGIC_GEN_1B        2
+#define MAGIC_GEN_2         4
+#define MAGIC_GEN_UNFUSED   5
+#define MAGIC_SUPER         6
+#define MAGIC_NTAG21X       7
+#define MAGIC_GEN_3         8
 /**
 06 00 = INITIATE
 0E xx = SELECT ID (xx = Chip-ID)
@@ -239,6 +246,50 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_AUTHENTICATE 0x0A
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
+
+// ASK C-ticket
+#define ASK_REQT               0x10
+#define ASK_IDENTIFY           0x0F
+#define ASK_SELECT             0x9F
+#define ASK_MULTREAD           (0x1 << 4) // High nibble
+#define ASK_UPDATE             (0x3 << 4) // High nibble
+#define ASK_WRITE              (0x5 << 4) // High nibble
+#define ASK_READ               (0x6 << 4) // High nibble
+#define ASK_DESACTIVATE        0xF0
+
+
+// defined crypto RF commands
+// only interpreting channel 1 communication
+#define CRYPTORF_SET_USER_ZONE      0x11
+#define CRYPTORF_READ_USER_ZONE     0x12
+#define CRYPTORF_WRITE_USER_ZONE    0x13
+#define CRYPTORF_WRITE_SYSTEM_ZONE  0x14
+#define CRYPTORF_READ_SYSTEM_ZONE   0x16
+#define CRYPTORF_VERIFY_CRYPTO      0x18
+#define CRYPTORF_SEND_CHECKSUM      0x19
+#define CRYPTORF_DESELECT           0x1A
+#define CRYPTORF_IDLE               0x1B
+#define CRYPTORF_CHECK_PASSWORD     0x1C
+
+// defined Crypto RF errors
+#define CRYPTORF_ERR_ACCESS_DENIED_ZONE               0x99
+#define CRYPTORF_ERR_PARAM_INVALID                    0xA1
+#define CRYPTORF_ERR_ADDRES_INVALID                   0xA2
+#define CRYPTORF_ERR_LENGTH_INVALID                   0xA3
+#define CRYPTORF_ERR_AUTH_ENC_REQ                     0xA9
+#define CRYPTORF_ERR_ACCESS_DENIED_WLOCK              0xB9
+#define CRYPTORF_ERR_BYTE_ACCESS_DENIED_NOT_ALLOWED   0xBA
+#define CRYPTORF_ERR_ACCESS_DENIED_NOT_ALLOWED        0xBA
+#define CRYPTORF_ERR_BYTE_ACCESS_DENIED_PASSWD_REQ    0xBC
+#define CRYPTORF_ERR_CHECKSUM_FAIL2                   0xC8
+#define CRYPTORF_ERR_CHECKSUM_FAIL                    0xC9
+#define CRYPTORF_ERR_PASSWD_REQ                       0xD9
+#define CRYPTORF_ERR_FUSE_ACCESS_DENIED               0xDF
+#define CRYPTORF_ERR_MODIFY_FORBIDDEN                 0xE9
+#define CRYPTORF_ERR_ACCESS_DENIED_FUSE_ORDR          0xE9
+#define CRYPTORF_ERR_MEMORY_WRITE_DATA_M              0xED
+#define CRYPTORF_ERR_MEMORY_ACCESS                    0xEE
+#define CRYPTORF_ERR_MEMORY_ACCESS_SEC                0xF9
 
 //First byte is 26
 #define ISO15693_INVENTORY     0x01
@@ -297,7 +348,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define TOPAZ_WRITE_E8                0x54 // Write-with-erase (eight bytes)
 #define TOPAZ_WRITE_NE8               0x1B // Write-no-erase (eight bytes)
 
-
 // Definitions of which protocol annotations there are available
 #define ISO_14443A       0
 #define ICLASS           1
@@ -314,8 +364,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define LTO             12
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
+#define PROTO_CRYPTORF  15
 
-//-- Picopass fuses
+// Picopass fuses
 #define FUSE_FPERS   0x80
 #define FUSE_CODING1 0x40
 #define FUSE_CODING0 0x20
@@ -324,6 +375,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FUSE_FPROD1  0x04
 #define FUSE_FPROD0  0x02
 #define FUSE_RA      0x01
+
+// Picopass Pagemode fuses
+#define PICOPASS_NON_SECURE_PAGEMODE 0x01
+#define PICOPASS_SECURE_PAGEMODE     0x11
+
 
 // ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_READ_BINARY             0xB0
@@ -480,6 +536,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define T5555_BITRATE_SHIFT             12 //(RF=2n+2)   ie 64=2*0x1F+2   or n = (RF-2)/2
 #define T5555_FAST_WRITE                0x00004000
 #define T5555_PAGE_SELECT               0x00008000
+#define T5555_FIXED                     0x60000000
 
 #define T55XX_WRITE_TIMEOUT 1500
 

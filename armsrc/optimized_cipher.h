@@ -21,6 +21,9 @@ typedef struct {
 /** The reader MAC is MAC(key, CC * NR )
  **/
 void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]);
+
+void opt_doReaderMAC_2(State _init,  uint8_t *nr, uint8_t mac[4], const uint8_t *div_key_p);
+
 /**
  * The tag MAC is MAC(key, CC * NR * 32x0))
  */
@@ -46,4 +49,6 @@ State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p);
  */
 void opt_doTagMAC_2(State _init, uint8_t *nr, uint8_t mac[4], const uint8_t *div_key_p);
 
+void doMAC_N(uint8_t *in_p, uint8_t in_size, uint8_t *div_key_p, uint8_t mac[4]);
+void iclass_calc_div_key(uint8_t *csn, uint8_t *key, uint8_t *div_key, bool elite);
 #endif // OPTIMIZED_CIPHER_H

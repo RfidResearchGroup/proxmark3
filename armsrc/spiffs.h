@@ -58,6 +58,8 @@ int rdv40_spiffs_stat(char *filename, uint32_t *buf, RDV40SpiFFSSafetyLevel leve
 uint32_t size_in_spiffs(const char *filename);
 int exists_in_spiffs(const char *filename);
 
+void rdv40_spiffs_safe_wipe(void);
+
 #define SPIFFS_OK                       0
 #define SPIFFS_ERR_NOT_MOUNTED          -10000
 #define SPIFFS_ERR_FULL                 -10001

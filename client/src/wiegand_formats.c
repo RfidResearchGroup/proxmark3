@@ -591,7 +591,7 @@ static const cardformat_t FormatTable[] = {
     {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"N10002",  Pack_N10002,  Unpack_N10002,  "HID N10002 34-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeySpan 36-bit",         {1, 1, 0, 1, 1}}, // from Proxmark forums
+    {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit",         {1, 1, 0, 1, 1}}, // from Proxmark forums
     {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit",         {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
     {"Sie36",   Pack_Sie36,   Unpack_Sie36,   "HID 36-bit Siemens",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
@@ -671,21 +671,21 @@ static void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t form
             PrintAndLogEx(SUCCESS, "       Parity: %s",card->ParityValid ? "Valid" : "Invalid");
     */
 
-    char s[80] = {0};
+    char s[110] = {0};
     if (format.Fields.hasFacilityCode)
-        snprintf(s, sizeof(s), "FC: %u", card->FacilityCode);
+        snprintf(s, sizeof(s), "FC: " _GREEN_("%u"), card->FacilityCode);
 
     if (format.Fields.hasCardNumber)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  CN: %" PRIu64, card->CardNumber);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  CN: " _GREEN_("%"PRIu64), card->CardNumber);
 
     if (format.Fields.hasIssueLevel)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue %u", card->IssueLevel);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue " _GREEN_("%u"), card->IssueLevel);
 
     if (format.Fields.hasOEMCode)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: %u", card->OEM);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: " _GREEN_("%u"), card->OEM);
 
     if (format.Fields.hasParity)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "    parity: %s", card->ParityValid ? "valid" : "invalid");
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "    parity: %s", card->ParityValid ? _GREEN_("valid") : _RED_("invalid"));
 
     PrintAndLogEx(SUCCESS, "[%s] - %s;  %s", format.Name, format.Descrp, s);
 }
@@ -708,7 +708,7 @@ bool HIDTryUnpack(wiegand_message_t *packed, bool ignore_parity) {
         }
         ++i;
     }
-    if (result == false) {
+    if (result == false && packed->Length) {
         PrintAndLogEx(SUCCESS, "Unknown. Bit len %d", packed->Length);
     }
 

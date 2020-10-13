@@ -740,8 +740,12 @@ static int unpack(scanner_t *s, json_t *root, va_list *ap) {
 
         case 'b':
             if (root && !json_is_boolean(root)) {
-                set_error(s, "<validation>", json_error_wrong_type, "Expected true or false, got %s",
-                          type_name(root));
+                set_error(s,
+                          "<validation>",
+                          json_error_wrong_type,
+                          "Expected true or false, got %s",
+                          type_name(root)
+                         );
                 return -1;
             }
 

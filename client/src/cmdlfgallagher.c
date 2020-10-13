@@ -67,11 +67,10 @@ static void descramble(uint8_t *arr, uint8_t len) {
 }
 
 //see ASK/MAN Demod for what args are accepted
-static int CmdGallagherDemod(const char *Cmd) {
-
-    (void)Cmd;
+int demodGallagher(bool verbose) {
+    (void) verbose; // unused so far
     bool st = true;
-    if (ASKDemod_ext("32 0 0 0", false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(32, 0, 100, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - GALLAGHER: ASKDemod failed");
         return PM3_ESOFT;
     }
@@ -103,9 +102,9 @@ static int CmdGallagherDemod(const char *Cmd) {
     for (int i = 0, pos = 0; i < ARRAYLEN(arr); i++) {
         pos = (i * 8) + i;
         arr[i] = bytebits_to_byte(DemodBuffer + pos, 8);
-        printf("%d -", pos);
+        PrintAndLogEx(NORMAL, "%d -" NOLF, pos);
     }
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
 
     // crc
     uint8_t crc = bytebits_to_byte(DemodBuffer + 72, 8);
@@ -134,9 +133,15 @@ static int CmdGallagherDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdGallagherDemod(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return demodGallagher(true);
+}
+
 static int CmdGallagherRead(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
     lf_read(false, 4096 * 2 + 20);
-    return CmdGallagherDemod(Cmd);
+    return demodGallagher(true);
 }
 
 static int CmdGallagherClone(const char *Cmd) {
@@ -222,8 +227,3 @@ int detectGallagher(uint8_t *dest, size_t *size) {
     //return start position
     return (int)startIdx;
 }
-
-int demodGallagher(void) {
-    return CmdGallagherDemod("");
-}
-
