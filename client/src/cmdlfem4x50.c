@@ -393,6 +393,9 @@ int CmdEM4x50Write(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
+
     bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
     if (isOK == false) {
         PrintAndLogEx(FAILED, "writing " _RED_("failed"));
@@ -487,6 +490,10 @@ int CmdEM4x50WritePassword(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
+    
     success = (bool)resp.status;
 
     // get, prepare and print response
