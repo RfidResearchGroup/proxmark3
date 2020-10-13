@@ -3671,7 +3671,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     PrintAndLogEx(NORMAL, "----+------------------------------------------------");
     uint8_t blocks = 4;
     uint8_t start = sector * 4;
-    if (sector > 32) {
+    if (sector >= 32) {
         blocks = 16;
         start = 128 + (sector - 32) * 16;
     }
@@ -4365,7 +4365,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     PrintAndLogEx(NORMAL, "----+------------------------------------------------");
     uint8_t blocks = 4;
     uint8_t start = sector * 4;
-    if (sector > 32) {
+    if (sector >= 32) {
         blocks = 16;
         start = 128 + (sector - 32) * 16;
     }
