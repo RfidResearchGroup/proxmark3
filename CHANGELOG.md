@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Removed 'hf iclass replay' -  use the 'hf iclass dump' or 'hf iclass rdbl' with option "n"  instead (@iceman1001).  Concept taken from official repo (@pwpiwi)
  - Add low level support for 14b' aka Innovatron (@doegox)
  - Add doc/cliparser.md (@mwalker33)
  - Add `hf 14b apdu` - send APDU over ISO14443B (@iceman1001)
