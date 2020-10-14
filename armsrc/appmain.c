@@ -1553,18 +1553,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             iClass_Dump(packet->data.asBytes);
             break;
         }
-        case CMD_HF_ICLASS_CLONE: {
-            struct p {
-                uint8_t startblock;
-                uint8_t endblock;
-                uint8_t data[];
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            iClass_Clone(payload->startblock, payload->endblock, payload->data);
-            break;
-        }
         case CMD_HF_ICLASS_RESTORE: {
-            iClass_Restore(packet->data.asBytes);
+            iClass_Restore( (iclass_restore_req_t *)packet->data.asBytes);
             break;
         }
 #endif

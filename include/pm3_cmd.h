@@ -335,10 +335,14 @@ typedef struct {
 
 // iCLASS dump data structure
 typedef struct {
+    uint8_t blockno;
+    uint8_t data[8];
+} PACKED iclass_restore_item_t;
+
+typedef struct {
     iclass_auth_req_t req;
-    uint8_t start_block;
-    uint8_t end_block;
-    uint8_t data[];
+    uint8_t item_cnt;
+    iclass_restore_item_t blocks[];    
 } PACKED iclass_restore_req_t;
 
 
@@ -351,7 +355,7 @@ typedef struct {
     uint8_t mem_config;     //[13]
     uint8_t eas;            //[14]
     uint8_t fuses;          //[15]
-} picopass_conf_block_t;
+} PACKED picopass_conf_block_t;
 
 // iCLASS secure mode memory mapping
 typedef struct {
@@ -361,14 +365,14 @@ typedef struct {
     uint8_t key_d[8];
     uint8_t key_c[8];
     uint8_t app_issuer_area[8];
-} picopass_hdr;
+} PACKED picopass_hdr;
 
 // iCLASS non-secure mode memory mapping
 typedef struct {
     uint8_t csn[8];
     picopass_conf_block_t conf;
     uint8_t app_issuer_area[8];
-} picopass_ns_hdr;
+} PACKED picopass_ns_hdr;
 
 
 // For the bootloader
@@ -560,7 +564,6 @@ typedef struct {
 
 // iCLASS / Picopass
 #define CMD_HF_ICLASS_READCHECK                                           0x038F
-#define CMD_HF_ICLASS_CLONE                                               0x0390
 #define CMD_HF_ICLASS_DUMP                                                0x0391
 #define CMD_HF_ICLASS_SNIFF                                               0x0392
 #define CMD_HF_ICLASS_SIMULATE                                            0x0393

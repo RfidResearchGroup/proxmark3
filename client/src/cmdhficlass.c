@@ -1431,13 +1431,6 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void calc_wb_mac(uint8_t blockno, uint8_t *data, uint8_t *div_key, uint8_t *MAC) {
-    uint8_t wb[9];
-    wb[0] = blockno;
-    memcpy(wb + 1, data, 8);
-    doMAC_N(wb, sizeof(wb), div_key, MAC);
-}
-
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose) {
 
     uint8_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
@@ -1472,47 +1465,6 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose) {
         PrintAndLogEx(SUCCESS, "CSN     %s", sprint_hex(CSN, 8));
         PrintAndLogEx(SUCCESS, "epurse  %s", sprint_hex(CCNR, 8));
     }
-    return true;
-}
-
-static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
-
-    iclass_auth_req_t payload = {
-        .use_raw = rawkey,
-        .use_elite = elite,
-        .use_credit_key = use_credit_key
-    };
-    memcpy(payload.key, KEY, 8);
-
-    SendCommandNG(CMD_HF_ICLASS_AUTH, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    if (WaitForResponseTimeout(CMD_HF_ICLASS_AUTH, &resp, 2000) == 0) {
-        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
-        return false;
-    }
-
-    if (resp.status != PM3_SUCCESS) {
-        if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
-        return false;
-    }
-
-    iclass_readblock_resp_t *packet = (iclass_readblock_resp_t *)resp.data.asBytes;
-
-    if (packet->isOK == 0) {
-        if (verbose) PrintAndLogEx(FAILED, "authentication error");
-        return false;
-    }
-
-    if (div_key)
-        memcpy(div_key, packet->div_key, sizeof(packet->div_key));
-
-    if (MAC)
-        memcpy(MAC, packet->mac, sizeof(packet->mac));
-
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8));
-
     return true;
 }
 
@@ -2026,11 +1978,6 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     return isok;
 }
 
-/*
-static int CmdHFiClassClone(const char *Cmd) {
-    return PM3_SUCCESS;
-}
-*/
 static int CmdHFiClassRestore(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = { 0x00 };
     char tempStr[50] = {0};
@@ -2082,7 +2029,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
                 } else if (dataLen == 1) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
-                        PrintAndLogEx(SUCCESS, "Using key[%d] %s", keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8));
+                        PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8));
                         memcpy(KEY, iClass_Key_Table[keyNbr], 8);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
@@ -2119,14 +2066,19 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
     if (errors || cmdp < 8) return usage_hf_iclass_restore();
 
+    if (rawkey + elite > 1) {
+        PrintAndLogEx(FAILED, "Can not use both 'e', 'r'");
+        return PM3_EINVARG;
+    }
+
     if (startblock < 5) {
         PrintAndLogEx(WARNING, "you cannot write key blocks this way. yet... make your start block > 4");
         return PM3_EINVARG;
     }
 
-    int total_bytes = (((endblock - startblock) + 1) * 12);
+    uint32_t payload_size = sizeof(iclass_restore_req_t) + (sizeof(iclass_restore_item_t) * (endblock - startblock + 1));
 
-    if (total_bytes > PM3_CMD_DATA_SIZE - 2) {
+    if (payload_size > PM3_CMD_DATA_SIZE) {
         PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", PM3_CMD_DATA_SIZE / 8);
         return PM3_EINVARG;
     }
@@ -2144,93 +2096,68 @@ static int CmdHFiClassRestore(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    if (bytes_read < sizeof(iclass_block_t) * (endblock - startblock + 1)) {
-        PrintAndLogEx(ERR, "file wrong size");
+    if (bytes_read < ((endblock - startblock + 1) * 8 )) {
+        PrintAndLogEx(ERR, "file is smaller than your suggested block range ( " _RED_("0x%02x..0x%02x")" )",
+                startblock, endblock
+                );
         free(dump);
         return PM3_EFILE;
     }
+
+    iclass_restore_req_t *payload = calloc(1, payload_size);
+    payload->req.use_raw = rawkey,
+    payload->req.use_elite = elite,
+    payload->req.use_credit_key = use_credit_key,
+    payload->req.use_replay = false,
+    payload->req.blockno = startblock,
+    payload->req.send_reply = true,
+    payload->req.do_auth = true,
+    memcpy(payload->req.key, KEY, 8);
+    
+    payload->item_cnt = (endblock - startblock + 1);
 
     // read data from file from block 6 --- 19
     // we will use this struct [data 8 bytes][MAC 4 bytes] for each block calculate all mac number for each data
     // then copy to usbcommand->asbytes;
     // max is 32 - 6 = 28 block.  28 x 12 bytes gives 336 bytes
-    iclass_block_t tag_data[PM3_CMD_DATA_SIZE / 12];
 
-    memcpy(tag_data, dump + startblock * 8, sizeof(iclass_block_t) * (endblock - startblock + 1));
+    for (uint8_t i = 0; i < payload->item_cnt; i++) {        
+        payload->blocks[i].blockno = startblock + i;
+        memcpy(payload->blocks[i].data, dump + (startblock * 8) + (i * 8) , sizeof(payload->blocks[i].data));
+    }
 
     free(dump);
 
-    uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    int i;
-    int numberAuthRetries = ICLASS_AUTH_RETRY;
-    do {
-        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
-            break;
-    } while (numberAuthRetries--);
-
-    if (numberAuthRetries <= 0) {
-        PrintAndLogEx(ERR, "failed to authenticate");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    uint8_t data[total_bytes];
-
-    // calculate all mac for every the block we will write
-    for (i = startblock; i <= endblock; i++) {
-
-        calc_wb_mac(i, tag_data[i - startblock].d, div_key, MAC);
-        // usb command d start pointer = d + (i - 6) * 12
-        // memcpy(pointer,tag_data[i - 6],8) 8 bytes
-        // memcpy(pointer + 8,mac,sizoof(mac) 4 bytes;
-        // next one
-        uint8_t *ptr = data + (i - startblock) * 12;
-        memcpy(ptr, &(tag_data[i - startblock].d[0]), 8);
-        memcpy(ptr + 8, MAC, 4);
-    }
-
     if (verbose) {
-        PrintAndLogEx(INFO, "------+--------------------------+-------------");
-        PrintAndLogEx(INFO, "block | data                     | mac");
-        PrintAndLogEx(INFO, "------+--------------------------+-------------");
-        uint8_t p[12];
-        for (i = 0; i <= endblock - startblock; i++) {
-            memcpy(p, data + (i * 12), 12);
-            char *s = calloc(70, sizeof(uint8_t));
-            snprintf(s, 70, "| %s ", sprint_hex(p, 8));
-            snprintf(s + strlen(s), 70 - strlen(s), "| %s", sprint_hex(p + 8, 4));
-            PrintAndLogEx(NORMAL, "  %02X  %s", i + startblock, s);
-            free(s);
+        PrintAndLogEx(INFO, "Preparing to restore block range 0x02x..0x%02x", startblock, endblock);
+        
+        PrintAndLogEx(INFO, "------+----------------------");
+        PrintAndLogEx(INFO, "block | data");
+        PrintAndLogEx(INFO, "------+----------------------");
+
+        for (uint8_t i = 0; i < payload->item_cnt; i++) {           
+            iclass_restore_item_t item = payload->blocks[i];
+            PrintAndLogEx(INFO, "  %02X  | %s", item.blockno, sprint_hex_inrow(item.data, sizeof(item.data)));
         }
     }
 
-    struct p {
-        uint8_t startblock;
-        uint8_t endblock;
-        uint8_t data[PM3_CMD_DATA_SIZE - 2];
-    } PACKED payload;
-
-    payload.startblock = startblock;
-    payload.endblock = endblock;
-    memcpy(payload.data, data, total_bytes);
+    PrintAndLogEx(INFO, "restore started...");
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ICLASS_CLONE, (uint8_t *)&payload, total_bytes + 2);
+    SendCommandNG(CMD_HF_ICLASS_RESTORE, (uint8_t *)payload, payload_size);
 
-    if (WaitForResponseTimeout(CMD_HF_ICLASS_CLONE, &resp, 2000) == 0) {
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_RESTORE, &resp, 2500) == 0) {
         PrintAndLogEx(WARNING, "command execute timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
     if (resp.status == PM3_SUCCESS) {
-        if (resp.data.asBytes[0] == 1)
-            PrintAndLogEx(SUCCESS, "Restore successful");
-        else
-            PrintAndLogEx(WARNING, "Restore failed");
+        PrintAndLogEx(SUCCESS, "iCLASS restore " _GREEN_("successful"));
+        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass rdbl ") "` to verify data on card");
+    } else {
+        PrintAndLogEx(WARNING, "iCLASS restore " _RED_("failed"));
     }
     return resp.status;
 }
