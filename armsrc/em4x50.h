@@ -13,10 +13,6 @@
 
 #include "../include/em4x50.h"
 
-typedef struct {
-    uint8_t sectors[34][4];
-} em4x50_tag_t;
-
 int em4x50_standalone_read(uint32_t *words);
 int em4x50_standalone_brute(uint32_t start, uint32_t stop, uint32_t *pwd);
 bool em4x50_sim_send_listen_window(void);

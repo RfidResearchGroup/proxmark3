@@ -13,6 +13,7 @@
 #include "dbprint.h"
 #include "lfadc.h"
 #include "commonutil.h"
+#include "BigBuf.h"
 #include "em4x50.h"
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
@@ -49,16 +50,10 @@
 #define EM4X50_COMMAND_TIMEOUT              5000
 #define FPGA_TIMER_0                        0
 
-static uint32_t em4x50_tag[34] = {0x0};
 int gHigh = 0;
 int gLow = 0;
 
 // auxiliary functions
-
-static void init_tag(void) {
-
-    memset(em4x50_tag, 0x00, sizeof(em4x50_tag));
-}
 
 static void msb2lsb_word(uint8_t *word) {
 
@@ -165,7 +160,7 @@ static bool get_signalproperties(void) {
         if (BUTTON_PRESS()) return false;
 
         // about 2 samples per bit period
-        wait_timer(0, T0 * EM4X50_T_TAG_HALF_PERIOD);
+        wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_HALF_PERIOD);
 
         if (AT91C_BASE_SSC->SSC_RHR > noise) {
             signal_found = true;
@@ -211,11 +206,11 @@ static int get_next_bit(void) {
     // "find_double_listen_window" and "check_ack"
 
     // get sample at 3/4 of bit period
-    wait_timer(0, T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
+    wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
     uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
-    wait_timer(0, T0 * EM4X50_T_TAG_QUARTER_PERIOD);
+    wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_QUARTER_PERIOD);
 
     // decide wether "0" or "1"
     if (sample > gHigh)
@@ -538,17 +533,16 @@ bool em4x50_sim_send_listen_window(void) {
             ++check;
         }
 
-        if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD) {
+        if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD)
             SHORT_COIL();
-        } else if (t >= 3 * EM4X50_T_TAG_FULL_PERIOD) {
+        else if (t >= 3 * EM4X50_T_TAG_FULL_PERIOD)
             OPEN_COIL();
-        } else if (t >= EM4X50_T_TAG_FULL_PERIOD) {
+        else if (t >= EM4X50_T_TAG_FULL_PERIOD)
             SHORT_COIL();
-        } else if (t >= EM4X50_T_TAG_HALF_PERIOD) {
+        else if (t >= EM4X50_T_TAG_HALF_PERIOD)
             OPEN_COIL();
-        } else {
+        else
             SHORT_COIL();
-        }
 
         check = 0;
 
@@ -831,24 +825,24 @@ static bool reset(void) {
     return false;
 }
 
+
 //==============================================================================
 // read functions
 //==============================================================================
 
-static bool standard_read(int *now) {
+static bool standard_read(int *now, uint32_t *words) {
 
     // reads data that tag transmits when exposed to reader field
     // (standard read mode); number of read words is saved in <now>
 
     int fwr = *now;
-    uint32_t data = 0x0;
 
     // start with the identification of two succsessive listening windows
     if (find_double_listen_window(false)) {
 
         // read and save words until following double listen window is detected
-        while (get_word_from_bitstream(&data) == EM4X50_TAG_WORD)
-            em4x50_tag[(*now)++] = data;
+        while (get_word_from_bitstream(&words[*now]) == EM4X50_TAG_WORD)
+            (*now)++;
 
         // number of detected words
         *now -= fwr;
@@ -863,7 +857,7 @@ static bool standard_read(int *now) {
     return false;
 }
 
-static bool selective_read(uint8_t addresses[4]) {
+static bool selective_read(uint8_t addresses[4], uint32_t *words) {
 
     // reads from "first word read" (fwr = addresses[3]) to "last word read"
     // (lwr = addresses[2])
@@ -885,7 +879,7 @@ static bool selective_read(uint8_t addresses[4]) {
         if (check_ack(false))
 
             // save and verify via standard read mode (compare number of words)
-            if (standard_read(&now))
+            if (standard_read(&now, words))
                 if (now == (lwr - fwr + 1))
                     return true;
 
@@ -906,8 +900,8 @@ void em4x50_info(em4x50_data_t *etd) {
     bool bsuccess = false, blogin = false;
     uint8_t status = 0;
     uint8_t addresses[] = {0x00, 0x00, 0x21, 0x00}; // fwr = 0, lwr = 33
+    uint32_t words[32] = {0x0};
 
-    init_tag();
     em4x50_setup_read();
 
     // set gHigh and gLow
@@ -920,16 +914,13 @@ void em4x50_info(em4x50_data_t *etd) {
 
         }
 
-        bsuccess = selective_read(addresses);
+        bsuccess = selective_read(addresses, words);
     }
 
     status = (bsuccess << 1) + blogin;
 
-    for (int i = 0; i < 34; i++)
-        Dbprintf("em4x5_tag[%i] = %08x", i, em4x50_tag[i]);
-    
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)em4x50_tag, 136);
+    reply_ng(CMD_ACK, status, (uint8_t *)words, 136);
 }
 
 void em4x50_read(em4x50_data_t *etd) {
@@ -943,8 +934,8 @@ void em4x50_read(em4x50_data_t *etd) {
     int now = 0;
     uint8_t status = 0;
     uint8_t addresses[] = {0x00, 0x00, 0x00, 0x00};
+    uint32_t words[32] = {0x0};
 
-    init_tag();
     em4x50_setup_read();
 
     // set gHigh and gLow
@@ -960,12 +951,12 @@ void em4x50_read(em4x50_data_t *etd) {
 
             // only one word has to be read -> first word read = last word read
             addresses[2] = addresses[3] = etd->address;
-            bsuccess = selective_read(addresses);
+            bsuccess = selective_read(addresses, words);
 
         } else {
 
             // standard read mode
-            bsuccess = standard_read(&now);
+            bsuccess = standard_read(&now, words);
 
         }
     }
@@ -974,7 +965,8 @@ void em4x50_read(em4x50_data_t *etd) {
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)em4x50_tag, 136);
+    reply_ng(CMD_ACK, status, (uint8_t *)words, 136);
+    //reply_ng(CMD_ACK, status, (uint8_t *)em4x50_tag, 136);
 }
 
 //==============================================================================
@@ -1063,11 +1055,9 @@ void em4x50_write(em4x50_data_t *etd) {
 
     bool bsuccess = false, blogin = false;
     uint8_t status = 0;
-    //uint8_t word[4] = {0x00, 0x00, 0x00, 0x00};
-    uint32_t word = 0x0;
     uint8_t addresses[4] = {0x00, 0x00, 0x00, 0x00};
+    uint32_t words[34] = {0x0};
 
-    init_tag();
     em4x50_setup_read();
 
     // set gHigh and gLow
@@ -1092,21 +1082,9 @@ void em4x50_write(em4x50_data_t *etd) {
 
                 // call a selective read
                 addresses[2] = addresses[3] = etd->address;
-                if (selective_read(addresses)) {
+                if (selective_read(addresses, words)) {
 
                     // compare with given word
-                    word = em4x50_tag[etd->address];
-                    /*
-                    word[0] = tag.sectors[etd->address][0];
-                    word[1] = tag.sectors[etd->address][1];
-                    word[2] = tag.sectors[etd->address][2];
-                    word[3] = tag.sectors[etd->address][3];
-                     */
-                    reflect32(word);
-
-                    //bsuccess = true;
-                    //for (int i = 0; i < 4; i++)
-                    //    bsuccess &= (word[i] == etd->word[i]) ? true : false;
                     uint32_t tmp = 0x0;
                     tmp = etd->word[0];
                     tmp <<= 8;
@@ -1115,8 +1093,7 @@ void em4x50_write(em4x50_data_t *etd) {
                     tmp |= etd->word[2];
                     tmp <<= 8;
                     tmp |= etd->word[3];
-                    bsuccess = (word == tmp);
-
+                    bsuccess = (words[etd->address] == reflect32(tmp));
                 }
             }
         }
@@ -1125,7 +1102,7 @@ void em4x50_write(em4x50_data_t *etd) {
     status = (bsuccess << 1) + blogin;
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)em4x50_tag, 136);
+    reply_ng(CMD_ACK, status, (uint8_t *)words, 136);
 }
 
 void em4x50_write_password(em4x50_data_t *etd) {
@@ -1136,7 +1113,6 @@ void em4x50_write_password(em4x50_data_t *etd) {
     uint8_t rpwd[4] = {0x0, 0x0, 0x0, 0x0};
     uint8_t rnewpwd[4] = {0x0, 0x0, 0x0, 0x0};
 
-    init_tag();
     em4x50_setup_read();
 
     // set gHigh and gLow
@@ -1170,8 +1146,8 @@ void em4x50_wipe(em4x50_data_t *etd) {
     bool bsuccess = false;
     uint8_t zero[4] = {0, 0, 0, 0};
     uint8_t addresses[4] = {0, 0, EM4X50_NO_WORDS - 3, 1};
+    uint32_t words[34] = {0x0};
 
-    init_tag();
     em4x50_setup_read();
 
     // set gHigh and gLow
@@ -1192,12 +1168,12 @@ void em4x50_wipe(em4x50_data_t *etd) {
                 // login not necessary because protected word has been set to 0
                 // -> no read protected words
                 // -> selective read can be called immediately
-                if (selective_read(addresses)) {
+                if (selective_read(addresses, words)) {
 
                     // check if everything is zero
                     bsuccess = true;
                     for (int i = 1; i <= EM4X50_NO_WORDS - 3; i++)
-                        bsuccess &= (em4x50_tag[i] == 0) ? true : false;
+                        bsuccess &= (words[i] == 0);
 
                 }
 
@@ -1217,7 +1193,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, (uint8_t *)em4x50_tag, 136);
+    reply_ng(CMD_ACK, bsuccess, (uint8_t *)words, 136);
 }
 
 void em4x50_reset(void) {
@@ -1366,19 +1342,19 @@ void em4x50_watch() {
     // read continuously and display standard reads of tag
 
     int now = 0;
+    uint32_t words[34] = {0x0};
     
-    init_tag();
     em4x50_setup_read();
 
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
-        init_tag();
+        memset(words, 0, sizeof(words));
         now = 0;
 
         if (get_signalproperties() && find_em4x50_tag()) {
             
-            standard_read(&now);
+            standard_read(&now, words);
 
             if (now > 0) {
 
@@ -1387,7 +1363,7 @@ void em4x50_watch() {
                     
                     Dbprintf("EM4x50 TAG ID: "
                              _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
-                             em4x50_tag[i], reflect32(em4x50_tag[i]));
+                             words[i], reflect32(words[i]));
                 }
             }
         }
