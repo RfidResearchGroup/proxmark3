@@ -730,12 +730,8 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&etd, sizeof(etd));
-
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2 * TIMEOUT)) {
-        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
-        return PM3_ETIMEOUT;
-    }
-
+    WaitForResponse(CMD_ACK, &resp);
+    
     // print response
     bool isOK = resp.status;
     if (isOK) {
