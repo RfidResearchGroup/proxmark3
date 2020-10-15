@@ -303,16 +303,16 @@ local function main(args)
                     else
                         print(('[=] Status: failed to commit                => '..ansicolors.red..'FAIL:      '..ansicolors.reset..'14: %08X  15: %08X'):format(word14b, word15b))
                     end
+                    if auto then
+                        n = 0
+                        ed = sd
+                    else
+                        tries = 0
+                        soon = 0
+                        late = 0
+                    end
                 else
                     print(('[=] Status: 15 bitflipped but inactive  => '..ansicolors.yellow..'PROMISING: '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
-                end
-                if auto then
-                    n = 0
-                    ed = sd
-                else
-                    tries = 0
-                    soon = 0
-                    late = 0
                 end
             end
         end
