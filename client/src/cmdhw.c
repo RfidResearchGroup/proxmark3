@@ -539,7 +539,8 @@ int handle_tearoff(tearoff_params_t *params, bool verbose) {
 
         if (params->off && verbose)
             PrintAndLogEx(INFO, "Tear-off hook " _RED_("disabled"));
-    }
+    } else if (verbose)
+        PrintAndLogEx(WARNING, "Tear-off command failed.");
     return resp.status;
 }
 
@@ -563,11 +564,7 @@ static int CmdTearoff(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    struct {
-        uint16_t delay_us;
-        bool on;
-        bool off;
-    } PACKED params;
+    tearoff_params_t params;
     int delay = arg_get_int_def(ctx, 1, -1);
     params.on = arg_get_lit(ctx, 2);
     params.off = arg_get_lit(ctx, 3);
@@ -589,29 +586,7 @@ static int CmdTearoff(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_SET_TEAROFF, (uint8_t *)&params, sizeof(params));
-    PacketResponseNG resp;
-
-    if (WaitForResponseTimeout(CMD_SET_TEAROFF, &resp, 500) == false) {
-        PrintAndLogEx(WARNING, "Tear-off command timeout.");
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status == PM3_SUCCESS) {
-        if (params.delay_us > 0)
-            PrintAndLogEx(INFO, "Tear-off hook configured with delay of " _GREEN_("%i us"), params.delay_us);
-        if (params.on && silent == false)
-            PrintAndLogEx(INFO, "Tear-off hook " _GREEN_("enabled"));
-        if (params.off && silent == false)
-            PrintAndLogEx(INFO, "Tear-off hook " _RED_("disabled"));
-        return PM3_SUCCESS;
-    }
-
-    if (silent == false)
-        PrintAndLogEx(WARNING, "Tear-off command failed.");
-
-    return resp.status;
+    return handle_tearoff(&params, !silent);
 }
 
 static int CmdTia(const char *Cmd) {
