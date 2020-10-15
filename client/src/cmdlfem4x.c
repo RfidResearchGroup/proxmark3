@@ -1730,7 +1730,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     }
 
     uint32_t search_value = 0;
-    uint32_t write_value = 0xFFFF0000;
+    uint32_t write_value = 0;
     //    
     // inital phase 
     //
