@@ -1680,8 +1680,10 @@ static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool 
     
     return status;
 }
-static int unlock_reset(bool use_pwd, uint32_t pwd, uint32_t data) {
-    PrintAndLogEx(INFO, "resetting the " _RED_("active") " lock block");
+static int unlock_reset(bool use_pwd, uint32_t pwd, uint32_t data, bool verbose) {
+    if (verbose)
+        PrintAndLogEx(INFO, "resetting the " _RED_("active") " lock block");
+
     return unlock_write_protect(use_pwd, pwd, data, false);
 }
 
@@ -1776,7 +1778,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     
     PrintAndLogEx(INFO, "--------------- " _CYAN_("EM4x05 tear-off : target PROTECT") " -----------------------\n");    
 
-     PrintAndLogEx(INFO, "initial prot 14&15 [ " _GREEN_("%08X") ", " _GREEN_("%08X")  " ]", init_14, init_15);
+    PrintAndLogEx(INFO, "initial prot 14&15 [ " _GREEN_("%08X") ", " _GREEN_("%08X")  " ]", init_14, init_15);
 
     if (use_pwd) {
         PrintAndLogEx(INFO, "   target password [ " _GREEN_("%08"PRIX64) " ]", pwd);
@@ -1791,8 +1793,11 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     PrintAndLogEx(INFO, "       write value [ " _GREEN_("%08X") " ]", write_value);        
 
     PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
-
+    PrintAndLogEx(NORMAL, "");    
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------------\n");
+    
     int exit_code = PM3_SUCCESS;
     uint32_t word14 = 0, word15 = 0;
     uint32_t tries = 0;
@@ -1807,7 +1812,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     while (start <= end) {
 
         if (my_auto && n < 1) {
-            PrintAndLogEx(INFO, "Reached n < 1                    => " _YELLOW_("disabling automatic mode"));
+            PrintAndLogEx(INFO, "Reached n < 1                       => " _YELLOW_("disabling automatic mode"));
             end = start;
             my_auto = false;
             n = 0;
@@ -1833,20 +1838,11 @@ static int CmdEM4x05Unlock(const char *Cmd) {
             late = 0;
         }
 
-
-
         if (is_cancelled()) {
             exit_code = PM3_EOPABORTED;
             break;
         }
-
-        /*
-        if ( start != prev_delay) {
-            PrintAndLogEx(INFO, "Tear-off delay hook configured      => " _GREEN_("%.0lf us"), start);
-            prev_delay = start;
-        }
-        */
-            
+           
         // set tear off trigger
         clearCommandBuffer();    
         tearoff_params_t params = {
@@ -1857,7 +1853,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         res = handle_tearoff(&params, verbose); 
         if ( res != PM3_SUCCESS ) {
             PrintAndLogEx(WARNING, "failed to configure tear off");
-            return PM3_EOPABORTED;
+            return PM3_ESOFT;
         }
 
         // write
@@ -1865,18 +1861,16 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         
         // read after trigger
         res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
-        if (res == PM3_SUCCESS) {
-            //PrintAndLogEx(INFO, "14 after [ " _GREEN_("%08X") " ]", word14);            
-        } else {
-            break;
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "failed to read 14");
+            return PM3_ESOFT;
         }
 
         // read after trigger
         res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
-        if (res == PM3_SUCCESS) {
-            //PrintAndLogEx(INFO, "15 after [ " _GREEN_("%08X") " ]", word15);
-        } else {
-            break;
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "failed to read 15");
+            return PM3_ESOFT;
         }
 
         if (verbose)
@@ -1900,36 +1894,45 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                     PrintAndLogEx(INFO, "Status: Protect succeeded           => " _GREEN_("tearing too late"));
                 } else {
                     if ( word14 == search_value) {
-                         PrintAndLogEx(INFO, "Status: 15 ok, 14 not yet erased    => " _GREEN_("tearing too late"));
+                        PrintAndLogEx(INFO, "Status: 15 ok, 14 not yet erased    => " _GREEN_("tearing too late"));
                     } else {
-                         PrintAndLogEx(INFO, "Status: 15 ok, 14 partially erased  => " _GREEN_("tearing too late"));
+                        PrintAndLogEx(INFO, "Status: 15 ok, 14 partially erased  => " _GREEN_("tearing too late"));
                     }                    
                 }
-                unlock_reset(use_pwd, pwd, write_value);
+
+                unlock_reset(use_pwd, pwd, write_value, verbose);
+
                 uint32_t word14b = 0, word15b = 0;
+
                 // read after reset
                 res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                 if (res != PM3_SUCCESS) {
-                    break;
+                    PrintAndLogEx(WARNING, "failed to read 14");
+                    return PM3_ESOFT;
                 }
 
                 if (word14b == 0) {
-                    unlock_reset(use_pwd, pwd, write_value);                    
+
+                    unlock_reset(use_pwd, pwd, write_value, verbose);                    
+
                     res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                     if (res != PM3_SUCCESS) {
-                        break;
+                        PrintAndLogEx(WARNING, "failed to read 14");
+                        return PM3_ESOFT;
                     }
                 }
                 
                 if (word14b != search_value) {
 
-                    // read after reset
                     res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
                     if (res == PM3_SUCCESS) {
                         PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:") " 14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
                         success = true;
+                        break;
+                    } else {
+                        PrintAndLogEx(WARNING, "failed to read 15");
+                        return PM3_ESOFT;                        
                     }
-                    break;
                 }
                 if (my_auto) {
                     end = start;
@@ -1947,18 +1950,20 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                     PrintAndLogEx(INFO, "Status: 15 bitflipped and active    => " _RED_("SUCCESS?:  ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
                     PrintAndLogEx(INFO, "Committing results...");
 
-                    unlock_reset(use_pwd, pwd, write_value);    
+                    unlock_reset(use_pwd, pwd, write_value, verbose);    
                     uint32_t word14b = 0, word15b = 0;
+                    
                     // read after reset
                     res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                     if ( res != PM3_SUCCESS ) {
                         PrintAndLogEx(WARNING, "failed to read 14");
-                        return PM3_EOPABORTED;
+                        return PM3_ESOFT;
                     }
+
                     res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
                     if ( res != PM3_SUCCESS ) {
                         PrintAndLogEx(WARNING, "failed to read 15");
-                        return PM3_EOPABORTED;
+                        return PM3_ESOFT;
                     }
                     
                     if (verbose)
