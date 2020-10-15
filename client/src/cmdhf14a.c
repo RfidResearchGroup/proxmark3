@@ -1831,11 +1831,47 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (card.ats[0] > pos && card.ats[0] <  card.ats_len - 2) {
             const char *tip = "";
             if (card.ats[0] - pos >= 7) {
-                if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                    tip = "-> MIFARE Plus X 2K or 4K";
-                } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-                    tip = "-> MIFARE Plus S 2K or 4K";
+
+                if ((card.sak & 0x70) == 0x40) {  // and no GetVersion()..
+
+                    if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                        tip = "-> MIFARE Plus X 2K/4K (SL3)";
+                    } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+                        
+                        if ((card.atqa[0] & 0x02) == 0x02)
+                            tip = "-> MIFARE Plus S 2K (SL3)";
+                        else if ((card.atqa[0] & 0x04) == 0x04)
+                            tip = "-> MIFARE Plus S 4K (SL3)";
+                        
+                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
+                        tip = "-> MIFARE Plus SE 1K (17pF)";
+                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {    
+                        tip = "-> MIFARE Plus SE 1K (70pF)";
+                    }
+                
+                } else {  //SAK B4,5,6 
+                
+                    if ((card.sak & 0x20) == 0x20) {  // and no GetVersion()..    
+                    
+                        
+                        if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                            tip = "-> MIFARE Plus X 2K (SL1)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+                            tip = "-> MIFARE Plus S 2K (SL1)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
+                            tip = "-> MIFARE Plus SE 1K (17pF)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {    
+                            tip = "-> MIFARE Plus SE 1K (70pF)";
+                        }
+                    } else {
+                        if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                            tip = "-> MIFARE Plus X 4K (SL1)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+                            tip = "-> MIFARE Plus S 4K (SL1)";
+                        }                            
+                    }
                 }
+
             }
             PrintAndLogEx(SUCCESS, "       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
             if (card.ats[pos] == 0xC1) {
