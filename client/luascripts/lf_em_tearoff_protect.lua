@@ -250,6 +250,10 @@ local function main(args)
                 local wordstr14b = ('%08X'):format(word14b)
                 if (wordstr14b == '00000000') then
                     reset(wr_value, password)
+                    word14b, err14b =  core.em4x05_read(14, password)
+                    if err14b then
+                        return oops(err14b)
+                    end
                 end
                 if (wordstr14b ~= rd_value) then
                     local word15b, err15b =  core.em4x05_read(15, password)

@@ -1915,6 +1915,10 @@ static int CmdEM4x05Unlock(const char *Cmd) {
 
                 if (word14b == 0) {
                     unlock_reset(use_pwd, pwd, write_value);                    
+                    res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
+                    if (res != PM3_SUCCESS) {
+                        continue;
+                    }
                 }
                 
                 if (word14b != search_value) {
