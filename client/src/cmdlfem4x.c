@@ -1800,6 +1800,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     
     int exit_code = PM3_SUCCESS;
     uint32_t word14 = 0, word15 = 0;
+    uint32_t word14b = 0, word15b = 0;
     uint32_t tries = 0;
     uint32_t soon = 0;
     uint32_t late = 0;
@@ -1902,8 +1903,6 @@ static int CmdEM4x05Unlock(const char *Cmd) {
 
                 unlock_reset(use_pwd, pwd, write_value, verbose);
 
-                uint32_t word14b = 0, word15b = 0;
-
                 // read after reset
                 res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                 if (res != PM3_SUCCESS) {
@@ -1951,7 +1950,6 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                     PrintAndLogEx(INFO, "Committing results...");
 
                     unlock_reset(use_pwd, pwd, write_value, verbose);    
-                    uint32_t word14b = 0, word15b = 0;
                     
                     // read after reset
                     res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
@@ -2008,8 +2006,17 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     PrintAndLogEx(INFO, "----------------------------- " _CYAN_("exit") " ----------------------------------\n");
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\ntime in unlock " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
-    if (success)
-        PrintAndLogEx(INFO, "try " _YELLOW_("`lf em 4x05_dump`"));
+    if (success) {
+        uint32_t bitflips = search_value ^ word14b;
+        PrintAndLogEx(INFO, "Old protection word => " _YELLOW_("%08X"), search_value);
+        char bitstring[9] = {0};
+        for (int i=0; i < 8; i++) {
+            bitstring[i] = bitflips & (0xF << ((7-i) * 4)) ? 'x' : '.';
+        }
+        PrintAndLogEx(INFO, "Bitflips            => %s", bitstring);
+        PrintAndLogEx(INFO, "New protection word => " _CYAN_("%08X") "\n", word14b);
+        PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05_dump`"));
+    }
     PrintAndLogEx(NORMAL, "");
     return exit_code;
 }
