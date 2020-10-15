@@ -2013,7 +2013,12 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         for (int i=0; i < 8; i++) {
             bitstring[i] = bitflips & (0xF << ((7-i) * 4)) ? 'x' : '.';
         }
-        PrintAndLogEx(INFO, "Bitflips            => %s", bitstring);
+        // compute number of bits flipped
+        uint32_t i = bitflips;
+        i = i - ((i >> 1) & 0x55555555);
+        i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+        i = (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+        PrintAndLogEx(INFO, "Bitflips: %2u events => %s", i, bitstring);
         PrintAndLogEx(INFO, "New protection word => " _CYAN_("%08X") "\n", word14b);
         PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05_dump`"));
     }
