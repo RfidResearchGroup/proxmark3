@@ -12,9 +12,11 @@
 #define CMDHW_H__
 
 #include "common.h"
+#include "pm3_cmd.h"
 
 int CmdHW(const char *Cmd);
 
+int handle_tearoff(tearoff_params_t *params, bool verbose);
 void pm3_version(bool verbose, bool oneliner);
 
 #endif

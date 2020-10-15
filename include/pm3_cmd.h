@@ -375,6 +375,12 @@ typedef struct {
 } PACKED picopass_ns_hdr;
 
 
+typedef struct {
+    uint16_t delay_us;
+    bool on;
+    bool off;
+} PACKED tearoff_params_t;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 //#define CMD_SETUP_WRITE                                                   0x0001
