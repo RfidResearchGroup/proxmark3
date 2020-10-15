@@ -22,6 +22,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
   * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
   * [Target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
+  * [Qt: Session management error:](#qt-session-management-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -222,4 +223,16 @@ ticks.h:26:1: error: target attribute is not supported on this machine [-Werror=
  ^
 ```
 
+## Qt Session management error
+If you get the message  
 
+```
+Qt: Session management error: None of the authentication protocols specified are supported
+``` when running the Proxmark3 client it might be because a a environment variable.
+
+Solution:
+Try running the client without the SESSION_MANAGER environment variable.
+
+```
+env -u SESSION_MANAGER ./pm3
+```
