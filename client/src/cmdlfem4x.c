@@ -1681,7 +1681,7 @@ static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool 
     return status;
 }
 static int unlock_reset(bool use_pwd, uint32_t pwd, uint32_t data) {
-    PrintAndLogEx(FAILED, "resetting the " _RED_("active") " lock block");
+    PrintAndLogEx(INFO, "resetting the " _RED_("active") " lock block");
     return unlock_write_protect(use_pwd, pwd, data, false);
 }
 
@@ -1697,21 +1697,25 @@ static int CmdEM4x05Unlock(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0("n", NULL, NULL, "steps to skip"),
-        arg_u64_0("s", "start", "<us>", "start scan from delay (us)"),
-        arg_u64_0("e", "end", "<us>", "end scan at delay (us)"),
+        arg_int0("n", NULL, NULL, "steps to skip"),
+        arg_int0("s", "start", "<us>", "start scan from delay (us)"),
+        arg_int0("e", "end", "<us>", "end scan at delay (us)"),
         arg_u64_0("p", "pwd", "", "password (0x00000000)"),        
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end        
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    uint64_t n = arg_get_u64_def(ctx, 1, 10);
-    uint64_t start = arg_get_u64_def(ctx, 2, 2000);
-    uint64_t end = arg_get_u64_def(ctx, 3, 6000);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    double n = (double)arg_get_int_def(ctx, 1, 0);
+    double start = (double)arg_get_int_def(ctx, 2, 2000);
+    double end = (double)arg_get_int_def(ctx, 3, 6000);
     uint64_t inputpwd = arg_get_u64_def(ctx, 4, 0xFFFFFFFFFFFFFFFF);
     bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
+
+    if ( start > end ) {
+        PrintAndLogEx(FAILED, "start delay can\'t be larger than end delay %.0lf vs %.0lf", start, end);
+        return PM3_EINVARG;
+    }
 
     if (session.pm3_present == false) {
         PrintAndLogEx(WARNING, "device offline\n");
@@ -1726,7 +1730,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     }
 
     uint32_t search_value = 0;
-    uint32_t write_value = 0;
+    uint32_t write_value = 0xFFFF0000;
     //    
     // inital phase 
     //
@@ -1747,13 +1751,6 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         return PM3_ENODATA;        
     }
 
-
-#define UNLOCK_WORD 0x00008000
-    if (init_15 == UNLOCK_WORD) {
-        PrintAndLogEx(SUCCESS, "Tag already fully unlocked, nothing to do");
-        return PM3_SUCCESS;
-    }
-
 #define ACTIVE_MASK 0x00008000
     if ((init_15 & ACTIVE_MASK) == ACTIVE_MASK) {
         search_value = init_15;
@@ -1761,16 +1758,15 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         search_value = init_14;
     }
 
+    if (search_value == ACTIVE_MASK) {
+        PrintAndLogEx(SUCCESS, "Tag already fully unlocked, nothing to do");
+        return PM3_SUCCESS;
+    }
 
     bool my_auto = false;
     if (n == 0) {
         my_auto = true;
         n = (end - start) / 2;
-    } else {       
-        if ( start > end ) {
-            PrintAndLogEx(FAILED, "start delay can\'t be larger than end delay %u vs %u", start, end);
-            return PM3_EINVARG;
-        }
     }
     
     // fix at one specific delay
@@ -1780,19 +1776,19 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     
     PrintAndLogEx(INFO, "--------------- " _CYAN_("EM4x05 tear-off : target PROTECT") " -----------------------\n");    
 
-     PrintAndLogEx(INFO, " Word 14,15 inital [ " _GREEN_("%08"PRIX32) ", " _GREEN_("%08"PRIX32)  " ]", init_14, init_15);
+     PrintAndLogEx(INFO, "initial prot 14&15 [ " _GREEN_("%08X") ", " _GREEN_("%08X")  " ]", init_14, init_15);
 
     if (use_pwd) {
-        PrintAndLogEx(INFO, "   target password [ " _GREEN_("%08"PRIX32) " ]", pwd);
+        PrintAndLogEx(INFO, "   target password [ " _GREEN_("%08"PRIX64) " ]", pwd);
     }
     if (my_auto) {
         PrintAndLogEx(INFO, "    automatic mode [ " _GREEN_("enabled") " ]");
     }
 
-    PrintAndLogEx(INFO, "   target stepping [ " _GREEN_("%u") " ]", n);
-    PrintAndLogEx(INFO, "target delay range [ " _GREEN_("%"PRIu32) " ... " _GREEN_("%"PRIu32) " ]", start, end);
-    PrintAndLogEx(INFO, "      search value [ " _GREEN_("%08"PRIX32) " ]", search_value);        
-    PrintAndLogEx(INFO, "       write value [ " _GREEN_("%08"PRIX32) " ]", write_value);        
+    PrintAndLogEx(INFO, "   target stepping [ " _GREEN_("%.0lf") " ]", n);
+    PrintAndLogEx(INFO, "target delay range [ " _GREEN_("%.0lf") " ... " _GREEN_("%.0lf") " ]", start, end);
+    PrintAndLogEx(INFO, "      search value [ " _GREEN_("%08X") " ]", search_value);        
+    PrintAndLogEx(INFO, "       write value [ " _GREEN_("%08X") " ]", write_value);        
 
     PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
     PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
@@ -1824,11 +1820,11 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         if (tries >= 5 && n == 0 && soon != late) {
             
             if (soon > late) {
-                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i     => " _CYAN_("adjust +1us >> %u us"), tries, soon, late, start);
+                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i        => " _CYAN_("adjust +1 us >> %.0lf us"), tries, soon, late, start);
                 start++;
                 end++;
             } else {
-                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i     => " _CYAN_("adjust -1us >> %u us"), tries, soon, late, start);
+                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i        => " _CYAN_("adjust -1 us >> %.0lf us"), tries, soon, late, start);
                 start--;
                 end--;
             }
@@ -1846,7 +1842,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
 
         /*
         if ( start != prev_delay) {
-            PrintAndLogEx(INFO, "Tear-off delay hook configured      => " _GREEN_("%u us"), start);
+            PrintAndLogEx(INFO, "Tear-off delay hook configured      => " _GREEN_("%.0lf us"), start);
             prev_delay = start;
         }
         */
@@ -1870,7 +1866,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         // read after trigger
         res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
         if (res == PM3_SUCCESS) {
-            //PrintAndLogEx(INFO, "14 after [ " _GREEN_("%08"PRIX32) " ]", word14);            
+            //PrintAndLogEx(INFO, "14 after [ " _GREEN_("%08X") " ]", word14);            
         } else {
             continue;
         }
@@ -1878,20 +1874,21 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         // read after trigger
         res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
         if (res == PM3_SUCCESS) {
-            //PrintAndLogEx(INFO, "15 after [ " _GREEN_("%08"PRIX32) " ]", word15);
+            //PrintAndLogEx(INFO, "15 after [ " _GREEN_("%08X") " ]", word15);
         } else {
             continue;
         }
 
-        PrintAndLogEx(INFO, "ref:%08X   14:%08X   15:%08X ", search_value, word14, word15);
+        if (verbose)
+            PrintAndLogEx(INFO, "ref:%08X   14:%08X   15:%08X ", search_value, word14, word15);
         
         if ( word14 == search_value && word15 == 0) {
             PrintAndLogEx(INFO, "Status: Nothing happened            => " _GREEN_("tearing too soon"));
             
             if (my_auto) {
                 start += n;
+                PrintAndLogEx(INFO, "                                    => " _CYAN_("adjust +%.0lf us >> %.0lf us"), n, start);
                 n /= 2;
-                PrintAndLogEx(INFO, "Adjusting params: n %i  start %i  end %i", n, start, end);
             } else {
                 soon++;
             }
@@ -1909,23 +1906,23 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                     }                    
                 }
                 unlock_reset(use_pwd, pwd, write_value);
-                
+                uint32_t word14b = 0, word15b = 0;
                 // read after reset
-                res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
+                res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                 if (res != PM3_SUCCESS) {
                     continue;
                 }
 
-                if (word14 == 0) {
+                if (word14b == 0) {
                     unlock_reset(use_pwd, pwd, write_value);                    
                 }
                 
-                if (word14 != search_value) {
+                if (word14b != search_value) {
 
                     // read after reset
-                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
+                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
                     if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:") " 14: " _CYAN_("%08X") "  15: %08X", word14, word15);
+                        PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:") " 14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
                         break;
                     } else {
                         continue;
@@ -1934,8 +1931,8 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                 if (my_auto) {
                     end = start;
                     start -= n;
+                    PrintAndLogEx(INFO, "                                    => " _CYAN_("adjust -%.0lf us >> %.0lf us"), n, start);
                     n /= 2;
-                    PrintAndLogEx(INFO, "Adjusting params: n %i  start %i  end %i", n, start, end);
                 } else {
                     late++;
                 }
@@ -1948,46 +1945,48 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                     PrintAndLogEx(INFO, "Committing results...");
 
                     unlock_reset(use_pwd, pwd, write_value);    
+                    uint32_t word14b = 0, word15b = 0;
                     // read after reset
-                    res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
+                    res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                     if ( res != PM3_SUCCESS ) {
                         PrintAndLogEx(WARNING, "failed to read 14");
                         return PM3_EOPABORTED;
                     }
-                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
+                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
                     if ( res != PM3_SUCCESS ) {
                         PrintAndLogEx(WARNING, "failed to read 15");
                         return PM3_EOPABORTED;
                     }
                     
-                    PrintAndLogEx(INFO, "ref:%08x   14:%08X   15:%08X", search_value, word14, word15);
+                    if (verbose)
+                        PrintAndLogEx(INFO, "ref:%08x   14:%08X   15:%08X", search_value, word14b, word15b);
                     
-                    if ((word14 & ACTIVE_MASK) == ACTIVE_MASK) {
+                    if ((word14b & ACTIVE_MASK) == ACTIVE_MASK) {
                         
-                        if (word14 == word15) {
-                            PrintAndLogEx(INFO, "Status: confirmed                   => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14, word15);
+                        if (word14b == word15) {
+                            PrintAndLogEx(INFO, "Status: confirmed                   => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
                             break;
                         }
                         
-                        if (word14 != search_value) {
-                            PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14, word15);
+                        if (word14b != search_value) {
+                            PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
                             break;
                         }
                         
-                        PrintAndLogEx(INFO, "Status: failed to commit bitflip        => " _RED_("FAIL:      ") "14: %08X  15: %08X", word14, word15);
-                    } else {
-                        PrintAndLogEx(INFO, "Status: 15 bitflipped but inactive      => " _YELLOW_("PROMISING: ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
-                        
+                        PrintAndLogEx(INFO, "Status: failed to commit bitflip        => " _RED_("FAIL:      ") "14: %08X  15: %08X", word14b, word15b);
                     }
+                } else {
+                    PrintAndLogEx(INFO, "Status: 15 bitflipped but inactive      => " _YELLOW_("PROMISING: ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
                     
-                    if (my_auto) {
-                        n = 0;
-                        end = start;
-                    } else {
-                        tries = 0;
-                        soon = 0;
-                        late = 0;
-                    }
+                }
+                
+                if (my_auto) {
+                    n = 0;
+                    end = start;
+                } else {
+                    tries = 0;
+                    soon = 0;
+                    late = 0;
                 }
             }
         }

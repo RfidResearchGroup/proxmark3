@@ -36,7 +36,7 @@ arguments = [[
     end
 ]]
 
-local set_tearoff_delay = 'hw tearoff -s --on --delay %d'
+local set_tearoff_delay = 'hw tearoff --on --delay %d'
 local wr_template = 'lf em 4x05_write %s %s %s'
 
 ---
