@@ -1802,7 +1802,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     // main loop
     //
     //uint32_t prev_delay = 0;
-    
+    bool success = false;
     uint64_t t1 = msclock();
     while (start <= end) {
 
@@ -1868,7 +1868,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         if (res == PM3_SUCCESS) {
             //PrintAndLogEx(INFO, "14 after [ " _GREEN_("%08X") " ]", word14);            
         } else {
-            continue;
+            break;
         }
 
         // read after trigger
@@ -1876,7 +1876,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
         if (res == PM3_SUCCESS) {
             //PrintAndLogEx(INFO, "15 after [ " _GREEN_("%08X") " ]", word15);
         } else {
-            continue;
+            break;
         }
 
         if (verbose)
@@ -1910,14 +1910,14 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                 // read after reset
                 res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                 if (res != PM3_SUCCESS) {
-                    continue;
+                    break;
                 }
 
                 if (word14b == 0) {
                     unlock_reset(use_pwd, pwd, write_value);                    
                     res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                     if (res != PM3_SUCCESS) {
-                        continue;
+                        break;
                     }
                 }
                 
@@ -1927,10 +1927,9 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                     res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
                     if (res == PM3_SUCCESS) {
                         PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:") " 14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
-                        break;
-                    } else {
-                        continue;
+                        success = true;
                     }
+                    break;
                 }
                 if (my_auto) {
                     end = start;
@@ -1969,28 +1968,29 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                         
                         if (word14b == word15) {
                             PrintAndLogEx(INFO, "Status: confirmed                   => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
+                            success = true;
                             break;
                         }
                         
                         if (word14b != search_value) {
                             PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
+                            success = true;
                             break;
                         }
                         
                         PrintAndLogEx(INFO, "Status: failed to commit bitflip        => " _RED_("FAIL:      ") "14: %08X  15: %08X", word14b, word15b);
                     }
+                    if (my_auto) {
+                        n = 0;
+                        end = start;
+                    } else {
+                        tries = 0;
+                        soon = 0;
+                        late = 0;
+                    }
                 } else {
                     PrintAndLogEx(INFO, "Status: 15 bitflipped but inactive      => " _YELLOW_("PROMISING: ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
-                    
-                }
-                
-                if (my_auto) {
-                    n = 0;
-                    end = start;
-                } else {
-                    tries = 0;
-                    soon = 0;
-                    late = 0;
+                    soon ++;
                 }
             }
         }
@@ -2003,7 +2003,8 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     PrintAndLogEx(INFO, "----------------------------- " _CYAN_("exit") " ----------------------------------\n");
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\ntime in unlock " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
-    PrintAndLogEx(INFO, "try " _YELLOW_("`lf em 4x05_dump`"));
+    if (success)
+        PrintAndLogEx(INFO, "try " _YELLOW_("`lf em 4x05_dump`"));
     PrintAndLogEx(NORMAL, "");
     return exit_code;
 }
