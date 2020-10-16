@@ -1804,44 +1804,7 @@ write_dump:
 }
 
 static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose) {
-    /*
-        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose) == false) {
-            return PM3_ESOFT;
-        }
-
-        calc_wb_mac(blockno, bldata, div_key, MAC);
-
-        struct p {
-            uint8_t blockno;
-            uint8_t data[12];
-        } PACKED payload;
-        payload.blockno = blockno;
-
-        memcpy(payload.data, bldata, 8);
-        memcpy(payload.data + 8, MAC, 4);
-
-
-    //
-    typedef struct {
-        uint8_t key[8];
-        bool use_raw;
-        bool use_elite;
-        bool use_credit_key;
-        bool send_reply;
-        bool do_auth;
-        uint8_t blockno;
-    } PACKED iclass_auth_req_t;
-
-    // iCLASS write block request data structure
-    typedef struct {
-        iclass_auth_req_t req;
-        uint8_t data[8];
-    } PACKED iclass_writeblock_req_t;
-
-
-    */
+ 
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
         .req.use_elite = elite,
@@ -2129,7 +2092,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     free(dump);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "Preparing to restore block range 0x02x..0x%02x", startblock, endblock);
+        PrintAndLogEx(INFO, "Preparing to restore block range 0x%02x..0x%02x", startblock, endblock);
         
         PrintAndLogEx(INFO, "------+----------------------");
         PrintAndLogEx(INFO, "block | data");
@@ -2150,6 +2113,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     if (WaitForResponseTimeout(CMD_HF_ICLASS_RESTORE, &resp, 2500) == 0) {
         PrintAndLogEx(WARNING, "command execute timeout");
         DropField();
+        free(payload);
         return PM3_ETIMEOUT;
     }
 
@@ -2159,6 +2123,8 @@ static int CmdHFiClassRestore(const char *Cmd) {
     } else {
         PrintAndLogEx(WARNING, "iCLASS restore " _RED_("failed"));
     }
+
+    free(payload);
     return resp.status;
 }
 
