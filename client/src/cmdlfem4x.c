@@ -716,7 +716,7 @@ static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t col
 static bool downloadSamplesEM(void) {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
-    uint8_t got[5500];
+    uint8_t got[6000];
     if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "(downloadSamplesEM) command execution time out");
         return false;
@@ -1800,7 +1800,7 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     PrintAndLogEx(INFO, "initial prot 14&15 [ " _GREEN_("%08X") ", " _GREEN_("%08X")  " ]", init_14, init_15);
 
     if (use_pwd) {
-        PrintAndLogEx(INFO, "   target password [ " _GREEN_("%08"PRIX64) " ]", pwd);
+        PrintAndLogEx(INFO, "   target password [ " _GREEN_("%08X") " ]", pwd);
     }
     if (my_auto) {
         PrintAndLogEx(INFO, "    automatic mode [ " _GREEN_("enabled") " ]");
