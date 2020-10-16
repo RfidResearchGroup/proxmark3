@@ -625,6 +625,8 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         }
         PrintAndLogEx(NORMAL, "");
+        saveFileJSON(filename, (card_type == EM_4X69) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
+        
         saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(filename, ".bin", data, sizeof(data));
     }
