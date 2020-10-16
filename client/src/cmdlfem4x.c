@@ -1703,6 +1703,9 @@ static void unlock_add_item(em4x05_unlock_item_t *array, uint8_t len, uint32_t v
         }
     }
 
+    if (i >= len ) 
+        return;
+        
     array[i].cnt++;
     array[i].value = value;    
 }
