@@ -3059,6 +3059,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
 static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
                     
     PrintAndLogEx(INFO, "Reset tear check");
@@ -3087,7 +3088,9 @@ static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
     }
     return PM3_SUCCESS;
 }
+*/
 
+/*
 static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -3333,10 +3336,10 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                 }
 
                 uint32_t bar =  (0x1000000 - b) + 2;
-                //wr_value = bar;
-                //newvalue[0] = (bar) & 0xFF;
-                //newvalue[1] = ((bar >> 8) & 0xFF);
-                //newvalue[2] = ((bar >> 16) & 0xFF);
+                // wr_value = bar;
+                // newvalue[0] = (bar) & 0xFF;
+                // newvalue[1] = ((bar >> 8) & 0xFF);
+                // newvalue[2] = ((bar >> 16) & 0xFF);
 
                 wr_value = 0;
                 newvalue[0] = 0;
@@ -3375,24 +3378,21 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                     if ( b >= (inital_value + (2 * wr_value))) {
                         PrintAndLogEx(INFO, "Large " _YELLOW_("( JUMP )") " detected");
                         
-                        /*
-                        wr_value = bar;
-                        newvalue[0] = (bar) & 0xFF;
-                        newvalue[1] = ((bar >> 8) & 0xFF);
-                        newvalue[2] = ((bar >> 16) & 0xFF);
-
-                        */
+                        
+                        // wr_value = bar;
+                        // newvalue[0] = (bar) & 0xFF;
+                        // newvalue[1] = ((bar >> 8) & 0xFF);
+                        // newvalue[2] = ((bar >> 16) & 0xFF);
                     } else {
-                        /*
-                        wr_value = bar;
-                        newvalue[0] = (bar) & 0xFF;
-                        newvalue[1] = ((bar >> 8) & 0xFF);
-                        newvalue[2] = ((bar >> 16) & 0xFF);
-                        wr_value = 0;
-                        newvalue[0] = 0;
-                        newvalue[1] = 0;
-                        newvalue[2] = 0;
-                        */
+                        
+                        // wr_value = bar;
+                        // newvalue[0] = (bar) & 0xFF;
+                        // newvalue[1] = ((bar >> 8) & 0xFF);
+                        // newvalue[2] = ((bar >> 16) & 0xFF);
+                        // wr_value = 0;
+                        // newvalue[0] = 0;
+                        // newvalue[1] = 0;
+                        // newvalue[2] = 0;
                     }
 
                 }
@@ -3451,6 +3451,8 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
     CommandReceived(read_tear_str);
     return PM3_SUCCESS;
 }
+
+*/
 
 static int CmdHF14MfuNDEF(const char *Cmd) {
 
@@ -3582,7 +3584,7 @@ static command_t CommandTable[] = {
     {"gen",     CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3des mifare diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
-    {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1 Counter bits"},        
+//    {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1 Counter bits"},        
     {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };
