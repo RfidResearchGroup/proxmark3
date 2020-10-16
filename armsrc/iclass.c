@@ -1879,11 +1879,6 @@ void iClass_WriteBlock(uint8_t *msg) {
                 return;
         } else {
 
-            if (resp == NULL) {
-                res = true;
-                break;
-            }
-
             if (GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time) == 10) {
                 res = true;
                 break;
