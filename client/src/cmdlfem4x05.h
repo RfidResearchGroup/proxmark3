@@ -5,20 +5,27 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency EM4x commands
+// Low frequency EM4x05 commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDLFEM4X_H__
-#define CMDLFEM4X_H__
+#ifndef CMDLFEM4X05_H__
+#define CMDLFEM4X05_H__
 
 #include "common.h"
 
-int CmdLFEM4X(const char *Cmd);
+int CmdLFEM4X05(const char *Cmd);
 
-int demodEM410x(bool verbose);
-void printEM410x(uint32_t hi, uint64_t id);
+bool EM4x05IsBlock0(uint32_t *word);
+int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word);
 
-int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo);
-int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose);
+
+int CmdEM4x05Demod(const char *Cmd);
+int CmdEM4x05Dump(const char *Cmd);
+int CmdEM4x05Read(const char *Cmd);
+int CmdEM4x05Write(const char *Cmd);
+int CmdEM4x05Wipe(const char *Cmd);
+int CmdEM4x05Info(const char *Cmd);
+int CmdEM4x05Chk(const char *Cmd);
+int CmdEM4x05Unlock(const char *Cmd);
 
 #endif
