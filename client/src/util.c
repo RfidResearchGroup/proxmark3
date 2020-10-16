@@ -895,3 +895,40 @@ int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
     }
     return i - 1;
 }
+
+inline uint32_t bitcount32(uint32_t a) {
+#if defined __GNUC__
+    return __builtin_popcountl(a);
+#else
+    a = a - ((a >> 1) & 0x55555555);
+    a = (a & 0x33333333) + ((a >> 2) & 0x33333333);
+    return (((a + (a >> 4)) & 0x0f0f0f0f) * 0x01010101) >> 24;
+#endif
+}
+
+inline uint64_t bitcount64(uint64_t a) {
+#if defined __GNUC__
+    return __builtin_popcountll(a);
+#else
+    PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
+    return 0;
+#endif
+}
+
+inline uint32_t leadingzeros32(uint32_t a) {
+#if defined __GNUC__
+    return __builtin_clzl(a);
+#else
+    PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
+    return 0;
+#endif
+}
+
+inline uint64_t leadingzeros64(uint64_t a) {
+#if defined __GNUC__
+    return __builtin_clzll(a);
+#else
+    PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
+    return 0;
+#endif
+}

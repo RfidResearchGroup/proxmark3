@@ -1473,6 +1473,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareU_Otp_Tearoff(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
+        case CMD_HF_MFU_COUNTER_TEAROFF: {            
+            struct p {
+                uint8_t counter;
+                uint32_t tearoff_time;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;             
+            MifareU_Counter_Tearoff(payload->counter, payload->tearoff_time);
+            break;
+        }
         case CMD_HF_MIFARE_STATIC_NONCE: {
             MifareHasStaticNonce();
             break;
@@ -1503,20 +1512,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_SIMULATE: {
-            SimulateIClass(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
-            break;
-        }
-        case CMD_HF_ICLASS_READER: {
-            ReaderIClass(packet->oldarg[0]);
-            break;
-        }
-        case CMD_HF_ICLASS_REPLAY: {
+/*
             struct p {
                 uint8_t reader[4];
                 uint8_t mac[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            ReaderIClass_Replay(payload->reader, payload->mac);
+*/
+
+            SimulateIClass(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_ICLASS_READER: {
+            ReaderIClass(packet->oldarg[0]);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {
@@ -1545,18 +1553,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             iClass_Dump(packet->data.asBytes);
             break;
         }
-        case CMD_HF_ICLASS_CLONE: {
-            struct p {
-                uint8_t startblock;
-                uint8_t endblock;
-                uint8_t data[];
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            iClass_Clone(payload->startblock, payload->endblock, payload->data);
-            break;
-        }
         case CMD_HF_ICLASS_RESTORE: {
-            iClass_Restore(packet->data.asBytes);
+            iClass_Restore( (iclass_restore_req_t *)packet->data.asBytes);
             break;
         }
 #endif

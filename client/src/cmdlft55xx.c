@@ -378,7 +378,7 @@ static int usage_t55xx_dangerraw(void) {
 static int usage_t55xx_clonehelp(void) {
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
-// todo:  rename to clone
+    PrintAndLogEx(NORMAL, _GREEN_("lf destron clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf em 410x_clone"));
 // todo:  implement restore
 //    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x05_write"));

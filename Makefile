@@ -173,6 +173,9 @@ help:
 	@echo "+ .../check       - Run offline tests against specific target. See above."
 	@echo "+ miscchecks      - Detect various encoding issues in source code"
 	@echo
+	@echo "+ udev            - Sets udev rules on *nix"
+	@echo "+ accessrights    - Ensure user belongs to correct group on *nix"
+	@echo
 	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
 	@echo "To activate verbose mode, use make V=1"
 

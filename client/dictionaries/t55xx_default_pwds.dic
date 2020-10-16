@@ -26,6 +26,8 @@ A5B4C3D2
 50520901
 # default PROX
 50524F58
+# blue gun EM4305 
+F9DCEBA0
 # Default pwd, simple:
 00000000
 11111111
@@ -123,3 +125,7 @@ b5f44686 # seeds ul-ev1
 C6EF3720 # TEA
 7854794A # xbox tea constant :)
 F1EA5EED # burtle
+69314718 # ln2
+57721566 # euler constant (dec)
+93C467E3 # euler constant (hex)
+27182818 # natural log

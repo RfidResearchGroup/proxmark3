@@ -441,7 +441,9 @@ SRCS =  aidsearch.c \
 		cmdlf.c \
 		cmdlfawid.c \
 		cmdlfcotag.c \
+		cmdlfdestron.c \
 		cmdlfem4x.c \
+		cmdlfem4x05.c \
 		cmdlfem4x50.c \
 		cmdlffdxb.c \
 		cmdlfguard.c \

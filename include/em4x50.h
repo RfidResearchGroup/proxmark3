@@ -49,7 +49,7 @@ typedef struct {
     uint8_t addresses[4];
     uint8_t address;
     uint8_t word[4];
-} em4x50_data_t;
+} PACKED em4x50_data_t;
 
 typedef struct {
     uint8_t byte[4];
@@ -60,6 +60,6 @@ typedef struct {
     bool cparity[8];
     bool stopparity;
     bool parity;
-} em4x50_word_t;
+} PACKED em4x50_word_t;
 
 #endif /* EM4X50_H__ */

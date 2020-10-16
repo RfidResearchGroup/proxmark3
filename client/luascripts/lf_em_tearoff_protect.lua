@@ -36,7 +36,7 @@ arguments = [[
     end
 ]]
 
-local set_tearoff_delay = 'hw tearoff -s --on --delay %d'
+local set_tearoff_delay = 'hw tearoff --on --delay %d'
 local wr_template = 'lf em 4x05_write %s %s %s'
 
 ---
@@ -250,6 +250,10 @@ local function main(args)
                 local wordstr14b = ('%08X'):format(word14b)
                 if (wordstr14b == '00000000') then
                     reset(wr_value, password)
+                    word14b, err14b =  core.em4x05_read(14, password)
+                    if err14b then
+                        return oops(err14b)
+                    end
                 end
                 if (wordstr14b ~= rd_value) then
                     local word15b, err15b =  core.em4x05_read(15, password)
@@ -299,16 +303,16 @@ local function main(args)
                     else
                         print(('[=] Status: failed to commit                => '..ansicolors.red..'FAIL:      '..ansicolors.reset..'14: %08X  15: %08X'):format(word14b, word15b))
                     end
+                    if auto then
+                        n = 0
+                        ed = sd
+                    else
+                        tries = 0
+                        soon = 0
+                        late = 0
+                    end
                 else
                     print(('[=] Status: 15 bitflipped but inactive  => '..ansicolors.yellow..'PROMISING: '..ansicolors.reset..'14: %08X  15: '..ansicolors.cyan..'%08X'..ansicolors.reset):format(word14, word15))
-                end
-                if auto then
-                    n = 0
-                    ed = sd
-                else
-                    tries = 0
-                    soon = 0
-                    late = 0
                 end
             end
         end

@@ -2624,13 +2624,13 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
     } // else force RATS
 
     // RATS, Request for answer to select
-    if (!no_rats) {
-        uint8_t rats[]       = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
+    if (no_rats == false) {
+        uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, resp_par);
-
-        if (!len) return 0;
+        if (len == 0) 
+            return 0;
 
         if (p_card) {
             memcpy(p_card->ats, resp, sizeof(p_card->ats));
@@ -2929,10 +2929,15 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 ReaderTransmit(cmd, len, NULL);                                         // 8 bits, odd parity
             }
         }
-        arg0 = ReaderReceive(buf, par);
-        FpgaDisableTracing();
 
-        reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+            FpgaDisableTracing();
+            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+        } else {
+            arg0 = ReaderReceive(buf, par);
+            FpgaDisableTracing();
+            reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+        }
     }
 
     if ((param & ISO14A_REQUEST_TRIGGER))
