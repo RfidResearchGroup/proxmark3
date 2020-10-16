@@ -71,7 +71,7 @@ int demodDestron(bool verbose) {
         parity_err += oddparity8(data[i]);
         data[i] &= 0x7F;
     }
-    if (errCnt > 0) {
+    if (parity_err > 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Destron: parity errors: %d", parity_err);
         return PM3_ESOFT;
     }
