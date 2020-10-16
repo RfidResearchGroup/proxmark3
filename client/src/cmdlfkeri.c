@@ -225,7 +225,7 @@ static int CmdKeriClone(const char *Cmd) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
         q5 = true;
     }
-
+    typeLen = sizeof(keritype);
     CLIGetStrWithReturn(ctx, 2, keritype, &typeLen);
 
     fc = arg_get_int_def(ctx, 3, 0);
