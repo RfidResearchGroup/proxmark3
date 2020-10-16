@@ -1139,8 +1139,8 @@ static int l_em4x50_read(lua_State *L) {
     uint32_t addr = 0;
     sscanf(p_addr, "%u", &addr);
     
-    if (addr > 33)
-        return returnToLuaWithError(L, "Address out-of-range (0..33) got %zu", addr);
+    if (addr > 31)
+        return returnToLuaWithError(L, "Address out-of-range (0..31) got %u", addr);
 
     // setting up structures
     em4x50_data_t etd;
