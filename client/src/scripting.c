@@ -1171,7 +1171,7 @@ static int l_em4x50_read(lua_State *L) {
 
     PrintAndLogEx(DEBUG, "Addr %u", etd.address);
     if (etd.pwd_given)
-        PrintAndLogEx(DEBUG, " Pwd %08X", etd.password);
+        PrintAndLogEx(DEBUG, " Pwd %s", sprint_hex(etd.password, sizeof(etd.password)));
 
     em4x50_word_t words[EM4X50_NO_WORDS];
 
