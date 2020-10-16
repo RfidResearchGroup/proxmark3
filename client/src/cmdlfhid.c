@@ -417,7 +417,7 @@ static int CmdHIDBrute(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool verbose = arg_get_lit(ctx, 1);
-
+    formatLen = sizeof(format);
     CLIGetStrWithReturn(ctx, 2, format, &formatLen);
 
     format_idx = HIDFindCardFormat((char *) format);

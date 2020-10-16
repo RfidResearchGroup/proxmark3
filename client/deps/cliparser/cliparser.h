@@ -49,7 +49,7 @@
 
 #define CLIGetHexWithReturn(ctx, paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str((ctx), (paramnum)), (data), sizeof((data)), (datalen))) {CLIParserFree((ctx)); return PM3_ESOFT;}
 
-#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str((ctx), (paramnum)), (data), sizeof((data)), (datalen))) {CLIParserFree((ctx)); return PM3_ESOFT;}
+#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str((ctx), (paramnum)), (data), (*datalen), (datalen))) {CLIParserFree((ctx)); return PM3_ESOFT;}
 
 typedef struct {
     void **argtable;
