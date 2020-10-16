@@ -1645,6 +1645,10 @@ static int CmdEM4x05Chk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+typedef struct {
+    uint16_t cnt;
+    uint32_t value;    
+} em4x05_unlock_item_t;
 
 static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool verbose) {
 
@@ -1685,6 +1689,22 @@ static int unlock_reset(bool use_pwd, uint32_t pwd, uint32_t data, bool verbose)
         PrintAndLogEx(INFO, "resetting the " _RED_("active") " lock block");
 
     return unlock_write_protect(use_pwd, pwd, data, false);
+}
+static void unlock_add_item(em4x05_unlock_item_t *array, uint8_t len, uint32_t value) {
+    
+    uint8_t i = 0;
+    for (; i < len; i++) {
+        if ( array[i].cnt == 0)
+            break;
+        
+        if ( array[i].value == value) {
+            array[i].cnt++;
+            return;
+        }
+    }
+
+    array[i].cnt++;
+    array[i].value = value;    
 }
 
 static int CmdEM4x05Unlock(const char *Cmd) {
@@ -1804,10 +1824,12 @@ static int CmdEM4x05Unlock(const char *Cmd) {
     uint32_t tries = 0;
     uint32_t soon = 0;
     uint32_t late = 0;
+
+    em4x05_unlock_item_t flipped[64]; 
+
     //
     // main loop
     //
-    //uint32_t prev_delay = 0;
     bool success = false;
     uint64_t t1 = msclock();
     while (start <= end) {
@@ -1971,12 +1993,16 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                         
                         if (word14b == word15) {
                             PrintAndLogEx(INFO, "Status: confirmed                   => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
+
+                            unlock_add_item(flipped, 64, word14b);
                             success = true;
                             break;
                         }
                         
                         if (word14b != search_value) {
                             PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
+                            
+                            unlock_add_item(flipped, 64, word14b);
                             success = true;
                             break;
                         }
@@ -1993,6 +2019,9 @@ static int CmdEM4x05Unlock(const char *Cmd) {
                     }
                 } else {
                     PrintAndLogEx(INFO, "Status: 15 bitflipped but inactive      => " _YELLOW_("PROMISING: ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
+                    
+                    unlock_add_item(flipped, 64, word15);
+                    
                     soon ++;
                 }
             }
@@ -2014,13 +2043,24 @@ static int CmdEM4x05Unlock(const char *Cmd) {
             bitstring[i] = bitflips & (0xF << ((7-i) * 4)) ? 'x' : '.';
         }
         // compute number of bits flipped
-        uint32_t i = bitflips;
-        i = i - ((i >> 1) & 0x55555555);
-        i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
-        i = (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-        PrintAndLogEx(INFO, "Bitflips: %2u events => %s", i, bitstring);
+
+        PrintAndLogEx(INFO, "Bitflips: %2u events => %s", bitcount32(bitflips), bitstring);
         PrintAndLogEx(INFO, "New protection word => " _CYAN_("%08X") "\n", word14b);
+
+   
         PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05_dump`"));
+    }
+
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "Stats:");
+        PrintAndLogEx(INFO, " idx | value    | cnt | flipped bits");
+        PrintAndLogEx(INFO, "-----+----------+-----+------");
+        for (uint8_t i = 0; i < 64; i++) {
+            if (flipped[i].cnt == 0)
+                break;
+            
+            PrintAndLogEx(INFO, " %3u | %08X | %3u | %u", i, flipped[i].value, flipped[i].cnt, bitcount32(search_value ^ flipped[i].value));
+        }
     }
     PrintAndLogEx(NORMAL, "");
     return exit_code;
