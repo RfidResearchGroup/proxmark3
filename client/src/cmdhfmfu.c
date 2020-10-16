@@ -3071,7 +3071,7 @@ static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
         PrintAndLogEx(FAILED, "failed to select card,  exiting...");
         return PM3_ESOFT;
     }
-    if (ul_send_cmd_raw(cw, sizeof(cw), resp, sizeof(resp) < 0)) {
+    if (ul_send_cmd_raw(cw, sizeof(cw), resp, sizeof(resp)) < 0) {
         PrintAndLogEx(FAILED, "failed to write all ZEROS");
         return PM3_ESOFT;
     }
@@ -3451,7 +3451,6 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
     CommandReceived(read_tear_str);
     return PM3_SUCCESS;
 }
-
 
 static int CmdHF14MfuNDEF(const char *Cmd) {
 
