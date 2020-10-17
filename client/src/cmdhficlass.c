@@ -873,17 +873,16 @@ static int CmdHFiClassReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("", NULL, "read once"),
+        arg_lit0("1", "one", "read once"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool loop_read = arg_get_lit(ctx, 1);
+    bool read_once = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-
 
     PrintAndLogEx(INFO, "Starting iCLASS reader mode");
     PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
-    return read_iclass_csn(loop_read, true);
+    return read_iclass_csn(!read_once, true);
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {

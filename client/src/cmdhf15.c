@@ -1079,16 +1079,16 @@ static int CmdHF15Reader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("", NULL, "read once"),
+        arg_lit0("1", "one", "read once"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool loop_read = arg_get_lit(ctx, 1);
+    bool read_once = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "Starting ISO15 reader mode");
     PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
-    readHF15Uid(loop_read, true);
+    readHF15Uid(!read_once, true);
     return PM3_SUCCESS;
 }
 
