@@ -1563,7 +1563,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         }
     }
 
-    if ((use_replay + rawkey + elite) > 0) {
+    if ((use_replay + rawkey + elite) > 1) {
         PrintAndLogEx(FAILED, "Can not use a combo of 'e', 'r', 'n'");
         errors = true;
     }
@@ -1920,7 +1920,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     if (got_blockno == false)
         errors = true;
 
-    if ((use_replay + rawkey + elite) > 0) {
+    if ((use_replay + rawkey + elite) > 1) {
         PrintAndLogEx(FAILED, "Can not use a combo of 'e', 'r', 'n'");
         errors = true;
     }
@@ -2252,7 +2252,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     if (got_blockno == false)
         errors = true;
     
-    if ((use_replay + rawkey + elite) > 0) {
+    if ((use_replay + rawkey + elite) > 1) {
         PrintAndLogEx(FAILED, "Can not use a combo of 'e', 'r', 'n'");
         errors = true;
     }
@@ -2807,6 +2807,12 @@ static void add_key(uint8_t *key) {
     }
 }
 
+/*
+static int iclass_chk_keys(void) {
+    return PM3_SUCCESS;
+}
+*/
+
 static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     // empty string
@@ -3290,7 +3296,6 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
     uint8_t key[8] = {0};
     uint8_t data[16] = {0};
-    bool isReverse = false;
     int len = 0;
 
     CLIParserContext *ctx;
@@ -3307,7 +3312,7 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    isReverse = arg_get_lit(ctx, 1);
+    bool isReverse = arg_get_lit(ctx, 1);
 
     CLIGetHexWithReturn(ctx, 2, data, &len);
 
@@ -3329,6 +3334,28 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFiClassAutopwn(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass autopwn",
+                  "Tries to check keys, if found,  dump card and save file",
+                  "hf iclass autopwn\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    
+    // Check keys.
+
+    // dump
+
+    PrintAndLogEx(INFO, "to be implemented");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
@@ -3343,7 +3370,8 @@ static command_t CommandTable[] = {
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write Picopass / iCLASS block"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
-    {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "[options..] Check keys"},
+    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "[options..] Automatic key recovery tool for iCLASS"},
+    {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "[options..] Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
