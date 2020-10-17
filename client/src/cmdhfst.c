@@ -357,7 +357,7 @@ static int cmd_hf_st_sim(const char *Cmd) {
 
 static int cmd_hf_st_ndef(const char *Cmd) {
     int pwdlen = 0;
-    uint8_t pwd[16 + 1] = {0};
+    uint8_t pwd[16] = {0};
     bool with_pwd = false;
 
     CLIParserContext *ctx;
@@ -486,7 +486,7 @@ static int cmd_hf_st_ndef(const char *Cmd) {
 static int cmd_hf_st_protect(const char *Cmd) {
 
     int pwdlen = 0;
-    uint8_t pwd[16 + 1] = {0};
+    uint8_t pwd[16] = {0};
     int statelen = 3;
     uint8_t state[3] = {0x26, 0, 0x02};
 
@@ -641,9 +641,9 @@ static int cmd_hf_st_protect(const char *Cmd) {
 static int cmd_hf_st_pwd(const char *Cmd) {
 
     int pwdlen = 0;
-    uint8_t pwd[16 + 1] = {0};
+    uint8_t pwd[16] = {0};
     int newpwdlen = 0;
-    uint8_t newpwd[16 + 1] = {0};
+    uint8_t newpwd[16] = {0};
     int changePwdlen = 4;
     uint8_t changePwd[4] = {0x24, 0x00, 0x01, 0x10};
     bool change_read_password = false;
