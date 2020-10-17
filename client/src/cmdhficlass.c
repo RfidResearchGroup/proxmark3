@@ -272,17 +272,6 @@ static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_reader(void) {
-    PrintAndLogEx(NORMAL, "Act as a iCLASS reader.  Look for iCLASS tags until Enter or the pm3 button is pressed\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass reader [h] [1]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h   Show this help");
-    PrintAndLogEx(NORMAL, "  1   read only 1 tag");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass reader 1"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_loclass(void) {
     PrintAndLogEx(NORMAL, "Execute the offline part of loclass attack");
     PrintAndLogEx(NORMAL, "  An iclass dumpfile is assumed to consist of an arbitrary number of");
@@ -875,10 +864,25 @@ int read_iclass_csn(bool loop, bool verbose) {
 }
 
 static int CmdHFiClassReader(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_iclass_reader();
-    bool loop_read = (cmdp == '1') ? false : true;
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass reader",
+                  "Act as a iCLASS reader.  Look for iCLASS tags until Enter or the pm3 button is pressed\n",
+                  "hf iclass reader\n"
+                  "hf iclass reader -1");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("", NULL, "read once"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool loop_read = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+
+    PrintAndLogEx(INFO, "Starting iCLASS reader mode");
+    PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
     return read_iclass_csn(loop_read, true);
 }
 

@@ -1073,7 +1073,7 @@ static int CmdHF15Sniff(const char *Cmd) {
 static int CmdHF15Reader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 reader",
-                  "This command continues loops and tries to identify ISO 15693 tags\n",
+                  "Act as a ISO15693 reader.  Look for ISO15693 tags until Enter or the pm3 button is pressed\n",
                   "hf 15 reader\n"
                   "hf 15 reader -1");
 
