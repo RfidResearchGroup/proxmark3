@@ -567,13 +567,9 @@ static int CmdIndalaSim(const char *Cmd) {
 
 static int CmdIndalaClone(const char *Cmd) {
 
-    bool is_long_uid = false, got_cn = false, got_26 = false;
-    bool is_t5555 = false;
     int32_t cardnumber;
     uint32_t blocks[8] = {0};
     uint8_t max = 0;
-    uint8_t data[7 * 4];
-    int datalen = 0;
     uint8_t fc = 0;
     uint16_t cn = 0;
 
@@ -597,13 +593,16 @@ static int CmdIndalaClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    is_long_uid = arg_get_lit(ctx, 1);
+    bool is_long_uid = arg_get_lit(ctx, 1);
 
     // raw param
+    int datalen = 0;
+    uint8_t data[(7 * 4) + 1 ];
     CLIGetHexWithReturn(ctx, 3, data, &datalen);
 
-    is_t5555 = arg_get_lit(ctx, 4);
-
+    bool is_t5555 = arg_get_lit(ctx, 4);
+    
+    bool got_cn = false, got_26 = false;
     if (is_long_uid == false) {
 
         // Heden param
