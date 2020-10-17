@@ -34,6 +34,7 @@
 #include "crc16.h"             // iso15 crc
 #include "cmddata.h"           // getsamples
 #include "fileutils.h"         // savefileEML
+#include "cliparser.h"
 
 #define FrameSOF                Iso15693FrameSOF
 #define Logic0                  Iso15693Logic0
@@ -209,16 +210,6 @@ const productName_t uidmapping[] = {
 
 static int CmdHF15Help(const char *Cmd);
 
-static int usage_15_demod(void) {
-    PrintAndLogEx(NORMAL, "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
-                  "Gather samples with 'hf 15 read' / 'hf 15 record'");
-    return PM3_SUCCESS;
-}
-static int usage_15_samples(void) {
-    PrintAndLogEx(NORMAL, "Acquire samples as Reader (enables carrier, send inquiry\n"
-                  "and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal");
-    return PM3_SUCCESS;
-}
 static int usage_15_info(void) {
     PrintAndLogEx(NORMAL, "Uses the optional command 'get_systeminfo' 0x2B to try and extract information\n"
                   "command may fail, depending on tag.\n"
@@ -235,36 +226,7 @@ static int usage_15_info(void) {
                   _YELLOW_("\thf 15 info u"));
     return PM3_SUCCESS;
 }
-static int usage_15_record(void) {
-    PrintAndLogEx(NORMAL, "Record activity without enabling carrier");
-    return PM3_SUCCESS;
-}
-static int usage_15_reader(void) {
-    PrintAndLogEx(NORMAL, "This command identifies a ISO 15693 tag\n"
-                  "\n"
-                  "Usage: hf 15 reader [h]\n"
-                  "Options:\n"
-                  "\th             this help\n"
-                  "\t1             read once\n"
-                  "\n"
-                  "Example:\n"
-                  _YELLOW_("\thf 15 reader\n")
-                  _YELLOW_("\thf 15 reader 1\n"));
-    return PM3_SUCCESS;
-}
-static int usage_15_sim(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf 15 sim <UID>\n"
-                  "\n"
-                  "Example:\n"
-                  _YELLOW_("\thf 15 sim E016240000000000"));
-    return PM3_SUCCESS;
-}
-static int usage_15_findafi(void) {
-    PrintAndLogEx(NORMAL, "This command attempts to brute force AFI of an ISO15693 tag\n"
-                  "\n"
-                  "Usage: hf 15 findafi");
-    return PM3_SUCCESS;
-}
+
 static int usage_15_writeafi(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 writeafi <uid|u|*> <afi>\n"
                   "\tuid (either): \n"
@@ -356,17 +318,6 @@ static int usage_15_readmulti(void) {
                   "\t   *         scan for tag\n"
                   "\t   <start>   0-255, page number to start\n"
                   "\t   <count>   1-6, number of pages");
-    return PM3_SUCCESS;
-}
-static int usage_15_csetuid(void) {
-    PrintAndLogEx(NORMAL, "Set UID for magic Chinese card (only works with such cards)\n"
-                  "\n"
-                  "Usage:  hf 15 csetuid <uid>\n"
-                  "Options:\n"
-                  "\tuid : <8B hex>  full UID eg E011223344556677\n"
-                  "\n"
-                  "Example:\n"
-                  _YELLOW_("\thf 15 csetuid E011223344556677"));
     return PM3_SUCCESS;
 }
 
@@ -691,17 +642,31 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
 }
 
 // Mode 3
-//helptext
 static int CmdHF15Demod(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_15_demod();
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 demod",
+                  "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
+                  "Gather samples with 'hf 15 samples' / 'hf 15 sniff'",
+                  "hf 15 demod\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    
     // The sampling rate is 106.353 ksps/s, for T = 18.8 us
     int i, j;
     int max = 0, maxPos = 0;
     int skip = 4;
 
-    if (GraphTraceLen < 1000) return PM3_ESOFT;
+    if (GraphTraceLen < 1000) {        
+        PrintAndLogEx(FAILED, "Too few samples in GraphBuffer. Need more than 1000");
+        PrintAndLogEx(HINT, "Run " _YELLOW_("`hf 15 samples`") " to collect and download data");
+        return PM3_ESOFT;
+    }
 
     // First, correlate for SOF
     for (i = 0; i < 1000; i++) {
@@ -719,7 +684,7 @@ static int CmdHF15Demod(const char *Cmd) {
 
     i = maxPos + ARRAYLEN(FrameSOF) / skip;
     int k = 0;
-    uint8_t outBuf[20];
+    uint8_t outBuf[2048] = {0};
     memset(outBuf, 0, sizeof(outBuf));
     uint8_t mask = 0x01;
     for (;;) {
@@ -746,13 +711,20 @@ static int CmdHF15Demod(const char *Cmd) {
         } else {
             i += ARRAYLEN(Logic0) / skip;
         }
+
         mask <<= 1;
         if (mask == 0) {
             k++;
             mask = 0x01;
         }
+
         if ((i + (int)ARRAYLEN(FrameEOF)) >= GraphTraceLen) {
             PrintAndLogEx(INFO, "ran off end!");
+            break;
+        }
+
+        if (k > 2048) {
+            PrintAndLogEx(INFO, "ran out of buffer");
             break;
         }
     }
@@ -761,27 +733,58 @@ static int CmdHF15Demod(const char *Cmd) {
         PrintAndLogEx(WARNING, "Warning, uneven octet! (discard extra bits!)");
         PrintAndLogEx(INFO, "   mask = %02x", mask);
     }
-    PrintAndLogEx(INFO, "%d octets", k);
-
-    for (i = 0; i < k; i++)
-        PrintAndLogEx(SUCCESS, "# %2d: %02x ", i, outBuf[i]);
-
-    if (k > 2) {
-        PrintAndLogEx(SUCCESS, "CRC %04x", Crc15(outBuf, k - 2));
+    
+    if ( k == 0 ) {
+        return PM3_SUCCESS;
     }
+
+    i = 0;
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Got %d octets, decoded as following", k);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, " idx | data");
+    PrintAndLogEx(SUCCESS, "-----+-------------------------------------------------");
+    if ( k / 16 > 0) {
+        for (; i < k; i += 16) {
+            PrintAndLogEx(SUCCESS, " %3i | %s", i, sprint_hex(outBuf + i, 16));
+        }
+    }
+
+    uint8_t mod = (k % 16);
+    if (mod > 0) {
+        PrintAndLogEx(SUCCESS, " %3i | %s", i, sprint_hex(outBuf + i, mod));
+    }
+    PrintAndLogEx(SUCCESS, "-----+-------------------------------------------------");
+    if (k > 2) {
+        PrintAndLogEx(SUCCESS, "--> CRC %04x", Crc15(outBuf, k - 2));
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
 // * Acquire Samples as Reader (enables carrier, sends inquiry)
 //helptext
 static int CmdHF15Samples(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_15_samples();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 samples",
+                  "Acquire samples as Reader (enables carrier, send inquiry\n"
+                  "and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal",
+                  "hf 15 samples");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_ACQ_RAW_ADC, NULL, 0);
 
     getSamples(0, true);
+
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 demod") "` to decode signal");
     return PM3_SUCCESS;
 }
 
@@ -1042,12 +1045,20 @@ static int CmdHF15Info(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// Record Activity without enabling carrier
-//helptext
+// Sniff Activity without enabling carrier
 static int CmdHF15Sniff(const char *Cmd) {
-    char cmdp =  tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_15_record();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 sniff",
+                  "Sniff activity without enabling carrier",
+                  "hf 15 sniff\n");
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SNIFF, NULL, 0);
@@ -1060,10 +1071,23 @@ static int CmdHF15Sniff(const char *Cmd) {
 }
 
 static int CmdHF15Reader(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_15_reader();
-    bool loop_read = (cmdp == '1') ? false : true;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 reader",
+                  "This command continues loops and tries to identify ISO 15693 tags\n",
+                  "hf 15 reader\n"
+                  "hf 15 reader -1");
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("", NULL, "read once"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool loop_read = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "Starting ISO15 reader mode");
+    PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
     readHF15Uid(loop_read, true);
     return PM3_SUCCESS;
 }
@@ -1071,19 +1095,34 @@ static int CmdHF15Reader(const char *Cmd) {
 // Simulation is still not working very good
 // helptext
 static int CmdHF15Sim(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_sim();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 sim",
+                  "Simulate a ISO15693 tag\n",
+                  "hf 15 sim -u E011223344556677");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("u", "uid", "<8b hex>", "UID eg E011223344556677"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     struct {
         uint8_t uid[8];
     } PACKED payload;
+    
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
+    CLIParserFree(ctx);
 
-    if (param_gethex(Cmd, 0, payload.uid, 16)) {
+    if (uidlen != 9) {
         PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
         return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
+    PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
 
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -1096,17 +1135,25 @@ static int CmdHF15Sim(const char *Cmd) {
 // (There is no standard way of reading the AFI, although some tags support this)
 // helptext
 static int CmdHF15FindAfi(const char *Cmd) {
-    PacketResponseNG resp;
-    uint32_t timeout = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 findafi",
+                  "This command attempts to brute force AFI of an ISO15693 tag\n",
+                  "hf 15 findafi");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_15_findafi();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 
     clearCommandBuffer();
+    PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
 
+    uint32_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         timeout++;
 
@@ -1842,16 +1889,28 @@ static int CmdHF15Restore(const char *Cmd) {
  */
 static int CmdHF15CSetUID(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_csetuid();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 csetuid",
+                  "Set UID for magic Chinese card (only works with such cards)\n",
+                  "hf 15 csetuid -u E011223344556677");
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("u", "uid", "<8b hex>", "UID eg E011223344556677"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     struct {
         uint8_t uid[8];
     } PACKED payload;
-
-    if (param_gethex(Cmd, 0, payload.uid, 16)) {
-        PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
+    
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
+    CLIParserFree(ctx);
+    
+    if (uidlen != 8) {
+        PrintAndLogEx(WARNING, "UID must include 16 HEX symbols got ");
         return PM3_EINVARG;
     }
 
@@ -1874,9 +1933,10 @@ static int CmdHF15CSetUID(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_CSETUID, (uint8_t *)&payload, sizeof(payload));
-
     if (WaitForResponseTimeout(CMD_HF_ISO15693_CSETUID, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;        
     }
 
     PrintAndLogEx(INFO, "getting updated card details...");
