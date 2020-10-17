@@ -816,6 +816,8 @@ static int CmdHFiClassSim(const char *Cmd) {
         case ICLASS_SIM_MODE_CSN_DEFAULT:
         case ICLASS_SIM_MODE_FULL:
         default: {
+            PrintAndLogEx(INFO, "Starting iCLASS simulation");
+            PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, CSN, 8);
