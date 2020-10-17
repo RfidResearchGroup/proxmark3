@@ -156,26 +156,36 @@ static int CmdMotorolaClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf motorola clone",
-                  "Enables cloning of Motorola card with specified uid onto T55x7\n"
-                  "defaults to 64.",
-                  "lf motorola clone a0000000a0002021"
+                  "clone Motorola UID to T55x7 or Q5/T5555 tag\n"
+                  "defaults to 64 bit format",
+                  "lf motorola clone -r a0000000a0002021"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx1(NULL, NULL, "<uid (hex)>", NULL),
+        arg_strx1("r", "raw",  "<hex>", "raw bytes"),
+        arg_lit0("q", "Q5",    "optional - specify writing to Q5/T5555 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    bool is_t5555 = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_FIXED | T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+    
+    PrintAndLogEx(INFO, "Target chip " _YELLOW_("%s"), (is_t5555) ? "Q5/T5555" : "T55x7");
 
     // config for Motorola 64 format (RF/32;PSK1 with RF/2; Maxblock=2)
-    PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit tag with RawID %s", sprint_hex(data, datalen));
-    blocks[0] =  T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
+    PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit tag");
+    PrintAndLogEx(INFO, "Using raw " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
+
+    if (is_t5555) 
+        blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+    else 
+        blocks[0] =  T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
+    
+
     blocks[1] = bytes_to_num(data, 4);
     blocks[2] = bytes_to_num(data + 4, 4);
 
