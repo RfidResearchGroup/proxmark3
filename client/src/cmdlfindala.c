@@ -616,12 +616,14 @@ static int CmdIndalaClone(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
+    
+    PrintAndLogEx(INFO, "Target chip " _YELLOW_("%s"), (is_t5555) ? "Q5/T5555" : "T55x7");
 
     if (is_long_uid) {
         // 224 BIT UID
         // config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
         PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag");
-        PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Using raw " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
 
         if (is_t5555)
             blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
@@ -674,7 +676,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
         // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag");
-        PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Using raw " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
 
         if (is_t5555)
             blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);
