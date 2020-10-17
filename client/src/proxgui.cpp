@@ -60,7 +60,7 @@ extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char
     if (getenv("DISPLAY") == NULL)
         return;
 #endif
-    unsetenv("SESSION_MANAGER");
+    qunsetenv("SESSION_MANAGER");
     main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, stayInCommandLoop);
     gui = new ProxGuiQT(argc, argv, main_loop_thread);
 }
