@@ -407,7 +407,6 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        printf("Dropping field: 3\n");
         DropField();
         return PM3_ESOFT;
     }
