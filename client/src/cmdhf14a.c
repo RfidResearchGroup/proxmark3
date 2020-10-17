@@ -1455,96 +1455,133 @@ typedef enum {
     MTOTHER = 32
 } nxp_mifare_type_t;
 
-// According to NXP AN10833 Rev 3.6 MIFARE Type Identification, Table  6
-static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
+// Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
+static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
     int type = MTNONE;
-
+    
     PrintAndLogEx(SUCCESS, "Possible types:");
-
-    if (sak == 0x00) {
-        printTag("NTAG 20x / 21x / 21x TT / I2C plus");
-        printTag("MIFARE Ultralight / C / EV1 / Nano");
-        type = MTULTRALIGHT;
-    }
-
-    if (sak == 0x01) {
-        printTag("TNP3xxx (Activision Game Appliance)");
-        type = MTCLASSIC;
-    }
-
-    if ((sak & 0x04) == 0x04) {
-        printTag("Any MIFARE CL1 / NTAG424DNA");
-        type |= MTDESFIRE;
-    }
-
-    if ((sak & 0x08) == 0x08) {
-        printTag("MIFARE Classic 1K / Classic 1K CL2");
-        printTag("MIFARE Plus 2K / Plus EV1 2K");
-        printTag("MIFARE Plus CL2 2K / Plus CL2 EV1 2K");
-        type |= MTCLASSIC;
-        type |= MTPLUS;
-    }
-
-    if ((sak & 0x09) == 0x09) {
-        printTag("MIFARE Mini 0.3K / Mini CL2 0.3K");
-        type |= MTMINI;
-    }
-
-    if ((sak & 0x10) == 0x10) {
-        printTag("MIFARE Plus 2K / Plus CL2 2K");
-        type |= MTPLUS;
-    }
-
-    if ((sak & 0x11) == 0x11) {
-        printTag("MIFARE Plus 4K / Plus CL2 4K");
-        type |= MTPLUS;
-    }
-
-    if ((sak & 0x18) == 0x18) {
-        if (atqa == 0x0042) {
-            printTag("MIFARE Plus 4K / Plus EV1 4K");
-            printTag("MIFARE Plus CL2 4K / Plus CL2 EV1 4K");
-            type |= MTPLUS;
-        } else {
-            printTag("MIFARE Classic 4K / Classic 4K CL2");
+    
+    if ((sak & 0x02) != 0x02) {
+        if ((sak & 0x19) == 0x19) {
+            printTag("MIFARE Classic 2K");
             type |= MTCLASSIC;
-        }
-    }
+        } else if ((sak & 0x38) == 0x38) {
+            printTag("SmartMX with MIFARE Classic 4K");
+            type |= MTCLASSIC;
+        } else if ((sak & 0x18) == 0x18) {
+            if (select_status == 1) {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Plus EV1 4K CL2 in SL1");
+                    printTag("MIFARE Plus S 4K CL2 in SL1");
+                    printTag("MIFARE Plus X 4K CL2 in SL1");
+                } else {
+                    printTag("MIFARE Plus EV1 4K in SL1");
+                    printTag("MIFARE Plus S 4K in SL1");
+                    printTag("MIFARE Plus X 4K in SL1");
+                }
+                
+                type |= MTPLUS;
+            } else {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Classic 4K CL2");
+                } else {
+                    printTag("MIFARE Classic 4K");
+                }
 
-    if ((sak & 0x20) == 0x20) {
-        if (atqa == 0x0344) {
-            printTag("MIFARE DESFire MF3ICD40");
-            printTag("MIFARE DESFire EV1 2K/4K/8K / DESFire EV1 CL2 2K/4K/8K");
-            printTag("MIFARE NTAG424DNA");
+                type |= MTCLASSIC;
+            }
+        } else if ((sak & 0x09) == 0x09) {
+            if ((atqa & 0x0040) == 0x0040) {
+                printTag("MIFARE Mini 0.3K CL2");
+            } else {
+                printTag("MIFARE Mini 0.3K");
+            }
+
+            type |= MTMINI;
+        } else if ((sak & 0x28) == 0x28) {
+            printTag("SmartMX with MIFARE Classic 1K");
+            type |= MTCLASSIC;
+        } else if ((sak & 0x08) == 0x08) {
+            if (select_status == 1) {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Plus EV1 2K CL2 in SL1");
+                    printTag("MIFARE Plus S 2K CL2 in SL1");
+                    printTag("MIFARE Plus X 2K CL2 in SL1");
+                    printTag("MIFARE Plus SE 1K CL2");
+                } else {
+                    printTag("MIFARE Plus EV1 2K in SL1");
+                    printTag("MIFARE Plus S 2K in SL1");
+                    printTag("MIFARE Plus X 2K in SL1");
+                    printTag("MIFARE Plus SE 1K");
+                }
+                
+                type |= MTPLUS;
+            } else {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Classic 1K CL2");
+                } else {
+                    printTag("MIFARE Classic 1K");
+                }
+
+                type |= MTCLASSIC;
+            }
+        } else if ((sak & 0x11) == 0x11) {
+            printTag("MIFARE Plus 4K in SL2");
+            type |= MTPLUS;
+        } else if ((sak & 0x10) == 0x10) {
+            printTag("MIFARE Plus 2K in SL2");
+            type |= MTPLUS;
+        } else if ((sak & 0x01) == 0x01) {
+            printTag("TNP3xxx (TagNPlay, Activision Game Appliance)");
+            type |= MTCLASSIC;
+        } else if ((sak & 0x24) == 0x24) {
+            printTag("MIFARE DESFire CL1");
+            printTag("MIFARE DESFire EV1 CL1");
             type |= MTDESFIRE;
-        } else if (atqa == 0x0304) {
-            printTag("MIFARE NTAG424DNA (Random ID feature)");
+        } else if ((sak & 0x20) == 0x20) {
+            if (select_status == 1) {
+                if ((atqa & 0x0040) == 0x0040) {
+                    if ((atqa & 0x0300) == 0x0300) {
+                        printTag("MIFARE DESFire CL2");
+                        printTag("MIFARE DESFire EV1 256B/2K/4K/8K CL2");
+                        printTag("MIFARE DESFire EV2 2K/4K/8K/16K/32K");
+                        printTag("MIFARE DESFire Light 640B");
+                    } else {
+                        printTag("MIFARE Plus EV1 2K/4K CL2 in SL3");
+                        printTag("MIFARE Plus S 2K/4K CL2 in SL3");
+                        printTag("MIFARE Plus X 2K/4K CL2 in SL3");
+                        printTag("MIFARE Plus SE 1K CL2");
+                        type |= MTPLUS;
+                    }
+                } else {
+                    printTag("MIFARE Plus EV1 2K/4K in SL3");
+                    printTag("MIFARE Plus S 2K/4K in SL3");
+                    printTag("MIFARE Plus X 2K/4K in SL3");
+                    printTag("MIFARE Plus SE 1K");
+                    type |= MTPLUS;
+                }
+                
+                printTag("NTAG 4xx");
+                type |= MTDESFIRE;
+            }
+        } else if ((sak & 0x04) == 0x04) {
+            printTag("Any MIFARE CL1");
             type |= MTDESFIRE;
         } else {
-            printTag("MIFARE Plus 2K/4K / Plus EV1 2K/4K");
-            printTag("MIFARE Plus CL2 2K/4K / Plus CL2 EV1 2K/4K");
-            type |= MTPLUS;
+            printTag("MIFARE Ultralight");
+            printTag("MIFARE Ultralight C");
+            printTag("MIFARE Ultralight EV1");
+            printTag("MIFARE Ultralight Nano");
+            printTag("MIFARE Hospitality");
+            printTag("NTAG 2xx");
+            type |= MTULTRALIGHT;
+            type |= MTOTHER;
         }
     }
-
-    if ((sak & 0x24) == 0x24) {
-        if (atqa == 0x0344) {
-            printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
-            type |= MTDESFIRE;
-        }
-    }
-
-    if ((sak & 0x28) == 0x28) {
-        if (atqa == 0x0344) {
-            printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
-            type |= MTDESFIRE;
-        }
-    }
-
+    
     if (type == MTNONE) {
         PrintAndLogEx(WARNING, "   failed to fingerprint");
     }
-
     return type;
 }
 
@@ -1630,7 +1667,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
-        nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
+        nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
 
         isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
         isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
@@ -1650,7 +1687,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 isST = true;
                 break;
             case 0x04: // NXP
-                nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
+                nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
 
                 isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
                 isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
