@@ -766,7 +766,9 @@ static int CmdHF15Demod(const char *Cmd) {
     for (i = 0; i < k; i++)
         PrintAndLogEx(SUCCESS, "# %2d: %02x ", i, outBuf[i]);
 
-    PrintAndLogEx(SUCCESS, "CRC %04x", Crc15(outBuf, k - 2));
+    if (k > 2) {
+        PrintAndLogEx(SUCCESS, "CRC %04x", Crc15(outBuf, k - 2));
+    }
     return PM3_SUCCESS;
 }
 
