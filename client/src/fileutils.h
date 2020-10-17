@@ -64,6 +64,8 @@ typedef enum {
     jsfMfPlusKeys,
     jsfCustom,
     jsfMfDesfireKeys,
+    jsfEM4x05,
+    jsfEM4x69,
 } JSONFileType;
 
 typedef enum {

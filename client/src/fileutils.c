@@ -494,6 +494,33 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
+        case jsfEM4x05: {
+            JsonSaveStr(root, "FileType", "EM4205/EM4305");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data + (1 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.Config", data + (4 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.Protection1", data + (14 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.Protection2", data + (15 * 4), 4);
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
+        case jsfEM4x69: {
+            JsonSaveStr(root, "FileType", "EM4469/EM4569");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data + (1 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.Protection", data + (3 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.Config", data + (4 * 4), 4);
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
         case jsfMfPlusKeys: {
             JsonSaveStr(root, "FileType", "mfp");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);

@@ -203,11 +203,11 @@ CLIGetHexWithReturn(\<context\>, \<opt index\>, \<store variable\>, \<ptr to sto
     quick test : seems res_keylen == 0 when ok so not key len ???
 
 **string option return**
-CLIGetStrWithReturn(\<context\>,\<opt index\>, \<unsigned char \*\>, \<int \*\>);
+CLIGetStrWithReturn(\<context\>,\<opt index\>, \<uint8_t \*\>, \<int \*\>);
     If failed to retrieve string, it will exit fct
 
     uint8_t buffer[100];
-    int slen = 0;
+    int slen = sizeof(buffer); // <- slen MUST be the maximum number of characters that you want returned. e.g. Buffer Size
     CLIGetStrWithReturn(ctx, 1, buffer, &slen);
 
 **string option**     

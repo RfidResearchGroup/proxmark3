@@ -35,20 +35,7 @@
 #include "cmdhw.h"
 
 //////////////// 4205 / 4305 commands
-static int usage_lf_em4x05_dump(void) {
-    PrintAndLogEx(NORMAL, "Dump EM4x05/EM4x69.  Tag must be on antenna. ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_dump [h] [f <filename prefix>] <pwd>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h                     - this help");
-    PrintAndLogEx(NORMAL, "       f <filename prefix>   - overide filename prefix (optional).  Default is based on UID");
-    PrintAndLogEx(NORMAL, "       pwd                   - password (hex) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_dump");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_dump 11223344");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_dump f card1 11223344");
-    return PM3_SUCCESS;
-}
+
 static int usage_lf_em4x05_wipe(void) {
     PrintAndLogEx(NORMAL, "Wipe EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
@@ -101,6 +88,48 @@ static int usage_lf_em4x05_info(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x05_info");
     PrintAndLogEx(NORMAL, "      lf em 4x05_info deadc0de");
     return PM3_SUCCESS;
+}
+
+#define EM_SERIAL_BLOCK 1
+#define EM_CONFIG_BLOCK 4
+#define EM4305_PROT1_BLOCK 14
+#define EM4305_PROT2_BLOCK 15
+#define EM4469_PROT_BLOCK 3
+
+typedef enum {
+    EM_UNKNOWN,
+    EM_4205,
+    EM_4305,
+    EM_4X69,
+} em_tech_type_t;
+
+// 1 = EM4x69
+// 2 = EM4x05
+static em_tech_type_t em_get_card_type(uint32_t config) {
+    uint8_t t = (config >> 1) & 0xF;
+    switch(t) {
+        case 4:
+            return EM_4X69;
+        case 8:
+            return EM_4205;
+        case 9:
+            return EM_4305;
+    }
+    return EM_UNKNOWN;
+}
+
+static const char* em_get_card_str(uint32_t config) {    
+    switch (em_get_card_type(config)) {
+        case EM_4305:
+            return "EM4305";
+        case EM_4X69:
+            return "EM4469";
+        case EM_4205:
+            return "EM4205";
+        case EM_UNKNOWN:
+            break;
+    }
+    return "Unknown";
 }
 
 // even parity COLUMN
@@ -366,37 +395,52 @@ int CmdEM4x05Demod(const char *Cmd) {
 }
 
 int CmdEM4x05Dump(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em dump",
+                  "Dump EM4x05/EM4x69.  Tag must be on antenna.",
+                  "lf em dump\n"
+                  "lf em dump -p 11223344\n"
+                  "lf em dump -f myfile -p 11223344"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("p", "pwd", "<hex>", "password (0x00000000)"),        
+        arg_str0("f", "file", "<filename>", "overide filename prefix (optional).  Default is based on UID"),
+        arg_param_end        
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint64_t inputpwd = arg_get_u64_def(ctx, 1, 0xFFFFFFFFFFFFFFFF);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+    
     uint8_t addr = 0;
     uint32_t pwd = 0;
-    bool usePwd = false;
+    bool usePwd = false;    
+    if (inputpwd != 0xFFFFFFFFFFFFFFFF) {
+        
+        if (inputpwd & 0xFFFFFFFF00000000) {
+            PrintAndLogEx(FAILED, "Pwd too large");
+            return PM3_EINVARG;
+        }
+        
+        usePwd = true;
+        pwd = (inputpwd & 0xFFFFFFFF);
+    }
+
+    uint32_t block0 = 0;
+    // read word 0 (chip info)
+    // block 0 can be read even without a password.
+    if (EM4x05IsBlock0(&block0) == false)
+        return PM3_ESOFT;
+
     bool needReadPwd = true;
-    uint8_t cmdp = 0;
     uint8_t bytes[4] = {0};
     uint32_t data[16];
-    char preferredName[FILE_PATH_SIZE] = {0};
-    char optchk[10];
-
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_em4x05_dump();
-                break;
-            case 'f':   // since f could match in password, lets confirm it is 1 character only for an option
-                param_getstr(Cmd, cmdp, optchk, sizeof(optchk));
-                if (strlen(optchk) == 1) { // Have a single character f so filename no password
-                    param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
-                    cmdp += 2;
-                    break;
-                } // if not a single 'f' dont break and flow onto default as should be password
-
-            default :   // for backwards-compatibility options should be > 'f' else assume its the hex password`
-                // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
-                pwd = param_get32ex(Cmd, cmdp, 1, 16);
-                if (pwd != 1)
-                    usePwd = true;
-                cmdp++;
-        };
-    }
 
     int success = PM3_SUCCESS;
     int status, status14, status15;
@@ -404,105 +448,189 @@ int CmdEM4x05Dump(const char *Cmd) {
     bool gotLockBits = false;
     bool lockInPW2 = false;
     uint32_t word = 0;
+    
     const char *info[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
+    const char *info4x69 [] = {"Info", "UID", "Password", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
 
-    if (usePwd) {
-        // Test first if a password is required
-        status = EM4x05ReadWord_ext(14, pwd, false, &word);
-        if (status == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Note that password doesn't seem to be needed");
-            needReadPwd = false;
-        }
-    }
-    PrintAndLogEx(NORMAL, "Addr | data     | ascii |lck| info");
-    PrintAndLogEx(NORMAL, "-----+----------+-------+---+-----");
+    // EM4305 vs EM4469 
+    em_tech_type_t card_type = em_get_card_type(block0);
+    
+    PrintAndLogEx(INFO, "Found a " _GREEN_("%s") " tag", em_get_card_str(block0));
+    PrintAndLogEx(NORMAL, "");
 
-    // To flag any blocks locked we need to read blocks 14 and 15 first
-    // dont swap endin until we get block lock flags.
-    status14 = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
-    if (status14 == PM3_SUCCESS) {
-        if (!usePwd)
-            needReadPwd = false;
-        if ((word & 0x00008000) != 0x00) {
-            lock_bits = word;
-            gotLockBits = true;
+    PrintAndLogEx(INFO, "Addr | data     | ascii |lck| info");
+    PrintAndLogEx(INFO, "-----+----------+-------+---+-----");
+
+    if ( card_type == EM_4205 || card_type == EM_4305 || card_type == EM_UNKNOWN) {
+
+        if (usePwd) {
+            // Test first if a password is required
+            status = EM4x05ReadWord_ext(EM4305_PROT1_BLOCK, pwd, false, &word);
+            if (status == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "Note that password doesn't seem to be needed");
+                needReadPwd = false;
+            }
         }
-        data[14] = word;
-    } else {
-        success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-    }
-    status15 = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
-    if (status15 == PM3_SUCCESS) {
-        if ((word & 0x00008000) != 0x00) { // assume block 15 is the current lock block
-            lock_bits = word;
-            gotLockBits = true;
-            lockInPW2 = true;
+
+        // To flag any blocks locked we need to read blocks 14 and 15 first
+        // dont swap endin until we get block lock flags.
+        status14 = EM4x05ReadWord_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
+        if (status14 == PM3_SUCCESS) {
+            if (!usePwd)
+                needReadPwd = false;
+            if ((word & 0x00008000) != 0x00) {
+                lock_bits = word;
+                gotLockBits = true;
+            }
+            data[EM4305_PROT1_BLOCK] = word;
+        } else {
+            success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
         }
-        data[15] = word;
-    } else {
-        success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-    }
-    uint32_t lockbit;
-    // Now read blocks 0 - 13 as we have 14 and 15
-    for (; addr < 14; addr++) {
-        lockbit = (lock_bits >> addr) & 1;
-        if (addr == 2) {
-            if (usePwd) {
-                if ((needReadPwd) && (success != PM3_ESOFT)) {
-                    data[addr] = BSWAP_32(pwd);
-                    num_to_bytes(pwd, 4, bytes);
-                    PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
+        status15 = EM4x05ReadWord_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word);
+        if (status15 == PM3_SUCCESS) {
+            if ((word & 0x00008000) != 0x00) { // assume block 15 is the current lock block
+                lock_bits = word;
+                gotLockBits = true;
+                lockInPW2 = true;
+            }
+            data[EM4305_PROT2_BLOCK] = word;
+        } else {
+            success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+        }
+        uint32_t lockbit;
+        // Now read blocks 0 - 13 as we have 14 and 15
+        for (; addr < 14; addr++) {
+            lockbit = (lock_bits >> addr) & 1;
+            if (addr == 2) {
+                if (usePwd) {
+                    if ((needReadPwd) && (success != PM3_ESOFT)) {
+                        data[addr] = BSWAP_32(pwd);
+                        num_to_bytes(pwd, 4, bytes);
+                        PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
+                    } else {
+                        // The pwd is not needed for Login so we're not sure what's the actual content of that block
+                        PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
+                    }
                 } else {
-                    // The pwd is not needed for Login so we're not sure what's the actual content of that block
-                    PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
+                    data[addr] = 0x00; // Unknown password, but not used to set to zeros
+                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
                 }
             } else {
-                data[addr] = 0x00; // Unknown password, but not used to set to zeros
-                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
+                // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+                status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
+                if (status != PM3_SUCCESS)
+                    success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+                data[addr] = BSWAP_32(word);
+                if (status == PM3_SUCCESS) {
+                    num_to_bytes(word, 4, bytes);
+                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
+                } else
+                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, info[addr], status == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
             }
-        } else {
-            // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
-            status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
-            if (status != PM3_SUCCESS)
-                success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-            data[addr] = BSWAP_32(word);
-            if (status == PM3_SUCCESS) {
-                num_to_bytes(word, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
-            } else
-                PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
         }
-    }
-    // Print blocks 14 and 15
-    // Both lock bits are protected with bit idx 14 (special case)
-    addr = 14;
-    if (status14 == PM3_SUCCESS) {
-        lockbit = (lock_bits >> addr) & 1;
-        PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? "" : _GREEN_("active"));
+        // Print blocks 14 and 15
+        // Both lock bits are protected with bit idx 14 (special case)
+        addr = 14;
+        if (status14 == PM3_SUCCESS) {
+            lockbit = (lock_bits >> addr) & 1;
+            PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? "" : _GREEN_("active"));
+        } else {
+            PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, info[addr], status14 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
+        }
+        addr = 15;
+        if (status15 == PM3_SUCCESS) {
+            lockbit = (lock_bits >> 14) & 1; // beware lock bit of word15 is pr14
+            PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? _GREEN_("active") : "");
+        } else {
+            PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, info[addr], status15 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
+        }
+        // Update endian for files
+        data[14] = BSWAP_32(data[14]);
+        data[15] = BSWAP_32(data[15]);
+
+    } else if (card_type == EM_4X69) {
+        
+        if (usePwd) {
+            // Test first if a password is required
+            status = EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, false, &word);
+            if (status == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "Note that password doesn't seem to be needed");
+                needReadPwd = false;
+            }
+        }
+        
+        // To flag any blocks locked we need to read blocks 14 and 15 first
+        // dont swap endin until we get block lock flags.
+        status14 = EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
+        if (status14 == PM3_SUCCESS) {
+            if (!usePwd)
+                needReadPwd = false;
+            if ((word & 0x00008000) != 0x00) {
+                lock_bits = word;
+                gotLockBits = true;
+            }
+            data[EM4469_PROT_BLOCK] = word;
+        } else {
+            success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+        }
+        
+        uint32_t lockbit;
+
+        for (; addr < 15; addr++) {
+            lockbit = (lock_bits >> addr) & 1;
+            if (addr == 2) {
+                if (usePwd) {
+                    if ((needReadPwd) && (success != PM3_ESOFT)) {
+                        data[addr] = BSWAP_32(pwd);
+                        num_to_bytes(pwd, 4, bytes);
+                        PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info4x69[addr]);
+                    } else {
+                        // The pwd is not needed for Login so we're not sure what's the actual content of that block
+                        PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info4x69[addr]);
+                    }
+                } else {
+                    data[addr] = 0x00; // Unknown password, but not used to set to zeros
+                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info4x69[addr]);
+                }
+            } else {
+
+                status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+                if (status != PM3_SUCCESS) {
+                    success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+                }
+
+                data[addr] = BSWAP_32(word);
+                if (status == PM3_SUCCESS) {
+                    num_to_bytes(word, 4, bytes);
+                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info4x69[addr]);
+                } else {
+                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, info4x69[addr], status == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
+                }
+            }
+        }
+        
     } else {
-        PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status14 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
     }
-    addr = 15;
-    if (status15 == PM3_SUCCESS) {
-        lockbit = (lock_bits >> 14) & 1; // beware lock bit of word15 is pr14
-        PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr], lockInPW2 ? _GREEN_("active") : "");
-    } else {
-        PrintAndLogEx(NORMAL, "  %02u |          |       |   | %-10s %s", addr, info[addr], status15 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
-    }
-    // Update endian for files
-    data[14] = BSWAP_32(data[14]);
-    data[15] = BSWAP_32(data[15]);
 
     if (success == PM3_SUCCESS) { // all ok save dump to file
         // saveFileEML will add .eml extension to filename
         // saveFile (binary) passes in the .bin extension.
-        if (strcmp(preferredName, "") == 0) // Set default filename, if not set by user
-            sprintf(preferredName, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
+        if (strcmp(filename, "") == 0) {
+            
+            if ( card_type == EM_4X69) {
+                sprintf(filename, "lf-4x69-%08X-dump", BSWAP_32(data[1]));
+            } else {
+                sprintf(filename, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
+            }
 
-        saveFileEML(preferredName, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
-        saveFile(preferredName, ".bin", data, sizeof(data));
+        }
+        PrintAndLogEx(NORMAL, "");
+        saveFileJSON(filename, (card_type == EM_4X69) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
+        
+        saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
+        saveFile(filename, ".bin", data, sizeof(data));
     }
-
+    PrintAndLogEx(NORMAL, "");
     return success;
 }
 
@@ -787,7 +915,7 @@ static void printEM4x05config(uint32_t wordData) {
     uint8_t pigeon = (wordData & (1 << 26)) >> 26;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Config Information") " ---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Config Information") " ------------------------");
     PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)", wordData);
     PrintAndLogEx(INFO, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
     PrintAndLogEx(INFO, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
@@ -810,11 +938,6 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
     uint8_t cap = (block0 >> 5) & 3;
     uint16_t custCode = (block0 >> 9) & 0x2FF;    
 
-    PrintAndLogEx(INFO, "   block0: %X", block0);
-    PrintAndLogEx(INFO, " chiptype: %X", chipType);
-    PrintAndLogEx(INFO, "capacitor: %X", cap);
-    PrintAndLogEx(INFO, " custcode: %X", custCode);
-    
     /* bits
     //  0,   rfu
     //  1,2,3,4  chip type
@@ -834,51 +957,35 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
     
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
 
-    char ctstr[50];
-    snprintf(ctstr, sizeof(ctstr), " Chip Type:   %u | ", chipType);
-    switch (chipType) {
-        case 9:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4305");
-            break;
-        case 4:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4469");
-            break;
-        case 8:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");
-            break;
-        //add more here when known
-        default:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "Unknown");
-            break;
-    }
-    PrintAndLogEx(SUCCESS, "%s", ctstr);
+    PrintAndLogEx(SUCCESS, "    Block0: " _GREEN_("%08x") " (Word 0)", block0);
+    PrintAndLogEx(SUCCESS, " Chip Type:   %3u | " _YELLOW_("%s"), chipType, em_get_card_str(block0));
 
     switch (cap) {
         case 3:
-            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | 330pF", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %3u | 330pF", cap);
             break;
         case 2:
-            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | %spF", cap, (chipType == 2) ? "75" : "210");
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %3u | %spF", cap, (chipType == 4) ? "75" : "210");
             break;
         case 1:
-            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | 250pF", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %3u | 250pF", cap);
             break;
         case 0:
-            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | no resonant capacitor", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %3u | no resonant capacitor", cap);
             break;
         default:
-            PrintAndLogEx(SUCCESS, "  Cap Type:   %u | unknown", cap);
+            PrintAndLogEx(SUCCESS, "  Cap Type:   %3u | unknown", cap);
             break;
     }
 
-    PrintAndLogEx(SUCCESS, " Cust Code: %03u | %s", custCode, (custCode == 0x200) ? "Default" : "Unknown");
+    PrintAndLogEx(SUCCESS, " Cust Code: 0x%x | %s", custCode, (custCode == 0x200) ? "Default" : "Unknown");
     if (serial != 0)
         PrintAndLogEx(SUCCESS, "  Serial #: " _YELLOW_("%08X"), serial);
 }
 
 static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Protection") " ---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Protection") " --------------------------------");
     PrintAndLogEx(INFO, "ProtectionWord: %08X (Word %i)", word, addr);
     for (uint8_t i = 0; i < 15; i++) {
         PrintAndLogEx(INFO, "      Word:  %02u | %s", i, ((1 << i) & word) ? _RED_("write Locked") : "unlocked");
@@ -893,10 +1000,6 @@ bool EM4x05IsBlock0(uint32_t *word) {
 }
 
 int CmdEM4x05Info(const char *Cmd) {
-#define EM_SERIAL_BLOCK 1
-#define EM_CONFIG_BLOCK 4
-#define EM_PROT1_BLOCK 14
-#define EM_PROT2_BLOCK 15
     uint32_t pwd;
     uint32_t word = 0, block0 = 0, serial = 0;
     bool usePwd = false;
@@ -914,9 +1017,13 @@ int CmdEM4x05Info(const char *Cmd) {
     if (EM4x05IsBlock0(&block0) == false)
         return PM3_ESOFT;
 
+    // based on Block0 ,  decide type.
+    int card_type = em_get_card_type(block0);
+
     // read word 1 (serial #) doesn't need pwd
     // continue if failed, .. non blocking fail.
     EM4x05ReadWord_ext(EM_SERIAL_BLOCK, 0, false, &serial);
+
     printEM4x05info(block0, serial);
 
     // read word 4 (config block)
@@ -925,21 +1032,33 @@ int CmdEM4x05Info(const char *Cmd) {
         return PM3_ESOFT;
 
     printEM4x05config(word);
+    
+    // if 4469 read EM4469_PROT_BLOCK
+    // if 4305 read 14,15
+    if (card_type == EM_4205 || card_type == EM_4305) {
 
-    // read word 14 and 15 to see which is being used for the protection bits
-    if (EM4x05ReadWord_ext(EM_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
-        return PM3_ESOFT;
-    }
-    if (word & 0x8000) {
-        printEM4x05ProtectionBits(word, EM_PROT1_BLOCK);
-        return PM3_SUCCESS;
-    } else { // if status bit says this is not the used protection word
-        if (EM4x05ReadWord_ext(EM_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+        // read word 14 and 15 to see which is being used for the protection bits
+        if (EM4x05ReadWord_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
-        if (word & 0x8000) {
-            printEM4x05ProtectionBits(word, EM_PROT2_BLOCK);
-            return PM3_SUCCESS;
         }
+
+        if (word & 0x8000) {
+            printEM4x05ProtectionBits(word, EM4305_PROT1_BLOCK);
+            return PM3_SUCCESS;
+        } else { // if status bit says this is not the used protection word
+            if (EM4x05ReadWord_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+                return PM3_ESOFT;
+            if (word & 0x8000) {
+                printEM4x05ProtectionBits(word, EM4305_PROT2_BLOCK);
+                return PM3_SUCCESS;
+            }
+        }
+    } else if (card_type == EM_4X69) {
+          // read word 3 to see which is being used for the protection bits
+        if (EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+            return PM3_ESOFT;
+        }
+        printEM4x05ProtectionBits(word, EM4469_PROT_BLOCK);
     }
     //something went wrong
     return PM3_ESOFT;
