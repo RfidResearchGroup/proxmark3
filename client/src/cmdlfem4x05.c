@@ -361,6 +361,29 @@ static int demodEM4x05resp(uint32_t *word, bool onlyPreamble) {
 
 //////////////// 4205 / 4305 commands
 
+static int EM4x05Login_ext(uint32_t pwd) {
+
+    struct {
+        uint32_t password;
+    } PACKED payload;
+
+    payload.password = pwd;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X_LOGIN, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X_LOGIN, &resp, 10000)) {
+        PrintAndLogEx(WARNING, "(EM4x05Login_ext) timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (downloadSamplesEM() == false) {
+        return PM3_ESOFT;
+    }
+    uint32_t word;
+    return demodEM4x05resp(&word, true);
+}
+
 int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
 
     struct {
@@ -438,7 +461,6 @@ int CmdEM4x05Dump(const char *Cmd) {
     if (EM4x05IsBlock0(&block0) == false)
         return PM3_ESOFT;
 
-    bool needReadPwd = true;
     uint8_t bytes[4] = {0};
     uint32_t data[16];
 
@@ -456,28 +478,32 @@ int CmdEM4x05Dump(const char *Cmd) {
     em_tech_type_t card_type = em_get_card_type(block0);
     
     PrintAndLogEx(INFO, "Found a " _GREEN_("%s") " tag", em_get_card_str(block0));
-    PrintAndLogEx(NORMAL, "");
 
+    if (usePwd) {
+        // Test first if the password is correct
+        status = EM4x05Login_ext(pwd);
+        if (status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Password is " _GREEN_("correct"));
+        } else if (status == PM3_EFAILED) {
+            PrintAndLogEx(WARNING, "Password is " _RED_("incorrect") ", will try without password");
+            usePwd = false;
+        } else if (status != PM3_EFAILED) {
+            PrintAndLogEx(WARNING, "Login attempt: No answer from tag");
+            return status;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Addr | data     | ascii |lck| info");
     PrintAndLogEx(INFO, "-----+----------+-------+---+-----");
 
     if ( card_type == EM_4205 || card_type == EM_4305 || card_type == EM_UNKNOWN) {
 
-        if (usePwd) {
-            // Test first if a password is required
-            status = EM4x05ReadWord_ext(EM4305_PROT1_BLOCK, pwd, false, &word);
-            if (status == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Note that password doesn't seem to be needed");
-                needReadPwd = false;
-            }
-        }
 
         // To flag any blocks locked we need to read blocks 14 and 15 first
         // dont swap endin until we get block lock flags.
         status14 = EM4x05ReadWord_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
-            if (!usePwd)
-                needReadPwd = false;
             if ((word & 0x00008000) != 0x00) {
                 lock_bits = word;
                 gotLockBits = true;
@@ -503,14 +529,9 @@ int CmdEM4x05Dump(const char *Cmd) {
             lockbit = (lock_bits >> addr) & 1;
             if (addr == 2) {
                 if (usePwd) {
-                    if ((needReadPwd) && (success != PM3_ESOFT)) {
-                        data[addr] = BSWAP_32(pwd);
-                        num_to_bytes(pwd, 4, bytes);
-                        PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
-                    } else {
-                        // The pwd is not needed for Login so we're not sure what's the actual content of that block
-                        PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
-                    }
+                    data[addr] = BSWAP_32(pwd);
+                    num_to_bytes(pwd, 4, bytes);
+                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info[addr]);
                 } else {
                     data[addr] = 0x00; // Unknown password, but not used to set to zeros
                     PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
@@ -550,21 +571,10 @@ int CmdEM4x05Dump(const char *Cmd) {
 
     } else if (card_type == EM_4X69) {
         
-        if (usePwd) {
-            // Test first if a password is required
-            status = EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, false, &word);
-            if (status == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Note that password doesn't seem to be needed");
-                needReadPwd = false;
-            }
-        }
-        
         // To flag any blocks locked we need to read blocks 14 and 15 first
         // dont swap endin until we get block lock flags.
         status14 = EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
-            if (!usePwd)
-                needReadPwd = false;
             if ((word & 0x00008000) != 0x00) {
                 lock_bits = word;
                 gotLockBits = true;
@@ -580,14 +590,9 @@ int CmdEM4x05Dump(const char *Cmd) {
             lockbit = (lock_bits >> addr) & 1;
             if (addr == 2) {
                 if (usePwd) {
-                    if ((needReadPwd) && (success != PM3_ESOFT)) {
-                        data[addr] = BSWAP_32(pwd);
-                        num_to_bytes(pwd, 4, bytes);
-                        PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info4x69[addr]);
-                    } else {
-                        // The pwd is not needed for Login so we're not sure what's the actual content of that block
-                        PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info4x69[addr]);
-                    }
+                    data[addr] = BSWAP_32(pwd);
+                    num_to_bytes(pwd, 4, bytes);
+                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), info4x69[addr]);
                 } else {
                     data[addr] = 0x00; // Unknown password, but not used to set to zeros
                     PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info4x69[addr]);
@@ -1095,15 +1100,6 @@ int CmdEM4x05Chk(const char *Cmd) {
     uint64_t card_id = arg_get_u64_def(ctx, 2, 0);
     CLIParserFree(ctx);
 
-    uint8_t addr = 4;
-    uint32_t word = 0;
-    // Test first if a password is required
-    int status = EM4x05ReadWord_ext(addr, 0, false, &word);
-    if (status == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Password doesn't seem to be needed to read the tag");
-        return PM3_SUCCESS;
-    }
-
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
@@ -1118,10 +1114,12 @@ int CmdEM4x05Chk(const char *Cmd) {
         uint32_t pwd = lf_t55xx_white_pwdgen(card_id & 0xFFFFFFFF);
         PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", pwd);
 
-        status = EM4x05ReadWord_ext(addr, pwd, true, &word);
+        int status = EM4x05Login_ext(pwd);
         if (status == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
+        } else if (status != PM3_EFAILED) {
+            PrintAndLogEx(WARNING, "No answer from tag");
         }
     }
 
@@ -1131,7 +1129,6 @@ int CmdEM4x05Chk(const char *Cmd) {
 
         PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
-        word = 0;
         uint32_t keycount = 0;
 
         int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
@@ -1160,11 +1157,13 @@ int CmdEM4x05Chk(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
 
-            status = EM4x05ReadWord_ext(addr, curr_password, 1, &word);
+            int status = EM4x05Login_ext(curr_password);
             if (status == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                 found = true;
                 break;
+            } else if (status != PM3_EFAILED) {
+                PrintAndLogEx(WARNING, "No answer from tag");
             }
         }
     }
