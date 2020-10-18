@@ -1357,7 +1357,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     uint32_t soon = 0;
     uint32_t late = 0;
 
-    em4x05_unlock_item_t flipped[64]; 
+    em4x05_unlock_item_t flipped[64] ={{0,0}};
 
     //
     // main loop
