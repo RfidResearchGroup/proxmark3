@@ -424,57 +424,55 @@ uint8_t get_pagemap(const picopass_hdr *hdr) {
 }
 
 static void fuse_config(const picopass_hdr *hdr) {
+
+    uint16_t otp = (hdr->conf.otp[1] << 8 | hdr->conf.otp[0]);
+
+    PrintAndLogEx(INFO, "    Raw: " _YELLOW_("%s"), sprint_hex((uint8_t*)&hdr->conf, 8));
+    PrintAndLogEx(INFO, "         " _YELLOW_("%02X") ".....................  App limit", hdr->conf.app_limit);
+    PrintAndLogEx(INFO, "            " _YELLOW_("%04X") " ( %5u )......  OTP", otp, otp);
+    PrintAndLogEx(INFO, "                  " _YELLOW_("%02X") "............  Block write lock", hdr->conf.block_writelock);
+    PrintAndLogEx(INFO, "                     " _YELLOW_("%02X") ".........  Chip", hdr->conf.chip_config);
+    PrintAndLogEx(INFO, "                        " _YELLOW_("%02X") "......  Mem", hdr->conf.mem_config);
+    PrintAndLogEx(INFO, "                           " _YELLOW_("%02X") "...  EAS", hdr->conf.eas);
+    PrintAndLogEx(INFO, "                              " _YELLOW_("%02X") "  Fuses", hdr->conf.fuses);
+
     uint8_t fuses = hdr->conf.fuses;
 
+    PrintAndLogEx(INFO, "  Fuses:");
     if (isset(fuses, FUSE_FPERS))
-        PrintAndLogEx(SUCCESS, "  Mode: " _GREEN_("Personalization (programmable)"));
+        PrintAndLogEx(SUCCESS, "    mode..... " _GREEN_("Personalization (programmable)"));
     else
-        PrintAndLogEx(SUCCESS, "  Mode: " _YELLOW_("Application (locked)"));
+        PrintAndLogEx(SUCCESS, "    mode..... " _YELLOW_("Application (locked)"));
 
     if (isset(fuses, FUSE_CODING1)) {
-        PrintAndLogEx(SUCCESS, "Coding: RFU");
+        PrintAndLogEx(SUCCESS, "    coding.. RFU");
     } else {
         if (isset(fuses, FUSE_CODING0))
-            PrintAndLogEx(SUCCESS, "Coding: " _YELLOW_("ISO 14443-2 B / 15693"));
+            PrintAndLogEx(SUCCESS, "    coding... " _YELLOW_("ISO 14443-2 B / 15693"));
         else
-            PrintAndLogEx(SUCCESS, "Coding: " _YELLOW_("ISO 14443-B only"));
+            PrintAndLogEx(SUCCESS, "    coding... " _YELLOW_("ISO 14443-B only"));
     }
 
     uint8_t pagemap = get_pagemap(hdr);
     switch (pagemap) {
         case 0x0:
-            PrintAndLogEx(INFO, " Crypt: No auth possible. Read only if RA is enabled");
+            PrintAndLogEx(INFO, "    crypt.... No auth possible. Read only if RA is enabled");
             break;
         case 0x1:
-            PrintAndLogEx(SUCCESS, " Crypt: Non secured page");
+            PrintAndLogEx(SUCCESS, "    crypt.... Non secured page");
             break;
         case 0x2:
-            PrintAndLogEx(INFO, " Crypt: Secured page, keys locked");
+            PrintAndLogEx(INFO, "    crypt.... Secured page, keys locked");
             break;
         case 0x03:
-            PrintAndLogEx(SUCCESS, " Crypt: Secured page, " _GREEN_("keys not locked"));
+            PrintAndLogEx(SUCCESS, "    crypt.... Secured page, " _GREEN_("keys not locked"));
             break;
     }
 
     if (isset(fuses, FUSE_RA))
-        PrintAndLogEx(SUCCESS, "    RA: Read access enabled");
+        PrintAndLogEx(SUCCESS, "    RA....... Read access enabled (non-secure mode)");
     else
-        PrintAndLogEx(INFO, "    RA: Read access not enabled");
-
-    PrintAndLogEx(INFO,
-                  "App limit " _YELLOW_("0x%02X") ", OTP " _YELLOW_("0x%02X%02X") ", Block write lock " _YELLOW_("0x%02X")
-                  , hdr->conf.app_limit
-                  , hdr->conf.otp[1]
-                  , hdr->conf.otp[0]
-                  , hdr->conf.block_writelock
-                 );
-    PrintAndLogEx(INFO,
-                  "     Chip " _YELLOW_("0x%02X") ", Mem " _YELLOW_("0x%02X") ", EAS " _YELLOW_("0x%02X") ", Fuses " _YELLOW_("0x%02X")
-                  , hdr->conf.chip_config
-                  , hdr->conf.mem_config
-                  , hdr->conf.eas
-                  , hdr->conf.fuses
-                 );
+        PrintAndLogEx(INFO, "    RA....... Read access not enabled");
 }
 
 static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *app_areas, uint8_t *kb) {
@@ -535,19 +533,19 @@ static void mem_app_config(const picopass_hdr *hdr) {
     uint8_t app2_limit = card_app2_limit[type];
     uint8_t pagemap = get_pagemap(hdr);
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("Memory") " ------");
+    PrintAndLogEx(INFO, "-------------------------- " _CYAN_("Memory") " --------------------------");
 
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-        PrintAndLogEx(INFO, "    %u KBits (%u bytes)", kb, app2_limit * 8);
+        PrintAndLogEx(INFO, " %u KBits ( " _YELLOW_("%u") " bytes )", kb, app2_limit * 8);
         PrintAndLogEx(INFO, "    Tag has not App Areas");
         return;
     }
 
-    PrintAndLogEx(INFO, "    %u KBits/%u App Areas (%u bytes)", kb, app_areas, (app2_limit + 1) * 8);
+    PrintAndLogEx(INFO, " %u KBits/%u App Areas ( " _YELLOW_("%u") " bytes )", kb, app_areas, (app2_limit + 1) * 8);
     PrintAndLogEx(INFO, "    AA1 blocks %u { 0x06 - 0x%02X (06 - %02d) }", app1_limit, app1_limit + 5, app1_limit + 5);
     PrintAndLogEx(INFO, "    AA2 blocks %u { 0x%02X - 0x%02X (%02d - %02d) }", app2_limit - app1_limit, app1_limit + 5 + 1, app2_limit, app1_limit + 5 + 1, app2_limit);
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("KeyAccess") " ------");
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("KeyAccess") " -------------------------");
     PrintAndLogEx(INFO, " Kd = Debit key (AA1),  Kc = Credit key (AA2)");
     uint8_t book = isset(mem, 0x20);
     if (book) {
@@ -568,18 +566,18 @@ static void mem_app_config(const picopass_hdr *hdr) {
 }
 
 static void print_picopass_info(const picopass_hdr *hdr) {
-    PrintAndLogEx(INFO, "------ " _CYAN_("card configuration") " ------");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("card configuration") " --------------------");
     fuse_config(hdr);
     mem_app_config(hdr);
 }
 static void print_picopass_header(const picopass_hdr *hdr) {
-    PrintAndLogEx(INFO, "------------ " _CYAN_("card") " -------------");
-    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") "  (uid)", sprint_hex(hdr->csn, sizeof(hdr->csn)));
-    PrintAndLogEx(SUCCESS, " Config: %s  (Card configuration)", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
-    PrintAndLogEx(SUCCESS, "E-purse: %s  (Card challenge, CC)", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
-    PrintAndLogEx(SUCCESS, "     Kd: %s  (Debit key, hidden)", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
-    PrintAndLogEx(SUCCESS, "     Kc: %s  (Credit key, hidden)", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
-    PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
+    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("card") " ---------------------------");
+    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
+    PrintAndLogEx(SUCCESS, " Config: %s Card configuration", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
+    PrintAndLogEx(SUCCESS, "E-purse: %s Card challenge, CC", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
+    PrintAndLogEx(SUCCESS, "     Kd: %s Debit key, hidden", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+    PrintAndLogEx(SUCCESS, "     Kc: %s Credit key, hidden", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+    PrintAndLogEx(SUCCESS, "    AIA: %s Application Issuer area", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
 }
 
 static int CmdHFiClassList(const char *Cmd) {
@@ -1121,22 +1119,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    uint8_t *csn = dump;
-    PrintAndLogEx(INFO, "------+----+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |0x00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, 1, blocks, bytes);
-
-    /*
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "----+-------------------------+---------");
-        PrintAndLogEx(INFO, "blk | data                    | ascii");
-        PrintAndLogEx(INFO, "----+-------------------------+---------");
-        for (uint16_t i = 0; i < blocks; i++){
-            PrintAndLogEx(INFO, "%03d | %s ", i, sprint_hex_ascii(dump + (i * 8) , 8) );
-        }
-        PrintAndLogEx(INFO, "----+-------------------------+---------");
-        PrintAndLogEx(NORMAL, "");
-    */
     free(dump);
     return PM3_SUCCESS;
 }
@@ -1290,7 +1273,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         saveFileEML(fptr, decrypted, decryptedlen, 8);
         saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen, NULL);
 
-        PrintAndLogEx(INFO, "Following output skips CSN / block0");
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
 
         PrintAndLogEx(NORMAL, "");
@@ -1785,9 +1767,6 @@ write_dump:
         PrintAndLogEx(INFO, "Reading AA2 failed. dumping AA1 data to file");
 
     // print the dump
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "------+----+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |0x00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got);
 
     // use CSN as filename
@@ -2416,9 +2395,20 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         , filemaxblock
     );
     */
+    uint8_t pagemap = get_pagemap(hdr);
+
+
 
     int i = startblock;
-    PrintAndLogEx(INFO, "------+----+-------------------------+----------");
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, " blk| data                    | ascii    |lck| info");
+    PrintAndLogEx(INFO, "----+-------------------------+----------+---+--------------");
+    PrintAndLogEx(INFO, "0x00| " _GREEN_("%s") " |   | CSN ", sprint_hex_ascii(iclass_dump, 8));
+    
+    if (i != 1)
+        PrintAndLogEx(INFO, "....");
+
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
 
@@ -2458,10 +2448,28 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
             bl_lock = true;
         }
 
-        PrintAndLogEx(INFO, "  %c   |0x%02X| %s", (bl_lock) ? 'x' : ' ', i, sprint_hex_ascii(blk, 8));
+        const char *lockstr = (bl_lock) ? _RED_("x") : " ";
+
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+            const char *info_nonks[] = {"CSN", "Config", "AIA", "User"};
+            const char *s = info_nonks[3];
+            if (i < 3) {
+                s = info_nonks[i];
+            }            
+           
+            PrintAndLogEx(INFO, "0x%02X| %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
+        } else {
+            const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
+            const char *s = info_ks[6];
+            if (i < 6) {
+                s = info_ks[i];
+            }
+            PrintAndLogEx(INFO, "0x%02X| %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
+        }
         i++;
     }
-    PrintAndLogEx(INFO, "------+----+-------------------------+----------");
+    PrintAndLogEx(INFO, "----+-------------------------+----------+---+--------------");
+    PrintAndLogEx(NORMAL, "");
 }
 
 static int CmdHFiClassView(const char *Cmd) {
@@ -2505,13 +2513,9 @@ static int CmdHFiClassView(const char *Cmd) {
         PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") " end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
     }
 
+    PrintAndLogEx(NORMAL, "");
     print_picopass_header((picopass_hdr *) dump);
     print_picopass_info((picopass_hdr *) dump);
-
-    PrintAndLogEx(NORMAL, "");
-    uint8_t *csn = dump;
-    PrintAndLogEx(INFO, "------+----+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |0x00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
@@ -2687,12 +2691,15 @@ static int saveKeys(char *filename) {
 
 static int printKeys(void) {
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "idx| key");
+    PrintAndLogEx(INFO, "---+------------------------");
     for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
         if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0)
-            PrintAndLogEx(INFO, "%u: %s", i, sprint_hex(iClass_Key_Table[i], 8));
+            PrintAndLogEx(INFO, " %u |", i);
         else
-            PrintAndLogEx(INFO, "%u: "_YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], 8));
+            PrintAndLogEx(INFO, " %u | " _YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], 8));
     }
+    PrintAndLogEx(INFO, "---+------------------------");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -2810,110 +2817,14 @@ static void add_key(uint8_t *key) {
     }
 }
 
+
 /*
-static int iclass_chk_keys(void) {
-    return PM3_SUCCESS;
-}
-*/
-
-static int CmdHFiClassCheckKeys(const char *Cmd) {
-
-    // empty string
-    if (strlen(Cmd) == 0) return usage_hf_iclass_chk();
-
-    uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    // elite key,  raw key, standard key
-    bool use_elite = false;
-    bool use_raw = false;
-    bool use_credit_key = false;
-    bool found_key = false;
-    //bool found_credit = false;
-    bool got_csn = false;
-    bool errors = false;
-    uint8_t cmdp = 0x00;
-
-    char filename[FILE_PATH_SIZE] = {0};
-    uint8_t fileNameLen = 0;
-
-    uint64_t t1 = msclock();
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_chk();
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                if (fileNameLen < 1) {
-                    PrintAndLogEx(WARNING, _RED_("no filename found after f"));
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'e':
-                use_elite = true;
-                cmdp++;
-                break;
-            case 'c':
-                use_credit_key = true;
-                cmdp++;
-                break;
-            case 'r':
-                use_raw = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    if (errors) return usage_hf_iclass_chk();
-
-    uint8_t *keyBlock = NULL;
-    uint32_t keycount = 0;
-
-    // load keys
-    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
-    if (res != PM3_SUCCESS || keycount == 0) {
-        free(keyBlock);
-        return res;
-    }
+static int iclass_chk_keys(uint8_t *keyBlock, uint32_t keycount) {
 
     iclass_premac_t *pre = calloc(keycount, sizeof(iclass_premac_t));
-    if (!pre) {
-        free(keyBlock);
+    if (pre == NULL) {
         return PM3_EMALLOC;
     }
-
-    // Get CSN / UID and CCNR
-    PrintAndLogEx(SUCCESS, "Reading tag CSN / CCNR...");
-    for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
-        got_csn = select_only(CSN, CCNR, false);
-        if (got_csn == false)
-            PrintAndLogEx(WARNING, "one more try");
-    }
-
-    if (got_csn == false) {
-        PrintAndLogEx(WARNING, "Tried 10 times. Can't select card, aborting...");
-        free(keyBlock);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(CSN, sizeof(CSN)));
-    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
-
-    PrintAndLogEx(SUCCESS, "Generating diversified keys %s", (use_elite || use_raw) ? NOLF : "");
-    if (use_elite)
-        PrintAndLogEx(NORMAL, "using " _YELLOW_("elite algo"));
-    if (use_raw)
-        PrintAndLogEx(NORMAL, "using " _YELLOW_("raw mode"));
-
-    GenerateMacFrom(CSN, CCNR, use_raw, use_elite, keyBlock, keycount, pre);
-
-    PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", (use_credit_key) ? "CREDIT" : "DEBIT");
 
     // max 42 keys inside USB_COMMAND.  512/4 = 103 mac
     uint32_t chunksize = keycount > (PM3_CMD_DATA_SIZE / 4) ? (PM3_CMD_DATA_SIZE / 4) : keycount;
@@ -2998,7 +2909,195 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             break;
         }
 
-    } // end chunks of keys
+    }
+    return PM3_SUCCESS;
+}
+*/
+
+static int CmdHFiClassCheckKeys(const char *Cmd) {
+
+    // empty string
+    if (strlen(Cmd) == 0) return usage_hf_iclass_chk();
+
+    uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    // elite key,  raw key, standard key
+    bool use_elite = false;
+    bool use_raw = false;
+    bool use_credit_key = false;
+    bool found_key = false;
+    //bool found_credit = false;
+    bool got_csn = false;
+    bool errors = false;
+    uint8_t cmdp = 0x00;
+
+    char filename[FILE_PATH_SIZE] = {0};
+    uint8_t fileNameLen = 0;
+
+    uint64_t t1 = msclock();
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_chk();
+            case 'f':
+                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
+                if (fileNameLen < 1) {
+                    PrintAndLogEx(WARNING, _RED_("no filename found after f"));
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'e':
+                use_elite = true;
+                cmdp++;
+                break;
+            case 'c':
+                use_credit_key = true;
+                cmdp++;
+                break;
+            case 'r':
+                use_raw = true;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    if (errors) return usage_hf_iclass_chk();
+
+    uint8_t *keyBlock = NULL;
+    uint32_t keycount = 0;
+
+    // load keys
+    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+    if (res != PM3_SUCCESS || keycount == 0) {
+        free(keyBlock);
+        return res;
+    }
+    
+        // Get CSN / UID and CCNR
+    PrintAndLogEx(SUCCESS, "Reading tag CSN / CCNR...");
+    for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
+        got_csn = select_only(CSN, CCNR, false);
+        if (got_csn == false)
+            PrintAndLogEx(WARNING, "one more try");
+    }
+
+    if (got_csn == false) {
+        PrintAndLogEx(WARNING, "Tried 10 times. Can't select card, aborting...");
+        free(keyBlock);
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    iclass_premac_t *pre = calloc(keycount, sizeof(iclass_premac_t));
+    if (pre == NULL) {
+        return PM3_EMALLOC;
+    }
+
+
+    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(CSN, sizeof(CSN)));
+    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+
+    PrintAndLogEx(SUCCESS, "Generating diversified keys %s", (use_elite || use_raw) ? NOLF : "");
+    if (use_elite)
+        PrintAndLogEx(NORMAL, "using " _YELLOW_("elite algo"));
+    if (use_raw)
+        PrintAndLogEx(NORMAL, "using " _YELLOW_("raw mode"));
+
+    GenerateMacFrom(CSN, CCNR, use_raw, use_elite, keyBlock, keycount, pre);
+
+    PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", (use_credit_key) ? "CREDIT" : "DEBIT");
+
+
+    // max 42 keys inside USB_COMMAND.  512/4 = 103 mac
+    uint32_t chunksize = keycount > (PM3_CMD_DATA_SIZE / 4) ? (PM3_CMD_DATA_SIZE / 4) : keycount;
+    bool lastChunk = false;
+
+    // fast push mode
+    conn.block_after_ACK = true;
+
+    // keep track of position of found key
+    uint8_t found_offset = 0;
+    uint32_t key_offset = 0;
+    // main keychunk loop
+    for (key_offset = 0; key_offset < keycount; key_offset += chunksize) {
+
+        uint64_t t2 = msclock();
+        uint8_t timeout = 0;
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "Aborted via keyboard!");
+            goto out;
+        }
+
+        uint32_t keys = ((keycount - key_offset)  > chunksize) ? chunksize : keycount - key_offset;
+
+        // last chunk?
+        if (keys == keycount - key_offset) {
+            lastChunk = true;
+            // Disable fast mode on last command
+            conn.block_after_ACK = false;
+        }
+        uint32_t flags = lastChunk << 8;
+        // bit 16
+        //   - 1 indicates credit key
+        //   - 0 indicates debit key (default)
+        flags |= (use_credit_key << 16);
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + key_offset, 4 * keys);
+        PacketResponseNG resp;
+
+        bool looped = false;
+        while (!WaitForResponseTimeout(CMD_HF_ICLASS_CHKKEYS, &resp, 2000)) {
+            timeout++;
+            PrintAndLogEx(NORMAL, "." NOLF);
+            if (timeout > 120) {
+                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+                goto out;
+            }
+            looped = true;
+        }
+
+        if (looped)
+            PrintAndLogEx(NORMAL, "");
+
+        found_offset = resp.oldarg[1] & 0xFF;
+        uint8_t isOK = resp.oldarg[0] & 0xFF;
+
+        t2 = msclock() - t2;
+        switch (isOK) {
+            case 1: {
+                found_key = true;
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s")
+                              , sprint_hex(keyBlock + (key_offset + found_offset) * 8, 8)
+                             );
+                break;
+            }
+            case 0: {
+                PrintAndLogEx(INPLACE, "Chunk [%d/%d]", key_offset, keycount);
+                break;
+            }
+            case 99: {
+            }
+            default: {
+                break;
+            }
+        }
+
+        // both keys found.
+        if (found_key) {
+            break;
+        }
+
+    }
 
 out:
     t1 = msclock() - t1;
