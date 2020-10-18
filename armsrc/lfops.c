@@ -2526,8 +2526,8 @@ void EM4xLogin(uint32_t pwd) {
     EM4xLoginEx(pwd);
 
     WaitUS(400);
-
-    DoPartialAcquisition(20, false, 1000, 1000);
+    // We need to acquire more than needed, to help demodulators finding the proper modulation
+    DoPartialAcquisition(20, false, 6000, 1000);
 
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
