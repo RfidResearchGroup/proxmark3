@@ -203,34 +203,33 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
 int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
     *datalen = 0;
 
-    int ibuf = 0;
-    uint8_t tmp_buf[512] = {0};
-    int res = CLIParamStrToBuf(argstr, tmp_buf, maxdatalen * 2, &ibuf); // *2 because here HEX
+    int tmplen = 0;
+    uint8_t tmpstr[(256 * 2) + 1] = {0};
+    
+    // concat all strings in argstr into tmpstr[]
+    // 
+    int res = CLIParamStrToBuf(argstr, tmpstr, sizeof(tmpstr), &tmplen);
     if (res) {
-        printf("Parameter error: buffer overflow.\n");
-        fflush(stdout);
         return res;
     }
-    if (ibuf == 0) {
+    if (tmplen == 0) {
         return res;
     }
 
-    switch (param_gethex_to_eol((char *)tmp_buf, 0, data, maxdatalen, datalen)) {
+    res = param_gethex_to_eol((char*)tmpstr, 0, data, maxdatalen, datalen);
+    switch (res) {
         case 1:
-            printf("Parameter error: Invalid HEX value.\n");
-            fflush(stdout);
-            return 1;
+            printf("Parameter error: Invalid HEX value\n");
+            break;
         case 2:
-            printf("Parameter error: parameter too large.\n");
-            fflush(stdout);
-            return 2;
+            printf("Parameter error: parameter too large\n");
+            break;
         case 3:
-            printf("Parameter error: Hex string must have even number of digits.\n");
-            fflush(stdout);
-            return 3;
+            printf("Parameter error: Hex string must have EVEN number of digits\n");
+            break;
     }
-
-    return 0;
+    fflush(stdout);
+    return res;
 }
 
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
@@ -238,26 +237,37 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (!argstr->count)
         return 0;
 
-    uint8_t tmp_buf[512] = {0};
+    uint8_t tmpstr[(256 * 2) + 1] = {0};
     int ibuf = 0;
 
     for (int i = 0; i < argstr->count; i++) {
+        
         int len = strlen(argstr->sval[i]);
-        memcpy(&tmp_buf[ibuf], argstr->sval[i], len);
+            
+        if (len > ( (sizeof(tmpstr) / 2 ) - ibuf)) {
+            printf("Parameter error: string too long (%i chars), expect MAX %zu chars\n", len + ibuf, (sizeof(tmpstr) / 2));
+            fflush(stdout);
+            return 2;
+        }
+                
+        memcpy(&tmpstr[ibuf], argstr->sval[i], len);
+
         ibuf += len;
     }
-    tmp_buf[ibuf] = 0;
+    
+    ibuf = MIN(ibuf, (sizeof(tmpstr) / 2));
+    tmpstr[ibuf] = 0;
 
-    if (!ibuf)
+    if (ibuf == 0)
         return 0;
 
-    if (ibuf + 1 > maxdatalen) {
-        printf("Parameter error: string too long, expect max %i chars\n", maxdatalen - 1);
+    if (ibuf > maxdatalen) {
+        printf("Parameter error: string too long (%i chars), expected MAX %i chars\n", ibuf, maxdatalen);
         fflush(stdout);
         return 2;
     }
 
-    memcpy(data, tmp_buf, ibuf + 1);
+    memcpy(data, tmpstr, ibuf + 1);
     *datalen = ibuf;
     return 0;
 }

@@ -2501,7 +2501,7 @@ static void SendForward(uint8_t fwd_bit_count) {
     }
 }
 
-static void EM4xLogin(uint32_t pwd) {
+static void EM4xLoginEx(uint32_t pwd) {
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_LOGIN);
     len += Prepare_Data(pwd & 0xFFFF, pwd >> 16);
@@ -2510,6 +2510,29 @@ static void EM4xLogin(uint32_t pwd) {
     // should receive
     // 0000 1010 ok
     // 0000 0001 fail
+}
+
+void EM4xLogin(uint32_t pwd) {
+
+    StartTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    WaitMS(20);
+
+    LED_A_ON();
+
+    // clear buffer now so it does not interfere with timing later
+    BigBuf_Clear_ext(false);
+
+    EM4xLoginEx(pwd);
+
+    WaitUS(400);
+    // We need to acquire more than needed, to help demodulators finding the proper modulation
+    DoPartialAcquisition(0, false, 6000, 1000);
+
+    StopTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    reply_ng(CMD_LF_EM4X_LOGIN, PM3_SUCCESS, NULL, 0);
+    LEDsoff();
 }
 
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
@@ -2529,7 +2552,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
     * 0000 1010 ok
     * 0000 0001 fail
     **/
-    if (usepwd) EM4xLogin(pwd);
+    if (usepwd) EM4xLoginEx(pwd);
 
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_READ);
@@ -2539,7 +2562,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
     WaitUS(400);
 
-    DoPartialAcquisition(20, false, 6000, 1000);
+    DoPartialAcquisition(0, false, 6000, 1000);
 
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2564,7 +2587,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
     * 0000 1010 ok.
     * 0000 0001 fail
     **/
-    if (usepwd) EM4xLogin(pwd);
+    if (usepwd) EM4xLoginEx(pwd);
 
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_WRITE);
@@ -2607,7 +2630,7 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
     * 0000 1010 ok.
     * 0000 0001 fail
     **/
-    if (usepwd) EM4xLogin(pwd);
+    if (usepwd) EM4xLoginEx(pwd);
 
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_PROTECT);

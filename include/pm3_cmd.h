@@ -496,6 +496,7 @@ typedef struct {
 #define CMD_LF_T55XX_RESET_READ                                           0x0216
 #define CMD_LF_PCF7931_READ                                               0x0217
 #define CMD_LF_PCF7931_WRITE                                              0x0223
+#define CMD_LF_EM4X_LOGIN                                                 0x0229
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
 #define CMD_LF_EM4X_PROTECTWORD                                           0x021B

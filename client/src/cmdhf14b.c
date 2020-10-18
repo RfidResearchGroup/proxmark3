@@ -130,7 +130,6 @@ static int CmdHF14BSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b sim",
                   "Simulate a ISO/IEC 14443 type B tag with 4 byte UID / PUPI",
-                  "hf 14b sim\n"
                   "hf 14b sim -u 11AA33BB"
                  );
 
@@ -139,7 +138,7 @@ static int CmdHF14BSim(const char *Cmd) {
         arg_strx0("u", "uid", "hex", "4byte UID/PUPI"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t pupi[4];
     int n = 0;
@@ -150,6 +149,9 @@ static int CmdHF14BSim(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to read pupi");
         return PM3_EINVARG;
     }
+    
+    PrintAndLogEx(INFO, "Simulate with PUPI : " _GREEN_("%s"), sprint_hex_inrow(pupi, sizeof(pupi)));
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));
     return PM3_SUCCESS;

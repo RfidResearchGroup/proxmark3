@@ -970,6 +970,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             );
             break;
         }
+        case CMD_LF_EM4X_LOGIN: {
+            struct p {
+                uint32_t password;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EM4xLogin(payload->password);
+            break;
+        }
         case CMD_LF_EM4X_READWORD: {
             struct p {
                 uint32_t password;
