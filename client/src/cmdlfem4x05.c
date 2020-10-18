@@ -1095,13 +1095,20 @@ int CmdEM4x05Chk(const char *Cmd) {
     uint64_t card_id = arg_get_u64_def(ctx, 2, 0);
     CLIParserFree(ctx);
 
+    uint8_t addr = 4;
+    uint32_t word = 0;
+    // Test first if a password is required
+    int status = EM4x05ReadWord_ext(addr, 0, false, &word);
+    if (status == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Password doesn't seem to be needed to read the tag");
+        return PM3_SUCCESS;
+    }
+
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
     PrintAndLogEx(NORMAL, "");
     
-    uint8_t addr = 4;
-    uint32_t word = 0;
     bool found = false;
     uint64_t t1 = msclock();
     
@@ -1111,7 +1118,7 @@ int CmdEM4x05Chk(const char *Cmd) {
         uint32_t pwd = lf_t55xx_white_pwdgen(card_id & 0xFFFFFFFF);
         PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", pwd);
 
-        int status = EM4x05ReadWord_ext(addr, pwd, true, &word);
+        status = EM4x05ReadWord_ext(addr, pwd, true, &word);
         if (status == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
@@ -1153,7 +1160,7 @@ int CmdEM4x05Chk(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
 
-            int status = EM4x05ReadWord_ext(addr, curr_password, 1, &word);
+            status = EM4x05ReadWord_ext(addr, curr_password, 1, &word);
             if (status == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                 found = true;
