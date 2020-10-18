@@ -147,7 +147,7 @@ static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t col
     return true;
 }
 
-#define EM_PREAMBLE_LEN 6
+#define EM_PREAMBLE_LEN 8
 // download samples from device and copy to Graphbuffer
 static bool downloadSamplesEM(void) {
 
@@ -178,15 +178,15 @@ static int doPreambleSearch(size_t *startIdx) {
         return PM3_ESOFT;
     }
 
-    // set size to 9 to only test first 3 positions for the preamble
+    // set size to 11 to only test first 3 positions for the preamble
     // do not set it too long else an error preamble followed by 010 could be seen as success.
-    size_t size = (9 > DemodBufferLen) ? DemodBufferLen : 9;
+    size_t size = (11 > DemodBufferLen) ? DemodBufferLen : 11;
     *startIdx = 0;
     // skip first two 0 bits as they might have been missed in the demod
-    uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 1, 0, 1, 0};
+    uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
 
     if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 1};
+        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
         if (!preambleSearchEx(DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
             return PM3_ESOFT;
