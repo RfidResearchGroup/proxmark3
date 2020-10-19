@@ -2052,14 +2052,14 @@ static int CmdHFiClassRestore(const char *Cmd) {
     }
 
     iclass_restore_req_t *payload = calloc(1, payload_size);
-    payload->req.use_raw = rawkey,
-             payload->req.use_elite = elite,
-                      payload->req.use_credit_key = use_credit_key,
-                               payload->req.use_replay = false,
-                                        payload->req.blockno = startblock,
-                                                 payload->req.send_reply = true,
-                                                          payload->req.do_auth = true,
-                                                                   memcpy(payload->req.key, KEY, 8);
+    payload->req.use_raw = rawkey;
+    payload->req.use_elite = elite;
+    payload->req.use_credit_key = use_credit_key;
+    payload->req.use_replay = false;
+    payload->req.blockno = startblock;
+    payload->req.send_reply = true;
+    payload->req.do_auth = true;
+    memcpy(payload->req.key, KEY, 8);
 
     payload->item_cnt = (endblock - startblock + 1);
 
