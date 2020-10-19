@@ -428,51 +428,51 @@ static void fuse_config(const picopass_hdr *hdr) {
     uint16_t otp = (hdr->conf.otp[1] << 8 | hdr->conf.otp[0]);
 
     PrintAndLogEx(INFO, "    Raw: " _YELLOW_("%s"), sprint_hex((uint8_t*)&hdr->conf, 8));
-    PrintAndLogEx(INFO, "         " _YELLOW_("%02X") ".....................  App limit", hdr->conf.app_limit);
+    PrintAndLogEx(INFO, "         " _YELLOW_("%02X") ".....................  app limit", hdr->conf.app_limit);
     PrintAndLogEx(INFO, "            " _YELLOW_("%04X") " ( %5u )......  OTP", otp, otp);
-    PrintAndLogEx(INFO, "                  " _YELLOW_("%02X") "............  Block write lock", hdr->conf.block_writelock);
-    PrintAndLogEx(INFO, "                     " _YELLOW_("%02X") ".........  Chip", hdr->conf.chip_config);
-    PrintAndLogEx(INFO, "                        " _YELLOW_("%02X") "......  Mem", hdr->conf.mem_config);
+    PrintAndLogEx(INFO, "                  " _YELLOW_("%02X") "............  block write lock", hdr->conf.block_writelock);
+    PrintAndLogEx(INFO, "                     " _YELLOW_("%02X") ".........  chip", hdr->conf.chip_config);
+    PrintAndLogEx(INFO, "                        " _YELLOW_("%02X") "......  mem", hdr->conf.mem_config);
     PrintAndLogEx(INFO, "                           " _YELLOW_("%02X") "...  EAS", hdr->conf.eas);
-    PrintAndLogEx(INFO, "                              " _YELLOW_("%02X") "  Fuses", hdr->conf.fuses);
+    PrintAndLogEx(INFO, "                              " _YELLOW_("%02X") "  fuses", hdr->conf.fuses);
 
     uint8_t fuses = hdr->conf.fuses;
 
     PrintAndLogEx(INFO, "  Fuses:");
     if (isset(fuses, FUSE_FPERS))
-        PrintAndLogEx(SUCCESS, "    mode..... " _GREEN_("Personalization (programmable)"));
+        PrintAndLogEx(SUCCESS, "    mode......... " _GREEN_("Personalization (programmable)"));
     else
-        PrintAndLogEx(SUCCESS, "    mode..... " _YELLOW_("Application (locked)"));
+        PrintAndLogEx(SUCCESS, "    mode......... " _YELLOW_("Application (locked)"));
 
     if (isset(fuses, FUSE_CODING1)) {
-        PrintAndLogEx(SUCCESS, "    coding.. RFU");
+        PrintAndLogEx(SUCCESS, "    coding...... RFU");
     } else {
         if (isset(fuses, FUSE_CODING0))
-            PrintAndLogEx(SUCCESS, "    coding... " _YELLOW_("ISO 14443-2 B / 15693"));
+            PrintAndLogEx(SUCCESS, "    coding....... " _YELLOW_("ISO 14443-2 B / 15693"));
         else
-            PrintAndLogEx(SUCCESS, "    coding... " _YELLOW_("ISO 14443-B only"));
+            PrintAndLogEx(SUCCESS, "    coding....... " _YELLOW_("ISO 14443-B only"));
     }
 
     uint8_t pagemap = get_pagemap(hdr);
     switch (pagemap) {
         case 0x0:
-            PrintAndLogEx(INFO, "    crypt.... No auth possible. Read only if RA is enabled");
+            PrintAndLogEx(INFO, "    crypt........ No auth possible. Read only if RA is enabled");
             break;
         case 0x1:
-            PrintAndLogEx(SUCCESS, "    crypt.... Non secured page");
+            PrintAndLogEx(SUCCESS, "    crypt........ Non secured page");
             break;
         case 0x2:
-            PrintAndLogEx(INFO, "    crypt.... Secured page, keys locked");
+            PrintAndLogEx(INFO, "    crypt........ Secured page, keys locked");
             break;
         case 0x03:
-            PrintAndLogEx(SUCCESS, "    crypt.... Secured page, " _GREEN_("keys not locked"));
+            PrintAndLogEx(SUCCESS, "    crypt........ Secured page, " _GREEN_("keys not locked"));
             break;
     }
 
     if (isset(fuses, FUSE_RA))
-        PrintAndLogEx(SUCCESS, "    RA....... Read access enabled (non-secure mode)");
+        PrintAndLogEx(SUCCESS, "    RA........... Read access enabled (non-secure mode)");
     else
-        PrintAndLogEx(INFO, "    RA....... Read access not enabled");
+        PrintAndLogEx(INFO, "    RA........... Read access not enabled");
 }
 
 static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *app_areas, uint8_t *kb) {
@@ -545,23 +545,23 @@ static void mem_app_config(const picopass_hdr *hdr) {
     PrintAndLogEx(INFO, "    AA1 blocks %u { 0x06 - 0x%02X (06 - %02d) }", app1_limit, app1_limit + 5, app1_limit + 5);
     PrintAndLogEx(INFO, "    AA2 blocks %u { 0x%02X - 0x%02X (%02d - %02d) }", app2_limit - app1_limit, app1_limit + 5 + 1, app2_limit, app1_limit + 5 + 1, app2_limit);
 
-    PrintAndLogEx(INFO, "------------------------ " _CYAN_("KeyAccess") " -------------------------");
-    PrintAndLogEx(INFO, " Kd = Debit key (AA1),  Kc = Credit key (AA2)");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("KeyAccess") " ------------------------");
+    PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
     uint8_t book = isset(mem, 0x20);
     if (book) {
-        PrintAndLogEx(INFO, "     Read A - Kd");
-        PrintAndLogEx(INFO, "     Read B - Kc");
-        PrintAndLogEx(INFO, "    Write A - Kd");
-        PrintAndLogEx(INFO, "    Write B - Kc");
-        PrintAndLogEx(INFO, "      Debit - Kd or Kc");
-        PrintAndLogEx(INFO, "     Credit - Kc");
+        PrintAndLogEx(INFO, "    Read A....... debit");
+        PrintAndLogEx(INFO, "    Read B....... credit");
+        PrintAndLogEx(INFO, "    Write A...... debit");
+        PrintAndLogEx(INFO, "    Write B...... credit");
+        PrintAndLogEx(INFO, "    Debit........ debit or credit");
+        PrintAndLogEx(INFO, "    Credit....... credit");
     } else {
-        PrintAndLogEx(INFO, "     Read A - Kd or Kc");
-        PrintAndLogEx(INFO, "     Read B - Kd or Kc");
-        PrintAndLogEx(INFO, "    Write A - Kc");
-        PrintAndLogEx(INFO, "    Write B - Kc");
-        PrintAndLogEx(INFO, "      Debit - Kd or Kc");
-        PrintAndLogEx(INFO, "     Credit - Kc");
+        PrintAndLogEx(INFO, "    Read A....... debit or credit");
+        PrintAndLogEx(INFO, "    Read B....... debit or credit");
+        PrintAndLogEx(INFO, "    Write A...... credit");
+        PrintAndLogEx(INFO, "    Write B...... credit");
+        PrintAndLogEx(INFO, "    Debit........ debit or credit");
+        PrintAndLogEx(INFO, "    redit........ credit");
     }
 }
 
@@ -3539,33 +3539,33 @@ int info_iclass(void) {
         picopass_ns_hdr *ns_hdr = (picopass_ns_hdr *)resp.data.asBytes;
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --------------------------");
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
+        PrintAndLogEx(INFO, "--------------------- " _CYAN_("Tag Information") " ----------------------");
+        PrintAndLogEx(INFO, "------------------------------------------------------------");
 
         if (readStatus & FLAG_ICLASS_CSN) {
-            PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") "  (uid)", sprint_hex(hdr->csn, sizeof(hdr->csn)));
+            PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
         }
 
         if (readStatus & FLAG_ICLASS_CONF) {
-            PrintAndLogEx(SUCCESS, " Config: %s  (Card configuration)", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
+            PrintAndLogEx(SUCCESS, " Config: %s card configuration", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
         }
 
         // page mapping.  If fuse0|1 == 0x01, card is in non-secure mode, with CSN, CONF, AIA as top 3 blocks.
         // page9 in http://www.proxmark.org/files/Documents/13.56%20MHz%20-%20iClass/DS%20Picopass%202KS%20V1-0.pdf
         uint8_t pagemap = get_pagemap(hdr);
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-            PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area)));
+            PrintAndLogEx(SUCCESS, "    AIA: %s application issuer area", sprint_hex(ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area)));
         } else {
 
             if (readStatus & FLAG_ICLASS_CC) {
-                PrintAndLogEx(SUCCESS, "E-purse: %s  (Card challenge, CC)", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
+                PrintAndLogEx(SUCCESS, "E-purse: %s Card challenge, CC", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
             }
 
-            PrintAndLogEx(SUCCESS, "     Kd: %s  (Debit key, hidden)", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
-            PrintAndLogEx(SUCCESS, "     Kc: %s  (Credit key, hidden)", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+            PrintAndLogEx(SUCCESS, "     Kd: %s debit key, hidden", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+            PrintAndLogEx(SUCCESS, "     Kc: %s credit key, hidden", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
 
             if (readStatus & FLAG_ICLASS_AIA) {
-                PrintAndLogEx(SUCCESS, "    AIA: %s  (Application Issuer area)", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
+                PrintAndLogEx(SUCCESS, "    AIA: %s application issuer area", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
             }
         }
 
@@ -3573,7 +3573,7 @@ int info_iclass(void) {
             print_picopass_info(hdr);
         }
 
-        PrintAndLogEx(INFO, "------ " _CYAN_("Fingerprint") " ------");
+        PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
 
         uint8_t aia[8];
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE)
@@ -3588,18 +3588,17 @@ int info_iclass(void) {
         bool se_enabled = (memcmp(aia, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
         if (isHidRange) {
-            PrintAndLogEx(SUCCESS, "CSN is in HID range");
+            PrintAndLogEx(SUCCESS, "    CSN.......... " _YELLOW_("HID range"));
             if (legacy)
-                PrintAndLogEx(SUCCESS, "Credential : " _GREEN_("iCLASS legacy"));
+                PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS legacy"));
             if (se_enabled)
-                PrintAndLogEx(SUCCESS, "Credential : " _GREEN_("iCLASS SE"));
-
+                PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS SE"));
         } else {
-            PrintAndLogEx(SUCCESS, _YELLOW_("PicoPass")" (CSN is not in HID range)");
+            PrintAndLogEx(SUCCESS, "    CSN..-.......  " _YELLOW_("outside HID range"));
         }
 
         uint8_t cardtype = get_mem_config(hdr);
-        PrintAndLogEx(SUCCESS, " Card type : " _GREEN_("%s"), card_types[cardtype]);
+        PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
     }
 
     DropField();
