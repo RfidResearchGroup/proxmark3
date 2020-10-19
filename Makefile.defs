@@ -27,6 +27,9 @@ LD = g++
 SH = sh
 BASH = bash
 PERL = perl
+CCC =foo
+CC_VERSION = $(shell $(CC) -dumpversion 2>/dev/null|sed 's/\..*//')
+CC_VERSION := $(or $(strip $(CC_VERSION)),0)
 
 PATHSEP=/
 PREFIX ?=              /usr/local
@@ -62,7 +65,11 @@ DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-s
 # Some more warnings we need first to eliminate, so temporarely tolerated:
 DEFCFLAGS += -Wcast-align -Wno-error=cast-align
 DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
-
+# GCC 10 has issues with false positives on stringop-overflow, let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
+# beware these flags didn't exist for GCC < 7
+ifeq ($(shell expr $(CC_VERSION) \>= 10), 1)
+    DEFCFLAGS += -Wno-stringop-overflow -Wno-error=stringop-overflow
+endif
 ifeq ($(platform),Darwin)
 # their readline has strict-prototype issues
 DEFCFLAGS += -Wno-strict-prototypes
