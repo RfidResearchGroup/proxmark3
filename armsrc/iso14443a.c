@@ -2629,7 +2629,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, resp_par);
-        if (len == 0) 
+        if (len == 0)
             return 0;
 
         if (p_card) {

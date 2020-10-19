@@ -177,13 +177,13 @@ Check column "offline" for their availability.
 |`hf 15 info             `|N       |`Tag information`
 |`hf 15 sniff            `|N       |`Sniff ISO15693 traffic`
 |`hf 15 raw              `|N       |`Send raw hex data to tag`
-|`hf 15 read             `|N       |`Read a block`
+|`hf 15 rdbl             `|N       |`Read a block`
 |`hf 15 reader           `|N       |`Act like an ISO15693 reader`
 |`hf 15 readmulti        `|N       |`Reads multiple Blocks`
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO15693 tag`
 |`hf 15 samples          `|N       |`Acquire Samples as Reader (enables carrier, sends inquiry)`
 |`hf 15 sim              `|N       |`Fake an ISO15693 tag`
-|`hf 15 write            `|N       |`Write a block`
+|`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 findafi          `|N       |`Brute force AFI of an ISO15693 tag`
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO15693 tag`
 |`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO15693 tag`
@@ -233,7 +233,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf fido help           `|Y       |`This help.`
-|`hf fido info           `|N       |`List ISO 14443A history`
+|`hf fido list           `|N       |`List ISO 14443A history`
 |`hf fido info           `|N       |`Info about FIDO tag.`
 |`hf fido reg            `|N       |`FIDO U2F Registration Message.`
 |`hf fido auth           `|N       |`FIDO U2F Authentication Message.`
@@ -256,10 +256,10 @@ Check column "offline" for their availability.
 |`hf iclass restore      `|N       |`[options..] Restore a dump file onto a Picopass / iCLASS tag`
 |`hf iclass sniff        `|N       |`            Eavesdrop Picopass / iCLASS communication`
 |`hf iclass wrbl         `|N       |`[options..] Write Picopass / iCLASS block`
-|`hf iclass chk          `|Y       |`[options..] Check keys`
+|`hf iclass autopwn      `|N       |`[options..] Automatic key recovery tool for iCLASS`
+|`hf iclass chk          `|N       |`[options..] Check keys`
 |`hf iclass loclass      `|Y       |`[options..] Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`[options..] Uses authentication trace to check for key in dictionary file`
-|`hf iclass replay       `|N       |`<mac>       Read Picopass / iCLASS tag via replay attack`
 |`hf iclass sim          `|N       |`[options..] Simulate iCLASS tag`
 |`hf iclass eload        `|N       |`[f <fn>   ] Load Picopass / iCLASS dump file into emulator memory`
 |`hf iclass esave        `|N       |`[f <fn>   ] Save emulator memory to file`
@@ -556,6 +556,19 @@ Check column "offline" for their availability.
 |`lf cotag read          `|N       |`Attempt to read and extract tag data`
 
 
+### lf destron
+
+ { FDX-A Destron RFIDs...     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf destron help        `|Y       |`This help`
+|`lf destron demod       `|Y       |`Demodulate an Destron tag from the GraphBuffer`
+|`lf destron read        `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf destron clone       `|N       |`Clone Destron tag to T55x7`
+|`lf destron sim         `|N       |`Simulate Destron tag`
+
+
 ### lf em
 
  { EM4X CHIPs & RFIDs...      }
@@ -570,12 +583,14 @@ Check column "offline" for their availability.
 |`lf em 410x_watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`
 |`lf em 410x_spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
 |`lf em 410x_clone       `|N       |`write EM410x UID to T55x7 or Q5/T5555 tag`
+|`lf em 4x05_chk         `|N       |`Check passwords from dictionary`
 |`lf em 4x05_demod       `|Y       |`demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
 |`lf em 4x05_dump        `|N       |`dump EM4x05/EM4x69 tag`
 |`lf em 4x05_wipe        `|N       |`wipe EM4x05/EM4x69 tag`
 |`lf em 4x05_info        `|N       |`tag information EM4x05/EM4x69`
 |`lf em 4x05_read        `|N       |`read word data from EM4x05/EM4x69`
 |`lf em 4x05_write       `|N       |`write word data to EM4x05/EM4x69`
+|`lf em 4x05_unlock      `|N       |`execute tear off against EM4x05/EM4x69`
 |`lf em 4x50_dump        `|N       |`dump EM4x50 tag`
 |`lf em 4x50_info        `|N       |`tag information EM4x50`
 |`lf em 4x50_write       `|N       |`write word data to EM4x50`

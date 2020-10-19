@@ -205,9 +205,9 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 
     int tmplen = 0;
     uint8_t tmpstr[(256 * 2) + 1] = {0};
-    
+
     // concat all strings in argstr into tmpstr[]
-    // 
+    //
     int res = CLIParamStrToBuf(argstr, tmpstr, sizeof(tmpstr), &tmplen);
     if (res) {
         return res;
@@ -216,7 +216,7 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
         return res;
     }
 
-    res = param_gethex_to_eol((char*)tmpstr, 0, data, maxdatalen, datalen);
+    res = param_gethex_to_eol((char *)tmpstr, 0, data, maxdatalen, datalen);
     switch (res) {
         case 1:
             printf("Parameter error: Invalid HEX value\n");
@@ -241,20 +241,20 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     int ibuf = 0;
 
     for (int i = 0; i < argstr->count; i++) {
-        
+
         int len = strlen(argstr->sval[i]);
-            
-        if (len > ( (sizeof(tmpstr) / 2 ) - ibuf)) {
+
+        if (len > ((sizeof(tmpstr) / 2) - ibuf)) {
             printf("Parameter error: string too long (%i chars), expect MAX %zu chars\n", len + ibuf, (sizeof(tmpstr) / 2));
             fflush(stdout);
             return 2;
         }
-                
+
         memcpy(&tmpstr[ibuf], argstr->sval[i], len);
 
         ibuf += len;
     }
-    
+
     ibuf = MIN(ibuf, (sizeof(tmpstr) / 2));
     tmpstr[ibuf] = 0;
 

@@ -601,7 +601,7 @@ static int CmdIndalaClone(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, data, &datalen);
 
     bool is_t5555 = arg_get_lit(ctx, 4);
-    
+
     bool got_cn = false, got_26 = false;
     if (is_long_uid == false) {
 
@@ -616,7 +616,7 @@ static int CmdIndalaClone(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
-    
+
     PrintAndLogEx(INFO, "Target chip " _YELLOW_("%s"), (is_t5555) ? "Q5/T5555" : "T55x7");
 
     if (is_long_uid) {

@@ -1474,13 +1474,13 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
     int res = 0;
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, &start_time);
-    
+
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
 
         res = PM3_ETEAROFF;
 
     } else {
-    
+
         *eof_time = start_time + 32 * ((8 * ts->max) - 4); // substract the 4 padding bits after EOF
         LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
         if (recv != NULL) {
@@ -1595,11 +1595,11 @@ void ReaderIso15693(uint32_t parameter) {
     uint32_t start_time = 0;
     uint32_t eof_time;
     int recvlen = SendDataTag(cmd, sizeof(cmd), true, true, answer, ISO15693_MAX_RESPONSE_LENGTH, start_time, ISO15693_READER_TIMEOUT, &eof_time);
-    
+
     if (recvlen == PM3_ETEAROFF) { // tearoff occured
         reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
     } else {
-        
+
         start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
         // we should do a better check than this
@@ -1634,7 +1634,7 @@ void ReaderIso15693(uint32_t parameter) {
             }
         } else {
             DbpString("Failed to select card");
-            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);            
+            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
         }
     }
     switch_off();
@@ -1869,7 +1869,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         }
 
         if (recv) {
-            recvlen = MIN(recvlen,ISO15693_MAX_RESPONSE_LENGTH);
+            recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
             reply_mix(CMD_ACK, recvlen, 0, 0, recvbuf, recvlen);
         } else {
             reply_mix(CMD_ACK, 1, 0, 0, NULL, 0);

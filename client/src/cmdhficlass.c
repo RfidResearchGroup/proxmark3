@@ -427,7 +427,7 @@ static void fuse_config(const picopass_hdr *hdr) {
 
     uint16_t otp = (hdr->conf.otp[1] << 8 | hdr->conf.otp[0]);
 
-    PrintAndLogEx(INFO, "    Raw: " _YELLOW_("%s"), sprint_hex((uint8_t*)&hdr->conf, 8));
+    PrintAndLogEx(INFO, "    Raw: " _YELLOW_("%s"), sprint_hex((uint8_t *)&hdr->conf, 8));
     PrintAndLogEx(INFO, "         " _YELLOW_("%02X") ".....................  app limit", hdr->conf.app_limit);
     PrintAndLogEx(INFO, "            " _YELLOW_("%04X") " ( %5u )......  OTP", otp, otp);
     PrintAndLogEx(INFO, "                  " _YELLOW_("%02X") "............  block write lock", hdr->conf.block_writelock);
@@ -1540,7 +1540,7 @@ static int CmdHFiClassDump(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Using " _YELLOW_("replay NR/MAC mode"));
                 use_replay = true;
                 cmdp++;
-                break; 
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -1552,7 +1552,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         PrintAndLogEx(FAILED, "Can not use a combo of 'e', 'r', 'n'");
         errors = true;
     }
-    
+
     if (errors) return usage_hf_iclass_dump();
 
     uint32_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
@@ -1788,7 +1788,7 @@ write_dump:
 }
 
 static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose) {
- 
+
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
         .req.use_elite = elite,
@@ -1882,13 +1882,13 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 rawkey = true;
                 cmdp++;
                 break;
-/*
-            case 'n':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("replay NR/MAC mode"));
-                use_replay = true;
-                cmdp++;
-                break;  
-*/                
+            /*
+                        case 'n':
+                            PrintAndLogEx(SUCCESS, "Using " _YELLOW_("replay NR/MAC mode"));
+                            use_replay = true;
+                            cmdp++;
+                            break;
+            */
             case 'v':
                 verbose = true;
                 cmdp++;
@@ -1910,7 +1910,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
 
     int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose);
-    switch(isok) {
+    switch (isok) {
         case PM3_SUCCESS:
             PrintAndLogEx(SUCCESS, "Wrote block %02X successful", blockno);
             break;
@@ -2043,24 +2043,24 @@ static int CmdHFiClassRestore(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    if (bytes_read < ((endblock - startblock + 1) * 8 )) {
+    if (bytes_read < ((endblock - startblock + 1) * 8)) {
         PrintAndLogEx(ERR, "file is smaller than your suggested block range ( " _RED_("0x%02x..0x%02x")" )",
-                startblock, endblock
-                );
+                      startblock, endblock
+                     );
         free(dump);
         return PM3_EFILE;
     }
 
     iclass_restore_req_t *payload = calloc(1, payload_size);
     payload->req.use_raw = rawkey,
-    payload->req.use_elite = elite,
-    payload->req.use_credit_key = use_credit_key,
-    payload->req.use_replay = false,
-    payload->req.blockno = startblock,
-    payload->req.send_reply = true,
-    payload->req.do_auth = true,
-    memcpy(payload->req.key, KEY, 8);
-    
+             payload->req.use_elite = elite,
+                      payload->req.use_credit_key = use_credit_key,
+                               payload->req.use_replay = false,
+                                        payload->req.blockno = startblock,
+                                                 payload->req.send_reply = true,
+                                                          payload->req.do_auth = true,
+                                                                   memcpy(payload->req.key, KEY, 8);
+
     payload->item_cnt = (endblock - startblock + 1);
 
     // read data from file from block 6 --- 19
@@ -2068,21 +2068,21 @@ static int CmdHFiClassRestore(const char *Cmd) {
     // then copy to usbcommand->asbytes;
     // max is 32 - 6 = 28 block.  28 x 12 bytes gives 336 bytes
 
-    for (uint8_t i = 0; i < payload->item_cnt; i++) {        
+    for (uint8_t i = 0; i < payload->item_cnt; i++) {
         payload->blocks[i].blockno = startblock + i;
-        memcpy(payload->blocks[i].data, dump + (startblock * 8) + (i * 8) , sizeof(payload->blocks[i].data));
+        memcpy(payload->blocks[i].data, dump + (startblock * 8) + (i * 8), sizeof(payload->blocks[i].data));
     }
 
     free(dump);
 
     if (verbose) {
         PrintAndLogEx(INFO, "Preparing to restore block range 0x%02x..0x%02x", startblock, endblock);
-        
+
         PrintAndLogEx(INFO, "------+----------------------");
         PrintAndLogEx(INFO, "block | data");
         PrintAndLogEx(INFO, "------+----------------------");
 
-        for (uint8_t i = 0; i < payload->item_cnt; i++) {           
+        for (uint8_t i = 0; i < payload->item_cnt; i++) {
             iclass_restore_item_t item = payload->blocks[i];
             PrintAndLogEx(INFO, "  %02X  | %s", item.blockno, sprint_hex_inrow(item.data, sizeof(item.data)));
         }
@@ -2233,7 +2233,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     }
     if (got_blockno == false)
         errors = true;
-    
+
     if ((use_replay + rawkey + elite) > 1) {
         PrintAndLogEx(FAILED, "Can not use a combo of 'e', 'r', 'n'");
         errors = true;
@@ -2405,7 +2405,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     PrintAndLogEx(INFO, " blk| data                    | ascii    |lck| info");
     PrintAndLogEx(INFO, "----+-------------------------+----------+---+--------------");
     PrintAndLogEx(INFO, "0x00| " _GREEN_("%s") " |   | CSN ", sprint_hex_ascii(iclass_dump, 8));
-    
+
     if (i != 1)
         PrintAndLogEx(INFO, "....");
 
@@ -2455,8 +2455,8 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
             const char *s = info_nonks[3];
             if (i < 3) {
                 s = info_nonks[i];
-            }            
-           
+            }
+
             PrintAndLogEx(INFO, "0x%02X| %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
@@ -2978,8 +2978,8 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         free(keyBlock);
         return res;
     }
-    
-        // Get CSN / UID and CCNR
+
+    // Get CSN / UID and CCNR
     PrintAndLogEx(SUCCESS, "Reading tag CSN / CCNR...");
     for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
         got_csn = select_only(CSN, CCNR, false);
@@ -2993,7 +2993,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    
+
     iclass_premac_t *pre = calloc(keycount, sizeof(iclass_premac_t));
     if (pre == NULL) {
         return PM3_EMALLOC;
@@ -3449,7 +3449,7 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    
+
     // Check keys.
 
     // dump

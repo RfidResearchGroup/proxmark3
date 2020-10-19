@@ -493,7 +493,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 
     if (resp.status == PM3_ETEAROFF)
         return PM3_SUCCESS;
-    
+
     success = (bool)resp.status;
 
     // get, prepare and print response

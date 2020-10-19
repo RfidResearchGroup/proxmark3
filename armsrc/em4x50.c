@@ -889,18 +889,18 @@ static int write(uint8_t word[4], uint8_t address) {
             return PM3_ETEAROFF;
         } else {
 
-                // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-                wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
+            // wait for T0 * EM4X50_T_TAG_TWA (write access time)
+            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
 
-                // look for ACK sequence
-                if (check_ack(false)) {
+            // look for ACK sequence
+            if (check_ack(false)) {
 
-                    // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
-                    // for saving data and should return with ACK
-                    if (check_ack(false))
-                        return PM3_SUCCESS;
+                // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
+                // for saving data and should return with ACK
+                if (check_ack(false))
+                    return PM3_SUCCESS;
 
-                }
+            }
         }
 
     } else {
@@ -985,7 +985,7 @@ void em4x50_write(em4x50_data_t *etd) {
             lf_finalize();
             return;
         }
-        
+
         if (res == PM3_SUCCESS) {
             // to verify result reset EM4x50
             if (reset()) {
@@ -1033,7 +1033,7 @@ void em4x50_write_password(em4x50_data_t *etd) {
 
         // login and change password
         if (login(etd->password)) {
-            
+
             int res = write_password(etd->password, etd->new_password);
             if (res == PM3_ETEAROFF) {
                 lf_finalize();

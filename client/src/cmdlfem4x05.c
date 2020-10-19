@@ -107,7 +107,7 @@ typedef enum {
 // 2 = EM4x05
 static em_tech_type_t em_get_card_type(uint32_t config) {
     uint8_t t = (config >> 1) & 0xF;
-    switch(t) {
+    switch (t) {
         case 4:
             return EM_4X69;
         case 8:
@@ -118,7 +118,7 @@ static em_tech_type_t em_get_card_type(uint32_t config) {
     return EM_UNKNOWN;
 }
 
-static const char* em_get_card_str(uint32_t config) {    
+static const char *em_get_card_str(uint32_t config) {
     switch (em_get_card_type(config)) {
         case EM_4305:
             return "EM4305";
@@ -429,9 +429,9 @@ int CmdEM4x05Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0("p", "pwd", "<hex>", "password (0x00000000)"),        
+        arg_u64_0("p", "pwd", "<hex>", "password (0x00000000)"),
         arg_str0("f", "file", "<filename>", "overide filename prefix (optional).  Default is based on UID"),
-        arg_param_end        
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -440,17 +440,17 @@ int CmdEM4x05Dump(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
-    
+
     uint8_t addr = 0;
     uint32_t pwd = 0;
-    bool usePwd = false;    
+    bool usePwd = false;
     if (inputpwd != 0xFFFFFFFFFFFFFFFF) {
-        
+
         if (inputpwd & 0xFFFFFFFF00000000) {
             PrintAndLogEx(FAILED, "Pwd too large");
             return PM3_EINVARG;
         }
-        
+
         usePwd = true;
         pwd = (inputpwd & 0xFFFFFFFF);
     }
@@ -470,13 +470,13 @@ int CmdEM4x05Dump(const char *Cmd) {
     bool gotLockBits = false;
     bool lockInPW2 = false;
     uint32_t word = 0;
-    
+
     const char *info[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
     const char *info4x69 [] = {"Info", "UID", "Password", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
 
-    // EM4305 vs EM4469 
+    // EM4305 vs EM4469
     em_tech_type_t card_type = em_get_card_type(block0);
-    
+
     PrintAndLogEx(INFO, "Found a " _GREEN_("%s") " tag", em_get_card_str(block0));
 
     if (usePwd) {
@@ -497,7 +497,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     PrintAndLogEx(INFO, "Addr | data     | ascii |lck| info");
     PrintAndLogEx(INFO, "-----+----------+-------+---+-----");
 
-    if ( card_type == EM_4205 || card_type == EM_4305 || card_type == EM_UNKNOWN) {
+    if (card_type == EM_4205 || card_type == EM_4305 || card_type == EM_UNKNOWN) {
 
 
         // To flag any blocks locked we need to read blocks 14 and 15 first
@@ -570,7 +570,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         data[15] = BSWAP_32(data[15]);
 
     } else if (card_type == EM_4X69) {
-        
+
         // To flag any blocks locked we need to read blocks 14 and 15 first
         // dont swap endin until we get block lock flags.
         status14 = EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
@@ -583,7 +583,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
         }
-        
+
         uint32_t lockbit;
 
         for (; addr < 15; addr++) {
@@ -613,7 +613,7 @@ int CmdEM4x05Dump(const char *Cmd) {
                 }
             }
         }
-        
+
     } else {
     }
 
@@ -621,8 +621,8 @@ int CmdEM4x05Dump(const char *Cmd) {
         // saveFileEML will add .eml extension to filename
         // saveFile (binary) passes in the .bin extension.
         if (strcmp(filename, "") == 0) {
-            
-            if ( card_type == EM_4X69) {
+
+            if (card_type == EM_4X69) {
                 sprintf(filename, "lf-4x69-%08X-dump", BSWAP_32(data[1]));
             } else {
                 sprintf(filename, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
@@ -631,7 +631,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "");
         saveFileJSON(filename, (card_type == EM_4X69) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
-        
+
         saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(filename, ".bin", data, sizeof(data));
     }
@@ -941,7 +941,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     uint8_t chipType = (block0 >> 1) & 0xF;
     uint8_t cap = (block0 >> 5) & 3;
-    uint16_t custCode = (block0 >> 9) & 0x2FF;    
+    uint16_t custCode = (block0 >> 9) & 0x2FF;
 
     /* bits
     //  0,   rfu
@@ -950,7 +950,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
     //  7,8, rfu
     //  9 - 18 customer code
     //  19,  rfu
-              
+
        98765432109876543210
        001000000000
     // 00100000000001111000
@@ -959,7 +959,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
     //             011
     // 00100000000
     */
-    
+
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
 
     PrintAndLogEx(SUCCESS, "    Block0: " _GREEN_("%08x") " (Word 0)", block0);
@@ -1037,7 +1037,7 @@ int CmdEM4x05Info(const char *Cmd) {
         return PM3_ESOFT;
 
     printEM4x05config(word);
-    
+
     // if 4469 read EM4469_PROT_BLOCK
     // if 4305 read 14,15
     if (card_type == EM_4205 || card_type == EM_4305) {
@@ -1059,7 +1059,7 @@ int CmdEM4x05Info(const char *Cmd) {
             }
         }
     } else if (card_type == EM_4X69) {
-          // read word 3 to see which is being used for the protection bits
+        // read word 3 to see which is being used for the protection bits
         if (EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
         }
@@ -1104,12 +1104,12 @@ int CmdEM4x05Chk(const char *Cmd) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
     PrintAndLogEx(NORMAL, "");
-    
+
     bool found = false;
     uint64_t t1 = msclock();
-    
+
     // White cloner password based on EM4100 ID
-    if ( card_id > 0 ) {
+    if (card_id > 0) {
 
         uint32_t pwd = lf_t55xx_white_pwdgen(card_id & 0xFFFFFFFF);
         PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", pwd);
@@ -1180,7 +1180,7 @@ int CmdEM4x05Chk(const char *Cmd) {
 
 typedef struct {
     uint16_t cnt;
-    uint32_t value;    
+    uint32_t value;
 } em4x05_unlock_item_t;
 
 static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool verbose) {
@@ -1214,7 +1214,7 @@ static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool 
         PrintAndLogEx(ERR, "Tag denied PROTECT operation");
     else
         PrintAndLogEx(DEBUG, "No answer from tag");
-    
+
     return status;
 }
 static int unlock_reset(bool use_pwd, uint32_t pwd, uint32_t data, bool verbose) {
@@ -1224,14 +1224,14 @@ static int unlock_reset(bool use_pwd, uint32_t pwd, uint32_t data, bool verbose)
     return unlock_write_protect(use_pwd, pwd, data, false);
 }
 static void unlock_add_item(em4x05_unlock_item_t *array, uint8_t len, uint32_t value) {
-    
+
     uint8_t i = 0;
     for (; i < len; i++) {
-        if ( array[i].value == value ) {
+        if (array[i].value == value) {
             array[i].cnt++;
             break;
         }
-        if ( array[i].cnt == 0 ) {
+        if (array[i].cnt == 0) {
             array[i].cnt++;
             array[i].value = value;
             break;
@@ -1254,9 +1254,9 @@ int CmdEM4x05Unlock(const char *Cmd) {
         arg_int0("n", NULL, NULL, "steps to skip"),
         arg_int0("s", "start", "<us>", "start scan from delay (us)"),
         arg_int0("e", "end", "<us>", "end scan at delay (us)"),
-        arg_u64_0("p", "pwd", "", "password (0x00000000)"),        
+        arg_u64_0("p", "pwd", "", "password (0x00000000)"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_param_end        
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     double n = (double)arg_get_int_def(ctx, 1, 0);
@@ -1266,7 +1266,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    if ( start > end ) {
+    if (start > end) {
         PrintAndLogEx(FAILED, "start delay can\'t be larger than end delay %.0lf vs %.0lf", start, end);
         return PM3_EINVARG;
     }
@@ -1285,24 +1285,24 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     uint32_t search_value = 0;
     uint32_t write_value = 0;
-    //    
-    // inital phase 
+    //
+    // inital phase
     //
     // read word 14
     uint32_t init_14 = 0;
     int res = EM4x05ReadWord_ext(14, pwd, use_pwd, &init_14);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to read word 14\n");
-        return PM3_ENODATA;        
+        return PM3_ENODATA;
     }
 
-        
-    // read 15 
+
+    // read 15
     uint32_t init_15 = 0;
     res = EM4x05ReadWord_ext(15, pwd, use_pwd, &init_15);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to read word 15\n");
-        return PM3_ENODATA;        
+        return PM3_ENODATA;
     }
 
 #define ACTIVE_MASK 0x00008000
@@ -1322,13 +1322,13 @@ int CmdEM4x05Unlock(const char *Cmd) {
         my_auto = true;
         n = (end - start) / 2;
     }
-    
+
     // fix at one specific delay
     if (start == end) {
         n = 0;
     }
-    
-    PrintAndLogEx(INFO, "--------------- " _CYAN_("EM4x05 tear-off : target PROTECT") " -----------------------\n");    
+
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("EM4x05 tear-off : target PROTECT") " -----------------------\n");
 
     PrintAndLogEx(INFO, "initial prot 14&15 [ " _GREEN_("%08X") ", " _GREEN_("%08X")  " ]", init_14, init_15);
 
@@ -1341,15 +1341,15 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     PrintAndLogEx(INFO, "   target stepping [ " _GREEN_("%.0lf") " ]", n);
     PrintAndLogEx(INFO, "target delay range [ " _GREEN_("%.0lf") " ... " _GREEN_("%.0lf") " ]", start, end);
-    PrintAndLogEx(INFO, "      search value [ " _GREEN_("%08X") " ]", search_value);        
-    PrintAndLogEx(INFO, "       write value [ " _GREEN_("%08X") " ]", write_value);        
+    PrintAndLogEx(INFO, "      search value [ " _GREEN_("%08X") " ]", search_value);
+    PrintAndLogEx(INFO, "       write value [ " _GREEN_("%08X") " ]", write_value);
 
     PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "");    
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------------\n");
-    
+
     int exit_code = PM3_SUCCESS;
     uint32_t word14 = 0, word15 = 0;
     uint32_t word14b = 0, word15b = 0;
@@ -1357,7 +1357,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     uint32_t soon = 0;
     uint32_t late = 0;
 
-    em4x05_unlock_item_t flipped[64] ={{0,0}};
+    em4x05_unlock_item_t flipped[64] = {{0, 0}};
 
     //
     // main loop
@@ -1378,7 +1378,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         }
 
         if (tries >= 5 && n == 0 && soon != late) {
-            
+
             if (soon > late) {
                 PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i        => " _CYAN_("adjust +1 us >> %.0lf us"), tries, soon, late, start);
                 start++;
@@ -1397,23 +1397,23 @@ int CmdEM4x05Unlock(const char *Cmd) {
             exit_code = PM3_EOPABORTED;
             break;
         }
-           
+
         // set tear off trigger
-        clearCommandBuffer();    
+        clearCommandBuffer();
         tearoff_params_t params = {
             .delay_us = start,
             .on = true,
             .off = false
         };
-        res = handle_tearoff(&params, verbose); 
-        if ( res != PM3_SUCCESS ) {
+        res = handle_tearoff(&params, verbose);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "failed to configure tear off");
             return PM3_ESOFT;
         }
 
         // write
         res = unlock_write_protect(use_pwd, pwd, write_value, verbose);
-        
+
         // read after trigger
         res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
         if (res != PM3_SUCCESS) {
@@ -1430,10 +1430,10 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
         if (verbose)
             PrintAndLogEx(INFO, "ref:%08X   14:%08X   15:%08X ", search_value, word14, word15);
-        
-        if ( word14 == search_value && word15 == 0) {
+
+        if (word14 == search_value && word15 == 0) {
             PrintAndLogEx(INFO, "Status: Nothing happened            => " _GREEN_("tearing too soon"));
-            
+
             if (my_auto) {
                 start += n;
                 PrintAndLogEx(INFO, "                                    => " _CYAN_("adjust +%.0lf us >> %.0lf us"), n, start);
@@ -1442,17 +1442,17 @@ int CmdEM4x05Unlock(const char *Cmd) {
                 soon++;
             }
         } else {
-            
+
             if (word15 == search_value) {
-                
+
                 if (word14 == 0) {
                     PrintAndLogEx(INFO, "Status: Protect succeeded           => " _GREEN_("tearing too late"));
                 } else {
-                    if ( word14 == search_value) {
+                    if (word14 == search_value) {
                         PrintAndLogEx(INFO, "Status: 15 ok, 14 not yet erased    => " _GREEN_("tearing too late"));
                     } else {
                         PrintAndLogEx(INFO, "Status: 15 ok, 14 partially erased  => " _GREEN_("tearing too late"));
-                    }                    
+                    }
                 }
 
                 unlock_reset(use_pwd, pwd, write_value, verbose);
@@ -1466,7 +1466,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
                 if (word14b == 0) {
 
-                    unlock_reset(use_pwd, pwd, write_value, verbose);                    
+                    unlock_reset(use_pwd, pwd, write_value, verbose);
 
                     res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
                     if (res != PM3_SUCCESS) {
@@ -1474,7 +1474,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
                         return PM3_ESOFT;
                     }
                 }
-                
+
                 if (word14b != search_value) {
 
                     res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
@@ -1484,7 +1484,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
                         break;
                     } else {
                         PrintAndLogEx(WARNING, "failed to read 15");
-                        return PM3_ESOFT;                        
+                        return PM3_ESOFT;
                     }
                 }
                 if (my_auto) {
@@ -1497,32 +1497,32 @@ int CmdEM4x05Unlock(const char *Cmd) {
                 }
 
             } else {
-                
-                if (( word15 & ACTIVE_MASK) == ACTIVE_MASK) {
-                    
+
+                if ((word15 & ACTIVE_MASK) == ACTIVE_MASK) {
+
                     PrintAndLogEx(INFO, "Status: 15 bitflipped and active    => " _RED_("SUCCESS?:  ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
                     PrintAndLogEx(INFO, "Committing results...");
 
-                    unlock_reset(use_pwd, pwd, write_value, verbose);    
-                    
+                    unlock_reset(use_pwd, pwd, write_value, verbose);
+
                     // read after reset
                     res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
-                    if ( res != PM3_SUCCESS ) {
+                    if (res != PM3_SUCCESS) {
                         PrintAndLogEx(WARNING, "failed to read 14");
                         return PM3_ESOFT;
                     }
 
                     res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
-                    if ( res != PM3_SUCCESS ) {
+                    if (res != PM3_SUCCESS) {
                         PrintAndLogEx(WARNING, "failed to read 15");
                         return PM3_ESOFT;
                     }
-                    
+
                     if (verbose)
                         PrintAndLogEx(INFO, "ref:%08x   14:%08X   15:%08X", search_value, word14b, word15b);
-                    
+
                     if ((word14b & ACTIVE_MASK) == ACTIVE_MASK) {
-                        
+
                         if (word14b == word15) {
                             PrintAndLogEx(INFO, "Status: confirmed                   => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
 
@@ -1530,15 +1530,15 @@ int CmdEM4x05Unlock(const char *Cmd) {
                             success = true;
                             break;
                         }
-                        
+
                         if (word14b != search_value) {
                             PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
-                            
+
                             unlock_add_item(flipped, 64, word14b);
                             success = true;
                             break;
                         }
-                        
+
                         PrintAndLogEx(INFO, "Status: failed to commit bitflip        => " _RED_("FAIL:      ") "14: %08X  15: %08X", word14b, word15b);
                     }
                     if (my_auto) {
@@ -1551,14 +1551,14 @@ int CmdEM4x05Unlock(const char *Cmd) {
                     }
                 } else {
                     PrintAndLogEx(INFO, "Status: 15 bitflipped but inactive      => " _YELLOW_("PROMISING: ") "14: %08X  15: " _CYAN_("%08X"), word14, word15);
-                    
+
                     unlock_add_item(flipped, 64, word15);
-                    
+
                     soon ++;
                 }
             }
         }
-        
+
         if (my_auto == false) {
             tries++;
         }
@@ -1571,15 +1571,15 @@ int CmdEM4x05Unlock(const char *Cmd) {
         uint32_t bitflips = search_value ^ word14b;
         PrintAndLogEx(INFO, "Old protection word => " _YELLOW_("%08X"), search_value);
         char bitstring[9] = {0};
-        for (int i=0; i < 8; i++) {
-            bitstring[i] = bitflips & (0xF << ((7-i) * 4)) ? 'x' : '.';
+        for (int i = 0; i < 8; i++) {
+            bitstring[i] = bitflips & (0xF << ((7 - i) * 4)) ? 'x' : '.';
         }
         // compute number of bits flipped
 
         PrintAndLogEx(INFO, "Bitflips: %2u events => %s", bitcount32(bitflips), bitstring);
         PrintAndLogEx(INFO, "New protection word => " _CYAN_("%08X") "\n", word14b);
 
-   
+
         PrintAndLogEx(INFO, "Try " _YELLOW_("`lf em 4x05_dump`"));
     }
 
@@ -1590,7 +1590,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         for (uint8_t i = 0; i < 64; i++) {
             if (flipped[i].cnt == 0)
                 break;
-            
+
             PrintAndLogEx(INFO, " %3u | %08X | %3u | %u", i, flipped[i].value, flipped[i].cnt, bitcount32(search_value ^ flipped[i].value));
         }
     }

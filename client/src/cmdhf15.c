@@ -656,13 +656,13 @@ static int CmdHF15Demod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    
+
     // The sampling rate is 106.353 ksps/s, for T = 18.8 us
     int i, j;
     int max = 0, maxPos = 0;
     int skip = 4;
 
-    if (GraphTraceLen < 1000) {        
+    if (GraphTraceLen < 1000) {
         PrintAndLogEx(FAILED, "Too few samples in GraphBuffer. Need more than 1000");
         PrintAndLogEx(HINT, "Run " _YELLOW_("`hf 15 samples`") " to collect and download data");
         return PM3_ESOFT;
@@ -733,8 +733,8 @@ static int CmdHF15Demod(const char *Cmd) {
         PrintAndLogEx(WARNING, "Warning, uneven octet! (discard extra bits!)");
         PrintAndLogEx(INFO, "   mask = %02x", mask);
     }
-    
-    if ( k == 0 ) {
+
+    if (k == 0) {
         return PM3_SUCCESS;
     }
 
@@ -744,7 +744,7 @@ static int CmdHF15Demod(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " idx | data");
     PrintAndLogEx(SUCCESS, "-----+-------------------------------------------------");
-    if ( k / 16 > 0) {
+    if (k / 16 > 0) {
         for (; i < k; i += 16) {
             PrintAndLogEx(SUCCESS, " %3i | %s", i, sprint_hex(outBuf + i, 16));
         }
@@ -824,7 +824,7 @@ static int NxpSysInfo(uint8_t *uid) {
     if (status == PM3_ETEAROFF) {
         return status;
     }
-    
+
     if (status < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to NXP systeminfo command");
         return PM3_EWRONGANSWER;
@@ -1058,7 +1058,7 @@ static int CmdHF15Sniff(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    
+
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SNIFF, NULL, 0);
@@ -1111,7 +1111,7 @@ static int CmdHF15Sim(const char *Cmd) {
     struct {
         uint8_t uid[8];
     } PACKED payload;
-    
+
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
     CLIParserFree(ctx);
@@ -1904,11 +1904,11 @@ static int CmdHF15CSetUID(const char *Cmd) {
     struct {
         uint8_t uid[8];
     } PACKED payload;
-    
+
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
     CLIParserFree(ctx);
-    
+
     if (uidlen != 8) {
         PrintAndLogEx(WARNING, "UID must include 16 HEX symbols got ");
         return PM3_EINVARG;
@@ -1936,7 +1936,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     if (WaitForResponseTimeout(CMD_HF_ISO15693_CSETUID, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         DropField();
-        return PM3_ESOFT;        
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "getting updated card details...");

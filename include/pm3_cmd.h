@@ -342,7 +342,7 @@ typedef struct {
 typedef struct {
     iclass_auth_req_t req;
     uint8_t item_cnt;
-    iclass_restore_item_t blocks[];    
+    iclass_restore_item_t blocks[];
 } PACKED iclass_restore_req_t;
 
 
