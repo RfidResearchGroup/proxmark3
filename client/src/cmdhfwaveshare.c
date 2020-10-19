@@ -693,8 +693,18 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         return PM3_ESOFT;
     }
 
-    if ((card.uidlen != 7) || (memcmp(card.uid, "WSDZ10m", 7) != 0)) {
+    if ((card.uidlen != 7) || ((memcmp(card.uid, "FSTN10m", 7) != 0) && (memcmp(card.uid, "WSDZ10m", 7) != 0))) {
         PrintAndLogEx(WARNING, "Card doesn't look like Waveshare tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    if (((model_nr != M1in54B) && (memcmp(card.uid, "FSTN10m", 7) == 0))) {
+        PrintAndLogEx(WARNING, "Card is a Waveshare tag 1.54\", not %s", models[model_nr].desc);
+        DropField();
+        return PM3_ESOFT;
+    }
+    if (((model_nr == M1in54B) && (memcmp(card.uid, "FSTN10m", 7) != 0))) {
+        PrintAndLogEx(WARNING, "Card is not a Waveshare tag 1.54\", check your model number");
         DropField();
         return PM3_ESOFT;
     }
@@ -921,6 +931,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         msleep(200);
     }
     PrintAndLogEx(DEBUG, "Step11: Wait tag to be ready");
+    PrintAndLogEx(INPLACE, "E-paper Reflashing, Waiting");
     if (model_nr == M2in13B || model_nr == M1in54B) { // Black, white and red screen refresh time is longer, wait first
         msleep(9000);
     } else if (model_nr == M7in5HD) {
@@ -950,7 +961,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
             } else {
                 fail_num++;
                 PrintAndLogEx(INPLACE, "E-paper Reflashing, Waiting");
-                msleep(100);
+                msleep(400);
             }
         }
     }
