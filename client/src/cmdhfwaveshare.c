@@ -351,7 +351,7 @@ static void map8to1(uint8_t *colormap, uint16_t width, uint16_t height, uint8_t 
 static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red, char *filename, bool save_conversions) {
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     // check file is full color
-    if (pbmpheader->bpp != 24) {
+    if ((pbmpheader->bpp != 24) && (pbmpheader->bpp != 32)) {
         return PM3_ESOFT;
     }
 
@@ -400,6 +400,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
             chanB[X + (height - Y - 1) * width] = bmp[offset++];
             chanG[X + (height - Y - 1) * width] = bmp[offset++];
             chanR[X + (height - Y - 1) * width] = bmp[offset++];
+            if (pbmpheader->bpp == 32) // Skip Alpha chan
+                offset++;
         }
         // Skip line padding
         offset += width % 4;
@@ -436,6 +438,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
                     bmp[offset++] = chanB[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanG[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanR[X + (height - Y - 1) * width] & 0xFF;
+                    if (pbmpheader->bpp == 32) // Fill Alpha chan
+                        bmp[offset++] = 0xFF;
                 }
                 // Skip line padding
                 offset += width % 4;
@@ -500,6 +504,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                    if (pbmpheader->bpp == 32) // Fill Alpha chan
+                        bmp[offset++] = 0xFF;
                 }
                 // Skip line padding
                 offset += width % 4;
@@ -1059,11 +1065,13 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
             return PM3_ESOFT;
         }
     } else if (depth == 32) {
-        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Remove alpha channel.", depth);
-        free(bmp);
-        return PM3_ESOFT;
+        PrintAndLogEx(DEBUG, "BMP file is a RGBA, we will ignore the Alpha channel");
+        if (read_bmp_rgb(bmp, bytes_read, model_nr, &black, &red, filename, save_conversions) != PM3_SUCCESS) {
+            free(bmp);
+            return PM3_ESOFT;
+        }
     } else {
-        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Must be 1 (BW) or 24 (RGB)", depth);
+        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Must be 1 (BW), 24 (RGB) or 32 (RGBA)", depth);
         free(bmp);
         return PM3_ESOFT;
     }
