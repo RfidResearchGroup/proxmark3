@@ -4,24 +4,85 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "Make all & run",
             "type": "shell",
-            "command": "make clean && make all -j$(nproc --all)",
+            "command": "make -j && ./pm3",
             "problemMatcher": [
                 "$gcc"
-            ]
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
-            "label": "flash fullimage",
+            "label": "Make TARGET",
             "type": "shell",
-            "command": "sudo ./pm3-flash-fullimage",
+            "command": "make ${input:componentType} -j",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+        },
+        {
+            "label": "Debug: make client",
+            "type": "shell",
+            "command": "make client -j DEBUG=1",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+        },
+        {
+            "label": "Debug: clean & make client",
+            "type": "shell",
+            "command": "make client/clean && make client -j DEBUG=1",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+        },
+        {
+            "label": "Flash fullimage",
+            "type": "shell",
+            "command": "./pm3-flash-fullimage",
             "problemMatcher": []
         },
         {
             "label": "FLASH BOOTROM",
             "type": "shell",
-            "command": "sudo ./pm3-flash-bootrom",
+            "command": "./pm3-flash-bootrom",
             "problemMatcher": []
+        },
+        {
+            "label": "Run client",
+            "type": "shell",
+            "command": "./pm3",
+            "problemMatcher": [],
+            "dependsOn": [
+                "Release: build client"
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "type": "pickString",
+            "id": "componentType",
+            "description": "What Makefile target do you want to execute?",
+            "options": [
+                "all",
+                "client",
+                "bootrom",
+                "fullimage",
+                "recovery",
+                "clean",
+                "install",
+                "uninstall",
+                "style",
+                "miscchecks",
+                "check",
+            ],
+            "default": "all"
         }
     ]
 }
