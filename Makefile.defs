@@ -51,9 +51,15 @@ else
     RANLIB= ranlib
 endif
 
-DEFCXXFLAGS = -Wall -Werror -O3 -pipe
-DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
-DEFLDFLAGS =
+ifeq ($(DEBUG),1)
+  DEFCXXFLAGS = -g -O0 -pipe
+  DEFCFLAGS = -g -O0 -fstrict-aliasing -pipe
+  DEFLDFLAGS =
+else
+  DEFCXXFLAGS = -Wall -Werror -O3 -pipe
+  DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
+  DEFLDFLAGS =
+endif
 # Next ones are activated only if SANITIZE=1
 ifeq ($(SANITIZE),1)
   DEFCFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
