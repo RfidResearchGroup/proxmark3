@@ -1185,7 +1185,7 @@ int CmdEM4x05Brute(const char *Cmd) {
                   "Note: if you get many false positives, change position on the antenna"
                   "lf em 4x05_brute\n"
                   "lf em 4x05_brute -n 1                   -> stop after first candidate found\n"
-                  "lf em 4x05_brute -s 0x00000022B8        -> remember to use 0x for hex"
+                  "lf em 4x05_brute -s 0x000022B8          -> remember to use 0x for hex"
                  );
 
     void *argtable[] = {
