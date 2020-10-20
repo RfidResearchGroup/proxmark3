@@ -423,14 +423,14 @@ int CmdEM4x05Dump(const char *Cmd) {
     CLIParserInit(&ctx, "lf em dump",
                   "Dump EM4x05/EM4x69.  Tag must be on antenna.",
                   "lf em dump\n"
-                  "lf em dump -p 11223344\n"
-                  "lf em dump -f myfile -p 11223344"
+                  "lf em dump -p 0x11223344\n"
+                  "lf em dump -f myfile -p 0x11223344"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("p", "pwd", "<hex>", "password (0x00000000)"),
-        arg_str0("f", "file", "<filename>", "overide filename prefix (optional).  Default is based on UID"),
+        arg_str0("f", "file", "<filename>", "override filename prefix (optional).  Default is based on UID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
