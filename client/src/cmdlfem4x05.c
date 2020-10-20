@@ -1660,24 +1660,51 @@ static size_t em4x05_Sniff_GetNextBitStart (size_t idx, size_t sc, int *data, si
 uint32_t static em4x05_Sniff_GetBlock (char *bits, bool fwd) {
     uint32_t value = 0;
     uint8_t idx;
+    bool parityerror = false;
+    uint8_t parity;
 
+    parity = 0;
     for (idx = 0; idx < 8; idx++) {
         value <<= 1;
         value += (bits[idx] - '0');
+        parity += (bits[idx] - '0');
     }
+    parity = parity % 2;
+    if (parity != (bits[8] - '0'))
+        parityerror = true;
+
+    parity = 0;
     for (idx = 9; idx < 17; idx++) {
         value <<= 1;
         value += (bits[idx] - '0');
+        parity += (bits[idx] - '0');
     }
+    parity = parity % 2;
+    if (parity != (bits[17] - '0'))
+        parityerror = true;
+
+    parity = 0;
     for (idx = 18; idx < 26; idx++) {
         value <<= 1;
         value += (bits[idx] - '0');
+        parity += (bits[idx] - '0');
     }
+    parity = parity % 2;
+    if (parity != (bits[26] - '0'))
+        parityerror = true;
+
+    parity = 0;
     for (idx = 27; idx < 35; idx++) {
         value <<= 1;
         value += (bits[idx] - '0');
+        parity += (bits[idx] - '0');
     }
-    
+    parity = parity % 2;
+    if (parity != (bits[35] - '0'))
+        parityerror = true;
+
+    if (parityerror) printf ("parity error : ");
+
     if (!fwd) {
         uint32_t t1 = value;
         value = 0;
@@ -1754,11 +1781,8 @@ int CmdEM4x05Sniff(const char *Cmd) {
             idx = em4x05_Sniff_GetNextBitStart (idx, GraphTraceLen, GraphBuffer, &pulseSamples);
             ZeroWidth = idx - ZeroWidth;
 
-       //     printf ("Zero width after 2 0 bits : %llu 0 Zero width %d\n",idx,ZeroWidth);
-
             if (ZeroWidth <= 50) {
-                    pktOffset -= ZeroWidth;
-              //  ZeroSamples = 0;
+                pktOffset -= ZeroWidth;
                 memset(bits,0x00,sizeof(bits));
                 bitidx = 0;
 
@@ -1771,7 +1795,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                         eop = true;
                         bits[bitidx++] = '0';   // Append last zero from the last bit find
                         cmdText[0] = 0;
-                        // Memo6->Lines->Add("Bit widths... : "+T1);
+
                         // EM4305 command lengths
                         // Login        0011 <pwd>          => 4 +     45 => 49
                         // Write Word   0101 <adr> <data>   => 4 + 7 + 45 => 56
@@ -1780,6 +1804,18 @@ int CmdEM4x05Sniff(const char *Cmd) {
                         // Disable      1010       <data>   => 4 +     45 => 49
                         // -> disaable 1010 11111111 0 11111111 0 11111111 0 11111111 0 00000000 0
 
+                        // Check to see if we got the leading 0
+                        if  (((strncmp (bits,"00011",5) == 0)&& (bitidx == 50)) ||
+                             ((strncmp (bits,"00101",5) == 0)&& (bitidx == 57)) ||
+                             ((strncmp (bits,"01001",5) == 0)&& (bitidx == 12)) ||
+                             ((strncmp (bits,"01100",5) == 0)&& (bitidx == 50)) ||
+                             ((strncmp (bits,"01010",5) == 0)&& (bitidx == 50))) {
+                                 memcpy (bits,&bits[1],bitidx-1);
+                                 bitidx--;
+                             printf ("Trim leading 0\n");
+                        }
+                        bits[bitidx] = 0;
+         //   printf ("==> %s\n",bits);
                         // logon
                         if ((strncmp (bits,"0011",4) == 0) && (bitidx == 49)) {
                             haveData = true;
@@ -1794,7 +1830,6 @@ int CmdEM4x05Sniff(const char *Cmd) {
                         if ((strncmp (bits,"0101",4) == 0) && (bitidx == 56)) {
                             haveData = true;
                             sprintf (cmdText,"Write");
-                            tmpValue = 0;
                             tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
                             sprintf (blkAddr,"%d",tmpValue);
                             if (tmpValue == 2)
@@ -1803,42 +1838,39 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             sprintf (dataText,"%08X",tmpValue);
                         }
 
-                        // write 2 test
-                        if ((strncmp (bits,"00101",5) == 0) && (bitidx == 57)) {
+                        // read
+                        if ((strncmp (bits,"1001",4) == 0) && (bitidx == 11)) {
                             haveData = true;
-                            sprintf (cmdText,"Write");
-                            tmpValue = 0;
-                            tmpValue = (bits[5] - '0') + ((bits[6] - '0') << 1) + ((bits[7] - '0') << 2)  + ((bits[8] - '0') << 3);
+                            pwd = false;
+                            sprintf (cmdText,"Read");
+                            tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
                             sprintf (blkAddr,"%d",tmpValue);
-                            if (tmpValue == 2)
-                                pwd = true;
-                            tmpValue = em4x05_Sniff_GetBlock (&bits[12], fwd);
+                            sprintf (dataText," ");
+                        }
+
+                        // protect
+                        if ((strncmp (bits,"1100",4) == 0) && (bitidx == 49)) {
+                            haveData = true;
+                            pwd = false;
+                            sprintf (cmdText,"Protect");
+                            sprintf (blkAddr," ");
+                            tmpValue = em4x05_Sniff_GetBlock (&bits[11], fwd);
                             sprintf (dataText,"%08X",tmpValue);
                         }
-/*
-                        if ((Bits.SubString(1,4) == "1001") && (Bits.Length() == 11)) {
-                            Addr = Bits.SubString(5,7);
-                            Data = "";
-                            Memo6->Lines->Add("Read  :     "+Addr+" "+Data);
+
+                        // disable
+                        if ((strncmp (bits,"1010",4) == 0) && (bitidx == 49)) {
+                            haveData = true;
+                            pwd = false;
+                            sprintf (cmdText,"Disable");
+                            sprintf (blkAddr," ");
+                            tmpValue = em4x05_Sniff_GetBlock (&bits[11], fwd);
+                            sprintf (dataText,"%08X",tmpValue);
                         }
 
-                        if ((Bits.SubString(1,4) == "1100") && (Bits.Length() == 49)) {
-                            Addr = "";
-                            Data = Bits.SubString(5,45);
-                            Memo6->Lines->Add("Protect :     "+Addr+" "+Data);
-                        }
-
-                        if ((Bits.SubString(1,4) == "1010") && (Bits.Length() == 49)) {
-                            Addr = "";
-                            Data = Bits.SubString(5,45);
-                            Memo6->Lines->Add("Disable :     "+Addr+" "+Data);
-                        }
-*/
-                        // Memo6->Lines->Add("Raw : "+Bits);
-                        bits[bitidx] = 0;
-                     //   printf ("%s\n",bits);
+                      //  bits[bitidx] = 0;
                     } else {
-                        i = (CycleWidth - ZeroWidth) / 30;
+                        i = (CycleWidth - ZeroWidth) / 28;
                         bits[bitidx++] = '0';
                         for (int ii = 0; ii < i; ii++)
                             bits[bitidx++] = '1';
