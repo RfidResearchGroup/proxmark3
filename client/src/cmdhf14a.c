@@ -1338,7 +1338,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         if (!res && datalen > 0)
             waitCmd(0, timeout);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int waitCmd(uint8_t iSelect, uint32_t timeout) {
@@ -1398,16 +1398,20 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t arg0 = FLAG_4B_UID_IN_DATA;
+    struct {
+        uint8_t flag;
+    } PACKED param;
+    param.flag = FLAG_4B_UID_IN_DATA;
+
     if (arg_get_lit(ctx, 2))
-        arg0 = FLAG_7B_UID_IN_DATA;
+        param.flag = FLAG_7B_UID_IN_DATA;
     if (arg_get_lit(ctx, 3))
-        arg0 = FLAG_10B_UID_IN_DATA;
+        param.flag = FLAG_10B_UID_IN_DATA;
 
     CLIParserFree(ctx);
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_ANTIFUZZ, arg0, 0, 0, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t*)&param, sizeof(param));
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AChaining(const char *Cmd) {
@@ -1438,7 +1442,7 @@ static int CmdHF14AChaining(const char *Cmd) {
 
     PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void printTag(const char *tag) {
