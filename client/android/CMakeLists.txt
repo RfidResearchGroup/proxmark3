@@ -1,4 +1,5 @@
 # version
+message("-- CMake ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.4.1)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fvisibility=hidden -w")
