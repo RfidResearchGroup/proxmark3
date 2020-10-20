@@ -2545,9 +2545,10 @@ void EM4xBruteforce(uint32_t start_pwd, uint32_t n) {
         DoPartialAcquisition(0, false, 350, 1000);
         uint8_t *mem = BigBuf_get_addr();
         if (mem[334] < 128) {
+            candidates_found++;
             Dbprintf("Password candidate: " _GREEN_("%08X"), pwd);
             if ((n != 0) && (candidates_found == n)) {
-                Dbprintf("EM4x05 Bruteforce Stopped. %i candidates found", candidates_found);
+                Dbprintf("EM4x05 Bruteforce Stopped. %i candidate%s found", candidates_found, candidates_found > 1 ? "s" : "");
                 break;
             }
         }

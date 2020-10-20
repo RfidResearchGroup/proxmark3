@@ -1196,7 +1196,7 @@ int CmdEM4x05Brute(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t start_pwd = arg_get_u64_def(ctx, 1, 0);
-    uint32_t n = arg_get_int_def(ctx, 1, 0);
+    uint32_t n = arg_get_int_def(ctx, 2, 0);
     CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, "");
