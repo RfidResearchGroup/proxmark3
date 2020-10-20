@@ -542,7 +542,8 @@ static void read_black(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *black)
     }
 }
 static void read_red(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *red) {
-    for (uint8_t j = 0; j < models[model_nr].len; j++) {
+    // spurious warning with GCC10 (-Wstringop-overflow) when j is uint8_t, even if all len are < 128
+    for (uint16_t j = 0; j < models[model_nr].len; j++) {
         if (model_nr == M1in54B) {
             //1.54B needs to flip the red picture data, other screens do not need to flip data
             l[3 + j] = ~red[i * models[model_nr].len + j];
