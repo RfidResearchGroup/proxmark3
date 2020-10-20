@@ -37,7 +37,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "Debug: clean & make client",
+            "preLaunchTask": "client: Debug: clean & make",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ],

@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Make all & run",
+            "label": "all: Make & run",
             "type": "shell",
             "command": "make -j && ./pm3",
             "problemMatcher": [
@@ -16,7 +16,7 @@
             }
         },
         {
-            "label": "Make TARGET",
+            "label": "choose: Make",
             "type": "shell",
             "command": "make ${input:componentType} -j",
             "problemMatcher": [
@@ -25,7 +25,7 @@
             "group": "build",
         },
         {
-            "label": "Debug: make client",
+            "label": "client: Debug: make",
             "type": "shell",
             "command": "make client -j DEBUG=1",
             "problemMatcher": [
@@ -34,7 +34,7 @@
             "group": "build",
         },
         {
-            "label": "Debug: clean & make client",
+            "label": "client: Debug: clean & make",
             "type": "shell",
             "command": "make client/clean && make client -j DEBUG=1",
             "problemMatcher": [
@@ -43,25 +43,22 @@
             "group": "build",
         },
         {
-            "label": "Flash fullimage",
+            "label": "fullimage: Make & Flash",
             "type": "shell",
-            "command": "./pm3-flash-fullimage",
+            "command": "make fullimage && ./pm3-flash-fullimage",
             "problemMatcher": []
         },
         {
-            "label": "FLASH BOOTROM",
+            "label": "BOOTROM: Make & Flash",
             "type": "shell",
-            "command": "./pm3-flash-bootrom",
+            "command": "make bootrom && ./pm3-flash-bootrom",
             "problemMatcher": []
         },
         {
             "label": "Run client",
             "type": "shell",
             "command": "./pm3",
-            "problemMatcher": [],
-            "dependsOn": [
-                "Release: build client"
-            ]
+            "problemMatcher": []
         }
     ],
     "inputs": [
