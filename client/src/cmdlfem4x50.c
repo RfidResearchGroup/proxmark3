@@ -77,7 +77,7 @@ static int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_dump [h] [f <filename prefix>] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                     - this help");
-    PrintAndLogEx(NORMAL, "       f <filename prefix>   - overide filename prefix (optional).  Default is based on UID");
+    PrintAndLogEx(NORMAL, "       f <filename prefix>   - override filename prefix (optional).  Default is based on UID");
     PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_dump"));

@@ -186,7 +186,7 @@ static int usage_t55xx_dump(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password 4bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override, force pwd read despite danger to card");
-    PrintAndLogEx(NORMAL, "     f <prefix>   - overide filename prefix (optional).  Default is based on blk 0");
+    PrintAndLogEx(NORMAL, "     f <prefix>   - override filename prefix (optional).  Default is based on blk 0");
     print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE, config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");

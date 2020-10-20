@@ -2491,7 +2491,7 @@ static void SendForward(uint8_t fwd_bit_count, bool fast) {
     TurnReadLF_off(EM_START_GAP);
     TurnReadLFOn(18 * 8);
 
-    // now start writting with bitbanging the antenna. (each bit should be 32*8 total length)
+    // now start writing with bitbanging the antenna. (each bit should be 32*8 total length)
     while (fwd_bit_sz-- > 0) { //prepare next bit modulation
         if (((*fwd_write_ptr++) & 1) == 1) {
             WaitUS(32 * 8);
