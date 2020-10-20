@@ -1597,3 +1597,227 @@ int CmdEM4x05Unlock(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     return exit_code;
 }
+
+static size_t em4x05_Sniff_GetNextBitStart (size_t idx, size_t sc, int *data, size_t *pulsesamples)
+{
+    while ((idx < sc) && (data[idx] <= 10)) // find a going high
+        idx++;
+
+    while ((idx < sc) && (data[idx] > -10)) // find going low  may need to add something here it SHOULD be a small clk around 0, but white seems to extend a bit.
+        idx++;
+
+    (*pulsesamples) = 0;
+    while ((idx < sc) && ((data[idx+1] - data[idx]) < 10 )) {  // find "sharp rise"
+        (*pulsesamples)++;
+        idx++;
+    }
+
+    return idx;
+}
+
+uint32_t static em4x05_Sniff_GetBlock (char *bits, bool fwd) {
+    uint32_t value = 0;
+    uint8_t idx;
+
+    for (idx = 0; idx < 8; idx++) {
+        value <<= 1;
+        value += (bits[idx] - '0');
+    }
+    for (idx = 9; idx < 17; idx++) {
+        value <<= 1;
+        value += (bits[idx] - '0');
+    }
+    for (idx = 18; idx < 26; idx++) {
+        value <<= 1;
+        value += (bits[idx] - '0');
+    }
+    for (idx = 27; idx < 35; idx++) {
+        value <<= 1;
+        value += (bits[idx] - '0');
+    }
+    
+    if (!fwd) {
+        uint32_t t1 = value;
+        value = 0;
+        for (idx = 0; idx < 32; idx++)
+            value |= (((t1 >> idx) & 1) << (31 - idx));
+    }
+    return value;
+}
+
+int CmdEM4x05Sniff(const char *Cmd) {
+
+    bool sampleData = true;
+    bool haveData = false;
+    size_t idx = 0;
+    char cmdText [100];
+    char dataText [100];
+    char blkAddr[4];
+    char bits[80];
+    int bitidx;
+    int ZeroWidth;    // 32-42 "1" is 32
+    int CycleWidth;
+    size_t pulseSamples;
+    size_t pktOffset;
+    int i;
+    bool eop = false;
+    uint32_t tmpValue;
+    bool pwd = false;
+    bool fwd = false;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05_sniff",
+                  "Sniff EM4x05 commands sent from a programmer",
+                  "lf em 4x05_sniff -> sniff via lf sniff\n"
+                  "lf em 4x05_sniff -1 -> sniff from data loaded into the buffer\n"
+                  "lf em 4x05_sniff -r -> reverse the bit order when showing block data"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", "buf","Use the data in the buffer"),
+        arg_lit0("r", "rev", "Reverse the bit order for data blocks"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    sampleData = !arg_get_lit(ctx,1);
+    fwd = arg_get_lit(ctx,2);
+
+    // setup and sample data from Proxmark
+    // if not directed to existing sample/graphbuffer
+    if (sampleData) {
+        CmdLFSniff("");
+    }
+
+    // Headings
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, _CYAN_("EM4x05 command detection"));
+    PrintAndLogEx(SUCCESS, "offset | Command     |   Data   | blk | raw");
+    PrintAndLogEx(SUCCESS, "-------+-------------+----------+-----+------------------------------------------------------------");
+
+    idx = 0;
+    // loop though sample buffer
+    while (idx < GraphTraceLen) {
+        eop = false;
+        haveData = false;
+        pwd = false;
+
+        idx = em4x05_Sniff_GetNextBitStart (idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+        pktOffset = idx;
+        if (pulseSamples >= 10)  { // Should be 18 so a bit less to allow for processing
+        
+            // Use first bit to get "0" bit samples as a reference
+            ZeroWidth = idx;
+            idx = em4x05_Sniff_GetNextBitStart (idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+            ZeroWidth = idx - ZeroWidth;
+
+       //     printf ("Zero width after 2 0 bits : %llu 0 Zero width %d\n",idx,ZeroWidth);
+
+            if (ZeroWidth <= 50) {
+                    pktOffset -= ZeroWidth;
+              //  ZeroSamples = 0;
+                memset(bits,0x00,sizeof(bits));
+                bitidx = 0;
+
+                while ((idx < GraphTraceLen) && !eop) {
+                    CycleWidth = idx;
+                    idx = em4x05_Sniff_GetNextBitStart (idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+
+                    CycleWidth = idx - CycleWidth;
+                    if ((CycleWidth > 300) || (CycleWidth < (ZeroWidth-5))) { // to long or too short
+                        eop = true;
+                        bits[bitidx++] = '0';   // Append last zero from the last bit find
+                        cmdText[0] = 0;
+                        // Memo6->Lines->Add("Bit widths... : "+T1);
+                        // EM4305 command lengths
+                        // Login        0011 <pwd>          => 4 +     45 => 49
+                        // Write Word   0101 <adr> <data>   => 4 + 7 + 45 => 56
+                        // Read Word    1001 <adr>          => 4 + 7      => 11
+                        // Protect      1100       <data>   => 4 +     45 => 49
+                        // Disable      1010       <data>   => 4 +     45 => 49
+                        // -> disaable 1010 11111111 0 11111111 0 11111111 0 11111111 0 00000000 0
+
+                        // logon
+                        if ((strncmp (bits,"0011",4) == 0) && (bitidx == 49)) {
+                            haveData = true;
+                            pwd = true;
+                            sprintf (cmdText,"Logon");
+                            sprintf (blkAddr,"   ");
+                            tmpValue = em4x05_Sniff_GetBlock (&bits[4], fwd);
+                            sprintf (dataText,"%08X",tmpValue);
+                        }
+
+                        // write
+                        if ((strncmp (bits,"0101",4) == 0) && (bitidx == 56)) {
+                            haveData = true;
+                            sprintf (cmdText,"Write");
+                            tmpValue = 0;
+                            tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
+                            sprintf (blkAddr,"%d",tmpValue);
+                            if (tmpValue == 2)
+                                pwd = true;
+                            tmpValue = em4x05_Sniff_GetBlock (&bits[11], fwd);
+                            sprintf (dataText,"%08X",tmpValue);
+                        }
+
+                        // write 2 test
+                        if ((strncmp (bits,"00101",5) == 0) && (bitidx == 57)) {
+                            haveData = true;
+                            sprintf (cmdText,"Write");
+                            tmpValue = 0;
+                            tmpValue = (bits[5] - '0') + ((bits[6] - '0') << 1) + ((bits[7] - '0') << 2)  + ((bits[8] - '0') << 3);
+                            sprintf (blkAddr,"%d",tmpValue);
+                            if (tmpValue == 2)
+                                pwd = true;
+                            tmpValue = em4x05_Sniff_GetBlock (&bits[12], fwd);
+                            sprintf (dataText,"%08X",tmpValue);
+                        }
+/*
+                        if ((Bits.SubString(1,4) == "1001") && (Bits.Length() == 11)) {
+                            Addr = Bits.SubString(5,7);
+                            Data = "";
+                            Memo6->Lines->Add("Read  :     "+Addr+" "+Data);
+                        }
+
+                        if ((Bits.SubString(1,4) == "1100") && (Bits.Length() == 49)) {
+                            Addr = "";
+                            Data = Bits.SubString(5,45);
+                            Memo6->Lines->Add("Protect :     "+Addr+" "+Data);
+                        }
+
+                        if ((Bits.SubString(1,4) == "1010") && (Bits.Length() == 49)) {
+                            Addr = "";
+                            Data = Bits.SubString(5,45);
+                            Memo6->Lines->Add("Disable :     "+Addr+" "+Data);
+                        }
+*/
+                        // Memo6->Lines->Add("Raw : "+Bits);
+                        bits[bitidx] = 0;
+                     //   printf ("%s\n",bits);
+                    } else {
+                        i = (CycleWidth - ZeroWidth) / 30;
+                        bits[bitidx++] = '0';
+                        for (int ii = 0; ii < i; ii++)
+                            bits[bitidx++] = '1';
+                    }
+                }
+            }
+        }
+        idx++;
+
+        // Print results
+        if (haveData) { //&& (minWidth > 1) && (maxWidth > minWidth)){
+            if (pwd)
+                PrintAndLogEx(SUCCESS, "%6llu | %-10s  | "_YELLOW_("%8s")" | "_YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+            else
+                PrintAndLogEx(SUCCESS, "%6llu | %-10s  | "_GREEN_("%8s")" | "_GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+        }
+    }
+
+    // footer
+    PrintAndLogEx(SUCCESS, "---------------------------------------------------------------------------------------------------");
+    PrintAndLogEx(NORMAL, "");
+
+    return PM3_SUCCESS;
+}
