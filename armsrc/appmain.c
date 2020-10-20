@@ -1613,7 +1613,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_SETCLOCK: {
-            SmartCardSetClock(packet->oldarg[0]);
+            struct p {
+                uint32_t new_clk;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            SmartCardSetClock(payload->new_clk);
             break;
         }
         case CMD_SMART_RAW: {
