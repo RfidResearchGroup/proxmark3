@@ -1756,6 +1756,10 @@ int CmdEM4x05Sniff(const char *Cmd) {
     // setup and sample data from Proxmark
     // if not directed to existing sample/graphbuffer
     if (sampleData) {
+        if (!IfPm3Lf()) {
+            PrintAndLogEx(WARNING, "Only offline mode is available");
+            return PM3_EINVARG;
+        }
         CmdLFSniff("");
     }
 
