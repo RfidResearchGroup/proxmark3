@@ -18,7 +18,7 @@
 #    -DANDROID_NATIVE_API_LEVEL=android-19 \
 #    -DSKIPBT=1 -DSKIPPYTHON=1 -DSKIPPTHREAD=1 ..
 
-message("-- CMake ${CMAKE_VERSION}")
+message(STATUS "CMake ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
 SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
