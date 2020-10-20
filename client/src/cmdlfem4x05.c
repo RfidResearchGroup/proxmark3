@@ -1178,6 +1178,48 @@ int CmdEM4x05Chk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdEM4x05Brute(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05_brute",
+                  "This command tries to bruteforce the password of a EM4205/4305/4469/4569\n",
+                  "Note: if you get many false positives, change position on the antenna"
+                  "lf em 4x05_brute\n"
+                  "lf em 4x05_brute -n 1                   -> stop after first candidate found\n"
+                  "lf em 4x05_brute -s 0x00000022B8        -> remember to use 0x for hex"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("s", "start", "<pwd>", "Start bruteforce enumeration from this password value"),
+        arg_int0("n", "", "<digits>", "Stop after having found n candidates. Default: 0 => infinite"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t start_pwd = arg_get_u64_def(ctx, 1, 0);
+    uint32_t n = arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(NORMAL, "");
+
+    struct {
+        uint32_t start_pwd;
+        uint32_t n;
+    } PACKED payload;
+
+    payload.start_pwd = start_pwd;
+    payload.n = n;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X_BF, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X_BF, &resp, 1000)) {
+        PrintAndLogEx(WARNING, "(EM4x05 Bruteforce) timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+    PrintAndLogEx(INFO, "Bruteforce is running on device side, press button to interrupt");
+    return PM3_SUCCESS;
+}
+
 typedef struct {
     uint16_t cnt;
     uint32_t value;

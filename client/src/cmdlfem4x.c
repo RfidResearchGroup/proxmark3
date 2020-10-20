@@ -647,6 +647,7 @@ static command_t CommandTable[] = {
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
     {"4x05_unlock", CmdEM4x05Unlock,      IfPm3Lf,         "execute tear off against EM4x05/EM4x69"},
     {"4x05_sniff",  CmdEM4x05Sniff,       IfPm3Lf,         "Attempt to recover em4x05 commands from sample buffer"},
+    {"4x05_brute",  CmdEM4x05Brute,       IfPm3Lf,         "Bruteforce password"},
     {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 4x50") " -----------------------"},
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
     {"4x50_info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},

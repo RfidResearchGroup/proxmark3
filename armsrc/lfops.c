@@ -2467,7 +2467,7 @@ static uint8_t Prepare_Data(uint16_t data_low, uint16_t data_hi) {
 // Requires: forwarLink_data filled with valid bits (1 bit per byte)
 // fwd_bit_count set with number of bits to be sent
 //====================================================================
-static void SendForward(uint8_t fwd_bit_count) {
+static void SendForward(uint8_t fwd_bit_count, bool fast) {
 
 // iceman,   21.3us increments for the USclock verification.
 // 55FC * 8us == 440us / 21.3 === 20.65 steps.  could be too short. Go for 56FC instead
@@ -2480,9 +2480,10 @@ static void SendForward(uint8_t fwd_bit_count) {
     fwd_write_ptr = forwardLink_data;
     fwd_bit_sz = fwd_bit_count;
 
-    // Set up FPGA, 125kHz or 95 divisor
-    LFSetupFPGAForADC(LF_DIVISOR_125, true);
-
+    if (! fast) {
+        // Set up FPGA, 125kHz or 95 divisor
+        LFSetupFPGAForADC(LF_DIVISOR_125, true);
+    }
     // force 1st mod pulse (start gap must be longer for 4305)
     fwd_bit_sz--; //prepare next bit modulation
     fwd_write_ptr++;
@@ -2505,11 +2506,57 @@ static void EM4xLoginEx(uint32_t pwd) {
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_LOGIN);
     len += Prepare_Data(pwd & 0xFFFF, pwd >> 16);
-    SendForward(len);
+    SendForward(len, false);
     //WaitUS(20); // no wait for login command.
     // should receive
     // 0000 1010 ok
     // 0000 0001 fail
+}
+
+void EM4xBruteforce(uint32_t start_pwd, uint32_t n) {
+    // With current timing, 18.6 ms per test = 53.8 pwds/s
+    reply_ng(CMD_LF_EM4X_BF, PM3_SUCCESS, NULL, 0);
+    StartTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    WaitMS(20);
+    LED_A_ON();
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
+    uint32_t candidates_found = 0;
+    for (uint32_t pwd = start_pwd; pwd < 0xFFFFFFFF; pwd++) {
+        if (((pwd - start_pwd) & 0x3F) == 0x00) {
+            WDT_HIT();
+            if (BUTTON_PRESS() || data_available()) {
+                Dbprintf("EM4x05 Bruteforce Interrupted");
+                break;
+            }
+        }
+        // Report progress every 256 attempts
+        if (((pwd - start_pwd) & 0xFF) == 0x00) {
+            Dbprintf("Trying: %06Xxx", pwd >> 8);
+        }
+        clear_trace();
+
+        forward_ptr = forwardLink_data;
+        uint8_t len = Prepare_Cmd(FWD_CMD_LOGIN);
+        len += Prepare_Data(pwd & 0xFFFF, pwd >> 16);
+        SendForward(len, true);
+
+        WaitUS(400);
+        DoPartialAcquisition(0, false, 350, 1000);
+        uint8_t *mem = BigBuf_get_addr();
+        if (mem[334] < 128) {
+            Dbprintf("Password candidate: " _GREEN_("%08X"), pwd);
+            if ((n != 0) && (candidates_found == n)) {
+                Dbprintf("EM4x05 Bruteforce Stopped. %i candidates found", candidates_found);
+                break;
+            }
+        }
+        // Beware: if smaller, tag might not have time to be back in listening state yet
+        WaitMS(1);
+    }
+    StopTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
 }
 
 void EM4xLogin(uint32_t pwd) {
@@ -2558,7 +2605,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
     uint8_t len = Prepare_Cmd(FWD_CMD_READ);
     len += Prepare_Addr(addr);
 
-    SendForward(len);
+    SendForward(len, false);
 
     WaitUS(400);
 
@@ -2594,7 +2641,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
     len += Prepare_Addr(addr);
     len += Prepare_Data(data & 0xFFFF, data >> 16);
 
-    SendForward(len);
+    SendForward(len, false);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
         StopTicks();
@@ -2636,7 +2683,7 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd) {
     uint8_t len = Prepare_Cmd(FWD_CMD_PROTECT);
     len += Prepare_Data(data & 0xFFFF, data >> 16);
 
-    SendForward(len);
+    SendForward(len, false);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
         StopTicks();
