@@ -352,7 +352,67 @@ static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
     return res;
 }
 
+
 //////////////// 4205 / 4305 commands
+
+static bool em4x05_verify_write(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t data) {
+    uint32_t r = 0;
+    int res = em4x05_read_word_ext(addr, pwd, use_pwd, &r);
+    if (res == PM3_SUCCESS) {
+        return (r == data);
+    }    
+    return false;
+}
+
+int em4x05_clone_tag(uint32_t *blockdata, uint8_t numblocks, uint32_t pwd, bool use_pwd) {
+
+    if (blockdata == NULL)
+        return PM3_EINVARG;
+
+    if (numblocks < 1 || numblocks > 8)
+        return PM3_EINVARG;
+
+    // fast push mode
+    conn.block_after_ACK = true;
+
+    int res = em4x05_write_word_ext(EM_CONFIG_BLOCK, pwd, use_pwd, blockdata[0]);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "(em4x05_clone_tag) Time out writing to tag");
+        return res;
+    }
+
+    for (int8_t i = 1; i < numblocks; i++) {
+
+        // Disable fast mode on last packet
+        if (i == numblocks - 1) {
+            conn.block_after_ACK = false;
+        }
+
+        res = em4x05_write_word_ext(4 + i, pwd, use_pwd, blockdata[i]);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "(em4x05_clone_tag) Time out writing to tag");
+            return res;
+        }
+    }
+
+    res = 0;
+    if (em4x05_verify_write(EM_CONFIG_BLOCK, use_pwd, pwd, blockdata[0]) == false) {
+        res++;
+    }
+    
+    for (int8_t i = 1; i < numblocks; i++) {
+        if (em4x05_verify_write(4 + i, use_pwd, pwd, blockdata[i]) == false) {
+            res++;
+        }
+    }
+
+    if (res == 0) {
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int em4x05_login_ext(uint32_t pwd) {
 
     struct {
@@ -376,7 +436,7 @@ static int em4x05_login_ext(uint32_t pwd) {
     return em4x05_demod_resp(&word, true);
 }
 
-int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
+int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t *word) {
 
     struct {
         uint32_t password;
@@ -386,7 +446,7 @@ int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word
 
     payload.password = pwd;
     payload.address = addr;
-    payload.usepwd = usePwd;
+    payload.usepwd = use_pwd;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X_READWORD, (uint8_t *)&payload, sizeof(payload));
@@ -402,7 +462,7 @@ int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word
     return em4x05_demod_resp(word, false);
 }
 
-int em4x05_write_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t data) {
+int em4x05_write_word_ext(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t data) {
     struct {
         uint32_t password;
         uint32_t data;
@@ -413,7 +473,7 @@ int em4x05_write_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t data
     payload.password = pwd;
     payload.data = data;
     payload.address = addr;
-    payload.usepwd = usePwd;
+    payload.usepwd = use_pwd;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));

@@ -8,23 +8,21 @@
 // PSK1, RF/128, RF/2, 64 bits long
 //-----------------------------------------------------------------------------
 #include "cmdlfkeri.h"
-
 #include <string.h>
 #include <inttypes.h>
-
 #include <ctype.h>
 #include <stdlib.h>
-
-#include "commonutil.h"     // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "cliparser.h"
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // preamble test
-#include "cmdlft55xx.h" // verifywrite
+#include "protocols.h"    // for T55xx config register definitions
+#include "lfdemod.h"      // preamble test
+#include "cmdlft55xx.h"   // verifywrite
+#include "cmdlfem4x05.h"  // 
 
 static int CmdHelp(const char *Cmd);
 typedef enum  {Scramble = 0, Descramble = 1} KeriMSScramble_t;
@@ -185,7 +183,7 @@ static int CmdKeriRead(const char *Cmd) {
 
 static int CmdKeriClone(const char *Cmd) {
 
-    bool q5 = false;
+    bool q5 = false, em4305 = false;
 
     uint8_t keritype[2] = {'i'}; // default to internalid
     int typeLen = 0;
@@ -207,7 +205,7 @@ static int CmdKeriClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf keri clone",
-                  "clone a KERI tag to a T55x7 or Q5/T5555 tag",
+                  "clone a KERI tag to a T55x7, Q5/T5555 or EM4305 tag",
                   "lf keri clone -t i --id 12345\n"
                   "lf keri clone -t m --fc 6 --id 12345\n");
 
@@ -217,6 +215,7 @@ static int CmdKeriClone(const char *Cmd) {
         arg_str0("t",  "type", "<m|i>", "Type m - MS, i - Internal ID"),
         arg_int0(NULL, "fc",   "<dec>", "Facility Code"),
         arg_int1(NULL, "id",   "<dec>", "Keri ID"),
+        arg_lit0(NULL,  "em4305",       "specify writing to EM5405 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -225,12 +224,22 @@ static int CmdKeriClone(const char *Cmd) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
         q5 = true;
     }
+    if (arg_get_lit(ctx, 5)) {
+        blocks[0] = EM4305_KERI_CONFIG_BLOCK;        
+        em4305 = true;
+    }
+
     typeLen = sizeof(keritype);
     CLIGetStrWithReturn(ctx, 2, keritype, &typeLen);
 
     fc = arg_get_int_def(ctx, 3, 0);
     cid = arg_get_int_def(ctx, 4, 0);
     CLIParserFree(ctx);
+    
+    if (q5 && em4305) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     // Setup card data/build internal id
     switch (keritype[0]) {
@@ -256,7 +265,13 @@ static int CmdKeriClone(const char *Cmd) {
 
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em4305) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
+    
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf keri read`") " to verify");
     return res;
