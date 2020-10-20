@@ -1121,7 +1121,7 @@ static int l_em4x05_read(lua_State *L) {
         PrintAndLogEx(DEBUG, " Pwd %08X", password);
 
     uint32_t word = 0;
-    int res = EM4x05ReadWord_ext(addr, password, use_pwd, &word);
+    int res = em4x05_read_word_ext(addr, password, use_pwd, &word);
     if (res != PM3_SUCCESS) {
         return returnToLuaWithError(L, "Failed to read EM4x05 data");
     }
