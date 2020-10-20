@@ -2497,7 +2497,7 @@ static void SendForward(uint8_t fwd_bit_count, bool fast) {
             WaitUS(32 * 8);
         } else {
             TurnReadLF_off(23 * 8);
-            TurnReadLFOn((32 - 23) * 8);
+            TurnReadLFOn(18 * 8);
         }
     }
 }
