@@ -402,6 +402,29 @@ int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word
     return em4x05_demod_resp(word, false);
 }
 
+int em4x05_write_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t data) {
+    struct {
+        uint32_t password;
+        uint32_t data;
+        uint8_t address;
+        uint8_t usepwd;
+    } PACKED payload;
+
+    payload.password = pwd;
+    payload.data = data;
+    payload.address = addr;
+    payload.usepwd = usePwd;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X_WRITEWORD, &resp, 2000)) {
+        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
 int CmdEM4x05Demod(const char *Cmd) {
     uint32_t dummy = 0;
     return em4x05_demod_resp(&dummy, false);
@@ -711,26 +734,9 @@ int CmdEM4x05Write(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
     } else {
-        struct {
-            uint32_t password;
-            uint32_t data;
-            uint8_t address;
-            uint8_t usepwd;
-        } PACKED payload;
-
-        payload.password = pwd;
-        payload.data = data;
-        payload.address = addr;
-        payload.usepwd = usePwd;
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));
-        PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_LF_EM4X_WRITEWORD, &resp, 2000)) {
-            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
+        em4x05_write_word_ext(addr, pwd, usePwd, data);
     }
+
     if (em4x05_download_samples() == false)
         return PM3_ENODATA;
 

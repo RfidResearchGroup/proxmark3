@@ -559,13 +559,13 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define EM4x05_FIRST_USER_BLOCK         5
 #define EM4x05_SET_NUM_BLOCKS(x)        ((x+5-1)<<14) //# of blocks sent during default read mode
 #define EM4x05_GET_NUM_BLOCKS(x)        (((x>>14) & 0xF)-5+1)
-#define EM4x05_READ_LOGIN_REQ           1<<18
-#define EM4x05_READ_HK_LOGIN_REQ        1<<19
-#define EM4x05_WRITE_LOGIN_REQ          1<<20
-#define EM4x05_WRITE_HK_LOGIN_REQ       1<<21
-#define EM4x05_READ_AFTER_WRITE         1<<22
-#define EM4x05_DISABLE_ALLOWED          1<<23
-#define EM4x05_READER_TALK_FIRST        1<<24
+#define EM4x05_READ_LOGIN_REQ           (1 << 18)
+#define EM4x05_READ_HK_LOGIN_REQ        (1 << 19)
+#define EM4x05_WRITE_LOGIN_REQ          (1 << 20)
+#define EM4x05_WRITE_HK_LOGIN_REQ       (1 << 21)
+#define EM4x05_READ_AFTER_WRITE         (1 << 22)
+#define EM4x05_DISABLE_ALLOWED          (1 << 23)
+#define EM4x05_READER_TALK_FIRST        (1 << 24)
 
 
 // FeliCa protocol
