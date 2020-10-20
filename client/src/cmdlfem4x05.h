@@ -27,5 +27,6 @@ int CmdEM4x05Wipe(const char *Cmd);
 int CmdEM4x05Info(const char *Cmd);
 int CmdEM4x05Chk(const char *Cmd);
 int CmdEM4x05Unlock(const char *Cmd);
+int CmdEM4x05Sniff(const char *Cmd);
 
 #endif
