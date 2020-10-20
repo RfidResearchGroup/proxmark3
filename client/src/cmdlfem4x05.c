@@ -36,6 +36,8 @@
 
 //////////////// 4205 / 4305 commands
 
+#define EM_PREAMBLE_LEN 8
+
 static int usage_lf_em4x05_wipe(void) {
     PrintAndLogEx(NORMAL, "Wipe EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
@@ -90,19 +92,6 @@ static int usage_lf_em4x05_info(void) {
     return PM3_SUCCESS;
 }
 
-#define EM_SERIAL_BLOCK 1
-#define EM_CONFIG_BLOCK 4
-#define EM4305_PROT1_BLOCK 14
-#define EM4305_PROT2_BLOCK 15
-#define EM4469_PROT_BLOCK 3
-
-typedef enum {
-    EM_UNKNOWN,
-    EM_4205,
-    EM_4305,
-    EM_4X69,
-} em_tech_type_t;
-
 // 1 = EM4x69
 // 2 = EM4x05
 static em_tech_type_t em_get_card_type(uint32_t config) {
@@ -133,7 +122,7 @@ static const char *em_get_card_str(uint32_t config) {
 }
 
 // even parity COLUMN
-static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+static bool em4x05_col_parity_test(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
     uint8_t colP = 0;
 
@@ -147,14 +136,14 @@ static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t col
     return true;
 }
 
-#define EM_PREAMBLE_LEN 8
+
 // download samples from device and copy to Graphbuffer
-static bool downloadSamplesEM(void) {
+static bool em4x05_download_samples(void) {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
     uint8_t got[6000];
     if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
-        PrintAndLogEx(WARNING, "(downloadSamplesEM) command execution time out");
+        PrintAndLogEx(WARNING, "(em_download_samples) command execution time out");
         return false;
     }
 
@@ -273,12 +262,12 @@ static bool detectNRZ(void) {
 }
 
 // param: idx - start index in demoded data.
-static int setDemodBufferEM(uint32_t *word, size_t idx) {
+static int em4x05_setdemod_buffer(uint32_t *word, size_t idx) {
 
     //test for even parity bits.
     uint8_t parity[45] = {0};
     memcpy(parity, DemodBuffer, 45);
-    if (!EM_ColParityTest(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
+    if (!em4x05_col_parity_test(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - End Parity check failed");
         return PM3_ESOFT;
     }
@@ -296,7 +285,7 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE, NRZ
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
-static int demodEM4x05resp(uint32_t *word, bool onlyPreamble) {
+static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
     size_t idx = 0;
     *word = 0;
     bool found_err = false;
@@ -347,21 +336,24 @@ static int demodEM4x05resp(uint32_t *word, bool onlyPreamble) {
         }
         if (found_err)
             return PM3_EFAILED;
+
         return PM3_ESOFT;
     } while (0);
+
     if (onlyPreamble)
         return PM3_SUCCESS;
-    res = setDemodBufferEM(word, idx);
+
+    res = em4x05_setdemod_buffer(word, idx);
     if (res == PM3_SUCCESS)
         return res;
+
     if (found_err)
         return PM3_EFAILED;
     return res;
 }
 
 //////////////// 4205 / 4305 commands
-
-static int EM4x05Login_ext(uint32_t pwd) {
+static int em4x05_login_ext(uint32_t pwd) {
 
     struct {
         uint32_t password;
@@ -373,18 +365,18 @@ static int EM4x05Login_ext(uint32_t pwd) {
     SendCommandNG(CMD_LF_EM4X_LOGIN, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X_LOGIN, &resp, 10000)) {
-        PrintAndLogEx(WARNING, "(EM4x05Login_ext) timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "(em4x05_login_ext) timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
-    if (downloadSamplesEM() == false) {
+    if (em4x05_download_samples() == false) {
         return PM3_ESOFT;
     }
     uint32_t word;
-    return demodEM4x05resp(&word, true);
+    return em4x05_demod_resp(&word, true);
 }
 
-int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
+int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
 
     struct {
         uint32_t password;
@@ -400,21 +392,19 @@ int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) 
     SendCommandNG(CMD_LF_EM4X_READWORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X_READWORD, &resp, 10000)) {
-        PrintAndLogEx(WARNING, "(EM4x05ReadWord_ext) timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "(em4x05_read_word_ext) timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
-    if (downloadSamplesEM() == false) {
+    if (em4x05_download_samples() == false) {
         return PM3_ESOFT;
     }
-    return demodEM4x05resp(word, false);
+    return em4x05_demod_resp(word, false);
 }
 
 int CmdEM4x05Demod(const char *Cmd) {
-//    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-//   if (ctmp == 'h') return usage_lf_em4x05_demod();
     uint32_t dummy = 0;
-    return demodEM4x05resp(&dummy, false);
+    return em4x05_demod_resp(&dummy, false);
 }
 
 int CmdEM4x05Dump(const char *Cmd) {
@@ -458,7 +448,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     uint32_t block0 = 0;
     // read word 0 (chip info)
     // block 0 can be read even without a password.
-    if (EM4x05IsBlock0(&block0) == false)
+    if (em4x05_isblock0(&block0) == false)
         return PM3_ESOFT;
 
     uint8_t bytes[4] = {0};
@@ -481,7 +471,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
     if (usePwd) {
         // Test first if the password is correct
-        status = EM4x05Login_ext(pwd);
+        status = em4x05_login_ext(pwd);
         if (status == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Password is " _GREEN_("correct"));
         } else if (status == PM3_EFAILED) {
@@ -502,7 +492,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         // To flag any blocks locked we need to read blocks 14 and 15 first
         // dont swap endin until we get block lock flags.
-        status14 = EM4x05ReadWord_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
+        status14 = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) {
                 lock_bits = word;
@@ -512,7 +502,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
         }
-        status15 = EM4x05ReadWord_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word);
+        status15 = em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word);
         if (status15 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) { // assume block 15 is the current lock block
                 lock_bits = word;
@@ -537,8 +527,8 @@ int CmdEM4x05Dump(const char *Cmd) {
                     PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, info[addr]);
                 }
             } else {
-                // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
-                status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
+                // success &= em4x05_read_word_ext(addr, pwd, usePwd, &word);
+                status = em4x05_read_word_ext(addr, pwd, usePwd, &word); // Get status for single read
                 if (status != PM3_SUCCESS)
                     success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
                 data[addr] = BSWAP_32(word);
@@ -573,7 +563,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         // To flag any blocks locked we need to read blocks 14 and 15 first
         // dont swap endin until we get block lock flags.
-        status14 = EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
+        status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) {
                 lock_bits = word;
@@ -599,7 +589,7 @@ int CmdEM4x05Dump(const char *Cmd) {
                 }
             } else {
 
-                status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+                status = em4x05_read_word_ext(addr, pwd, usePwd, &word);
                 if (status != PM3_SUCCESS) {
                     success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
                 }
@@ -662,7 +652,7 @@ int CmdEM4x05Read(const char *Cmd) {
     }
 
     uint32_t word = 0;
-    int status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+    int status = em4x05_read_word_ext(addr, pwd, usePwd, &word);
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
     else if (status == PM3_EFAILED)
@@ -741,11 +731,11 @@ int CmdEM4x05Write(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
     }
-    if (!downloadSamplesEM())
+    if (em4x05_download_samples() == false)
         return PM3_ENODATA;
 
     uint32_t dummy = 0;
-    int status = demodEM4x05resp(&dummy, true);
+    int status = em4x05_demod_resp(&dummy, true);
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
     else if (status == PM3_EFAILED)
@@ -1000,8 +990,8 @@ static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
 }
 
 //quick test for EM4x05/EM4x69 tag
-bool EM4x05IsBlock0(uint32_t *word) {
-    return (EM4x05ReadWord_ext(0, 0, false, word) == PM3_SUCCESS);
+bool em4x05_isblock0(uint32_t *word) {
+    return (em4x05_read_word_ext(0, 0, false, word) == PM3_SUCCESS);
 }
 
 int CmdEM4x05Info(const char *Cmd) {
@@ -1019,7 +1009,7 @@ int CmdEM4x05Info(const char *Cmd) {
 
     // read word 0 (chip info)
     // block 0 can be read even without a password.
-    if (EM4x05IsBlock0(&block0) == false)
+    if (em4x05_isblock0(&block0) == false)
         return PM3_ESOFT;
 
     // based on Block0 ,  decide type.
@@ -1027,13 +1017,13 @@ int CmdEM4x05Info(const char *Cmd) {
 
     // read word 1 (serial #) doesn't need pwd
     // continue if failed, .. non blocking fail.
-    EM4x05ReadWord_ext(EM_SERIAL_BLOCK, 0, false, &serial);
+    em4x05_read_word_ext(EM_SERIAL_BLOCK, 0, false, &serial);
 
     printEM4x05info(block0, serial);
 
     // read word 4 (config block)
     // needs password if one is set
-    if (EM4x05ReadWord_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+    if (em4x05_read_word_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
         return PM3_ESOFT;
 
     printEM4x05config(word);
@@ -1043,7 +1033,7 @@ int CmdEM4x05Info(const char *Cmd) {
     if (card_type == EM_4205 || card_type == EM_4305) {
 
         // read word 14 and 15 to see which is being used for the protection bits
-        if (EM4x05ReadWord_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+        if (em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
         }
 
@@ -1051,7 +1041,7 @@ int CmdEM4x05Info(const char *Cmd) {
             printEM4x05ProtectionBits(word, EM4305_PROT1_BLOCK);
             return PM3_SUCCESS;
         } else { // if status bit says this is not the used protection word
-            if (EM4x05ReadWord_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+            if (em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
                 return PM3_ESOFT;
             if (word & 0x8000) {
                 printEM4x05ProtectionBits(word, EM4305_PROT2_BLOCK);
@@ -1060,7 +1050,7 @@ int CmdEM4x05Info(const char *Cmd) {
         }
     } else if (card_type == EM_4X69) {
         // read word 3 to see which is being used for the protection bits
-        if (EM4x05ReadWord_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+        if (em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
         }
         printEM4x05ProtectionBits(word, EM4469_PROT_BLOCK);
@@ -1114,7 +1104,7 @@ int CmdEM4x05Chk(const char *Cmd) {
         uint32_t pwd = lf_t55xx_white_pwdgen(card_id & 0xFFFFFFFF);
         PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", pwd);
 
-        int status = EM4x05Login_ext(pwd);
+        int status = em4x05_login_ext(pwd);
         if (status == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
@@ -1157,7 +1147,7 @@ int CmdEM4x05Chk(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
 
-            int status = EM4x05Login_ext(curr_password);
+            int status = em4x05_login_ext(curr_password);
             if (status == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                 found = true;
@@ -1245,11 +1235,11 @@ static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool 
         return PM3_ETIMEOUT;
     }
 
-    if (!downloadSamplesEM())
+    if (em4x05_download_samples() == false)
         return PM3_ENODATA;
 
     uint32_t dummy = 0;
-    int status = demodEM4x05resp(&dummy, true);
+    int status = em4x05_demod_resp(&dummy, true);
     if (status == PM3_SUCCESS && verbose)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
     else if (status == PM3_EFAILED)
@@ -1332,7 +1322,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     //
     // read word 14
     uint32_t init_14 = 0;
-    int res = EM4x05ReadWord_ext(14, pwd, use_pwd, &init_14);
+    int res = em4x05_read_word_ext(14, pwd, use_pwd, &init_14);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to read word 14\n");
         return PM3_ENODATA;
@@ -1341,7 +1331,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     // read 15
     uint32_t init_15 = 0;
-    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &init_15);
+    res = em4x05_read_word_ext(15, pwd, use_pwd, &init_15);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to read word 15\n");
         return PM3_ENODATA;
@@ -1457,14 +1447,14 @@ int CmdEM4x05Unlock(const char *Cmd) {
         res = unlock_write_protect(use_pwd, pwd, write_value, verbose);
 
         // read after trigger
-        res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14);
+        res = em4x05_read_word_ext(14, pwd, use_pwd, &word14);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "failed to read 14");
             return PM3_ESOFT;
         }
 
         // read after trigger
-        res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15);
+        res = em4x05_read_word_ext(15, pwd, use_pwd, &word15);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "failed to read 15");
             return PM3_ESOFT;
@@ -1500,7 +1490,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
                 unlock_reset(use_pwd, pwd, write_value, verbose);
 
                 // read after reset
-                res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
+                res = em4x05_read_word_ext(14, pwd, use_pwd, &word14b);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(WARNING, "failed to read 14");
                     return PM3_ESOFT;
@@ -1510,7 +1500,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
                     unlock_reset(use_pwd, pwd, write_value, verbose);
 
-                    res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
+                    res = em4x05_read_word_ext(14, pwd, use_pwd, &word14b);
                     if (res != PM3_SUCCESS) {
                         PrintAndLogEx(WARNING, "failed to read 14");
                         return PM3_ESOFT;
@@ -1519,7 +1509,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
                 if (word14b != search_value) {
 
-                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
+                    res = em4x05_read_word_ext(15, pwd, use_pwd, &word15b);
                     if (res == PM3_SUCCESS) {
                         PrintAndLogEx(INFO, "Status: new definitive value!       => " _RED_("SUCCESS:") " 14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
                         success = true;
@@ -1548,13 +1538,13 @@ int CmdEM4x05Unlock(const char *Cmd) {
                     unlock_reset(use_pwd, pwd, write_value, verbose);
 
                     // read after reset
-                    res = EM4x05ReadWord_ext(14, pwd, use_pwd, &word14b);
+                    res = em4x05_read_word_ext(14, pwd, use_pwd, &word14b);
                     if (res != PM3_SUCCESS) {
                         PrintAndLogEx(WARNING, "failed to read 14");
                         return PM3_ESOFT;
                     }
 
-                    res = EM4x05ReadWord_ext(15, pwd, use_pwd, &word15b);
+                    res = em4x05_read_word_ext(15, pwd, use_pwd, &word15b);
                     if (res != PM3_SUCCESS) {
                         PrintAndLogEx(WARNING, "failed to read 15");
                         return PM3_ESOFT;
@@ -1566,7 +1556,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
                     if ((word14b & ACTIVE_MASK) == ACTIVE_MASK) {
 
                         if (word14b == word15) {
-                            PrintAndLogEx(INFO, "Status: confirmed                   => " _RED_("SUCCESS:   ") "14: " _CYAN_("%08X") "  15: %08X", word14b, word15b);
+                            PrintAndLogEx(INFO, "Status: confirmed                   => " _GREEN_("SUCCESS:   ") "14: " _GREEN_("%08X") "  15: %08X", word14b, word15b);
 
                             unlock_add_item(flipped, 64, word14b);
                             success = true;
@@ -1640,8 +1630,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     return exit_code;
 }
 
-static size_t em4x05_Sniff_GetNextBitStart (size_t idx, size_t sc, int *data, size_t *pulsesamples)
-{
+static size_t em4x05_Sniff_GetNextBitStart (size_t idx, size_t sc, int *data, size_t *pulsesamples) {
     while ((idx < sc) && (data[idx] <= 10)) // find a going high
         idx++;
 
