@@ -123,17 +123,6 @@ int demodKeri(bool verbose) {
     setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
-    //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-
-    //get internal id
-    // uint32_t ID = bytebits_to_byte(DemodBuffer + 29, 32);
-    // Due to the 3 sync bits being at the start of the capture
-    // We can take the last 32bits as the internal ID.
-    uint32_t ID = raw2;
-    ID &= 0x7FFFFFFF;
-
     /*
         000000000000000000000000000001XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX111
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^1###############################^^^
@@ -148,25 +137,40 @@ int demodKeri(bool verbose) {
         Might be a hash of FC & CN to generate Internal ID
     */
 
-    PrintAndLogEx(SUCCESS, "KERI - Internal ID: " _GREEN_("%u") ", Raw: %08X%08X", ID, raw1, raw2);
+
     /*
         Descramble Data.
     */
     uint32_t fc = 0;
     uint32_t cardid = 0;
-
-    // Just need to the low 32 bits without the 111 trailer
-    CmdKeriMSScramble(Descramble, &fc, &cardid, &raw2);
-
-    PrintAndLogEx(SUCCESS, "Descrambled MS - FC: " _GREEN_("%d") " Card: " _GREEN_("%d"), fc, cardid);
+    //got a good demod
+    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
 
     if (invert) {
         PrintAndLogEx(INFO, "Had to Invert - probably KERI");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
 
+        raw1 = bytebits_to_byte(DemodBuffer, 32);
+        raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    
         CmdPrintDemodBuff("x");
     }
+
+    //get internal id
+    // uint32_t ID = bytebits_to_byte(DemodBuffer + 29, 32);
+    // Due to the 3 sync bits being at the start of the capture
+    // We can take the last 32bits as the internal ID.
+    uint32_t ID = raw2;
+    ID &= 0x7FFFFFFF;
+
+    PrintAndLogEx(SUCCESS, "KERI - Internal ID: " _GREEN_("%u") ", Raw: %08X%08X", ID, raw1, raw2);
+    
+    // Just need to the low 32 bits without the 111 trailer
+    CmdKeriMSScramble(Descramble, &fc, &cardid, &raw2);
+
+    PrintAndLogEx(SUCCESS, "Descrambled MS - FC: " _GREEN_("%d") " Card: " _GREEN_("%d"), fc, cardid);
     return PM3_SUCCESS;
 }
 
