@@ -912,6 +912,73 @@ int CmdEM4x05Wipe(const char *Cmd) {
     return success;
 }
 
+static const char *printEM4x05_known(uint32_t word) {
+
+    switch(word) {
+//        case EM4305_DEFAULT_CONFIG_BLOCK:
+        case EM4305_PRESCO_CONFIG_BLOCK: {
+            return "EM4305 DEFAULT / PRESCO";
+        }
+//        case EM4305_PAXTON_CONFIG_BLOCK:
+        case EM4305_EM_UNIQUE_CONFIG_BLOCK: {
+            return "EM UNIQUE / PAXTON";
+        }
+        case EM4305_VISA2000_CONFIG_BLOCK: {
+            return "VISA2000";
+        }
+        case EM4305_VIKING_CONFIG_BLOCK: {
+            return "VIKING";
+        }
+        case EM4305_NORALSY_CONFIG_BLOCK: {
+            return "NORALSY";
+        }
+        case EM4305_SECURAKEY_CONFIG_BLOCK: {
+            return "SECURAKEY";
+        }
+//        case EM4305_HID_26_CONFIG_BLOCK:
+//        case EM4305_PARADOX_CONFIG_BLOCK:
+        case EM4305_AWID_CONFIG_BLOCK: {
+            return "HID26 / PARADOX / AWID";
+        }
+        case EM4305_PYRAMID_CONFIG_BLOCK: {
+            return "PYRAMID";
+        }
+        case EM4305_IOPROX_CONFIG_BLOCK: {
+            return "IOPROX";
+        }
+//        case EM4305_KERI_CONFIG_BLOCK:
+        case EM4305_INDALA_64_CONFIG_BLOCK: {
+            return "INDALA 64 / KERI";
+        }
+        case EM4305_INDALA_224_CONFIG_BLOCK: {
+            return "INDALA 224";
+        }
+        case EM4305_MOTOROLA_CONFIG_BLOCK: {
+            return "MOTOROLA";
+        }
+        case EM4305_NEXWATCH_CONFIG_BLOCK: {
+            return "NEXWATCH";
+        }
+//        case EM4305_NEDAP_64_CONFIG_BLOCK:
+        case EM4305_JABLOTRON_CONFIG_BLOCK: {
+            return "JABLOTRON / NEDAP 64";
+        }
+        case EM4305_GUARDPROXII_CONFIG_BLOCK: {
+            return "GUARD PROXII";
+        }
+        case EM4305_NEDAP_128_CONFIG_BLOCK: {
+            return "NEDAP 128";
+        }
+        case EM4305_PAC_CONFIG_BLOCK: {
+            return "PAC/Stanley";
+        }
+        case EM4305_VERICHIP_CONFIG_BLOCK: {
+            return "VERICHIP";
+        }
+    }
+    return "";
+}
+
 static void printEM4x05config(uint32_t wordData) {
     uint16_t datarate = (((wordData & 0x3F) + 1) * 2);
     uint8_t encoder = ((wordData >> 6) & 0xF);
@@ -1002,7 +1069,8 @@ static void printEM4x05config(uint32_t wordData) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Config Information") " ------------------------");
-    PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)", wordData);
+    PrintAndLogEx(INFO, "ConfigWord: %08X  ( " _YELLOW_("%s") " )", wordData, printEM4x05_known(wordData) );
+
     PrintAndLogEx(INFO, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
     PrintAndLogEx(INFO, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
     PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
@@ -1043,7 +1111,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
 
-    PrintAndLogEx(SUCCESS, "    Block0: " _GREEN_("%08x") " (Word 0)", block0);
+    PrintAndLogEx(SUCCESS, "    Block0: " _GREEN_("%08x"), block0);
     PrintAndLogEx(SUCCESS, " Chip Type:   %3u | " _YELLOW_("%s"), chipType, em_get_card_str(block0));
 
     switch (cap) {
@@ -1079,6 +1147,7 @@ static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
             PrintAndLogEx(INFO, "      Word:  %02u | %s", i + 1, ((1 << i) & word) ? _RED_("write locked") : "unlocked");
     }
 }
+
 
 //quick test for EM4x05/EM4x69 tag
 bool em4x05_isblock0(uint32_t *word) {
@@ -1148,6 +1217,7 @@ int CmdEM4x05Info(const char *Cmd) {
         }
         printEM4x05ProtectionBits(word, EM4469_PROT_BLOCK);
     }
+
     //something went wrong
     return PM3_ESOFT;
 }
