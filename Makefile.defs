@@ -43,6 +43,12 @@ INSTALLDOCSRELPATH ?=  share/doc/proxmark3
 platform = $(shell uname)
 DETECTED_OS=$(platform)
 
+ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
+DETECTED_COMPILER = clang
+else
+DETECTED_COMPILER = gcc
+endif
+
 ifeq ($(platform),Darwin)
     AR= /usr/bin/ar rcs
     RANLIB= /usr/bin/ranlib
@@ -74,7 +80,9 @@ DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
 # GCC 10 has issues with false positives on stringop-overflow, let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
 # beware these flags didn't exist for GCC < 7
 ifeq ($(shell expr $(CC_VERSION) \>= 10), 1)
+  ifneq ($(DETECTED_COMPILER), clang)
     DEFCFLAGS += -Wno-stringop-overflow -Wno-error=stringop-overflow
+	endif
 endif
 ifeq ($(platform),Darwin)
 # their readline has strict-prototype issues
