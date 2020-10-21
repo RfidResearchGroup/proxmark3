@@ -205,7 +205,7 @@ static int CmdKeriClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf keri clone",
-                  "clone a KERI tag to a T55x7, Q5/T5555 or EM4305 tag",
+                  "clone a KERI tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
                   "lf keri clone -t i --id 12345\n"
                   "lf keri clone -t m --fc 6 --id 12345\n");
 
@@ -215,17 +215,20 @@ static int CmdKeriClone(const char *Cmd) {
         arg_str0("t",  "type", "<m|i>", "Type m - MS, i - Internal ID"),
         arg_int0(NULL, "fc",   "<dec>", "Facility Code"),
         arg_int1(NULL, "id",   "<dec>", "Keri ID"),
-        arg_lit0(NULL,  "em4305",       "specify writing to EM5405 tag"),
+        arg_lit0(NULL,  "em",           "specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    char cardtype[16] = {"T55x7"};
     if (arg_get_lit(ctx, 1)) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype) ,"Q5/T5555");
         q5 = true;
     }
     if (arg_get_lit(ctx, 5)) {
-        blocks[0] = EM4305_KERI_CONFIG_BLOCK;        
+        blocks[0] = EM4305_KERI_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype) ,"EM4305/4469");
         em4305 = true;
     }
 
@@ -258,7 +261,7 @@ static int CmdKeriClone(const char *Cmd) {
     // Prepare and write to card
     // 3 LSB is ONE
     uint64_t data = ((uint64_t)internalid << 3) + 7;
-    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), (q5) ? "Q5/T5555" : "T55x7", internalid);
+    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), cardtype, internalid);
 
     blocks[1] = data >> 32;
     blocks[2] = data & 0xFFFFFFFF;

@@ -374,18 +374,16 @@ int em4x05_clone_tag(uint32_t *blockdata, uint8_t numblocks, uint32_t pwd, bool 
 
     // fast push mode
     conn.block_after_ACK = true;
-
-    int res = em4x05_write_word_ext(EM_CONFIG_BLOCK, pwd, use_pwd, blockdata[0]);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "(em4x05_clone_tag) Time out writing to tag");
-        return res;
-    }
-
-    for (int8_t i = 1; i < numblocks; i++) {
+    int res = 0;
+    for (int8_t i = 0; i < numblocks; i++) {
 
         // Disable fast mode on last packet
         if (i == numblocks - 1) {
             conn.block_after_ACK = false;
+        }
+        
+        if (i != 0) {
+            blockdata[i] = reflect(blockdata[i], 32);
         }
 
         res = em4x05_write_word_ext(4 + i, pwd, use_pwd, blockdata[i]);
@@ -396,19 +394,14 @@ int em4x05_clone_tag(uint32_t *blockdata, uint8_t numblocks, uint32_t pwd, bool 
     }
 
     res = 0;
-    if (em4x05_verify_write(EM_CONFIG_BLOCK, use_pwd, pwd, blockdata[0]) == false) {
-        res++;
-    }
-    
-    for (int8_t i = 1; i < numblocks; i++) {
+    for (int8_t i = 0; i < numblocks; i++) {
         if (em4x05_verify_write(4 + i, use_pwd, pwd, blockdata[i]) == false) {
             res++;
         }
     }
 
-    if (res == 0) {
+    if (res == 0)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
-    }
 
     return PM3_SUCCESS;
 }
@@ -496,19 +489,19 @@ int CmdEM4x05Dump(const char *Cmd) {
     CLIParserInit(&ctx, "lf em dump",
                   "Dump EM4x05/EM4x69.  Tag must be on antenna.",
                   "lf em dump\n"
-                  "lf em dump -p 0x11223344\n"
-                  "lf em dump -f myfile -p 0x11223344"
+                  "lf em dump -p 11223344\n"
+                  "lf em dump -f myfile -p 11223344"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0("p", "pwd", "<hex>", "password (0x00000000)"),
+        arg_str0("p", "pwd", "<hex>", "password (00000000)"),
         arg_str0("f", "file", "<filename>", "override filename prefix (optional).  Default is based on UID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint64_t inputpwd = arg_get_u64_def(ctx, 1, 0xFFFFFFFFFFFFFFFF);
+    uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 1, 0xFFFFFFFFFFFFFFFF);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
@@ -1139,21 +1132,22 @@ int CmdEM4x05Chk(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x05_chk",
                   "This command uses a dictionary attack against EM4205/4305/4469/4569",
                   "lf em 4x05_chk\n"
-                  "lf em 4x05_chk -e 0x00000022B8        -> remember to use 0x for hex\n"
+                  "lf em 4x05_chk -e 000022B8            -> remember to use 0x for hex\n"
                   "lf em 4x05_chk -f t55xx_default_pwds  -> use T55xx default dictionary"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("f", "file", "<*.dic>", "loads a default keys dictionary file <*.dic>"),
-        arg_u64_0("e", "em", "<EM4100>", "try the calculated password from some cloners based on EM4100 ID"),
+        arg_str0("e", "em", "<EM4100>", "try the calculated password from some cloners based on EM4100 ID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    uint64_t card_id = arg_get_u64_def(ctx, 2, 0);
+
+    uint64_t card_id = arg_get_u64_hexstr_def(ctx, 2, 0);
     CLIParserFree(ctx);
 
     if (strlen(filename) == 0) {
@@ -1241,7 +1235,7 @@ int CmdEM4x05Brute(const char *Cmd) {
                   "Note: if you get many false positives, change position on the antenna"
                   "lf em 4x05_brute\n"
                   "lf em 4x05_brute -n 1                   -> stop after first candidate found\n"
-                  "lf em 4x05_brute -s 0x000022B8          -> remember to use 0x for hex"
+                  "lf em 4x05_brute -s 000022B8            -> remember to use 0x for hex"
                  );
 
     void *argtable[] = {
@@ -1251,7 +1245,7 @@ int CmdEM4x05Brute(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t start_pwd = arg_get_u64_def(ctx, 1, 0);
+    uint32_t start_pwd = arg_get_u64_hexstr_def(ctx, 1, 0);
     uint32_t n = arg_get_int_def(ctx, 2, 0);
     CLIParserFree(ctx);
 
@@ -1352,7 +1346,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
         arg_int0("n", NULL, NULL, "steps to skip"),
         arg_int0("s", "start", "<us>", "start scan from delay (us)"),
         arg_int0("e", "end", "<us>", "end scan at delay (us)"),
-        arg_u64_0("p", "pwd", "", "password (0x00000000)"),
+        arg_str0("p", "pwd", "", "password (00000000)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -1360,7 +1354,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     double n = (double)arg_get_int_def(ctx, 1, 0);
     double start = (double)arg_get_int_def(ctx, 2, 2000);
     double end = (double)arg_get_int_def(ctx, 3, 6000);
-    uint64_t inputpwd = arg_get_u64_def(ctx, 4, 0xFFFFFFFFFFFFFFFF);
+    uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 4, 0xFFFFFFFFFFFFFFFF);
     bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 

@@ -541,8 +541,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define T55XX_WRITE_TIMEOUT 1500
 
 // em4x05 & em4x69 chip configuration register definitions
-#define EM4x05_GET_BITRATE(x)           (((x & 0x3F)*2)+2)
-#define EM4x05_SET_BITRATE(x)           ((x-2)/2)
+#define EM4x05_GET_BITRATE(x)           ((((x) & 0x3F) * 2) + 2)
+#define EM4x05_SET_BITRATE(x)           (((x) - 2) / 2)
 #define EM4x05_MODULATION_NRZ           0x00000000
 #define EM4x05_MODULATION_MANCHESTER    0x00000040
 #define EM4x05_MODULATION_BIPHASE       0x00000080
@@ -557,8 +557,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define EM4x05_PSK_RF_8                 0x00000800
 #define EM4x05_MAXBLOCK_SHIFT           14
 #define EM4x05_FIRST_USER_BLOCK         5
-#define EM4x05_SET_NUM_BLOCKS(x)        ((x+5-1)<<14) //# of blocks sent during default read mode
-#define EM4x05_GET_NUM_BLOCKS(x)        (((x>>14) & 0xF)-5+1)
+#define EM4x05_SET_NUM_BLOCKS(x)        (( (x) + 4) << 14) //# of blocks sent during default read mode
+#define EM4x05_GET_NUM_BLOCKS(x)        ((( (x) >> 14) & 0xF) - 4)
 #define EM4x05_READ_LOGIN_REQ           (1 << 18)
 #define EM4x05_READ_HK_LOGIN_REQ        (1 << 19)
 #define EM4x05_WRITE_LOGIN_REQ          (1 << 20)

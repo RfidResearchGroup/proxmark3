@@ -11,8 +11,10 @@
 #include "cliparser.h"
 #include <string.h>
 #include <stdlib.h>
-#include <util.h> // Get color constants
-#include <ui.h> // get PrintAndLogEx
+#include <util.h>   // Get color constants
+#include <ui.h>     // get PrintAndLogEx
+#include <ctype.h>  // tolower
+#include <inttypes.h> // PRIu64
 
 #ifndef ARRAYLEN
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
@@ -124,7 +126,6 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
 
     return 0;
 }
-
 
 enum ParserState {
     PS_FIRST,
@@ -270,6 +271,22 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     memcpy(data, tmpstr, ibuf + 1);
     *datalen = ibuf;
     return 0;
+}
+
+uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_t def) {
+    uint64_t rv = 0;
+    uint8_t data[8];
+    int datalen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), data, sizeof(data), &datalen);
+    if (res == 0) {
+        for (uint8_t i = 0; i < datalen; i++) {
+            rv <<= 8;
+            rv |= data[i];
+        }
+    } else  {
+        rv = def;
+    }   
+    return rv;
 }
 
 
