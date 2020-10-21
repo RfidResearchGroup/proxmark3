@@ -342,7 +342,7 @@ typedef struct {
 typedef struct {
     iclass_auth_req_t req;
     uint8_t item_cnt;
-    iclass_restore_item_t blocks[];    
+    iclass_restore_item_t blocks[];
 } PACKED iclass_restore_req_t;
 
 
@@ -500,6 +500,7 @@ typedef struct {
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
 #define CMD_LF_EM4X_PROTECTWORD                                           0x021B
+#define CMD_LF_EM4X_BF                                                    0x022A
 #define CMD_LF_IO_WATCH                                                   0x021A
 #define CMD_LF_EM410X_WATCH                                               0x021C
 #define CMD_LF_EM4X50_INFO                                                0x0240

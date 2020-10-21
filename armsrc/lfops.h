@@ -57,6 +57,7 @@ void T55xxDangerousRawTest(uint8_t *data);
 void TurnReadLFOn(uint32_t delay);
 
 void EM4xLogin(uint32_t pwd);
+void EM4xBruteforce(uint32_t start_pwd, uint32_t n);
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
 void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd);
 void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd);

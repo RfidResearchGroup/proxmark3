@@ -523,14 +523,14 @@ static int cmd_hf_st_protect(const char *Cmd) {
     if (enable_protection && disable_protection) {
         PrintAndLogEx(ERR, "Must specify either enable or disable protection, not both");
         return PM3_EINVARG;
-    } 
+    }
     if (enable_protection) {
         state[0] = 0x28;
     }
     if (disable_protection) {
         state[0] = 0x26;
     }
-    
+
     if (read_protection && write_protection) {
         PrintAndLogEx(ERR, "Must specify either read or write protection, not both");
         return PM3_EINVARG;
@@ -681,7 +681,7 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     if (change_write_password) {
         changePwd[2] = 0x02;
     }
-    
+
     if (pwdlen != 16) {
         PrintAndLogEx(ERR, "Original write password must be 16 hex bytes");
         return PM3_EINVARG;

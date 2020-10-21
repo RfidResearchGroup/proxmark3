@@ -2390,7 +2390,7 @@ void iso14443a_antifuzz(uint32_t flags) {
         }
     }
 
-    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_SUCCESS, NULL, 0);
     switch_off();
     BigBuf_free_keep_EM();
 }
@@ -2629,7 +2629,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, resp_par);
-        if (len == 0) 
+        if (len == 0)
             return 0;
 
         if (p_card) {

@@ -18,6 +18,7 @@
 #    -DANDROID_NATIVE_API_LEVEL=android-19 \
 #    -DSKIPBT=1 -DSKIPPYTHON=1 -DSKIPPTHREAD=1 ..
 
+message(STATUS "CMake ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
 SET (PM3_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
@@ -496,20 +497,10 @@ if (NOT APPLE)
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,--as-needed -latomic -Wl,--no-as-needed)
 endif (NOT APPLE)
 
-
-find_library(pm3rrg_rdv4_cliparser REQUIRED)
-find_library(pm3rrg_rdv4_tinycbor REQUIRED)
-find_library(pm3rrg_rdv4_lua REQUIRED)
-find_library(pm3rrg_rdv4_mbedtls REQUIRED)
-find_library(pm3rrg_rdv4_reveng REQUIRED)
-find_library(pm3rrg_rdv4_hardnested REQUIRED)
-
 if (NOT JANSSON_FOUND)
-    find_library(pm3rrg_rdv4_jansson REQUIRED)
     set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
 endif (NOT JANSSON_FOUND)
 if (NOT WHEREAMI_FOUND)
-    find_library(pm3rrg_rdv4_whereami REQUIRED)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
 endif (NOT WHEREAMI_FOUND)
 

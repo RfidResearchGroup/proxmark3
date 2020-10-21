@@ -792,18 +792,18 @@ void pm3_version(bool verbose, bool oneliner) {
 
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
         if (IfPm3Rdv4Fw() == false) {
-            PrintAndLogEx(NORMAL, "  firmware.........................%s", _GREEN_("PM3OTHER"));
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3OTHER"));
             if (IfPm3FpcUsartHost()) {
-                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on..........%s", _GREEN_("present"));
+                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
             }
         } else {
-            PrintAndLogEx(NORMAL, "  firmware.........................%s", _GREEN_("PM3RDV4"));
-            PrintAndLogEx(NORMAL, "  external flash...................%s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "  smartcard reader.................%s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on..........%s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3RDV4"));
+            PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
         }
         if (IfPm3FpcUsartDevFromUsb()) {
-            PrintAndLogEx(NORMAL, "  FPC USART for developer..........%s", _GREEN_("present"));
+            PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
         }
 
         PrintAndLogEx(NORMAL, "");

@@ -1338,7 +1338,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         if (!res && datalen > 0)
             waitCmd(0, timeout);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int waitCmd(uint8_t iSelect, uint32_t timeout) {
@@ -1398,16 +1398,20 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t arg0 = FLAG_4B_UID_IN_DATA;
+    struct {
+        uint8_t flag;
+    } PACKED param;
+    param.flag = FLAG_4B_UID_IN_DATA;
+
     if (arg_get_lit(ctx, 2))
-        arg0 = FLAG_7B_UID_IN_DATA;
+        param.flag = FLAG_7B_UID_IN_DATA;
     if (arg_get_lit(ctx, 3))
-        arg0 = FLAG_10B_UID_IN_DATA;
+        param.flag = FLAG_10B_UID_IN_DATA;
 
     CLIParserFree(ctx);
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_ANTIFUZZ, arg0, 0, 0, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t*)&param, sizeof(param));
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AChaining(const char *Cmd) {
@@ -1438,7 +1442,7 @@ static int CmdHF14AChaining(const char *Cmd) {
 
     PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void printTag(const char *tag) {
@@ -1681,10 +1685,16 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 }
                 getTagLabel(card.uid[0], card.uid[1]);
                 break;
-            case 0x57: // Qualcomm
+            case 0x46:
+                if (memcmp(card.uid, "FSTN10m", 7) == 0) {
+                    isMifareClassic = false;
+                    printTag("Waveshare NFC-Powered e-Paper 1.54\" (please disregard MANUFACTURER mapping above)");
+                }
+                break;
+            case 0x57:
                 if (memcmp(card.uid, "WSDZ10m", 7) == 0) {
                     isMifareClassic = false;
-                    printTag("Waveshare NFC-Powered e-Paper");
+                    printTag("Waveshare NFC-Powered e-Paper (please disregard MANUFACTURER mapping above)");
                 }
                 break;
             default:
@@ -1837,30 +1847,30 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
                         tip = "-> MIFARE Plus X 2K/4K (SL3)";
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-                        
+
                         if ((card.atqa[0] & 0x02) == 0x02)
                             tip = "-> MIFARE Plus S 2K (SL3)";
                         else if ((card.atqa[0] & 0x04) == 0x04)
                             tip = "-> MIFARE Plus S 4K (SL3)";
-                        
+
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
                         tip = "-> MIFARE Plus SE 1K (17pF)";
-                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {    
+                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
                         tip = "-> MIFARE Plus SE 1K (70pF)";
                     }
-                
-                } else {  //SAK B4,5,6 
-                
-                    if ((card.sak & 0x20) == 0x20) {  // and no GetVersion()..    
-                    
-                        
+
+                } else {  //SAK B4,5,6
+
+                    if ((card.sak & 0x20) == 0x20) {  // and no GetVersion()..
+
+
                         if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
                             tip = "-> MIFARE Plus X 2K (SL1)";
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
                             tip = "-> MIFARE Plus S 2K (SL1)";
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
                             tip = "-> MIFARE Plus SE 1K (17pF)";
-                        } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {    
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
                             tip = "-> MIFARE Plus SE 1K (70pF)";
                         }
                     } else {
@@ -1868,7 +1878,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             tip = "-> MIFARE Plus X 4K (SL1)";
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
                             tip = "-> MIFARE Plus S 4K (SL1)";
-                        }                            
+                        }
                     }
                 }
 

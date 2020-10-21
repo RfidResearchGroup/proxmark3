@@ -1367,7 +1367,7 @@ static bool select_iclass_tag_ex(picopass_hdr *hdr, bool use_credit_key, uint32_
         *status |= FLAG_ICLASS_CC;
 
     }  else {
-        
+
         // on NON_SECURE_PAGEMODE cards, AIA is on block2..
 
         // read App Issuer Area block 2
@@ -1443,7 +1443,7 @@ void ReaderIClass(uint8_t flags) {
     // with 0xFF:s in block 3 and 4.
 
     LED_B_ON();
-    reply_mix(CMD_ACK, result_status, 0, 0, (uint8_t*)&hdr, sizeof(hdr));
+    reply_mix(CMD_ACK, result_status, 0, 0, (uint8_t *)&hdr, sizeof(hdr));
 
     //Send back to client, but don't bother if we already sent this -
     //  only useful if looping in arm (not try_once && not abort_after_read)
@@ -1489,9 +1489,9 @@ bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr *hdr, uint
 
     memcpy(ccnr, hdr->epurse, sizeof(hdr->epurse));
 
-    if ( payload->use_replay) {
+    if (payload->use_replay) {
 
-        memcpy(pmac, payload->key + 4, 4);        
+        memcpy(pmac, payload->key + 4, 4);
         memcpy(cmd_check + 1, payload->key, 8);
 
     } else {
@@ -1780,7 +1780,7 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac) 
 
     // write command: cmd, 1 blockno, 8 data, 4 mac
     uint8_t write[16] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
-    memcpy(write + 2, data, 8); 
+    memcpy(write + 2, data, 8);
     memcpy(write + 10, mac, 4);
     AddCrc(write + 1, 13);
 
@@ -1872,11 +1872,11 @@ void iClass_WriteBlock(uint8_t *msg) {
         iclass_send_as_reader(write, sizeof(write), &start_time, &eof_time);
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
-                res = false;
-                switch_off();
-                if (payload->req.send_reply)
-                    reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
-                return;
+            res = false;
+            switch_off();
+            if (payload->req.send_reply)
+                reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
+            return;
         } else {
 
             if (GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time) == 10) {
@@ -1885,7 +1885,7 @@ void iClass_WriteBlock(uint8_t *msg) {
             }
         }
     }
-    
+
     if (tries == 0) {
         res = false;
         goto out;
@@ -1932,7 +1932,7 @@ void iClass_Restore(iclass_restore_req_t *msg) {
         if (msg->req.send_reply) {
             reply_ng(CMD_HF_ICLASS_RESTORE, PM3_ESOFT, NULL, 0);
         }
-        return;        
+        return;
     }
 
     LED_A_ON();
@@ -1942,7 +1942,7 @@ void iClass_Restore(iclass_restore_req_t *msg) {
     uint32_t eof_time = 0;
     picopass_hdr hdr = {0};
 
-    // select 
+    // select
     bool res = select_iclass_tag(&hdr, msg->req.use_credit_key, &eof_time);
     if (res == false) {
         goto out;
@@ -1974,7 +1974,7 @@ void iClass_Restore(iclass_restore_req_t *msg) {
             doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
         else
             doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
-        
+
         // data + mac
         if (iclass_writeblock_ext(item.blockno, item.data, mac)) {
             Dbprintf("Write block [%02x] " _GREEN_("successful"), item.blockno);
@@ -1983,7 +1983,7 @@ void iClass_Restore(iclass_restore_req_t *msg) {
             Dbprintf("Write block [%02x] " _RED_("failed"), item.blockno);
         }
     }
-    
+
 out:
 
     switch_off();

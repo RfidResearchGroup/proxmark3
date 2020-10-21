@@ -351,7 +351,7 @@ static void map8to1(uint8_t *colormap, uint16_t width, uint16_t height, uint8_t 
 static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red, char *filename, bool save_conversions) {
     BMP_HEADER *pbmpheader = (BMP_HEADER *)bmp;
     // check file is full color
-    if (pbmpheader->bpp != 24) {
+    if ((pbmpheader->bpp != 24) && (pbmpheader->bpp != 32)) {
         return PM3_ESOFT;
     }
 
@@ -400,6 +400,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
             chanB[X + (height - Y - 1) * width] = bmp[offset++];
             chanG[X + (height - Y - 1) * width] = bmp[offset++];
             chanR[X + (height - Y - 1) * width] = bmp[offset++];
+            if (pbmpheader->bpp == 32) // Skip Alpha chan
+                offset++;
         }
         // Skip line padding
         offset += width % 4;
@@ -436,6 +438,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
                     bmp[offset++] = chanB[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanG[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanR[X + (height - Y - 1) * width] & 0xFF;
+                    if (pbmpheader->bpp == 32) // Fill Alpha chan
+                        bmp[offset++] = 0xFF;
                 }
                 // Skip line padding
                 offset += width % 4;
@@ -500,6 +504,8 @@ static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, ui
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
                     bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                    if (pbmpheader->bpp == 32) // Fill Alpha chan
+                        bmp[offset++] = 0xFF;
                 }
                 // Skip line padding
                 offset += width % 4;
@@ -536,7 +542,8 @@ static void read_black(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *black)
     }
 }
 static void read_red(uint32_t i, uint8_t *l, uint8_t model_nr, uint8_t *red) {
-    for (uint8_t j = 0; j < models[model_nr].len; j++) {
+    // spurious warning with GCC10 (-Wstringop-overflow) when j is uint8_t, even if all len are < 128
+    for (uint16_t j = 0; j < models[model_nr].len; j++) {
         if (model_nr == M1in54B) {
             //1.54B needs to flip the red picture data, other screens do not need to flip data
             l[3 + j] = ~red[i * models[model_nr].len + j];
@@ -693,8 +700,18 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         return PM3_ESOFT;
     }
 
-    if ((card.uidlen != 7) || (memcmp(card.uid, "WSDZ10m", 7) != 0)) {
+    if ((card.uidlen != 7) || ((memcmp(card.uid, "FSTN10m", 7) != 0) && (memcmp(card.uid, "WSDZ10m", 7) != 0))) {
         PrintAndLogEx(WARNING, "Card doesn't look like Waveshare tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    if (((model_nr != M1in54B) && (memcmp(card.uid, "FSTN10m", 7) == 0))) {
+        PrintAndLogEx(WARNING, "Card is a Waveshare tag 1.54\", not %s", models[model_nr].desc);
+        DropField();
+        return PM3_ESOFT;
+    }
+    if (((model_nr == M1in54B) && (memcmp(card.uid, "FSTN10m", 7) != 0))) {
+        PrintAndLogEx(WARNING, "Card is not a Waveshare tag 1.54\", check your model number");
         DropField();
         return PM3_ESOFT;
     }
@@ -921,6 +938,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         msleep(200);
     }
     PrintAndLogEx(DEBUG, "Step11: Wait tag to be ready");
+    PrintAndLogEx(INPLACE, "E-paper Reflashing, Waiting");
     if (model_nr == M2in13B || model_nr == M1in54B) { // Black, white and red screen refresh time is longer, wait first
         msleep(9000);
     } else if (model_nr == M7in5HD) {
@@ -950,7 +968,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
             } else {
                 fail_num++;
                 PrintAndLogEx(INPLACE, "E-paper Reflashing, Waiting");
-                msleep(100);
+                msleep(400);
             }
         }
     }
@@ -1048,11 +1066,13 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
             return PM3_ESOFT;
         }
     } else if (depth == 32) {
-        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Remove alpha channel.", depth);
-        free(bmp);
-        return PM3_ESOFT;
+        PrintAndLogEx(DEBUG, "BMP file is a RGBA, we will ignore the Alpha channel");
+        if (read_bmp_rgb(bmp, bytes_read, model_nr, &black, &red, filename, save_conversions) != PM3_SUCCESS) {
+            free(bmp);
+            return PM3_ESOFT;
+        }
     } else {
-        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Must be 1 (BW) or 24 (RGB)", depth);
+        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Must be 1 (BW), 24 (RGB) or 32 (RGBA)", depth);
         free(bmp);
         return PM3_ESOFT;
     }

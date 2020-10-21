@@ -1106,7 +1106,7 @@ static int l_em4x05_read(lua_State *L) {
 
     // get password
     const char *p_pwd = luaL_checkstring(L, 2);
-    if (p_pwd == NULL || strlen(p_pwd) == 0 ) {
+    if (p_pwd == NULL || strlen(p_pwd) == 0) {
         use_pwd = false;
     } else {
         if (strlen(p_pwd) != 8)
@@ -1121,7 +1121,7 @@ static int l_em4x05_read(lua_State *L) {
         PrintAndLogEx(DEBUG, " Pwd %08X", password);
 
     uint32_t word = 0;
-    int res = EM4x05ReadWord_ext(addr, password, use_pwd, &word);
+    int res = em4x05_read_word_ext(addr, password, use_pwd, &word);
     if (res != PM3_SUCCESS) {
         return returnToLuaWithError(L, "Failed to read EM4x05 data");
     }
@@ -1138,7 +1138,7 @@ static int l_em4x50_read(lua_State *L) {
     const char *p_addr = luaL_checklstring(L, 1, &size);
     uint32_t addr = 0;
     sscanf(p_addr, "%u", &addr);
-    
+
     if (addr > 31)
         return returnToLuaWithError(L, "Address out-of-range (0..31) got %u", addr);
 
@@ -1159,9 +1159,9 @@ static int l_em4x50_read(lua_State *L) {
 
         uint32_t pwd = 0;
         sscanf(p_pwd, "%08x", &pwd);
-        
+
         PrintAndLogEx(DEBUG, " Pwd %08X", pwd);
-        
+
         etd.password[0] = pwd & 0xFF;
         etd.password[1] = (pwd >> 8) & 0xFF;
         etd.password[2] = (pwd >> 16) & 0xFF;
@@ -1181,11 +1181,11 @@ static int l_em4x50_read(lua_State *L) {
     }
 
     uint32_t word = (
-            words[etd.address].byte[0] << 24 |
-            words[etd.address].byte[1] << 16 |
-            words[etd.address].byte[2] << 8 |
-            words[etd.address].byte[3] 
-        );
+                        words[etd.address].byte[0] << 24 |
+                        words[etd.address].byte[1] << 16 |
+                        words[etd.address].byte[2] << 8 |
+                        words[etd.address].byte[3]
+                    );
     lua_pushinteger(L, word);
     return 1;
 }

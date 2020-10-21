@@ -8,23 +8,21 @@
 // PSK1, RF/128, RF/2, 64 bits long
 //-----------------------------------------------------------------------------
 #include "cmdlfkeri.h"
-
 #include <string.h>
 #include <inttypes.h>
-
 #include <ctype.h>
 #include <stdlib.h>
-
-#include "commonutil.h"     // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "cliparser.h"
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // preamble test
-#include "cmdlft55xx.h" // verifywrite
+#include "protocols.h"    // for T55xx config register definitions
+#include "lfdemod.h"      // preamble test
+#include "cmdlft55xx.h"   // verifywrite
+#include "cmdlfem4x05.h"  // 
 
 static int CmdHelp(const char *Cmd);
 typedef enum  {Scramble = 0, Descramble = 1} KeriMSScramble_t;
@@ -125,17 +123,6 @@ int demodKeri(bool verbose) {
     setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
-    //got a good demod
-    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-
-    //get internal id
-    // uint32_t ID = bytebits_to_byte(DemodBuffer + 29, 32);
-    // Due to the 3 sync bits being at the start of the capture
-    // We can take the last 32bits as the internal ID.
-    uint32_t ID = raw2;
-    ID &= 0x7FFFFFFF;
-
     /*
         000000000000000000000000000001XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX111
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^1###############################^^^
@@ -150,25 +137,40 @@ int demodKeri(bool verbose) {
         Might be a hash of FC & CN to generate Internal ID
     */
 
-    PrintAndLogEx(SUCCESS, "KERI - Internal ID: " _GREEN_("%u") ", Raw: %08X%08X", ID, raw1, raw2);
+
     /*
         Descramble Data.
     */
     uint32_t fc = 0;
     uint32_t cardid = 0;
-
-    // Just need to the low 32 bits without the 111 trailer
-    CmdKeriMSScramble(Descramble, &fc, &cardid, &raw2);
-
-    PrintAndLogEx(SUCCESS, "Descrambled MS - FC: " _GREEN_("%d") " Card: " _GREEN_("%d"), fc, cardid);
+    //got a good demod
+    uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
+    uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
 
     if (invert) {
         PrintAndLogEx(INFO, "Had to Invert - probably KERI");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
 
+        raw1 = bytebits_to_byte(DemodBuffer, 32);
+        raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    
         CmdPrintDemodBuff("x");
     }
+
+    //get internal id
+    // uint32_t ID = bytebits_to_byte(DemodBuffer + 29, 32);
+    // Due to the 3 sync bits being at the start of the capture
+    // We can take the last 32bits as the internal ID.
+    uint32_t ID = raw2;
+    ID &= 0x7FFFFFFF;
+
+    PrintAndLogEx(SUCCESS, "KERI - Internal ID: " _GREEN_("%u") ", Raw: %08X%08X", ID, raw1, raw2);
+    
+    // Just need to the low 32 bits without the 111 trailer
+    CmdKeriMSScramble(Descramble, &fc, &cardid, &raw2);
+
+    PrintAndLogEx(SUCCESS, "Descrambled MS - FC: " _GREEN_("%d") " Card: " _GREEN_("%d"), fc, cardid);
     return PM3_SUCCESS;
 }
 
@@ -185,7 +187,7 @@ static int CmdKeriRead(const char *Cmd) {
 
 static int CmdKeriClone(const char *Cmd) {
 
-    bool q5 = false;
+    bool q5 = false, em4305 = false;
 
     uint8_t keritype[2] = {'i'}; // default to internalid
     int typeLen = 0;
@@ -207,7 +209,7 @@ static int CmdKeriClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf keri clone",
-                  "clone a KERI tag to a T55x7 or Q5/T5555 tag",
+                  "clone a KERI tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
                   "lf keri clone -t i --id 12345\n"
                   "lf keri clone -t m --fc 6 --id 12345\n");
 
@@ -217,20 +219,34 @@ static int CmdKeriClone(const char *Cmd) {
         arg_str0("t",  "type", "<m|i>", "Type m - MS, i - Internal ID"),
         arg_int0(NULL, "fc",   "<dec>", "Facility Code"),
         arg_int1(NULL, "id",   "<dec>", "Keri ID"),
+        arg_lit0(NULL,  "em",           "specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    char cardtype[16] = {"T55x7"};
     if (arg_get_lit(ctx, 1)) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype) ,"Q5/T5555");
         q5 = true;
     }
+    if (arg_get_lit(ctx, 5)) {
+        blocks[0] = EM4305_KERI_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype) ,"EM4305/4469");
+        em4305 = true;
+    }
+
     typeLen = sizeof(keritype);
     CLIGetStrWithReturn(ctx, 2, keritype, &typeLen);
 
     fc = arg_get_int_def(ctx, 3, 0);
     cid = arg_get_int_def(ctx, 4, 0);
     CLIParserFree(ctx);
+    
+    if (q5 && em4305) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     // Setup card data/build internal id
     switch (keritype[0]) {
@@ -249,14 +265,20 @@ static int CmdKeriClone(const char *Cmd) {
     // Prepare and write to card
     // 3 LSB is ONE
     uint64_t data = ((uint64_t)internalid << 3) + 7;
-    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), (q5) ? "Q5/T5555" : "T55x7", internalid);
+    PrintAndLogEx(INFO, "Preparing to clone KERI to " _YELLOW_("%s") " with Internal Id " _YELLOW_("%" PRIx32), cardtype, internalid);
 
     blocks[1] = data >> 32;
     blocks[2] = data & 0xFFFFFFFF;
 
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em4305) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
+    
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf keri read`") " to verify");
     return res;

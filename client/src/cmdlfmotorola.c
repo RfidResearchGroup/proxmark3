@@ -173,18 +173,18 @@ static int CmdMotorolaClone(const char *Cmd) {
     CLIParserFree(ctx);
 
     //TODO add selection of chip for Q5 or T55x7
-    
+
     PrintAndLogEx(INFO, "Target chip " _YELLOW_("%s"), (is_t5555) ? "Q5/T5555" : "T55x7");
 
     // config for Motorola 64 format (RF/32;PSK1 with RF/2; Maxblock=2)
     PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit tag");
     PrintAndLogEx(INFO, "Using raw " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
 
-    if (is_t5555) 
+    if (is_t5555)
         blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
-    else 
+    else
         blocks[0] =  T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
-    
+
 
     blocks[1] = bytes_to_num(data, 4);
     blocks[2] = bytes_to_num(data + 4, 4);

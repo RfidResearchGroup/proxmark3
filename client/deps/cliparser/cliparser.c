@@ -11,8 +11,10 @@
 #include "cliparser.h"
 #include <string.h>
 #include <stdlib.h>
-#include <util.h> // Get color constants
-#include <ui.h> // get PrintAndLogEx
+#include <util.h>   // Get color constants
+#include <ui.h>     // get PrintAndLogEx
+#include <ctype.h>  // tolower
+#include <inttypes.h> // PRIu64
 
 #ifndef ARRAYLEN
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
@@ -125,7 +127,6 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
     return 0;
 }
 
-
 enum ParserState {
     PS_FIRST,
     PS_ARGUMENT,
@@ -205,9 +206,9 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 
     int tmplen = 0;
     uint8_t tmpstr[(256 * 2) + 1] = {0};
-    
+
     // concat all strings in argstr into tmpstr[]
-    // 
+    //
     int res = CLIParamStrToBuf(argstr, tmpstr, sizeof(tmpstr), &tmplen);
     if (res) {
         return res;
@@ -216,7 +217,7 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
         return res;
     }
 
-    res = param_gethex_to_eol((char*)tmpstr, 0, data, maxdatalen, datalen);
+    res = param_gethex_to_eol((char *)tmpstr, 0, data, maxdatalen, datalen);
     switch (res) {
         case 1:
             printf("Parameter error: Invalid HEX value\n");
@@ -241,20 +242,20 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     int ibuf = 0;
 
     for (int i = 0; i < argstr->count; i++) {
-        
+
         int len = strlen(argstr->sval[i]);
-            
-        if (len > ( (sizeof(tmpstr) / 2 ) - ibuf)) {
+
+        if (len > ((sizeof(tmpstr) / 2) - ibuf)) {
             printf("Parameter error: string too long (%i chars), expect MAX %zu chars\n", len + ibuf, (sizeof(tmpstr) / 2));
             fflush(stdout);
             return 2;
         }
-                
+
         memcpy(&tmpstr[ibuf], argstr->sval[i], len);
 
         ibuf += len;
     }
-    
+
     ibuf = MIN(ibuf, (sizeof(tmpstr) / 2));
     tmpstr[ibuf] = 0;
 
@@ -270,6 +271,22 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     memcpy(data, tmpstr, ibuf + 1);
     *datalen = ibuf;
     return 0;
+}
+
+uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_t def) {
+    uint64_t rv = 0;
+    uint8_t data[8];
+    int datalen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), data, sizeof(data), &datalen);
+    if (res == 0) {
+        for (uint8_t i = 0; i < datalen; i++) {
+            rv <<= 8;
+            rv |= data[i];
+        }
+    } else  {
+        rv = def;
+    }   
+    return rv;
 }
 
 

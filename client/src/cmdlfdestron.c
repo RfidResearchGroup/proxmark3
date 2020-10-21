@@ -66,7 +66,7 @@ int demodDestron(bool verbose) {
 
     uint8_t data[5] = {0};
     uint8_t parity_err = 0;
-    for (int i=0; i < sizeof(data); i++) {
+    for (int i = 0; i < sizeof(data); i++) {
         data[i] = bytebits_to_byte(bits + i * 8, 8);
         parity_err += oddparity8(data[i]);
         data[i] &= 0x7F;
@@ -113,11 +113,11 @@ static int CmdDestronClone(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t data_ex[12 + 24] = {0}; // ManchesterEncode need extra room
-    for (int i=0; i < datalen; i++) {
+    for (int i = 0; i < datalen; i++) {
         data_ex[i + 1] = ~data [i] | (evenparity8(data[i]) << 7);
     }
-    for (int i=0; i < 3; i++) {
-        blocks[i+1] = manchesterEncode2Bytes((data_ex[i*2]<<8)+data_ex[i*2+1]);
+    for (int i = 0; i < 3; i++) {
+        blocks[i + 1] = manchesterEncode2Bytes((data_ex[i * 2] << 8) + data_ex[i * 2 + 1]);
     }
     // inject preamble
     blocks[1] = (blocks[1] & 0xFFFF) | 0xAAE20000;

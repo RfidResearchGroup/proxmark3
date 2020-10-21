@@ -294,9 +294,9 @@ static int CmdHFMFPInfo(const char *Cmd) {
     } else {
         // info about 14a part
         infoHF14A(false, false, false);
-        
+
         // Historical bytes.
-        
+
     }
 
 

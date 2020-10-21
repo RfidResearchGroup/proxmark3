@@ -27,6 +27,9 @@ LD = g++
 SH = sh
 BASH = bash
 PERL = perl
+CCC =foo
+CC_VERSION = $(shell $(CC) -dumpversion 2>/dev/null|sed 's/\..*//')
+CC_VERSION := $(or $(strip $(CC_VERSION)),0)
 
 PATHSEP=/
 PREFIX ?=              /usr/local
@@ -48,9 +51,15 @@ else
     RANLIB= ranlib
 endif
 
-DEFCXXFLAGS = -Wall -Werror -O3 -pipe
-DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
-DEFLDFLAGS =
+ifeq ($(DEBUG),1)
+  DEFCXXFLAGS = -g -O0 -pipe
+  DEFCFLAGS = -g -O0 -fstrict-aliasing -pipe
+  DEFLDFLAGS =
+else
+  DEFCXXFLAGS = -Wall -Werror -O3 -pipe
+  DEFCFLAGS = -Wall -Werror -O3 -fstrict-aliasing -pipe
+  DEFLDFLAGS =
+endif
 # Next ones are activated only if SANITIZE=1
 ifeq ($(SANITIZE),1)
   DEFCFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
@@ -62,7 +71,11 @@ DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-s
 # Some more warnings we need first to eliminate, so temporarely tolerated:
 DEFCFLAGS += -Wcast-align -Wno-error=cast-align
 DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
-
+# GCC 10 has issues with false positives on stringop-overflow, let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
+# beware these flags didn't exist for GCC < 7
+ifeq ($(shell expr $(CC_VERSION) \>= 10), 1)
+    DEFCFLAGS += -Wno-stringop-overflow -Wno-error=stringop-overflow
+endif
 ifeq ($(platform),Darwin)
 # their readline has strict-prototype issues
 DEFCFLAGS += -Wno-strict-prototypes

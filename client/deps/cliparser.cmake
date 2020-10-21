@@ -3,6 +3,7 @@ add_library(pm3rrg_rdv4_cliparser STATIC
         cliparser/cliparser.c
 )
 
+target_compile_definitions(pm3rrg_rdv4_cliparser PRIVATE _ISOC99_SOURCE)
 target_include_directories(pm3rrg_rdv4_cliparser PRIVATE
         ../../common
         ../../include

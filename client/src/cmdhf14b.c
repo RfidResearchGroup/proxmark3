@@ -149,7 +149,7 @@ static int CmdHF14BSim(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to read pupi");
         return PM3_EINVARG;
     }
-    
+
     PrintAndLogEx(INFO, "Simulate with PUPI : " _GREEN_("%s"), sprint_hex_inrow(pupi, sizeof(pupi)));
     PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     clearCommandBuffer();

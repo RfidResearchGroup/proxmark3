@@ -31,7 +31,7 @@
 #include "cmdlfawid.h"      // for awid menu
 #include "cmdlfem4x.h"      // for em4x menu
 #include "cmdlfem4x05.h"    // for em4x05 / 4x69
-#include "cmdlfem4x50.h"    // for em4x50 
+#include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfidteck.h"    // for idteck menu
@@ -1348,7 +1348,7 @@ static bool CheckChipType(bool getDeviceData) {
 
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
-    if (EM4x05IsBlock0(&word)) {
+    if (em4x05_isblock0(&word)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05 / EM4x69"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") " commands");
         retval = true;
