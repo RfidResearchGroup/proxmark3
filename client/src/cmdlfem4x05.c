@@ -346,18 +346,10 @@ static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
             if (res == PM3_SUCCESS)
                 break;
 
-            res = doPreambleSearch(&idx);
-            if (res == PM3_SUCCESS)
-                break;
-
             if (res == PM3_EFAILED)
                 found_err = true;
 
             psk1TOpsk2(DemodBuffer, DemodBufferLen);
-            res = doPreambleSearch(&idx);
-            if (res == PM3_SUCCESS)
-                break;
-
             res = doPreambleSearch(&idx);
             if (res == PM3_SUCCESS)
                 break;
