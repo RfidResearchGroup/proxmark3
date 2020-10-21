@@ -171,16 +171,19 @@ static int doPreambleSearch(size_t *startIdx) {
     // do not set it too long else an error preamble followed by 010 could be seen as success.
     size_t size = (11 > DemodBufferLen) ? DemodBufferLen : 11;
     *startIdx = 0;
+
     // skip first two 0 bits as they might have been missed in the demod
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
+    uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
 
     if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
+
         if (!preambleSearchEx(DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
             return PM3_ESOFT;
         }
         return PM3_EFAILED; // Error preamble found
+
     }
     return PM3_SUCCESS;
 }
@@ -211,6 +214,18 @@ static bool detectPSK(void) {
     ans = PSKDemod(0, 0, 6, false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 Demod failed");
+        return false;
+    }
+
+    // In order to hit the INVERT,  we need to demod here
+    if (DemodBufferLen < 11) {
+        PrintAndLogEx(INFO," demod buff len less than PREAMBLE lEN");
+    }
+
+    size_t size = (11 > DemodBufferLen) ? DemodBufferLen : 11;
+    size_t startIdx = 0;
+    uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
+    if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, &startIdx, true)) {
 
         //try psk1 inverted
         ans = PSKDemod(0, 1, 6, false);
@@ -218,7 +233,13 @@ static bool detectPSK(void) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 inverted Demod failed");
             return false;
         }
+
+        if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, &startIdx, true)) {
+            PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 inverted Demod failed 2");
+            return false;
+        }
     }
+
     // either PSK1 or PSK1 inverted is ok from here.
     // lets check PSK2 later.
     return true;
@@ -324,6 +345,11 @@ static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
             res = doPreambleSearch(&idx);
             if (res == PM3_SUCCESS)
                 break;
+
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+
             if (res == PM3_EFAILED)
                 found_err = true;
 
@@ -331,9 +357,15 @@ static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
             res = doPreambleSearch(&idx);
             if (res == PM3_SUCCESS)
                 break;
+
+            res = doPreambleSearch(&idx);
+            if (res == PM3_SUCCESS)
+                break;
+
             if (res == PM3_EFAILED)
                 found_err = true;
         }
+
         if (found_err)
             return PM3_EFAILED;
 
@@ -1082,8 +1114,10 @@ int CmdEM4x05Info(const char *Cmd) {
 
     // read word 4 (config block)
     // needs password if one is set
-    if (em4x05_read_word_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+    if (em4x05_read_word_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "(CmdEM4x05Info) failed to read CONFIG BLOCK");
         return PM3_ESOFT;
+    }
 
     printEM4x05config(word);
 
