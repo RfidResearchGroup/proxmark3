@@ -22,7 +22,7 @@ static int usage_lf_em4x50_info(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       v         - verbose output");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_info"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_info p fa225de1"));
@@ -37,8 +37,8 @@ static int usage_lf_em4x50_write(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       a <addr>  - memory address to write to (dec)");
-    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex, lsb notation)");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation) (optional)");
+    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex, lsb)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write a 3 w deadc0de"));
     PrintAndLogEx(NORMAL, "");
@@ -50,8 +50,8 @@ static int usage_lf_em4x50_write_password(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write_password [h] [p <pwd>] [n <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation)");
-    PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
+    PrintAndLogEx(NORMAL, "       n <pwd>   - new password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write_password p 11223344 n 01020304"));
     PrintAndLogEx(NORMAL, "");
@@ -64,7 +64,7 @@ static int usage_lf_em4x50_read(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       a <addr>  - memory address to read (dec) (optional)");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_read"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_read a 2 p 00000000"));
@@ -78,7 +78,7 @@ static int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                     - this help");
     PrintAndLogEx(NORMAL, "       f <filename prefix>   - overide filename prefix (optional).  Default is based on UID");
-    PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_dump"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_dump p 11223344"));
@@ -91,7 +91,7 @@ static int usage_lf_em4x50_wipe(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_wipe [h] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_wipe p 11223344"));
     PrintAndLogEx(NORMAL, "");
@@ -103,8 +103,8 @@ static int usage_lf_em4x50_brute(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_brute [h] f <pwd> l <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       f <pwd>   - start password (hex, lsb notation)");
-    PrintAndLogEx(NORMAL, "       l <pwd>   - stop password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       f <pwd>   - start password (hex, lsb)");
+    PrintAndLogEx(NORMAL, "       l <pwd>   - stop password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_brute f 11200000 l 11300000"));
     PrintAndLogEx(NORMAL, "");
@@ -116,7 +116,7 @@ static int usage_lf_em4x50_login(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_login [h] p <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb notation)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_login p 11200000"));
     PrintAndLogEx(NORMAL, "");
@@ -251,7 +251,7 @@ bool detect_4x50_block(void) {
     em4x50_data_t etd = {
         .pwd_given = false,
         .addr_given = true,
-        .address = EM4X50_DEVICE_ID,
+        .addresses = EM4X50_DEVICE_ID,
     };
     em4x50_word_t words[EM4X50_NO_WORDS];
     return (em4x50_read(&etd, words, false) == PM3_SUCCESS);
@@ -261,7 +261,7 @@ int read_em4x50_uid(void) {
     em4x50_data_t etd = {
         .pwd_given = false,
         .addr_given = true,
-        .address = EM4X50_DEVICE_SERIAL,
+        .addresses = EM4X50_DEVICE_SERIAL,
     };
     em4x50_word_t words[EM4X50_NO_WORDS];
     int res = em4x50_read(&etd, words, false);
@@ -279,7 +279,7 @@ int CmdEM4x50Info(const char *Cmd) {
     uint8_t cmdp = 0;
     em4x50_data_t etd;
     etd.pwd_given = false;
-
+    
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
 
@@ -287,21 +287,13 @@ int CmdEM4x50Info(const char *Cmd) {
                 return usage_lf_em4x50_info();
 
             case 'p':
-                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
+                etd.password1 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
 
-            case 'v':
-                verbose = true;
-                cmdp += 1;
-                break;
-
             default:
-                PrintAndLogEx(WARNING, "  Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -337,48 +329,48 @@ int CmdEM4x50Write(const char *Cmd) {
     em4x50_data_t etd = { .pwd_given = false };
 
     bool errors = false, bword = false, baddr = false;
+    uint8_t address = 0x0;
     uint8_t cmdp = 0;
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h': {
+
+            case 'h':
                 return usage_lf_em4x50_write();
-            }
-            case 'p': {
-                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
+
+            case 'p':
+                etd.password1 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
-            }
-            case 'w': {
-                if (param_gethex(Cmd, cmdp + 1, etd.word, 8)) {
-                    PrintAndLogEx(FAILED, "\n  word has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
+
+            case 'w':
+                etd.word = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 bword = true;
                 cmdp += 2;
                 break;
-            }
-            case 'a': {
-                param_getdec(Cmd, cmdp + 1, &etd.address);
+
+            case 'a':
+                param_getdec(Cmd, cmdp + 1, &address);
 
                 // validation
-                if (etd.address < 1 || etd.address > 31) {
-                    PrintAndLogEx(FAILED, "\n  error, address has to be in range [1-31]\n");
+                if (address < 1 || address > 31) {
+                    PrintAndLogEx(FAILED, "error, address has to be in range [1-31]\n");
                     return PM3_EINVARG;
                 }
+                etd.addresses = address;    // lwr
+                etd.addresses <<= 8;
+                etd.addresses |= address;   // fwr
                 baddr = true;
                 cmdp += 2;
                 break;
-            }
-            default: {
-                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-            }
+
         }
     }
 
@@ -405,30 +397,18 @@ int CmdEM4x50Write(const char *Cmd) {
             PrintAndLogEx(FAILED, "login failed");
             return PM3_ESOFT;
         }
-        PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%s"), sprint_hex_inrow(etd.password, 4));
+        PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%08x"), etd.password1);
     }
 
     // display result of writing operation in structured format
     uint8_t *data = resp.data.asBytes;
     em4x50_word_t words[EM4X50_NO_WORDS];
 
-    prepare_result(data, etd.address, etd.address, words);
-    print_result(words, etd.address, etd.address);
+    prepare_result(data, address, address, words);
+    print_result(words, address, address);
     PrintAndLogEx(SUCCESS, "Successfully wrote to tag");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("lf em 4x50_read a %u") "` - to read your data", etd.address);
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("lf em 4x50_read a %u") "` - to read your data", address);
     return PM3_SUCCESS;
-}
-
-static void print_write_password_result(PacketResponseNG *resp, const em4x50_data_t *etd) {
-
-    // display result of password changing operation
-
-    char string[NO_CHARS_MAX] = {0}, pstring[NO_CHARS_MAX] = {0};
-
-    sprintf(pstring, "\n  writing new password " _GREEN_("ok"));
-    strcat(string, pstring);
-
-    PrintAndLogEx(NORMAL, "%s\n", string);
 }
 
 int CmdEM4x50WritePassword(const char *Cmd) {
@@ -442,7 +422,6 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 
     // init
     etd.pwd_given = false;
-    etd.newpwd_given = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
@@ -451,27 +430,20 @@ int CmdEM4x50WritePassword(const char *Cmd) {
                 return usage_lf_em4x50_write_password();
 
             case 'p':
-                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
-                bpwd = true;
+                etd.password1 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 etd.pwd_given = true;
+                bpwd = true;
                 cmdp += 2;
                 break;
 
             case 'n':
-                if (param_gethex(Cmd, cmdp + 1, etd.new_password, 8)) {
-                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
+                etd.password2 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 bnpwd = true;
-                etd.newpwd_given = true;
                 cmdp += 2;
                 break;
 
             default:
-                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -489,11 +461,11 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     }
     success = (bool)resp.status;
 
-    // get, prepare and print response
+    // print response
     if (success)
-        print_write_password_result(&resp, &etd);
+        PrintAndLogEx(SUCCESS, "\nwriting new password " _GREEN_("ok") "\n");
     else
-        PrintAndLogEx(NORMAL, "\nwriting password " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "\nwriting password " _RED_("failed") "\n");
 
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
@@ -534,14 +506,14 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
             PrintAndLogEx(FAILED, "login failed");
             return PM3_ESOFT;
         }
-        PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%s"), sprint_hex_inrow(etd->password, 4));
+        PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%08x"), etd->password1);
     }
 
     uint8_t *data = resp.data.asBytes;
     em4x50_word_t words[EM4X50_NO_WORDS];
     int now = (resp.status & STATUS_NO_WORDS) >> 2;
     if (edata.addr_given) {
-        prepare_result(data, etd->address, etd->address, words);
+        prepare_result(data, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
     } else {
         prepare_result(data, 0, now - 1, words);
     }
@@ -551,7 +523,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     }
 
     if (edata.addr_given)
-        print_result(words, etd->address, etd->address);
+        print_result(words, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF);
     else
         print_result(words, 0, now - 1);
 
@@ -560,47 +532,48 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
 
 int CmdEM4x50Read(const char *Cmd) {
 
+    uint8_t address = 0x0;
     em4x50_data_t etd;
     memset(&etd, 0x00, sizeof(em4x50_data_t));
 
     etd.pwd_given = false;
     etd.addr_given = false;
-    etd.newpwd_given = false;
 
     bool errors = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h': {
+
+            case 'h':
                 return usage_lf_em4x50_read();
-            }
+
             case 'a': {
-                param_getdec(Cmd, cmdp + 1, &etd.address);
+                param_getdec(Cmd, cmdp + 1, &address);
+                // lsb: byte 1 = fwr, byte 2 = lwr, byte 3 = 0x0, byte 4 = 0x0
+                etd.addresses = address;    // lwr
+                etd.addresses <<= 8;
+                etd.addresses |= address;   // fwr
 
                 // validation
-                if (etd.address <= 0 || etd.address >= EM4X50_NO_WORDS) {
-                    PrintAndLogEx(FAILED, "\n  error, address has to be in range [1-33]\n");
+                if (address <= 0 || address >= EM4X50_NO_WORDS) {
+                    PrintAndLogEx(FAILED, "error, address has to be in range [1-33]\n");
                     return PM3_EINVARG;
                 }
                 etd.addr_given = true;
                 cmdp += 2;
                 break;
             }
-            case 'p': {
-                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
+            case 'p':
+                etd.password1 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
-            }
-            default: {
-                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-            }
         }
     }
 
@@ -616,7 +589,6 @@ int CmdEM4x50Dump(const char *Cmd) {
     em4x50_data_t etd;
     etd.pwd_given = false;
     etd.addr_given = false;
-    etd.newpwd_given = false;
 
     char filename[FILE_PATH_SIZE] = {0x00};
     char *fptr = filename;
@@ -625,24 +597,24 @@ int CmdEM4x50Dump(const char *Cmd) {
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
+
             case 'h':
                 return usage_lf_em4x50_dump();
                 break;
+
             case 'f':
                 param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
                 cmdp += 2;
                 break;
-            case 'p': {
-                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                    PrintAndLogEx(FAILED, "\n  password has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
+
+            case 'p':
+                etd.password1 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 etd.pwd_given = true;
                 cmdp += 2;
                 break;
-            }
+
             default:
-                PrintAndLogEx(WARNING, "  Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         };
@@ -698,38 +670,36 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     // fills EM4x50 tag with zeros including password
 
-    bool errors = false, bpwd = false;
+    bool errors = false, pwd_given = false;
     uint8_t cmdp = 0;
-    em4x50_data_t etd;
+    uint32_t password = 0x0;
     PacketResponseNG resp;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
+ 
             case 'h':
                 return usage_lf_em4x50_wipe();
 
             case 'p':
-                if (param_gethex(Cmd, cmdp + 1, etd.password, 8)) {
-                    PrintAndLogEx(FAILED, "\npassword has to be 8 hex symbols\n");
-                    return PM3_EINVARG;
-                }
-                bpwd = true;
+                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                pwd_given = true;
                 cmdp += 2;
                 break;
 
             default:
-                PrintAndLogEx(WARNING, "\nUnknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
     }
 
-    if (errors || !bpwd)
+    if (errors || !pwd_given)
         return usage_lf_em4x50_wipe();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&password, sizeof(password));
     WaitForResponse(CMD_ACK, &resp);
     
     // print response
@@ -756,20 +726,24 @@ int CmdEM4x50Brute(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
+
             case 'h':
                 return usage_lf_em4x50_brute();
+
             case 'f':
-                etd.start_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                etd.password1 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 startpwd = true;
                 cmdp += 2;
                 break;
+
             case 'l':
-                etd.stop_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                etd.password2 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 stoppwd = true;
                 cmdp += 2;
                 break;
+
             default:
-                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -779,14 +753,14 @@ int CmdEM4x50Brute(const char *Cmd) {
         return usage_lf_em4x50_brute();
 
     // print some information
-    no_iter = etd.stop_password - etd.start_password + 1;
+    no_iter = etd.password2 - etd.password1 + 1;
     dur_s = no_iter / speed;
     dur_h = dur_s / 3600;
     dur_m = (dur_s - dur_h * 3600) / 60;
     dur_s -= dur_h * 3600 + dur_m * 60;
-    PrintAndLogEx(NORMAL, "\ntrying %i passwords in range [0x%08x, 0x%08x]",
-                  no_iter, etd.start_password, etd.stop_password);
-    PrintAndLogEx(NORMAL, "estimated duration: %ih%im%is\n", dur_h, dur_m, dur_s);
+    PrintAndLogEx(INFO, "trying %i passwords in range [0x%08x, 0x%08x]",
+                  no_iter, etd.password1, etd.password2);
+    PrintAndLogEx(INFO, "estimated duration: %ih%im%is", dur_h, dur_m, dur_s);
 
     // start
     clearCommandBuffer();
@@ -795,9 +769,9 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     // print response
     if ((bool)resp.status)
-        PrintAndLogEx(NORMAL, "\npassword " _GREEN_("found") ": 0x%08x\n", resp.data.asDwords[0]);
+        PrintAndLogEx(SUCCESS, "\npassword " _GREEN_("found") ": 0x%08x\n", resp.data.asDwords[0]);
     else
-        PrintAndLogEx(NORMAL, "\npassword: " _RED_("not found") "\n");
+        PrintAndLogEx(FAILED, "\npassword: " _RED_("not found") "\n");
 
     return PM3_SUCCESS;
 }
@@ -806,21 +780,24 @@ int CmdEM4x50Login(const char *Cmd) {
 
     bool errors = false, pwd_given = false;
     uint8_t cmdp = 0;
-    em4x50_data_t etd;
+    uint32_t password = 0x0;
     PacketResponseNG resp;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
+
             case 'h':
                 return usage_lf_em4x50_login();
+
             case 'p':
-                etd.login_password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 pwd_given = true;
                 cmdp += 2;
                 break;
+
             default:
-                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -831,14 +808,14 @@ int CmdEM4x50Login(const char *Cmd) {
 
     // start
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_LOGIN, (uint8_t *)&etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X50_LOGIN, (uint8_t *)&password, sizeof(password));
     WaitForResponse(CMD_ACK, &resp);
 
     // print response
     if ((bool)resp.status)
-        PrintAndLogEx(NORMAL, "\nlogin " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "\nlogin " _GREEN_("ok") "\n");
     else
-        PrintAndLogEx(NORMAL, "\nlogin " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "\nlogin " _RED_("failed") "\n");
 
     return PM3_SUCCESS;
 }
@@ -852,10 +829,12 @@ int CmdEM4x50Reset(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
 
         switch (tolower(param_getchar(Cmd, cmdp))) {
+
             case 'h':
                 return usage_lf_em4x50_reset();
+
             default:
-                PrintAndLogEx(WARNING, "\n  Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -871,9 +850,9 @@ int CmdEM4x50Reset(const char *Cmd) {
 
     // print response
     if ((bool)resp.status)
-        PrintAndLogEx(NORMAL, "\nreset " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "\nreset " _GREEN_("ok") "\n");
     else
-        PrintAndLogEx(NORMAL, "\nreset " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "\nreset " _RED_("failed") "\n");
 
     return PM3_SUCCESS;
 }
@@ -893,7 +872,7 @@ int CmdEM4x50Watch(const char *Cmd) {
                 return usage_lf_em4x50_watch();
 
             default:
-                PrintAndLogEx(WARNING, "  Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }

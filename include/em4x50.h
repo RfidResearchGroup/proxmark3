@@ -43,14 +43,10 @@
 typedef struct {
     bool addr_given;
     bool pwd_given;
-    bool newpwd_given;
-    uint8_t password[4];
-    uint8_t new_password[4];
-    uint8_t address;
-    uint8_t word[4];
-    uint32_t start_password;
-    uint32_t stop_password;
-    uint32_t login_password;
+    uint32_t password1;
+    uint32_t password2;
+    uint32_t word;
+    uint32_t addresses;
 } em4x50_data_t;
 
 typedef struct {

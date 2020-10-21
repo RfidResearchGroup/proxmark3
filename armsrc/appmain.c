@@ -1034,7 +1034,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_EM4X50_WIPE: {
-            em4x50_wipe((em4x50_data_t *)packet->data.asBytes);
+            em4x50_wipe((uint32_t *)packet->data.asBytes);
             break;
         }
         case CMD_LF_EM4X50_BRUTE: {
@@ -1042,7 +1042,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_EM4X50_LOGIN: {
-            em4x50_login((em4x50_data_t *)packet->data.asBytes);
+            em4x50_login((uint32_t *)packet->data.asBytes);
             break;
         }
         case CMD_LF_EM4X50_RESET: {
