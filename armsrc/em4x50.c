@@ -166,12 +166,10 @@ static bool get_signalproperties(void) {
     gHigh = sample_ref + pct * (sample_max_mean - sample_ref) / 100;
     gLow = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
     
-    Dbprintf("gHigh = %i, gLow = %i", gHigh, gLow);
-    
     return true;
 }
 
-static bool unvalid_bit(void) {
+static bool invalid_bit(void) {
 
     // returns true if bit is undefined by evaluating a single sample within
     // a bit period (given there is no LIW, ACK or NAK)
@@ -365,7 +363,7 @@ static int find_double_listen_window(bool bcommand) {
                     // ...and check if the following bit does make sense
                     // (if not it is the correct position within the second
                     // listen window)
-                    if (unvalid_bit()) {
+                    if (invalid_bit()) {
 
                         // send RM for request mode
                         em4x50_reader_send_bit(0);
@@ -583,7 +581,7 @@ static bool check_ack(bool bliw) {
 
                     // check for listen window (if first bit cannot be inerpreted
                     // as a valid bit it must belong to a listen window)
-                    if (unvalid_bit()) {
+                    if (invalid_bit()) {
 
                         // send RM for request mode
                         em4x50_reader_send_bit(0);
