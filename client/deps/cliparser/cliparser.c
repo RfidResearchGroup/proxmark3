@@ -278,7 +278,7 @@ uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_
     uint8_t data[8];
     int datalen = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), data, sizeof(data), &datalen);
-    if (res == 0) {
+    if (res == 0 && datalen > 0) {
         for (uint8_t i = 0; i < datalen; i++) {
             rv <<= 8;
             rv |= data[i];
