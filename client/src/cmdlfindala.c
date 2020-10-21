@@ -567,13 +567,9 @@ static int CmdIndalaSim(const char *Cmd) {
 
 static int CmdIndalaClone(const char *Cmd) {
 
-    bool is_long_uid = false, got_cn = false, got_26 = false;
-    bool is_t5555 = false;
     int32_t cardnumber;
     uint32_t blocks[8] = {0};
     uint8_t max = 0;
-    uint8_t data[7 * 4];
-    int datalen = 0;
     uint8_t fc = 0;
     uint16_t cn = 0;
 
@@ -597,13 +593,16 @@ static int CmdIndalaClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    is_long_uid = arg_get_lit(ctx, 1);
+    bool is_long_uid = arg_get_lit(ctx, 1);
 
     // raw param
+    int datalen = 0;
+    uint8_t data[(7 * 4) + 1 ];
     CLIGetHexWithReturn(ctx, 3, data, &datalen);
 
-    is_t5555 = arg_get_lit(ctx, 4);
+    bool is_t5555 = arg_get_lit(ctx, 4);
 
+    bool got_cn = false, got_26 = false;
     if (is_long_uid == false) {
 
         // Heden param
@@ -618,11 +617,13 @@ static int CmdIndalaClone(const char *Cmd) {
 
     CLIParserFree(ctx);
 
+    PrintAndLogEx(INFO, "Target chip " _YELLOW_("%s"), (is_t5555) ? "Q5/T5555" : "T55x7");
+
     if (is_long_uid) {
         // 224 BIT UID
         // config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
         PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag");
-        PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Using raw " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
 
         if (is_t5555)
             blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
@@ -656,6 +657,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
             if (getIndalaBits(fc, cn, bits) != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+                free(bits);
                 return PM3_ESOFT;
             }
 
@@ -674,7 +676,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
         // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag");
-        PrintAndLogEx(INFO, "RawID %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Using raw " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
 
         if (is_t5555)
             blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);

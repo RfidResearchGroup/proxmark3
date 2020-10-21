@@ -16,9 +16,8 @@
 int CmdLFEM4X(const char *Cmd);
 
 int demodEM410x(bool verbose);
-bool EM4x05IsBlock0(uint32_t *word);
-
 void printEM410x(uint32_t hi, uint64_t id);
+
 int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo);
 int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose);
 

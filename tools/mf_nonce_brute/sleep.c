@@ -10,7 +10,7 @@
 
 #ifndef _WIN32
 
-#define _POSIX_C_SOURCE	199309L
+#define _POSIX_C_SOURCE 199309L
 #include "sleep.h"
 #include <time.h>
 #include <stdio.h>

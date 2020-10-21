@@ -233,6 +233,7 @@ static int plus_print_version(uint8_t *version) {
     PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
+    PrintAndLogEx(INFO, "          Raw : %s", sprint_hex(version, 7));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
     PrintAndLogEx(INFO, "          Type: %s", getTypeStr(version[1]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
@@ -241,6 +242,7 @@ static int plus_print_version(uint8_t *version) {
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
+    PrintAndLogEx(INFO, "          Raw : %s", sprint_hex(version + 7, 6));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[7]));
     PrintAndLogEx(INFO, "          Type: %s", getTypeStr(version[8]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[9]);
@@ -265,12 +267,20 @@ static int get_plus_version(uint8_t *version, int *version_len) {
 
 static int CmdHFMFPInfo(const char *Cmd) {
 
-    if (Cmd && strlen(Cmd) > 0)
-        PrintAndLogEx(WARNING, "command don't have any parameters.\n");
-
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
+
+    // Mifare Plus info
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ACK, &resp);
+
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+
 
     bool supportVersion = false;
     bool supportSignature = false;
@@ -284,17 +294,11 @@ static int CmdHFMFPInfo(const char *Cmd) {
     } else {
         // info about 14a part
         infoHF14A(false, false, false);
+
+        // Historical bytes.
+
     }
 
-    // Mifare Plus info
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
-    PacketResponseNG resp;
-    WaitForResponse(CMD_ACK, &resp);
-
-    iso14a_card_select_t card;
-    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
-    uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
     // Signature originality check
     uint8_t signature[56] = {0};

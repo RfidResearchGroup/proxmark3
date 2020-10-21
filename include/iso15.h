@@ -12,7 +12,7 @@
 #define _ISO15_H_
 
 #include "common.h"
-typedef struct {    
+typedef struct {
     uint8_t uid[10];
     uint8_t uidlen;
     uint8_t atqb[7];
@@ -21,12 +21,12 @@ typedef struct {
 } PACKED iso14b_card_select_t;
 
 typedef enum ISO15_COMMAND {
-    ISO15_CONNECT =         (1 << 0),
-    ISO15_NO_DISCONNECT =   (1 << 1),
-    ISO15_RAW =             (1 << 2),
-    ISO15_APPEND_CRC =      (1 << 3),
-    ISO15_HIGH_SPEED =      (1 << 4),
-    ISO15_READ_RESPONSE =   (1 << 5)
+    ISO15_CONNECT = (1 << 0),
+    ISO15_NO_DISCONNECT = (1 << 1),
+    ISO15_RAW = (1 << 2),
+    ISO15_APPEND_CRC = (1 << 3),
+    ISO15_HIGH_SPEED = (1 << 4),
+    ISO15_READ_RESPONSE = (1 << 5)
 } iso15_command_t;
 
 

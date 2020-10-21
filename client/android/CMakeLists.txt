@@ -1,4 +1,5 @@
 # version
+message(STATUS "CMake ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.4.1)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fvisibility=hidden -w")
@@ -12,7 +13,6 @@ add_subdirectory(../deps deps)
 if (CMAKE_MAKE_PROGRAM MATCHES ".*ninja.*")
     set(BZIP2_INCLUDE_DIRS ${BZIP2_ROOT})
     set(BZIP2_LIBRARIES pm3rrg_rdv4_bzip2)
-    find_library(pm3rrg_rdv4_bzip2 REQUIRED)
 elseif (UNIX) # Cross compile at Unix Makefile System.
     # bzip2 dep.
     include(ExternalProject)
@@ -125,9 +125,10 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/cmdlf.c
         ${PM3_ROOT}/client/src/cmdlfawid.c
         ${PM3_ROOT}/client/src/cmdlfcotag.c
+        ${PM3_ROOT}/client/src/cmdlfdestron.c
         ${PM3_ROOT}/client/src/cmdlfem4x.c
         ${PM3_ROOT}/client/src/cmdlfem4x50.c
-        ${PM3_ROOT}/client/src/cmdlffdx.c
+        ${PM3_ROOT}/client/src/cmdlffdxb.c
         ${PM3_ROOT}/client/src/cmdlfgallagher.c
         ${PM3_ROOT}/client/src/cmdlfguard.c
         ${PM3_ROOT}/client/src/cmdlfhid.c
@@ -188,15 +189,6 @@ target_include_directories(pm3rrg_rdv4 PRIVATE
         ${PM3_ROOT}/common
         ${PM3_ROOT}/common_fpga
         ${PM3_ROOT}/client/src)
-
-find_library(pm3rrg_rdv4_cliparser REQUIRED)
-find_library(pm3rrg_rdv4_jansson REQUIRED)
-find_library(pm3rrg_rdv4_tinycbor REQUIRED)
-find_library(pm3rrg_rdv4_lua REQUIRED)
-find_library(pm3rrg_rdv4_mbedtls REQUIRED)
-find_library(pm3rrg_rdv4_reveng REQUIRED)
-find_library(pm3rrg_rdv4_hardnested REQUIRED)
-find_library(pm3rrg_rdv4_whereami REQUIRED)
 
 target_link_libraries(pm3rrg_rdv4
         ${BZIP2_LIBRARIES}

@@ -13,8 +13,12 @@ At the moment both are maintained because they don't perfectly overlap yet.
 
 | Feature | Makefile | CMake | Remarks |
 |-----|---|---|---|
-| verbose | V=1 | VERBOSE=1 |   |
+| verbose | `V=1` | `VERBOSE=1` |   |
+| debug build | `DEBUG=1` | `-DCMAKE_BUILD_TYPE=Debug` | client only |
 | warnings management | yes (1) | **no** | (1) cf Makefile.defs |
+| extra GCC warnings | GCCEXTRA=1 | **no** |   |
+| extra Clang warnings | CLANGEXTRA=1 | **no** | only on host |
+| AddressSanitize | SANITIZE=1 | **no** | only on host |
 | compilation | in place | in build dir | |
 | user `CFLAGS`/`LDFLAGS` | envvars honored (1) | envvars honored (2) | (1) also `LDLIBS` and `INCLUDES_CLIENT` for more tuning (2) only at first cmake call |
 | Mingw gnu printf | `_ISOC99_SOURCE` | `_ISOC99_SOURCE` | and in cbor.h: `__attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)))`|
@@ -29,7 +33,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | bzip2 detection | **none** | find_package, Cross:gitclone | |
 | dep cliparser | in_deps | in_deps |   |
 | dep hardnested | in_deps | in_deps |   |
-| hardn arch autodetect | `uname -m` =? 86 or amd64; `$(CC) -E -mavx512f`? +AVX512` |  `CMAKE_SYSTEM_PROCESSOR` =? x86 or x86_64 or i686 or AMD64 (1) | (1) currently it always includes AVX512 on Intel arch |
+| hardn arch autodetect | `uname -m` =? 86 or amd64; `$(CC) -E -mavx512f`? +`AVX512` |  `CMAKE_SYSTEM_PROCESSOR` =? x86 or x86_64 or i686 or AMD64 (1) | (1) currently it always includes AVX512 on Intel arch |
 | `cpu_arch` | yes | **no/auto?** | e.g. `cpu_arch=generic` for cross-compilation
 | dep jansson | sys / in_deps | sys / in_deps |   |
 | jansson detection | pc | pc/find* |   |

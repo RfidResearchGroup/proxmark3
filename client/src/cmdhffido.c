@@ -36,10 +36,21 @@
 #include "emv/dump.h"
 #include "ui.h"
 #include "cmdhf14a.h"
+#include "cmdtrace.h"
 
 static int CmdHelp(const char *Cmd);
 
-static int CmdHFFidoInfo(const char *cmd) {
+static int cmd_hf_fido_list(const char *Cmd) {
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 14a");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
+}
+
+static int cmd_hf_fido_info(const char *cmd) {
 
     if (cmd && strlen(cmd) > 0)
         PrintAndLogEx(WARNING, "WARNING: command doesn't have any parameters.\n");
@@ -150,7 +161,7 @@ static json_t *OpenJson(CLIParserContext *ctx, int paramnum, char *fname, void *
     return root;
 }
 
-static int CmdHFFidoRegister(const char *cmd) {
+static int cmd_hf_fido_register(const char *cmd) {
     uint8_t data[64] = {0};
     int chlen = 0;
     uint8_t cdata[250] = {0};
@@ -198,6 +209,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     if (paramsPlain) {
         memset(cdata, 0x00, 32);
+        chlen = sizeof(cdata);
         CLIGetStrWithReturn(ctx, 6, cdata, &chlen);
         if (chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
@@ -205,6 +217,7 @@ static int CmdHFFidoRegister(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        chlen = sizeof(cdata);
         CLIGetHexWithReturn(ctx, 6, cdata, &chlen);
         if (chlen && chlen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
@@ -218,6 +231,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     if (paramsPlain) {
         memset(adata, 0x00, 32);
+        applen = sizeof(adata);
         CLIGetStrWithReturn(ctx, 7, adata, &applen);
         if (applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
@@ -225,6 +239,7 @@ static int CmdHFFidoRegister(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        applen = sizeof(adata);
         CLIGetHexWithReturn(ctx, 7, adata, &applen);
         if (applen && applen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
@@ -386,7 +401,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFFidoAuthenticate(const char *cmd) {
+static int cmd_hf_fido_authenticate(const char *cmd) {
     uint8_t data[512] = {0};
     uint8_t hdata[250] = {0};
     bool public_key_loaded = false;
@@ -474,6 +489,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
+        hdatalen = sizeof(hdata);
         CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
@@ -481,6 +497,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        hdatalen = sizeof(hdata);
         CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
@@ -494,6 +511,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
+        hdatalen = sizeof(hdata);
         CLIGetStrWithReturn(ctx, 11, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
@@ -501,6 +519,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        hdatalen = sizeof(hdata);
         CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
@@ -652,7 +671,7 @@ static int GetExistsFileNameJson(const char *prefixDir, const char *reqestedFile
     return PM3_SUCCESS;
 }
 
-static int CmdHFFido2MakeCredential(const char *cmd) {
+static int cmd_hf_fido_2make_credential(const char *cmd) {
     json_error_t error;
     char fname[FILE_PATH_SIZE] = {0};
 
@@ -682,6 +701,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
+    jsonnamelen = sizeof(jsonname);
     CLIGetStrWithReturn(ctx, 5, jsonname, &jsonnamelen);
 
     if (!jsonnamelen) {
@@ -777,7 +797,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFFido2GetAssertion(const char *cmd) {
+static int cmd_hf_fido_2get_assertion(const char *cmd) {
     json_error_t error;
     char fname[FILE_PATH_SIZE] = {0};
 
@@ -806,7 +826,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 
     uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
-    int jsonnamelen = 0;
+    int jsonnamelen = sizeof(jsonname);
     CLIGetStrWithReturn(ctx, 5, jsonname, &jsonnamelen);
 
     if (!jsonnamelen) {
@@ -903,13 +923,14 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",      CmdHelp,                    AlwaysAvailable, "This help."},
-    {"info",      CmdHFFidoInfo,              IfPm3Iso14443a,  "Info about FIDO tag."},
-    {"reg",       CmdHFFidoRegister,          IfPm3Iso14443a,  "FIDO U2F Registration Message."},
-    {"auth",      CmdHFFidoAuthenticate,      IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
-    {"make",      CmdHFFido2MakeCredential,   IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
-    {"assert",    CmdHFFido2GetAssertion,     IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
-    {NULL,        NULL,                       0, NULL}
+    {"help",      CmdHelp,                      AlwaysAvailable, "This help."},
+    {"list",      cmd_hf_fido_list,             IfPm3Iso14443a,  "List ISO 14443A history"},
+    {"info",      cmd_hf_fido_info,             IfPm3Iso14443a,  "Info about FIDO tag."},
+    {"reg",       cmd_hf_fido_register,         IfPm3Iso14443a,  "FIDO U2F Registration Message."},
+    {"auth",      cmd_hf_fido_authenticate,     IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
+    {"make",      cmd_hf_fido_2make_credential, IfPm3Iso14443a,  "FIDO2 MakeCredential command."},
+    {"assert",    cmd_hf_fido_2get_assertion,   IfPm3Iso14443a,  "FIDO2 GetAssertion command."},
+    {NULL, NULL, 0, NULL}
 };
 
 int CmdHFFido(const char *Cmd) {

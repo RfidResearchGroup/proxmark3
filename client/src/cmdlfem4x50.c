@@ -16,7 +16,7 @@
 #include "em4x50.h"
 
 static int usage_lf_em4x50_info(void) {
-    PrintAndLogEx(NORMAL, "Read all information of EM4x50. Tag nust be on antenna.");
+    PrintAndLogEx(NORMAL, "Read all information of EM4x50. Tag must be on antenna.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_info [h] [v] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -307,7 +307,7 @@ int CmdEM4x50Info(const char *Cmd) {
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -380,10 +380,13 @@ int CmdEM4x50Write(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
 
     bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
     if (isOK == false) {
@@ -455,10 +458,14 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WRITE_PASSWORD, (uint8_t *)&etd, sizeof(etd));
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE_PASSWORD, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
+
     success = (bool)resp.status;
 
     // print response
@@ -487,7 +494,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     SendCommandNG(CMD_LF_EM4X50_READ, (uint8_t *)&edata, sizeof(edata));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_READ, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "(em4x50) timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -628,7 +635,7 @@ int CmdEM4x50Dump(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -699,9 +706,19 @@ int CmdEM4x50Wipe(const char *Cmd) {
         return usage_lf_em4x50_wipe();
 
     clearCommandBuffer();
+<<<<<<< HEAD
     SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&password, sizeof(password));
     WaitForResponse(CMD_ACK, &resp);
     
+=======
+    SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&etd, sizeof(etd));
+
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WIPE, &resp, 2 * TIMEOUT)) {
+        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
+        return PM3_ETIMEOUT;
+    }
+
+>>>>>>> master
     // print response
     bool isOK = resp.status;
     if (isOK) {

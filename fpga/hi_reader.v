@@ -19,7 +19,7 @@ module hi_reader(
     output ssp_frame, ssp_din, ssp_clk;
     output dbg;
     input [1:0] subcarrier_frequency;
-	input [3:0] minor_mode;
+    input [3:0] minor_mode;
 
 assign adc_clk = ck_1356meg;  // sample frequency is 13,56 MHz
 
@@ -58,7 +58,7 @@ end
 reg [5:0] corr_i_cnt;
 always @(negedge adc_clk)
 begin
-	corr_i_cnt <= corr_i_cnt + 1;
+    corr_i_cnt <= corr_i_cnt + 1;
 end
 
 
@@ -83,28 +83,28 @@ reg [12:0] min_ci_cq_2; // min_ci_cq / 2
 
 always @(*)
 begin
-	if (corr_i_accum[13] == 1'b0)
-		abs_ci <= corr_i_accum;
-	else
-		abs_ci <= -corr_i_accum;
+    if (corr_i_accum[13] == 1'b0)
+        abs_ci <= corr_i_accum;
+    else
+        abs_ci <= -corr_i_accum;
 
-	if (corr_q_accum[13] == 1'b0)
-		abs_cq <= corr_q_accum;
-	else
-		abs_cq <= -corr_q_accum;
+    if (corr_q_accum[13] == 1'b0)
+        abs_cq <= corr_q_accum;
+    else
+        abs_cq <= -corr_q_accum;
 
-	if (abs_ci > abs_cq)
-	begin
-		max_ci_cq <= abs_ci;
-		min_ci_cq_2 <= abs_cq / 2;
-	end
-	else
-	begin
-		max_ci_cq <= abs_cq;
-		min_ci_cq_2 <= abs_ci / 2;
-	end
+    if (abs_ci > abs_cq)
+    begin
+        max_ci_cq <= abs_ci;
+        min_ci_cq_2 <= abs_cq / 2;
+    end
+    else
+    begin
+        max_ci_cq <= abs_cq;
+        min_ci_cq_2 <= abs_ci / 2;
+    end
 
-	corr_amplitude <= max_ci_cq + min_ci_cq_2;
+    corr_amplitude <= max_ci_cq + min_ci_cq_2;
 
 end
 
@@ -115,21 +115,21 @@ reg subcarrier_Q;
 
 always @(*)
 begin
-	if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_848_KHZ)
-		begin
-			subcarrier_I = ~corr_i_cnt[3];
-			subcarrier_Q = ~(corr_i_cnt[3] ^ corr_i_cnt[2]);
-		end
-	else if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_212_KHZ)
-		begin
-			subcarrier_I = ~corr_i_cnt[5];
-			subcarrier_Q = ~(corr_i_cnt[5] ^ corr_i_cnt[4]);
-		end
-	else
-		begin											// 424 kHz
-			subcarrier_I = ~corr_i_cnt[4];
-			subcarrier_Q = ~(corr_i_cnt[4] ^ corr_i_cnt[3]);
-		end
+    if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_848_KHZ)
+        begin
+            subcarrier_I = ~corr_i_cnt[3];
+            subcarrier_Q = ~(corr_i_cnt[3] ^ corr_i_cnt[2]);
+        end
+    else if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_212_KHZ)
+        begin
+            subcarrier_I = ~corr_i_cnt[5];
+            subcarrier_Q = ~(corr_i_cnt[5] ^ corr_i_cnt[4]);
+        end
+    else
+        begin                                           // 424 kHz
+            subcarrier_I = ~corr_i_cnt[4];
+            subcarrier_Q = ~(corr_i_cnt[4] ^ corr_i_cnt[3]);
+        end
 end
 
 
@@ -143,64 +143,64 @@ begin
     begin
         if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE)
         begin
-			// send amplitude plus 2 bits reader signal
-			corr_i_out <= corr_amplitude[13:6];
-			corr_q_out <= {corr_amplitude[5:0], after_hysteresis_prev_prev, after_hysteresis_prev};
-		end
-		else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ)
-		begin
+            // send amplitude plus 2 bits reader signal
+            corr_i_out <= corr_amplitude[13:6];
+            corr_q_out <= {corr_amplitude[5:0], after_hysteresis_prev_prev, after_hysteresis_prev};
+        end
+        else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ)
+        begin
 
-			// Send 7 most significant bits of in phase tag signal (signed), plus 1 bit reader signal
-			if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
-				corr_i_out <= {corr_i_accum[11:5], after_hysteresis_prev_prev};
-			else // truncate to maximum value
-				if (corr_i_accum[13] == 1'b0)
-					corr_i_out <= {7'b0111111, after_hysteresis_prev_prev};
-				else
-					corr_i_out <= {7'b1000000, after_hysteresis_prev_prev};
+            // Send 7 most significant bits of in phase tag signal (signed), plus 1 bit reader signal
+            if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
+                corr_i_out <= {corr_i_accum[11:5], after_hysteresis_prev_prev};
+            else // truncate to maximum value
+                if (corr_i_accum[13] == 1'b0)
+                    corr_i_out <= {7'b0111111, after_hysteresis_prev_prev};
+                else
+                    corr_i_out <= {7'b1000000, after_hysteresis_prev_prev};
 
-			// Send 7 most significant bits of quadrature phase tag signal (signed), plus 1 bit reader signal
-			if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111)
-				corr_q_out <= {corr_q_accum[11:5], after_hysteresis_prev};
-			else // truncate to maximum value
-				if (corr_q_accum[13] == 1'b0)
-					corr_q_out <= {7'b0111111, after_hysteresis_prev};
-				else
-					corr_q_out <= {7'b1000000, after_hysteresis_prev};
-		end
+            // Send 7 most significant bits of quadrature phase tag signal (signed), plus 1 bit reader signal
+            if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111)
+                corr_q_out <= {corr_q_accum[11:5], after_hysteresis_prev};
+            else // truncate to maximum value
+                if (corr_q_accum[13] == 1'b0)
+                    corr_q_out <= {7'b0111111, after_hysteresis_prev};
+                else
+                    corr_q_out <= {7'b1000000, after_hysteresis_prev};
+        end
         else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE)
         begin
-			// send amplitude
-			corr_i_out <= {2'b00, corr_amplitude[13:8]};
-			corr_q_out <= corr_amplitude[7:0];
-		end
-		else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_IQ)
-		begin
+            // send amplitude
+            corr_i_out <= {2'b00, corr_amplitude[13:8]};
+            corr_q_out <= corr_amplitude[7:0];
+        end
+        else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_IQ)
+        begin
 
-			// Send 8 bits of in phase tag signal
-			if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
-				corr_i_out <= corr_i_accum[11:4];
-			else // truncate to maximum value
-				if (corr_i_accum[13] == 1'b0)
-					corr_i_out <= 8'b01111111;
-				else
-					corr_i_out <= 8'b10000000;
+            // Send 8 bits of in phase tag signal
+            if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
+                corr_i_out <= corr_i_accum[11:4];
+            else // truncate to maximum value
+                if (corr_i_accum[13] == 1'b0)
+                    corr_i_out <= 8'b01111111;
+                else
+                    corr_i_out <= 8'b10000000;
 
-			// Send 8 bits of quadrature phase tag signal
-			if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111)
-				corr_q_out <= corr_q_accum[11:4];
-			else // truncate to maximum value
-				if (corr_q_accum[13] == 1'b0)
-					corr_q_out <= 8'b01111111;
-				else
-					corr_q_out <= 8'b10000000;
-		end
+            // Send 8 bits of quadrature phase tag signal
+            if (corr_q_accum[13:11] == 3'b000 || corr_q_accum[13:11] == 3'b111)
+                corr_q_out <= corr_q_accum[11:4];
+            else // truncate to maximum value
+                if (corr_q_accum[13] == 1'b0)
+                    corr_q_out <= 8'b01111111;
+                else
+                    corr_q_out <= 8'b10000000;
+        end
 
-		// for each Q/I pair report two reader signal samples when sniffing. Store the 1st.
-		after_hysteresis_prev_prev <= after_hysteresis;
+        // for each Q/I pair report two reader signal samples when sniffing. Store the 1st.
+        after_hysteresis_prev_prev <= after_hysteresis;
 
-		// Initialize next correlation.
-		// Both I and Q reference signals are high when corr_i_nct == 0. Therefore need to accumulate.
+        // Initialize next correlation.
+        // Both I and Q reference signals are high when corr_i_nct == 0. Therefore need to accumulate.
         corr_i_accum <= $signed({1'b0, adc_d});
         corr_q_accum <= $signed({1'b0, adc_d});
     end
@@ -217,14 +217,14 @@ begin
             corr_q_accum <= corr_q_accum - $signed({1'b0, adc_d});
     end
 
-	// for each Q/I pair report two reader signal samples when sniffing. Store the 2nd.
+    // for each Q/I pair report two reader signal samples when sniffing. Store the 2nd.
     if (corr_i_cnt == 6'd32)
         after_hysteresis_prev <= after_hysteresis;
 
     // Then the result from last time is serialized and send out to the ARM.
     // We get one report each cycle, and each report is 16 bits, so the
     // ssp_clk should be the adc_clk divided by 64/16 = 4.
-	// ssp_clk frequency = 13,56MHz / 4 = 3.39MHz
+    // ssp_clk frequency = 13,56MHz / 4 = 3.39MHz
 
     if (corr_i_cnt[1:0] == 2'b00)
     begin
@@ -261,8 +261,8 @@ begin
     if (corr_i_cnt[1:0] == 2'b10)
         ssp_clk <= 1'b0;
 
-	// set ssp_frame signal for corr_i_cnt = 1..3
-	// (send one frame with 16 Bits)
+    // set ssp_frame signal for corr_i_cnt = 1..3
+    // (send one frame with 16 Bits)
     if (corr_i_cnt == 6'd1)
         ssp_frame <= 1'b1;
 
@@ -280,11 +280,11 @@ reg [3:0] jam_counter;
 
 always @(negedge adc_clk)
 begin
-	if (corr_i_cnt == 6'd0)
-	begin
-		jam_counter <= jam_counter + 1;
-		jam_signal <= jam_counter[1] ^ jam_counter[3];
-	end
+    if (corr_i_cnt == 6'd0)
+    begin
+        jam_counter <= jam_counter + 1;
+        jam_signal <= jam_counter[1] ^ jam_counter[3];
+    end
 end
 
 // Antenna drivers
@@ -303,22 +303,22 @@ begin
         pwr_oe4 = 1'b0;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_JAM)
-	begin
+    begin
         pwr_hi  = ck_1356meg & jam_signal;
         pwr_oe4 = 1'b0;
-	end
-	else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ
-		  || minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE
-		  || minor_mode == `FPGA_HF_READER_MODE_SNIFF_PHASE)
-	begin // all off
-		pwr_hi  = 1'b0;
-		pwr_oe4 = 1'b0;
-	end
-	else // receiving from tag
-	begin
-		pwr_hi  = ck_1356meg;
-		pwr_oe4 = 1'b0;
-	end
+    end
+    else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ
+          || minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE
+          || minor_mode == `FPGA_HF_READER_MODE_SNIFF_PHASE)
+    begin // all off
+        pwr_hi  = 1'b0;
+        pwr_oe4 = 1'b0;
+    end
+    else // receiving from tag
+    begin
+        pwr_hi  = ck_1356meg;
+        pwr_oe4 = 1'b0;
+    end
 end
 
 // always on

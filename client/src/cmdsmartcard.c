@@ -791,14 +791,14 @@ static int CmdSmartReader(const char *Cmd) {
 static int CmdSmartSetClock(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
-    uint8_t clock1 = 0;
+    uint8_t new_clk = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_sm_setclock();
             case 'c':
-                clock1 = param_get8ex(Cmd, cmdp + 1, 2, 10);
-                if (clock1 > 2)
+                new_clk = param_get8ex(Cmd, cmdp + 1, 2, 10);
+                if (new_clk > 2)
                     errors = true;
 
                 cmdp += 2;
@@ -813,21 +813,26 @@ static int CmdSmartSetClock(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_setclock();
 
+    struct {
+        uint32_t new_clk;
+    } PACKED payload;
+    
+    payload.new_clk = new_clk;
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_SMART_SETCLOCK, clock1, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SMART_SETCLOCK, (uint8_t*)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_SMART_SETCLOCK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "smart card set clock failed");
         return PM3_ESOFT;
     }
 
-    switch (clock1) {
+    switch (new_clk) {
         case 0:
             PrintAndLogEx(SUCCESS, "Clock changed to 16MHz giving 10800 baudrate");
             break;
@@ -844,9 +849,13 @@ static int CmdSmartSetClock(const char *Cmd) {
 }
 
 static int CmdSmartList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("7816");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t 7816");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static void smart_brute_prim(void) {

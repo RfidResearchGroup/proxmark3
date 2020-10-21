@@ -708,7 +708,7 @@ bool HIDTryUnpack(wiegand_message_t *packed, bool ignore_parity) {
         }
         ++i;
     }
-    if (result == false) {
+    if (result == false && packed->Length) {
         PrintAndLogEx(SUCCESS, "Unknown. Bit len %d", packed->Length);
     }
 

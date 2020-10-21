@@ -72,7 +72,7 @@ lf config s 10000 t 20
 lf t55xx sniff
 
 -- if you have a save trace from before, try
-data load xxxxxxx.pm3
+data load -f xxxxxxx.pm3
 lf t55xx sniff 1
 ```
 

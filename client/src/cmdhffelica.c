@@ -407,9 +407,13 @@ static bool add_last_IDm(uint8_t position, uint8_t *data) {
 }
 
 static int CmdHFFelicaList(const char *Cmd) {
-    (void)Cmd;
-    CmdTraceList("felica");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t felica");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static int CmdHFFelicaReader(const char *Cmd) {

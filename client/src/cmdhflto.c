@@ -207,9 +207,13 @@ int infoLTO(bool verbose) {
 }
 
 static int CmdHfLTOList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdTraceList("lto");
-    return PM3_SUCCESS;
+    char args[128] = {0};
+    if (strlen(Cmd) == 0) {
+        snprintf(args, sizeof(args), "-t lto");
+    } else {
+        strncpy(args, Cmd, sizeof(args) - 1);
+    }
+    return CmdTraceList(args);
 }
 
 static int lto_rdbl(uint8_t blk, uint8_t *block_responce, uint8_t *block_cnt_responce, bool verbose) {

@@ -13,6 +13,31 @@
 #include "proxmark3_arm.h"
 #include "dbprint.h"
 
+
+// timer counts in 666ns increments (32/48MHz), rounding applies
+// WARNING: timer can't measure more than 43ms (666ns * 0xFFFF)
+void SpinDelayUsPrecision(int us) {
+    int ticks = ((MCK / 1000000) * us + 16) >> 5;
+
+    // Borrow a PWM unit for my real-time clock
+    AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
+
+    // 48 MHz / 32 gives 1.5 Mhz
+    AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(5);      // Channel Mode Register
+    AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;                           // Channel Duty Cycle Register
+    AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xFFFF;                      // Channel Period Register
+
+    uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+
+    for (;;) {
+        uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+        if (now == (uint16_t)(start + ticks))
+            return;
+
+        WDT_HIT();
+    }
+}
+
 // timer counts in 21.3us increments (1024/48MHz), rounding applies
 // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelayUs(int us) {

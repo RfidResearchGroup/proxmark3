@@ -27,7 +27,8 @@ void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cm
 void ExitGraphics(void);
 
 extern double CursorScaleFactor;
-extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
+extern char CursorScaleFactorUnit[11];
+extern double PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
 extern uint32_t CursorCPos, CursorDPos;
 extern int CommandFinished;
 extern int offline;

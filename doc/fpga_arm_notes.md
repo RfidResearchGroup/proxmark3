@@ -65,37 +65,37 @@ ARM, send a 16bit configuration with fits the select major mode.
 ## ARM GPIO setup
 
 ```
-	// First configure the GPIOs, and get ourselves a clock.
-	AT91C_BASE_PIOA->PIO_ASR =
-		GPIO_SSC_FRAME  |
-		GPIO_SSC_DIN    |
-		GPIO_SSC_DOUT   |
-		GPIO_SSC_CLK;
-	AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
+    // First configure the GPIOs, and get ourselves a clock.
+    AT91C_BASE_PIOA->PIO_ASR =
+        GPIO_SSC_FRAME  |
+        GPIO_SSC_DIN    |
+        GPIO_SSC_DOUT   |
+        GPIO_SSC_CLK;
+    AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
 
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
+    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SSC);
 
-	// Now set up the SSC proper, starting from a known state.
-	AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
+    // Now set up the SSC proper, starting from a known state.
+    AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
-	// RX clock comes from TX clock, RX starts on Transmit Start,
-	// data and frame signal is sampled on falling edge of RK
-	AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
+    // RX clock comes from TX clock, RX starts on Transmit Start,
+    // data and frame signal is sampled on falling edge of RK
+    AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
 
-	// 8, 16 or 32 bits per transfer, no loopback, MSB first, 1 transfer per sync
-	// pulse, no output sync
-	if ((FPGA_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER && FpgaGetCurrent() == FPGA_BITSTREAM_HF) {
-		AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-	} else {
-		AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-	}
+    // 8, 16 or 32 bits per transfer, no loopback, MSB first, 1 transfer per sync
+    // pulse, no output sync
+    if ((FPGA_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER && FpgaGetCurrent() == FPGA_BITSTREAM_HF) {
+        AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+    } else {
+        AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+    }
 
-	// TX clock comes from TK pin, no clock output, outputs change on rising edge of TK, 
-	// TF (frame sync) is sampled on falling edge of TK, start TX on rising edge of TF
-	AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) | SSC_CLOCK_MODE_START(5);
+    // TX clock comes from TK pin, no clock output, outputs change on rising edge of TK, 
+    // TF (frame sync) is sampled on falling edge of TK, start TX on rising edge of TF
+    AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) | SSC_CLOCK_MODE_START(5);
 
-	// tx framing is the same as the rx framing
-	AT91C_BASE_SSC->SSC_TFMR = AT91C_BASE_SSC->SSC_RFMR;
+    // tx framing is the same as the rx framing
+    AT91C_BASE_SSC->SSC_TFMR = AT91C_BASE_SSC->SSC_RFMR;
 
 ```
 

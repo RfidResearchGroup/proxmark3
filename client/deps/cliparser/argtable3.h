@@ -35,6 +35,7 @@
 
 #include <stdio.h>      /* FILE */
 #include <time.h>       /* struct tm */
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -110,6 +111,12 @@ struct arg_int {
     int *ival;               /* Array of parsed argument values */
 };
 
+struct arg_u64 {
+    struct arg_hdr hdr;      /* The mandatory argtable header struct */
+    int count;               /* Number of matching command line args */
+    uint64_t *uval;          /* Array of parsed argument values */
+};
+
 struct arg_dbl {
     struct arg_hdr hdr;      /* The mandatory argtable header struct */
     int count;               /* Number of matching command line args */
@@ -176,32 +183,29 @@ struct arg_lit *arg_litn(const char *shortopts,
                          int maxcount,
                          const char *glossary);
 
-struct arg_key *arg_key0(const char *keyword,
-                         int flags,
-                         const char *glossary);
-struct arg_key *arg_key1(const char *keyword,
-                         int flags,
-                         const char *glossary);
-struct arg_key *arg_keyn(const char *keyword,
-                         int flags,
-                         int mincount,
-                         int maxcount,
-                         const char *glossary);
+struct arg_key *arg_key0(const char *keyword, int flags, const char *glossary);
+struct arg_key *arg_key1(const char *keyword, int flags, const char *glossary);
+struct arg_key *arg_keyn(const char *keyword, int flags, int mincount, int maxcount, const char *glossary);
 
-struct arg_int *arg_int0(const char *shortopts,
-                         const char *longopts,
-                         const char *datatype,
-                         const char *glossary);
-struct arg_int *arg_int1(const char *shortopts,
-                         const char *longopts,
-                         const char *datatype,
-                         const char *glossary);
-struct arg_int *arg_intn(const char *shortopts,
-                         const char *longopts,
-                         const char *datatype,
-                         int mincount,
-                         int maxcount,
-                         const char *glossary);
+struct arg_int *arg_int0(const char *shortopts, const char *longopts, const char *datatype, const char *glossary);
+struct arg_int *arg_int1(const char *shortopts, const char *longopts, const char *datatype, const char *glossary);
+struct arg_int *arg_intn(const char *shortopts, const char *longopts, const char *datatype, int mincount, int maxcount, const char *glossary);
+
+struct arg_u64 *arg_u64_0(const char *shortopts,
+                          const char *longopts,
+                          const char *datatype,
+                          const char *glossary);
+struct arg_u64 *arg_u64_1(const char *shortopts,
+                          const char *longopts,
+                          const char *datatype,
+                          const char *glossary);
+struct arg_u64 *arg_u64_n(const char *shortopts,
+                          const char *longopts,
+                          const char *datatype,
+                          int mincount,
+                          int maxcount,
+                          const char *glossary);
+
 
 struct arg_dbl *arg_dbl0(const char *shortopts,
                          const char *longopts,

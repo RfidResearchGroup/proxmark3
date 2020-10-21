@@ -816,14 +816,16 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
         return PM3_ESOFT;
     }
 
-    struct p *payload = calloc(1, sizeof(struct p) + size);
+    size_t paylen = sizeof(struct p) + size;
+    struct p *payload = calloc(1, paylen);
+
     payload->blockno = blockNum;
     payload->blockcnt = blocksCount;
     payload->blockwidth = blockBtWidth;
     memcpy(payload->data, data, size);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_EML_MEMSET, (uint8_t *)payload, sizeof(payload) + size);
+    SendCommandNG(CMD_HF_MIFARE_EML_MEMSET, (uint8_t *)payload, paylen);
     free(payload);
     return PM3_SUCCESS;
 }
@@ -1178,7 +1180,7 @@ int detect_mf_magic(bool is_mfc) {
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 2 / CUID"));
             break;
         case MAGIC_GEN_3:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 3 / APDU"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities : possibly " _GREEN_("Gen 3 / APDU"));
             break;
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));

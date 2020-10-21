@@ -134,11 +134,36 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("[a] Anticol override......%i: %s%s%s", hf14aconfig.forceanticol, (hf14aconfig.forceanticol == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forceanticol == 1) ? _RED_("Yes: Always do anticol") : "", (hf14aconfig.forceanticol == 2) ? _RED_("Yes: Always skip anticol") : "");
-    Dbprintf("[b] BCC override..........%i: %s%s%s", hf14aconfig.forcebcc, (hf14aconfig.forcebcc == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcebcc == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcebcc == 2) ? _RED_("Yes: Always use card BCC") : "");
-    Dbprintf("[2] CL2 override..........%i: %s%s%s", hf14aconfig.forcecl2, (hf14aconfig.forcecl2 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl2 == 1) ? _RED_("Yes: Always do CL2") : "", (hf14aconfig.forcecl2 == 2) ? _RED_("Yes: Always skip CL2") : "");
-    Dbprintf("[3] CL3 override..........%i: %s%s%s", hf14aconfig.forcecl3, (hf14aconfig.forcecl3 == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcecl3 == 1) ? _RED_("Yes: Always do CL3") : "", (hf14aconfig.forcecl3 == 2) ? _RED_("Yes: Always skip CL3") : "");
-    Dbprintf("[r] RATS override.........%i: %s%s%s", hf14aconfig.forcerats, (hf14aconfig.forcerats == 0) ? _GREEN_("No") " (follow standard)" : "", (hf14aconfig.forcerats == 1) ? _RED_("Yes: Always do RATS") : "", (hf14aconfig.forcerats == 2) ? _RED_("Yes: Always skip RATS") : "");
+    Dbprintf("  [a] Anticol override....%i %s%s%s",
+             hf14aconfig.forceanticol,
+             (hf14aconfig.forceanticol == 0) ? "( " _GREEN_("No") " ) follow standard " : "",
+             (hf14aconfig.forceanticol == 1) ? "( " _RED_("Yes") " ) always do anticol" : "",
+             (hf14aconfig.forceanticol == 2) ? "( " _RED_("Yes") " ) always skip anticol" : ""
+            );
+    Dbprintf("  [b] BCC override........%i %s%s%s",
+             hf14aconfig.forcebcc,
+             (hf14aconfig.forcebcc == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
+             (hf14aconfig.forcebcc == 1) ? "( " _RED_("Yes") " ) always do CL2" : "",
+             (hf14aconfig.forcebcc == 2) ? "( " _RED_("Yes") " ) always use card BCC" : ""
+            );
+    Dbprintf("  [2] CL2 override........%i %s%s%s",
+             hf14aconfig.forcecl2,
+             (hf14aconfig.forcecl2 == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
+             (hf14aconfig.forcecl2 == 1) ? "( " _RED_("Yes") " ) always do CL2" : "",
+             (hf14aconfig.forcecl2 == 2) ? "( " _RED_("Yes") " ) always skip CL2" : ""
+            );
+    Dbprintf("  [3] CL3 override........%i %s%s%s",
+             hf14aconfig.forcecl3,
+             (hf14aconfig.forcecl3 == 0) ? "( " _GREEN_("No") " ) follow standard" : "",
+             (hf14aconfig.forcecl3 == 1) ? "( " _RED_("Yes") " ) always do CL3" : "",
+             (hf14aconfig.forcecl3 == 2) ? "( " _RED_("Yes") " ) always skip CL3" : ""
+            );
+    Dbprintf("  [r] RATS override.......%i %s%s%s",
+             hf14aconfig.forcerats,
+             (hf14aconfig.forcerats == 0) ? "( " _GREEN_("No") " q follow standard " : "",
+             (hf14aconfig.forcerats == 1) ? "( " _RED_("Yes") " ) always do RATS" : "",
+             (hf14aconfig.forcerats == 2) ? "( " _RED_("Yes") " ) always skip RATS" : ""
+            );
 }
 
 /**
@@ -2365,7 +2390,7 @@ void iso14443a_antifuzz(uint32_t flags) {
         }
     }
 
-    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_SUCCESS, NULL, 0);
     switch_off();
     BigBuf_free_keep_EM();
 }
@@ -2599,13 +2624,13 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
     } // else force RATS
 
     // RATS, Request for answer to select
-    if (!no_rats) {
-        uint8_t rats[]       = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
+    if (no_rats == false) {
+        uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, resp_par);
-
-        if (!len) return 0;
+        if (len == 0)
+            return 0;
 
         if (p_card) {
             memcpy(p_card->ats, resp, sizeof(p_card->ats));
@@ -2687,7 +2712,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
         LED_D_ON();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
-    SpinDelay(100);
+    SpinDelay(50);
 
     // Start the timer
     StartCountSspClk();
@@ -2904,10 +2929,15 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 ReaderTransmit(cmd, len, NULL);                                         // 8 bits, odd parity
             }
         }
-        arg0 = ReaderReceive(buf, par);
-        FpgaDisableTracing();
 
-        reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+            FpgaDisableTracing();
+            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+        } else {
+            arg0 = ReaderReceive(buf, par);
+            FpgaDisableTracing();
+            reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+        }
     }
 
     if ((param & ISO14A_REQUEST_TRIGGER))

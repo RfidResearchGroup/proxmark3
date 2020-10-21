@@ -16,6 +16,8 @@
 extern int g_rsamples;   // = 0;
 extern uint8_t g_trigger;
 
+int tearoff_hook(void);
+
 // ADC Vref = 3300mV, and an (10M+1M):1M voltage divider on the HF input can measure voltages up to 36300 mV
 #define MAX_ADC_HF_VOLTAGE 36300
 // ADC Vref = 3300mV,  (240k-10M):240k voltage divider,  140800 mV

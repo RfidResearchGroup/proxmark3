@@ -68,6 +68,24 @@ extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
+static uint16_t tearoff_delay_us = 0;
+static bool tearoff_enabled = false;
+
+int tearoff_hook(void) {
+    if (tearoff_enabled) {
+        if (tearoff_delay_us == 0) {
+            Dbprintf(_RED_("No tear-off delay configured!"));
+            return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
+        }
+        SpinDelayUsPrecision(tearoff_delay_us);
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        tearoff_enabled = false;
+        Dbprintf(_YELLOW_("Tear-off triggered!"));
+        return PM3_ETEAROFF;
+    } else {
+        return PM3_SUCCESS;     // SUCCESS = the hook didn't do anything
+    }
+}
 
 void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
@@ -731,6 +749,24 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
         }
+        case CMD_SET_TEAROFF: {
+            struct p {
+                uint16_t delay_us;
+                bool on;
+                bool off;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            if (payload->on && payload->off)
+                reply_ng(CMD_SET_TEAROFF, PM3_EINVARG, NULL, 0);
+            if (payload->on)
+                tearoff_enabled = true;
+            if (payload->off)
+                tearoff_enabled = false;
+            if (payload->delay_us > 0)
+                tearoff_delay_us = payload->delay_us;
+            reply_ng(CMD_SET_TEAROFF, PM3_SUCCESS, NULL, 0);
+            break;
+        }
         // always available
         case CMD_HF_DROPFIELD: {
             hf_field_off();
@@ -827,7 +863,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HID_CLONE: {
-            CopyHIDtoT55x7(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes[0]);
+            lf_hidsim_t *payload = (lf_hidsim_t *)packet->data.asBytes;
+            CopyHIDtoT55x7(payload->hi2, payload->hi, payload->lo, payload->longFMT);
             break;
         }
         case CMD_LF_IO_WATCH: {
@@ -933,6 +970,23 @@ static void PacketReceived(PacketCommandNG *packet) {
             );
             break;
         }
+        case CMD_LF_EM4X_LOGIN: {
+            struct p {
+                uint32_t password;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EM4xLogin(payload->password);
+            break;
+        }
+        case CMD_LF_EM4X_BF: {
+            struct p {
+                uint32_t start_pwd;
+                uint32_t n;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EM4xBruteforce(payload->start_pwd, payload->n);
+            break;
+        }
         case CMD_LF_EM4X_READWORD: {
             struct p {
                 uint32_t password;
@@ -952,6 +1006,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd);
+            break;
+        }
+        case CMD_LF_EM4X_PROTECTWORD: {
+            struct p {
+                uint32_t password;
+                uint32_t data;
+                uint8_t usepwd;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EM4xProtectWord(payload->data, payload->password, payload->usepwd);
             break;
         }
         case CMD_LF_AWID_WATCH:  {
@@ -1211,7 +1275,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO14443A_ANTIFUZZ: {
-            iso14443a_antifuzz(packet->oldarg[0]);
+            struct p {
+                uint8_t flag;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            iso14443a_antifuzz(payload->flag);
             break;
         }
         case CMD_HF_EPA_COLLECT_NONCE: {
@@ -1442,6 +1510,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareU_Otp_Tearoff(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
+        case CMD_HF_MFU_COUNTER_TEAROFF: {
+            struct p {
+                uint8_t counter;
+                uint32_t tearoff_time;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareU_Counter_Tearoff(payload->counter, payload->tearoff_time);
+            break;
+        }
         case CMD_HF_MIFARE_STATIC_NONCE: {
             MifareHasStaticNonce();
             break;
@@ -1472,20 +1549,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_SIMULATE: {
+            /*
+                        struct p {
+                            uint8_t reader[4];
+                            uint8_t mac[4];
+                        } PACKED;
+                        struct p *payload = (struct p *) packet->data.asBytes;
+            */
+
             SimulateIClass(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_READER: {
             ReaderIClass(packet->oldarg[0]);
-            break;
-        }
-        case CMD_HF_ICLASS_REPLAY: {
-            struct p {
-                uint8_t reader[4];
-                uint8_t mac[4];
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
-            ReaderIClass_Replay(payload->reader, payload->mac);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {
@@ -1514,18 +1590,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             iClass_Dump(packet->data.asBytes);
             break;
         }
-        case CMD_HF_ICLASS_CLONE: {
-            struct p {
-                uint8_t startblock;
-                uint8_t endblock;
-                uint8_t data[];
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            iClass_Clone(payload->startblock, payload->endblock, payload->data);
-            break;
-        }
         case CMD_HF_ICLASS_RESTORE: {
-            iClass_Restore(packet->data.asBytes);
+            iClass_Restore((iclass_restore_req_t *)packet->data.asBytes);
             break;
         }
 #endif
@@ -1567,7 +1633,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_SETCLOCK: {
-            SmartCardSetClock(packet->oldarg[0]);
+            struct p {
+                uint32_t new_clk;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            SmartCardSetClock(payload->new_clk);
             break;
         }
         case CMD_SMART_RAW: {

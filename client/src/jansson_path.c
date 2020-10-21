@@ -38,9 +38,7 @@ static void jsonp_free(void *ptr) {
 }
 
 static char *jsonp_strndup(const char *str, size_t len) {
-    char *new_str;
-
-    new_str = jsonp_malloc(len + 1);
+    char *new_str = jsonp_malloc(len + 1);
     if (!new_str)
         return NULL;
 

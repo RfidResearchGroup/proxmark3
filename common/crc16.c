@@ -191,7 +191,7 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
             crc = crc16_kermit(d, n);
             break;
         case CRC_11784:
-            crc = crc16_fdx(d, n);
+            crc = crc16_fdxb(d, n);
             break;
         case CRC_LEGIC:
             // TODO
@@ -225,7 +225,7 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_KERMIT:
             return crc16_kermit(d, n);
         case CRC_11784:
-            return crc16_fdx(d, n);
+            return crc16_fdxb(d, n);
         case CRC_LEGIC:
             // TODO
             return 0;
@@ -270,7 +270,7 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_KERMIT:
             return (crc16_kermit(d, n) == 0);
         case CRC_11784:
-            return (crc16_fdx(d, n) == 0);
+            return (crc16_fdxb(d, n) == 0);
         case CRC_LEGIC:
             // TODO
             return false;
@@ -288,7 +288,7 @@ uint16_t crc16_ccitt(uint8_t const *d, size_t n) {
 
 // FDX-B ISO11784/85) uses KERMIT/CCITT
 // poly 0x xx  init=0x000  refin=false  refout=true  xorout=0x0000 ...
-uint16_t crc16_fdx(uint8_t const *d, size_t n) {
+uint16_t crc16_fdxb(uint8_t const *d, size_t n) {
     return crc16_fast(d, n, 0x0000, false, true);
 }
 

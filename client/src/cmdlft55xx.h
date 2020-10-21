@@ -105,21 +105,23 @@ typedef struct {
     uint32_t dw;
 } t5555_tracedata_t;
 
+typedef enum {
+    DEMOD_NRZ  = 0x00,
+    DEMOD_PSK1 = 0x01,
+    DEMOD_PSK2 = 0x02,
+    DEMOD_PSK3 = 0x03,
+    DEMOD_FSK1 = 0x04,
+    DEMOD_FSK2 = 0x05,
+    DEMOD_FSK1a = 0x06,
+    DEMOD_FSK2a = 0x07,
+    DEMOD_FSK   = 0xF0, //generic FSK (auto detect FCs)
+    DEMOD_ASK  = 0x08,
+    DEMOD_BI   = 0x10,
+    DEMOD_BIa  = 0x18,
+} t55xx_modulation;
+
 typedef struct {
-    enum {
-        DEMOD_NRZ  = 0x00,
-        DEMOD_PSK1 = 0x01,
-        DEMOD_PSK2 = 0x02,
-        DEMOD_PSK3 = 0x03,
-        DEMOD_FSK1  = 0x04,
-        DEMOD_FSK1a = 0x05,
-        DEMOD_FSK2  = 0x06,
-        DEMOD_FSK2a = 0x07,
-        DEMOD_FSK   = 0xF0, //generic FSK (auto detect FCs)
-        DEMOD_ASK  = 0x08,
-        DEMOD_BI   = 0x10,
-        DEMOD_BIa  = 0x18,
-    }  modulation;
+    t55xx_modulation modulation;
     bool inverted;
     uint8_t offset;
     uint32_t block0;
@@ -180,9 +182,9 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
 
 bool GetT55xxBlockData(uint32_t *blockdata);
 bool DecodeT55xxBlock(void);
-bool tryDetectModulation(uint8_t downlink_mode, bool print_config);
-//bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf);
-bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd);
+bool t55xxTryDetectModulation(uint8_t downlink_mode, bool print_config);
+//bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf);
+bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd);
 bool testKnownConfigBlock(uint32_t block0);
 
 bool tryDetectP1(bool getData);

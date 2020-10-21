@@ -119,15 +119,17 @@ bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
 
         MBEDTLS_MPI_CHK(mbedtls_mpi_shift_l(&g_one, mpi_get_uint(&t_temp)));
 
-        if (bitand_is_zero(&g_one, &prints[i])) {
-            if (verbose)
-                PrintAndLogEx(FAILED, "No fingerprint found.\n");
-            goto cleanup;
-        }
-
-        mbedtls_mpi_free(&g_one);
         mbedtls_mpi_free(&t_temp);
         mbedtls_mpi_free(&t_prime);
+
+        if (bitand_is_zero(&g_one, &prints[i])) {
+            if (verbose) {
+                PrintAndLogEx(FAILED, "No fingerprint found.\n");
+            }
+            mbedtls_mpi_free(&g_one);
+            goto cleanup;
+        }
+        mbedtls_mpi_free(&g_one);
     }
 
     ret = true;

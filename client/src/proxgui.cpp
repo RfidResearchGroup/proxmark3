@@ -60,6 +60,9 @@ extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char
     if (getenv("DISPLAY") == NULL)
         return;
 #endif
+#if QT_VERSION >= 0x050100
+    qunsetenv("SESSION_MANAGER");
+#endif
     main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, stayInCommandLoop);
     gui = new ProxGuiQT(argc, argv, main_loop_thread);
 }

@@ -10,23 +10,23 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfvisa2000.h"
-
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <inttypes.h>
-
-#include "commonutil.h"     // ARRAYLEN
+#include <stdio.h>
+#include "commonutil.h"    // ARRAYLEN
 #include "common.h"
-#include "cmdparser.h"    // command_t
+#include "cmdparser.h"     // command_t
 #include "comms.h"
 #include "ui.h"
 #include "graph.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
+#include "protocols.h"     // for T55xx config register definitions
+#include "lfdemod.h"       // parityTest
 #include "cmdlft55xx.h"    // write verify
+#include "cmdlfem4x05.h"   //
 
 #define BL0CK1 0x56495332
 
@@ -39,10 +39,12 @@ static int usage_lf_visa2k_clone(void) {
     PrintAndLogEx(NORMAL, "      h          : This help");
     PrintAndLogEx(NORMAL, "      <card ID>  : Visa2k card ID");
     PrintAndLogEx(NORMAL, "      <Q5>       : specify writing to Q5/T5555 tag");
+    PrintAndLogEx(NORMAL, "      <em4305>   : specify writing to EM4305/4469 tag");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf visa2000 clone 112233"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf visa2000 clone 112233 q5") "      -- encode for Q5/T5555");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf visa2000 clone 112233 em4305") "  -- encode for EM4305/4469");
     return PM3_SUCCESS;
 }
 
@@ -180,18 +182,38 @@ static int CmdVisa2kClone(const char *Cmd) {
 
     id = param_get32ex(Cmd, 0, 0, 10);
 
-    //Q5
+    char cardtype[16] = {"T55x7"};
+    // Q5
     bool q5 = tolower(param_getchar(Cmd, 1)) == 'q';
-    if (q5)
+    if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype) ,"Q5/T5555");
+    }
 
+    // EM4305
+    bool em = tolower(param_getchar(Cmd, 1)) == 'e';
+    if (em) {
+        blocks[0] = EM4305_VISA2000_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype) ,"EM4305/4469");
+    }
+    
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+        
     blocks[2] = id;
     blocks[3] = (visa_parity(id) << 4) | visa_chksum(id);
 
-    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to " _YELLOW_("%s") " with CardId: %"PRIu64, (q5) ? "Q5/T5555" : "T55x7", id);
+    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to " _YELLOW_("%s") " with CardId: %"PRIu64, cardtype, id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf visa2000 read`") " to verify");
     return res;

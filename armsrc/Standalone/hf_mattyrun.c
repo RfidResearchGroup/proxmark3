@@ -575,4 +575,5 @@ void RunMod(void) {
             }
         }
     }
+    LEDsoff();
 }

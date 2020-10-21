@@ -76,11 +76,12 @@ Current usages:
 
 * `void SpinDelayUs(int us)`
 * `void SpinDelay(int ms)` based on SpinDelayUs
+* `void SpinDelayUsPrecision(int us)`
 
-Busy wait based on 46.875 kHz PWM Channel 0, 21.3 us precision
+Busy wait based on 46.875 kHz PWM Channel 0
 
-WARNING: timer can't measure more than 1.39 s
-
+* 21.3 us precision and maximum 1.39 s
+* *Precision* variant: 0.7 us precision and maximum 43 ms
 
 ## Occasional TC0+TC1 / CountUS functions
 
@@ -98,7 +99,7 @@ Maximal value: 0x7fffffff = 2147 s
 
 Can't be used at the same time as CountSspClk or Ticks functions.
 
-## Occasional TC0+TC1 SSP_CLK from FPGA / CountSspClk functions
+## Occasional TC0+TC1+TC2 SSP_CLK from FPGA / CountSspClk functions
 
 cf `armsrc/ticks.c`
 

@@ -14,7 +14,6 @@ add_library(pm3rrg_rdv4_amiibo STATIC
 if (NOT TARGET pm3rrg_rdv4_mbedtls)
   include(mbedtls.cmake)
 endif()
-find_library(pm3rrg_rdv4_mbedtls REQUIRED)
 target_link_libraries(pm3rrg_rdv4_amiibo PRIVATE
         m
         pm3rrg_rdv4_mbedtls)

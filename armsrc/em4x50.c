@@ -14,6 +14,7 @@
 #include "lfadc.h"
 #include "commonutil.h"
 #include "em4x50.h"
+#include "appmain.h" // tear
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
@@ -349,6 +350,8 @@ static int find_double_listen_window(bool bcommand) {
                 // first listen window found
 
                 if (bcommand) {
+
+//                    SpinDelay(10);
 
                     // data transmission from card has to be stopped, because
                     // a commamd shall be issued
@@ -953,14 +956,18 @@ static bool write(uint32_t word, uint32_t addresses) {
         // wait for T0 * EM4X50_T_TAG_TWA (write access time)
         wait_timer0(T0 * EM4X50_T_TAG_TWA);
 
-        // look for ACK sequence
-        if (check_ack(false)) {
+            // wait for T0 * EM4X50_T_TAG_TWA (write access time)
+            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
 
-            // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
-            // for saving data and should return with ACK
-            if (check_ack(false))
-                return true;
+            // look for ACK sequence
+            if (check_ack(false)) {
 
+                // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
+                // for saving data and should return with ACK
+                if (check_ack(false))
+                    return PM3_SUCCESS;
+
+            }
         }
 
     } else {
@@ -968,7 +975,7 @@ static bool write(uint32_t word, uint32_t addresses) {
             Dbprintf("error in command request");
     }
 
-    return false;
+    return PM3_ESOFT;
 }
 
 static bool write_password(uint32_t password, uint32_t new_password) {
@@ -986,9 +993,8 @@ static bool write_password(uint32_t password, uint32_t new_password) {
         // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
         wait_timer0(T0 * EM4X50_T_TAG_TPP);
 
-        // look for ACK sequence and send rm request
-        // during following listen window
-        if (check_ack(true)) {
+            // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
+            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TPP);
 
             // send new password
             em4x50_reader_send_word(new_password);
@@ -996,10 +1002,11 @@ static bool write_password(uint32_t password, uint32_t new_password) {
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
             wait_timer0(T0 * EM4X50_T_TAG_TWA);
 
-            if (check_ack(false))
                 if (check_ack(false))
-                    return true;
+                    if (check_ack(false))
+                        return PM3_SUCCESS;
 
+            }
         }
 
     } else {
@@ -1007,7 +1014,7 @@ static bool write_password(uint32_t password, uint32_t new_password) {
             Dbprintf("error in command request");
     }
 
-    return false;
+    return PM3_ESOFT;
 }
 
 void em4x50_write(em4x50_data_t *etd) {
@@ -1031,6 +1038,7 @@ void em4x50_write(em4x50_data_t *etd) {
         // write word to given address
         if (write(etd->word, etd->addresses)) {
 
+        if (res == PM3_SUCCESS) {
             // to verify result reset EM4x50
             if (reset()) {
 
@@ -1049,7 +1057,6 @@ void em4x50_write(em4x50_data_t *etd) {
     }
 
     status = (bsuccess << 1) + blogin;
-
     lf_finalize();
     reply_ng(CMD_ACK, status, (uint8_t *)words, 136);
 }
@@ -1071,7 +1078,7 @@ void em4x50_write_password(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, 0, 0);
+    reply_ng(CMD_LF_EM4X50_WRITE_PASSWORD, bsuccess, 0, 0);
 }
 
 void em4x50_wipe(uint32_t *password) {

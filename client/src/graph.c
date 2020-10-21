@@ -190,11 +190,9 @@ int GetAskClock(const char *str, bool printAns) {
     return clock1;
 }
 
-uint8_t GetPskCarrier(const char *str, bool printAns) {
+int GetPskCarrier(bool verbose) {
     if (getSignalProperties()->isnoise)
         return -1;
-
-    uint8_t carrier = 0;
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
     if (bits == NULL) {
@@ -211,16 +209,18 @@ uint8_t GetPskCarrier(const char *str, bool printAns) {
 
     uint16_t fc = countFC(bits, size, false);
     free(bits);
-    carrier = fc & 0xFF;
+
+    uint8_t carrier = fc & 0xFF;
     if (carrier != 2 && carrier != 4 && carrier != 8) return 0;
     if ((fc >> 8) == 10 && carrier == 8) return 0;
     // Only print this message if we're not looping something
-    if (printAns)
+    if (verbose)
         PrintAndLogEx(SUCCESS, "Auto-detected PSK carrier rate: %d", carrier);
+
     return carrier;
 }
 
-int GetPskClock(const char *str, bool printAns) {
+int GetPskClock(const char *str, bool verbose) {
 
     if (getSignalProperties()->isnoise)
         return -1;
@@ -251,14 +251,14 @@ int GetPskClock(const char *str, bool printAns) {
         setClockGrid(clock1, firstPhaseShiftLoc);
 
     // Only print this message if we're not looping something
-    if (printAns)
+    if (verbose)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
 
     free(bits);
     return clock1;
 }
 
-int GetNrzClock(const char *str, bool printAns) {
+int GetNrzClock(const char *str, bool verbose) {
 
     if (getSignalProperties()->isnoise)
         return -1;
@@ -285,7 +285,7 @@ int GetNrzClock(const char *str, bool printAns) {
     clock1 = DetectNRZClock(bits, size, 0, &clkStartIdx);
     setClockGrid(clock1, clkStartIdx);
     // Only print this message if we're not looping something
-    if (printAns)
+    if (verbose)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
 
     free(bits);
@@ -294,7 +294,7 @@ int GetNrzClock(const char *str, bool printAns) {
 
 //by marshmellow
 //attempt to detect the field clock and bit clock for FSK
-int GetFskClock(const char *str, bool printAns) {
+int GetFskClock(const char *str, bool verbose) {
 
     int clock1 = param_get32ex(str, 0, 0, 10);
     if (clock1 != 0)
@@ -307,7 +307,7 @@ int GetFskClock(const char *str, bool printAns) {
         return 0;
 
     if ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5)) {
-        if (printAns)
+        if (verbose)
             PrintAndLogEx(SUCCESS, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
 
         setClockGrid(rf1, firstClockEdge);

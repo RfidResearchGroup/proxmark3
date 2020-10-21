@@ -32,7 +32,7 @@ device-side.
 local function calypso_parse(result)
     local r = Command.parse(result)
     if r.arg1 >= 0 then
-        local len = r.arg2 * 2
+        local len = r.arg1 * 2
         if len > 0 then
             r.data = string.sub(r.data, 0, len);
             return r, nil
@@ -113,8 +113,9 @@ end
 local function calypso_send_cmd_raw(data, ignoreresponse )
 
     local command, flags, result, err
-    flags = lib14b.ISO14B_COMMAND.ISO14B_RAW +
-            lib14b.ISO14B_COMMAND.ISO14B_APPEND_CRC
+    flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
+--    flags = lib14b.ISO14B_COMMAND.ISO14B_RAW +
+--            lib14b.ISO14B_COMMAND.ISO14B_APPEND_CRC
 
     data = data or "00"
 
@@ -162,6 +163,7 @@ local function calypso_apdu_status(apdu)
     return status, desc, err
 end
 
+local CLA = '94'
 local _calypso_cmds = {
 
 -- Break down of command bytes:
@@ -184,27 +186,25 @@ local _calypso_cmds = {
 --  Electronic Purse file
 --  Electronic Transaction log file
 
-
-    --['01.Select ICC file']    = '0294 a4 00 0002 3f00',
-    ['01.Select ICC file']    = '0294 a4 080004 3f00 0002',
-    ['02.ICC']                = '0394 b2 01 041d',
-    ['03.Select EnvHol file'] = '0294 a4 080004 2000 2001',
-    ['04.EnvHol1']            = '0394 b2 01 041d',
-    ['05.Select EvLog file']  = '0294 a4 080004 2000 2010',
-    ['06.EvLog1']             = '0394 b2 01 041d',
-    ['07.EvLog2']             = '0294 b2 02 041d',
-    ['08.EvLog3']             = '0394 b2 03 041d',
-    ['09.Select ConList file']= '0294 a4 080004 2000 2050',
-    ['10.ConList']            = '0394 b2 01 041d',
-    ['11.Select Contra file'] = '0294 a4 080004 2000 2020',
-    ['12.Contra1']            = '0394 b2 01 041d',
-    ['13.Contra2']            = '0294 b2 02 041d',
-    ['14.Contra3']            = '0394 b2 03 041d',
-    ['15.Contra4']            = '0294 b2 04 041d',
-    ['16.Select Counter file']= '0394 a4 080004 2000 2069',
-    ['17.Counter']            = '0294 b2 01 041d',
-    ['18.Select SpecEv file'] = '0394 a4 080004 2000 2040',
-    ['19.SpecEv1']            = '0294 b2 01 041d',
+    ['01.Select ICC file']    = CLA..'a4 080004 3f00 0002',
+    ['02.ICC']                = CLA..'b2 01 041d',
+    ['03.Select EnvHol file'] = CLA..'a4 080004 2000 2001',
+    ['04.EnvHol1']            = CLA..'b2 01 041d',
+    ['05.Select EvLog file']  = CLA..'a4 080004 2000 2010',
+    ['06.EvLog1']             = CLA..'b2 01 041d',
+    ['07.EvLog2']             = CLA..'b2 02 041d',
+    ['08.EvLog3']             = CLA..'b2 03 041d',
+    ['09.Select ConList file']= CLA..'a4 080004 2000 2050',
+    ['10.ConList']            = CLA..'b2 01 041d',
+    ['11.Select Contra file'] = CLA..'a4 080004 2000 2020',
+    ['12.Contra1']            = CLA..'b2 01 041d',
+    ['13.Contra2']            = CLA..'b2 02 041d',
+    ['14.Contra3']            = CLA..'b2 03 041d',
+    ['15.Contra4']            = CLA..'b2 04 041d',
+    ['16.Select Counter file']= CLA..'a4 080004 2000 2069',
+    ['17.Counter']            = CLA..'b2 01 041d',
+    ['18.Select SpecEv file'] = CLA..'a4 080004 2000 2040',
+    ['19.SpecEv1']            = CLA..'b2 01 041d',
 }
 
 ---
