@@ -187,7 +187,7 @@ static int CmdKeriRead(const char *Cmd) {
 
 static int CmdKeriClone(const char *Cmd) {
 
-    bool q5 = false, em4305 = false;
+    bool q5 = false, em = false;
 
     uint8_t keritype[2] = {'i'}; // default to internalid
     int typeLen = 0;
@@ -233,7 +233,7 @@ static int CmdKeriClone(const char *Cmd) {
     if (arg_get_lit(ctx, 5)) {
         blocks[0] = EM4305_KERI_CONFIG_BLOCK;
         snprintf(cardtype, sizeof(cardtype) ,"EM4305/4469");
-        em4305 = true;
+        em = true;
     }
 
     typeLen = sizeof(keritype);
@@ -243,7 +243,7 @@ static int CmdKeriClone(const char *Cmd) {
     cid = arg_get_int_def(ctx, 4, 0);
     CLIParserFree(ctx);
     
-    if (q5 && em4305) {
+    if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
@@ -273,7 +273,7 @@ static int CmdKeriClone(const char *Cmd) {
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
-    if (em4305) {
+    if (em) {
         res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));

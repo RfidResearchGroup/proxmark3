@@ -191,13 +191,13 @@ static int CmdVisa2kClone(const char *Cmd) {
     }
 
     // EM4305
-    bool em4305 = tolower(param_getchar(Cmd, 1)) == 'e';
-    if (em4305) {
+    bool em = tolower(param_getchar(Cmd, 1)) == 'e';
+    if (em) {
         blocks[0] = EM4305_VISA2000_CONFIG_BLOCK;
         snprintf(cardtype, sizeof(cardtype) ,"EM4305/4469");
     }
     
-    if (q5 && em4305) {
+    if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
@@ -209,7 +209,7 @@ static int CmdVisa2kClone(const char *Cmd) {
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
-    if (em4305) {
+    if (em) {
         res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
