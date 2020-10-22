@@ -1131,6 +1131,7 @@ static int l_em4x05_read(lua_State *L) {
 }
 
 // 4350
+/*
 static int l_em4x50_read(lua_State *L) {
 
     // get addr
@@ -1189,7 +1190,7 @@ static int l_em4x50_read(lua_State *L) {
     lua_pushinteger(L, word);
     return 1;
 }
-
+*/
 //
 static int l_ndefparse(lua_State *L) {
 
@@ -1382,7 +1383,7 @@ int set_pm3_libraries(lua_State *L) {
         {"ud",                          l_ud},
         {"rem",                         l_remark},
         {"em4x05_read",                 l_em4x05_read},
-        {"em4x50_read",                 l_em4x50_read},
+//        {"em4x50_read",                 l_em4x50_read},
         {NULL, NULL}
     };
 
