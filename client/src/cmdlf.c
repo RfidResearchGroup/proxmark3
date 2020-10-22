@@ -113,7 +113,7 @@ static int usage_lf_read(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate low frequence tag from graphbuffer.");
+    PrintAndLogEx(NORMAL, "Simulate low frequency tag from graphbuffer.");
     PrintAndLogEx(NORMAL, "Usage: lf sim [h] <gap>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         This help");
@@ -126,7 +126,7 @@ static int usage_lf_sim(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_sniff(void) {
-    PrintAndLogEx(NORMAL, "Sniff low frequence signal.");
+    PrintAndLogEx(NORMAL, "Sniff low frequency signal.");
     PrintAndLogEx(NORMAL, "Usage: lf sniff [h] [q] [s #samples] [@]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         This help");

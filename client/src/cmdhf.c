@@ -57,7 +57,7 @@ static int usage_hf_search(void) {
 }
 
 static int usage_hf_sniff(void) {
-    PrintAndLogEx(NORMAL, "The high frequence sniffer will assign all available memory on device for sniffed data");
+    PrintAndLogEx(NORMAL, "The high frequency sniffer will assign all available memory on device for sniffed data");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
     PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");
     PrintAndLogEx(NORMAL, "Usage: hf sniff <skip pairs> <skip triggers>");
@@ -357,7 +357,7 @@ static command_t CommandTable[] = {
     {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                }"},
 //    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                }"},
     {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...    }"},
-    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / Felica RFIDs...       }"},
+    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...       }"},
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                  }"},
     {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                   }"},
