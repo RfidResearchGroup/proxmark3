@@ -1526,7 +1526,7 @@ out:
 }
 
 static command_t CommandTable[] = {
-    {"-----------", CmdHelp,            AlwaysAvailable, "-------------- " _CYAN_("Direct") " --------------"},
+    {"-----------", CmdHelp,            AlwaysAvailable, "-------------- " _CYAN_("Low Frequency") " --------------"},
     {"awid",        CmdLFAWID,          AlwaysAvailable, "{ AWID RFIDs...              }"},
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
     {"destron",     CmdLFDestron,       AlwaysAvailable, "{ FDX-A Destron RFIDs...     }"},
