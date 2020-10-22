@@ -199,9 +199,11 @@ void printEM410x(uint32_t hi, uint64_t id) {
     if (hi) {
         //output 88 bit em id
         PrintAndLogEx(NORMAL, "\nEM TAG ID      : "_YELLOW_("%06X%016" PRIX64), hi, id);
+        PrintAndLogEx(NORMAL, "Clock rate     : "_YELLOW_("RF/%d"), g_DemodClock);
     } else {
         //output 40 bit em id
         PrintAndLogEx(NORMAL, "\nEM TAG ID      : "_YELLOW_("%010" PRIX64), id);
+        PrintAndLogEx(NORMAL, "Clock rate     : "_YELLOW_("RF/%d"), g_DemodClock);
         PrintAndLogEx(NORMAL, "\nPossible de-scramble patterns\n");
         PrintAndLogEx(NORMAL, "Unique TAG ID  : %010" PRIX64, id2lo);
         PrintAndLogEx(NORMAL, "HoneyWell IdentKey {");
