@@ -706,19 +706,9 @@ int CmdEM4x50Wipe(const char *Cmd) {
         return usage_lf_em4x50_wipe();
 
     clearCommandBuffer();
-<<<<<<< HEAD
     SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&password, sizeof(password));
     WaitForResponse(CMD_ACK, &resp);
     
-=======
-    SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&etd, sizeof(etd));
-
-    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WIPE, &resp, 2 * TIMEOUT)) {
-        PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
-        return PM3_ETIMEOUT;
-    }
-
->>>>>>> master
     // print response
     bool isOK = resp.status;
     if (isOK) {
