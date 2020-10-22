@@ -888,7 +888,7 @@ void em4x50_info(em4x50_data_t *etd) {
     status = (bsuccess << 1) + blogin;
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, 136);
 }
 
 void em4x50_read(em4x50_data_t *etd) {
@@ -931,14 +931,14 @@ void em4x50_read(em4x50_data_t *etd) {
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, 136);
 }
 
 //==============================================================================
 // write functions
 //==============================================================================
 
-static bool write(uint32_t word, uint32_t addresses) {
+static int write(uint32_t word, uint32_t addresses) {
 
     // writes <word> to specified <address>
 
@@ -953,11 +953,13 @@ static bool write(uint32_t word, uint32_t addresses) {
         // send data
         em4x50_reader_send_word(word);
 
-        // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-        wait_timer0(T0 * EM4X50_T_TAG_TWA);
-
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+            reply_ng(CMD_LF_EM4X50_WRITE, PM3_ETEAROFF, NULL, 0);
+            return PM3_ETEAROFF;
+        } else {
+        
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
+            wait_timer0(T0 * EM4X50_T_TAG_TWA);
 
             // look for ACK sequence
             if (check_ack(false)) {
@@ -969,16 +971,15 @@ static bool write(uint32_t word, uint32_t addresses) {
 
             }
         }
-
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
             Dbprintf("error in command request");
     }
 
-    return PM3_ESOFT;
+    return false;
 }
 
-static bool write_password(uint32_t password, uint32_t new_password) {
+static int write_password(uint32_t password, uint32_t new_password) {
 
     // changes password from <password> to <new_password>
 
@@ -990,17 +991,23 @@ static bool write_password(uint32_t password, uint32_t new_password) {
         // send address data
         em4x50_reader_send_word(password);
 
-        // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
-        wait_timer0(T0 * EM4X50_T_TAG_TPP);
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+            reply_ng(CMD_LF_EM4X50_WRITE, PM3_ETEAROFF, NULL, 0);
+            return PM3_ETEAROFF;
+        } else {
 
             // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
-            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TPP);
+            wait_timer0(T0 * EM4X50_T_TAG_TPP);
 
-            // send new password
-            em4x50_reader_send_word(new_password);
+            // look for ACK sequence and send rm request
+            // during following listen window
+            if (check_ack(true)) {
 
-            // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-            wait_timer0(T0 * EM4X50_T_TAG_TWA);
+                // send new password
+                em4x50_reader_send_word(new_password);
+
+                // wait for T0 * EM4X50_T_TAG_TWA (write access time)
+                wait_timer0(T0 * EM4X50_T_TAG_TWA);
 
                 if (check_ack(false))
                     if (check_ack(false))
@@ -1008,7 +1015,6 @@ static bool write_password(uint32_t password, uint32_t new_password) {
 
             }
         }
-
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
             Dbprintf("error in command request");
@@ -1036,9 +1042,14 @@ void em4x50_write(em4x50_data_t *etd) {
             blogin = login(etd->password1);
 
         // write word to given address
-        if (write(etd->word, etd->addresses)) {
+        int res = write(etd->word, etd->addresses);
+        if (res == PM3_ETEAROFF) {
+            lf_finalize();
+            return;
+        }
 
         if (res == PM3_SUCCESS) {
+
             // to verify result reset EM4x50
             if (reset()) {
 
@@ -1058,7 +1069,7 @@ void em4x50_write(em4x50_data_t *etd) {
 
     status = (bsuccess << 1) + blogin;
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, 136);
 }
 
 void em4x50_write_password(em4x50_data_t *etd) {
@@ -1073,8 +1084,15 @@ void em4x50_write_password(em4x50_data_t *etd) {
     if (get_signalproperties() && find_em4x50_tag()) {
 
         // login and change password
-        if (login(etd->password1))
-            bsuccess = write_password(etd->password1, etd->password2);
+        if (login(etd->password1)) {
+
+            int res = write_password(etd->password1, etd->password2);
+            if (res == PM3_ETEAROFF) {
+                lf_finalize();
+                return;
+            }
+            bsuccess = (res == PM3_SUCCESS);
+        }
     }
 
     lf_finalize();
@@ -1134,7 +1152,7 @@ void em4x50_wipe(uint32_t *password) {
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_WIPE, bsuccess, (uint8_t *)words, 136);
 }
 
 void em4x50_reset(void) {
