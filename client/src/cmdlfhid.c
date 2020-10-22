@@ -470,7 +470,7 @@ static int CmdHIDBrute(const char *Cmd) {
     cn_low = cn_hi;
 
     // main loop
-    // iceman:  could add options for bruteforcing OEM, ISSUE or FC aswell..
+    // iceman:  could add options for bruteforcing OEM, ISSUE or FC as well..
     bool exitloop = false;
     bool fin_hi, fin_low;
     fin_hi = fin_low = false;

@@ -73,7 +73,7 @@ git clone https://github.com/RfidResearchGroup/proxmark3.git
 # Check ModemManager
 
 ### ⚠️ Very important ⚠️
-make sure ModemManager will not interfer, otherwise it could brick your Proxmark3!
+make sure ModemManager will not interfere, otherwise it could brick your Proxmark3!
 Read carefully [this page about ModemManager](ModemManager-Must-Be-Discarded.md) and follow its instructions.
 
 # Check connection

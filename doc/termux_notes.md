@@ -181,7 +181,7 @@ Install [this free app](https://play.google.com/store/apps/details?id=masar.bb) 
 ^[Top](#top)
 
 You need to pair the proxmark3 in the Android settings.
-In the app choose your registred PM3 device as 'device A'.
+In the app choose your registered PM3 device as 'device A'.
 Select TCP server as 'Device B' and choose an unused port (e.g. 4321).
 Ensure 'Retransmission' is set to 'both ways'.
 

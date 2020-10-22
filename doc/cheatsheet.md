@@ -1,7 +1,7 @@
 <a id="Top"></a>
 # Command Cheat Sheet
 
-|Generic|Low Frequence 125 kHz|High Frequence 13.56 MHz|
+|Generic|Low Frequency 125 kHz|High Frequency 13.56 MHz|
 |---|---|---|
 |[Generic](#Generic)|[T55XX](#T55XX)|[MIFARE](#MIFARE)|
 |[Data](#Data)|[HID Prox](#HID-Prox)|[iCLASS](#iCLASS)|
@@ -324,7 +324,7 @@ pm3 --> script run hf_mf_uidbruteforce -s 0x11223344556677 -e 0x11223344556679 -
 ## Wiegand manipulation
 ^[Top](#top)
 
-List all available weigand formats in client
+List all available wiegand formats in client
 ```
 pm3 --> wiegand list
 ```
@@ -592,7 +592,7 @@ Options
 -k <key>        The current six byte key with write access
 -n <key>        The new key that will be written to the card
 -a <access>     The new access bytes that will be written to the card
--x              Execute the commands aswell
+-x              Execute the commands as well
 
 pm3 --> script run hf_mf_format -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ```
