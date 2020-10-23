@@ -1116,13 +1116,13 @@ static int CmdHF15Sim(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
     CLIParserFree(ctx);
 
-    if (uidlen != 9) {
+    if (uidlen != 8) {
         PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
         return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
-    PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
+    PrintAndLogEx(INFO, "press " _YELLOW_("`Pm3 button`") " to cancel");
 
     PacketResponseNG resp;
     clearCommandBuffer();
