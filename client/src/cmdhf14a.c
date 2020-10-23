@@ -27,6 +27,10 @@
 #include "crc16.h"
 #include "util_posix.h"  // msclock
 #include "aidsearch.h"
+#include "proxgui.h"
+#include "cmddata.h"
+#include "graph.h"
+#include "fpga.h"
 
 bool APDUInFramingEnable = true;
 
@@ -265,6 +269,7 @@ static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
     PrintAndLogEx(NORMAL, "       x    just drop the signal field");
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
+    PrintAndLogEx(NORMAL, "       @    continuous mode. Updates hf plot as well");
     return PM3_SUCCESS;
 }
 
@@ -475,9 +480,9 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 static int CmdHF14AReader(const char *Cmd) {
 
     uint32_t cm = ISO14A_CONNECT;
-    bool disconnectAfter = true, silent = false;
+    bool disconnectAfter = true, silent = false, continuous = false;
     int cmdp = 0;
-
+    int res = PM3_SUCCESS;
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -494,6 +499,9 @@ static int CmdHF14AReader(const char *Cmd) {
             case 'x':
                 cm &= ~ISO14A_CONNECT;
                 break;
+            case '@':
+                continuous = true;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown command.");
                 return PM3_EINVARG;
@@ -503,60 +511,96 @@ static int CmdHF14AReader(const char *Cmd) {
 
     if (!disconnectAfter)
         cm |= ISO14A_NO_DISCONNECT;
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
-
-    if (ISO14A_CONNECT & cm) {
-        PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-            if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
-        /*
-            0: couldn't read
-            1: OK, with ATS
-            2: OK, no ATS
-            3: proprietary Anticollision
-        */
-        uint64_t select_status = resp.oldarg[0];
-
-        if (select_status == 0) {
-            if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        if (select_status == 3) {
-            PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-            PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-        PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
-        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
-
-        if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-            PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
-        }
-
-        if (!disconnectAfter) {
-            if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
-        }
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
+    do {
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
 
+        if (ISO14A_CONNECT & cm) {
+            PacketResponseNG resp;
+            if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+
+            iso14a_card_select_t card;
+            memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+            /*
+                0: couldn't read
+                1: OK, with ATS
+                2: OK, no ATS
+                3: proprietary Anticollision
+            */
+            uint64_t select_status = resp.oldarg[0];
+
+            if (select_status == 0) {
+                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+
+            if (select_status == 3) {
+                if (!(silent && continuous)) {
+                    PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+                    PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
+                }
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+            if (!(silent && continuous)) {
+                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+                PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
+                PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+                if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+                    PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
+                }
+            }
+            if (!disconnectAfter) {
+                if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
+            }
+        }
+plot:
+        if (continuous) {
+            uint8_t buf[FPGA_TRACE_SIZE];
+
+            PacketResponseNG response;
+            if (!GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &response, 4000, true)) {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                return PM3_ETIMEOUT;
+            }
+
+            for (size_t i = 0; i < FPGA_TRACE_SIZE; i++) {
+                GraphBuffer[i] = ((int)buf[i]) - 127;
+            }
+
+            GraphTraceLen = FPGA_TRACE_SIZE;
+
+            // remove signal offset
+            CmdHpf("");
+
+            setClockGrid(0, 0);
+            DemodBufferLen = 0;
+            RepaintGraphWindow();
+        }
+        if (kbd_enter_pressed()) {
+            break;
+        }
+    } while (continuous);
     if (disconnectAfter) {
         if (!silent) PrintAndLogEx(INFO, "field dropped.");
     }
-
-    return PM3_SUCCESS;
+    if (continuous)
+        return PM3_SUCCESS;
+    else
+        return res;
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
