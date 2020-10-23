@@ -419,7 +419,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 
             uint8_t key[8];
             if (check_known_default(csn, epurse, rmac, tmac, key)) {
-                snprintf(exp, size, "( " _GREEN_("%s") ")", sprint_hex(key, 8));
+                snprintf(exp, size, "( " _GREEN_("%s") " )", sprint_hex_inrow(key, 8));
             }
             curr_state = PICO_NONE;
         }
