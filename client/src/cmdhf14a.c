@@ -27,10 +27,8 @@
 #include "crc16.h"
 #include "util_posix.h"  // msclock
 #include "aidsearch.h"
-#include "proxgui.h"
-#include "cmddata.h"
-#include "graph.h"
-#include "fpga.h"
+#include "cmdhf.h"       // handle HF plot
+
 
 bool APDUInFramingEnable = true;
 
@@ -568,35 +566,25 @@ static int CmdHF14AReader(const char *Cmd) {
             }
         }
 plot:
-        if (continuous) {
-            uint8_t buf[FPGA_TRACE_SIZE];
-
-            PacketResponseNG response;
-            if (!GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &response, 4000, true)) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-                return PM3_ETIMEOUT;
+        if (continuous) {            
+            res = handle_hf_plot();
+            if (res != PM3_SUCCESS) {
+                break;
             }
-
-            for (size_t i = 0; i < FPGA_TRACE_SIZE; i++) {
-                GraphBuffer[i] = ((int)buf[i]) - 127;
-            }
-
-            GraphTraceLen = FPGA_TRACE_SIZE;
-
-            // remove signal offset
-            CmdHpf("");
-
-            setClockGrid(0, 0);
-            DemodBufferLen = 0;
-            RepaintGraphWindow();
         }
+
         if (kbd_enter_pressed()) {
             break;
         }
+
     } while (continuous);
+
     if (disconnectAfter) {
-        if (!silent) PrintAndLogEx(INFO, "field dropped.");
+        if (silent == false) {
+            PrintAndLogEx(INFO, "field dropped.");
+        }
     }
+
     if (continuous)
         return PM3_SUCCESS;
     else

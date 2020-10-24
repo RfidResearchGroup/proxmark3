@@ -311,19 +311,8 @@ int CmdHFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdHFPlot(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf plot",
-                  "Plots HF signal after RF signal path and A/D conversion.",
-                  "This can be used after any hf command and will show the last few milliseconds of the HF signal.\n"
-                  "Note: If the last hf command terminated because of a timeout you will most probably see nothing.\n");
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
+int handle_hf_plot(void) {
+    
     uint8_t buf[FPGA_TRACE_SIZE];
 
     PacketResponseNG response;
@@ -333,7 +322,7 @@ int CmdHFPlot(const char *Cmd) {
     }
 
     for (size_t i = 0; i < FPGA_TRACE_SIZE; i++) {
-        GraphBuffer[i] = ((int)buf[i]) - 127;
+        GraphBuffer[i] = ((int)buf[i]) - 128;
     }
 
     GraphTraceLen = FPGA_TRACE_SIZE;
@@ -347,6 +336,22 @@ int CmdHFPlot(const char *Cmd) {
     DemodBufferLen = 0;
     RepaintGraphWindow();
     return PM3_SUCCESS;
+}
+
+int CmdHFPlot(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf plot",
+                  "Plots HF signal after RF signal path and A/D conversion.",
+                  "This can be used after any hf command and will show the last few milliseconds of the HF signal.\n"
+                  "Note: If the last hf command terminated because of a timeout you will most probably see nothing.\n");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    return handle_hf_plot();
 }
 
 static command_t CommandTable[] = {
