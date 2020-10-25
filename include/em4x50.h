@@ -39,6 +39,7 @@
 #define STATUS_LOGIN                0x1
 #define NO_CHARS_MAX                400
 #define TIMEOUT                     2000
+#define RESTORE_DEFAULT_FILENAME    "lf-4x50restore.bin"
 
 typedef struct {
     bool addr_given;
@@ -47,10 +48,11 @@ typedef struct {
     uint32_t password2;
     uint32_t word;
     uint32_t addresses;
-} em4x50_data_t;
+    uint8_t data[136];
+} PACKED em4x50_data_t;
 
 typedef struct {
     uint8_t byte[4];
-} em4x50_word_t;
+} PACKED em4x50_word_t;
 
 #endif /* EM4X50_H__ */
