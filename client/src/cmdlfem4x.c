@@ -659,6 +659,7 @@ static command_t CommandTable[] = {
     {"4x50_login",  CmdEM4x50Login,       IfPm3EM4x50,     "login into EM4x50"},
     {"4x50_reset",  CmdEM4x50Reset,       IfPm3EM4x50,     "reset EM4x50"},
     {"4x50_watch",  CmdEM4x50Watch,       IfPm3EM4x50,     "read EM4x50 continously"},
+    {"4x50_restore",CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
     {NULL, NULL, NULL, NULL}
 };
 
