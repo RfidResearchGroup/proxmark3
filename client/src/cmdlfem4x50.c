@@ -673,7 +673,7 @@ int CmdEM4x50Dump(const char *Cmd) {
     if (strlen(filename) == 0) {
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += sprintf(fptr, "lf-4x50-");
-        FillFileNameByUID(fptr, words[EM4X50_DEVICE_SERIAL].byte, "-dump", 4);
+        FillFileNameByUID(fptr, words[EM4X50_DEVICE_ID].byte, "-dump", 4);
     }
 
     uint8_t data[EM4X50_NO_WORDS * 4] = {0};
