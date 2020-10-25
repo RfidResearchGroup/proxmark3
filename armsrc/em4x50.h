@@ -28,5 +28,6 @@ void em4x50_brute(em4x50_data_t *etd);
 void em4x50_login(uint32_t *password);
 void em4x50_reset(void);
 void em4x50_watch(void);
+void em4x50_restore(em4x50_data_t *etd);
 
 #endif /* EM4X50_H */
