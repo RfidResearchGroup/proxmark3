@@ -13,6 +13,7 @@
 #include "fileutils.h"
 #include "comms.h"
 #include "commonutil.h"
+#include "cmdparser.h"
 #include "em4x50.h"
 
 static int usage_lf_em4x50_info(void) {
@@ -141,6 +142,22 @@ static int usage_lf_em4x50_watch(void) {
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_watch"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_lf_em4x50_restore(void) {
+    PrintAndLogEx(NORMAL, "Restore EM4x50 dump to tag. Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_restore [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h                     - this help");
+    PrintAndLogEx(NORMAL, "       u <UID>               - uid, try to restore from lf-4x50-<UID>-dump.bin");
+    PrintAndLogEx(NORMAL, "       f <filename prefix>   - data filename <filename>.<prefix> (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex, lsb) (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore h"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump p 12345678"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -308,7 +325,7 @@ int CmdEM4x50Info(const char *Cmd) {
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
@@ -318,7 +335,7 @@ int CmdEM4x50Info(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "reading tag " _RED_("failed"));
+    PrintAndLogEx(FAILED, "Reading tag " _RED_("failed"));
     return PM3_ESOFT;
 }
 
@@ -356,7 +373,7 @@ int CmdEM4x50Write(const char *Cmd) {
 
                 // validation
                 if (address < 1 || address > 31) {
-                    PrintAndLogEx(FAILED, "error, address has to be in range [1-31]\n");
+                    PrintAndLogEx(FAILED, "Error, address has to be in range [1-31]");
                     return PM3_EINVARG;
                 }
                 etd.addresses = address;    // lwr
@@ -367,7 +384,7 @@ int CmdEM4x50Write(const char *Cmd) {
                 break;
 
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
 
@@ -381,7 +398,7 @@ int CmdEM4x50Write(const char *Cmd) {
     SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
@@ -390,17 +407,17 @@ int CmdEM4x50Write(const char *Cmd) {
 
     bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
     if (isOK == false) {
-        PrintAndLogEx(FAILED, "writing " _RED_("failed"));
+        PrintAndLogEx(FAILED, "Writing " _RED_("failed"));
         return PM3_ESOFT;
     }
 
     if (etd.pwd_given) {
         bool login = resp.status & STATUS_LOGIN;
         if (login == false) {
-            PrintAndLogEx(FAILED, "login failed");
+            PrintAndLogEx(FAILED, "Login failed");
             return PM3_ESOFT;
         }
-        PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%08x"), etd.password1);
+        PrintAndLogEx(SUCCESS, "Login with password " _YELLOW_("%08x"), etd.password1);
     }
 
     // display result of writing operation in structured format
@@ -446,7 +463,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
                 break;
 
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -459,7 +476,7 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     SendCommandNG(CMD_LF_EM4X50_WRITE_PASSWORD, (uint8_t *)&etd, sizeof(etd));
 
     if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE_PASSWORD, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
@@ -470,9 +487,9 @@ int CmdEM4x50WritePassword(const char *Cmd) {
 
     // print response
     if (success)
-        PrintAndLogEx(SUCCESS, "\nwriting new password " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "Writing new password " _GREEN_("ok"));
     else
-        PrintAndLogEx(FAILED, "\nwriting password " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "Writing password " _RED_("failed"));
 
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
@@ -502,7 +519,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
     if (isOK == false) {
         if (verbose)
-            PrintAndLogEx(FAILED, "reading " _RED_("failed"));
+            PrintAndLogEx(FAILED, "Reading " _RED_("failed"));
 
         return PM3_ESOFT;
     }
@@ -510,10 +527,10 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     if (edata.pwd_given) {
         bool login = resp.status & STATUS_LOGIN;
         if (login == false) {
-            PrintAndLogEx(FAILED, "login failed");
+            PrintAndLogEx(FAILED, "Login failed");
             return PM3_ESOFT;
         }
-        PrintAndLogEx(SUCCESS, "login with password " _YELLOW_("%08x"), etd->password1);
+        PrintAndLogEx(SUCCESS, "Login with password " _YELLOW_("%08x"), etd->password1);
     }
 
     uint8_t *data = resp.data.asBytes;
@@ -564,7 +581,7 @@ int CmdEM4x50Read(const char *Cmd) {
 
                 // validation
                 if (address <= 0 || address >= EM4X50_NO_WORDS) {
-                    PrintAndLogEx(FAILED, "error, address has to be in range [1-33]\n");
+                    PrintAndLogEx(FAILED, "Error, address has to be in range [1-33]");
                     return PM3_EINVARG;
                 }
                 etd.addr_given = true;
@@ -578,7 +595,7 @@ int CmdEM4x50Read(const char *Cmd) {
                 break;
 
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -631,18 +648,18 @@ int CmdEM4x50Dump(const char *Cmd) {
     if (errors)
         return usage_lf_em4x50_dump();
 
-    PrintAndLogEx(INFO, "reading EM4x50 tag");
+    PrintAndLogEx(INFO, "Reading EM4x50 tag");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
     bool success = (resp.status & STATUS_SUCCESS) >> 1;
     if (success == false) {
-        PrintAndLogEx(FAILED, "reading tag " _RED_("failed"));
+        PrintAndLogEx(FAILED, "Reading tag " _RED_("failed"));
         return PM3_ESOFT;
     }
 
@@ -696,7 +713,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
                 break;
 
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -707,14 +724,14 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&password, sizeof(password));
-    WaitForResponse(CMD_ACK, &resp);
+    WaitForResponse(CMD_LF_EM4X50_WIPE, &resp);
     
     // print response
     bool isOK = resp.status;
     if (isOK) {
-        PrintAndLogEx(SUCCESS, "\nwiping data " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "Wiping data " _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "\nwiping data " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "Wiping data " _RED_("failed"));
         return PM3_ESOFT;
     }
 
@@ -750,7 +767,7 @@ int CmdEM4x50Brute(const char *Cmd) {
                 break;
 
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -765,9 +782,9 @@ int CmdEM4x50Brute(const char *Cmd) {
     dur_h = dur_s / 3600;
     dur_m = (dur_s - dur_h * 3600) / 60;
     dur_s -= dur_h * 3600 + dur_m * 60;
-    PrintAndLogEx(INFO, "trying %i passwords in range [0x%08x, 0x%08x]",
+    PrintAndLogEx(INFO, "Trying %i passwords in range [0x%08x, 0x%08x]",
                   no_iter, etd.password1, etd.password2);
-    PrintAndLogEx(INFO, "estimated duration: %ih%im%is", dur_h, dur_m, dur_s);
+    PrintAndLogEx(INFO, "Estimated duration: %ih%im%is", dur_h, dur_m, dur_s);
 
     // start
     clearCommandBuffer();
@@ -776,9 +793,9 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     // print response
     if ((bool)resp.status)
-        PrintAndLogEx(SUCCESS, "\npassword " _GREEN_("found") ": 0x%08x\n", resp.data.asDwords[0]);
+        PrintAndLogEx(SUCCESS, "Password " _GREEN_("found") ": 0x%08x", resp.data.asDwords[0]);
     else
-        PrintAndLogEx(FAILED, "\npassword: " _RED_("not found") "\n");
+        PrintAndLogEx(FAILED, "Password: " _RED_("not found"));
 
     return PM3_SUCCESS;
 }
@@ -820,9 +837,9 @@ int CmdEM4x50Login(const char *Cmd) {
 
     // print response
     if ((bool)resp.status)
-        PrintAndLogEx(SUCCESS, "\nlogin " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "Login " _GREEN_("ok"));
     else
-        PrintAndLogEx(FAILED, "\nlogin " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "Login " _RED_("failed"));
 
     return PM3_SUCCESS;
 }
@@ -841,7 +858,7 @@ int CmdEM4x50Reset(const char *Cmd) {
                 return usage_lf_em4x50_reset();
 
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -857,9 +874,9 @@ int CmdEM4x50Reset(const char *Cmd) {
 
     // print response
     if ((bool)resp.status)
-        PrintAndLogEx(SUCCESS, "\nreset " _GREEN_("ok") "\n");
+        PrintAndLogEx(SUCCESS, "Reset " _GREEN_("ok"));
     else
-        PrintAndLogEx(FAILED, "\nreset " _RED_("failed") "\n");
+        PrintAndLogEx(FAILED, "Reset " _RED_("failed"));
 
     return PM3_SUCCESS;
 }
@@ -896,6 +913,101 @@ int CmdEM4x50Watch(const char *Cmd) {
     WaitForResponse(CMD_ACK, &resp);
 
     PrintAndLogEx(INFO, "Done");
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50Restore(const char *Cmd) {
+
+    //uint8_t data[136] = {0x0};
+    size_t bytes_read = 0;
+    char filename[FILE_PATH_SIZE] = {0x00};
+    char szTemp[FILE_PATH_SIZE - 20] = {0x00};
+    FILE *fdump;
+
+    em4x50_data_t etd;
+    etd.pwd_given = false;
+
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+
+            case 'h':
+                return usage_lf_em4x50_restore();
+                break;
+
+            case 'u':
+                param_getstr(Cmd, cmdp + 1, szTemp, FILE_PATH_SIZE - 20);
+                if (filename[0] == 0x00)
+                    snprintf(filename, FILE_PATH_SIZE, "lf-4x50-%s-dump.bin", szTemp);
+                cmdp += 2;
+                break;
+
+            case 'f':
+                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                cmdp += 2;
+                break;
+
+            case 'p':
+                etd.password1 = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                etd.pwd_given = true;
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        };
+    }
+
+    // validation
+    if (errors)
+        return usage_lf_em4x50_restore();
+
+    // open dump file
+    if ((fdump = fopen(filename, "rb")) == NULL) {
+        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
+        return PM3_EFILE;
+    }
+    PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
+
+    // read data from dump file
+    bytes_read = fread(&etd.data, sizeof(uint8_t), sizeof(etd.data), fdump);
+    if (bytes_read != sizeof(etd.data)) {
+        PrintAndLogEx(FAILED, "Read error");
+        return PM3_EFILE;
+    }
+    fclose(fdump);
+    
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_RESTORE, (uint8_t *)&etd, sizeof(etd));
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_RESTORE, &resp, 2 * TIMEOUT)) {
+        PrintAndLogEx(FAILED, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
+
+    bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
+    if (isOK == false) {
+        PrintAndLogEx(FAILED, "Restore " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    if (etd.pwd_given) {
+        bool login = resp.status & STATUS_LOGIN;
+        if (login == false) {
+            PrintAndLogEx(FAILED, "Login failed");
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(SUCCESS, "Login with password " _YELLOW_("%08x"), etd.password1);
+    }
+    PrintAndLogEx(SUCCESS, "Restore " _GREEN_("ok"));
+    PrintAndLogEx(INFO, "Finish restore");
 
     return PM3_SUCCESS;
 }
