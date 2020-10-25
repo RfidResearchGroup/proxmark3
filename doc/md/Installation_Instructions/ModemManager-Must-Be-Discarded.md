@@ -8,7 +8,7 @@ ModemManager is pre-installed on many different Linux distributions, very probab
 It's intended to prepare and configure the mobile broadband (2G/3G/4G) devices, whether they are built-in or dongles.
 Some are serial, so when the Proxmark3 is plugged and a `/dev/ttyACM0` appears, ModemManager attempts to talk to it to see if it's a modem replying to AT commands.
 
-Now imagine what happens when you're flashing your Proxmark3 and ModemManager suddently starts sending bytes to it at the same time...
+Now imagine what happens when you're flashing your Proxmark3 and ModemManager suddenly starts sending bytes to it at the same time...
 Yes it makes the flashing failing. And if it happens while you're flashing the bootloader, it will require a JTAG device to unbrick the Proxmark3.
 
 ModemManager is a threat for the Proxmark3, but also for many other embedded devices, such as some Arduino platforms.
@@ -35,7 +35,7 @@ sudo systemctl disable ModemManager
 
 # Solution 3: use filtering udev rules
 
-If you *really* need ModemManager, e.g. for your 4G device, you'll have to use some filtering rules to make sure it doesn't interfer with the Proxmark3. 
+If you *really* need ModemManager, e.g. for your 4G device, you'll have to use some filtering rules to make sure it doesn't interfere with the Proxmark3. 
 
 Once you have cloned the Proxmark3 repository, you can run `make udev` to install udev rules that will tell ModemManager to not look at your Proxmark3.
 
@@ -89,7 +89,7 @@ sudo journalctl -f|grep "ModemManager.*\[filter\]"
 ```
 Now plug in the Proxmark 3.
 
-If ModemManager interfers, you'll get logs like this:
+If ModemManager interferes, you'll get logs like this:
 ```
 ModemManager[xxxxx]: <debug> [filter] (tty/ttyACM0): port allowed: cdc-acm interface reported AT-capable
 ```
@@ -108,7 +108,7 @@ sudo mmcli -G ERR
 
 # I didn't read carefully this page and now my Proxmark3 is not responding
 
-First of all, follow the instructions above to make sure ModemManager will not interfer with the Proxmark3 anymore.
+First of all, follow the instructions above to make sure ModemManager will not interfere with the Proxmark3 anymore.
 
 Now there are two possibilities:
 

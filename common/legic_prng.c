@@ -24,7 +24,7 @@ static struct lfsr {
 // * someone mentioned iv must be ODD.
 // Hack:
 // Now we have a special case with iv == 0
-// it sets b to 0 aswell to make sure we get a all zero keystream out
+// it sets b to 0 as well to make sure we get a all zero keystream out
 // which is used in the initialisation phase sending the IV
 //
 void legic_prng_init(uint8_t iv) {

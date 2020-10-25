@@ -190,7 +190,7 @@ Meanwhile, a fast transition to MIX frames can be done with:
 ## Bootrom
 
 Bootrom code will still use the old frame format to remain compatible with other repos supporting the old format and because it would hardly gain anything from the new format:
-* almost all frames convey 512b of payload, so difference in overhead is neglictible
+* almost all frames convey 512b of payload, so difference in overhead is negligible
 * bringing flash over usart sounds risky and would be terribly slow anyway (115200 bauds vs. 7M bauds).
 
 `SendCommandBL` is the same as `SendCommandOLD` with a different name to be sure not to migrate it.

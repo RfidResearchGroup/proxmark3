@@ -36,7 +36,7 @@ arguments = [[
     -k <key>       - the current six byte key with write access
     -n <key>       - the new key that will be written to the card
     -a <access>    - the new access bytes that will be written to the card
-    -x             - execute the commands aswell.
+    -x             - execute the commands as well.
 ]]
 
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds

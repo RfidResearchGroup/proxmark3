@@ -561,7 +561,7 @@ static void mem_app_config(const picopass_hdr *hdr) {
         PrintAndLogEx(INFO, "    Write A...... credit");
         PrintAndLogEx(INFO, "    Write B...... credit");
         PrintAndLogEx(INFO, "    Debit........ debit or credit");
-        PrintAndLogEx(INFO, "    redit........ credit");
+        PrintAndLogEx(INFO, "    Credit....... credit");
     }
 }
 
@@ -715,7 +715,7 @@ static int CmdHFiClassSim(const char *Cmd) {
                 return PM3_EMALLOC;
             }
 
-            memset(dump, 0, datalen);//<-- Need zeroes for the EPURSE - field (offical)
+            memset(dump, 0, datalen);//<-- Need zeroes for the EPURSE - field (official)
 
             uint8_t i = 0;
             for (i = 0 ; i < NUM_CSNS ; i++) {
@@ -2249,7 +2249,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     }
 
     if (auth == false && verbose) {
-        PrintAndLogEx(WARNING, "warning: no authentication used with read. Typical for cards configured toin `non-secure page`");
+        PrintAndLogEx(WARNING, "warning: no authentication used with read. Typical for cards configured into `non-secure page`");
 
     }
 

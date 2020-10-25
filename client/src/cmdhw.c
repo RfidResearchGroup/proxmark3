@@ -681,6 +681,7 @@ static int CmdConnect(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
+    {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},    
     {"help",          CmdHelp,         AlwaysAvailable, "This help"},
     {"connect",       CmdConnect,      AlwaysAvailable, "connect Proxmark3 to serial port"},
     {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},

@@ -2962,7 +2962,7 @@ out:
         printKeyTable(sectorsCnt, e_sector);
 
         if (use_flashmemory && found_keys == (sectorsCnt << 1)) {
-            PrintAndLogEx(SUCCESS, "Card dumped aswell. run " _YELLOW_("`%s %c`"),
+            PrintAndLogEx(SUCCESS, "Card dumped as well. run " _YELLOW_("`%s %c`"),
                           "hf mf esave",
                           GetFormatFromSector(sectorsCnt)
                          );

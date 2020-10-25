@@ -1708,6 +1708,11 @@ void SimTagIso15693(uint8_t *uid) {
 
     bool exit_loop = false;
     while (exit_loop == false) {
+
+        button_pressed = BUTTON_PRESS();
+        if (button_pressed || data_available())
+            break;
+
         WDT_HIT();
 
         // find reader field

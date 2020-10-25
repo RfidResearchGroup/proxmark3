@@ -57,7 +57,7 @@ static int usage_hf_search(void) {
 }
 
 static int usage_hf_sniff(void) {
-    PrintAndLogEx(NORMAL, "The high frequence sniffer will assign all available memory on device for sniffed data");
+    PrintAndLogEx(NORMAL, "The high frequency sniffer will assign all available memory on device for sniffed data");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
     PrintAndLogEx(NORMAL, "Press button to quit the sniffing.\n");
     PrintAndLogEx(NORMAL, "Usage: hf sniff <skip pairs> <skip triggers>");
@@ -311,19 +311,8 @@ int CmdHFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdHFPlot(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf plot",
-                  "Plots HF signal after RF signal path and A/D conversion.",
-                  "This can be used after any hf command and will show the last few milliseconds of the HF signal.\n"
-                  "Note: If the last hf command terminated because of a timeout you will most probably see nothing.\n");
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
+int handle_hf_plot(void) {
+    
     uint8_t buf[FPGA_TRACE_SIZE];
 
     PacketResponseNG response;
@@ -333,7 +322,7 @@ int CmdHFPlot(const char *Cmd) {
     }
 
     for (size_t i = 0; i < FPGA_TRACE_SIZE; i++) {
-        GraphBuffer[i] = ((int)buf[i]) - 127;
+        GraphBuffer[i] = ((int)buf[i]) - 128;
     }
 
     GraphTraceLen = FPGA_TRACE_SIZE;
@@ -349,14 +338,31 @@ int CmdHFPlot(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdHFPlot(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf plot",
+                  "Plots HF signal after RF signal path and A/D conversion.",
+                  "This can be used after any hf command and will show the last few milliseconds of the HF signal.\n"
+                  "Note: If the last hf command terminated because of a timeout you will most probably see nothing.\n");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    return handle_hf_plot();
+}
+
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,          AlwaysAvailable, "This help"},
+    
+    {"--------",    CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("High Frequency") " -----------------------"},
     {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...               }"},
     {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...               }"},
     {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                }"},
 //    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                }"},
     {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...    }"},
-    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / Felica RFIDs...       }"},
+    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...       }"},
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                  }"},
     {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                   }"},
@@ -369,6 +375,8 @@ static command_t CommandTable[] = {
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...          }"},
+    {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},    
+    {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},

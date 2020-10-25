@@ -1778,9 +1778,10 @@ static void PrepareDelayedTransfer(uint16_t delay) {
 //-------------------------------------------------------------------------------------
 static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing) {
 
-    if (!hf_field_active)
+    if (!hf_field_active) {
+        Dbprintf("Warning: HF field is off, ignoring TransmitFor14443a command");
         return;
-
+    }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
     if (timing) {
@@ -2189,8 +2190,10 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *received_len) {
 
-    if (!hf_field_active)
+    if (!hf_field_active) {
+        Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag_Thinfilm command");
         return false;
+    }
 
     // Set FPGA mode to "reader listen mode", no modulation (listen
     // only, since we are receiving, not transmitting).

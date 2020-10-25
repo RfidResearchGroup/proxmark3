@@ -698,13 +698,12 @@ static int CmdSmartInfo(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
+    if (resp.status != PM3_SUCCESS) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ESOFT;
     }
@@ -771,13 +770,12 @@ static int CmdSmartReader(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
+    if (resp.status != PM3_SUCCESS) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ESOFT;
     }
@@ -1186,14 +1184,13 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
 
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
+    if (resp.status != PM3_SUCCESS) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }

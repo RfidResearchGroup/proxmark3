@@ -591,7 +591,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
 
         // To flag any blocks locked we need to read blocks 14 and 15 first
-        // dont swap endin until we get block lock flags.
+        // dont swap endian until we get block lock flags.
         status14 = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) {
@@ -662,7 +662,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     } else if (card_type == EM_4X69) {
 
         // To flag any blocks locked we need to read blocks 14 and 15 first
-        // dont swap endin until we get block lock flags.
+        // dont swap endian until we get block lock flags.
         status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) {
@@ -1951,7 +1951,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                         // Read Word    1001 <adr>          => 4 + 7      => 11
                         // Protect      1100       <data>   => 4 +     45 => 49
                         // Disable      1010       <data>   => 4 +     45 => 49
-                        // -> disaable 1010 11111111 0 11111111 0 11111111 0 11111111 0 00000000 0
+                        // -> disable 1010 11111111 0 11111111 0 11111111 0 11111111 0 00000000 0
 
                         // Check to see if we got the leading 0
                         if  (((strncmp (bits,"00011",5) == 0)&& (bitidx == 50)) ||
