@@ -40,6 +40,7 @@
 #define NO_CHARS_MAX                400
 #define TIMEOUT                     2000
 #define RESTORE_DEFAULT_FILENAME    "lf-4x50restore.bin"
+#define DUMP_FILESIZE               136
 
 typedef struct {
     bool addr_given;
