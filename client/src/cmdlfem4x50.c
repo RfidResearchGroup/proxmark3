@@ -22,7 +22,6 @@ static int usage_lf_em4x50_info(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_info [h] [v] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       v         - verbose output");
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_info"));
@@ -37,8 +36,8 @@ static int usage_lf_em4x50_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write [h] [a <address>] [w <data>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       a <addr>  - memory address to write to (dec)");
-    PrintAndLogEx(NORMAL, "       w <word>  - word to write (hex, lsb)");
+    PrintAndLogEx(NORMAL, "       b <block> - memory address to write to (dec)");
+    PrintAndLogEx(NORMAL, "       d <data>  - word to write (hex, lsb)");
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write a 3 w deadc0de"));
@@ -64,7 +63,7 @@ static int usage_lf_em4x50_read(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_read [h] [a <address>] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       a <addr>  - memory address to read (dec) (optional)");
+    PrintAndLogEx(NORMAL, "       b <block> - memory address to read (dec) (optional)");
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_read"));
@@ -362,13 +361,13 @@ int CmdEM4x50Write(const char *Cmd) {
                 cmdp += 2;
                 break;
 
-            case 'w':
+            case 'd':
                 etd.word = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 bword = true;
                 cmdp += 2;
                 break;
 
-            case 'a':
+            case 'b':
                 param_getdec(Cmd, cmdp + 1, &address);
 
                 // validation
@@ -572,7 +571,7 @@ int CmdEM4x50Read(const char *Cmd) {
             case 'h':
                 return usage_lf_em4x50_read();
 
-            case 'a': {
+            case 'b': {
                 param_getdec(Cmd, cmdp + 1, &address);
                 // lsb: byte 1 = fwr, byte 2 = lwr, byte 3 = 0x0, byte 4 = 0x0
                 etd.addresses = address;    // lwr
