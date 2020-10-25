@@ -149,14 +149,14 @@ static int usage_lf_em4x50_restore(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_restore [h]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h                     - this help");
-    PrintAndLogEx(NORMAL, "       u <UID>               - uid, try to restore from lf-4x50-<UID>-dump.bin");
-    PrintAndLogEx(NORMAL, "       f <filename prefix>   - data filename <filename>.<prefix> (optional)");
-    PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex, lsb) (optional)");
+    PrintAndLogEx(NORMAL, "       h             - this help");
+    PrintAndLogEx(NORMAL, "       u <UID>       - uid, try to restore from lf-4x50-<UID>-dump.bin");
+    PrintAndLogEx(NORMAL, "       f <filename>  - data filename <filename.bin/eml> (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>       - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore h"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump p 12345678"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump.eml p 12345678"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -920,7 +920,8 @@ int CmdEM4x50Restore(const char *Cmd) {
 
     //uint8_t data[136] = {0x0};
     size_t bytes_read = 0;
-    char filename[FILE_PATH_SIZE] = {0x00};
+    char filename[FILE_PATH_SIZE] = {0};
+    char ext[FILE_PATH_SIZE] = {0};
     char szTemp[FILE_PATH_SIZE - 20] = {0x00};
     FILE *fdump;
 
@@ -939,7 +940,7 @@ int CmdEM4x50Restore(const char *Cmd) {
             case 'u':
                 param_getstr(Cmd, cmdp + 1, szTemp, FILE_PATH_SIZE - 20);
                 if (filename[0] == 0x00)
-                    snprintf(filename, FILE_PATH_SIZE, "lf-4x50-%s-dump.bin", szTemp);
+                    snprintf(filename, FILE_PATH_SIZE, "./lf-4x50-%s-dump.bin", szTemp);
                 cmdp += 2;
                 break;
 
@@ -965,21 +966,42 @@ int CmdEM4x50Restore(const char *Cmd) {
     if (errors)
         return usage_lf_em4x50_restore();
 
-    // open dump file
-    if ((fdump = fopen(filename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
-        return PM3_EFILE;
-    }
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
-    // read data from dump file
-    bytes_read = fread(&etd.data, sizeof(uint8_t), sizeof(etd.data), fdump);
-    if (bytes_read != sizeof(etd.data)) {
+    // read data from dump file; file has to be "bin" or "eml"
+    // (file type is distinguished by file extension)
+    
+    memcpy(ext, &filename[strlen(filename) - 4], 4);
+    ext[5] = 0x00;
+    if (memcmp(ext, ".eml", 4) == 0) {
+
+        // read from eml file
+        if (loadFileEML(filename, etd.data, &bytes_read) != PM3_SUCCESS)
+            return PM3_EFILE;
+
+    } else {
+
+        // open bin file
+        if ((fdump = fopen(filename, "rb")) == NULL) {
+            PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
+            return PM3_EFILE;
+        }
+        
+        // read from bin file
+        bytes_read = fread(&etd.data, sizeof(uint8_t), DUMP_FILESIZE, fdump);
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%i") " bytes from bin file " _YELLOW_("%s"),
+                      bytes_read,
+                      filename
+                      );
+
+        fclose(fdump);
+    }
+    
+    if (bytes_read != DUMP_FILESIZE) {
         PrintAndLogEx(FAILED, "Read error");
         return PM3_EFILE;
     }
-    fclose(fdump);
-    
+
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_RESTORE, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
