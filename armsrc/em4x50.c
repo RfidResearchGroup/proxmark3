@@ -1342,7 +1342,7 @@ void em4x50_restore(em4x50_data_t *etd) {
 
         for (int j = 0; j < 4; j++)
             words_client[i] |= (etd->data[4 * i + j]) << ((3 - j) * 8);
-        
+
         // lsb is needed (dump is msb)
         words_client[i] = reflect32(words_client[i]);
     }
