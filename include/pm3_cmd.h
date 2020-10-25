@@ -512,6 +512,7 @@ typedef struct {
 #define CMD_LF_EM4X50_LOGIN                                               0x0246
 #define CMD_LF_EM4X50_RESET                                               0x0247
 #define CMD_LF_EM4X50_WATCH                                               0x0248
+#define CMD_LF_EM4X50_RESTORE                                             0x0249
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
