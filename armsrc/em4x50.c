@@ -14,6 +14,7 @@
 #include "lfadc.h"
 #include "commonutil.h"
 #include "em4x50.h"
+#include "BigBuf.h"
 #include "appmain.h" // tear
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
@@ -1140,9 +1141,15 @@ void em4x50_wipe(uint32_t *password) {
 
                     // so far everything is fine
                     // last task: reset password
-                    if (login(*password))
-                        bsuccess = write_password(*password, zero);
+                    if (login(*password)) {
 
+                        int res = write_password(*password, zero);
+                        if (res == PM3_ETEAROFF) {
+                            lf_finalize();
+                            return;
+                        }
+                        bsuccess = (res == PM3_SUCCESS);
+                    }
                     // verify by login with new password
                     if (bsuccess)
                         bsuccess = login(zero);
@@ -1150,9 +1157,9 @@ void em4x50_wipe(uint32_t *password) {
             }
         }
     }
-
+  
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_WIPE, bsuccess, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_WIPE, bsuccess, 0, 0);
 }
 
 void em4x50_reset(void) {
@@ -1314,4 +1321,67 @@ int em4x50_standalone_read(uint32_t *words) {
                 now++;
 
     return now;
+}
+
+void em4x50_restore(em4x50_data_t *etd) {
+
+    // restore em4x50 dump file to tag
+
+    bool bsuccess = false, blogin = false;
+    int res = 0;
+    int start = (etd->pwd_given) ? 2 : 3;   // without password word 2 cannot be written
+    uint8_t status = 0;
+    uint32_t addresses = 0x00001F01; // from fwr = 1 to lwr = 31 (0x1F)
+    uint32_t words_client[EM4X50_NO_WORDS] = {0x0};
+    uint32_t words_read[EM4X50_NO_WORDS] = {0x0};
+
+    em4x50_setup_read();
+
+    // read data
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+
+        for (int j = 0; j < 4; j++)
+            words_client[i] |= (etd->data[4 * i + j]) << ((3 - j) * 8);
+        
+        // lsb is needed (dump is msb)
+        words_client[i] = reflect32(words_client[i]);
+    }
+    
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag()) {
+
+        // login first if password is available
+        if (etd->pwd_given)
+            blogin = login(etd->password1);
+
+        // write data to each address but ignore addresses
+        // 0 -> password, 32 -> serial, 33 -> uid
+        for (int i = start; i < EM4X50_NO_WORDS - 2; i++) {
+            res = write(words_client[i], i);
+            if (res == PM3_ETEAROFF) {
+                lf_finalize();
+                return;
+            }
+        }
+
+        // to verify result -> reset EM4x50
+        if (reset()) {
+
+            // login not necessary because protected word has been set to 0
+            // -> no read protected words
+            // -> selective read can be called immediately
+            if (selective_read(addresses, words_read)) {
+
+                // check if everything is zero
+                bsuccess = true;
+                for (int i = start; i < EM4X50_NO_WORDS - 2; i++)
+                    bsuccess &= (reflect32(words_read[i]) == words_client[i]);
+            }
+        }
+    }
+
+    status = (bsuccess << 1) + blogin;
+
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X50_RESTORE, status, 0, 0);
 }
