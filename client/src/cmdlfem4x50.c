@@ -975,10 +975,10 @@ int CmdEM4x50Restore(const char *Cmd) {
     ext[5] = 0x00;
     if (memcmp(ext, ".eml", 4) == 0)
         res = loadFileEML(filename, etd.data, &bytes_read) != PM3_SUCCESS;
-    else if (memcmp(ext, ".json", 5) == 0)
-        res = loadFileJSON(filename, etd.data, sizeof(etd.data), &bytes_read, NULL);
-    else
+    else if (memcmp(ext, ".bin", 4) == 0)
         res = loadFile(filename, ".bin", etd.data, sizeof(etd.data), &bytes_read);
+    else
+        res = loadFileJSON(filename, etd.data, sizeof(etd.data), &bytes_read, NULL);
 
     if ((res != PM3_SUCCESS) && (bytes_read != DUMP_FILESIZE)) {
         PrintAndLogEx(FAILED, "Read error");
