@@ -521,6 +521,20 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
+        case jsfEM4x50: {
+            JsonSaveStr(root, "FileType", "EM4X50");
+            JsonSaveBufAsHexCompact(root, "$.Card.Protection", data + (1 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.Config", data + (2 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.Serial", data + (32 * 4), 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data + (33 * 4), 4);
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
         case jsfMfPlusKeys: {
             JsonSaveStr(root, "FileType", "mfp");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);

@@ -683,9 +683,11 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     // saveFileEML will add .eml extension to filename
     // saveFile (binary) passes in the .bin extension.
+    // saveFileJSON adds .json extension
     saveFileEML(filename, data, sizeof(data), 4);
     saveFile(filename, ".bin", data, sizeof(data));
-    //saveFileJSON...
+    saveFileJSON(filename, jsfEM4x50, data, sizeof(data), NULL);
+
     return PM3_SUCCESS;
 }
 
