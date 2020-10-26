@@ -22,6 +22,15 @@
 #include "protocols.h"
 #include "fileutils.h"  //saveFile
 
+/*
+  iceman notes
+  We can't dump LTO 5 or 6 tags yet since we don't have a datasheet.
+  If you have access to datasheet,  le me know!
+ 
+  LTO w Type info 00 01   has 101 blocks.  
+  LTO w Type info 00 03   has 255 blocks.
+  LTO w Type info 00 xx   has NN blocks.  
+*/
 #define CM_MEM_MAX_SIZE     0x1FE0  // (32byte/block * 255block = 8160byte)
 
 static int CmdHelp(const char *Cmd);
@@ -185,6 +194,17 @@ static int CmdHfLTOInfo(const char *Cmd) {
     return infoLTO(true);
 }
 
+static const char* lto_print_size(uint8_t ti) {
+    switch(ti) {
+        case 1:
+            return "101 blocks / 3232 bytes";
+        case 3:
+            return "255 blocks / 8160 bytes";
+        default :
+            return "";
+    }
+}
+
 int infoLTO(bool verbose) {
 
     clearCommandBuffer();
@@ -199,8 +219,9 @@ int infoLTO(bool verbose) {
 
     if (ret_val == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "UID: " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
-        PrintAndLogEx(SUCCESS, "TYPE INFO: " _YELLOW_("%s"), sprint_hex_inrow(type_info, sizeof(type_info)));
+        PrintAndLogEx(SUCCESS, "UID......... " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
+        PrintAndLogEx(SUCCESS, "Type info... " _YELLOW_("%s"), sprint_hex_inrow(type_info, sizeof(type_info)));
+        PrintAndLogEx(SUCCESS, "Memory...... " _YELLOW_("%s"), lto_print_size(type_info[1]));
     }
 
     return ret_val;
@@ -442,11 +463,18 @@ int dumpLTO(uint8_t *dump, bool verbose) {
         lto_switch_off_field();
         return ret_val;
     }
+    // 0003 == 255 blocks x 32 = 8160 bytes
+    // 0001 == 101 blocks x 32 = 3232 bytes
+    uint8_t blocks = 0xFF;
+    if (type_info[1] == 0x01) {
+        blocks = 0x65;
+    }
+    PrintAndLogEx(SUCCESS, "Found LTO tag w " _YELLOW_("%s") " memory", lto_print_size(type_info[1]));
 
     uint8_t block_data_d00_d15[18];
     uint8_t block_data_d16_d31[18];
 
-    for (uint8_t i = 0; i < 255; i++) {
+    for (uint8_t i = 0; i < blocks; i++) {
 
         ret_val = lto_rdbl(i, block_data_d00_d15,  block_data_d16_d31, verbose);
 
@@ -458,6 +486,8 @@ int dumpLTO(uint8_t *dump, bool verbose) {
             lto_switch_off_field();
             return ret_val;
         }
+        PrintAndLogEx(INPLACE, "...reading block %d", i);
+        fflush(stdout);
     }
 
     lto_switch_off_field();
@@ -502,6 +532,7 @@ static int CmdHfLTODump(const char *Cmd) {
     }
 
     int ret_val = dumpLTO(dump, true);
+    PrintAndLogEx(NORMAL, "");
     if (ret_val != PM3_SUCCESS) {
         free(dump);
         return ret_val;

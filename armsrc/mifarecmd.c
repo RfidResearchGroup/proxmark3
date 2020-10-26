@@ -2752,15 +2752,15 @@ void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time) {
 
     // Send MFU counter increase cmd
     uint8_t cmd[] = {
-            MIFARE_ULEV1_INCR_CNT,
-            counter,
-            0,  // lsb
-            0,  
-            0,  // msb
-            0,  // rfu
-            0,
-            0,
-        };
+        MIFARE_ULEV1_INCR_CNT,
+        counter,
+        0,  // lsb
+        0,
+        0,  // msb
+        0,  // rfu
+        0,
+        0,
+    };
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     // anticollision / select card

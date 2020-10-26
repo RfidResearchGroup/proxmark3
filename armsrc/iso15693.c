@@ -290,6 +290,7 @@ void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time) {
     LED_B_OFF();
 
     *start_time = *start_time + DELAY_ARM_TO_TAG;
+    FpgaDisableTracing();
 }
 
 //-----------------------------------------------------------------------------
@@ -732,6 +733,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     }
 
     FpgaDisableSscDma();
+    FpgaDisableTracing();
 
     uint32_t sof_time = *eof_time
                         - (dt->len * 8 * 8 * 16) // time for byte transfers
@@ -1469,17 +1471,22 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
         // low speed (1 out of 256)
         CodeIso15693AsReader256(send, sendlen);
     }
-
+    int res = 0;
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, &start_time);
-    *eof_time = start_time + 32 * ((8 * ts->max) - 4); // substract the 4 padding bits after EOF
-    LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
 
-    int res = 0;
-    if (recv != NULL) {
-        res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+
+        res = PM3_ETEAROFF;
+
+    } else {
+
+        *eof_time = start_time + 32 * ((8 * ts->max) - 4); // substract the 4 padding bits after EOF
+        LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
+        if (recv != NULL) {
+            res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
+        }
     }
-    FpgaDisableTracing();
     return res;
 }
 
@@ -1495,7 +1502,6 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
     if (recv != NULL) {
         res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
     }
-    FpgaDisableTracing();
     return res;
 }
 
@@ -1588,41 +1594,49 @@ void ReaderIso15693(uint32_t parameter) {
     BuildIdentifyRequest(cmd);
     uint32_t start_time = 0;
     uint32_t eof_time;
-    int answerLen = SendDataTag(cmd, sizeof(cmd), true, true, answer, ISO15693_MAX_RESPONSE_LENGTH, start_time, ISO15693_READER_TIMEOUT, &eof_time);
-    start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    int recvlen = SendDataTag(cmd, sizeof(cmd), true, true, answer, ISO15693_MAX_RESPONSE_LENGTH, start_time, ISO15693_READER_TIMEOUT, &eof_time);
 
-    // we should do a better check than this
-    if (answerLen >= 12) {
-        uint8_t uid[8];
-        uid[0] = answer[9]; // always E0
-        uid[1] = answer[8]; // IC Manufacturer code
-        uid[2] = answer[7];
-        uid[3] = answer[6];
-        uid[4] = answer[5];
-        uid[5] = answer[4];
-        uid[6] = answer[3];
-        uid[7] = answer[2];
+    if (recvlen == PM3_ETEAROFF) { // tearoff occured
+        reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
+    } else {
 
-        if (DBGLEVEL >= DBG_EXTENDED) {
-            Dbprintf("[+] UID = %02X%02X%02X%02X%02X%02X%02X%02X",
-                     uid[0], uid[1], uid[2], uid[3],
-                     uid[4], uid[5], uid[5], uid[6]
-                    );
+        start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+
+        // we should do a better check than this
+        if (recvlen >= 12) {
+            uint8_t uid[8];
+            uid[0] = answer[9]; // always E0
+            uid[1] = answer[8]; // IC Manufacturer code
+            uid[2] = answer[7];
+            uid[3] = answer[6];
+            uid[4] = answer[5];
+            uid[5] = answer[4];
+            uid[6] = answer[3];
+            uid[7] = answer[2];
+
+            if (DBGLEVEL >= DBG_EXTENDED) {
+                Dbprintf("[+] UID = %02X%02X%02X%02X%02X%02X%02X%02X",
+                         uid[0], uid[1], uid[2], uid[3],
+                         uid[4], uid[5], uid[5], uid[6]
+                        );
+            }
+            // send UID back to client.
+            // arg0 = 1 = OK
+            // arg1 = len of response (12 bytes)
+            // arg2 = rtf
+            // asbytes = uid.
+            reply_mix(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
+
+            if (DBGLEVEL >= DBG_EXTENDED) {
+                Dbprintf("[+] %d octets read from IDENTIFY request:", recvlen);
+                DbdecodeIso15693Answer(recvlen, answer);
+                Dbhexdump(recvlen, answer, true);
+            }
+        } else {
+            DbpString("Failed to select card");
+            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
         }
-        // send UID back to client.
-        // arg0 = 1 = OK
-        // arg1 = len of response (12 bytes)
-        // arg2 = rtf
-        // asbytes = uid.
-        reply_mix(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
     }
-
-    if (DBGLEVEL >= DBG_EXTENDED) {
-        Dbprintf("[+] %d octets read from IDENTIFY request:", answerLen);
-        DbdecodeIso15693Answer(answerLen, answer);
-        Dbhexdump(answerLen, answer, true);
-    }
-
     switch_off();
     BigBuf_free();
 }
@@ -1694,6 +1708,11 @@ void SimTagIso15693(uint8_t *uid) {
 
     bool exit_loop = false;
     while (exit_loop == false) {
+
+        button_pressed = BUTTON_PRESS();
+        if (button_pressed || data_available())
+            break;
+
         WDT_HIT();
 
         // find reader field
@@ -1767,6 +1786,11 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
     if (recvlen >= 12) {
         Dbprintf("NoAFI UID = %s", iso15693_sprintUID(NULL, recv + 2));
+    } else {
+        DbpString("Failed to select card");
+        reply_ng(CMD_ACK, PM3_ESOFT, NULL, 0);
+        switch_off();
+        return;
     }
 
     // now with AFI
@@ -1816,10 +1840,9 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
 
     LED_A_ON();
 
-    int recvlen = 0;
     uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
-    uint32_t eof_time = 0;
     uint16_t timeout;
+    uint32_t eof_time = 0;
     bool request_answer = false;
 
     switch (data[1]) {
@@ -1837,43 +1860,29 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
             timeout = ISO15693_READER_TIMEOUT;
     }
 
-    if (DBGLEVEL >= DBG_EXTENDED) {
-        Dbprintf("SEND:");
-        Dbhexdump(datalen, data, false);
-    }
-
     uint32_t start_time = 0;
-    recvlen = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time);
+    int recvlen = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time);
 
-    // send a single EOF to get the tag response
-    if (request_answer) {
-        start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-        recvlen = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT, &eof_time);
+    if (recvlen == PM3_ETEAROFF) { // tearoff occured
+        reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
+    } else {
+
+        // send a single EOF to get the tag response
+        if (request_answer) {
+            start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+            recvlen = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT, &eof_time);
+        }
+
+        if (recv) {
+            recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
+            reply_mix(CMD_ACK, recvlen, 0, 0, recvbuf, recvlen);
+        } else {
+            reply_mix(CMD_ACK, 1, 0, 0, NULL, 0);
+        }
     }
-
-    // for the time being, switch field off to protect rdv4.0
     // note: this prevents using hf 15 cmd with s option - which isn't implemented yet anyway
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LED_D_OFF();
-
-    if (recv) {
-
-        if (recvlen > ISO15693_MAX_RESPONSE_LENGTH) {
-            recvlen = ISO15693_MAX_RESPONSE_LENGTH;
-        }
-        reply_mix(CMD_ACK, recvlen, 0, 0, recvbuf, recvlen);
-
-        if (DBGLEVEL >= DBG_EXTENDED) {
-
-            Dbprintf("RECV:");
-            if (recvlen > 0) {
-                Dbhexdump(recvlen, recvbuf, false);
-                DbdecodeIso15693Answer(recvlen, recvbuf);
-            }
-        }
-    } else {
-        reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
-    }
 }
 
 /*

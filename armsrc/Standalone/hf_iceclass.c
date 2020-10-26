@@ -302,15 +302,17 @@ static int reader_dump_mode(void) {
         Iso15693InitReader();
         set_tracing(false);
 
+
+        picopass_hdr *hdr = (picopass_hdr *)card_data;
+
         // select tag.
         uint32_t eof_time = 0;
-        bool res = select_iclass_tag(card_data, auth.use_credit_key, &eof_time);
+        bool res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
         if (res == false) {
             switch_off();
             continue;
         }
 
-        picopass_hdr *hdr = (picopass_hdr *)card_data;
         // sanity check of CSN.
         if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
             switch_off();
@@ -366,7 +368,7 @@ static int reader_dump_mode(void) {
             auth.use_credit_key = true;
             memcpy(auth.key, aa2_key, sizeof(auth.key));
 
-            res = select_iclass_tag(card_data, auth.use_credit_key, &eof_time);
+            res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
             if (res) {
 
                 // sanity check of CSN.

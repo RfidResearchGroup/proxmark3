@@ -22,6 +22,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
   * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
   * [Target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
+  * [Qt: Session management error:](#qt-session-management-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -65,7 +66,7 @@ Another possibility is if, when using the button for entering bootloader mode, t
 
 ### Determine if the bootloader was damaged or only the main OS image
 
-Unplug, press the Proxmark3 button and keep it pressed when you plug it on USB. If the red LEDs show a "off/on/off/on" pattern, you're goot, you manually entered into the bootloader mode.
+Unplug, press the Proxmark3 button and keep it pressed when you plug it on USB. If the red LEDs show a "off/on/off/on" pattern, you're good, you manually entered into the bootloader mode.
 On new bootloaders, you can release the button. If the pattern disappears, you're on an older bootloader and you've to do it again and keep the button pressed during all the flashing operation. 
 
 Once in bootloader mode, flash the main image.
@@ -199,7 +200,7 @@ brew remove proxmark3
 brew reinstall proxmark3
 ```
 
-On Ubuntu 16.04 (xenial) you should either conside a later release or you can install a later toolchain.
+On Ubuntu 16.04 (xenial) you should either consider a later release or you can install a later toolchain.
 
 
 sample error output:
@@ -222,4 +223,16 @@ ticks.h:26:1: error: target attribute is not supported on this machine [-Werror=
  ^
 ```
 
+## Qt Session management error
+If you get the message  
 
+```
+Qt: Session management error: None of the authentication protocols specified are supported
+``` when running the Proxmark3 client it might be because a a environment variable.
+
+Solution:
+Try running the client without the SESSION_MANAGER environment variable.
+
+```
+env -u SESSION_MANAGER ./pm3
+```

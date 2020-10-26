@@ -1,12 +1,13 @@
-# Notes on Cloner gunes
+# Notes on Cloner guns
 
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=39903#p39903
 
+- [Notes on Cloner guns](#notes-on-cloner-guns)
 - [Blue and black cloners](#blue-and-black-cloners)
 - [White cloner (pre 2015)](#white-cloner-pre-2015)
 - [White cloner (after 2016)](#white-cloner-after-2016)
 - [White cloner (after 2016 D Quality)](#white-cloner-after-2016-d-quality)
-- [restore page1 data](#restore-page1-data)
+- [Restore page1 data](#restore-page1-data)
 - [Sniffing the comms](#sniffing-the-comms)
 
 
@@ -67,7 +68,7 @@ If t55xx write b 2 d 2D782308 1
 The T55x7 protocol uses a pwm based protocol for writing to tags.  In order to make decoding easier try the new command as seen below instead. It will try to extract the data written.
 
 ```
--- after threshold limit 20 is triggred, skip 10000 samples before collecting samples.
+-- after threshold limit 20 is triggered, skip 10000 samples before collecting samples.
 lf config s 10000 t 20
 lf t55xx sniff
 

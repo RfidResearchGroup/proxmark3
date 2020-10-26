@@ -1895,12 +1895,17 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         uint32_t eof_time = 0;
         CodeAndTransmit14443bAsReader(cmd, len, &start_time, &eof_time);
 
-        eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-        status = Get14443bAnswerFromTag(buf, sizeof(buf), 5 * ISO14443B_READER_TIMEOUT, &eof_time); // raw
-        FpgaDisableTracing();
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+            FpgaDisableTracing();
+            reply_mix(CMD_HF_ISO14443B_COMMAND, -2, 0, 0, NULL, 0);
+        } else {
+            eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
+            status = Get14443bAnswerFromTag(buf, sizeof(buf), 5 * ISO14443B_READER_TIMEOUT, &eof_time); // raw
+            FpgaDisableTracing();
 
-        sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
-        reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, Demod.output, sendlen);
+            sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
+            reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, Demod.output, sendlen);
+        }
     }
 
 out:

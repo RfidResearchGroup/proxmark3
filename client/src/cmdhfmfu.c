@@ -21,6 +21,7 @@
 #include "generator.h"
 #include "mifare/ndef.h"
 #include "cliparser.h"
+#include "cmdmain.h"
 
 
 #define MAX_UL_BLOCKS       0x0F
@@ -241,7 +242,7 @@ static int usage_hf_mfu_otp_tearoff(void) {
     PrintAndLogEx(NORMAL, "  s <time>  : (optional) start time to run the test - default 0 us");
     PrintAndLogEx(NORMAL, "  d <data>  : (optional) data to full-write before trying the OTP test - default 0x00");
     PrintAndLogEx(NORMAL, "  t <data>  : (optional) data to write while running the OTP test - default 0x00");
-    PrintAndLogEx(NORMAL, "  m <data>  : (optional) exit criteria, if block matches this value");    
+    PrintAndLogEx(NORMAL, "  m <data>  : (optional) exit criteria, if block matches this value");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf mfu otptear b 3");
@@ -343,21 +344,28 @@ static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint
     return resplen;
 }
 
-static int ul_select(iso14a_card_select_t *card) {
+static bool ul_select(iso14a_card_select_t *card) {
 
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    bool ans = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
-
-    if (!ans || resp.oldarg[0] < 1) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         DropField();
-        return 0;
-    }
+        return false;
+    } else {
 
-    memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
-    return 1;
+        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        if (len == 0) {
+            PrintAndLogEx(WARNING, "iso14443a card select failed");
+            DropField();
+            return false;
+        }
+
+        if (card)
+            memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
+    }
+    return true;
 }
 
 // This read command will at least return 16bytes.
@@ -885,7 +893,7 @@ static int ulev1_print_counters(void) {
         len = ulev1_readCounter(i, counter, sizeof(counter));
         if (len == 3) {
             PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
-            PrintAndLogEx(SUCCESS, "            - %02X tearing (" _GREEN_("%s") ")", tear[0], (tear[0] == 0xBD) ? "ok" : "failure");
+            PrintAndLogEx(SUCCESS, "            - %02X tearing (%s)", tear[0], (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("failure"));
         }
     }
     return len;
@@ -1027,11 +1035,10 @@ static int ulc_magic_test(){
     iso14a_card_select_t card;
     uint8_t nonce1[11] = {0x00};
     uint8_t nonce2[11] = {0x00};
-    int status = ul_select(&card);
-    if ( !status ){
+    if ( !ul_select(&card) ){
         return UL_ERROR;
     }
-    status = ulc_requestAuthentication(nonce1, sizeof(nonce1));
+    int status = ulc_requestAuthentication(nonce1, sizeof(nonce1));
     if ( status > 0 ) {
         status = ulc_requestAuthentication(nonce2, sizeof(nonce2));
         returnValue =  ( !memcmp(nonce1, nonce2, 11) ) ? UL_C_MAGIC : UL_C;
@@ -1620,7 +1627,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(WARNING, "Command execute timeout");
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 //
 //  Read Single Block
@@ -2839,12 +2846,10 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 return usage_hf_mfu_otp_tearoff();
             case 'b':
                 blockNoUint = param_get8(Cmd, cmdp + 1);
-/*
                 if (blockNoUint < 2) {
                     PrintAndLogEx(WARNING, "Wrong block number");
                     errors = true;
                 }
-*/
                 cmdp += 2;
                 break;
             case 'i':
@@ -2892,7 +2897,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 }
                 use_match = true;
                 cmdp += 2;
-                break;            
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -2942,9 +2947,17 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
+
+        // we be getting ACK that we are silently ignoring here..
+
         if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 2000)) {
             PrintAndLogEx(WARNING, "Failed");
             return PM3_ESOFT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Tear off reporting failure to select tag");
+            continue;
         }
 
         got_post = false;
@@ -3046,7 +3059,38 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
+static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
 
+    PrintAndLogEx(INFO, "Reset tear check");
+
+    uint8_t cw[6] = { MIFARE_ULEV1_INCR_CNT, cnt_no, 0x00, 0x00, 0x00, 0x00};
+    uint8_t ct[1] = {0};
+    uint8_t resp[10] = {0};
+
+    if (ul_select(card) == false) {
+        PrintAndLogEx(FAILED, "failed to select card,  exiting...");
+        return PM3_ESOFT;
+    }
+    if (ul_send_cmd_raw(cw, sizeof(cw), resp, sizeof(resp)) < 0) {
+        PrintAndLogEx(FAILED, "failed to write all ZEROS");
+        return PM3_ESOFT;
+    }
+    if (ulev1_readTearing(cnt_no, ct, sizeof(ct)) < 0) {
+        PrintAndLogEx(FAILED, "AFTER, failed to read ANTITEAR,  exiting...");
+        return PM3_ESOFT;
+    }
+    DropField();
+
+    if (ct[0] != 0xBD) {
+        PrintAndLogEx(INFO, "Resetting seem to have failed, WHY!?");
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
+}
+*/
+
+/*
 static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -3062,16 +3106,33 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         arg_int0("c", "cnt", "<0,1,2>", "Target this EV1 counter (0,1,2)"),
         arg_int0("i", "inc", "<dec>", "time interval to increase in each iteration - default 10 us"),
         arg_int0("l", "limit", "<dec>", "test upper limit time - default 3000 us"),
-        arg_int0("s", "start", "<dec>", "test start time - default 0 us"),        
+        arg_int0("s", "start", "<dec>", "test start time - default 0 us"),
+        arg_int0(NULL, "fix", "<dec>", "test fixed loop delay"),
+        arg_str0("x", "hex",  NULL, "3 byte hex to increase counter with"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int interval = 0;
+    int time_limit, start_time = 0;
     int counter = arg_get_int_def(ctx, 1, 0);
-    int interval = arg_get_int_def(ctx, 2, 10);
-    int time_limit = arg_get_int_def(ctx, 3, 3000);
-    int start_time = arg_get_int_def(ctx, 4, 0);
+    int fixed = arg_get_int_def(ctx, 5, -1);
+
+    if ( fixed == -1 ) {
+        interval = arg_get_int_def(ctx, 2, 10);
+        time_limit = arg_get_int_def(ctx, 3, 3000);
+        start_time = arg_get_int_def(ctx, 4, 0);
+    } else {
+        start_time = fixed;
+        interval = 0;
+        time_limit = fixed;
+    }
+
+    uint8_t newvalue[5] = {0};
+    int newvaluelen = 0;
+    CLIGetHexWithReturn(ctx, 6, newvalue, &newvaluelen);
     CLIParserFree(ctx);
-    
+
     // Validations
     if (start_time > (time_limit - interval)) {
         PrintAndLogEx(WARNING, "Wrong start time number");
@@ -3095,109 +3156,303 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
     iso14a_card_select_t card;
 
-    if (ul_select(&card) == 0) {
-        PrintAndLogEx(WARNING, "Failed to select card");
+    // reset counter tear
+    counter_reset_tear(&card, cnt_no);
+
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(INFO, "failed to select card,  exiting...");
         return PM3_ESOFT;
     }
-    
+
     uint8_t inital_cnt[3] = {0, 0, 0};
     int len = ulev1_readCounter(cnt_no, inital_cnt, sizeof(inital_cnt));
-    DropField();
     if ( len != sizeof(inital_cnt) ) {
-        PrintAndLogEx(WARNING, "Failed to read counter");
+        PrintAndLogEx(WARNING, "failed to read counter");
         return PM3_ESOFT;
     }
 
+    uint8_t inital_tear[1] = {0};
+    len = ulev1_readTearing(cnt_no, inital_tear, sizeof(inital_tear));
+    DropField();
+    if ( len != sizeof(inital_tear) ) {
+        PrintAndLogEx(WARNING, "failed to read ANTITEAR,  exiting...  %d", len);
+        return PM3_ESOFT;
+    }
+
+    uint32_t wr_value = ( newvalue[0] | newvalue[1] << 8 | newvalue[2] << 16 );
+    uint32_t inital_value = ( inital_cnt[0] | inital_cnt[1] << 8 | inital_cnt[2] << 16 );;
+
     PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Ev1 Counter Tear off") " ---------------------");
-    PrintAndLogEx(INFO, "Target counter no     " _GREEN_("%u"), counter);
-    PrintAndLogEx(INFO, "Target initial value  " _GREEN_("%s"), sprint_hex_inrow(inital_cnt, sizeof(inital_cnt)));    
+    PrintAndLogEx(INFO, "Target counter no     [ " _GREEN_("%u") " ]", counter);
+    PrintAndLogEx(INFO, "       counter value  [ " _GREEN_("%s") " ]", sprint_hex_inrow(inital_cnt, sizeof(inital_cnt)));
+    PrintAndLogEx(INFO, "     anti-tear value  [ " _GREEN_("%02X") " ]", inital_tear[0]);
+    PrintAndLogEx(INFO, "       increase value [ " _GREEN_("%s") " ]", sprint_hex_inrow(newvalue, newvaluelen));
     PrintAndLogEx(INFO, "----------------------------------------------------");
 
-    bool got_pre = false, got_post = false;
+    uint8_t pre_tear = 0, post_tear = 0;
     uint8_t pre[3] = {0};
     uint8_t post[3] = {0};
     uint32_t actual_time = start_time;
+    uint32_t a = 0, b = 0;
+    uint32_t loop = 0;
+
+    uint16_t late = 0;
 
     while (actual_time <= (time_limit - interval)) {
+
+
+        DropField();
+
+        loop++;
 
         if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "\naborted via keyboard!\n");
             break;
         }
 
-        PrintAndLogEx(INPLACE, "Using tear-off delay " _GREEN_("%" PRIu32) " us", actual_time);
+        PrintAndLogEx(INPLACE, "Using tear-off delay " _GREEN_("%" PRIu32) " us  (attempt %u)", actual_time, loop);
 
-        if (ul_select(&card) == 0)
-            return PM3_ESOFT;
+        if (ul_select(&card) == false) {
+            PrintAndLogEx(FAILED, "BEFORE, failed to select card,  looping...");
+            continue;
+        }
 
-        got_pre = false;        
         uint8_t cntresp[3] = {0, 0, 0};
         int rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp));
         if ( rlen == sizeof(cntresp) ) {
             memcpy(pre, cntresp, sizeof(pre));
-            got_pre = true;
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "BEFORE, failed to read COUNTER,  exiting...");
+            break;
         }
+
+        uint8_t tear[1] = {0};
+        int tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
+        if ( tlen == sizeof(tear) ) {
+            pre_tear = tear[0];
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "BEFORE, failed to read ANTITEAR,  exiting...  %d", tlen);
+            break;
+        }
+
         DropField();
 
         struct p {
             uint8_t counter;
             uint32_t tearoff_time;
+            uint8_t value[3];
         } PACKED payload;
         payload.counter = cnt_no;
         payload.tearoff_time = actual_time;
+        memcpy(payload.value, newvalue, sizeof(payload.value));
 
         clearCommandBuffer();
         PacketResponseNG resp;
         SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
         if (!WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000)) {
             PrintAndLogEx(WARNING, "\ntear off command failed");
-            return PM3_ESOFT;
+            continue;
         }
 
-        got_post = false;
-        if (ul_select(&card) == 0)
-            return PM3_ESOFT;
+        if (ul_select(&card) == false) {
+            PrintAndLogEx(FAILED, "AFTER, failed to select card,  exiting...");
+            break;
+        }
 
         rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp));
         if ( rlen == sizeof(cntresp) ) {
             memcpy(post, cntresp, sizeof(post));
-            got_post = true;
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "AFTER, failed to read COUNTER,  exiting...");
+            break;
         }
+
+        tear[0] = 0;
+        tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
+        if ( tlen == sizeof(tear) ) {
+            post_tear = tear[0];
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "AFTER, failed to read ANTITEAR,  exiting...");
+            break;
+        }
+
         DropField();
 
-        if (got_pre && got_post) {
+        char prestr[20] = {0};
+        snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
+        char poststr[20] = {0};
+        snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
 
-            char prestr[20] = {0};
-            snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
-            char poststr[20] = {0};
-            snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
+        bool post_tear_check = (post_tear == 0xBD);
+        a = (pre[0] | pre[1] << 8 | pre[2]  << 16);
+        b = (post[0] | post[1] << 8 | post[2]  << 16);
 
-            if (memcmp(pre, post, sizeof(pre)) == 0) {
-//                PrintAndLogEx(INFO, "Current %d - %s", cnt_no, poststr);
+        // A != B
+        if (memcmp(pre, post, sizeof(pre)) != 0) {
+
+
+            PrintAndLogEx(NORMAL, "");
+
+            if (inital_value != a ) {
+
+                if ( inital_value != b )
+                    PrintAndLogEx(INFO, "pre %08x, post %08x != inital %08x  |  tear:  0x%02X  == 0x%02X", a, b, inital_value, pre_tear, post_tear);
+                else
+                    PrintAndLogEx(INFO, "pre %08x != inital and post %08x == inital %08x |  tear:  0x%02X  == 0x%02X", a, b, inital_value, pre_tear, post_tear);
             } else {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, _CYAN_("Tear off occured") " : %d  %s vs " _RED_("%s")
-                              , cnt_no, prestr, poststr);
+
+                if ( inital_value != b )
+                    PrintAndLogEx(INFO, "pre %08x == inital and post %08x != inital  %08x |  tear:  0x%02X  == 0x%02X", a, b, inital_value, pre_tear, post_tear);
             }
 
-        } else {
-            if (got_pre == false) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(FAILED, "Failed to read Counter BEFORE");
+            if ( b == 0 ) {
+                PrintAndLogEx(INFO, _CYAN_("Tear off occured  (ZEROS value!) ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
+                    , prestr
+                    , poststr
+                    , pre_tear
+                    , post_tear
+                    , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+                );
+                break;
             }
-            if (got_post == false) {
+
+            if ( a > b ) {
+                PrintAndLogEx(INFO, _CYAN_("Tear off occured  " _RED_("( LESS )") " ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
+                    , prestr
+                    , poststr
+                    , pre_tear
+                    , post_tear
+                    , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+                );
+
+
+                if (counter_reset_tear(&card, cnt_no) != PM3_SUCCESS){
+                    PrintAndLogEx(FAILED, "failed to reset tear,  exiting...");
+                    break;
+                }
+
+                uint32_t bar =  (0x1000000 - b) + 2;
+                // wr_value = bar;
+                // newvalue[0] = (bar) & 0xFF;
+                // newvalue[1] = ((bar >> 8) & 0xFF);
+                // newvalue[2] = ((bar >> 16) & 0xFF);
+
+                wr_value = 0;
+                newvalue[0] = 0;
+                newvalue[1] = 0;
+                newvalue[2] = 0;
+
+                PrintAndLogEx(INFO, "     0x1000000 - 0x%x == 0x%x", b, bar);
+                PrintAndLogEx(INFO, "      new increase value 0x%x" , wr_value);
+                PrintAndLogEx(INFO, "    because BAR + post == 0x%x" , bar + b);
+
+                PrintAndLogEx(INFO, "New increase value " _YELLOW_("%s"), sprint_hex_inrow(newvalue, newvaluelen));
+                continue;
+            } else  {
+
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(FAILED, "Failed to read Counter AFTER");
+                PrintAndLogEx(INFO, _CYAN_("Tear off occured  (+1)  (too late) ->  ") "%s vs %s   Tear:  0x%02X == 0x%02X   ( %s )"
+                    , prestr
+                    , poststr
+                    , pre_tear
+                    , post_tear
+                    , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+                );
+
+                if ( post_tear_check  && b == inital_value) {
+                    PrintAndLogEx(INFO, "Reverted to previous value");
+                    break;
+                }
+                if ( wr_value != 0 ) {
+
+                    //uint32_t bar =  (0x1000000 - b) + 2;
+                    wr_value = 0;
+                    newvalue[0] = 0;
+                    newvalue[1] = 0;
+                    newvalue[2] = 0;
+
+                    if ( b >= (inital_value + (2 * wr_value))) {
+                        PrintAndLogEx(INFO, "Large " _YELLOW_("( JUMP )") " detected");
+
+
+                        // wr_value = bar;
+                        // newvalue[0] = (bar) & 0xFF;
+                        // newvalue[1] = ((bar >> 8) & 0xFF);
+                        // newvalue[2] = ((bar >> 16) & 0xFF);
+                    } else {
+
+                        // wr_value = bar;
+                        // newvalue[0] = (bar) & 0xFF;
+                        // newvalue[1] = ((bar >> 8) & 0xFF);
+                        // newvalue[2] = ((bar >> 16) & 0xFF);
+                        // wr_value = 0;
+                        // newvalue[0] = 0;
+                        // newvalue[1] = 0;
+                        // newvalue[2] = 0;
+                    }
+
+                }
+                PrintAndLogEx(INFO, "New increase value " _YELLOW_("%s"), sprint_hex_inrow(newvalue, newvaluelen));
+
+                //actual_time--;
+                late++;
+            }
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, _CYAN_("Status:  same value!   ->  ") "%s == %s   Tear:  0x%02X == 0x%02X   ( %s )"
+                , prestr
+                , poststr
+                , pre_tear
+                , post_tear
+                , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+            );
+
+            if ( post_tear_check ) {
+                if ( a == b ) {
+                    //actual_time--;
+                    continue;
+                }
+
+                if ( b == inital_value ) {
+                    PrintAndLogEx(INFO, "Reverted to previous value");
+                    break;
+                }
+            } else {
+
+                if (counter_reset_tear(&card, cnt_no) != PM3_SUCCESS){
+                    PrintAndLogEx(FAILED, "failed to reset tear,  exiting...");
+                    break;
+                }
+
             }
         }
 
         actual_time += interval;
     }
+
     DropField();
+
+    PrintAndLogEx(INFO, " Sent %u tear offs ", loop);
+
+    counter_reset_tear(&card, cnt_no);
+
+    PrintAndLogEx(INFO, "hf 14a raw -s -c 3900              -->  read counter 0");
+    PrintAndLogEx(INFO, "hf 14a raw -s -c 3e00              -->  read tearing 0");
     PrintAndLogEx(NORMAL, "");
+    char read_cnt_str[30];
+    sprintf(read_cnt_str, "hf 14a raw -s -c 39%02x", counter);
+    CommandReceived(read_cnt_str);
+    char read_tear_str[30];
+    sprintf(read_tear_str, "hf 14a raw -s -c 3e%02x", counter);
+    CommandReceived(read_tear_str);
     return PM3_SUCCESS;
 }
 
+*/
 
 static int CmdHF14MfuNDEF(const char *Cmd) {
 
@@ -3329,7 +3584,7 @@ static command_t CommandTable[] = {
     {"gen",     CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3des mifare diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
-    {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1 Counter bits"},        
+//    {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1 Counter bits"},
     {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };

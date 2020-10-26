@@ -56,6 +56,7 @@
 
 |filename|description|
 |--------|-----------|
+|lf_sniff_blue_cloner_em4100.pm3          |Sniffing of blue cloner writing an EM4100 on T5577 and EM4305|
 |lf_sniff_ht2-BC3B8810-acg-reader.pm3     |Sniffing of Hitag2 being read by an HID ACG LF Multitag reader|
 |lf_sniff_ht2-BC3B8810-frosch-reader.pm3  |Sniffing of Hitag2 being read by a Frosch Hitag reader|
 |lf_sniff_ht2-BC3B8810-rfidler-reader.pm3 |Sniffing of Hitag2 being read by a RFIDler|

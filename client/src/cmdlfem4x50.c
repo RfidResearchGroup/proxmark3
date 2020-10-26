@@ -77,7 +77,7 @@ static int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_dump [h] [f <filename prefix>] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                     - this help");
-    PrintAndLogEx(NORMAL, "       f <filename prefix>   - overide filename prefix (optional).  Default is based on UID");
+    PrintAndLogEx(NORMAL, "       f <filename prefix>   - override filename prefix (optional).  Default is based on UID");
     PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_dump"));
@@ -315,7 +315,7 @@ int CmdEM4x50Info(const char *Cmd) {
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -388,10 +388,13 @@ int CmdEM4x50Write(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
 
     bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
     if (isOK == false) {
@@ -483,10 +486,14 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WRITE_PASSWORD, (uint8_t *)&etd, sizeof(etd));
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE_PASSWORD, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
+
     success = (bool)resp.status;
 
     // get, prepare and print response
@@ -515,7 +522,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     SendCommandNG(CMD_LF_EM4X50_READ, (uint8_t *)&edata, sizeof(edata));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_READ, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "(em4x50) timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -651,7 +658,7 @@ int CmdEM4x50Dump(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -726,7 +733,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&etd, sizeof(etd));
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2 * TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WIPE, &resp, 2 * TIMEOUT)) {
         PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.\n");
         return PM3_ETIMEOUT;
     }

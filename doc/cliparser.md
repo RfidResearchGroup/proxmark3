@@ -25,7 +25,7 @@ And then it fell into silence since it wasn't well documented how to use the cli
 Fast forward today, where more commands has used the cliparser but it still wasn't the natural way when adding a new client command to the Proxmark3 client.
 After more discussions among @doegox, @iceman1001 and @mrwalker the concept became more clear on how to use the cliparser lib in the _preferred_ way.
 
-The aftermath was a design and layout specified which lead to a simpler implementation of the cliparser in the client source code while still unifiy all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness.
+The aftermath was a design and layout specified which lead to a simpler implementation of the cliparser in the client source code while still unifying all helptexts with the new colours support and a defined layout. As seen below, the simplicity and clearness.
 
 ![sample of new style helptext](http://www.icedev.se/proxmark3/helptext.png)
 
@@ -203,11 +203,11 @@ CLIGetHexWithReturn(\<context\>, \<opt index\>, \<store variable\>, \<ptr to sto
     quick test : seems res_keylen == 0 when ok so not key len ???
 
 **string option return**
-CLIGetStrWithReturn(\<context\>,\<opt index\>, \<unsigned char \*\>, \<int \*\>);
+CLIGetStrWithReturn(\<context\>,\<opt index\>, \<uint8_t \*\>, \<int \*\>);
     If failed to retrieve string, it will exit fct
 
     uint8_t buffer[100];
-    int slen = 0;
+    int slen = sizeof(buffer); // <- slen MUST be the maximum number of characters that you want returned. e.g. Buffer Size
     CLIGetStrWithReturn(ctx, 1, buffer, &slen);
 
 **string option**     

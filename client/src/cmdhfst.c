@@ -215,15 +215,20 @@ int infoHF_ST(void) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
-    if (resplen < 2)
+    if (resplen < 2) {
+        DropField();
         return PM3_ESOFT;
+    }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -235,12 +240,15 @@ int infoHF_ST(void) {
     int aSELECT_FILE_CC_n = 0;
     param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n);
     res = ExchangeAPDU14a(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -248,12 +256,15 @@ int infoHF_ST(void) {
     int aREAD_CC_n = 0;
     param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);
     res = ExchangeAPDU14a(aREAD_CC, aREAD_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -265,12 +276,15 @@ int infoHF_ST(void) {
     int aSELECT_FILE_SYS_n = 0;
     param_gethex_to_eol("00a4000c02e101", 0, aSELECT_FILE_SYS, sizeof(aSELECT_FILE_SYS), &aSELECT_FILE_SYS_n);
     res = ExchangeAPDU14a(aSELECT_FILE_SYS, aSELECT_FILE_SYS_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting system file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -280,12 +294,15 @@ int infoHF_ST(void) {
     int aREAD_SYS_n = 0;
     param_gethex_to_eol("00b0000012", 0, aREAD_SYS, sizeof(aREAD_SYS), &aREAD_SYS_n);
     res = ExchangeAPDU14a(aREAD_SYS, aREAD_SYS_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "reading system file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
     print_st_system_info(response, resplen - 2);
@@ -377,15 +394,20 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
-    if (resplen < 2)
+    if (resplen < 2) {
+        DropField();
         return PM3_ESOFT;
+    }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -397,12 +419,15 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -412,8 +437,10 @@ static int cmd_hf_st_ndef(const char *Cmd) {
         int aVERIFY_n = 0;
         param_gethex_to_eol("0020000100", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
         res = ExchangeAPDU14a(aVERIFY, aVERIFY_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-        if (res)
+        if (res) {
+            DropField();
             return res;
+        }
 
         sw = get_sw(response, resplen);
         if (sw == 0x6300) {
@@ -421,12 +448,15 @@ static int cmd_hf_st_ndef(const char *Cmd) {
             param_gethex_to_eol("0020000110", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
             memcpy(aVERIFY + aVERIFY_n, pwd, pwdlen);
             res = ExchangeAPDU14a(aVERIFY, aVERIFY_n + pwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-            if (res)
+            if (res) {
+                DropField();
                 return res;
+            }
 
             sw = get_sw(response, resplen);
             if (sw != 0x9000) {
                 PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                DropField();
                 return PM3_ESOFT;
             }
         }
@@ -437,12 +467,15 @@ static int cmd_hf_st_ndef(const char *Cmd) {
     int aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b000001d", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
     res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -490,25 +523,23 @@ static int cmd_hf_st_protect(const char *Cmd) {
     if (enable_protection && disable_protection) {
         PrintAndLogEx(ERR, "Must specify either enable or disable protection, not both");
         return PM3_EINVARG;
-    } else {
-        if (enable_protection) {
-            state[0] = 0x28;
-        }
-        if (disable_protection) {
-            state[0] = 0x26;
-        }
+    }
+    if (enable_protection) {
+        state[0] = 0x28;
+    }
+    if (disable_protection) {
+        state[0] = 0x26;
     }
 
     if (read_protection && write_protection) {
         PrintAndLogEx(ERR, "Must specify either read or write protection, not both");
         return PM3_EINVARG;
-    } else {
-        if (read_protection) {
-            state[2] = 0x01;
-        }
-        if (write_protection) {
-            state[2] = 0x02;
-        }
+    }
+    if (read_protection) {
+        state[2] = 0x01;
+    }
+    if (write_protection) {
+        state[2] = 0x02;
     }
 
     if (pwdlen != 16) {
@@ -526,15 +557,20 @@ static int cmd_hf_st_protect(const char *Cmd) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
-    if (resplen < 2)
+    if (resplen < 2) {
+        DropField();
         return PM3_ESOFT;
+    }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -546,12 +582,15 @@ static int cmd_hf_st_protect(const char *Cmd) {
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -562,12 +601,15 @@ static int cmd_hf_st_protect(const char *Cmd) {
     param_gethex_to_eol("0020000210", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
     memcpy(aVERIFY + aVERIFY_n, pwd, pwdlen);
     res = ExchangeAPDU14a(aVERIFY, aVERIFY_n + pwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -578,12 +620,15 @@ static int cmd_hf_st_protect(const char *Cmd) {
     param_gethex_to_eol("00", 0, aPROTECT, sizeof(aPROTECT), &aPROTECT_n);
     memcpy(aPROTECT + aPROTECT_n, state, statelen);
     res = ExchangeAPDU14a(aPROTECT, aPROTECT_n + statelen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "changing protection failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -629,13 +674,12 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     if (change_read_password && change_write_password) {
         PrintAndLogEx(ERR, "Must specify either read or write, not both");
         return PM3_EINVARG;
-    } else {
-        if (change_read_password) {
-            changePwd[2] = 0x01;
-        }
-        if (change_write_password) {
-            changePwd[2] = 0x02;
-        }
+    }
+    if (change_read_password) {
+        changePwd[2] = 0x01;
+    }
+    if (change_write_password) {
+        changePwd[2] = 0x02;
     }
 
     if (pwdlen != 16) {
@@ -657,15 +701,20 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
-    if (resplen < 2)
+    if (resplen < 2) {
+        DropField();
         return PM3_ESOFT;
+    }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -677,12 +726,15 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
     res = ExchangeAPDU14a(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -693,12 +745,15 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     param_gethex_to_eol("0020000210", 0, aVERIFY, sizeof(aVERIFY), &aVERIFY_n);
     memcpy(aVERIFY + aVERIFY_n, pwd, pwdlen);
     res = ExchangeAPDU14a(aVERIFY, aVERIFY_n + pwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -711,12 +766,15 @@ static int cmd_hf_st_pwd(const char *Cmd) {
     memcpy(aCHG_PWD + aCHG_PWD_n, changePwd, changePwdlen);
     memcpy(aCHG_PWD + aCHG_PWD_n + changePwdlen, newpwd, newpwdlen);
     res = ExchangeAPDU14a(aCHG_PWD, aCHG_PWD_n + changePwdlen + newpwdlen, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res)
+    if (res) {
+        DropField();
         return res;
+    }
 
     sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "password change failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, " %s password changed", ((changePwd[2] & 0x01) == 0x01) ? _YELLOW_("read") : _YELLOW_("write"));

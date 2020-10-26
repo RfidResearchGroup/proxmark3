@@ -14,6 +14,7 @@
 #include "lfadc.h"
 #include "commonutil.h"
 #include "em4x50.h"
+#include "appmain.h" // tear
 
 // 4 data bytes
 // + byte with row parities
@@ -470,10 +471,12 @@ static bool find_double_listen_window(bool bcommand) {
 
                 if (bcommand) {
 
+//                    SpinDelay(10);
+
                     // data transmission from card has to be stopped, because
                     // a commamd shall be issued
 
-                    // unfortunately the posititon in listen window (where
+                    // unfortunately the position in listen window (where
                     // command request has to be sent) has gone, so if a
                     // second window follows - sync on this to issue a command
 
@@ -519,7 +522,7 @@ static bool find_em4x50_tag(void) {
 static bool request_receive_mode(void) {
 
     // To issue a command we have to find a listen window first.
-    // Because identification and sychronization at the same time is not
+    // Because identification and synchronization at the same time is not
     // possible when using pulse lengths a double listen window is used.
     bool bcommand = true;
     return find_double_listen_window(bcommand);
@@ -556,7 +559,7 @@ static bool check_ack(bool bliw) {
                     // "bit" of listen window)
                     wait_timer(FPGA_TIMER_0, T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
 
-                    // check for listen window (if first bit cannot be inerpreted
+                    // check for listen window (if first bit cannot be interpreted
                     // as a valid bit it must belong to a listen window)
                     if (get_next_bit() == EM4X50_BIT_OTHER) {
 
@@ -727,7 +730,7 @@ static bool standard_read(int *now) {
     int fwr = *now;
     uint8_t bits[EM4X50_TAG_WORD] = {0};
 
-    // start with the identification of two succsessive listening windows
+    // start with the identification of two successive listening windows
     if (find_double_listen_window(false)) {
 
         // read and save words until following double listen window is detected
@@ -816,7 +819,7 @@ void em4x50_info(em4x50_data_t *etd) {
     status = (bsuccess << 1) + blogin;
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)tag.sectors, 238);
 }
 
 void em4x50_read(em4x50_data_t *etd) {
@@ -860,14 +863,13 @@ void em4x50_read(em4x50_data_t *etd) {
     status = (now << 2) + (bsuccess << 1) + blogin;
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)tag.sectors, 238);
 }
 
 //==============================================================================
 // write functions
 //==============================================================================
-
-static bool write(uint8_t word[4], uint8_t address) {
+static int write(uint8_t word[4], uint8_t address) {
 
     // writes <word> to specified <address>
 
@@ -882,17 +884,23 @@ static bool write(uint8_t word[4], uint8_t address) {
         // send data
         em4x50_send_word(word);
 
-        // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-        wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+            reply_ng(CMD_LF_EM4X50_WRITE, PM3_ETEAROFF, NULL, 0);
+            return PM3_ETEAROFF;
+        } else {
 
-        // look for ACK sequence
-        if (check_ack(false)) {
+            // wait for T0 * EM4X50_T_TAG_TWA (write access time)
+            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
 
-            // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
-            // for saving data and should return with ACK
-            if (check_ack(false))
-                return true;
+            // look for ACK sequence
+            if (check_ack(false)) {
 
+                // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time)
+                // for saving data and should return with ACK
+                if (check_ack(false))
+                    return PM3_SUCCESS;
+
+            }
         }
 
     } else {
@@ -900,10 +908,10 @@ static bool write(uint8_t word[4], uint8_t address) {
             Dbprintf("error in command request");
     }
 
-    return false;
+    return PM3_ESOFT;
 }
 
-static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
+static int write_password(uint8_t password[4], uint8_t new_password[4]) {
 
     // changes password from <password> to <new_password>
 
@@ -915,23 +923,29 @@ static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
         // send address data
         em4x50_send_word(password);
 
-        // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
-        wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TPP);
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+            reply_ng(CMD_LF_EM4X50_WRITE, PM3_ETEAROFF, NULL, 0);
+            return PM3_ETEAROFF;
+        } else {
 
-        // look for ACK sequence and send rm request
-        // during following listen window
-        if (check_ack(true)) {
+            // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
+            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TPP);
 
-            // send new password
-            em4x50_send_word(new_password);
+            // look for ACK sequence and send rm request
+            // during following listen window
+            if (check_ack(true)) {
 
-            // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-            wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
+                // send new password
+                em4x50_send_word(new_password);
 
-            if (check_ack(false))
+                // wait for T0 * EM4X50_T_TAG_TWA (write access time)
+                wait_timer(FPGA_TIMER_0, T0 * EM4X50_T_TAG_TWA);
+
                 if (check_ack(false))
-                    return true;
+                    if (check_ack(false))
+                        return PM3_SUCCESS;
 
+            }
         }
 
     } else {
@@ -939,7 +953,7 @@ static bool write_password(uint8_t password[4], uint8_t new_password[4]) {
             Dbprintf("error in command request");
     }
 
-    return false;
+    return PM3_ESOFT;
 }
 
 void em4x50_write(em4x50_data_t *etd) {
@@ -966,8 +980,13 @@ void em4x50_write(em4x50_data_t *etd) {
             blogin = login(etd->password);
 
         // write word to given address
-        if (write(etd->word, etd->address)) {
+        int res = write(etd->word, etd->address);
+        if (res == PM3_ETEAROFF) {
+            lf_finalize();
+            return;
+        }
 
+        if (res == PM3_SUCCESS) {
             // to verify result reset EM4x50
             if (reset()) {
 
@@ -996,14 +1015,13 @@ void em4x50_write(em4x50_data_t *etd) {
     }
 
     status = (bsuccess << 1) + blogin;
-
     lf_finalize();
-    reply_ng(CMD_ACK, status, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)tag.sectors, 238);
 }
 
 void em4x50_write_password(em4x50_data_t *etd) {
 
-    // sinmple change of password
+    // simple change of password
 
     bool bsuccess = false;
 
@@ -1015,12 +1033,18 @@ void em4x50_write_password(em4x50_data_t *etd) {
 
         // login and change password
         if (login(etd->password)) {
-            bsuccess = write_password(etd->password, etd->new_password);
+
+            int res = write_password(etd->password, etd->new_password);
+            if (res == PM3_ETEAROFF) {
+                lf_finalize();
+                return;
+            }
+            bsuccess = (res == PM3_SUCCESS);
         }
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, 0, 0);
+    reply_ng(CMD_LF_EM4X50_WRITE_PASSWORD, bsuccess, 0, 0);
 }
 
 void em4x50_wipe(em4x50_data_t *etd) {
@@ -1049,7 +1073,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
             // to verify result reset EM4x50
             if (reset()) {
 
-                // login not necessary because protectd word has been set to 0
+                // login not necessary because protected word has been set to 0
                 // -> no read protected words
                 // -> selective read can be called immediately
                 if (selective_read(addresses)) {
@@ -1078,5 +1102,5 @@ void em4x50_wipe(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, (uint8_t *)tag.sectors, 238);
+    reply_ng(CMD_LF_EM4X50_WIPE, bsuccess, (uint8_t *)tag.sectors, 238);
 }

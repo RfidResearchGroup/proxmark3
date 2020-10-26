@@ -150,7 +150,7 @@ Note that it may take a quite long time for a freshly plugged Proxmark3 to be vi
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
 ## Color text on windows 10
-In later versions of windows 10 you may be able to get color to work by setting this registery key
+In later versions of windows 10 you may be able to get color to work by setting this registry key
 ```
 [HKEY_CURRENT_USER\Console]
     "VirtualTerminalLevel"=dword:00000001

@@ -92,7 +92,7 @@ About 1 us precision
 * `void StartCountUS(void)`
 * `uint32_t RAMFUNC GetCountUS(void)`
 
-Use two chainer timers TC0 and TC1.
+Use two chained timers TC0 and TC1.
 TC0 runs at 1.5 MHz and TC1 is clocked when TC0 reaches 0xC000.
 
 Maximal value: 0x7fffffff = 2147 s
@@ -110,13 +110,13 @@ About 1 cycle of 13.56 MHz? precision
 * `uint32_t RAMFUNC GetCountSspClk(void)`
 * `uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start)` <= **TODO** could be used more often
 
-Use two chainer timers TC0 and TC1.
+Use two chained timers TC0 and TC1.
 TC0 runs at SSP_CLK from FPGA (13.56 MHz?) and TC1 is clocked when TC0 loops.
 
 Usage:
 
 * for iso14443 commands to count field cycles
-* Also usable with FPGA in LF mode ?? cf `armsrc/legicrfsim.c` SSP Clock is clocked by the FPGA at 212 kHz (subcarrier frequency)
+* Also usable with FPGA in LF mode ?? cf `armsrc/legicrfsim.c` SSP Clock is clocked by the FPGA at 212 kHz (sub-carrier frequency)
 
 Can't be used at the same time as CountUS or Ticks functions.
 
@@ -133,7 +133,7 @@ cf `armsrc/ticks.c`
 * `void WaitMS(uint32_t ms)`
 * `void StopTicks(void)` <= **TODO** why a stop for this timer and not for CountUS / CountSspClk ?
 
-Use two chainer timers TC0 and TC1.
+Use two chained timers TC0 and TC1.
 TC0 runs at 1.5 MHz and TC1 is clocked when TC0 loops.
 
 Maximal value: 0xffffffff = 2863 s (but don't use high value with WaitTicks else you'll trigger WDT)

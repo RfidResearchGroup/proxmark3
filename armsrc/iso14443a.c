@@ -1778,9 +1778,10 @@ static void PrepareDelayedTransfer(uint16_t delay) {
 //-------------------------------------------------------------------------------------
 static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing) {
 
-    if (!hf_field_active)
+    if (!hf_field_active) {
+        Dbprintf("Warning: HF field is off, ignoring TransmitFor14443a command");
         return;
-
+    }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
     if (timing) {
@@ -2189,8 +2190,10 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *received_len) {
 
-    if (!hf_field_active)
+    if (!hf_field_active) {
+        Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag_Thinfilm command");
         return false;
+    }
 
     // Set FPGA mode to "reader listen mode", no modulation (listen
     // only, since we are receiving, not transmitting).
@@ -2390,7 +2393,7 @@ void iso14443a_antifuzz(uint32_t flags) {
         }
     }
 
-    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_SUCCESS, NULL, 0);
     switch_off();
     BigBuf_free_keep_EM();
 }
@@ -2624,13 +2627,13 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
     } // else force RATS
 
     // RATS, Request for answer to select
-    if (!no_rats) {
-        uint8_t rats[]       = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
+    if (no_rats == false) {
+        uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, resp_par);
-
-        if (!len) return 0;
+        if (len == 0)
+            return 0;
 
         if (p_card) {
             memcpy(p_card->ats, resp, sizeof(p_card->ats));
@@ -2932,7 +2935,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
             FpgaDisableTracing();
-            reply_old(CMD_ACK, 0, 0, 0, NULL, 0);
+            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
         } else {
             arg0 = ReaderReceive(buf, par);
             FpgaDisableTracing();

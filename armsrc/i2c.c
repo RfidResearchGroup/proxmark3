@@ -47,12 +47,6 @@ static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_2CLK    I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
 
-#define I2C_DELAY_100us   I2CSpinDelayClk( 100 / 3)
-#define I2C_DELAY_600us   I2CSpinDelayClk( 600 / 3)
-#define I2C_DELAY_10ms    I2CSpinDelayClk( 10 * 1000 / 3 )
-#define I2C_DELAY_30ms    I2CSpinDelayClk( 30 * 1000 / 3 )
-#define I2C_DELAY_100ms   I2CSpinDelayClk( 100 * 1000 / 3)
-
 #define  ISO7618_MAX_FRAME 255
 
 // try i2c bus recovery at 100kHz = 5us high, 5us low
@@ -134,11 +128,11 @@ void I2C_Reset_EnterMainProgram(void) {
     StartTicks();
     I2C_init();
     I2C_SetResetStatus(0, 0, 0);
-    I2C_DELAY_30ms;
+    WaitMS(30);
     I2C_SetResetStatus(1, 0, 0);
-    I2C_DELAY_30ms;
+    WaitMS(30);
     I2C_SetResetStatus(1, 1, 1);
-    I2C_DELAY_10ms;
+    WaitMS(10);
 }
 
 // Reset the SIM_Adapter, then enter the bootloader program
@@ -147,9 +141,9 @@ void I2C_Reset_EnterBootloader(void) {
     StartTicks();
     I2C_init();
     I2C_SetResetStatus(0, 1, 1);
-    I2C_DELAY_100ms;
+    WaitMS(100);
     I2C_SetResetStatus(1, 1, 1);
-    I2C_DELAY_10ms;
+    WaitMS(10);
 }
 
 // Wait for the clock to go High.
@@ -187,13 +181,13 @@ static bool WaitSCL_L(void) {
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 18000;
+    volatile uint32_t delay = 1800;
     while (delay--) {
         // exit on SCL LOW
         if (!SCL_read)
             return true;
 
-        I2C_DELAY_100us;
+        WaitMS(1);
     }
     return (delay == 0);
 }
@@ -225,7 +219,7 @@ static bool I2C_WaitForSim(void) {
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
     // 1byte transfer == 1ms  with max frame being 256bytes
-    if (!WaitSCL_H_delay(30 * 1000 * 50))
+    if (!WaitSCL_H_delay(20 * 1000 * 50))
         return false;
 
     return true;
@@ -440,8 +434,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t d
 
     // extra wait  500us (514us measured)
     // 200us  (xx measured)
-//    WaitUS(600);
-    I2C_DELAY_600us;
+    WaitUS(600);
 
     bool bBreak = true;
     uint16_t readcount = 0;
@@ -641,6 +634,9 @@ bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
 
         len = I2C_BufferRead(dest, *destlen, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 
+
+        LED_C_ON();
+
         if (len > 1) {
             break;
         } else if (len == 1) {
@@ -674,7 +670,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
     if (I2C_WaitForSim() == false)
         return false;
-
+   
     // read bytes from module
     uint8_t len = sizeof(card_ptr->atr);
     if (sc_rx_bytes(card_ptr->atr, &len) == false)
@@ -713,12 +709,12 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 }
 
 void SmartCardAtr(void) {
-    smart_card_atr_t card;
     LED_D_ON();
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
-    bool isOK = GetATR(&card, true);
-    reply_mix(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+    smart_card_atr_t card;
+    int res = GetATR(&card, true) ? PM3_SUCCESS : PM3_ETIMEOUT;    
+    reply_ng(CMD_SMART_ATR, res, (uint8_t*)&card, sizeof(smart_card_atr_t));
     set_tracing(false);
     LEDsoff();
 }
@@ -811,8 +807,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         }
 
         // writing takes time.
-//        WaitMS(50);
-        I2C_DELAY_100ms;
+        WaitMS(100);
 
         // read
         res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
@@ -844,12 +839,10 @@ void SmartCardSetClock(uint64_t arg0) {
     LED_D_ON();
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
-
     // Send SIM CLC
     // start [C0 05 xx] stop
     I2C_WriteByte(arg0, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
-
-    reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_ng(CMD_SMART_SETCLOCK, PM3_SUCCESS, NULL, 0);
     set_tracing(false);
     LEDsoff();
 }

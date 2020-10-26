@@ -417,7 +417,7 @@ static int CmdHIDBrute(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool verbose = arg_get_lit(ctx, 1);
-
+    formatLen = sizeof(format);
     CLIGetStrWithReturn(ctx, 2, format, &formatLen);
 
     format_idx = HIDFindCardFormat((char *) format);
@@ -433,8 +433,6 @@ static int CmdHIDBrute(const char *Cmd) {
     cn_hi.OEM = arg_get_int_def(ctx, 6, 0);
     delay = arg_get_int_def(ctx, 7, 1000);
 
-    CLIParserFree(ctx);
-
     if (arg_get_lit(ctx, 8) && arg_get_lit(ctx, 9)) {
         direction = 0;
     } else if (arg_get_lit(ctx, 8)) {
@@ -443,6 +441,8 @@ static int CmdHIDBrute(const char *Cmd) {
         direction = 2;
     }
 
+    CLIParserFree(ctx);
+    
     if (verbose) {
         PrintAndLogEx(INFO, "Wiegand format#.. %i", format_idx);
         PrintAndLogEx(INFO, "OEM#............. %u", cn_hi.OEM);
@@ -470,7 +470,7 @@ static int CmdHIDBrute(const char *Cmd) {
     cn_low = cn_hi;
 
     // main loop
-    // iceman:  could add options for bruteforcing OEM, ISSUE or FC aswell..
+    // iceman:  could add options for bruteforcing OEM, ISSUE or FC as well..
     bool exitloop = false;
     bool fin_hi, fin_low;
     fin_hi = fin_low = false;

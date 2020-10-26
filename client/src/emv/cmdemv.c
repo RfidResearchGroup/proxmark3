@@ -1435,7 +1435,7 @@ static int CmdEMVScan(const char *Cmd) {
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
 
     uint8_t filename[FILE_PATH_SIZE] = {0};
-    int filenamelen = 0;
+    int filenamelen = sizeof(filename);
     CLIGetStrWithReturn(ctx, 12, filename, &filenamelen);
 
     CLIParserFree(ctx);

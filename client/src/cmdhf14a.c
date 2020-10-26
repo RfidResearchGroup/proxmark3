@@ -27,6 +27,8 @@
 #include "crc16.h"
 #include "util_posix.h"  // msclock
 #include "aidsearch.h"
+#include "cmdhf.h"       // handle HF plot
+
 
 bool APDUInFramingEnable = true;
 
@@ -265,6 +267,7 @@ static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
     PrintAndLogEx(NORMAL, "       x    just drop the signal field");
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
+    PrintAndLogEx(NORMAL, "       @    continuous mode. Updates hf plot as well");
     return PM3_SUCCESS;
 }
 
@@ -475,9 +478,9 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 static int CmdHF14AReader(const char *Cmd) {
 
     uint32_t cm = ISO14A_CONNECT;
-    bool disconnectAfter = true, silent = false;
+    bool disconnectAfter = true, silent = false, continuous = false;
     int cmdp = 0;
-
+    int res = PM3_SUCCESS;
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -494,6 +497,9 @@ static int CmdHF14AReader(const char *Cmd) {
             case 'x':
                 cm &= ~ISO14A_CONNECT;
                 break;
+            case '@':
+                continuous = true;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown command.");
                 return PM3_EINVARG;
@@ -503,60 +509,86 @@ static int CmdHF14AReader(const char *Cmd) {
 
     if (!disconnectAfter)
         cm |= ISO14A_NO_DISCONNECT;
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
-
-    if (ISO14A_CONNECT & cm) {
-        PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-            if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
-        /*
-            0: couldn't read
-            1: OK, with ATS
-            2: OK, no ATS
-            3: proprietary Anticollision
-        */
-        uint64_t select_status = resp.oldarg[0];
-
-        if (select_status == 0) {
-            if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        if (select_status == 3) {
-            PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-            PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-        PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
-        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
-
-        if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-            PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
-        }
-
-        if (!disconnectAfter) {
-            if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
-        }
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
+    do {
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+
+        if (ISO14A_CONNECT & cm) {
+            PacketResponseNG resp;
+            if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+
+            iso14a_card_select_t card;
+            memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+            /*
+                0: couldn't read
+                1: OK, with ATS
+                2: OK, no ATS
+                3: proprietary Anticollision
+            */
+            uint64_t select_status = resp.oldarg[0];
+
+            if (select_status == 0) {
+                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+
+            if (select_status == 3) {
+                if (!(silent && continuous)) {
+                    PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+                    PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
+                }
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+            if (!(silent && continuous)) {
+                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+                PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
+                PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+                if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+                    PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
+                }
+            }
+            if (!disconnectAfter) {
+                if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
+            }
+        }
+plot:
+        if (continuous) {            
+            res = handle_hf_plot();
+            if (res != PM3_SUCCESS) {
+                break;
+            }
+        }
+
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+    } while (continuous);
 
     if (disconnectAfter) {
-        if (!silent) PrintAndLogEx(INFO, "field dropped.");
+        if (silent == false) {
+            PrintAndLogEx(INFO, "field dropped.");
+        }
     }
 
-    return PM3_SUCCESS;
+    if (continuous)
+        return PM3_SUCCESS;
+    else
+        return res;
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
@@ -1338,7 +1370,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         if (!res && datalen > 0)
             waitCmd(0, timeout);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int waitCmd(uint8_t iSelect, uint32_t timeout) {
@@ -1398,16 +1430,20 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t arg0 = FLAG_4B_UID_IN_DATA;
+    struct {
+        uint8_t flag;
+    } PACKED param;
+    param.flag = FLAG_4B_UID_IN_DATA;
+
     if (arg_get_lit(ctx, 2))
-        arg0 = FLAG_7B_UID_IN_DATA;
+        param.flag = FLAG_7B_UID_IN_DATA;
     if (arg_get_lit(ctx, 3))
-        arg0 = FLAG_10B_UID_IN_DATA;
+        param.flag = FLAG_10B_UID_IN_DATA;
 
     CLIParserFree(ctx);
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_ANTIFUZZ, arg0, 0, 0, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t*)&param, sizeof(param));
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AChaining(const char *Cmd) {
@@ -1438,7 +1474,7 @@ static int CmdHF14AChaining(const char *Cmd) {
 
     PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void printTag(const char *tag) {
@@ -1681,10 +1717,16 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 }
                 getTagLabel(card.uid[0], card.uid[1]);
                 break;
-            case 0x57: // Qualcomm
+            case 0x46:
+                if (memcmp(card.uid, "FSTN10m", 7) == 0) {
+                    isMifareClassic = false;
+                    printTag("Waveshare NFC-Powered e-Paper 1.54\" (please disregard MANUFACTURER mapping above)");
+                }
+                break;
+            case 0x57:
                 if (memcmp(card.uid, "WSDZ10m", 7) == 0) {
                     isMifareClassic = false;
-                    printTag("Waveshare NFC-Powered e-Paper");
+                    printTag("Waveshare NFC-Powered e-Paper (please disregard MANUFACTURER mapping above)");
                 }
                 break;
             default:
@@ -1831,11 +1873,47 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (card.ats[0] > pos && card.ats[0] <  card.ats_len - 2) {
             const char *tip = "";
             if (card.ats[0] - pos >= 7) {
-                if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                    tip = "-> MIFARE Plus X 2K or 4K";
-                } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-                    tip = "-> MIFARE Plus S 2K or 4K";
+
+                if ((card.sak & 0x70) == 0x40) {  // and no GetVersion()..
+
+                    if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                        tip = "-> MIFARE Plus X 2K/4K (SL3)";
+                    } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+
+                        if ((card.atqa[0] & 0x02) == 0x02)
+                            tip = "-> MIFARE Plus S 2K (SL3)";
+                        else if ((card.atqa[0] & 0x04) == 0x04)
+                            tip = "-> MIFARE Plus S 4K (SL3)";
+
+                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
+                        tip = "-> MIFARE Plus SE 1K (17pF)";
+                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
+                        tip = "-> MIFARE Plus SE 1K (70pF)";
+                    }
+
+                } else {  //SAK B4,5,6
+
+                    if ((card.sak & 0x20) == 0x20) {  // and no GetVersion()..
+
+
+                        if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                            tip = "-> MIFARE Plus X 2K (SL1)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+                            tip = "-> MIFARE Plus S 2K (SL1)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
+                            tip = "-> MIFARE Plus SE 1K (17pF)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
+                            tip = "-> MIFARE Plus SE 1K (70pF)";
+                        }
+                    } else {
+                        if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                            tip = "-> MIFARE Plus X 4K (SL1)";
+                        } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+                            tip = "-> MIFARE Plus S 4K (SL1)";
+                        }
+                    }
                 }
+
             }
             PrintAndLogEx(SUCCESS, "       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
             if (card.ats[pos] == 0xC1) {

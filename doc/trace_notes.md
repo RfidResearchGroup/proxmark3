@@ -17,7 +17,7 @@ With `trace list` a table is shown which gives timing information, the src of th
 ### Timing
 ^[Top](#top)
 
-The Start and the End coloumn lists timestamps when the transmission of the shown data started (time of first bit) and when it ended (end of last modulation).
+The Start and the End column lists timestamps when the transmission of the shown data started (time of first bit) and when it ended (end of last modulation).
 
 The unit for this time information depends on the protocol in use:
 
@@ -29,7 +29,7 @@ The unit for this time information depends on the protocol in use:
 * iClass, ISO15693, ISO18092 and FeliCa have no accurate timing information at the moment
 * For others timing is not available
 
-By specifing the option ```f``` (e.g. ```trace list 14a f```) the frame delay times are shown. (So you don't have to do the math by your own).
+By specifying the option ```f``` (e.g. ```trace list 14a f```) the frame delay times are shown. (So you don't have to do the math by your own).
 
 ### Sources
 ^[Top](#top)
@@ -39,7 +39,7 @@ If the data is marked as a response the source is shown as Tag. Otherwise it is 
 ### Data
 ^[Top](#top)
 
-This coloumn show the raw bytes trasmitted over the air. With option ```c``` CRC bytes are marked in square brackets.
+This column shows the raw bytes transmitted over the air. With option ```c``` CRC bytes are marked in square brackets.
 
 ### CRC
 ^[Top](#top)

@@ -209,6 +209,7 @@ static int cmd_hf_fido_register(const char *cmd) {
 
     if (paramsPlain) {
         memset(cdata, 0x00, 32);
+        chlen = sizeof(cdata);
         CLIGetStrWithReturn(ctx, 6, cdata, &chlen);
         if (chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
@@ -216,6 +217,7 @@ static int cmd_hf_fido_register(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        chlen = sizeof(cdata);
         CLIGetHexWithReturn(ctx, 6, cdata, &chlen);
         if (chlen && chlen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
@@ -229,6 +231,7 @@ static int cmd_hf_fido_register(const char *cmd) {
 
     if (paramsPlain) {
         memset(adata, 0x00, 32);
+        applen = sizeof(adata);
         CLIGetStrWithReturn(ctx, 7, adata, &applen);
         if (applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
@@ -236,6 +239,7 @@ static int cmd_hf_fido_register(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        applen = sizeof(adata);
         CLIGetHexWithReturn(ctx, 7, adata, &applen);
         if (applen && applen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
@@ -485,6 +489,7 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
 
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
+        hdatalen = sizeof(hdata);
         CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
@@ -492,6 +497,7 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        hdatalen = sizeof(hdata);
         CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length must be 32 bytes only.");
@@ -505,6 +511,7 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
 
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
+        hdatalen = sizeof(hdata);
         CLIGetStrWithReturn(ctx, 11, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
@@ -512,6 +519,7 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
             return PM3_EINVARG;
         }
     } else {
+        hdatalen = sizeof(hdata);
         CLIGetHexWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen && hdatalen != 32) {
             PrintAndLogEx(ERR, "ERROR: application parameter length must be 32 bytes only.");
@@ -693,6 +701,7 @@ static int cmd_hf_fido_2make_credential(const char *cmd) {
     uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
     int jsonnamelen = 0;
+    jsonnamelen = sizeof(jsonname);
     CLIGetStrWithReturn(ctx, 5, jsonname, &jsonnamelen);
 
     if (!jsonnamelen) {
@@ -817,7 +826,7 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
 
     uint8_t jsonname[FILE_PATH_SIZE] = {0};
     char *cjsonname = (char *)jsonname;
-    int jsonnamelen = 0;
+    int jsonnamelen = sizeof(jsonname);
     CLIGetStrWithReturn(ctx, 5, jsonname, &jsonnamelen);
 
     if (!jsonnamelen) {
@@ -915,7 +924,7 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                      AlwaysAvailable, "This help."},
-    {"info",      cmd_hf_fido_list,             IfPm3Iso14443a,  "List ISO 14443A history"},
+    {"list",      cmd_hf_fido_list,             IfPm3Iso14443a,  "List ISO 14443A history"},
     {"info",      cmd_hf_fido_info,             IfPm3Iso14443a,  "Info about FIDO tag."},
     {"reg",       cmd_hf_fido_register,         IfPm3Iso14443a,  "FIDO U2F Registration Message."},
     {"auth",      cmd_hf_fido_authenticate,     IfPm3Iso14443a,  "FIDO U2F Authentication Message."},

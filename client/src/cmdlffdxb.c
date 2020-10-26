@@ -470,7 +470,7 @@ const fdxbCountryMapping_t fdxbCountryMapping[] = {
     { 0,   "N/A" } // must be the last entry
 };
 
-static const char* mapFDBX(uint16_t countryCode) {
+static const char *mapFDBX(uint16_t countryCode) {
     uint16_t i = 0;
     while (fdxbCountryMapping[i].code > 0) {
         if (countryCode == fdxbCountryMapping[i].code) {
@@ -572,8 +572,8 @@ int demodFDXB(bool verbose) {
     PrintAndLogEx(SUCCESS, "  Animal bit set?  %s", animalBit ? _YELLOW_("True") : "False");
     PrintAndLogEx(SUCCESS, "      Data block?  %s  [value 0x%X]", dataBlockBit ? _YELLOW_("True") : "False", extended);
     PrintAndLogEx(SUCCESS, "        RUDI bit?  %s", rudiBit ? _YELLOW_("True") " (advanced transponder)" : "False");
-    PrintAndLogEx(SUCCESS, "       User Info?  %u %s", userInfo, userInfo == 0 ? "(RFU)":"");
-    PrintAndLogEx(SUCCESS, "  Replacement No?  %u %s", replacementNr, replacementNr == 0 ? "(RFU)":"");
+    PrintAndLogEx(SUCCESS, "       User Info?  %u %s", userInfo, userInfo == 0 ? "(RFU)" : "");
+    PrintAndLogEx(SUCCESS, "  Replacement No?  %u %s", replacementNr, replacementNr == 0 ? "(RFU)" : "");
 
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
