@@ -219,7 +219,7 @@ static bool I2C_WaitForSim(void) {
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
     // 1byte transfer == 1ms  with max frame being 256bytes
-    if (!WaitSCL_H_delay(20 * 1000 * 50))
+    if (!WaitSCL_H_delay(10 * 1000 * 50))
         return false;
 
     return true;
@@ -807,7 +807,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         }
 
         // writing takes time.
-        WaitMS(100);
+        WaitMS(50);
 
         // read
         res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
@@ -827,7 +827,8 @@ void SmartCardUpgrade(uint64_t arg0) {
         length -= size;
         pos += size;
     }
-    reply_mix(CMD_ACK, isOK, pos, 0, 0, 0);
+    
+    reply_ng(CMD_SMART_UPGRADE, (isOK) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
     LED_C_OFF();
     BigBuf_free();
 }

@@ -46,6 +46,7 @@
 #include "util.h"
 #include "ticks.h"
 #include "commonutil.h"
+#include "crc16.h"
 
 #ifdef WITH_LCD
 #include "LCD.h"
@@ -1654,13 +1655,44 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SMART_UPLOAD: {
             // upload file from client
+            struct p {
+                uint32_t idx;
+                uint32_t bytes_in_packet;
+                uint16_t crc;
+                uint8_t data[400];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
             uint8_t *mem = BigBuf_get_addr();
-            memcpy(mem + packet->oldarg[0], packet->data.asBytes, PM3_CMD_DATA_SIZE);
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+            memcpy(mem + payload->idx, payload->data, payload->bytes_in_packet);
+            
+            uint8_t a = 0, b = 0;
+            compute_crc(CRC_14443_A, mem + payload->idx,  payload->bytes_in_packet, &a, &b);
+            int res = PM3_SUCCESS;
+            if (payload->crc != (a << 8 | b)) {
+                DbpString("CRC Failed");
+                res = PM3_ESOFT;
+            }
+            reply_ng(CMD_SMART_UPLOAD, res, NULL, 0);
             break;
         }
         case CMD_SMART_UPGRADE: {
-            SmartCardUpgrade(packet->oldarg[0]);
+            struct p {
+                uint16_t fw_size;
+                uint16_t crc;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+
+            uint8_t *fwdata = BigBuf_get_addr();            
+            uint8_t a = 0, b = 0;
+            compute_crc(CRC_14443_A, fwdata, payload->fw_size, &a, &b);
+
+            if (payload->crc != (a << 8 | b)) {
+                Dbprintf("CRC Failed, 0x[%04x] != 0x[%02x%02x]", payload->crc, a, b);
+                reply_ng(CMD_SMART_UPGRADE, PM3_ESOFT, NULL, 0);
+            } else {                
+                SmartCardUpgrade(payload->fw_size);
+            }
+            fwdata = NULL;
             break;
         }
 #endif
