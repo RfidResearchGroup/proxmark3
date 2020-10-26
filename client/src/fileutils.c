@@ -1152,6 +1152,27 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         *datalen = sptr;
     }
 
+    if (!strcmp(ctype, "EM4X50")) {
+        size_t sptr = 0;
+        for (size_t i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            char blocks[30] = {0};
+            sprintf(blocks, "$.blocks.%zu", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+        *datalen = sptr;
+    }
+
 out:
 
     if (callback != NULL) {
