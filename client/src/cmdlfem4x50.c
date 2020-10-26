@@ -151,12 +151,13 @@ static int usage_lf_em4x50_restore(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - this help");
     PrintAndLogEx(NORMAL, "       u <UID>       - uid, try to restore from lf-4x50-<UID>-dump.bin");
-    PrintAndLogEx(NORMAL, "       f <filename>  - data filename <filename.bin/eml> (optional)");
+    PrintAndLogEx(NORMAL, "       f <filename>  - data filename <filename.bin/eml/json> (optional)");
     PrintAndLogEx(NORMAL, "       p <pwd>       - password (hex, lsb) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore h"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump.bin"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump.eml p 12345678"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump.json p 00000001"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -920,12 +921,11 @@ int CmdEM4x50Watch(const char *Cmd) {
 
 int CmdEM4x50Restore(const char *Cmd) {
 
-    //uint8_t data[136] = {0x0};
     size_t bytes_read = 0;
+    int res = 0;
     char filename[FILE_PATH_SIZE] = {0};
     char ext[FILE_PATH_SIZE] = {0};
     char szTemp[FILE_PATH_SIZE - 20] = {0x00};
-    FILE *fdump;
 
     em4x50_data_t etd;
     etd.pwd_given = false;
@@ -970,36 +970,17 @@ int CmdEM4x50Restore(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
-    // read data from dump file; file has to be "bin" or "eml"
-    // (file type is distinguished by file extension)
-    
+    // read data from dump file; file type has to be "bin", "eml" or "json"
     memcpy(ext, &filename[strlen(filename) - 4], 4);
     ext[5] = 0x00;
-    if (memcmp(ext, ".eml", 4) == 0) {
+    if (memcmp(ext, ".eml", 4) == 0)
+        res = loadFileEML(filename, etd.data, &bytes_read) != PM3_SUCCESS;
+    else if (memcmp(ext, ".json", 5) == 0)
+        res = loadFileJSON(filename, etd.data, sizeof(etd.data), &bytes_read, NULL);
+    else
+        res = loadFile(filename, ".bin", etd.data, sizeof(etd.data), &bytes_read);
 
-        // read from eml file
-        if (loadFileEML(filename, etd.data, &bytes_read) != PM3_SUCCESS)
-            return PM3_EFILE;
-
-    } else {
-
-        // open bin file
-        if ((fdump = fopen(filename, "rb")) == NULL) {
-            PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
-            return PM3_EFILE;
-        }
-        
-        // read from bin file
-        bytes_read = fread(&etd.data, sizeof(uint8_t), DUMP_FILESIZE, fdump);
-        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%i") " bytes from bin file " _YELLOW_("%s"),
-                      bytes_read,
-                      filename
-                      );
-
-        fclose(fdump);
-    }
-    
-    if (bytes_read != DUMP_FILESIZE) {
+    if ((res != PM3_SUCCESS) && (bytes_read != DUMP_FILESIZE)) {
         PrintAndLogEx(FAILED, "Read error");
         return PM3_EFILE;
     }
