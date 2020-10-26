@@ -161,6 +161,19 @@ static int usage_lf_em4x50_restore(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+static int usage_lf_em4x50_sim(void) {
+    PrintAndLogEx(NORMAL, "Simulate single EM4x50 word. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sim [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h             - this help");
+    PrintAndLogEx(NORMAL, "       u <UID>       - single word to simulate (hex, lsb");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim h"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim u 12345678"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
@@ -791,7 +804,7 @@ int CmdEM4x50Brute(const char *Cmd) {
     // start
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_BRUTE, (uint8_t *)&etd, sizeof(etd));
-    WaitForResponse(CMD_ACK, &resp);
+    WaitForResponse(CMD_LF_EM4X50_BRUTE, &resp);
 
     // print response
     if ((bool)resp.status)
@@ -835,7 +848,7 @@ int CmdEM4x50Login(const char *Cmd) {
     // start
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_LOGIN, (uint8_t *)&password, sizeof(password));
-    WaitForResponse(CMD_ACK, &resp);
+    WaitForResponse(CMD_LF_EM4X50_LOGIN, &resp);
 
     // print response
     if ((bool)resp.status)
@@ -872,7 +885,7 @@ int CmdEM4x50Reset(const char *Cmd) {
     // start
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_RESET, 0, 0);
-    WaitForResponse(CMD_ACK, &resp);
+    WaitForResponse(CMD_LF_EM4X50_RESET, &resp);
 
     // print response
     if ((bool)resp.status)
@@ -912,7 +925,7 @@ int CmdEM4x50Watch(const char *Cmd) {
     
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WATCH, 0, 0);
-    WaitForResponse(CMD_ACK, &resp);
+    WaitForResponse(CMD_LF_EM4X50_WATCH, &resp);
 
     PrintAndLogEx(INFO, "Done");
 
@@ -1011,7 +1024,52 @@ int CmdEM4x50Restore(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Login with password " _YELLOW_("%08x"), etd.password1);
     }
     PrintAndLogEx(SUCCESS, "Restore " _GREEN_("ok"));
-    PrintAndLogEx(INFO, "Finish restore");
+    PrintAndLogEx(INFO, "Finished restoring");
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50Sim(const char *Cmd) {
+
+    bool errors = false;
+    uint8_t cmdp = 0;
+    uint32_t word = 0x00;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+
+            case 'h':
+                return usage_lf_em4x50_sim();
+                break;
+
+            case 'u':
+                word = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        };
+    }
+
+    // validation
+    if (errors)
+        return usage_lf_em4x50_sim();
+
+    PrintAndLogEx(INFO, "Simulating " _YELLOW_("%08x"), word);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&word, sizeof(word));
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
+    
+    if (resp.status == PM3_ETEAROFF)
+        return PM3_SUCCESS;
+
+    PrintAndLogEx(INFO, "Done");
 
     return PM3_SUCCESS;
 }
