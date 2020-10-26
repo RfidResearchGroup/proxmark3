@@ -479,6 +479,9 @@ bool em4x50_sim_send_word(uint32_t word) {
 
     uint8_t cparity = 0x00;
 
+    // word has tobe sent in msb, not lsb
+    word = reflect32(word);
+    
     // 4 bytes each with even row parity bit
     for (int i = 0; i < 4; i++)
         if (!em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF))
@@ -1339,7 +1342,7 @@ void em4x50_restore(em4x50_data_t *etd) {
 
     bool bsuccess = false, blogin = false;
     int res = 0;
-    int start = (etd->pwd_given) ? 2 : 3;   // without password word 2 cannot be written
+    int start_word = 0;
     uint8_t status = 0;
     uint32_t addresses = 0x00001F01; // from fwr = 1 to lwr = 31 (0x1F)
     uint32_t words_client[EM4X50_NO_WORDS] = {0x0};
@@ -1366,7 +1369,11 @@ void em4x50_restore(em4x50_data_t *etd) {
 
         // write data to each address but ignore addresses
         // 0 -> password, 32 -> serial, 33 -> uid
-        for (int i = start; i < EM4X50_NO_WORDS - 2; i++) {
+
+        // without login words 1 and 2 cannot be written
+        start_word = (blogin) ? 1 : 3;
+
+        for (int i = start_word; i < EM4X50_NO_WORDS - 2; i++) {
             res = write(words_client[i], i);
             if (res == PM3_ETEAROFF) {
                 lf_finalize();
@@ -1384,7 +1391,7 @@ void em4x50_restore(em4x50_data_t *etd) {
 
                 // check if everything is zero
                 bsuccess = true;
-                for (int i = start; i < EM4X50_NO_WORDS - 2; i++)
+                for (int i = start_word; i < EM4X50_NO_WORDS - 2; i++)
                     bsuccess &= (reflect32(words_read[i]) == words_client[i]);
             }
         }
@@ -1396,19 +1403,45 @@ void em4x50_restore(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_RESTORE, status, 0, 0);
 }
 
-void em4x50_sim(uint32_t *word) {
+void em4x50_sim(em4x50_data_t *etd) {
 
-    // simulate word (e.g. UID)
+    // simulate either word (e.g. UID) or complete tag via dump file upload
+
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_sim();
+
+    // read data
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+
+        for (int j = 0; j < 4; j++)
+            words[i] |= (etd->data[4 * i + j]) << ((3 - j) * 8);
+
+        // lsb is needed (dump is msb)
+        words[i] = reflect32(words[i]);
+    }
+    
+    // extract control data
+    int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
+    int lwr = (words[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
+
+    // extract protection data
+    int fwrp = words[EM4X50_PROTECTION] & 0xFF;         // first word read protected
+    int lwrp = (words[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
 
     while (!BUTTON_PRESS()) {
         
         WDT_HIT();
+        em4x50_sim_send_listen_window();
+        for (int i = fwr; i <= lwr; i++) {
 
-        em4x50_sim_send_listen_window();
-        em4x50_sim_send_listen_window();
-        em4x50_sim_send_word(*word);
+            em4x50_sim_send_listen_window();
+
+            if ((i >= fwrp) && (i <= lwrp))
+                em4x50_sim_send_word(0x00);
+            else
+                em4x50_sim_send_word(words[i]);
+        }
     }
     
     lf_finalize();

@@ -175,6 +175,31 @@ static int usage_lf_em4x50_sim(void) {
     return PM3_SUCCESS;
 }
 
+static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len) {
+
+    // read data from dump file; file type is derived from file name extension
+
+    int res = 0;
+    size_t bytes_read = 0;
+    char ext[FILE_PATH_SIZE] = {0};
+
+
+    memcpy(ext, &filename[strlen(filename) - 4], 4);
+    ext[5] = 0x00;
+
+    if (memcmp(ext, ".eml", 4) == 0)
+        res = loadFileEML(filename, data, &bytes_read) != PM3_SUCCESS;
+    else if (memcmp(ext, ".bin", 4) == 0)
+        res = loadFile(filename, ".bin", data, data_len, &bytes_read);
+    else
+        res = loadFileJSON(filename, data, data_len, &bytes_read, NULL);
+
+    if ((res != PM3_SUCCESS) && (bytes_read != DUMP_FILESIZE))
+        return PM3_EFILE;
+    
+    return PM3_SUCCESS;
+}
+
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
     // restructure received result in "em4x50_word_t" structure
@@ -934,10 +959,7 @@ int CmdEM4x50Watch(const char *Cmd) {
 
 int CmdEM4x50Restore(const char *Cmd) {
 
-    size_t bytes_read = 0;
-    int res = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    char ext[FILE_PATH_SIZE] = {0};
     char szTemp[FILE_PATH_SIZE - 20] = {0x00};
 
     em4x50_data_t etd;
@@ -984,16 +1006,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
     // read data from dump file; file type has to be "bin", "eml" or "json"
-    memcpy(ext, &filename[strlen(filename) - 4], 4);
-    ext[5] = 0x00;
-    if (memcmp(ext, ".eml", 4) == 0)
-        res = loadFileEML(filename, etd.data, &bytes_read) != PM3_SUCCESS;
-    else if (memcmp(ext, ".bin", 4) == 0)
-        res = loadFile(filename, ".bin", etd.data, sizeof(etd.data), &bytes_read);
-    else
-        res = loadFileJSON(filename, etd.data, sizeof(etd.data), &bytes_read, NULL);
-
-    if ((res != PM3_SUCCESS) && (bytes_read != DUMP_FILESIZE)) {
+    if (loadFileEM4x50(filename, etd.data, sizeof(etd.data)) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Read error");
         return PM3_EFILE;
     }
@@ -1033,7 +1046,9 @@ int CmdEM4x50Sim(const char *Cmd) {
 
     bool errors = false;
     uint8_t cmdp = 0;
-    uint32_t word = 0x00;
+    char filename[FILE_PATH_SIZE] = {0};
+
+    em4x50_data_t etd;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1043,7 +1058,12 @@ int CmdEM4x50Sim(const char *Cmd) {
                 break;
 
             case 'u':
-                word = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                etd.word = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                cmdp += 2;
+                break;
+
+            case 'f':
+                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
                 cmdp += 2;
                 break;
 
@@ -1058,10 +1078,16 @@ int CmdEM4x50Sim(const char *Cmd) {
     if (errors)
         return usage_lf_em4x50_sim();
 
-    PrintAndLogEx(INFO, "Simulating " _YELLOW_("%08x"), word);
+    PrintAndLogEx(INFO, "Start simulating");
+
+    // read data from dump file; file type has to be "bin", "eml" or "json"
+    if (loadFileEM4x50(filename, etd.data, sizeof(etd.data)) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Read error");
+        return PM3_EFILE;
+    }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&word, sizeof(word));
+    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&etd, sizeof(etd));
 
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
