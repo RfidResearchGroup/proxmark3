@@ -1131,7 +1131,6 @@ static int l_em4x05_read(lua_State *L) {
 }
 
 // 4350
-/*
 static int l_em4x50_read(lua_State *L) {
 
     // get addr
@@ -1147,8 +1146,7 @@ static int l_em4x50_read(lua_State *L) {
     em4x50_data_t etd;
     memset(&etd, 0x00, sizeof(em4x50_data_t));
     etd.addr_given = true;
-    etd.address = addr & 0xFF;
-    etd.newpwd_given = false;
+    etd.addresses = addr & 0xFF;
 
     // get password
     const char *p_pwd = luaL_checkstring(L, 2);
@@ -1163,16 +1161,13 @@ static int l_em4x50_read(lua_State *L) {
 
         PrintAndLogEx(DEBUG, " Pwd %08X", pwd);
 
-        etd.password[0] = pwd & 0xFF;
-        etd.password[1] = (pwd >> 8) & 0xFF;
-        etd.password[2] = (pwd >> 16) & 0xFF;
-        etd.password[3] = (pwd >> 24) & 0xFF;
+        etd.password1 = pwd;
         etd.pwd_given = true;
     }
 
-    PrintAndLogEx(DEBUG, "Addr %u", etd.address);
+    PrintAndLogEx(DEBUG, "Addr %u", etd.addresses & 0xFF);
     if (etd.pwd_given)
-        PrintAndLogEx(DEBUG, " Pwd %s", sprint_hex(etd.password, sizeof(etd.password)));
+        PrintAndLogEx(DEBUG, " Pwd %08x", etd.password1);
 
     em4x50_word_t words[EM4X50_NO_WORDS];
 
@@ -1182,15 +1177,16 @@ static int l_em4x50_read(lua_State *L) {
     }
 
     uint32_t word = (
-                        words[etd.address].byte[0] << 24 |
-                        words[etd.address].byte[1] << 16 |
-                        words[etd.address].byte[2] << 8 |
-                        words[etd.address].byte[3]
+                        words[etd.addresses & 0xFF].byte[0] << 24 |
+                        words[etd.addresses & 0xFF].byte[1] << 16 |
+                        words[etd.addresses & 0xFF].byte[2] << 8 |
+                        words[etd.addresses & 0xFF].byte[3]
                     );
     lua_pushinteger(L, word);
+
     return 1;
 }
-*/
+
 //
 static int l_ndefparse(lua_State *L) {
 
@@ -1383,7 +1379,7 @@ int set_pm3_libraries(lua_State *L) {
         {"ud",                          l_ud},
         {"rem",                         l_remark},
         {"em4x05_read",                 l_em4x05_read},
-//        {"em4x50_read",                 l_em4x50_read},
+        {"em4x50_read",                 l_em4x50_read},
         {NULL, NULL}
     };
 
