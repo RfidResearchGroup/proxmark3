@@ -112,6 +112,16 @@ static void em4x50_setup_read(void) {
     WDT_HIT();
 }
 
+static void em4x50_setup_sim(void) {
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
+
+    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
+    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+}
+
 // functions for "reader" use case
 
 static bool get_signalproperties(void) {
@@ -1175,7 +1185,7 @@ void em4x50_reset(void) {
         status = reset();
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, 0, 0);
+    reply_ng(CMD_LF_EM4X50_RESET, status, 0, 0);
 }
 
 void em4x50_login(uint32_t *password) {
@@ -1191,7 +1201,7 @@ void em4x50_login(uint32_t *password) {
         status = login(*password);
 
     lf_finalize();
-    reply_ng(CMD_ACK, status, 0, 0);
+    reply_ng(CMD_LF_EM4X50_LOGIN, status, 0, 0);
 }
 
 static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
@@ -1247,7 +1257,7 @@ void em4x50_brute(em4x50_data_t *etd) {
         bsuccess = brute(etd->password1, etd->password2, &pwd);
 
     lf_finalize();
-    reply_ng(CMD_ACK, bsuccess, (uint8_t *)(&pwd), 32);
+    reply_ng(CMD_LF_EM4X50_BRUTE, bsuccess, (uint8_t *)(&pwd), 32);
 }
 
 void em4x50_watch() {
@@ -1284,7 +1294,7 @@ void em4x50_watch() {
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
-    reply_ng(CMD_ACK, 1, 0, 0);
+    reply_ng(CMD_LF_EM4X50_WATCH, 1, 0, 0);
 }
 
 //==============================================================================
@@ -1384,4 +1394,23 @@ void em4x50_restore(em4x50_data_t *etd) {
 
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_RESTORE, status, 0, 0);
+}
+
+void em4x50_sim(uint32_t *word) {
+
+    // simulate word (e.g. UID)
+
+    em4x50_setup_sim();
+
+    while (!BUTTON_PRESS()) {
+        
+        WDT_HIT();
+
+        em4x50_sim_send_listen_window();
+        em4x50_sim_send_listen_window();
+        em4x50_sim_send_word(*word);
+    }
+    
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X50_SIM, 1, 0, 0);
 }
