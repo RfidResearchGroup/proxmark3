@@ -690,7 +690,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     
-    if ((resp.status == PM3_SUCCESS)) {
+    if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Sim module firmware upgrade " _GREEN_("successful"));
         PrintAndLogEx(HINT, "run " _YELLOW_("`hw status`") " to validate the fw version ");
     } else {
