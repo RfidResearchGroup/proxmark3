@@ -175,6 +175,17 @@ static int usage_lf_em4x50_sim(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+static int usage_lf_em4x50_std_read(void) {
+    PrintAndLogEx(NORMAL, "Show standard read mode data of EM4x50 tag. Tag must be on antenna.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_std_read [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_std_read"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 
 static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len) {
 
@@ -426,7 +437,6 @@ int CmdEM4x50Write(const char *Cmd) {
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-
         }
     }
 
@@ -1097,6 +1107,74 @@ int CmdEM4x50Sim(const char *Cmd) {
         return PM3_SUCCESS;
 
     PrintAndLogEx(INFO, "Done");
+
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50StdRead(const char *Cmd) {
+
+    bool errors = false;
+    uint8_t cmdp = 0;
+    int now = 0;
+    PacketResponseNG resp;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+
+            case 'h':
+                return usage_lf_em4x50_std_read();
+
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    
+    if (errors)
+        return usage_lf_em4x50_std_read();
+
+    // start
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_STD_READ, 0, 0);
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_STD_READ, &resp, TIMEOUT)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    now = resp.status;
+    
+    // print response
+    if (now > 0) {
+
+        em4x50_word_t words[EM4X50_NO_WORDS];
+        
+        prepare_result(resp.data.asBytes, 0, now - 1, words);
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "  # | word (msb)  | word (lsb)  ");
+        PrintAndLogEx(INFO, "----+-------------+-------------");
+
+        for (int i = 0; i < now; i++) {
+
+            char r[30] = {0};
+            for (int j = 3; j >= 0; j--)
+                sprintf(r + strlen(r), "%02x ", reflect8(words[i].byte[j]));
+
+            PrintAndLogEx(INFO, " %2i | " _GREEN_("%s") "| %s",
+                          i,
+                          sprint_hex(words[i].byte, 4),
+                          r
+                          );
+        }
+        
+        PrintAndLogEx(INFO, "----+-------------+-------------");
+        PrintAndLogEx(SUCCESS, "Standard read " _GREEN_("ok"));
+
+    } else {
+        PrintAndLogEx(FAILED, "Standard read " _RED_("failed"));
+    }
 
     return PM3_SUCCESS;
 }

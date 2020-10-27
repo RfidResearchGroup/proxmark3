@@ -885,7 +885,7 @@ void em4x50_info(em4x50_data_t *etd) {
     bool bsuccess = false, blogin = false;
     uint8_t status = 0;
     uint32_t addresses = 0x00002100; // read from fwr = 0 to lwr = 33 (0x21)
-    uint32_t words[32] = {0x0};
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
 
@@ -915,7 +915,7 @@ void em4x50_read(em4x50_data_t *etd) {
     bool bsuccess = false, blogin = false;
     int now = 0;
     uint8_t status = 0;
-    uint32_t words[32] = {0x0};
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
 
@@ -1044,7 +1044,7 @@ void em4x50_write(em4x50_data_t *etd) {
 
     bool bsuccess = false, blogin = false;
     uint8_t status = 0;
-    uint32_t words[34] = {0x0};
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
 
@@ -1119,7 +1119,7 @@ void em4x50_wipe(uint32_t *password) {
 
     bool bsuccess = false;
     uint32_t addresses = 0x00001E01; // from fwr = 1 to lwr = 31 (0x1E)
-    uint32_t words[34] = {0x0};
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
     uint32_t zero = 0x0;
 
     em4x50_setup_read();
@@ -1268,7 +1268,7 @@ void em4x50_watch() {
     // read continuously and display standard reads of tag
 
     int now = 0;
-    uint32_t words[34] = {0x0};
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
     
     em4x50_setup_read();
 
@@ -1446,4 +1446,22 @@ void em4x50_sim(em4x50_data_t *etd) {
     
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_SIM, 1, 0, 0);
+}
+
+void em4x50_std_read(void) {
+
+    // reads data that tag transmits "voluntarily" -> standard read mode
+
+    int now = 0;
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
+
+    em4x50_setup_read();
+
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag())
+        standard_read(&now, words);
+    
+    LOW(GPIO_SSC_DOUT);
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X50_STD_READ, now, (uint8_t *)words, 4 * now);
 }

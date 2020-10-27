@@ -1126,6 +1126,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_sim((em4x50_data_t *)packet->data.asBytes);
             break;
         }
+        case CMD_LF_EM4X50_STD_READ: {
+            em4x50_std_read();
+            break;
+        }
 #endif
 
 #ifdef WITH_ISO15693
