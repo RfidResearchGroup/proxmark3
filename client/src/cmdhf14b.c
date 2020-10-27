@@ -985,7 +985,7 @@ static int CmdHF14BSriRdBl(const char *Cmd) {
     }
 
     if (card.uidlen != 8) {
-        PrintAndLogEx(FAILED, "current dump command only work with SRI4K / SRI512 tags");
+        PrintAndLogEx(FAILED, "current read command only work with SRI4K / SRI512 tags");
         return PM3_SUCCESS;
     }
 
