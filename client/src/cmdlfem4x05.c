@@ -98,11 +98,13 @@ static em_tech_type_t em_get_card_type(uint32_t config) {
     uint8_t t = (config >> 1) & 0xF;
     switch (t) {
         case 4:
-            return EM_4X69;
+            return EM_4469;
         case 8:
             return EM_4205;
         case 9:
             return EM_4305;
+        case 12:
+            return EM_4369;
     }
     return EM_UNKNOWN;
 }
@@ -111,10 +113,12 @@ static const char *em_get_card_str(uint32_t config) {
     switch (em_get_card_type(config)) {
         case EM_4305:
             return "EM4305";
-        case EM_4X69:
+        case EM_4469:
             return "EM4469";
         case EM_4205:
             return "EM4205";
+        case EM_4369:
+            return "EM4369";
         case EM_UNKNOWN:
             break;
     }
@@ -562,7 +566,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     uint32_t word = 0;
 
     const char *info[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
-    const char *info4x69 [] = {"Info", "UID", "Password", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
+    const char *info4x69 [] = {"Info", "UID", "Password", "Lock", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
 
     // EM4305 vs EM4469
     em_tech_type_t card_type = em_get_card_type(block0);
@@ -659,16 +663,14 @@ int CmdEM4x05Dump(const char *Cmd) {
         data[14] = BSWAP_32(data[14]);
         data[15] = BSWAP_32(data[15]);
 
-    } else if (card_type == EM_4X69) {
+    } else if (card_type == EM_4369 || card_type == EM_4469) {
 
-        // To flag any blocks locked we need to read blocks 14 and 15 first
+        // To flag any blocks locked we need to read block 3 first
         // dont swap endian until we get block lock flags.
         status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
-            if ((word & 0x00008000) != 0x00) {
-                lock_bits = word;
-                gotLockBits = true;
-            }
+            lock_bits = word;
+            gotLockBits = true;
             data[EM4469_PROT_BLOCK] = word;
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
@@ -676,8 +678,8 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         uint32_t lockbit;
 
-        for (; addr < 15; addr++) {
-            lockbit = (lock_bits >> addr) & 1;
+        for (; addr < 16; addr++) {
+            lockbit = (lock_bits >> (addr * 2)) & 3;
             if (addr == 2) {
                 if (usePwd) {
                     data[addr] = BSWAP_32(pwd);
@@ -712,15 +714,17 @@ int CmdEM4x05Dump(const char *Cmd) {
         // saveFile (binary) passes in the .bin extension.
         if (strcmp(filename, "") == 0) {
 
-            if (card_type == EM_4X69) {
-                sprintf(filename, "lf-4x69-%08X-dump", BSWAP_32(data[1]));
+            if (card_type == EM_4369) {
+                sprintf(filename, "lf-4369-%08X-dump", BSWAP_32(data[1]));
+            } else if (card_type == EM_4469) {
+                sprintf(filename, "lf-4469-%08X-dump", BSWAP_32(data[1]));
             } else {
                 sprintf(filename, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
             }
 
         }
         PrintAndLogEx(NORMAL, "");
-        saveFileJSON(filename, (card_type == EM_4X69) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
+        saveFileJSON(filename, (card_type == EM_4369 || card_type == EM_4469) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
 
         saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(filename, ".bin", data, sizeof(data));
@@ -1202,7 +1206,7 @@ int CmdEM4x05Info(const char *Cmd) {
                 return PM3_SUCCESS;
             }
         }
-    } else if (card_type == EM_4X69) {
+    } else if (card_type == EM_4369 || card_type == EM_4469) {
         // read word 3 to see which is being used for the protection bits
         if (em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
