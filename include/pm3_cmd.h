@@ -794,6 +794,9 @@ typedef struct {
 // tearoff occured                      client/pm3: when a tearoff hook was called and a tearoff actually happened
 #define PM3_ETEAROFF          -23
 
+// Got bad CRC                          client/pm3: error in transfer of data,  crc mismatch.
+#define PM3_ECRC              -24
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

@@ -959,25 +959,25 @@ static int CmdHF14BReader(const char *Cmd) {
     return readHF14B(verbose);
 }
 
-/* New command to read the contents of a SRI512|SRIX4K tag
- * SRI* tags are ISO14443-B modulated memory tags,
- * this command just dumps the contents of the memory/
- */
-static int CmdHF14BReadSri(const char *Cmd) {
+// Read SRI512|SRIX4K block
+static int CmdHF14BSriRdBl(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14b sriread",
-                  "Read contents of a SRI512 | SRIX4K tag",
-                  "hf 14b sriread\n"
+    CLIParserInit(&ctx, "hf 14b rdbl",
+                  "Read SRI512 | SRIX4K block",
+                  "hf 14b rdbl -b 06\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_int0("b", "block",   "<dec>", "block number"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int blockno = arg_get_int_def(ctx, 1, -1);
     CLIParserFree(ctx);
 
+/*
     iso14b_card_select_t card;
     if (get_14b_UID(&card) == false) {
         PrintAndLogEx(WARNING, "no tag found");
@@ -994,12 +994,23 @@ static int CmdHF14BReadSri(const char *Cmd) {
     // 2 = 512
     uint8_t cardtype = get_st_cardsize(card.uid);
     uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
+*/
+    struct {
+        uint8_t blockno;
+    } PACKED payload;
+    
+    payload.blockno = blockno;
 
+    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_SRI_READ, blocks, 0, 0, NULL, 0);
-
-    // iceman:  should download read data and print in client.
-    return PM3_SUCCESS;
+    SendCommandNG(CMD_HF_SRI_READ, (uint8_t*)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_SRI_READ, &resp, TIMEOUT) == false) {
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "block %02u : " _GREEN_("%s") " | " _GREEN_("%s"), blockno, sprint_hex(resp.data.asBytes, resp.length), sprint_ascii(resp.data.asBytes, resp.length));
+    }
+    return resp.status;
 }
 
 // New command to write a SRI512/SRIX4K tag.
@@ -1787,7 +1798,7 @@ static command_t CommandTable[] = {
     {"reader",      CmdHF14BReader,   IfPm3Iso14443b,  "Act as a 14443B reader to identify a tag"},
     {"sim",         CmdHF14BSim,      IfPm3Iso14443b,  "Fake ISO 14443B tag"},
     {"sniff",       CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO 14443B"},
-    {"sriread",     CmdHF14BReadSri,  IfPm3Iso14443b,  "Read contents of a SRI512 | SRIX4K tag"},
+    {"rdbl",        CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4x block"},
     {"sriwrite",    CmdHF14BWriteSri, IfPm3Iso14443b,  "Write data to a SRI512 | SRIX4K tag"},
 // {"valid",     srix4kValid,      AlwaysAvailable, "srix4k checksum test"},
     {NULL, NULL, NULL, NULL}
