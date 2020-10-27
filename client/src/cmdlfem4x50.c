@@ -19,35 +19,34 @@
 static int usage_lf_em4x50_info(void) {
     PrintAndLogEx(NORMAL, "Read all information of EM4x50. Tag must be on antenna.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_info [h] [v] [p <pwd>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_info [h] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_info"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_info p fa225de1"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_info v p fa225de1"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_em4x50_write(void) {
     PrintAndLogEx(NORMAL, "Write EM4x50 word. Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write [h] [a <address>] [w <data>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write [h] b <block> d <data> [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       b <block> - memory address to write to (dec)");
+    PrintAndLogEx(NORMAL, "       b <block> - block address to write to (dec)");
     PrintAndLogEx(NORMAL, "       d <data>  - word to write (hex, lsb)");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write a 3 w deadc0de"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_write b 3 d deadc0de"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_lf_em4x50_write_password(void) {
     PrintAndLogEx(NORMAL, "Write EM4x50 password. Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write_password [h] [p <pwd>] [n <pwd>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_write_password [h] p <pwd> n <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
@@ -60,14 +59,14 @@ static int usage_lf_em4x50_write_password(void) {
 static int usage_lf_em4x50_read(void) {
     PrintAndLogEx(NORMAL, "Read EM4x50 word(s). Tag must be on antenna.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_read [h] [a <address>] [p <pwd>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_read [h] b <block> [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       b <block> - memory address to read (dec) (optional)");
-    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb) (optional)");
+    PrintAndLogEx(NORMAL, "       b <block> - block address to read (dec)");
+    PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_read"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_read a 2 p 00000000"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_read b 32"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_read b 2 p 00000000"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -78,7 +77,7 @@ static int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                     - this help");
     PrintAndLogEx(NORMAL, "       f <filename prefix>   - overide filename prefix (optional).  Default is based on UID");
-    PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex, lsb) (optional)");
+    PrintAndLogEx(NORMAL, "       p <pwd>               - password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_dump"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_dump p 11223344"));
@@ -88,7 +87,7 @@ static int usage_lf_em4x50_dump(void) {
 static int usage_lf_em4x50_wipe(void) {
     PrintAndLogEx(NORMAL, "Wipe data from EM4x50 tag. Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_wipe [h] [p <pwd>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_wipe [h] p <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         - this help");
     PrintAndLogEx(NORMAL, "       p <pwd>   - password (hex, lsb)");
@@ -147,12 +146,12 @@ static int usage_lf_em4x50_watch(void) {
 static int usage_lf_em4x50_restore(void) {
     PrintAndLogEx(NORMAL, "Restore EM4x50 dump to tag. Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_restore [h]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_restore [h] [u <UID>] [f <filename>] [p <pwd>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - this help");
     PrintAndLogEx(NORMAL, "       u <UID>       - uid, try to restore from lf-4x50-<UID>-dump.bin");
-    PrintAndLogEx(NORMAL, "       f <filename>  - data filename <filename.bin/eml/json> (optional)");
-    PrintAndLogEx(NORMAL, "       p <pwd>       - password (hex, lsb) (optional)");
+    PrintAndLogEx(NORMAL, "       f <filename>  - data filename <filename.bin/eml/json>");
+    PrintAndLogEx(NORMAL, "       p <pwd>       - password (hex, lsb)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore h"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_restore f em4x50dump.bin"));
@@ -164,13 +163,15 @@ static int usage_lf_em4x50_restore(void) {
 static int usage_lf_em4x50_sim(void) {
     PrintAndLogEx(NORMAL, "Simulate single EM4x50 word. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sim [h]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sim [h] [u <UID>] [f <filename>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - this help");
-    PrintAndLogEx(NORMAL, "       u <UID>       - single word to simulate (hex, lsb");
+    PrintAndLogEx(NORMAL, "       u <UID>       - single word (e.g. UID) to simulate (hex, lsb");
+    PrintAndLogEx(NORMAL, "       f <filename>  - data filename <filename.bin/eml/json>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim h"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim u 12345678"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim f em4x50dump.json"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
