@@ -1171,7 +1171,7 @@ static int l_em4x50_read(lua_State *L) {
 
     em4x50_word_t words[EM4X50_NO_WORDS];
 
-    int res = em4x50_read(&etd, words, false);
+    int res = em4x50_read(&etd, words);
     if (res != PM3_SUCCESS) {
         return returnToLuaWithError(L, "Failed to read EM4x50 data");
     }

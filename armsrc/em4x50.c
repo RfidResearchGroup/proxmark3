@@ -907,13 +907,9 @@ void em4x50_info(em4x50_data_t *etd) {
 
 void em4x50_read(em4x50_data_t *etd) {
 
-    // reads in two different ways:
-    // - using "selective read mode" -> bidirectional communication
-    // - using "standard read mode" -> unidirectional communication (read
-    //   data that tag transmits "voluntarily")
+    // reads by using "selective read mode" -> bidirectional communication
 
     bool bsuccess = false, blogin = false;
-    int now = 0;
     uint8_t status = 0;
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
@@ -922,26 +918,16 @@ void em4x50_read(em4x50_data_t *etd) {
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
 
-        if (etd->addr_given) {
+        // try to login with given password
+        if (etd->pwd_given)
+            blogin = login(etd->password1);
 
-            // selective read mode
+        // only one word has to be read -> first word read = last word read
+        bsuccess = selective_read(etd->addresses, words);
 
-            // try to login with given password
-            if (etd->pwd_given)
-                blogin = login(etd->password1);
-
-            // only one word has to be read -> first word read = last word read
-            bsuccess = selective_read(etd->addresses, words);
-
-        } else {
-
-            // standard read mode
-            bsuccess = standard_read(&now, words);
-
-        }
     }
 
-    status = (now << 2) + (bsuccess << 1) + blogin;
+    status = (bsuccess << 1) + blogin;
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();

@@ -16,7 +16,7 @@
 
 int read_em4x50_uid(void);
 bool detect_4x50_block(void);
-int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose);
+int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out);
 
 int CmdEM4x50Info(const char *Cmd);
 int CmdEM4x50Write(const char *Cmd);

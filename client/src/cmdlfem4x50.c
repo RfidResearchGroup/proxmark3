@@ -321,17 +321,17 @@ bool detect_4x50_block(void) {
         .addresses = EM4X50_DEVICE_ID,
     };
     em4x50_word_t words[EM4X50_NO_WORDS];
-    return (em4x50_read(&etd, words, false) == PM3_SUCCESS);
+    return (em4x50_read(&etd, words) == PM3_SUCCESS);
 }
 
 int read_em4x50_uid(void) {
     em4x50_data_t etd = {
         .pwd_given = false,
         .addr_given = true,
-        .addresses = EM4X50_DEVICE_SERIAL,
+        .addresses = (EM4X50_DEVICE_SERIAL << 8) | EM4X50_DEVICE_SERIAL,
     };
     em4x50_word_t words[EM4X50_NO_WORDS];
-    int res = em4x50_read(&etd, words, false);
+    int res = em4x50_read(&etd, words);
     if (res == PM3_SUCCESS)
         PrintAndLogEx(INFO, " Serial: " _GREEN_("%s"), sprint_hex(words[EM4X50_DEVICE_SERIAL].byte, 4));
     return res;
@@ -543,11 +543,10 @@ int CmdEM4x50WritePassword(const char *Cmd) {
     return (success) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
-int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
+int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
 
     // envoke reading
-    // - without option -> standard read mode
-    // - with given address (option a) (and optional password if address is
+    // - with given address (option b) (and optional password if address is
     //   read protected) -> selective read mode
 
     em4x50_data_t edata = { .pwd_given = false, .addr_given = false };
@@ -566,12 +565,8 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
     }
 
     bool isOK = (resp.status & STATUS_SUCCESS) >> 1;
-    if (isOK == false) {
-        if (verbose)
-            PrintAndLogEx(FAILED, "Reading " _RED_("failed"));
-
+    if (isOK == false)
         return PM3_ESOFT;
-    }
 
     if (edata.pwd_given) {
         bool login = resp.status & STATUS_LOGIN;
@@ -584,21 +579,13 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose) {
 
     uint8_t *data = resp.data.asBytes;
     em4x50_word_t words[EM4X50_NO_WORDS];
-    int now = (resp.status & STATUS_NO_WORDS) >> 2;
-    if (edata.addr_given) {
-        prepare_result(data, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
-    } else {
-        prepare_result(data, 0, now - 1, words);
-    }
+    prepare_result(data, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
 
     if (out != NULL) {
         memcpy(out, &words, sizeof(em4x50_word_t) * EM4X50_NO_WORDS);
     }
 
-    if (edata.addr_given)
-        print_result(words, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF);
-    else
-        print_result(words, 0, now - 1);
+    print_result(words, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF);
 
     return PM3_SUCCESS;
 }
@@ -650,11 +637,10 @@ int CmdEM4x50Read(const char *Cmd) {
         }
     }
 
-    //if (errors || strlen(Cmd) == 0 || etd.addr_given == false)
-    if (errors)
+    if (errors || strlen(Cmd) == 0 || etd.addr_given == false)
         return usage_lf_em4x50_read();
 
-    return em4x50_read(&etd, NULL, true);
+    return em4x50_read(&etd, NULL);
 }
 
 int CmdEM4x50Dump(const char *Cmd) {
