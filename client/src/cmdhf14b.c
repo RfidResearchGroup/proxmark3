@@ -1006,10 +1006,10 @@ static int CmdHF14BReadSri(const char *Cmd) {
 static int CmdHF14BWriteSri(const char *Cmd) {
     /*
      * For SRIX4K  blocks 00 - 7F
-     * hf 14b raw -c -k 09 $srix4kwblock $srix4kwdata
+     * hf 14b raw --sr -c --data [09 $srix4kwblock $srix4kwdata
      *
      * For SR512  blocks 00 - 0F
-     * hf 14b raw -c -k 09 $sr512wblock $sr512wdata
+     * hf 14b raw --sr -c --data [09 $sr512wblock $sr512wdata]
      *
      * Special block FF =  otp_lock_reg block.
      * Data len 4 bytes-
@@ -1064,7 +1064,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
                      );
     }
 
-    sprintf(str, "--ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
+    sprintf(str, "--sr -c --data %02x%02x%02x%02x%02x%02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
     return CmdHF14BCmdRaw(str);
 }
 
