@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include "fileutils.h"
 #include "comms.h"
+#include "util.h"
 #include "commonutil.h"
 #include "cmdparser.h"
 #include "em4x50.h"
@@ -193,22 +194,17 @@ static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len) 
 
     int res = 0;
     size_t bytes_read = 0;
-    char ext[FILE_PATH_SIZE] = {0};
-
-
-    memcpy(ext, &filename[strlen(filename) - 4], 4);
-    ext[5] = 0x00;
-
-    if (memcmp(ext, ".eml", 4) == 0)
+     
+    if (str_endswith(filename, ".eml"))
         res = loadFileEML(filename, data, &bytes_read) != PM3_SUCCESS;
-    else if (memcmp(ext, ".bin", 4) == 0)
-        res = loadFile(filename, ".bin", data, data_len, &bytes_read);
-    else
+    else if (str_endswith(filename, ".json"))
         res = loadFileJSON(filename, data, data_len, &bytes_read, NULL);
+    else
+        res = loadFile(filename, ".bin", data, data_len, &bytes_read);
 
     if ((res != PM3_SUCCESS) && (bytes_read != DUMP_FILESIZE))
         return PM3_EFILE;
-    
+
     return PM3_SUCCESS;
 }
 
@@ -1081,7 +1077,10 @@ int CmdEM4x50Sim(const char *Cmd) {
         return usage_lf_em4x50_sim();
     }
 
-    PrintAndLogEx(INFO, "Start simulating");
+    if (word_given)
+        PrintAndLogEx(INFO, "Simulating " _YELLOW_("%08x"), etd.word);
+    else
+        PrintAndLogEx(INFO, "Simulating dump " _YELLOW_("%s"), filename);
 
     // read data from dump file; file type has to be "bin", "eml" or "json"
     if (loadFileEM4x50(filename, etd.data, sizeof(etd.data)) != PM3_SUCCESS) {
