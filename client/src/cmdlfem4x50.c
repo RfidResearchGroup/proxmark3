@@ -1041,7 +1041,7 @@ int CmdEM4x50Restore(const char *Cmd) {
 
 int CmdEM4x50Sim(const char *Cmd) {
 
-    bool errors = false;
+    bool errors = false, word_given = false;;
     uint8_t cmdp = 0;
     char filename[FILE_PATH_SIZE] = {0};
 
@@ -1056,6 +1056,7 @@ int CmdEM4x50Sim(const char *Cmd) {
 
             case 'u':
                 etd.word = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                word_given = true;
                 cmdp += 2;
                 break;
 
@@ -1071,9 +1072,14 @@ int CmdEM4x50Sim(const char *Cmd) {
         };
     }
 
-    // validation
+    // validations
     if (errors)
         return usage_lf_em4x50_sim();
+    
+    if (word_given && (strlen(filename) != 0)) {
+        PrintAndLogEx(INFO, "Plesae use either option 'u' or option 'f'");
+        return usage_lf_em4x50_sim();
+    }
 
     PrintAndLogEx(INFO, "Start simulating");
 
