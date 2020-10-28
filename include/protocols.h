@@ -566,6 +566,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define EM4x05_READ_AFTER_WRITE         (1 << 22)
 #define EM4x05_DISABLE_ALLOWED          (1 << 23)
 #define EM4x05_READER_TALK_FIRST        (1 << 24)
+#define EM4x05_INVERT                   (1 << 25)
+#define EM4x05_PIGEON                   (1 << 26)
 
 
 // FeliCa protocol
