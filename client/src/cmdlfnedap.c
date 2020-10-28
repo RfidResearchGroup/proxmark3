@@ -197,7 +197,7 @@ int demodNedap(bool verbose) {
 
         badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
 
-        PrintAndLogEx(SUCCESS, "NEDAP - Card: " _YELLOW_("%05u") " subtype: " _YELLOW_("%1u")" customer code: " _YELLOW_("%03x") ", Raw: %s", badgeId, subtype, customerCode, sprint_hex(data, size / 8));
+        PrintAndLogEx(SUCCESS, "NEDAP - Card: " _YELLOW_("%05u") " subtype: " _YELLOW_("%1u")" customer code: " _YELLOW_("%03x") ", Raw: " _YELLOW_("%s"), badgeId, subtype, customerCode, sprint_hex_inrow(data, size / 8));
         PrintAndLogEx(DEBUG, "Checksum (%s) 0x%04X",  _GREEN_("ok"), checksum);
 
     } else {
