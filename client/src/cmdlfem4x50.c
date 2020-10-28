@@ -314,7 +314,7 @@ bool detect_4x50_block(void) {
     em4x50_data_t etd = {
         .pwd_given = false,
         .addr_given = true,
-        .addresses = EM4X50_DEVICE_ID,
+        .addresses = (EM4X50_DEVICE_ID << 8) | EM4X50_DEVICE_ID,
     };
     em4x50_word_t words[EM4X50_NO_WORDS];
     return (em4x50_read(&etd, words) == PM3_SUCCESS);
