@@ -2296,6 +2296,7 @@ void MifareCIdent(bool is_mfc) {
         // test for some MFC 7b gen2
         if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
             isGen = MAGIC_GEN_2;
+            goto OUT;
         }
         // test for Ultralight magic gen2
         if (memcmp(buf, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
@@ -2323,7 +2324,7 @@ void MifareCIdent(bool is_mfc) {
             goto OUT;
         }
 
-        if (! is_mfc) {
+        if (is_mfc == false) {
             // magic ntag test
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             SpinDelay(40);
@@ -2336,8 +2337,7 @@ void MifareCIdent(bool is_mfc) {
                     isGen = MAGIC_NTAG21X;
                 }
             }
-        }
-        if (is_mfc) {
+        } else {
             // magic MFC Gen3 test
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             SpinDelay(40);
