@@ -607,9 +607,7 @@ int CmdEM4x50Read(const char *Cmd) {
             case 'b': {
                 param_getdec(Cmd, cmdp + 1, &address);
                 // lsb: byte 1 = fwr, byte 2 = lwr, byte 3 = 0x0, byte 4 = 0x0
-                etd.addresses = address;    // lwr
-                etd.addresses <<= 8;
-                etd.addresses |= address;   // fwr
+                etd.addresses = (address << 8) | address;
 
                 // validation
                 if (address <= 0 || address >= EM4X50_NO_WORDS) {
