@@ -1360,7 +1360,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
             AuthData.ks3 = AuthData.at_enc ^ prng_successor(AuthData.nt, 96);
 
             mfLastKey = GetCrypto1ProbableKey(&AuthData);
-            PrintAndLogEx(NORMAL, "            |            |  *  |%49s %012"PRIx64" prng %s |     |",
+            PrintAndLogEx(NORMAL, "            |            |  *  |%49s " _GREEN_("%012" PRIX64) " prng %s |     |",
                           "key",
                           mfLastKey,
                           validate_prng_nonce(AuthData.nt) ? _GREEN_("WEAK") : _YELLOW_("HARD"));
@@ -1377,7 +1377,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
             // check last used key
             if (mfLastKey) {
                 if (NestedCheckKey(mfLastKey, &AuthData, cmd, cmdsize, parity)) {
-                    PrintAndLogEx(NORMAL, "            |            |  *  |%60s %012"PRIx64"|     |", "last used key", mfLastKey);
+                    PrintAndLogEx(NORMAL, "            |            |  *  |%60s " _GREEN_("%012" PRIX64) "|     |", "last used key", mfLastKey);
                     traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
                 };
             }
@@ -1386,7 +1386,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
             if (!traceCrypto1) {
                 for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
                     if (NestedCheckKey(g_mifare_default_keys[i], &AuthData, cmd, cmdsize, parity)) {
-                        PrintAndLogEx(NORMAL, "            |            |  *  |%61s %012"PRIx64"|     |", "key", g_mifare_default_keys[i]);
+                        PrintAndLogEx(NORMAL, "            |            |  *  |%61s " _GREEN_("%012" PRIX64) "|     |", "key", g_mifare_default_keys[i]);
 
                         mfLastKey = g_mifare_default_keys[i];
                         traceCrypto1 = lfsr_recovery64(AuthData.ks2, AuthData.ks3);
@@ -1414,7 +1414,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
                             AuthData.ks3 = ks3;
                             AuthData.nt = ntx;
                             mfLastKey = GetCrypto1ProbableKey(&AuthData);
-                            PrintAndLogEx(NORMAL, "            |            |  *  | nested probable key:%012"PRIx64"      ks2:%08x ks3:%08x |     |",
+                            PrintAndLogEx(NORMAL, "            |            |  *  | nested probable key: " _GREEN_("%012" PRIX64) "     ks2:%08x ks3:%08x |     |",
                                           mfLastKey,
                                           AuthData.ks2,
                                           AuthData.ks3);
