@@ -696,7 +696,6 @@ static char GetFormatFromSector(uint8_t sectorNo) {
     }
 }
 
-
 static int CmdHF14AMfDarkside(const char *Cmd) {
     uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
     uint64_t key = 0;
@@ -2014,7 +2013,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     char ctmp;
     // Nested and Hardnested returned status
     uint64_t foundkey = 0;
-    int16_t isOK = 0;
+    int isOK = 0;
     int current_sector_i = 0, current_key_type_i = 0;
     // Dumping and transfere to simulater memory
     uint8_t block[16] = {0x00};
@@ -2372,8 +2371,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             if (verbose) {
                 PrintAndLogEx(INFO, "======================= " _YELLOW_("START DARKSIDE ATTACK") " =======================");
             }
-
-            isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
+            isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType + 0x60, &key64);
 
             switch (isOK) {
                 case -1 :
@@ -2393,17 +2391,18 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     PrintAndLogEx(WARNING, "\nAborted via keyboard.");
                     goto noValidKeyFound;
                 default :
-                    PrintAndLogEx(SUCCESS, "\nFound valid key: %012" PRIx64 "\n", key64);
+                    PrintAndLogEx(SUCCESS, "\nFound valid key: [ " _GREEN_("%012" PRIx64) " ]\n", key64);
                     break;
             }
 
             // Store the keys
+            num_to_bytes(key64, 6, key);
             e_sector[blockNo].Key[keyType] = key64;
             e_sector[blockNo].foundKey[keyType] = 'S';
-            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%012" PRIx64) " ] (used for nested / hardnested attack)",
                           blockNo,
                           keyType ? 'B' : 'A',
-                          sprint_hex(key, sizeof(key))
+                          key64
                          );
         } else {
 noValidKeyFound:
