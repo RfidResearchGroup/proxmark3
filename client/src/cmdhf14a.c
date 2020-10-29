@@ -28,7 +28,7 @@
 #include "util_posix.h"  // msclock
 #include "aidsearch.h"
 #include "cmdhf.h"       // handle HF plot
-
+#include "protocols.h"   // MAGIC_GEN_1A
 
 bool APDUInFramingEnable = true;
 
@@ -1611,7 +1611,6 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
             printTag("MIFARE Hospitality");
             printTag("NTAG 2xx");
             type |= MTULTRALIGHT;
-            type |= MTOTHER;
         }
     }
     
@@ -2097,7 +2096,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMagic = detect_mf_magic(true);
     }
     if (isMifareUltralight) {
-        isMagic = detect_mf_magic(false);
+        isMagic = (detect_mf_magic(false) == MAGIC_NTAG21X);
     }
     if (isMifareClassic) {
         int res = detect_classic_static_nonce();
