@@ -187,6 +187,31 @@ static int usage_lf_em4x50_std_read(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+static int usage_lf_em4x50_eload(void) {
+    PrintAndLogEx(NORMAL, "Load dump file into emulator memory.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_eload [h] f <filename>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h             - this help");
+    PrintAndLogEx(NORMAL, "       f <filename>  - dump filename <filename.bin/eml/json>");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_eload f em4x50dump.bin"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+static int usage_lf_em4x50_esave(void) {
+    PrintAndLogEx(NORMAL, "Save emulator memory to file.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_esave [h] [f <filename>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h             - this help");
+    PrintAndLogEx(NORMAL, "       f <filename>  - dump filename <filename.bin/eml/json>");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_esave"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_esave f em4x50dump.bin"));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 
 static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len) {
 
@@ -950,6 +975,7 @@ int CmdEM4x50Watch(const char *Cmd) {
 
 int CmdEM4x50Restore(const char *Cmd) {
 
+    size_t fn_len = 0;
     char filename[FILE_PATH_SIZE] = {0};
     char szTemp[FILE_PATH_SIZE - 20] = {0x00};
 
@@ -973,7 +999,9 @@ int CmdEM4x50Restore(const char *Cmd) {
                 break;
 
             case 'f':
-                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                fn_len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (fn_len == 0)
+                    errors = true;
                 cmdp += 2;
                 break;
 
@@ -1035,7 +1063,8 @@ int CmdEM4x50Restore(const char *Cmd) {
 
 int CmdEM4x50Sim(const char *Cmd) {
 
-    bool errors = false, word_given = false;;
+    bool errors = false, word_given = false, fn_given = false;
+    size_t fn_len = 0;
     uint8_t cmdp = 0;
     char filename[FILE_PATH_SIZE] = {0};
 
@@ -1055,7 +1084,11 @@ int CmdEM4x50Sim(const char *Cmd) {
                 break;
 
             case 'f':
-                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                fn_len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (fn_len != 0)
+                    fn_given = true;
+                else
+                    errors = true;
                 cmdp += 2;
                 break;
 
@@ -1067,10 +1100,10 @@ int CmdEM4x50Sim(const char *Cmd) {
     }
 
     // validations
-    if (errors)
+    if (errors || ((word_given == false) && (fn_given == false)))
         return usage_lf_em4x50_sim();
     
-    if (word_given && (strlen(filename) != 0)) {
+    if (word_given && fn_given) {
         PrintAndLogEx(INFO, "Plesae use either option 'u' or option 'f'");
         return usage_lf_em4x50_sim();
     }
@@ -1165,5 +1198,140 @@ int CmdEM4x50StdRead(const char *Cmd) {
         PrintAndLogEx(FAILED, "Standard read " _RED_("failed"));
     }
 
+    return PM3_SUCCESS;
+}
+
+static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t nobytes) {
+
+    // fast push mode
+    conn.block_after_ACK = true;
+
+    for (size_t i = offset; i < nobytes; i += PM3_CMD_DATA_SIZE) {
+
+        size_t len = MIN((nobytes - i), PM3_CMD_DATA_SIZE);
+        if (len == nobytes - i) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
+    }
+}
+
+int CmdEM4x50ELoad(const char *Cmd) {
+
+    bool errors = false, fn_given = false;
+    size_t nobytes = DUMP_FILESIZE, fn_len = 0;
+    uint8_t cmdp = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    uint8_t *data = calloc(nobytes, sizeof(uint8_t));
+
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+
+            case 'h':
+                return usage_lf_em4x50_eload();
+                break;
+
+            case 'f':
+                fn_len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (fn_len != 0)
+                    fn_given = true;
+                else
+                    errors = true;
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        };
+    }
+
+    // validations
+    if (errors || (fn_given == false))
+        return usage_lf_em4x50_eload();
+    
+    // read data from dump file; file type has to be "bin", "eml" or "json"
+    if (loadFileEM4x50(filename, data, DUMP_FILESIZE) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Read error");
+        return PM3_EFILE;
+    }
+
+    PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to emulator memory", filename);
+    em4x50_seteml(data, 0, nobytes);
+    
+    free(data);
+    PrintAndLogEx(SUCCESS, "Done");
+    return PM3_SUCCESS;
+}
+
+int CmdEM4x50ESave(const char *Cmd) {
+
+    bool errors = false;
+    size_t nobytes = DUMP_FILESIZE, fn_len = 0;
+    uint8_t cmdp = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    char *fptr = filename;
+    uint8_t *data = calloc(nobytes, sizeof(uint8_t));
+
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+
+            case 'h':
+                return usage_lf_em4x50_esave();
+                break;
+
+            case 'f':
+                fn_len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (fn_len == 0)
+                    errors = true;
+                cmdp += 2;
+                break;
+
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        };
+    }
+
+    // validations
+    if (errors)
+        return usage_lf_em4x50_esave();
+    
+    // download emulator memory
+    PrintAndLogEx(SUCCESS, "Reading emulator memory...");
+    if (!GetFromDevice(BIG_BUF_EML, data, nobytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(data);
+        return PM3_ETIMEOUT;
+    }
+    
+    // user supplied filename?
+    if (fn_len == 0) {
+        PrintAndLogEx(INFO, "Using UID as filename");
+        fptr += snprintf(fptr, sizeof(filename), "lf-4x50-");
+        FillFileNameByUID(fptr, (uint8_t *)&data[4 * EM4X50_DEVICE_ID], "-dump", 4);
+    }
+
+    PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to emulator memory", filename);
+    em4x50_seteml(data, 0, nobytes);
+    
+    saveFile(filename, ".bin", data, nobytes);
+    saveFileEML(filename, data, nobytes, 4);
+    saveFileJSON(filename, jsfEM4x50, data, nobytes, NULL);
     return PM3_SUCCESS;
 }

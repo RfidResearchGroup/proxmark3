@@ -31,5 +31,7 @@ int CmdEM4x50Watch(const char *Cmd);
 int CmdEM4x50Restore(const char *Cmd);
 int CmdEM4x50Sim(const char *Cmd);
 int CmdEM4x50StdRead(const char *Cmd);
+int CmdEM4x50ELoad(const char *Cmd);
+int CmdEM4x50ESave(const char *Cmd);
 
 #endif
