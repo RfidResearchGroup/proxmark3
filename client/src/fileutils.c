@@ -720,7 +720,8 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")"--> 0xffffffffffff has been inserted for unknown keys.", fileName);
+    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s"), fileName);
+    PrintAndLogEx(INFO, " OBS! --> 0xFFFFFFFFFFFF <-- has been inserted for unknown keys.");
     free(fileName);
     return PM3_SUCCESS;
 }
