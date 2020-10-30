@@ -5291,6 +5291,27 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     bool activate_field = true;
     bool keep_field_on = true;
+    int res = 0;
+
+    if (reset_card)  {
+
+        keep_field_on = false;
+        uint8_t response[6]; 
+        int resplen = 0;
+
+        // --------------- RESET CARD ----------------
+        uint8_t aRESET[] = { 0x00, 0xa6, 0xc0,  0x00 };
+        res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res) {
+            PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
+            DropField();
+            return res;
+        }
+        PrintAndLogEx(SUCCESS, "Super card reset [ " _GREEN_("ok") " ]");
+        return PM3_SUCCESS;
+    }
+
+
     uint8_t responseA[22]; 
     uint8_t responseB[22];
     int respAlen = 0;
@@ -5298,7 +5319,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     // --------------- First ----------------
     uint8_t aFIRST[] = { 0x00, 0xa6, 0xb0,  0x00,  0x10 };
-    int res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA), &respAlen);
+    res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA), &respAlen);
     if (res) {
         DropField();
         return res;
@@ -5377,22 +5398,6 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "recovered key [ " _GREEN_("%12" PRIX64) " ]", key64);
     else
         PrintAndLogEx(FAILED, "failed to recover any key");
-
-
-    if (reset_card)  {
-
-        activate_field = true;
-        uint8_t response[6]; 
-        int resplen = 0;
-
-        // --------------- RESET CARD ----------------
-        uint8_t aRESET[] = { 0x00, 0xa6, 0xc0,  0x00 };
-        res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response), &resplen);
-        if (res) {
-            DropField();
-            return res;
-        }
-    }
 
     return PM3_SUCCESS;
 }
