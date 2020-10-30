@@ -5282,13 +5282,12 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("r",  "reset",  "reset card"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool reset_card = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-/*
-    uint8_t reset[]  = { 0x02, 0x00, 0xa6, 0xc0,  0x00 };    
-*/
 
     bool activate_field = true;
     bool keep_field_on = true;
@@ -5378,6 +5377,22 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "recovered key [ " _GREEN_("%12" PRIX64) " ]", key64);
     else
         PrintAndLogEx(FAILED, "failed to recover any key");
+
+
+    if (reset_card)  {
+
+        activate_field = true;
+        uint8_t response[6]; 
+        int resplen = 0;
+
+        // --------------- RESET CARD ----------------
+        uint8_t aRESET[] = { 0x00, 0xa6, 0xc0,  0x00 };
+        res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res) {
+            DropField();
+            return res;
+        }
+    }
 
     return PM3_SUCCESS;
 }
