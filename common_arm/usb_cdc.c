@@ -130,9 +130,9 @@ AT91SAM7S256  USB Device Port
 #define SET_CONTROL_LINE_STATE        0x2221
 
 AT91PS_UDP pUdp = AT91C_BASE_UDP;
-uint8_t btConfiguration = 0;
-uint8_t btConnection    = 0;
-uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
+static uint8_t btConfiguration = 0;
+static uint8_t btConnection    = 0;
+static uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
 static const char devDescriptor[] = {
     /* Device descriptor */
@@ -289,7 +289,7 @@ static const char CompatIDFeatureDescriptor[] = {
         MS_EXTENDED_COMPAT_ID, 0x00,                    // Compatibility ID Descriptor Index  0x0004
         0x01,                                           // Number of sections. 0x1
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,       // Reserved (7bytes)
-        //-----function section 1------
+        // -----function section 1------
         0x00,                                           // Interface Number #0
         0x01,                                           // reserved (0x1)
         0x57, 0x49, 0x4E, 0x55, 0x53, 0x42, 0x00, 0x00, // Compatible ID  ('WINUSB\0\0')  (8bytes)
@@ -310,7 +310,7 @@ static const char OSprop[] = {
         // u16 wCount  -- three section
         3, 0,
 
-        //-----property section 1------
+        // -----property section 1------
         // u32 size  ( 14+40+78 == 132)
         132, 0, 0, 0,
         // u32 type
@@ -326,7 +326,7 @@ static const char OSprop[] = {
         '-',0,'1',0,'1',0,'c',0,'e',0,'-',0,'b',0,'f',0,'c',0,'1',0,'-',0,'0',0,'8',0,'0',0,
         '0',0,'2',0,'b',0,'e',0,'1',0,'0',0,'3',0,'1',0,'8',0,'}',0,0,0,
 
-        //-----property section 2------
+        // -----property section 2------
         // u32 size  ( 14+12+38 == 64)
         64, 0, 0, 0,
         // u32 type
@@ -340,7 +340,7 @@ static const char OSprop[] = {
         // data 'Awesome PM3 Device'
         'A',0,'w',0,'e',0,'s',0,'o',0,'m',0,'e',0,' ',0,'P',0,'M',0,'3',0,' ',0,'D',0,'e',0,'v',0,'i',0,'c',0,'e',0,0,0,
 
-        //-----property section 3------
+        // -----property section 3------
         // u32 size ( 14+12+76 == 102)
         102, 0, 0, 0,
         // u32 type
@@ -394,7 +394,7 @@ static const char StrMS_OSDescriptor[] = {
     'M', 0, 'S', 0, 'F', 0, 'T', 0, '1', 0, '0', 0, '0', 0, MS_VENDOR_CODE, 0
 };
 
-const char *getStringDescriptor(uint8_t idx) {
+static const char *getStringDescriptor(uint8_t idx) {
     switch (idx) {
         case 0:
             return StrLanguageCodes;
@@ -473,11 +473,13 @@ static void SpinDelayUs(int us) {
     }
 }
 
-//*----------------------------------------------------------------------------
-//* \fn    usb_disable
-//* \brief This function deactivates the USB device
-//*----------------------------------------------------------------------------
-void usb_disable() {
+/*
+ *----------------------------------------------------------------------------
+ * \fn    usb_disable
+ * \brief This function deactivates the USB device
+ *----------------------------------------------------------------------------
+*/
+void usb_disable(void) {
     // Disconnect the USB device
     AT91C_BASE_PIOA->PIO_ODR = GPIO_USB_PU;
 
@@ -487,11 +489,13 @@ void usb_disable() {
     }
 }
 
-//*----------------------------------------------------------------------------
-//* \fn    usb_enable
-//* \brief This function Activates the USB device
-//*----------------------------------------------------------------------------
-void usb_enable() {
+/*
+ *----------------------------------------------------------------------------
+ * \fn    usb_enable
+ * \brief This function Activates the USB device
+ *----------------------------------------------------------------------------
+*/
+void usb_enable(void) {
     // Set the PLL USB Divider
     AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
 
@@ -523,10 +527,12 @@ void usb_enable() {
     AT91C_BASE_PIOA->PIO_OER = GPIO_USB_PU;
 }
 
-//*----------------------------------------------------------------------------
-//* \fn    usb_check
-//* \brief Test if the device is configured and handle enumeration
-//*----------------------------------------------------------------------------
+/*
+ *----------------------------------------------------------------------------
+ * \fn    usb_check
+ * \brief Test if the device is configured and handle enumeration
+ *----------------------------------------------------------------------------
+*/
 static int usb_reconnect = 0;
 static int usb_configured = 0;
 void SetUSBreconnect(int value) {
@@ -542,7 +548,7 @@ int GetUSBconfigured(void) {
     return usb_configured;
 }
 
-bool usb_check() {
+bool usb_check(void) {
 
     /*
     // reconnected ONCE and
@@ -593,7 +599,7 @@ bool usb_check() {
     return (btConfiguration) ? true : false;
 }
 
-bool usb_poll() {
+bool usb_poll(void) {
     if (!usb_check()) return false;
     return (pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank);
 }
@@ -606,16 +612,18 @@ bool usb_poll() {
     that the length available to read is non-zero, thus hopefully fixes the
     bug.
 **/
-bool usb_poll_validate_length() {
+bool usb_poll_validate_length(void) {
     if (!usb_check()) return false;
     if (!(pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank)) return false;
     return ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16) >  0;
 }
 
-//*----------------------------------------------------------------------------
-//* \fn    usb_read
-//* \brief Read available data from Endpoint 1 OUT (host to device)
-//*----------------------------------------------------------------------------
+/*
+ *----------------------------------------------------------------------------
+ * \fn    usb_read
+ * \brief Read available data from Endpoint 1 OUT (host to device)
+ *----------------------------------------------------------------------------
+*/
 uint32_t usb_read(uint8_t *data, size_t len) {
 
     if (len == 0) return 0;
@@ -709,10 +717,12 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
     return nbBytesRcv;
 }
 
-//*----------------------------------------------------------------------------
-//* \fn    usb_write
-//* \brief Send through endpoint 2 (device to host)
-//*----------------------------------------------------------------------------
+/*
+ *----------------------------------------------------------------------------
+ * \fn    usb_write
+ * \brief Send through endpoint 2 (device to host)
+ *----------------------------------------------------------------------------
+*/
 int usb_write(const uint8_t *data, const size_t len) {
 
     if (!len) return PM3_EINVARG;
@@ -733,6 +743,7 @@ int usb_write(const uint8_t *data, const size_t len) {
     }
 
     UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {};
 
     while (length) {
         // Send next chunk
@@ -750,8 +761,9 @@ int usb_write(const uint8_t *data, const size_t len) {
 
         UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
         while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
-        UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
 
+        UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {};
     }
 
     // Wait for the end of transfer
@@ -762,14 +774,26 @@ int usb_write(const uint8_t *data, const size_t len) {
     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
+
+    if (len % AT91C_EP_IN_SIZE == 0) {
+
+        UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+        while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {};
+
+        UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
+    }
+
     return PM3_SUCCESS;
 }
 
-//*----------------------------------------------------------------------------
-//* \fn    AT91F_USB_SendData
-//* \brief Send Data through the control endpoint
-//*----------------------------------------------------------------------------
-void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
+/*
+ *----------------------------------------------------------------------------
+ * \fn    AT91F_USB_SendData
+ * \brief Send Data through the control endpoint
+ *----------------------------------------------------------------------------
+*/
+void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
     AT91_REG csr;
 
     do {
@@ -777,17 +801,17 @@ void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
         length -= cpt;
 
         while (cpt--)
-            pUdp->UDP_FDR[AT91C_EP_CONTROL] = *pData++;
+            pudp->UDP_FDR[AT91C_EP_CONTROL] = *pData++;
 
-        if (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
+        if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
             UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
-            while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP);
+            while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP);
         }
 
         UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY);
 
         do {
-            csr = pUdp->UDP_CSR[AT91C_EP_CONTROL];
+            csr = pudp->UDP_CSR[AT91C_EP_CONTROL];
             // Data IN stage has been stopped by a status OUT
             if (csr & AT91C_UDP_RX_DATA_BK0) {
 
@@ -798,9 +822,9 @@ void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 
     } while (length);
 
-    if (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
+    if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
         UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
-        while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP);
+        while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP);
     }
 }
 
@@ -809,22 +833,22 @@ void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
 //* \fn    AT91F_USB_SendZlp
 //* \brief Send zero length packet through the control endpoint
 //*----------------------------------------------------------------------------
-void AT91F_USB_SendZlp(AT91PS_UDP pUdp) {
+void AT91F_USB_SendZlp(AT91PS_UDP pudp) {
     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY);
-    while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP)) {};
+    while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP)) {};
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
-    while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
+    while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
 }
 
 //*----------------------------------------------------------------------------
 //* \fn    AT91F_USB_SendStall
 //* \brief Stall the control endpoint
 //*----------------------------------------------------------------------------
-void AT91F_USB_SendStall(AT91PS_UDP pUdp) {
+void AT91F_USB_SendStall(AT91PS_UDP pudp) {
     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_FORCESTALL);
-    while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_ISOERROR)) {};
+    while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_ISOERROR)) {};
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR));
-    while (pUdp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR)) {};
+    while (pudp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR)) {};
 }
 
 //*----------------------------------------------------------------------------
@@ -834,7 +858,7 @@ void AT91F_USB_SendStall(AT91PS_UDP pUdp) {
 //* 1. this is for USB endpoint0.  the control endpoint.
 //* 2. mixed with CDC ACM endpoint3 , interrupt, control endpoint
 //*----------------------------------------------------------------------------
-void AT91F_CDC_Enumerate() {
+void AT91F_CDC_Enumerate(void) {
     uint8_t bmRequestType, bRequest;
     uint16_t wValue, wIndex, wLength, wStatus;
 

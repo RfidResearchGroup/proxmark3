@@ -31,6 +31,7 @@ void init_table(CrcType_t crctype) {
         case CRC_14443_B:
         case CRC_15693:
         case CRC_ICLASS:
+        case CRC_CRYPTORF:
             generate_table(CRC16_POLY_CCITT, true);
             break;
         case CRC_FELICA:
@@ -171,6 +172,7 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
         case CRC_14443_A:
             crc = crc16_a(d, n);
             break;
+        case CRC_CRYPTORF:
         case CRC_14443_B:
         case CRC_15693:
             crc = crc16_x25(d, n);
@@ -189,7 +191,7 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
             crc = crc16_kermit(d, n);
             break;
         case CRC_11784:
-            crc = crc16_fdx(d, n);
+            crc = crc16_fdxb(d, n);
             break;
         case CRC_LEGIC:
             // TODO
@@ -209,6 +211,7 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
     switch (ct) {
         case CRC_14443_A:
             return crc16_a(d, n);
+        case CRC_CRYPTORF:
         case CRC_14443_B:
         case CRC_15693:
             return crc16_x25(d, n);
@@ -222,7 +225,7 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_KERMIT:
             return crc16_kermit(d, n);
         case CRC_11784:
-            return crc16_fdx(d, n);
+            return crc16_fdxb(d, n);
         case CRC_LEGIC:
             // TODO
             return 0;
@@ -252,6 +255,7 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
     switch (ct) {
         case CRC_14443_A:
             return (crc16_a(d, n) == 0);
+        case CRC_CRYPTORF:
         case CRC_14443_B:
             return (crc16_x25(d, n) == X25_CRC_CHECK);
         case CRC_15693:
@@ -266,7 +270,7 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_KERMIT:
             return (crc16_kermit(d, n) == 0);
         case CRC_11784:
-            return (crc16_fdx(d, n) == 0);
+            return (crc16_fdxb(d, n) == 0);
         case CRC_LEGIC:
             // TODO
             return false;
@@ -284,7 +288,7 @@ uint16_t crc16_ccitt(uint8_t const *d, size_t n) {
 
 // FDX-B ISO11784/85) uses KERMIT/CCITT
 // poly 0x xx  init=0x000  refin=false  refout=true  xorout=0x0000 ...
-uint16_t crc16_fdx(uint8_t const *d, size_t n) {
+uint16_t crc16_fdxb(uint8_t const *d, size_t n) {
     return crc16_fast(d, n, 0x0000, false, true);
 }
 
@@ -329,3 +333,4 @@ uint16_t crc16_legic(uint8_t const *d, size_t n, uint8_t uidcrc) {
     uint16_t initial = uidcrc << 8 | uidcrc;
     return crc16_fast(d, n, initial, true, true);
 }
+

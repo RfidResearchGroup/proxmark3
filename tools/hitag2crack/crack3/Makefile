@@ -1,19 +1,21 @@
-WARN=-Wall
-INCLUDE=-I../include
-CFLAGS=-c $(WARN) $(INCLUDE)
-LIBS=
+MYSRCPATHS = ../common
+MYSRCS = ht2crackutils.c hitagcrypto.c
+MYINCLUDES =-I ../common
+MYCFLAGS = -D_GNU_SOURCE
+MYDEFS =
+MYLDLIBS = -lpthread
 
-all: ht2crack3.c ht2test.c hitagcrypto.o utilpart.o
-	cc $(WARN) -o ht2crack3 ht2crack3.c hitagcrypto.o utilpart.o -lpthread $(LIBS)
-	cc $(WARN) -o ht2test ht2test.c hitagcrypto.o utilpart.o $(LIBS)
+BINS = ht2crack3 ht2crack3test
+INSTALLTOOLS = $(BINS)
 
-hitagcrypto.o: hitagcrypto.c hitagcrypto.h
-	cc $(CFLAGS) hitagcrypto.c
+include ../../../Makefile.host
 
-utilpart.o: utilpart.c util.h
-	cc $(CFLAGS) utilpart.c
+# checking platform can be done only after Makefile.host
+ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    CFLAGS += -D_ISOC99_SOURCE
+endif
 
-clean:
-	rm -rf *.o ht2crack3 ht2test
-
-fresh: clean all
+ht2crack3 : $(OBJDIR)/ht2crack3.o $(MYOBJS)
+ht2crack3test : $(OBJDIR)/ht2crack3test.o $(MYOBJS)

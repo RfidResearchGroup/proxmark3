@@ -93,8 +93,10 @@ Command = {
         o.data = data
         return o
     end,
-    parse = function (packet)
-            local count, cmd, arg1, arg2, arg3, data = bin.unpack('LLLLH511', packet)
+    parse = function(packet)
+            local count, cmd, arg1, arg2, arg3, data = bin.unpack('LLLL', packet)
+            local length = #packet - count + 1
+            count, data = bin.unpack('H'..length, packet, count)
             return Command:new{cmd = cmd, arg1 = arg1, arg2 = arg2, arg3 = arg3, data = data}
     end
 }
@@ -121,26 +123,28 @@ end
 -- @param command - the usb packet to send
 -- @param ignoreresponse - if set to true, we don't read the device answer packet
 --     which is usually recipe for fail. If not sent, the host will wait 2s for a
---     response of type CMD_ACK
+--     response of type CMD_ACK or like NG use the CMD as ack..
 -- @return packet,nil if successful
 --         nil, errormessage if unsuccessful
-function Command:sendMIX( ignore_response, timeout )
+function Command:sendMIX( ignore_response, timeout, use_cmd_ack)
+    if timeout == nil then timeout = TIMEOUT end
     local data = self.data
     local cmd = self.cmd
     local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
 
     local err, msg = core.SendCommandMIX(cmd, arg1, arg2, arg3, data)
     if err == nil then return err, msg end
-
     if ignore_response then return true, nil end
 
-    if timeout == nil then timeout = TIMEOUT end
+    local ack = _commands.CMD_ACK
+    if use_cmd_ack then
+        ack = cmd
+    end
 
-    local response, msg = core.WaitForResponseTimeout(_commands.CMD_ACK, timeout)
+    local response, msg = core.WaitForResponseTimeout(ack, timeout)
     if response == nil then
         return nil, 'Error, waiting for response timed out :: '..msg
     end
-
     -- lets digest
     data = nil
     cmd = nil
@@ -157,15 +161,13 @@ function Command:sendMIX( ignore_response, timeout )
     return packed, nil;
 end
 function Command:sendNG( ignore_response, timeout )
+    if timeout == nil then timeout = TIMEOUT end
     local data = self.data
     local cmd = self.cmd
     local err, msg = core.SendCommandNG(cmd, data)
     if err == nil then return nil, msg end
 
     if ignore_response then return true, nil end
-
-    if timeout == nil then timeout = TIMEOUT end
-
     local response, msg = core.WaitForResponseTimeout(cmd, timeout)
     if response == nil then
         return nil, 'Error, waiting for response timed out :: '..msg

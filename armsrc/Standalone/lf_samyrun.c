@@ -31,7 +31,7 @@ void ModInfo(void) {
 //  C = playing bank A
 //  D = playing bank B
 
-void RunMod() {
+void RunMod(void) {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");
@@ -56,11 +56,6 @@ void RunMod() {
         int button_pressed = BUTTON_HELD(280);
         if (button_pressed != BUTTON_HOLD)
             continue;
-        /*
-        #define BUTTON_NO_CLICK 0
-        #define BUTTON_SINGLE_CLICK -1
-        #define BUTTON_DOUBLE_CLICK -2
-        */
 
         if (state == STATE_READ) {
 
@@ -82,7 +77,7 @@ void RunMod() {
 
             // findone, high, low, no ledcontrol (A)
             uint32_t hi = 0, lo = 0;
-            CmdHIDdemodFSK(1, &hi, &lo, 0);
+            lf_hid_watch(1, &hi, &lo);
             high[selected] = hi;
             low[selected] = lo;
 

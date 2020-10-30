@@ -19,6 +19,14 @@ make clean
 make SKIPQT=1
 ```
 
+On Linux hosts, if the Bluez headers and library are present, the client will be compiled with native Bluetooth support. It's possible to explicitly skip Bluetooth support with:
+
+```
+make clean
+make SKIPBT=1
+```
+
+
 ## Firmware
 
 By default, the firmware is of course tuned for the Proxmark3 Rdv4.0 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.
@@ -72,16 +80,25 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | STANDALONE      | DESCRIPTION                            |
 |-----------------|----------------------------------------|
 |                 | No standalone mode
-| LF_SAMYRUN (def)| HID26 read/clone/sim - Samy Kamkar
-| LF_ICERUN       | standalone mode skeleton - iceman
-| LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
+| LF_SKELETON     | standalone mode skeleton - Iceman1001
+| LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
+| LF_EM4100RSWB   | LF EM4100 read/write/clone/brute mode - Monster1024
+| LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
-| HF_YOUNG        | Mifare sniff/simulation - Craig Young
-| HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
-| HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
+| LF_ICEHID       | LF HID collector to flashmem - Iceman1001
+| LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
+| LF_SAMYRUN      | HID26 read/clone/sim - Samy Kamkar
+| HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
+| HF_AVEFUL       | MIFARE Ultralight read/simulation - Ave Ozkal
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
+| HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
+| HF_ICECLASS     | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
+| HF_LEGIC        | HF Legic Prime standalone - uhei
+| HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
+| HF_MSDSAL  (def)| EMV Read and emulation - Salvador Mendoza
+| HF_YOUNG        | Mifare sniff/simulation - Craig Young
 
-By default `STANDALONE=LF_SAMYRUN`.
+By default `STANDALONE=HF_MSDSAL`.
 
 ## Next step
 

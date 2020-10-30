@@ -1,26 +1,22 @@
-WARN=-Wall
-INCLUDE=-I../include
-CFLAGS=-c $(WARN) $(INCLUDE)
-# Linux libs
-LIBS=-pthread -D_GNU_SOURCE
-# Mac libs
-# LIBS=
+MYSRCPATHS = ../common
+MYSRCS = ht2crackutils.c hitagcrypto.c
+MYINCLUDES =-I ../common
+MYCFLAGS = -D_GNU_SOURCE
+MYDEFS =
+MYLDLIBS = -lpthread
 
-all: ht2crack2buildtable.c ht2crack2search.c ht2crack2gentest.c hitagcrypto.o utilpart.o ht2crack2utils.o
-	cc $(WARN) -o ht2crack2buildtable ht2crack2buildtable.c hitagcrypto.o ht2crack2utils.o $(LIBS)
-	cc $(WARN) -o ht2crack2search ht2crack2search.c hitagcrypto.o utilpart.o ht2crack2utils.o $(LIBS)
-	cc $(WARN) -o ht2crack2gentest ht2crack2gentest.c hitagcrypto.o utilpart.o ht2crack2utils.o $(LIBS)
+BINS = ht2crack2buildtable ht2crack2search ht2crack2gentest
+INSTALLTOOLS = $(BINS)
 
-ht2crack2utils.o: ht2crack2utils.c ht2crack2utils.h
-	cc $(CFLAGS) ht2crack2utils.c
+include ../../../Makefile.host
 
-hitagcrypto.o: hitagcrypto.c hitagcrypto.h
-	cc $(CFLAGS) hitagcrypto.c
+# checking platform can be done only after Makefile.host
+ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    CFLAGS += -D_ISOC99_SOURCE
+endif
 
-utilpart.o: utilpart.c util.h
-	cc $(CFLAGS) utilpart.c
-
-clean:
-	rm -rf *.o ht2crack2buildtable ht2crack2search ht2crack2gentest
-
-fresh: clean all
+ht2crack2buildtable : $(OBJDIR)/ht2crack2buildtable.o $(MYOBJS)
+ht2crack2search : $(OBJDIR)/ht2crack2search.o $(MYOBJS)
+ht2crack2gentest : $(OBJDIR)/ht2crack2gentest.o $(MYOBJS)

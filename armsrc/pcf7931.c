@@ -173,7 +173,7 @@ bool IsBlock1PCF7931(uint8_t *block) {
     return false;
 }
 
-void ReadPCF7931() {
+void ReadPCF7931(void) {
     int found_blocks = 0; // successfully read blocks
     int max_blocks = 8;   // readable blocks
     uint8_t memory_blocks[8][17]; // PCF content

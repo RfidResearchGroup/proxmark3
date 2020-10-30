@@ -106,12 +106,10 @@
 #define FLASH_FASTBAUD MCK
 #define FLASH_MINBAUD FLASH_FASTBAUD
 
-#define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate);
-bool FlashInit();
+bool FlashInit(void);
 void FlashSetup(uint32_t baudrate);
 void FlashStop(void);
 bool Flash_WaitIdle(void);
@@ -122,9 +120,9 @@ void Flash_TransferAdresse(uint32_t address);
 
 bool Flash_CheckBusy(uint32_t timeout);
 
-void Flash_WriteEnable();
+void Flash_WriteEnable(void);
 bool Flash_WipeMemoryPage(uint8_t page);
-bool Flash_WipeMemory();
+bool Flash_WipeMemory(void);
 bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);
 bool Flash_Erase64k(uint8_t block);

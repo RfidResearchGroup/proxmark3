@@ -21,8 +21,8 @@ typedef struct {
 * acquisition of Cotag LF signal. Similar to other LF,  since the Cotag has such long datarate RF/384
 * and is Manchester?,  we directly gather the manchester data into bigbuff
 **/
-void doCotagAcquisition(size_t sample_size);
-uint32_t doCotagAcquisitionManchester(void);
+void doCotagAcquisition(void);
+uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen);
 
 /**
 * acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
@@ -40,7 +40,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size);
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF();
+uint32_t SniffLF(bool verbose, uint32_t sample_size);
 
 uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
                        bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip);
@@ -73,7 +73,7 @@ void initSampleBuffer(uint32_t *sample_size);
 void initSampleBufferEx(uint32_t *sample_size, bool use_malloc);
 void logSampleSimple(uint8_t sample);
 void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg);
-uint32_t getSampleCounter();
+uint32_t getSampleCounter(void);
 
 /**
 * Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
@@ -82,7 +82,7 @@ uint32_t getSampleCounter();
 *                  0 or 95 ==> 125 kHz
 *
 **/
-void LFSetupFPGAForADC(int divisor, bool lf_field);
+void LFSetupFPGAForADC(int divisor, bool reader_field);
 
 /**
  * Called from the USB-handler to set the sampling configuration
@@ -97,8 +97,9 @@ void LFSetupFPGAForADC(int divisor, bool lf_field);
  */
 void setSamplingConfig(sample_config *sc);
 
-sample_config *getSamplingConfig();
+sample_config *getSamplingConfig(void);
 
-void printConfig();
+void printLFConfig(void);
+void printSamples(void);
 
 #endif // __LFSAMPLING_H

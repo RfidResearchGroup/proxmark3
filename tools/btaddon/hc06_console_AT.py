@@ -2,7 +2,11 @@
 
 import sys
 import time
-import serial
+try:
+    import serial
+except ModuleNotFoundError:
+    print("Please install pyserial module first.")
+    sys.exit(1)
 
 if len(sys.argv) < 2:
     print('Usage: %s <baudrate>' % sys.argv[0])

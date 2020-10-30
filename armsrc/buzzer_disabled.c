@@ -1,4 +1,4 @@
-#include "buzzer.h"
+#include "buzzer_disabled.h"
 
 void Ring_BEE_ONCE(uint16_t music_note) {
     BEE_ON();

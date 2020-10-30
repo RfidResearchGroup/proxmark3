@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Andrei Costin <zveriu@gmail.com>, 2011
 # pm3_eml2upper.sh

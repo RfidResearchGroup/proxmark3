@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #  mfdread.py - Mifare dumps parser in human readable format
@@ -18,8 +18,11 @@ import copy
 import sys
 from collections import defaultdict
 
-from bitstring import BitArray
-
+try:
+    from bitstring import BitArray
+except ModuleNotFoundError:
+    print("Please install bitstring module first.")
+    sys.exit(1)
 
 class Options:
     FORCE_1K = False
@@ -28,7 +31,7 @@ class Options:
 if len(sys.argv) == 1:
     sys.exit('''
 ------------------
-Usage: mfdread.py ./dump.mfd
+Usage: pm3_mfdread.py ./dump.mfd
 Mifare dumps reader.
 ''')
 

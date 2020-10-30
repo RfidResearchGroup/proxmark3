@@ -14,68 +14,39 @@
 
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "zlib.h"
+#include "lz4.h"
 #include "BigBuf.h"
+#include "string.h"
 
 static uint8_t *next_free_memory;
 extern struct common_area common_area;
 extern char __data_src_start__, __data_start__, __data_end__, __bss_start__, __bss_end__;
 
-static voidpf inflate_malloc(voidpf opaque, uInt items, uInt size) {
-    uint8_t *allocated_memory;
-
-    allocated_memory = next_free_memory;
-    next_free_memory += items * size;
-    return allocated_memory;
-}
-
-static void inflate_free(voidpf opaque, voidpf address) {
-    // nothing to do
-}
-
 static void uncompress_data_section(void) {
-    z_stream data_section;
-
     next_free_memory = BigBuf_get_addr();
+    int avail_in;
+    memcpy(&avail_in, &__data_start__, sizeof(int));
+    int avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
+    // uncompress data segment to RAM
+    uintptr_t p = (uintptr_t)&__data_src_start__;
+    int res = LZ4_decompress_safe((char *)p + 4, &__data_start__, avail_in, avail_out);
 
-    // initialize zstream structure
-    data_section.next_in = (uint8_t *) &__data_src_start__;
-    data_section.avail_in = &__data_end__ - &__data_start__;  // uncompressed size. Wrong but doesn't matter.
-    data_section.next_out = (uint8_t *) &__data_start__;
-    data_section.avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
-    data_section.zalloc = &inflate_malloc;
-    data_section.zfree = &inflate_free;
-    data_section.opaque = NULL;
-
-    // initialize zlib for inflate
-    int res = inflateInit2(&data_section, 15);
     if (res < 0)
         return;
-
-    // uncompress data segment to RAM
-    inflate(&data_section, Z_FINISH);
-
     // save the size of the compressed data section
-    common_area.arg1 = data_section.total_in;
+    common_area.arg1 = res;
 }
 
-void __attribute__((section(".startos"))) Vector(void) {
+void __attribute__((section(".startos"))) Vector(void);
+void Vector(void) {
     /* Stack should have been set up by the bootloader */
-    // char *src;
-    char *dst, *end;
 
     uncompress_data_section();
 
     /* Set up (that is: clear) BSS. */
-    dst = &__bss_start__;
-    end = &__bss_end__;
+    char *dst = &__bss_start__;
+    char *end = &__bss_end__;
     while (dst < end) *dst++ = 0;
-
-    // Set up data segment: Copy from flash to ram
-    // src = &__data_src_start__;
-    // dst = &__data_start__;
-    // end = &__data_end__;
-    // while(dst < end) *dst++ = *src++;
 
     AppMain();
 }

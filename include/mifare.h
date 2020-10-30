@@ -70,37 +70,29 @@ typedef struct {
     uint32_t ProxToAirDuration;
     uint8_t  par; // enough for precalculated parity of 8 Byte responses
 } PACKED tag_response_info_t;
-//-----------------------------------------------------------------------------
-// ISO 14443B
-//-----------------------------------------------------------------------------
-typedef struct {
-    uint8_t uid[10];
-    uint8_t uidlen;
-    uint8_t atqb[7];
-    uint8_t chipid;
-    uint8_t cid;
-} PACKED iso14b_card_select_t;
 
-typedef enum ISO14B_COMMAND {
-    ISO14B_CONNECT = (1 << 0),
-    ISO14B_DISCONNECT = (1 << 1),
-    ISO14B_APDU = (1 << 2),
-    ISO14B_RAW = (1 << 3),
-    ISO14B_REQUEST_TRIGGER = (1 << 4),
-    ISO14B_APPEND_CRC = (1 << 5),
-    ISO14B_SELECT_STD = (1 << 6),
-    ISO14B_SELECT_SR = (1 << 7),
-    ISO14B_SET_TIMEOUT = (1 << 8),
-} iso14b_command_t;
+// DESFIRE_RAW flag enums
+typedef enum DESFIRE_COMMAND {
+    NONE         = 0x00,
+    INIT         = 0x01,
+    DISCONNECT   = 0x02,
+    CLEARTRACE   = 0x04,
+    BAR          = 0x10,
+} desfire_command_t;
 
-typedef enum ISO15_COMMAND {
-    ISO15_CONNECT = (1 << 0),
-    ISO15_NO_DISCONNECT = (1 << 1),
-    ISO15_RAW = (1 << 2),
-    ISO15_APPEND_CRC = (1 << 3),
-    ISO15_HIGH_SPEED = (1 << 4),
-    ISO15_READ_RESPONSE = (1 << 5)
-} iso15_command_t;
+typedef enum {
+    MFDES_AUTH_DES = 1,
+    MFDES_AUTH_ISO = 2,
+    MFDES_AUTH_AES = 3,
+    MFDES_AUTH_PICC = 4
+} mifare_des_authmode_t;
+
+typedef enum {
+    MFDES_ALGO_DES = 1,
+    MFDES_ALGO_3DES = 2,
+    MFDES_ALGO_3K3DES = 3,
+    MFDES_ALGO_AES = 4
+} mifare_des_authalgo_t;
 
 //-----------------------------------------------------------------------------
 // "hf 14a sim x", "hf mf sim x" attacks
@@ -137,109 +129,9 @@ typedef enum SMARTCARD_COMMAND {
     SC_RAW = (1 << 2),
     SC_SELECT = (1 << 3),
     SC_RAW_T0 = (1 << 4),
+    SC_CLEARLOG = (1 << 5),
+    SC_LOG = (1 << 6),
 } smartcard_command_t;
 
-//-----------------------------------------------------------------------------
-// FeliCa
-//-----------------------------------------------------------------------------
-// IDm  = ID manufacturer
-// mc = manufactureCode
-// mc1 mc2 u1 u2 u3 u4 u5 u6
-// PMm  = Product manufacturer
-// icCode =
-//    ic1 = ROM
-//    ic2 = IC
-// maximum response time =
-//    B3(request service)
-//    B4(request response)
-//    B5(authenticate)
-//    B6(read)
-//    B7(write)
-//    B8()
-
-// ServiceCode  2bytes  (access-rights)
-// FileSystem = 1 Block = 16 bytes
-typedef struct {
-    uint8_t IDm[8];
-    uint8_t code[2];
-    uint8_t uid[6];
-    uint8_t PMm[8];
-    uint8_t iccode[2];
-    uint8_t mrt[6];
-    uint8_t servicecode[2];
-} PACKED felica_card_select_t;
-
-typedef struct {
-    uint8_t sync[2];
-    uint8_t length[1];
-    uint8_t cmd_code[1];
-    uint8_t IDm[8];
-} PACKED felica_frame_response_t;
-
-typedef struct {
-    uint8_t status_flag1[1];
-    uint8_t status_flag2[1];
-} PACKED felica_status_flags_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    uint8_t node_number[1];
-    uint8_t node_key_versions[2];
-} PACKED felica_request_service_response_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    uint8_t mode[1];
-} PACKED felica_request_request_response_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    felica_status_flags_t status_flags;
-    uint8_t number_of_block[1];
-    uint8_t block_data[16];
-    uint8_t block_element_number[1];
-} PACKED felica_read_without_encryption_response_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    felica_status_flags_t status_flags;
-} PACKED felica_status_response_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    uint8_t number_of_systems[1];
-    uint8_t system_code_list[32];
-} PACKED felica_syscode_response_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    felica_status_flags_t status_flags;
-    uint8_t format_version[1];
-    uint8_t basic_version[2];
-    uint8_t number_of_option[1];
-    uint8_t option_version_list[4];
-} PACKED felica_request_spec_response_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    uint8_t m2c[8];
-    uint8_t m3c[8];
-} PACKED felica_auth1_response_t;
-
-typedef struct {
-    uint8_t code[1];
-    uint8_t IDtc[8];
-    uint8_t IDi[8];
-    uint8_t PMi[8];
-} PACKED felica_auth2_response_t;
-
-
-typedef enum FELICA_COMMAND {
-    FELICA_CONNECT = (1 << 0),
-    FELICA_NO_DISCONNECT = (1 << 1),
-    FELICA_RAW = (1 << 3),
-    FELICA_APPEND_CRC = (1 << 5),
-    FELICA_NO_SELECT = (1 << 6),
-} felica_command_t;
 
 #endif // _MIFARE_H_

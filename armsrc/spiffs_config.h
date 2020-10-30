@@ -18,8 +18,6 @@
 #include "string.h"
 #include "flashmem.h"
 
-void Dbprintf(const char *fmt, ...);
-
 //#include <stddef.h>
 //#include <unistd.h>
 // ----------- >8 ------------
@@ -59,8 +57,6 @@ typedef uint8_t u8_t;
 #define SPIFFS_API_DBG(_f, ...) //Dbprintf(_f, ## __VA_ARGS__)
 #define SPIFFS_API_DBGF(str) SPIFFS_API_DBG(str,NULL)
 #endif
-
-
 
 // Defines spiffs debug print formatters
 // some general signed number

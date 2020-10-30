@@ -15,17 +15,18 @@ local cmds = require('commands')
 local utils = require('utils')
 
 -- Shouldn't take longer than 2.5 seconds
-local TIMEOUT = 2500
+local TIMEOUT = 2000
 
 local ISO14B_COMMAND = {
-    ISO14B_CONNECT = 1,
-    ISO14B_DISCONNECT = 2,
-    ISO14B_APDU = 4,
-    ISO14B_RAW = 8,
+    ISO14B_CONNECT = 0x1,
+    ISO14B_DISCONNECT = 0x2,
+    ISO14B_APDU = 0x4,
+    ISO14B_RAW = 0x8,
     ISO14B_REQUEST_TRIGGER = 0x10,
     ISO14B_APPEND_CRC = 0x20,
     ISO14B_SELECT_STD = 0x40,
     ISO14B_SELECT_SR = 0x80,
+    ISO14B_SET_TIMEOUT = 0x100,
 }
 
 local function parse14443b(data)
@@ -74,9 +75,11 @@ local function read14443b(disconnect)
             arg1 = flags
             }
 
-    local result, err = command:sendMIX()
+    info = nil
+
+    local result, err = command:sendMIX(false, TIMEOUT, true)
     if result then
-        local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
+        local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL', result)
         if arg0 == 0 then
             data = string.sub(result, count)
             info, err = parse14443b(data)
@@ -88,12 +91,10 @@ local function read14443b(disconnect)
     end
 
     if err then
-        print(err)
         return nil, err
     end
-    return info
+    return info, nil
 end
-
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader.
 -- @return if successful: an table containing card info
@@ -102,12 +103,11 @@ local function waitFor14443b()
     print('Waiting for card... press Enter to quit')
     while not core.kbd_enter_pressed() do
         res, err = read14443b(false)
-        if res then return res end
+        if res then return res, err end
         -- err means that there was no response from card
     end
     return nil, 'Aborted by user'
 end
-
 ---
 -- turns on the HF field.
 local function connect14443b()

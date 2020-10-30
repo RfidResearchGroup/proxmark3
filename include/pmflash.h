@@ -14,9 +14,6 @@
 
 #include "common.h"
 
-// Flashmem spi baudrate
-extern uint32_t FLASHMEM_SPIBAUDRATE;
-
 // RDV40 Section
 // 256kb divided into 4k sectors.
 //

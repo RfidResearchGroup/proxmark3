@@ -28,7 +28,7 @@ USART support is in `common/usart.c`.
 
 There are mainly two ways to use this USART:
 * connect the host client to the Proxmark3 via this USART instead of USB-CDC, this is the `FPC_USART_HOST` option you can add to `PLATFORM_EXTRAS` in `Makefile.platform`. The most used way is through the BT add-on (blue shark) that we will cover later. Instead of BT add-on, we can also use e.g. a FTDI cable (mostly for internal development, it's much slower than USB-CDC anyway) or in the future other ways to connect the host such as a USART-to-Wi-Fi bridge.
-* connect "slave" devices to the Proxmark3 to add functionnalities. In such case, the host client will use USB-CDC and the USART will be use to, e.g. connect the Proxmark3 to various daughterboards. These is no such example of daughterboard as of today, except when we're talking to the BT add-on in its AT configuration mode.
+* connect "slave" devices to the Proxmark3 to add functionalities. In such case, the host client will use USB-CDC and the USART will be use to, e.g. connect the Proxmark3 to various daughterboards. These is no such example of daughterboard as of today, except when we're talking to the BT add-on in its AT configuration mode.
 
 This USART can be reached from the host client (if connected via USB-CDC) through the following commands, available when you add `FPC_USART_DEV` to `PLATFORM_EXTRAS` in `Makefile.platform`:
 * `usart config`, to configure the baudrate and the parity of the Proxmark3 USART
@@ -63,7 +63,7 @@ The add-on acts as a bridge, between its UART and the BT communication channel, 
 
 The Bluetooth RFCOMM protocol provides an emulation of serial ports over the L2CAP protocol ([ref](https://www.amd.e-technik.uni-rostock.de/ma/gol/lectures/wirlec/bluetooth_info/rfcomm.html)).
 
-As for USB-CDC, the real speed of the link is unrelated to serial baudrate notion. Litterature mentions a maximal value of 360kbps for some implementations, but the HC-06 Bluetooth module within the BT add-on is limited as the vast majority of similar devices to 128kbps.
+As for USB-CDC, the real speed of the link is unrelated to serial baudrate notion. Literature mentions a maximal value of 360kbps for some implementations, but the HC-06 Bluetooth module within the BT add-on is limited as the vast majority of similar devices to 128kbps.
 
 ### BT add-on baudrate
 

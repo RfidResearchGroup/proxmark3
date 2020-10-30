@@ -15,8 +15,13 @@ ifeq ($(DEFSBEENHERE),)
     $(error Can't find Makefile.defs)
 endif
 
-CFLAGS ?= -Wall -Werror -O3
+CFLAGS ?= $(DEFCFLAGS)
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
+CXXFLAGS ?= $(DEFCXXFLAGS)
+CXXFLAGS += $(MYDEFS) $(MYCXXFLAGS) $(MYINCLUDES)
+LDFLAGS ?= $(DEFLDFLAGS)
+LDFLAGS += $(MYLDFLAGS)
+LDLIBS += $(MYLDLIBS)
 
 vpath %.c $(MYSRCPATHS)
 
@@ -28,7 +33,8 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 BINDIR := .
 OBJDIR := obj
 
-MYOBJS = $(MYSRCS:%.c=$(OBJDIR)/%.o)
+MYOBJS ?= $(MYSRCS:%.c=$(OBJDIR)/%.o)
+MYCXXOBJS ?= $(MYCXXSRCS:%.cpp=$(OBJDIR)/%.o)
 CLEAN = $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
 
 all: $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
@@ -36,6 +42,11 @@ all: $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
 clean:
 	$(Q)$(RM) $(CLEAN)
 	$(Q)$(RMDIR) $(OBJDIR)
+ifneq (,$(MYCLEANOLDPATH))
+	    $(Q)$(RM) $(foreach f,$(CLEAN),$(MYCLEANOLDPATH)/$(f))
+	    $(Q)$(RMDIR) $(MYCLEANOLDPATH)/$(OBJDIR)
+	    $(Q)$(RMDIR_SOFT) $(MYCLEANOLDPATH) 2>/dev/null || true
+endif
 
 install: all
 ifneq (,$(INSTALLTOOLS))
@@ -54,24 +65,31 @@ endif
 
 .PHONY: all clean install uninstall
 
-$(BINDIR)/$(LIB_A): $(MYOBJS)
+$(BINDIR)/$(LIB_A): $(MYOBJS) $(MYCXXOBJS)
 	$(info [=] AR $(notdir $@))
-	$(Q)$(AR) $@ $(MYOBJS)
+	$(Q)$(AR) $@ $(MYOBJS) $(MYCXXOBJS)
 	$(Q)$(RANLIB) $@
 
-$(BINDIR)/% : $(OBJDIR)/%.o $(MYOBJS) $(MYLIBS)
+$(BINDIR)/% : $(OBJDIR)/%.o $(MYOBJS) $(MYCXXOBJS) $(MYLIBS)
 	$(info [=] LD $(notdir $@))
-	$(Q)$(LD) $(LDFLAGS) $(MYOBJS) $< -o $@ $(MYLIBS)
+	$(Q)$(LD) $(LDFLAGS) $(MYOBJS) $(MYCXXOBJS) $< -o $@ $(MYLIBS) $(MYLDLIBS)
 
-$(OBJDIR)/%.o : %.c | $(OBJDIR)
+%.o: %.c
+$(OBJDIR)/%.o : %.c $(OBJDIR)/%.d | $(OBJDIR)
 	$(info [-] CC $<)
 	$(Q)$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
+	$(Q)$(POSTCOMPILE)
+
+%.o: %.cpp
+$(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d | $(OBJDIR)
+	$(info [-] CXX $<)
+	$(Q)$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 $(OBJDIR):
 	$(Q)$(MKDIR) $(OBJDIR)
 
-DEPENDENCY_FILES = $(MYOBJS:%.o=%.d) $(BINS:%=$(OBJDIR)/%.d)
+DEPENDENCY_FILES = $(MYOBJS:%.o=%.d) $(MYCXXOBJS:%.o=%.d) $(BINS:%=$(OBJDIR)/%.d)
 
 $(DEPENDENCY_FILES): ;
 .PRECIOUS: $(DEPENDENCY_FILES)

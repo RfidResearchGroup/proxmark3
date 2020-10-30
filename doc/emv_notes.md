@@ -5,7 +5,7 @@
 
 - Get ATR|ATS
 - Get AID by PSE (`emv pse`)
-- Get AID by appliation list (`emv search`)
+- Get AID by application list (`emv search`)
 - Select application (`emv select`)
 - Format PDOL (look at next part)
 - Execute GPO (`emv gpo` this step and format PDOL)
@@ -27,7 +27,7 @@
 
 - Get ATR|ATS
 - Get AID by PSE (`emv pse`)
-- Get AID by appliation list (`emv search`)
+- Get AID by application list (`emv search`)
 - Select application (`emv select`)
 - Format PDOL (look at next part)
 - Execute GPO (`emv gpo` this step and format PDOL)
@@ -62,7 +62,7 @@ It works for VISA(r) and Mastercard(r) transactions. It may work with other EMV 
 ^[Top](#top)
 
 MSD - Magnetic Stripe mode
-VSDC - contact transacion
+VSDC - contact transaction
 qVSDC - contactless transaction
 
 ### Mastercard(r) transactions

@@ -3,8 +3,8 @@
  * This builds the 1.2TB table and sorts it.
  */
 
-#include "ht2crack2utils.h"
-
+#include "ht2crackutils.h"
+#include <stdlib.h>
 
 // DATAMAX is the size of each bucket (bytes).  There are 65536 buckets so choose a value such that
 // DATAMAX * 65536 < RAM available.  For ex, if you want to use 12GB of RAM (for a 16GB machine
@@ -18,7 +18,7 @@
 //
 // If sorting fails with a 'bus error' then that is likely because your disk I/O can't keep up with
 // the read/write demands of the multi-threaded sorting.  In this case, reduce the number of sorting
-// threads.  This will most likely only be a problem with network disks; SATA should be okay; 
+// threads.  This will most likely only be a problem with network disks; SATA should be okay;
 // USB2/3 should keep up.
 //
 // These MUST be a power of 2 for the maths to work - you have been warned!
@@ -53,66 +53,63 @@ uint64_t d2[48];
 int nsteps2;
 
 // create table entry
-void create_table(struct table *t, int d1, int d2)
-{
-    if (!t) {
+static void create_table(struct table *tt, int d_1, int d_2) {
+    if (!tt) {
         printf("create_table: t is NULL\n");
         exit(1);
     }
 
     // create some space
-    t->data = (unsigned char *)malloc(DATAMAX);
-    if (!(t->data)) {
+    tt->data = (unsigned char *)malloc(DATAMAX);
+    if (!(tt->data)) {
         printf("create_table: cannot malloc data\n");
         exit(1);
     }
 
     // set data ptr to start of data table
-    t->ptr = t->data;
+    tt->ptr = tt->data;
 
     // init the mutex
-    if (pthread_mutex_init(&(t->mutex), NULL)) {
+    if (pthread_mutex_init(&(tt->mutex), NULL)) {
         printf("create_table: cannot init mutex\n");
         exit(1);
     }
 
     // create the path
-//    sprintf(t->path, "/Volumes/2tb/%02X/%02X.bin", d1 & 0xff, d2 & 0xff);
-    sprintf(t->path, "table/%02x/%02x.bin", d1 & 0xff, d2 & 0xff);
+//    sprintf(tt->path, "/Volumes/2tb/%02X/%02X.bin", d_1 & 0xff, d_2 & 0xff);
+    sprintf(tt->path, "table/%02x/%02x.bin", d_1 & 0xff, d_2 & 0xff);
 }
 
 
 // create all table entries
-void create_tables(struct table *t)
-{
+static void create_tables(struct table *tt) {
     int i, j;
 
-    if (!t) {
+    if (!tt) {
         printf("create_tables: t is NULL\n");
         exit(1);
     }
 
-    for (i=0; i<0x100; i++) {
-        for (j=0; j<0x100; j++) {
-            create_table(t + ((i * 0x100) + j), i, j);
+    for (i = 0; i < 0x100; i++) {
+        for (j = 0; j < 0x100; j++) {
+            create_table(tt + ((i * 0x100) + j), i, j);
         }
     }
 }
 
 
 // free the table memory
-void free_tables(struct table *t)
-{
+static void free_tables(struct table *tt) {
     int i;
     struct table *ttmp;
 
-    if (!t) {
+    if (!tt) {
         printf("free_tables: t is NULL\n");
         exit(1);
     }
 
-    for (i=0; i<0x10000; i++) {
-        ttmp = t + i;
+    for (i = 0; i < 0x10000; i++) {
+        ttmp = tt + i;
         free(ttmp->data);
     }
 }
@@ -120,8 +117,7 @@ void free_tables(struct table *t)
 
 
 // write (partial) table to file
-void writetable(struct table *t1)
-{
+static void writetable(struct table *t1) {
     int fd;
 
     if (debug) printf("writetable %s\n", t1->path);
@@ -146,18 +142,17 @@ void writetable(struct table *t1)
 
 
 // store value in table
-void store(unsigned char *data)
-{
-    unsigned char d1, d2;
+static void store(unsigned char *data) {
+    unsigned char d_1, d_2;
     int offset;
     struct table *t1;
 
     // use the first two bytes as an index
-    d1 = data[0];
-    d2 = data[1];
-    offset = (d1 * 0x100) + d2;
+    d_1 = data[0];
+    d_2 = data[1];
+    offset = (d_1 * 0x100) + d_2;
 
-    if (debug) printf("store, d1=%02X, d2=%02X, offset = %d\n", d1, d2, offset);
+    if (debug) printf("store, d1=%02X, d2=%02X, offset = %d\n", d_1, d_2, offset);
 
     // get pointer to table entry
     t1 = t + offset;
@@ -171,7 +166,7 @@ void store(unsigned char *data)
     if (debug) printf("store, offset = %d, got lock\n", offset);
 
     // store the entry
-    memcpy(t1->ptr, data+2, 10);
+    memcpy(t1->ptr, data + 2, 10);
 
     if (debug) printf("store, offset = %d, copied data\n", offset);
 
@@ -199,24 +194,21 @@ void store(unsigned char *data)
 }
 
 // writes the ks (keystream) and s (state)
-void write_ks_s(uint32_t ks1, uint32_t ks2, uint64_t shiftreg)
-{
+static void write_ks_s(uint32_t ks1, uint32_t ks2, uint64_t shiftreg) {
     unsigned char buf[16];
 
     // create buffer
     writebuf(buf, ks1, 3);
-    writebuf(buf+3, ks2, 3);
-    writebuf(buf+6, shiftreg, 6);
+    writebuf(buf + 3, ks2, 3);
+    writebuf(buf + 6, shiftreg, 6);
 
     // store buffer
     store(buf);
-
 }
 
 
 // builds the di table for jumping
-void builddi(int steps, int table)
-{
+static void builddi(int steps, int table) {
     uint64_t statemask;
     int i;
     Hitag_State mystate;
@@ -237,7 +229,7 @@ void builddi(int steps, int table)
     }
 
     // build di states
-    for (i=0; i<48; i++) {
+    for (i = 0; i < 48; i++) {
         mystate.shiftreg = statemask;
         buildlfsr(&mystate);
         hitag2_nstep(&mystate, steps);
@@ -248,8 +240,7 @@ void builddi(int steps, int table)
 }
 
 // jump function - quickly jumps a load of steps
-void jumpnsteps(Hitag_State *hstate, int table)
-{
+static void jumpnsteps(Hitag_State *hstate, int table) {
     uint64_t output = 0;
     uint64_t bitmask;
     int i;
@@ -271,7 +262,7 @@ void jumpnsteps(Hitag_State *hstate, int table)
     // if si is 1, di.si = di; if si is 0, di.si = 0
 
     bitmask = 1;
-    for (i=0; i<48; i++) {
+    for (i = 0; i < 48; i++) {
         if (hstate->shiftreg & bitmask) {
             output = output ^ thisd[i];
         }
@@ -281,19 +272,18 @@ void jumpnsteps(Hitag_State *hstate, int table)
 
     hstate->shiftreg = output;
     buildlfsr(hstate);
-}        
+}
 
 
 // thread to build a part of the table
-void *buildtable(void *d)
-{
+static void *buildtable(void *dd) {
     Hitag_State hstate;
     Hitag_State hstate2;
     unsigned long i;
     unsigned long maxentries = 1;
     uint32_t ks1;
     uint32_t ks2;
-    int index = (int)(long)d;
+    int index = (int)(long)dd;
     int tnum = NUM_BUILD_THREADS;
 
     /* set random state */
@@ -301,7 +291,7 @@ void *buildtable(void *d)
     buildlfsr(&hstate);
 
     /* jump to offset using jump table 2 (2048) */
-    for (i=0; i<index; i++) {
+    for (i = 0; i < index; i++) {
         jumpnsteps(&hstate, 2);
     }
 
@@ -319,7 +309,7 @@ void *buildtable(void *d)
     }
 
     /* make the entries */
-    for (i=0; i<maxentries; i++) {
+    for (i = 0; i < maxentries; i++) {
 
         // copy the current state
         hstate2.shiftreg = hstate.shiftreg;
@@ -343,8 +333,7 @@ void *buildtable(void *d)
 
 
 // make 'table/' (unsorted) and 'sorted/' dir structures
-void makedirs()
-{
+static void makedirs(void) {
     char path[32];
     int i;
 
@@ -357,7 +346,7 @@ void makedirs()
         exit(1);
     }
 
-    for (i=0; i<0x100; i++) {
+    for (i = 0; i < 0x100; i++) {
         sprintf(path, "table/%02x", i);
         if (mkdir(path, 0755)) {
             printf("cannot make dir %s\n", path);
@@ -371,16 +360,14 @@ void makedirs()
     }
 }
 
-static int datacmp(const void *p1, const void *p2, void *dummy)
-{
-    unsigned char *d1 = (unsigned char *)p1;
-    unsigned char *d2 = (unsigned char *)p2;
+static int datacmp(const void *p1, const void *p2, void *dummy) {
+    unsigned char *d_1 = (unsigned char *)p1;
+    unsigned char *d_2 = (unsigned char *)p2;
 
-    return memcmp(d1, d2, DATASIZE);
+    return memcmp(d_1, d_2, DATASIZE);
 }
 
-void *sorttable(void *d)
-{
+static void *sorttable(void *dd) {
     int i, j;
     int fdin;
     int fdout;
@@ -388,22 +375,21 @@ void *sorttable(void *d)
     char outfile[64];
     unsigned char *data = NULL;
     struct stat filestat;
-    unsigned char *table = NULL;
     uint64_t numentries = 0;
-    int index = (int)(long)d;
+    int index = (int)(long)dd;
     int space = 0x100 / NUM_SORT_THREADS;
 
     // create table - 50MB should be enough
-    table = (unsigned char *)malloc(50UL * 1024UL * 1024UL);
+    unsigned char *table = (unsigned char *)malloc(50UL * 1024UL * 1024UL);
     if (!table) {
         printf("sorttable: cannot malloc table\n");
         exit(1);
     }
 
     // loop over our first byte values
-    for (i=(index * space); i<((index + 1) * space); i++) {
+    for (i = (index * space); i < ((index + 1) * space); i++) {
         // loop over all second byte values
-        for (j=0; j<0x100; j++) {
+        for (j = 0; j < 0x100; j++) {
 
             printf("sorttable: processing bytes 0x%02x/0x%02x\n", i, j);
 
@@ -450,7 +436,10 @@ void *sorttable(void *d)
                 printf("cannot create outfile %s\n", outfile);
                 exit(1);
             }
-            write(fdout, table, numentries * DATASIZE);
+            if (write(fdout, table, numentries * DATASIZE)) {
+                printf("writetable cannot write all of the data\n");
+                exit(1);
+            }
             close(fdout);
 
             // remove input file
@@ -464,8 +453,7 @@ void *sorttable(void *d)
     return NULL;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     pthread_t threads[NUM_BUILD_THREADS];
     void *status;
     long i;
@@ -493,7 +481,7 @@ int main(int argc, char *argv[])
     builddi(2048, 2);
 
     // start the threads
-    for (i=0; i<NUM_BUILD_THREADS; i++) {
+    for (i = 0; i < NUM_BUILD_THREADS; i++) {
         ret = pthread_create(&(threads[i]), NULL, buildtable, (void *)(i));
         if (ret) {
             printf("cannot start buildtable thread %ld\n", i);
@@ -504,7 +492,7 @@ int main(int argc, char *argv[])
     if (debug) printf("main, started buildtable threads\n");
 
     // wait for threads to finish
-    for (i=0; i<NUM_BUILD_THREADS; i++) {
+    for (i = 0; i < NUM_BUILD_THREADS; i++) {
         ret = pthread_join(threads[i], &status);
         if (ret) {
             printf("cannot join buildtable thread %ld\n", i);
@@ -514,7 +502,7 @@ int main(int argc, char *argv[])
     }
 
     // write all remaining files
-    for (i=0; i<0x10000; i++) {
+    for (i = 0; i < 0x10000; i++) {
         t1 = t + i;
         if (t1->ptr > t1->data) {
             writetable(t1);
@@ -531,7 +519,7 @@ int main(int argc, char *argv[])
 
 
     // start the threads
-    for (i=0; i<NUM_SORT_THREADS; i++) {
+    for (i = 0; i < NUM_SORT_THREADS; i++) {
         ret = pthread_create(&(threads[i]), NULL, sorttable, (void *)(i));
         if (ret) {
             printf("cannot start sorttable thread %ld\n", i);
@@ -542,7 +530,7 @@ int main(int argc, char *argv[])
     if (debug) printf("main, started sorttable threads\n");
 
     // wait for threads to finish
-    for (i=0; i<NUM_SORT_THREADS; i++) {
+    for (i = 0; i < NUM_SORT_THREADS; i++) {
         ret = pthread_join(threads[i], &status);
         if (ret) {
             printf("cannot join sorttable thread %ld\n", i);

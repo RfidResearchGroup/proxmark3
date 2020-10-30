@@ -15,7 +15,7 @@ The retrieved sniffing session can be acquired by connecting the device
 to a client that supports the reconnect capability and issue 'hf 14a list'.
 
 In order to view the grabbed authentication attempts in the flash mem,
-you can simply run 'script run read_pwd_mem' or just 'mem dump p l 256'
+you can simply run 'script run mem_readpwd' or just 'mem dump p l 256'
 from the client to view the stored quadlets.
 */
 
@@ -41,7 +41,7 @@ from the client to view the stored quadlets.
 #define HF_BOG_LOGFILE "hf_bog.log"
 
 // This is actually copied from SniffIso14443a
-void RAMFUNC SniffAndStore(uint8_t param) {
+static void RAMFUNC SniffAndStore(uint8_t param) {
 
     iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 
@@ -235,7 +235,7 @@ void ModInfo(void) {
     DbpString("  HF 14a sniff standalone with ULC/ULEV1/NTAG auth storing in flashmem - aka BogitoRun (Bogito)");
 }
 
-void RunMod() {
+void RunMod(void) {
 
     StandAloneMode();
 
@@ -249,5 +249,5 @@ void RunMod() {
     LEDsoff();
     SpinDelay(300);
     Dbprintf("- [ End ] -> You can take shell back ...");
-    Dbprintf("- [  !  ] -> use 'script run read_pwd_mem_spiffs' to print passwords");
+    Dbprintf("- [  !  ] -> use 'script run data_read_pwd_mem_spiffs' to print passwords");
 }

@@ -18,6 +18,11 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
   * [Usb cable](#usb-cable)
+  * [WSL explorer.exe . doesnt work](#WSL)
+  * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
+  * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
+  * [Target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
+  * [Qt: Session management error:](#qt-session-management-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -61,7 +66,7 @@ Another possibility is if, when using the button for entering bootloader mode, t
 
 ### Determine if the bootloader was damaged or only the main OS image
 
-Unplug, press the Proxmark3 button and keep it pressed when you plug it on USB. If the red LEDs show a "off/on/off/on" pattern, you're goot, you manually entered into the bootloader mode.
+Unplug, press the Proxmark3 button and keep it pressed when you plug it on USB. If the red LEDs show a "off/on/off/on" pattern, you're good, you manually entered into the bootloader mode.
 On new bootloaders, you can release the button. If the pattern disappears, you're on an older bootloader and you've to do it again and keep the button pressed during all the flashing operation. 
 
 Once in bootloader mode, flash the main image.
@@ -123,9 +128,9 @@ proxmark3 <YOUR_PORT_HERE> --flash --image /usr/local/share/proxmark3/firmware/f
 <>
 proxmark3 <YOUR_PORT_HERE> --flash --image /usr/share/proxmark3/firmware/fullimage.elf
 
-pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
+pm3 --> smart upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
 <>
-pm3 --> sc upgrade f /usr/share/proxmark3/firmware/sim011.bin
+pm3 --> smart upgrade f /usr/share/proxmark3/firmware/sim011.bin
 ```
 
 If you didn't install the PRoxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
@@ -148,9 +153,9 @@ client/proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 <>
 ./proxmark3 <YOUR_PORT_HERE> --flash --image ../armsrc/obj/fullimage.elf
 
-pm3 --> sc upgrade f tools/simmodule/sim011.bin
+pm3 --> smart upgrade f tools/simmodule/sim011.bin
 <>
-pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
+pm3 --> smart upgrade f ../tools/simmodule/sim011.bin
 ```
 
 etc.
@@ -164,3 +169,70 @@ If you get warnings related to pixmap or pixbuf such as *Pixbuf theme: Cannot lo
 It's needed to have a good USB cable to connect Proxmark3 to USB. If you have stability problems (Proxmark3 resets, firmware hangs, especially firmware hangs just after start, etc.) 
 
 - check your cable with a USB tester (or try to change it). It needs to have a resistance smaller or equal to 0.3 Ohm.
+
+## WSL
+When ```explorer.exe .``` doesn't work.  
+Trying to access the dump files created in WSL,  you will need to run ```explorer.exe .```  but sometimes this doesn't work.
+[As seen here](https://github.com/microsoft/WSL/issues/4027)  they suggest checking the following registry value for *P9NP*
+
+[<img src="http://www.icedev.se/proxmark3/rdv40/wsl2_p9np.png">](www.icedev.se/proxmark3/rdv40/wsl2_p9np.png)
+
+## Troubles with running the Proxmark3 client
+Some reports has stated that they needed to execute the Proxmark3 as root on their *nix system.  
+Try running it with
+    `sudo ./pm3`  
+
+## libQt5Core.so.5 not found
+On WSL1 / updated to Ubuntu 20.04,  there is a slight chance you experience problems when compiling the repo with QT5.
+The following steps is needed to make the development environment happy again.   
+```
+sudo apt reinstall qtbase5-dev
+sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
+```
+
+## target attribute is not supported on this machine
+If you get the message ```error: target attribute is not supported on this machine [-Werror=attributes]```
+when trying to compile,  its because you have an older arm-none-eabi tool chain. 
+
+On OSX/Homebrew, the solution is to reinstall the brew.  It will trigger a new download of a later tool chain.
+```
+brew remove proxmark3
+brew reinstall proxmark3
+```
+
+On Ubuntu 16.04 (xenial) you should either consider a later release or you can install a later toolchain.
+
+
+sample error output:
+```
+[*] MAKE armsrc/all
+compiler version:  arm-none-eabi-gcc (GNU Tools for ARM Embedded Processors) 5.4.1 20160919 (release) [ARM/embedded-5-branch revision 240496]
+
+[-] CC start.c
+In file included from start.c:18:0:
+BigBuf.h:41:1: error: target attribute is not supported on this machine [-Werror=attributes]
+ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
+ ^
+cc1: all warnings being treated as errors
+In file included from iso15693.c:72:0:
+ticks.h:25:1: error: target attribute is not supported on this machine [-Werror=attributes]
+ uint32_t RAMFUNC GetTickCount(void);
+ ^
+ticks.h:26:1: error: target attribute is not supported on this machine [-Werror=attributes]
+ uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks);
+ ^
+```
+
+## Qt Session management error
+If you get the message  
+
+```
+Qt: Session management error: None of the authentication protocols specified are supported
+``` when running the Proxmark3 client it might be because a a environment variable.
+
+Solution:
+Try running the client without the SESSION_MANAGER environment variable.
+
+```
+env -u SESSION_MANAGER ./pm3
+```

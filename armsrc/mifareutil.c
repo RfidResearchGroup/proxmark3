@@ -18,7 +18,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
-#include "des.h"
+#include "desfire_crypto.h"
 
 int DBGLEVEL = DBG_ERROR;
 
@@ -203,14 +203,14 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     iso14a_set_timeout(save_timeout);
 
     if (!len) {
-        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Authentication failed. Card timeout.");
+        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Authentication failed. Card timeout");
         return 2;
     }
 
     ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0, 0);
 
     if (ntpp != bytes_to_num(receivedAnswer, 4)) {
-        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Authentication failed. Error card response.");
+        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Authentication failed. Error card response");
         return 3;
     }
     return 0;
@@ -225,18 +225,18 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
 
     len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error %02x", receivedAnswer[0]);
         return 1;
     }
     if (len != 18) {
-        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: wrong response len: %x  (expected 18)", len);
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("wrong response len %d (expected 18)", len);
         return 2;
     }
 
     memcpy(bt, receivedAnswer + 16, 2);
     AddCrc14A(receivedAnswer, 16);
     if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-        if (DBGLEVEL >= DBG_INFO) Dbprintf("Cmd CRC response error.");
+        if (DBGLEVEL >= DBG_INFO) Dbprintf("CRC response error");
         return 3;
     }
 
@@ -296,7 +296,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     memcpy(enc_random_b, resp + 1, 8);
 
     // decrypt nonce.
-    tdes_2key_dec((void *)random_b, (void *)enc_random_b, sizeof(random_b), (const void *)key, IV);
+    tdes_nxp_receive((void *)enc_random_b, (void *)random_b, sizeof(random_b), (const void *)key, IV, 2);
     rol(random_b, 8);
     memcpy(rnd_ab, random_a, 8);
     memcpy(rnd_ab + 8, random_b, 8);
@@ -316,7 +316,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     }
 
     // encrypt    out, in, length, key, iv
-    tdes_2key_enc(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
+    tdes_nxp_send(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b, 2);
 
     len = mifare_sendcmd(MIFARE_ULC_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
     if (len != 11) {
@@ -329,7 +329,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     memcpy(enc_resp, resp + 1, 8);
 
     // decrypt    out, in, length, key, iv
-    tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
+    tdes_nxp_receive(enc_resp, resp_random_a, 8, key, enc_random_b, 2);
     if (memcmp(resp_random_a, random_a, 8) != 0) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("failed authentication");
         return 0;
@@ -355,7 +355,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     return 1;
 }
 
-int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
+static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
     uint8_t bt[2] = {0x00, 0x00};
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
@@ -446,37 +446,37 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     return 0;
 }
 
-/* // command not needed, but left for future testing
 int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
-    uint16_t len;
-    uint8_t par[3] = {0};  // enough for 18 parity bits
-    uint8_t d_block[18] = {0x00};
-    uint8_t receivedAnswer[MAX_FRAME_SIZE];
-    uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
+    // variables
+    uint16_t len = 0;
+
+    uint8_t d_block[18];
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
-    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
         if (DBGLEVEL >= DBG_ERROR)
-            Dbprintf("Cmd Addr Error: %02x", receivedAnswer[0]);
+            Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
         return 1;
     }
 
     memcpy(d_block, blockData, 16);
     AddCrc14A(d_block, 16);
 
-    ReaderTransmitPar(d_block, sizeof(d_block), par, NULL);
+    ReaderTransmit(d_block, sizeof(d_block), NULL);
 
+    // Receive the response
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
-    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
         if (DBGLEVEL >= DBG_ERROR)
-            Dbprintf("Cmd Data Error: %02x %d", receivedAnswer[0],len);
+            Dbprintf("Cmd Send Data Error: %02x %d", receivedAnswer[0], len);
         return 2;
     }
     return 0;
 }
-*/
 
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
@@ -509,7 +509,7 @@ int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid) {
     return mifare_classic_halt_ex(pcs);
 }
 
-int mifare_ultra_halt() {
+int mifare_ultra_halt(void) {
     uint16_t len = 0;
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_HALT, 0x00, receivedAnswer, NULL, NULL);
@@ -613,7 +613,7 @@ void emlClearMem(void) {
     memset(emCARD, 0, CARD_MEMORY_SIZE);
 
     // fill sectors trailer data
-    for (uint16_t b = 3; b <= MIFARE_4K_MAXBLOCK; ((b <= MIFARE_2K_MAXBLOCK) ? (b += 4) : (b += 16)))
+    for (uint16_t b = 3; b < MIFARE_4K_MAXBLOCK; ((b < MIFARE_2K_MAXBLOCK - 4) ? (b += 4) : (b += 16)))
         emlSetMem((uint8_t *)trailer, b, 1);
 
     // uid
@@ -697,7 +697,7 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
 
     int len;
-    uint8_t data[17] = {MFDES_AUTHENTICATION_FRAME};
+    uint8_t data[17] = {MFDES_ADDITIONAL_FRAME};
     memcpy(data + 1, key, 16);
 
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};

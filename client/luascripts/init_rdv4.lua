@@ -1,21 +1,21 @@
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 
 copyright = 'Copyright (c) 2019 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 This script initialize a Proxmark3 RDV4.0 with
   - uploading dictionary files to flashmem
   - configuring the LF T55X7 device settings
  ]]
 example = [[
-
      script run init_rdv4
 ]]
 usage = [[
 script run init_rdv4 -h
-
-Arguments:
+]]
+arguments = [[
     -h             : this help
 ]]
 
@@ -48,9 +48,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- The main entry point
@@ -71,9 +74,9 @@ function main(args)
     -- Upload dictionaries
     print('Uploading dictionaries to RDV4 flashmemory')
     print(dash)
-    core.console('mem load f mfc_default_keys m')
-    core.console('mem load f t55xx_default_pwds t')
-    core.console('mem load f iclass_default_keys i')
+    core.console('mem load -f mfc_default_keys --mfc')
+    core.console('mem load -f t55xx_default_pwds --t55xx')
+    core.console('mem load -f iclass_default_keys --iclass')
     print(dash)
 
     -- T55x7 Device configuration

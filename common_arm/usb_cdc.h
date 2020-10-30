@@ -52,9 +52,9 @@ int GetUSBreconnect(void);
 void SetUSBconfigured(int value);
 int GetUSBconfigured(void);
 
-void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length);
-void AT91F_USB_SendZlp(AT91PS_UDP pUdp);
-void AT91F_USB_SendStall(AT91PS_UDP pUdp);
+void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length);
+void AT91F_USB_SendZlp(AT91PS_UDP pudp);
+void AT91F_USB_SendStall(AT91PS_UDP pudp);
 void AT91F_CDC_Enumerate(void);
 
 #endif // _USB_CDC_H_

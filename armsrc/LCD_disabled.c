@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 // LCD code
 //-----------------------------------------------------------------------------
-#include "LCD.h"
+#include "LCD_disabled.h"
 
 void LCDSend(unsigned int data) {
     // 9th bit set for data, clear for command

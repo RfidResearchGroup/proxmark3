@@ -3,7 +3,7 @@
 There are two ways to install, build and use Proxmark3 on Windows:
 
 * Using Gator96100 **ProxSpace**, a package to assist in your Windows installation of MinGW
-* Using native **WSL**, if you're running a Windows 10 version recent enough (FCU 1709 or later)
+* Using native **WSL 1**, if you're running a Windows 10 version recent enough (FCU 1709 or later)
 
 ---
 
@@ -15,22 +15,30 @@ There are two ways to install, build and use Proxmark3 on Windows:
 ## Driver Installation
 
 Install required drivers for your Windows installation. You may need admin privileges to do this.  
-Step by step guides are online such as [RiscCorps](https://store.ryscc.com/blogs/news/how-to-install-a-proxmark3-driver-on-windows-10).
+Step by step guides are online such as [RyscCorps](https://store.ryscc.com/blogs/news/how-to-install-a-proxmark3-driver-on-windows-10).
 
-## Download / clone ProxSpace repo
+## Download ProxSpace repo
 
 Download the Gator96100 ProxSpace package from https://github.com/Gator96100/ProxSpace/releases
 
-If you prefer, you can clone it, provided that you installed Github for Windows https://desktop.github.com/.
-
 Extract 'ProxSpace' to a location path without spaces.  
-For example D:\OneDrive\Documents\GitHub is ok whereas C:\My Documents\My Projects\proxspace is not.
+
+Good example 
+```
+D:\OneDrive\Documents\GitHub
+``` 
+
+Bad example
+```
+C:\My Documents\My Projects\proxspace
+                  ^
+```
 
 If you're running Windows in a Virtualbox guest, make sure not to install ProxSpace on a vbox shared drive. (It's ok later to move the `/pm3` subfolder to a shared drive and edit the `*.bat`)
 
 ## Launch ProxSpace
 
-Run `runme.bat` or `runme64.bat` depending on your Windows architecture.
+Run `runme64.bat`.
 
 You'll get a Bash prompt and your home directory should become the ProxSpace `pm3` sub-directory.
 
@@ -56,11 +64,15 @@ To use the compiled client, the only differences are that executables end with `
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-# Installing on Windows with WSL
+# Installing on Windows with WSL 1
 
-It requires to run a Windows 10 version 1709 or above. Previous versions didn't have support for COM ports.
+WSL 1 requires to run on Windows 10 version 1709 or above. Previous windows versions didn't have support for COM ports.
 
-Install WSL with e.g. the standard Ubuntu.
+### stay away from WSL 2
+*Microsoft introduced WSL 2 starting on Windows 10 version 2004 with Hyper-V powering its virtualization; As of 2020-08-13, WSL 2 does not support USB and Serial.*
+
+### 
+Install WSL 1 with e.g. the standard Ubuntu. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions! When they recommend you to restart, you must restart.
 
 For WSL configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
 
@@ -70,16 +82,28 @@ Make sure your WSL can launch Windows processes to get the `pm3` scripts working
 
 If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](https://sourceforge.net/projects/xming/) and launch it, e.g. by executing XLaunch.
 
+## Window terminal Installation
+Microsoft has recent released a new terminal for their OS.  It is much better experience than old `cmd.exe` so we strongly recommend installing it.
+It is also open sourced, ref [terminal](https://github.com/microsoft/terminal). You can download and install from here: [windows terminal](https://aka.ms/terminal)
+
+
 ## Dependencies
 
-Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
+Enter WSL prompt (`wsl` or `start windows terminal`)  and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
 
+Make sure your WSL guest OS is up-to-date first
 ```sh
 sudo apt-get update
-sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
+sudo apt-get upgrade -y
+sudo apt-get auto-remove -y
 ```
 
+Install dependencies
+```sh
+sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
+libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev qtbase5-dev
+```
+_note_
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
 
 ## Clone the RRG/Iceman repository
@@ -90,13 +114,13 @@ git clone https://github.com/RfidResearchGroup/proxmark3.git
 
 ## Compile and use the project
 
-To use the compiled client, the only difference is that the Proxmark3 port is translated from your `comX` port where "X" is the com port number assigned to proxmark3 under Windows, to a `/dev/ttySX`, so commands become:
+To use the compiled client, the only difference is that the Proxmark3 port is translated from your `comX` port where **"X"** is the com port number assigned to proxmark3 under Windows, to a `/dev/ttySX`, so commands become:
 
 ```sh
 proxmark3 /dev/ttyACM0  =>  proxmark3 /dev/ttySX
 ```
 
-Depending on the Windows version, you might need to give permission to the current user to access `/dev/ttySX`: (change X to your port number)
+Depending on the Windows version, you might need to give permission to the current user to access `/dev/ttySX`: (change **X** to your port number)
 
 ```sh
 ls -al /dev/ttySX
@@ -126,7 +150,7 @@ Note that it may take a quite long time for a freshly plugged Proxmark3 to be vi
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
 ## Color text on windows 10
-In later versions of windows 10 you may be able to get color to work by setting this registery key
+In later versions of windows 10 you may be able to get color to work by setting this registry key
 ```
 [HKEY_CURRENT_USER\Console]
     "VirtualTerminalLevel"=dword:00000001

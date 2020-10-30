@@ -16,6 +16,7 @@
 #include "util.h"
 #include "lfdemod.h"
 #include "string.h"  // memset
+#include "appmain.h" // print stack
 
 /*
 Default LF config is set to:
@@ -27,17 +28,35 @@ Default LF config is set to:
     samples_to_skip = 0
     verbose = YES
     */
-sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
+static sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
 
-void printConfig() {
+// Holds bit packed struct of samples.
+static BitstreamOut data = {0, 0, 0};
+
+// internal struct to keep track of samples gathered
+static sampling_t samples = {0, 0, 0, 0};
+
+void printLFConfig(void) {
     uint32_t d = config.divisor;
-    DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
+    DbpString(_CYAN_("LF Sampling config"));
+    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")" )", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
     Dbprintf("  [b] bits per sample.....%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
     Dbprintf("  [t] trigger threshold...%d", config.trigger_threshold);
     Dbprintf("  [s] samples to skip.....%d ", config.samples_to_skip);
+
+    DbpString(_CYAN_("LF Sampling Stack"));
+    print_stack_usage();
+}
+
+void printSamples(void) {
+    DbpString(_CYAN_("LF Sampling memory usage"));
+//    Dbprintf("  decimation counter...%d", samples.dec_counter);
+//    Dbprintf("  sum..................%u", samples.sum);
+    Dbprintf("  counter.............." _YELLOW_("%u"), samples.counter);
+    Dbprintf("  total saved.........." _YELLOW_("%u"), samples.total_saved);
+    print_stack_usage();
 }
 
 /**
@@ -78,10 +97,10 @@ void setSamplingConfig(sample_config *sc) {
         config.samples_to_skip = sc->samples_to_skip;
 
     if (sc->verbose)
-        printConfig();
+        printLFConfig();
 }
 
-sample_config *getSamplingConfig() {
+sample_config *getSamplingConfig(void) {
     return &config;
 }
 
@@ -90,7 +109,7 @@ sample_config *getSamplingConfig() {
  * @param stream
  * @param bit
  */
-void pushBit(BitstreamOut *stream, uint8_t bit) {
+static void pushBit(BitstreamOut *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
     *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
@@ -99,36 +118,33 @@ void pushBit(BitstreamOut *stream, uint8_t bit) {
     stream->numbits++;
 }
 
-// Holds bit packed struct of samples.
-BitstreamOut data = {0, 0, 0};
-
-// internal struct to keep track of samples gathered
-sampling_t samples = {0, 0, 0, 0};
-
 void initSampleBuffer(uint32_t *sample_size) {
     initSampleBufferEx(sample_size, false);
 }
 
 void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
-
-    BigBuf_free();
+    if (sample_size == NULL) {
+        Dbprintf("initSampleBufferEx, param NULL");
+        return;
+    }
+    BigBuf_free_keep_EM();
 
     // We can't erase the buffer now, it would drastically delay the acquisition
-
     if (use_malloc) {
 
-        if (sample_size == NULL || *sample_size == 0 ) {
-           *sample_size = BigBuf_max_traceLen();
+        if (*sample_size == 0) {
+            *sample_size = BigBuf_max_traceLen();
             data.buffer = BigBuf_get_addr();
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
             data.buffer = BigBuf_malloc(*sample_size);
-
         }
 
     } else {
-        if (sample_size == NULL || *sample_size == 0 ) {
+        if (*sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
+        } else {
+            *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
         }
         data.buffer = BigBuf_get_addr();
     }
@@ -136,11 +152,11 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
     //
     samples.dec_counter = 0;
     samples.sum = 0;
-    samples.counter = 0;
+    samples.counter = *sample_size;
     samples.total_saved = 0;
 }
 
-uint32_t getSampleCounter() {
+uint32_t getSampleCounter(void) {
     return samples.total_saved;
 }
 
@@ -152,12 +168,12 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
 
     if (!data.buffer) return;
 
+    // keep track of total gather samples regardless how many was discarded.
+    if (samples.counter-- == 0) return;
+
     if (bits_per_sample == 0) bits_per_sample = 1;
     if (bits_per_sample > 8) bits_per_sample = 8;
     if (decimation == 0) decimation = 1;
-
-    // keep track of total gather samples regardless how many was discarded.
-    samples.counter++;
 
     if (avg) {
         samples.sum += sample;
@@ -219,15 +235,19 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
 
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-    // 50ms for the resonant antenna to settle.
-    if (reader_field)
-    SpinDelay(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
-    FpgaSetupSsc();
+    FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
 
     // start a 1.5ticks is 1us
     StartTicks();
+
+    // 50ms for the resonant antenna to settle.
+    if (reader_field) {
+        WaitMS(50);
+    } else {
+        WaitMS(1);
+    }
 }
 
 /**
@@ -250,14 +270,20 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
     initSampleBuffer(&sample_size);
 
+    if (DBGLEVEL >= DBG_DEBUG) {
+        printSamples();
+    }
+
+    bool trigger_hit = false;
     uint32_t cancel_counter = 0;
     int16_t checked = 0;
 
-    while (true) {
+    while (BUTTON_PRESS() == false) {
 
-        // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+        // only every 4000th times, in order to save time when collecting samples.
+        // interruptible only when logging not yet triggered
+        if ((checked >= 4000) && trigger_hit == false) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {
@@ -269,27 +295,28 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-//			AT91C_BASE_SSC->SSC_THR = 0x43;
             LED_D_ON();
         }
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-            // Testpoint 8 (TP8) can be used to trigger oscilliscope
+            // Test point 8 (TP8) can be used to trigger oscilloscope
             LED_D_OFF();
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
-            if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
-                if (cancel_after > 0) {
-                    cancel_counter++;
-                    if (cancel_after == cancel_counter)
-                        break;
+            if (trigger_hit == false) {
+                if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
+                    if (cancel_after > 0) {
+                        cancel_counter++;
+                        if (cancel_after == cancel_counter)
+                            break;
+                    }
+                    continue;
                 }
-                continue;
             }
 
-            trigger_threshold = 0;
+            trigger_hit = true;
 
             if (samples_to_skip > 0) {
                 samples_to_skip--;
@@ -302,18 +329,19 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
         }
     }
 
-    if (checked == -1 && verbose) {
-        Dbprintf("lf sampling aborted");
-    }
-
     if (verbose) {
-        Dbprintf("Done, saved " _YELLOW_("%d")"out of " _YELLOW_("%d")"seen samples at " _YELLOW_("%d")"bits/sample", samples.total_saved, samples.counter, bits_per_sample);
+        if (checked == -1) {
+            Dbprintf("lf sampling aborted");
+        } else if ((cancel_counter == cancel_after) && (cancel_after > 0)) {
+            Dbprintf("lf sampling cancelled after %u", cancel_counter);
+        }
+
+        Dbprintf("Done, saved " _YELLOW_("%d")" out of " _YELLOW_("%d")" seen samples at " _YELLOW_("%d")" bits/sample", samples.total_saved, samples.counter, bits_per_sample);
     }
 
     // Ensure that DC offset removal and noise check is performed for any device-side processing
     removeSignalOffset(data.buffer, samples.total_saved);
     computeSignalProperties(data.buffer, samples.total_saved);
-
     return data.numbits;
 }
 /**
@@ -334,20 +362,28 @@ uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size) {
                          , config.trigger_threshold
                          , verbose
                          , sample_size
-                         , 0
+                         , 0    // cancel_after
                          , config.samples_to_skip);
 }
 
 uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t sample_size, uint32_t cancel_after) {
-    return DoAcquisition(1, 8, 0, trigger_threshold, verbose, sample_size, cancel_after, 0);
+    return DoAcquisition(config.decimation
+                         , config.bits_per_sample
+                         , config.averaging
+                         , trigger_threshold
+                         , verbose
+                         , sample_size
+                         , cancel_after
+                         , 0);  // samples to skip
 }
 
-uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
+static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
     if (verbose)
-        printConfig();
+        printLFConfig();
 
     LFSetupFPGAForADC(config.divisor, reader_field);
     uint32_t ret = DoAcquisition_config(verbose, sample_size);
+    StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return ret;
 }
@@ -364,9 +400,9 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size) {
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SniffLF() {
+uint32_t SniffLF(bool verbose, uint32_t sample_size) {
     BigBuf_Clear_ext(false);
-    return ReadLF(false, true, 0);
+    return ReadLF(false, verbose, sample_size);
 }
 
 /**
@@ -393,9 +429,18 @@ void doT55x7Acquisition(size_t sample_size) {
 
     uint16_t checker = 0;
 
+    if (DBGLEVEL >= DBG_DEBUG) {
+        Dbprintf("doT55x7Acquisition - after init");
+        print_stack_usage();
+    }
+
     while (skipCnt < 1000 && (i < bufsize)) {
-        if (checker == 1000) {
-            if (BUTTON_PRESS() || data_available())
+
+        if (BUTTON_PRESS())
+            break;
+
+        if (checker == 4000) {
+            if (data_available())
                 break;
             else
                 checker = 0;
@@ -448,131 +493,102 @@ void doT55x7Acquisition(size_t sample_size) {
 **/
 
 #define COTAG_T1 384
-#define COTAG_T2 (COTAG_T1>>1)
-#define COTAG_ONE_THRESHOLD 128+10
-#define COTAG_ZERO_THRESHOLD 128-10
+#define COTAG_T2 (COTAG_T1 >> 1)
+#define COTAG_ONE_THRESHOLD 127+5
+#define COTAG_ZERO_THRESHOLD 127-5
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif
-void doCotagAcquisition(size_t sample_size) {
+void doCotagAcquisition(void) {
 
-    uint8_t *dest = BigBuf_get_addr();
     uint16_t bufsize = BigBuf_max_traceLen();
-
-    if (bufsize > sample_size)
-        bufsize = sample_size;
+    uint8_t *dest = BigBuf_malloc(bufsize);
 
     dest[0] = 0;
-    uint8_t firsthigh = 0, firstlow = 0;
-    uint16_t i = 0;
-    uint16_t noise_counter = 0;
 
-    uint16_t checker = 0;
+    bool firsthigh = false, firstlow = false;
+    uint16_t i = 0, noise_counter = 0;
 
-    while ((i < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
-        if (checker == 1000) {
-            if (BUTTON_PRESS() || data_available())
-                break;
-            else
-                checker = 0;
-        } else {
-            ++checker;
-        }
+    while ((i < bufsize - 1) && (noise_counter < COTAG_T1 << 1)) {
+
+        if (BUTTON_PRESS())
+            break;
 
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            LED_D_ON();
-        }
-
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
             // find first peak
-            if (!firsthigh) {
+            if (firsthigh == false) {
                 if (sample < COTAG_ONE_THRESHOLD) {
                     noise_counter++;
                     continue;
                 }
+
                 noise_counter = 0;
-                firsthigh = 1;
+                firsthigh = true;
             }
-            if (!firstlow) {
+
+            if (firstlow == false) {
                 if (sample > COTAG_ZERO_THRESHOLD) {
                     noise_counter++;
                     continue;
                 }
+
                 noise_counter = 0;
-                firstlow = 1;
+                firstlow = true;
             }
 
             ++i;
-
-            if (sample > COTAG_ONE_THRESHOLD)
+            if (sample > COTAG_ONE_THRESHOLD) {
                 dest[i] = 255;
-            else if (sample < COTAG_ZERO_THRESHOLD)
+            } else if (sample < COTAG_ZERO_THRESHOLD) {
                 dest[i] = 0;
-            else
+            } else {
                 dest[i] = dest[i - 1];
+            }
         }
     }
 
     // Ensure that DC offset removal and noise check is performed for any device-side processing
-    removeSignalOffset(dest, bufsize);
-    computeSignalProperties(dest, bufsize);
+    removeSignalOffset(dest, i);
+    computeSignalProperties(dest, i);
 }
 
-uint32_t doCotagAcquisitionManchester() {
+uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen) {
 
-    uint8_t *dest = BigBuf_get_addr();
-    uint16_t bufsize = BigBuf_max_traceLen();
-
-    if (bufsize > COTAG_BITS)
-        bufsize = COTAG_BITS;
+    if (dest == NULL)
+        return 0;
 
     dest[0] = 0;
-    uint8_t firsthigh = 0, firstlow = 0;
-    uint16_t sample_counter = 0, period = 0;
-    uint8_t curr = 0, prev = 0;
-    uint16_t noise_counter = 0;
-    uint16_t checker = 0;
 
-    while ((sample_counter < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
-        if (checker == 1000) {
-            if (BUTTON_PRESS() || data_available())
-                break;
-            else
-                checker = 0;
-        } else {
-            ++checker;
-        }
+    bool firsthigh = false, firstlow = false;
+    uint8_t curr = 0, prev = 0;
+    uint16_t i = 0;
+    uint16_t period = 0;
+
+    while ((i < destlen) && BUTTON_PRESS() == false) {
 
         WDT_HIT();
-
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            LED_D_ON();
-        }
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
             // find first peak
-            if (!firsthigh) {
+            if (firsthigh == false) {
                 if (sample < COTAG_ONE_THRESHOLD) {
-                    noise_counter++;
                     continue;
                 }
-                noise_counter = 0;
-                firsthigh = 1;
+                firsthigh = true;
             }
 
-            if (!firstlow) {
+            if (firstlow == false) {
                 if (sample > COTAG_ZERO_THRESHOLD) {
-                    noise_counter++;
                     continue;
                 }
-                noise_counter = 0;
-                firstlow = 1;
+                firstlow = true;
             }
 
             // set sample 255, 0,  or previous
@@ -592,10 +608,11 @@ uint32_t doCotagAcquisitionManchester() {
                 continue;
             }
 
-            dest[sample_counter] = curr;
-            ++sample_counter;
+            dest[i] = curr;
+            ++i;
             period = COTAG_T1;
         }
     }
-    return sample_counter;
+
+    return i;
 }

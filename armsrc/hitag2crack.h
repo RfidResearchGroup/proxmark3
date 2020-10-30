@@ -19,9 +19,9 @@ bool hitag2crack_tx_rx(uint8_t *responsestr, uint8_t *msg, int len, int state, b
 
 bool hitag2crack_rng_init(uint8_t *response, uint8_t *input);
 bool hitag2crack_decrypt_hex(uint8_t *response, uint8_t *hex);
-bool hitag2crack_decrypt_bin(uint8_t *response, uint8_t *hex);
+bool hitag2crack_decrypt_bin(uint8_t *response, uint8_t *e_binstr);
 bool hitag2crack_encrypt_hex(uint8_t *response, uint8_t *hex);
-bool hitag2crack_encrypt_bin(uint8_t *response, uint8_t *hex);
+bool hitag2crack_encrypt_bin(uint8_t *response, uint8_t *e_binstr);
 
 bool hitag2_keystream(uint8_t *response, uint8_t *nrarhex);
 bool hitag2crack_send_auth(uint8_t *nrar);
