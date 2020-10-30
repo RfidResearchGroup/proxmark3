@@ -5328,11 +5328,10 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         des_decrypt(outB + i, responseB + i, key);
     }
 
-    PrintAndLogEx(INFO, " in : %s", sprint_hex_inrow(responseA, respAlen));
-    PrintAndLogEx(INFO, "out : %s", sprint_hex_inrow(outA, sizeof(outA)));
-
-    PrintAndLogEx(INFO, " in : %s", sprint_hex_inrow(responseB, respAlen));
-    PrintAndLogEx(INFO, "out : %s", sprint_hex_inrow(outB, sizeof(outB)));
+    PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseA, respAlen));
+    PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outA, sizeof(outA)));
+    PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseB, respAlen));
+    PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outB, sizeof(outB)));
 
     if (memcmp(outA, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
         PrintAndLogEx(INFO, "No trace recorded");
