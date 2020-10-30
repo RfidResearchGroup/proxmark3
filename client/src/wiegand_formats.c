@@ -240,11 +240,13 @@ static bool Unpack_H10306(wiegand_message_t *packed, wiegand_card_t *card) {
 
     if (packed->Length != 34) return false; // Wrong length? Stop here.
 
-    card->CardNumber = (packed->Bot >> 1) & 0xFFFF;
-    card->FacilityCode = ((packed->Mid & 1) << 15) | ((packed->Bot >> 17) & 0xFF);
+    card->FacilityCode = get_linear_field(packed, 1, 16);
+    card->CardNumber = get_linear_field(packed, 17, 16);
+
     card->ParityValid =
-        ((evenparity32((packed->Mid & 0x00000001) ^ (packed->Bot & 0xFFFE0000)) & 1) == ((packed->Mid >> 1) & 1)) &&
-        ((oddparity32(packed->Bot & 0x0001FFFE) & 1) == ((packed->Bot & 1)));
+        (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 16))) &&
+        (get_bit_by_position(packed, 33) == oddparity32(get_linear_field(packed, 17, 16)));
+
     return true;
 }
 
@@ -604,6 +606,97 @@ static bool Unpack_CasiRusco40(wiegand_message_t *packed, wiegand_card_t *card) 
     return true;
 }
 
+static bool Pack_Optus(wiegand_card_t *card, wiegand_message_t *packed) {
+
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (card->FacilityCode > 0x3FF) return false; // Can't encode FC.
+    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
+    if (card->IssueLevel > 0) return false; // Not used in this format
+    if (card->OEM > 0) return false; // Not used in this format
+
+    packed->Length = 34; // Set number of bits
+    set_linear_field(packed, card->CardNumber, 1, 16);
+    set_linear_field(packed, card->FacilityCode, 22, 11);
+    
+    return add_HID_header(packed);
+}
+
+static bool Unpack_Optus(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    card->CardNumber = get_linear_field(packed, 1, 16);
+    card->FacilityCode = get_linear_field(packed, 22, 11);
+    return true;
+}
+
+static bool Pack_Smartpass(wiegand_card_t *card, wiegand_message_t *packed) {
+
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (card->FacilityCode > 0x3FF) return false; // Can't encode FC.
+    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
+    if (card->IssueLevel > 0x7) return false; // Not used in this format
+    if (card->OEM > 0) return false; // Not used in this format
+
+    packed->Length = 34; // Set number of bits
+
+    set_linear_field(packed, card->FacilityCode, 1, 13);
+    set_linear_field(packed, card->IssueLevel, 14, 3);
+    set_linear_field(packed, card->CardNumber, 17, 16);
+    return add_HID_header(packed);
+}
+
+static bool Unpack_Smartpass(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    card->FacilityCode = get_linear_field(packed, 1, 13);
+    card->IssueLevel = get_linear_field(packed, 14, 3);
+    card->CardNumber = get_linear_field(packed, 17, 16);
+    return true;
+}
+
+static bool Pack_bqt(wiegand_card_t *card, wiegand_message_t *packed) {
+
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (card->FacilityCode > 0xFF) return false; // Can't encode FC.
+    if (card->CardNumber > 0xFFFFFF) return false; // Can't encode CN.
+    if (card->IssueLevel > 0) return false; // Not used in this format
+    if (card->OEM > 0) return false; // Not used in this format
+
+    packed->Length = 34; // Set number of bits
+
+    set_linear_field(packed, card->FacilityCode, 1, 8);
+    set_linear_field(packed, card->CardNumber, 9, 24);
+    
+    set_bit_by_position(packed,
+                        evenparity32(get_linear_field(packed, 1, 16))
+                        , 0);
+    set_bit_by_position(packed,
+                        oddparity32(get_linear_field(packed, 17, 16))
+                        , 33);
+    
+    return add_HID_header(packed);
+}
+
+static bool Unpack_bqt(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    card->FacilityCode = get_linear_field(packed, 1, 8);
+    card->CardNumber = get_linear_field(packed, 9, 24);
+    
+    card->ParityValid =
+        (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 16))) &&
+        (get_bit_by_position(packed, 33) == oddparity32(get_linear_field(packed, 17, 16)));
+    return true;
+}
 
 static const cardformat_t FormatTable[] = {
     {"H10301",  Pack_H10301,  Unpack_H10301,  "HID H10301 26-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
@@ -614,7 +707,10 @@ static const cardformat_t FormatTable[] = {
     {"Kastle",  Pack_Kastle,  Unpack_Kastle,  "Kastle 32-bit",              {1, 1, 1, 0, 1}}, // from @xilni; PR #23 on RfidResearchGroup/proxmark3
     {"D10202",  Pack_D10202,  Unpack_D10202,  "HID D10202 33-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"N10002",  Pack_N10002,  Unpack_N10002,  "HID N10002 34-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
+    {"N10002",  Pack_N10002,  Unpack_N10002,  "HID N10002 34-bit",          {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au    
+    {"Optus34", Pack_Optus,   Unpack_Optus,   "Indala Optus 34-bit",        {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"Smartpass", Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", {1, 1, 1, 0, 0}}, // from cardinfo.barkweb.com.au    
+    {"BQT", Pack_bqt, Unpack_bqt, "BQT 34-bit", {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit",         {1, 1, 0, 1, 1}}, // from Proxmark forums
     {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit",         {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
