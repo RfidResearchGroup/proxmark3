@@ -701,9 +701,9 @@ static bool Unpack_bqt(wiegand_message_t *packed, wiegand_card_t *card) {
 static const cardformat_t FormatTable[] = {
     {"H10301",  Pack_H10301,  Unpack_H10301,  "HID H10301 26-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit",               {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
-    {"2804W",   Pack_2804W,   Unpack_2804W,   "2804 Wiegand",               {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
+    {"2804W",   Pack_2804W,   Unpack_2804W,   "2804 Wiegand 28-bit",        {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ATSW30",  Pack_ATSW30,  Unpack_ATSW30,  "ATS Wiegand 30-bit",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
-    {"ADT31",   Pack_ADT31,   Unpack_ADT31,   "HID ADT 31-bit",             {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
+    {"ADT31",   Pack_ADT31,   Unpack_ADT31,   "HID ADT 31-bit",             {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"Kastle",  Pack_Kastle,  Unpack_Kastle,  "Kastle 32-bit",              {1, 1, 1, 0, 1}}, // from @xilni; PR #23 on RfidResearchGroup/proxmark3
     {"D10202",  Pack_D10202,  Unpack_D10202,  "HID D10202 33-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
