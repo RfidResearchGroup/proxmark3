@@ -5343,7 +5343,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     uint8_t outB[16] = {0};
 
     uint8_t key[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};    
-    for (uint8_t i=0; i < 16; i += 8) {
+    for (uint8_t i = 0; i < 16; i += 8) {
         des_decrypt(outA + i, responseA + i, key);
         des_decrypt(outB + i, responseB + i, key);
     }
@@ -5379,10 +5379,11 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     data.nonce2 =  prng_successor(NT0, 31);;
     data.nr2 = bytes_to_num(outB + 8, 4);
     data.ar2 = bytes_to_num(outB + 12, 4);
-    data.sector = 0;
+    data.sector = GetSectorFromBlockNo(outA[5]);
     data.keytype = outA[4];
     data.state = FIRST;
 
+    PrintAndLogEx(DEBUG, "A Sector %02x", data.sector);
     PrintAndLogEx(DEBUG, "A NT  %08x", data.nonce);
     PrintAndLogEx(DEBUG, "A NR  %08x", data.nr);
     PrintAndLogEx(DEBUG, "A AR  %08x", data.ar);
