@@ -1,5 +1,3 @@
-a# RFID-Brute-Force
-
 These are text password lists that can be used to brute force RFID passwords. There are a lot better ways to find a password, but I haven't seen anyone talk about using normal password lists against RFID tags or publishing a list exclusively for this purpose.
 
 
