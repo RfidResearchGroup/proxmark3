@@ -3040,8 +3040,14 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         }
     }
 
-    if (errors || cmdp == 0) return usage_t55xx_chk();
+    if (errors) return usage_t55xx_chk();
+    
+    if (strlen(filename) == 0){
+        snprintf(filename, sizeof(filename), "t55xx_default_pwds");
+        use_pwd_file = true;
+    }
 
+    PrintAndLogEx(NORMAL, "");
     /*
     // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
     if ( T55xxReadBlock(7, false, false, false, 0x00000000) == PM3_SUCCESS) {
@@ -3064,7 +3070,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             timeout++;
             PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 180) {
-                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+                PrintAndLogEx(WARNING, "\nno response from Proxmark3. Aborting...");
                 return PM3_ENODATA;
             }
         }
@@ -3076,21 +3082,21 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         struct p *packet = (struct p *)resp.data.asBytes;
 
         if (packet->found) {
-            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX32) " ]", packet->candidate);
+            PrintAndLogEx(SUCCESS, "\nfound a candidate [ " _YELLOW_("%08"PRIX32) " ]", packet->candidate);
 
             if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, packet->candidate, downlink_mode)) {
                 found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, packet->candidate);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password [ " _GREEN_("%08"PRIX32) " ]", packet->candidate);
+                    PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", packet->candidate);
 
                 } else {
-                    PrintAndLogEx(WARNING, "Check pwd failed");
+                    PrintAndLogEx(WARNING, "check pwd failed");
                 }
             } else {
-                PrintAndLogEx(WARNING, "Check pwd failed");
+                PrintAndLogEx(WARNING, "check pwd failed");
             }
         } else {
-            PrintAndLogEx(WARNING, "Check pwd failed");
+            PrintAndLogEx(WARNING, "check pwd failed");
         }
         goto out;
     }
@@ -3098,7 +3104,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     // try calculated password
     if (useCardPassword) {
 
-        PrintAndLogEx(INFO, "Testing %08"PRIX32" generated ", cardPassword);
+        PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", cardPassword);
         for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
             if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, cardPassword, dl_mode)) {
@@ -3107,7 +3113,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, cardPassword);
             if (found) {
-                PrintAndLogEx(SUCCESS, "Found valid password : [ " _GREEN_("%08"PRIX32) " ]", cardPassword);
+                PrintAndLogEx(SUCCESS, "found valid password : [ " _GREEN_("%08"PRIX32) " ]", cardPassword);
                 dl_mode = 4; // Exit other downlink mode checks
             }
 
@@ -3116,22 +3122,24 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         }
     }
 
-    if ((!found) && (use_pwd_file)) {
+    if ((found == false) && use_pwd_file) {
         uint32_t keycount = 0;
 
         int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
         if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
-            PrintAndLogEx(WARNING, "No keys found in file");
+            PrintAndLogEx(WARNING, "no keys found in file");
             if (keyBlock != NULL)
                 free(keyBlock);
 
             return PM3_ESOFT;
         }
-
+        
+        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
+        
         for (uint32_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {
-                PrintAndLogEx(WARNING, "Device offline\n");
+                PrintAndLogEx(WARNING, "device offline\n");
                 free(keyBlock);
                 return PM3_ENODATA;
             }
@@ -3143,7 +3151,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             uint32_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
-            PrintAndLogEx(INFO, "Testing %08"PRIX32, curr_password);
+            PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
                 if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
@@ -3152,7 +3160,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
                 found = t55xxTryDetectModulationEx(dl_mode, T55XX_PrintConfig, 0, curr_password);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
+                    PrintAndLogEx(SUCCESS, "found valid password: [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                     dl_mode = 4; // Exit other downlink mode checks
                     c = keycount; // Exit loop
                 }
@@ -3163,7 +3171,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         }
     }
 
-    if (!found) PrintAndLogEx(WARNING, "Check pwd failed");
+    if (found == false)
+        PrintAndLogEx(WARNING, "check pwd failed");
 
     free(keyBlock);
 

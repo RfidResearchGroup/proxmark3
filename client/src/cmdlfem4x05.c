@@ -1299,15 +1299,13 @@ int CmdEM4x05Chk(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
         } else if (status != PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "No answer from tag");
+            PrintAndLogEx(WARNING, "no answer from tag");
         }
     }
 
     // Loop dictionary
     uint8_t *keyBlock = NULL;
     if (found == false) {
-
-        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
         uint32_t keycount = 0;
 
@@ -1319,6 +1317,8 @@ int CmdEM4x05Chk(const char *Cmd) {
 
             return PM3_ESOFT;
         }
+
+        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
         for (uint32_t c = 0; c < keycount; ++c) {
 
@@ -1343,7 +1343,7 @@ int CmdEM4x05Chk(const char *Cmd) {
                 found = true;
                 break;
             } else if (status != PM3_EFAILED) {
-                PrintAndLogEx(WARNING, "No answer from tag");
+                PrintAndLogEx(WARNING, "no answer from tag");
             }
         }
     }
