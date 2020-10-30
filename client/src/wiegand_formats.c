@@ -580,6 +580,31 @@ static bool Unpack_C1k48s(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
+static bool Pack_CasiRusco40(wiegand_card_t *card, wiegand_message_t *packed) {
+
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (card->FacilityCode > 0) return false; // Can't encode FC.
+    if (card->CardNumber > 0xFFFFFFFFFF) return false; // Can't encode CN.
+    if (card->IssueLevel > 0) return false; // Not used in this format
+    if (card->OEM > 0) return false; // Not used in this format
+
+    packed->Length = 40; // Set number of bits
+    set_linear_field(packed, card->CardNumber, 1, 38);
+
+    return add_HID_header(packed);
+}
+
+static bool Unpack_CasiRusco40(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 40) return false; // Wrong length? Stop here.
+
+    card->CardNumber = get_linear_field(packed, 1, 38);
+    return true;
+}
+
+
 static const cardformat_t FormatTable[] = {
     {"H10301",  Pack_H10301,  Unpack_H10301,  "HID H10301 26-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit",               {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
@@ -598,6 +623,7 @@ static const cardformat_t FormatTable[] = {
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit", {1, 1, 0, 1, 0}}, // from cardinfo.barkweb.com.au
+    {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",   {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };
