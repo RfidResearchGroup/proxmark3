@@ -663,7 +663,7 @@ static command_t CommandTable[] = {
     {"4x50_watch",  CmdEM4x50Watch,       IfPm3EM4x50,     "read EM4x50 continously"},
     {"4x50_restore",CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
     {"4x50_sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate single EM4x50 word (uid)"},
-    {"4x50_std_read",CmdEM4x50StdRead,    IfPm3EM4x50,     "show standard read mode data of EM4x50 tag"},
+    {"4x50_stdread",CmdEM4x50StdRead,     IfPm3EM4x50,     "show standard read mode data of EM4x50 tag"},
     {"4x50_eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "load a binary dump into emulator memory"},
     {"4x50_esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save emulator memory to file"},
     {NULL, NULL, NULL, NULL}

@@ -122,22 +122,6 @@ static void em4x50_setup_sim(void) {
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 }
 
-static void emlGetMem(uint32_t *words, size_t nowords) {
-
-    // read <nowords> words from emulator memory
-
-    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
-
-    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-
-        for (int j = 0; j < 4; j++)
-            words[i] |= (em4x50_mem[4 * i + j]) << ((3 - j) * 8);
-
-        // lsb is needed (given format is msb)
-        words[i] = reflect32(words[i]);
-    }
-}
-
 // functions for "reader" use case
 
 static bool get_signalproperties(void) {
@@ -1346,6 +1330,7 @@ void em4x50_restore(em4x50_data_t *etd) {
     int res = 0;
     int start_word = 0;
     uint8_t status = 0;
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t addresses = 0x00001F01; // from fwr = 1 to lwr = 31 (0x1F)
     uint32_t words_client[EM4X50_NO_WORDS] = {0x0};
     uint32_t words_read[EM4X50_NO_WORDS] = {0x0};
@@ -1353,8 +1338,9 @@ void em4x50_restore(em4x50_data_t *etd) {
     em4x50_setup_read();
 
     // read data from emulator memory
-    emlGetMem(words_client, EM4X50_NO_WORDS);
-    
+    for (int i = 0; i < EM4X50_NO_WORDS; i++)
+        words_client[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
+
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
 
@@ -1403,12 +1389,14 @@ void em4x50_sim(void) {
     // simulate uploaded data in emulator memory
     // (currently only a one-way communication is possible)
 
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_sim();
 
     // read data from emulator memory
-    emlGetMem(words, EM4X50_NO_WORDS);
+    for (int i = 0; i < EM4X50_NO_WORDS; i++)
+        words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
     
     // extract control data
     int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
@@ -1437,7 +1425,7 @@ void em4x50_sim(void) {
     reply_ng(CMD_LF_EM4X50_SIM, 1, 0, 0);
 }
 
-void em4x50_std_read(void) {
+void em4x50_stdread(void) {
 
     // reads data that tag transmits "voluntarily" -> standard read mode
 
@@ -1452,5 +1440,5 @@ void em4x50_std_read(void) {
     
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_STD_READ, now, (uint8_t *)words, 4 * now);
+    reply_ng(CMD_LF_EM4X50_STDREAD, now, (uint8_t *)words, 4 * now);
 }

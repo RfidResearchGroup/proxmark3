@@ -175,7 +175,7 @@ static int usage_lf_em4x50_sim(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_lf_em4x50_std_read(void) {
+static int usage_lf_em4x50_stdread(void) {
     PrintAndLogEx(NORMAL, "Show standard read mode data of EM4x50 tag. Tag must be on antenna.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_std_read [h]");
@@ -1168,7 +1168,7 @@ int CmdEM4x50StdRead(const char *Cmd) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
 
             case 'h':
-                return usage_lf_em4x50_std_read();
+                return usage_lf_em4x50_stdread();
 
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -1178,12 +1178,12 @@ int CmdEM4x50StdRead(const char *Cmd) {
     }
     
     if (errors)
-        return usage_lf_em4x50_std_read();
+        return usage_lf_em4x50_stdread();
 
     // start
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_STD_READ, 0, 0);
-    if (!WaitForResponseTimeout(CMD_LF_EM4X50_STD_READ, &resp, TIMEOUT)) {
+    SendCommandNG(CMD_LF_EM4X50_STDREAD, 0, 0);
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_STDREAD, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }

@@ -1126,8 +1126,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_sim();
             break;
         }
-        case CMD_LF_EM4X50_STD_READ: {
-            em4x50_std_read();
+        case CMD_LF_EM4X50_STDREAD: {
+            em4x50_stdread();
             break;
         }
         case CMD_LF_EM4X50_ESET: {
