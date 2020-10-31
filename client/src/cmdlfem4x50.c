@@ -162,16 +162,15 @@ static int usage_lf_em4x50_restore(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_em4x50_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate single EM4x50 word. ");
+    PrintAndLogEx(NORMAL, "Simulate dump of EM4x50 tag in emulatoe memory. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sim [h] [u <UID>] [f <filename>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_sim [h] [f <filename>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - this help");
-    PrintAndLogEx(NORMAL, "       u <UID>       - single word (e.g. UID) to simulate (hex, lsb");
-    PrintAndLogEx(NORMAL, "       f <filename>  - data filename <filename.bin/eml/json>");
+    PrintAndLogEx(NORMAL, "       f <filename>  - dump filename (bin/eml/json) for emulator memory upload");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim h"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim u 12345678"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim"));
     PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x50_sim f em4x50dump.json"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -231,6 +230,24 @@ static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len) 
         return PM3_EFILE;
 
     return PM3_SUCCESS;
+}
+
+static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t nobytes) {
+
+    // fast push mode
+    conn.block_after_ACK = true;
+
+    for (size_t i = offset; i < nobytes; i += PM3_CMD_DATA_SIZE) {
+
+        size_t len = MIN((nobytes - i), PM3_CMD_DATA_SIZE);
+        if (len == nobytes - i) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
+    }
 }
 
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
@@ -978,8 +995,14 @@ int CmdEM4x50Restore(const char *Cmd) {
     size_t fn_len = 0;
     char filename[FILE_PATH_SIZE] = {0};
     char szTemp[FILE_PATH_SIZE - 20] = {0x00};
-
     em4x50_data_t etd;
+    uint8_t *data = calloc(DUMP_FILESIZE, sizeof(uint8_t));
+
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
     etd.pwd_given = false;
 
     bool errors = false;
@@ -1025,10 +1048,13 @@ int CmdEM4x50Restore(const char *Cmd) {
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
     // read data from dump file; file type has to be "bin", "eml" or "json"
-    if (loadFileEM4x50(filename, etd.data, sizeof(etd.data)) != PM3_SUCCESS) {
+    if (loadFileEM4x50(filename, data, DUMP_FILESIZE) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Read error");
         return PM3_EFILE;
     }
+
+    em4x50_seteml(data, 0, DUMP_FILESIZE);
+    free(data);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_RESTORE, (uint8_t *)&etd, sizeof(etd));
@@ -1063,24 +1089,22 @@ int CmdEM4x50Restore(const char *Cmd) {
 
 int CmdEM4x50Sim(const char *Cmd) {
 
-    bool errors = false, word_given = false, fn_given = false;
+    bool errors = false, fn_given = false;
     size_t fn_len = 0;
     uint8_t cmdp = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    uint8_t *data = calloc(DUMP_FILESIZE, sizeof(uint8_t));
 
-    em4x50_data_t etd;
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
 
             case 'h':
                 return usage_lf_em4x50_sim();
-                break;
-
-            case 'u':
-                etd.word = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                word_given = true;
-                cmdp += 2;
                 break;
 
             case 'f':
@@ -1100,27 +1124,26 @@ int CmdEM4x50Sim(const char *Cmd) {
     }
 
     // validations
-    if (errors || ((word_given == false) && (fn_given == false)))
+    if (errors)
         return usage_lf_em4x50_sim();
     
-    if (word_given && fn_given) {
-        PrintAndLogEx(INFO, "Plesae use either option 'u' or option 'f'");
-        return usage_lf_em4x50_sim();
-    }
-
-    if (word_given)
-        PrintAndLogEx(INFO, "Simulating " _YELLOW_("%08x"), etd.word);
-    else
-        PrintAndLogEx(INFO, "Simulating dump " _YELLOW_("%s"), filename);
-
     // read data from dump file; file type has to be "bin", "eml" or "json"
-    if (loadFileEM4x50(filename, etd.data, sizeof(etd.data)) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Read error");
-        return PM3_EFILE;
+    if (fn_given) {
+        if (loadFileEM4x50(filename, data, DUMP_FILESIZE) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Read error");
+            return PM3_EFILE;
+        }
+
+        PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to emulator memory", filename);
+
+        em4x50_seteml(data, 0, DUMP_FILESIZE);
+        free(data);
     }
+
+    PrintAndLogEx(INFO, "Simulating data in emulator memory " _YELLOW_("%s"), filename);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X50_SIM, 0, 0);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
@@ -1199,24 +1222,6 @@ int CmdEM4x50StdRead(const char *Cmd) {
     }
 
     return PM3_SUCCESS;
-}
-
-static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t nobytes) {
-
-    // fast push mode
-    conn.block_after_ACK = true;
-
-    for (size_t i = offset; i < nobytes; i += PM3_CMD_DATA_SIZE) {
-
-        size_t len = MIN((nobytes - i), PM3_CMD_DATA_SIZE);
-        if (len == nobytes - i) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-
-        clearCommandBuffer();
-        SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
-    }
 }
 
 int CmdEM4x50ELoad(const char *Cmd) {
