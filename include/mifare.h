@@ -94,6 +94,11 @@ typedef enum {
     MFDES_ALGO_AES = 4
 } mifare_des_authalgo_t;
 
+typedef enum {
+    MFDES_KDF_ALGO_NONE = 0,
+    MFDES_KDF_ALGO_AN10922 = 1,
+} mifare_des_kdf_algo_t;
+
 //-----------------------------------------------------------------------------
 // "hf 14a sim x", "hf mf sim x" attacks
 //-----------------------------------------------------------------------------
