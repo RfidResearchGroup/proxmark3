@@ -126,8 +126,10 @@ size_t key_block_size(const desfirekey_t  key);
 size_t padded_data_length(const size_t nbytes, const size_t block_size);
 size_t maced_data_length(const desfirekey_t  key, const size_t nbytes);
 size_t enciphered_data_length(const desfiretag_t tag, const size_t nbytes, int communication_settings);
-void cmac_generate_subkeys(desfirekey_t key);
+void cmac_generate_subkeys(desfirekey_t key, MifareCryptoDirection direction);
 void cmac(const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
+
+void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t dataLen);
 
 void desfire_crc32(const uint8_t *data, const size_t len, uint8_t *crc);
 void desfire_crc32_append(uint8_t *data, const size_t len);

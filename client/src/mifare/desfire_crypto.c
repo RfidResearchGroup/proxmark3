@@ -251,7 +251,7 @@ static void xor(const uint8_t *ivect, uint8_t *data, const size_t len) {
     }
 }
 
-void cmac_generate_subkeys(desfirekey_t key) {
+void cmac_generate_subkeys(desfirekey_t key, MifareCryptoDirection direction) {
     int kbs = key_block_size(key);
     const uint8_t R = (kbs == 8) ? 0x1B : 0x87;
 
@@ -261,7 +261,7 @@ void cmac_generate_subkeys(desfirekey_t key) {
     uint8_t ivect[kbs];
     memset(ivect, 0, kbs);
 
-    mifare_cypher_blocks_chained(NULL, key, ivect, l, kbs, MCD_RECEIVE, MCO_ENCYPHER);
+    mifare_cypher_blocks_chained(NULL, key, ivect, l, kbs, direction, MCO_ENCYPHER);
 
     bool xor = false;
 
@@ -303,6 +303,45 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
     mifare_cypher_blocks_chained(NULL, key, ivect, buffer, len, MCD_SEND, MCO_ENCYPHER);
 
     memcpy(cmac, ivect, kbs);
+    free(buffer);
+}
+
+// This function is almot like cmac(...). but with some key differences.
+void mifare_kdf_an10922(const desfirekey_t key, const uint8_t *data, size_t len) {
+    int kbs = key_block_size(key);
+    int kbs2 = kbs * 2;
+    if (key == NULL || kbs == 0 || data == NULL || len < 1 || len > 31) {
+        return;
+    }
+
+    cmac_generate_subkeys(key, MCD_SEND);
+
+    uint8_t *buffer = malloc(kbs2);
+    uint8_t *ivect = malloc(kbs);
+
+    memset(ivect, 0, kbs);
+
+    buffer[0] = 0x01;
+    memcpy(&buffer[1], data, len++);
+
+    if (len != (kbs2)) {
+        buffer[len++] = 0x80;
+        while (len % kbs2) {
+            buffer[len++] = 0x00;
+        }
+        xor(key->cmac_sk2, buffer + kbs, kbs);
+    } else {
+        xor(key->cmac_sk1, buffer + kbs, kbs);
+    }
+
+    mbedtls_aes_context actx;
+    mbedtls_aes_init(&actx);
+    mbedtls_aes_setkey_enc(&actx, key->data, kbs * 8);
+    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, kbs2, ivect, buffer, buffer);
+    mbedtls_aes_free(&actx);
+
+    memcpy(key->data, buffer + kbs, kbs);
+    free(ivect);
     free(buffer);
 }
 
