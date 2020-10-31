@@ -122,6 +122,22 @@ static void em4x50_setup_sim(void) {
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 }
 
+static void emlGetMem(uint32_t *words, size_t nowords) {
+
+    // read <nowords> words from emulator memory
+
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+
+        for (int j = 0; j < 4; j++)
+            words[i] |= (em4x50_mem[4 * i + j]) << ((3 - j) * 8);
+
+        // lsb is needed (given format is msb)
+        words[i] = reflect32(words[i]);
+    }
+}
+
 // functions for "reader" use case
 
 static bool get_signalproperties(void) {
@@ -1336,15 +1352,8 @@ void em4x50_restore(em4x50_data_t *etd) {
 
     em4x50_setup_read();
 
-    // read data
-    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-
-        for (int j = 0; j < 4; j++)
-            words_client[i] |= (etd->data[4 * i + j]) << ((3 - j) * 8);
-
-        // lsb is needed (dump is msb)
-        words_client[i] = reflect32(words_client[i]);
-    }
+    // read data from emulator memory
+    emlGetMem(words_client, EM4X50_NO_WORDS);
     
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
@@ -1389,23 +1398,17 @@ void em4x50_restore(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_RESTORE, status, 0, 0);
 }
 
-void em4x50_sim(em4x50_data_t *etd) {
+void em4x50_sim(void) {
 
-    // simulate either word (e.g. UID) or complete tag via dump file upload
+    // simulate uploaded data in emulator memory
+    // (currently only a one-way communication is possible)
 
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_sim();
 
-    // read data
-    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
-
-        for (int j = 0; j < 4; j++)
-            words[i] |= (etd->data[4 * i + j]) << ((3 - j) * 8);
-
-        // lsb is needed (dump is msb)
-        words[i] = reflect32(words[i]);
-    }
+    // read data from emulator memory
+    emlGetMem(words, EM4X50_NO_WORDS);
     
     // extract control data
     int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
