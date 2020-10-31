@@ -49,7 +49,6 @@ typedef struct {
     uint32_t password2;
     uint32_t word;
     uint32_t addresses;
-    uint8_t data[136];
 } PACKED em4x50_data_t;
 
 typedef struct {
