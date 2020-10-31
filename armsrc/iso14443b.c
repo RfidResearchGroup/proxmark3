@@ -1540,7 +1540,8 @@ void iso14443b_setup(void) {
 //
 // I tried to be systematic and check every answer of the tag, every CRC, etc...
 //-----------------------------------------------------------------------------
-static bool ReadSTBlock(uint8_t blocknr, uint8_t *block) {
+static int read_srx_block(uint8_t blocknr, uint8_t *block) {
+   
     uint8_t cmd[] = {ISO14443B_READ_BLK, blocknr, 0x00, 0x00};
     AddCrc14B(cmd, 2);
 
@@ -1557,60 +1558,50 @@ static bool ReadSTBlock(uint8_t blocknr, uint8_t *block) {
     // Check if we got an answer from the tag
     if (retlen != 6) {
         DbpString("[!] expected 6 bytes from tag, got less...");
-        return false;
+        return PM3_EWRONGANSWER;
     }
     // The check the CRC of the answer
-    if (!check_crc(CRC_14443_B, r_block, retlen)) {
+    if (check_crc(CRC_14443_B, r_block, retlen) == false) {
         DbpString("CRC fail");
-        return false;
+        return PM3_ECRC;
     }
 
     if (block) {
         memcpy(block, r_block, 4);
     }
 
-    Dbprintf("Address=%02x, Contents=%08x, CRC=%04x",
-             blocknr,
-             (r_block[3] << 24) + (r_block[2] << 16) + (r_block[1] << 8) + r_block[0],
-             (r_block[4] << 8) + r_block[5]);
+    if (DBGLEVEL >= DBG_DEBUG) {
+        Dbprintf("Address=%02x, Contents=%08x, CRC=%04x",
+                    blocknr,
+                    (r_block[3] << 24) + (r_block[2] << 16) + (r_block[1] << 8) + r_block[0],
+                    (r_block[4] << 8) + r_block[5]
+            );
+    }
 
-    return true;
+    return PM3_SUCCESS;
 }
 
-void ReadSTMemoryIso14443b(uint16_t numofblocks) {
-
+void ReadSTBlock(uint8_t blocknr) {
     iso14443b_setup();
-
-    uint8_t *mem = BigBuf_malloc((numofblocks + 1) * 4);
-
     iso14b_card_select_t card;
     int res = iso14443b_select_srx_card(&card);
-    int isOK = PM3_SUCCESS;
-
-    // 0: OK 2: attrib fail, 3:crc fail,
-    if (res < 1) {
-        isOK = PM3_ETIMEOUT;
-        goto out;
-    }
-
-    ++numofblocks;
-
-    for (uint8_t i = 0; i < numofblocks; i++) {
-
-        if (ReadSTBlock(i, mem + (i * 4)) == false) {
-            isOK = PM3_ETIMEOUT;
-            break;
+    // 0: OK -1 wrong len, -2: attrib fail, -3:crc fail,
+    switch(res) {
+        case -1:
+        case -3: {
+            reply_ng(CMD_HF_SRI_READ, PM3_EWRONGANSWER, NULL, 0);
+            goto out;
+        }
+        case -2: {
+            reply_ng(CMD_HF_SRI_READ, PM3_ECRC, NULL, 0);
+            goto out;
         }
     }
-
-    // System area block (0xFF)
-    if (ReadSTBlock(0xFF, mem + (numofblocks * 4)) == false)
-        isOK = PM3_ETIMEOUT;
+    uint8_t *data = BigBuf_malloc(4);
+    res = read_srx_block(blocknr, data);
+    reply_ng(CMD_HF_SRI_READ, res, data, 4);
 
 out:
-
-    reply_ng(CMD_HF_SRI_READ, isOK, mem, numofblocks * 4);
-
     BigBuf_free();
     switch_off();
 }

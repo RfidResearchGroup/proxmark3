@@ -34,7 +34,7 @@ int iso14443b_select_card_srx(iso14b_card_select_t *card);
 
 void SimulateIso14443bTag(uint8_t *pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
-void ReadSTMemoryIso14443b(uint16_t numofblocks);
+void ReadSTBlock(uint8_t blocknr);
 void SniffIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 void SendRawCommand14443B_Ex(PacketCommandNG *c);

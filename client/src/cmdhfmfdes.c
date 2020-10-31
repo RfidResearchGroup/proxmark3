@@ -32,6 +32,7 @@
 #include "fileutils.h"
 #include "mifare/mifaredefault.h"  // default keys
 #include "mifare/ndef.h"           // NDEF
+#include "mifare/mad.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -63,6 +64,9 @@ typedef struct {
     uint8_t keyno;
     uint8_t keylen;
     uint8_t key[24];
+    uint8_t kdfAlgo;
+    uint8_t kdfInputLen;
+    uint8_t kdfInput[31];
 } PACKED mfdes_authinput_t;
 
 static mfdes_authinput_t currentauth[0xF] = {{.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}};
@@ -706,6 +710,13 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
         Desfire_3k3des_key_new_with_version(keybytes, key);
     }
 
+    if (payload->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
+        mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
+        if (g_debugMode) {
+            PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
+        }
+    }
+
     uint8_t subcommand = MFDES_AUTHENTICATE;
     tag->authentication_scheme = AS_LEGACY;
 
@@ -918,7 +929,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     memset(tag->ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
     tag->authenticated_key_no = payload->keyno;
     if (tag->authentication_scheme == AS_NEW) {
-        cmac_generate_subkeys(tag->session_key);
+        cmac_generate_subkeys(tag->session_key, MCD_RECEIVE);
     }
     return PM3_SUCCESS;
 }
@@ -1169,14 +1180,14 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
         PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
         return PM3_EINVARG;
     }
-    // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
-
+    // See tools/recover_pk.py to recover Pk from UIDs and signatures
 #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
     const ecdsa_publickey_t nxp_desfire_public_keys[] = {
         {"NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
         {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
         {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
+        {"DESFire EV3",             "041DB46C145D0A36539C6544BD6D9B0AA62FF91EC48CBC6ABAE36E0089A46F0D08C8A715EA40A63313B92E90DDC1730230E0458A33276FB743"},
         {"NTAG424DNA, NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
         {"DESFire Light",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
         {"Mifare Plus EV1",         "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
@@ -1987,7 +1998,7 @@ static void swap16(uint8_t *data) {
     data[1] = tmp;
 };
 
-static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, uint8_t *key, int cmdKeyNo, mfdes_auth_res_t *rpayload) {
+static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, uint8_t *key, int cmdKeyNo, uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput, mfdes_auth_res_t *rpayload) {
     switch (cmdAuthMode) {
         case MFDES_AUTH_DES:
             if (cmdAuthAlgo != MFDES_ALGO_DES && cmdAuthAlgo != MFDES_ALGO_3DES) {
@@ -2036,6 +2047,25 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
             break;
     }
 
+    switch (cmdKdfAlgo) {
+        case MFDES_KDF_ALGO_AN10922:
+            // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
+            if (cmdAuthAlgo != MFDES_ALGO_AES) {
+                PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
+                return PM3_EINVARG;
+            }
+            if (kdfInputLen < 1 || kdfInputLen > 31) {
+                PrintAndLogEx(FAILED, "KDF AN10922 algo requires an input of length 1-31 bytes.");
+                return PM3_EINVARG;
+            }
+        case MFDES_KDF_ALGO_NONE:
+            break;
+        default:
+            PrintAndLogEx(WARNING, "KDF algo %d is not supported.", cmdKdfAlgo);
+            return PM3_EINVARG;
+            break;
+    }
+
     // KEY
     int res = handler_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
@@ -2053,6 +2083,9 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
     payload.mode = cmdAuthMode;
     payload.algo = cmdAuthAlgo;
     payload.keyno = cmdKeyNo;
+    payload.kdfAlgo = cmdKdfAlgo;
+    payload.kdfInputLen = kdfInputLen;
+    memcpy(payload.kdfInput, kdfInput, kdfInputLen);
 
     int error = handler_desfire_auth(&payload, rpayload);
     if (error == PM3_SUCCESS) {
@@ -3539,8 +3572,12 @@ static int CmdHF14ADesDump(const char *Cmd) {
         aid[2] = app_ids[i + 2];
 
         PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
-        PrintAndLogEx(SUCCESS, "  AID Function Cluster 0x%02X: " _YELLOW_("%s"), aid[2], cluster_to_text(aid[2]));
-
+        if ((aid[2] >> 4) == 0xF) {
+            uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+            PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
+            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
+            MADDFDecodeAndPrint(short_aid);
+        }
         for (uint8_t m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
                 PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
@@ -3705,8 +3742,12 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         }
 
         PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
-        PrintAndLogEx(SUCCESS, "  AID Function Cluster 0x%02X: " _YELLOW_("%s"), aid[2], cluster_to_text(aid[2]));
-
+        if ((aid[2] >> 4) == 0xF) {
+            uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+            PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
+            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
+            MADDFDecodeAndPrint(short_aid);
+        }
         for (uint8_t m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
                 PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
@@ -3870,6 +3911,8 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
         arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
+        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922)"),
+        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3886,6 +3929,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     uint8_t key[24] = {0};
     int keylen = 0;
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
+
+    // Get KDF input
+    uint8_t kdfInput[31] = {0};
+    int kdfInputLen = 0;
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 6, 0);
+    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
+
     CLIParserFree(ctx);
 
     if (cmdAuthAlgo == MFDES_ALGO_AES) {
@@ -3931,7 +3981,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
     mfdes_auth_res_t rpayload;
-    int error = desfire_authenticate(cmdAuthMode, cmdAuthAlgo, aid, key, cmdKeyNo, &rpayload);
+    int error = desfire_authenticate(cmdAuthMode, cmdAuthAlgo, aid, key, cmdKeyNo, cmdKDFAlgo, kdfInputLen, kdfInput, &rpayload);
     if (error == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
         PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload.sessionkey, keylength));
@@ -4078,7 +4128,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_DES, aid, deskeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_DES, aid, deskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
                         foundKeys[0][keyno][0] = 0x01;
@@ -4110,7 +4160,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_3DES, aid, aeskeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_3DES, aid, aeskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[1][keyno][0] = 0x01;
@@ -4142,7 +4192,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[2][keyno][0] = 0x01;
@@ -4174,7 +4224,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_ISO, MFDES_ALGO_3K3DES, aid, k3kkeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_ISO, MFDES_ALGO_3K3DES, aid, k3kkeyList[curkey], keyno, 0, 0, NULL, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3K3 Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
                         foundKeys[3][keyno][0] = 0x01;

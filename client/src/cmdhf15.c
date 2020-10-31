@@ -1853,10 +1853,10 @@ static int CmdHF15Restore(const char *Cmd) {
         if (addressed_mode) {
             char uidhex[17] = {0x00};
             hex_to_buffer((uint8_t *)uidhex, uid, sizeof(uid), sizeof(uidhex) - 1, 0, false, true);
-            hex_to_buffer((uint8_t *)hex, data + i, blocksize, sizeof(hex) - 1, 0, false, true);
+            hex_to_buffer((uint8_t *)hex, data + bytes, blocksize, sizeof(hex) - 1, 0, false, true);
             snprintf(tmpCmd, sizeof(tmpCmd), "%s %s %u %s", newPrefix, uidhex, i, hex);
         } else {
-            hex_to_buffer((uint8_t *)hex, data + i, blocksize, sizeof(hex) - 1, 0, false, true);
+            hex_to_buffer((uint8_t *)hex, data + bytes, blocksize, sizeof(hex) - 1, 0, false, true);
             snprintf(tmpCmd, sizeof(tmpCmd), "%s u %u %s", newPrefix, i, hex);
         }
 

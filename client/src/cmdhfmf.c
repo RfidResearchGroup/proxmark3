@@ -18,13 +18,16 @@
 #include "cmdtrace.h"
 #include "emv/dump.h"
 #include "mifare/mifaredefault.h"          // mifare default key array
-#include "cliparser.h"           // argtable
+#include "cliparser.h"          // argtable
 #include "hardnested_bf_core.h" // SetSIMDInstr
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
 #include "protocols.h"
-#include "util_posix.h"  // msclock
+#include "util_posix.h"         // msclock
 #include "cmdhfmfhard.h"
+#include "des.h"                // des ecb
+#include "crapto1/crapto1.h"    // prng_successor
+#include "cmdhf14a.h"           // exchange APDU
 
 #define MFBLOCK_SIZE 16
 
@@ -627,7 +630,6 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
     }
 }
 
-
 static uint16_t NumOfBlocks(char card) {
     switch (card) {
         case '0' :
@@ -695,7 +697,6 @@ static char GetFormatFromSector(uint8_t sectorNo) {
             return ' ';
     }
 }
-
 
 static int CmdHF14AMfDarkside(const char *Cmd) {
     uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
@@ -2014,7 +2015,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     char ctmp;
     // Nested and Hardnested returned status
     uint64_t foundkey = 0;
-    int16_t isOK = 0;
+    int isOK = 0;
     int current_sector_i = 0, current_key_type_i = 0;
     // Dumping and transfere to simulater memory
     uint8_t block[16] = {0x00};
@@ -2372,8 +2373,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             if (verbose) {
                 PrintAndLogEx(INFO, "======================= " _YELLOW_("START DARKSIDE ATTACK") " =======================");
             }
-
-            isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
+            isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType + 0x60, &key64);
 
             switch (isOK) {
                 case -1 :
@@ -2393,17 +2393,18 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     PrintAndLogEx(WARNING, "\nAborted via keyboard.");
                     goto noValidKeyFound;
                 default :
-                    PrintAndLogEx(SUCCESS, "\nFound valid key: %012" PRIx64 "\n", key64);
+                    PrintAndLogEx(SUCCESS, "\nFound valid key: [ " _GREEN_("%012" PRIx64) " ]\n", key64);
                     break;
             }
 
             // Store the keys
+            num_to_bytes(key64, 6, key);
             e_sector[blockNo].Key[keyType] = key64;
             e_sector[blockNo].foundKey[keyType] = 'S';
-            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(SUCCESS, "target sector:%3u key type: %c -- found valid key [ " _GREEN_("%012" PRIx64) " ] (used for nested / hardnested attack)",
                           blockNo,
                           keyType ? 'B' : 'A',
-                          sprint_hex(key, sizeof(key))
+                          key64
                          );
         } else {
 noValidKeyFound:
@@ -3691,7 +3692,6 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     decode_print_st(start + blocks - 1, data);
     return PM3_SUCCESS;
 }
-
 
 static int CmdHF14AMfEClear(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
@@ -5266,6 +5266,147 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+static void des_decrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_dec(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, in, out);
+}
+
+static int CmdHf14AMfSuperCard(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf supercard",
+                  "Extract info from a `super card`",
+                  "hf mf supercard");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("r",  "reset",  "reset card"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool reset_card = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    bool activate_field = true;
+    bool keep_field_on = true;
+    int res = 0;
+
+    if (reset_card)  {
+
+        keep_field_on = false;
+        uint8_t response[6]; 
+        int resplen = 0;
+
+        // --------------- RESET CARD ----------------
+        uint8_t aRESET[] = { 0x00, 0xa6, 0xc0,  0x00 };
+        res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res) {
+            PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
+            DropField();
+            return res;
+        }
+        PrintAndLogEx(SUCCESS, "Super card reset [ " _GREEN_("ok") " ]");
+        return PM3_SUCCESS;
+    }
+
+
+    uint8_t responseA[22]; 
+    uint8_t responseB[22];
+    int respAlen = 0;
+    int respBlen = 0;
+
+    // --------------- First ----------------
+    uint8_t aFIRST[] = { 0x00, 0xa6, 0xb0,  0x00,  0x10 };
+    res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA), &respAlen);
+    if (res) {
+        DropField();
+        return res;
+    }
+
+    // --------------- Second ----------------
+    activate_field = false;
+    keep_field_on = false;
+    
+    uint8_t aSECOND[] = { 0x00, 0xa6, 0xb0,  0x01,  0x10 };
+    res = ExchangeAPDU14a(aSECOND, sizeof(aSECOND), activate_field, keep_field_on, responseB, sizeof(responseB), &respBlen);
+    if (res) {
+        DropField();
+        return res;
+    }
+    
+// uint8_t inA[] = { 0x72, 0xD7, 0xF4, 0x3E, 0xFD, 0xAB, 0xF2, 0x35, 0xFD, 0x49, 0xEE, 0xDC, 0x44, 0x95, 0x43, 0xC4};    
+// uint8_t inB[] = { 0xF0, 0xA2, 0x67, 0x6A, 0x04, 0x6A, 0x72, 0x12, 0x76, 0xA4, 0x1D, 0x02, 0x1F, 0xEA, 0x20, 0x85};
+
+    uint8_t outA[16] = {0};
+    uint8_t outB[16] = {0};
+
+    uint8_t key[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};    
+    for (uint8_t i = 0; i < 16; i += 8) {
+        des_decrypt(outA + i, responseA + i, key);
+        des_decrypt(outB + i, responseB + i, key);
+    }
+
+    PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseA, respAlen));
+    PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outA, sizeof(outA)));
+    PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseB, respAlen));
+    PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outB, sizeof(outB)));
+
+    if (memcmp(outA, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
+        PrintAndLogEx(INFO, "No trace recorded");
+        return PM3_SUCCESS;
+    }
+
+    // second trace?
+    if (memcmp(outB, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
+        PrintAndLogEx(INFO, "Only one trace recorded");
+        return PM3_SUCCESS;
+    }    
+
+    nonces_t data;    
+    
+    // first
+    uint16_t NT0 = (outA[6] << 8) | outA[7];    
+    data.cuid = bytes_to_num(outA, 4);
+    data.nonce = prng_successor(NT0, 31);
+    data.nr = bytes_to_num(outA + 8, 4);
+    data.ar = bytes_to_num(outA + 12, 4);
+    data.at = 0;
+
+    // second
+    NT0 = (outB[6] << 8) | outB[7];
+    data.nonce2 =  prng_successor(NT0, 31);;
+    data.nr2 = bytes_to_num(outB + 8, 4);
+    data.ar2 = bytes_to_num(outB + 12, 4);
+    data.sector = GetSectorFromBlockNo(outA[5]);
+    data.keytype = outA[4];
+    data.state = FIRST;
+
+    PrintAndLogEx(DEBUG, "A Sector %02x", data.sector);
+    PrintAndLogEx(DEBUG, "A NT  %08x", data.nonce);
+    PrintAndLogEx(DEBUG, "A NR  %08x", data.nr);
+    PrintAndLogEx(DEBUG, "A AR  %08x", data.ar);
+    PrintAndLogEx(DEBUG, "");
+    PrintAndLogEx(DEBUG, "B NT  %08x", data.nonce2);
+    PrintAndLogEx(DEBUG, "B NR  %08x", data.nr2);
+    PrintAndLogEx(DEBUG, "B AR  %08x", data.ar2);
+
+    uint64_t key64 = -1;
+    res = mfkey32_moebius(&data, &key64);
+    
+    if (res) {
+        PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%12" PRIX64) " ]"
+            , sprint_hex_inrow(outA, 4)
+            , data.sector
+            , (data.keytype == 0x60) ? 'A' : 'B'
+            , key64);
+    } else {
+        PrintAndLogEx(FAILED, "failed to recover any key");
+    }
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable,  "List MIFARE history"},
@@ -5280,6 +5421,7 @@ static command_t CommandTable[] = {
     {"chk",         CmdHF14AMfChk,          IfPm3Iso14443a,  "Check keys"},
     {"fchk",        CmdHF14AMfChk_fast,     IfPm3Iso14443a,  "Check keys fast, targets all keys on card"},
     {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
+    {"supercard",   CmdHf14AMfSuperCard,    IfPm3Iso14443a,  "Extract info from a `super card`"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
     {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},

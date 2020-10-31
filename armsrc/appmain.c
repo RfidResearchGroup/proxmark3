@@ -1220,7 +1220,11 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_ISO14443b
         case CMD_HF_SRI_READ: {
-            ReadSTMemoryIso14443b(packet->oldarg[0]);
+            struct p {
+                uint8_t blockno;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            ReadSTBlock(payload->blockno);
             break;
         }
         case CMD_HF_ISO14443B_SNIFF: {

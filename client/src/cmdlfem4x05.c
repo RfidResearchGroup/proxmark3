@@ -98,11 +98,13 @@ static em_tech_type_t em_get_card_type(uint32_t config) {
     uint8_t t = (config >> 1) & 0xF;
     switch (t) {
         case 4:
-            return EM_4X69;
+            return EM_4469;
         case 8:
             return EM_4205;
         case 9:
             return EM_4305;
+        case 12:
+            return EM_4369;
     }
     return EM_UNKNOWN;
 }
@@ -111,10 +113,12 @@ static const char *em_get_card_str(uint32_t config) {
     switch (em_get_card_type(config)) {
         case EM_4305:
             return "EM4305";
-        case EM_4X69:
+        case EM_4469:
             return "EM4469";
         case EM_4205:
             return "EM4205";
+        case EM_4369:
+            return "EM4369";
         case EM_UNKNOWN:
             break;
     }
@@ -562,7 +566,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     uint32_t word = 0;
 
     const char *info[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
-    const char *info4x69 [] = {"Info", "UID", "Password", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
+    const char *info4x69 [] = {"Info", "UID", "Password", "Lock", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
 
     // EM4305 vs EM4469
     em_tech_type_t card_type = em_get_card_type(block0);
@@ -659,16 +663,14 @@ int CmdEM4x05Dump(const char *Cmd) {
         data[14] = BSWAP_32(data[14]);
         data[15] = BSWAP_32(data[15]);
 
-    } else if (card_type == EM_4X69) {
+    } else if (card_type == EM_4369 || card_type == EM_4469) {
 
-        // To flag any blocks locked we need to read blocks 14 and 15 first
+        // To flag any blocks locked we need to read block 3 first
         // dont swap endian until we get block lock flags.
         status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
-            if ((word & 0x00008000) != 0x00) {
-                lock_bits = word;
-                gotLockBits = true;
-            }
+            lock_bits = word;
+            gotLockBits = true;
             data[EM4469_PROT_BLOCK] = word;
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
@@ -676,8 +678,8 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         uint32_t lockbit;
 
-        for (; addr < 15; addr++) {
-            lockbit = (lock_bits >> addr) & 1;
+        for (; addr < 16; addr++) {
+            lockbit = (lock_bits >> (addr * 2)) & 3;
             if (addr == 2) {
                 if (usePwd) {
                     data[addr] = BSWAP_32(pwd);
@@ -712,15 +714,17 @@ int CmdEM4x05Dump(const char *Cmd) {
         // saveFile (binary) passes in the .bin extension.
         if (strcmp(filename, "") == 0) {
 
-            if (card_type == EM_4X69) {
-                sprintf(filename, "lf-4x69-%08X-dump", BSWAP_32(data[1]));
+            if (card_type == EM_4369) {
+                sprintf(filename, "lf-4369-%08X-dump", BSWAP_32(data[1]));
+            } else if (card_type == EM_4469) {
+                sprintf(filename, "lf-4469-%08X-dump", BSWAP_32(data[1]));
             } else {
                 sprintf(filename, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
             }
 
         }
         PrintAndLogEx(NORMAL, "");
-        saveFileJSON(filename, (card_type == EM_4X69) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
+        saveFileJSON(filename, (card_type == EM_4369 || card_type == EM_4469) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
 
         saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(filename, ".bin", data, sizeof(data));
@@ -971,7 +975,7 @@ static const char *printEM4x05_known(uint32_t word) {
     return "";
 }
 
-static void printEM4x05config(uint32_t wordData) {
+static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
     uint16_t datarate = (((wordData & 0x3F) + 1) * 2);
     uint8_t encoder = ((wordData >> 6) & 0xF);
     char enc[14];
@@ -1057,7 +1061,8 @@ static void printEM4x05config(uint32_t wordData) {
     uint8_t raw = (wordData & EM4x05_READ_AFTER_WRITE) >> 22;
     uint8_t disable = (wordData & EM4x05_DISABLE_ALLOWED) >> 23;
     uint8_t rtf = (wordData & EM4x05_READER_TALK_FIRST) >> 24;
-    uint8_t pigeon = (wordData & (1 << 26)) >> 26;
+    uint8_t invert = (wordData & EM4x05_INVERT) >> 25;
+    uint8_t pigeon = (wordData & EM4x05_PIGEON) >> 26;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Config Information") " ------------------------");
@@ -1065,17 +1070,46 @@ static void printEM4x05config(uint32_t wordData) {
 
     PrintAndLogEx(INFO, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
     PrintAndLogEx(INFO, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
-    PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
-    PrintAndLogEx(INFO, "     Delay:   %u | %s", delay, cdelay);
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
+    } else if (PSKcf != 0) {
+        PrintAndLogEx(INFO, "co10..c011:   %u | %s", PSKcf, _RED_("Not used, must be set to logic 0"));
+    }
+    if (card_type == EM_4305) {
+        PrintAndLogEx(INFO, "     Delay:   %u | %s", delay, cdelay);
+    } else if (delay != 0) {
+        PrintAndLogEx(INFO, "co12..c013:   %u | %s", delay, _RED_("Not used, must be set to logic 0"));
+    }
     PrintAndLogEx(INFO, " LastWordR:  %02u | Address of last word for default read - meaning %u blocks are output", LWR, numblks);
     PrintAndLogEx(INFO, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required"));
-    PrintAndLogEx(INFO, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "   ReadHKL:   %u | Read housekeeping words (3,4) login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
+    } else if (readHKL != 0) {
+        PrintAndLogEx(INFO, "      c019:   %u | %s", readHKL, _RED_("Not used, must be set to logic 0"));
+    }
     PrintAndLogEx(INFO, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required"));
-    PrintAndLogEx(INFO, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
-    PrintAndLogEx(INFO, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "  WriteHKL:   %u | Write housekeeping words (2,3,4) login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
+    } else if (writeHKL != 0) {
+        PrintAndLogEx(INFO, "      c021:   %u | %s", writeHKL, _RED_("Not used, must be set to logic 0"));
+    }
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
+    } else if (raw != 0) {
+        PrintAndLogEx(INFO, "      c022:   %u | %s", raw, _RED_("Not used, must be set to logic 0"));
+    }
     PrintAndLogEx(INFO, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
     PrintAndLogEx(INFO, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
-    PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
+    if (card_type == EM_4369) {
+        PrintAndLogEx(INFO, "    Invert:   %u | Invert data? %s", invert, invert ? _YELLOW_("yes") : "no");
+    } else if (invert != 0) {
+        PrintAndLogEx(INFO, "      c025:   %u | %s", invert, _RED_("Not used, must be set to logic 0"));
+    }
+    if (card_type == EM_4305) {
+        PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
+    } else if (pigeon != 0) {
+        PrintAndLogEx(INFO, "      c026:   %u | %s", pigeon, _RED_("Not used, must be set to logic 0"));
+    }
 }
 
 static void printEM4x05info(uint32_t block0, uint32_t serial) {
@@ -1165,7 +1199,7 @@ int CmdEM4x05Info(const char *Cmd) {
         return PM3_ESOFT;
 
     // based on Block0 ,  decide type.
-    int card_type = em_get_card_type(block0);
+    em_tech_type_t card_type = em_get_card_type(block0);
 
     // read word 1 (serial #) doesn't need pwd
     // continue if failed, .. non blocking fail.
@@ -1180,7 +1214,7 @@ int CmdEM4x05Info(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    printEM4x05config(word);
+    printEM4x05config(card_type, word);
 
     // if 4469 read EM4469_PROT_BLOCK
     // if 4305 read 14,15
@@ -1202,7 +1236,7 @@ int CmdEM4x05Info(const char *Cmd) {
                 return PM3_SUCCESS;
             }
         }
-    } else if (card_type == EM_4X69) {
+    } else if (card_type == EM_4369 || card_type == EM_4469) {
         // read word 3 to see which is being used for the protection bits
         if (em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
@@ -1265,15 +1299,13 @@ int CmdEM4x05Chk(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
         } else if (status != PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "No answer from tag");
+            PrintAndLogEx(WARNING, "no answer from tag");
         }
     }
 
     // Loop dictionary
     uint8_t *keyBlock = NULL;
     if (found == false) {
-
-        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
         uint32_t keycount = 0;
 
@@ -1285,6 +1317,8 @@ int CmdEM4x05Chk(const char *Cmd) {
 
             return PM3_ESOFT;
         }
+
+        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
         for (uint32_t c = 0; c < keycount; ++c) {
 
@@ -1309,7 +1343,7 @@ int CmdEM4x05Chk(const char *Cmd) {
                 found = true;
                 break;
             } else if (status != PM3_EFAILED) {
-                PrintAndLogEx(WARNING, "No answer from tag");
+                PrintAndLogEx(WARNING, "no answer from tag");
             }
         }
     }

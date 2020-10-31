@@ -1645,6 +1645,7 @@ int CmdTuneSamples(const char *Cmd) {
 
     int timeout = 0;
     int timeout_max = 20;
+    PrintAndLogEx(INFO, "REMINDER: " _YELLOW_("'hw tune' doesn't actively tune your antennas") ", it's only informative");
     PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
