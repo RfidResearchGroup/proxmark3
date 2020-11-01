@@ -4055,6 +4055,14 @@ static int AuthCheckDesfire(uint8_t *aid,
     bool aes = false;
     bool k3kdes = false;
 
+    uint8_t num_keys = 0;
+    uint8_t key_setting = 0;
+    res = handler_desfire_getkeysettings(&key_setting, &num_keys);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Could not get key settings");
+        return res;
+    }
+
     if (memcmp(aid, "\x00\x00\x00", 3) != 0) {
         uint8_t file_ids[33] = {0};
         uint32_t file_ids_len = 0;
@@ -4086,7 +4094,7 @@ static int AuthCheckDesfire(uint8_t *aid,
                     usedkeys[read_access] = 1;
 
                     if (res == PM3_SUCCESS) {
-                        switch (fileset_len >> 6) {
+                        switch (num_keys >> 6) {
                             case 0:
                                 des = true;
                                 tdes = true;
@@ -4401,24 +4409,20 @@ static int CmdHF14aDesChk(const char *Cmd) {
         endFilePosition = 0;
     }
 
-    if (aeskeyListLen == 0) {
-        PrintAndLogEx(ERR, "Aes key list is empty. Nothing to check.");
+    if (aeskeyListLen == 0 && deskeyListLen == 0 && k3kkeyListLen == 0) {
+        PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
         return PM3_EINVARG;
-    } else {
+    }
+
+    if (aeskeyListLen != 0) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyListLen);
     }
 
-    if (deskeyListLen == 0) {
-        PrintAndLogEx(ERR, "Des key list is empty. Nothing to check.");
-        return PM3_EINVARG;
-    } else {
+    if (deskeyListLen != 0) {
         PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyListLen);
     }
 
-    if (k3kkeyListLen == 0) {
-        PrintAndLogEx(ERR, "K3k key list is empty. Nothing to check.");
-        return PM3_EINVARG;
-    } else {
+    if (k3kkeyListLen != 0) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
     }
 
@@ -4437,7 +4441,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     if (aidlength != 0) {
         memcpy(&app_ids[0], aid, 3);
-        app_ids_len = 1;
+        app_ids_len = 3;
     }
 
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
