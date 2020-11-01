@@ -83,6 +83,16 @@ typedef struct mfdes_data {
     uint8_t *data;
 } PACKED mfdes_data_t;
 
+typedef struct {
+    uint8_t isOK;
+    uint8_t uid[7];
+    uint8_t uidlen;
+    uint8_t versionHW[7];
+    uint8_t versionSW[7];
+    uint8_t details[14];
+} PACKED mfdes_info_res_t;
+
+
 typedef struct mfdes_value {
     uint8_t fileno;  //01
     uint8_t value[16];
@@ -663,6 +673,38 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return NTAG413DNA;
     return DESFIRE_UNKNOWN;
 }
+
+static int mfdes_get_info(mfdes_info_res_t *info) {
+    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
+    PacketResponseNG resp;
+
+    if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    memcpy(info, resp.data.asBytes, sizeof(mfdes_info_res_t));
+
+    if (resp.status != PM3_SUCCESS) {
+        switch (info->isOK) {
+            case 1:
+                PrintAndLogEx(WARNING, "Can't select card");
+                break;
+            case 2:
+                PrintAndLogEx(WARNING, "Card is most likely not DESFire. Wrong size UID");
+                break;
+            case 3:
+            default:
+                PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
+                break;
+        }
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
+}
+
 
 static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
@@ -3265,43 +3307,14 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     DropField();
-    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
-    PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
-        DropField();
-        return PM3_ETIMEOUT;
+    mfdes_info_res_t info;
+    int res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    struct p {
-        uint8_t isOK;
-        uint8_t uid[7];
-        uint8_t uidlen;
-        uint8_t versionHW[7];
-        uint8_t versionSW[7];
-        uint8_t details[14];
-    } PACKED;
-
-    struct p *package = (struct p *) resp.data.asBytes;
-
-    if (resp.status != PM3_SUCCESS) {
-        switch (package->isOK) {
-            case 1:
-                PrintAndLogEx(WARNING, "Can't select card");
-                break;
-            case 2:
-                PrintAndLogEx(WARNING, "Card is most likely not DESFire. Wrong size UID");
-                break;
-            case 3:
-            default:
-                PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
-                break;
-        }
-        return PM3_ESOFT;
-    }
-
-    nxp_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
+    nxp_cardtype_t cardtype = getCardType(info.versionHW[3], info.versionHW[4]);
     if (cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
         return PM3_SUCCESS;
@@ -3310,30 +3323,30 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, package->uidlen));
-    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), package->details[12], package->details[13]);
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
+    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionHW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionHW[1]);
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionHW[2]);
-    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionHW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6], true));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionHW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
+    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(info.versionHW[3], info.versionHW[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionHW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionHW[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionSW[1]);
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionSW[2]);
-    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  package->versionSW[3], package->versionSW[4]);
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionSW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionSW[6], false));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionSW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionSW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionSW[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionSW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionSW[6], false));
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Card capabilities"));
-    uint8_t major = package->versionSW[3];
-    uint8_t minor = package->versionSW[4];
+    uint8_t major = info.versionSW[3];
+    uint8_t minor = info.versionSW[4];
     if (major == 0 && minor == 4)
         PrintAndLogEx(INFO, "\t0.4 - DESFire MF3ICD40, No support for APDU (only native commands)");
     if (major == 0 && minor == 5)
@@ -3363,7 +3376,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
         if (handler_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
-            desfire_print_signature(package->uid, package->uidlen, signature, signature_len, cardtype);
+            desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
