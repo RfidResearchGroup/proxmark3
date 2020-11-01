@@ -583,7 +583,7 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: $(OBJS) $(AMIIBOLIB) $(CLIPARSERLIB) $(JANSSONLIB) $(HARDNESTEDLIB) $(LUALIB) $(MBEDTLSLIB) $(REVENGLIB) $(TINYCBORLIB) $(WHEREAMILIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: $(OBJS) amiibo cliparser jansson hardnested lua mbedtls reveng tinycbor whereami lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
@@ -649,43 +649,43 @@ tarbin: $(BINS)
 # local libraries targets #
 ###########################
 
-$(AMIIBOLIB):
+amiibo:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) all
 
-$(CLIPARSERLIB):
+cliparser:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) all
 
-$(HARDNESTEDLIB):
+hardnested:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) all
 
-$(JANSSONLIB):
+jansson:
 ifneq ($(JANSSON_FOUND),1)
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
 endif
 
-$(LUALIB):
+lua:
 ifneq ($(LUA_FOUND),1)
 	$(info [*] MAKE $@ for $(LUAPLATFORM))
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
 endif
 
-$(MBEDTLSLIB):
+mbedtls:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
-$(REVENGLIB):
+reveng:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) all
 
-$(TINYCBORLIB):
+tinycbor:
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) all
 
-$(WHEREAMILIB):
+whereami:
 ifneq ($(WHEREAMI_FOUND),1)
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) all
@@ -695,7 +695,7 @@ endif
 # misc #
 ########
 
-.PHONY: all clean install uninstall tarbin
+.PHONY: all clean install uninstall tarbin amiibo cliparser hardnested jansson lua mbedtls reveng tinycbor whereami
 
 # version.c should be remade on every compilation
 src/version.c: default_version.c
