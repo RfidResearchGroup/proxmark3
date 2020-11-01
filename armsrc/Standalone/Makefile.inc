@@ -41,6 +41,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_AVEFUL,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_aveful.c
 endif
+# WITH_STANDALONE_HF_TCPRST
+ifneq (,$(findstring WITH_STANDALONE_HF_TCPRST,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_tcprst.c
+endif
 # WITH_STANDALONE_LF_ICEHID
 ifneq (,$(findstring WITH_STANDALONE_LF_ICEHID,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_icehid.c

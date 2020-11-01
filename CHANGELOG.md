@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
  - Change many commands to cliparser (@iceman1001, @tcprst, @mwalker33,...)
  - ...
+  - Added `HF_TCPRST` standalone mode which read and emulate IKEA Rothult cards (@tcprst)
  - Add Gallagher key checking/KDF on MIFARE Desfire (@NZSmartie)
  - Add dictionaries with common words of proper size (@will-caruana)
  - Add `hf mf supercard` (@iceman1001)
