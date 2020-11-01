@@ -654,7 +654,7 @@ static command_t CommandTable[] = {
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
     {"4x50_info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
-    {"4x50_write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change password of EM4x50 tag"},
+    {"4x50_writepwd",CmdEM4x50WritePwd,   IfPm3EM4x50,     "change password of EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
     {"4x50_wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe data from EM4x50"},
     {"4x50_brute",  CmdEM4x50Brute,       IfPm3EM4x50,     "guess password of EM4x50"},
@@ -666,6 +666,7 @@ static command_t CommandTable[] = {
     {"4x50_stdread",CmdEM4x50StdRead,     IfPm3EM4x50,     "show standard read mode data of EM4x50 tag"},
     {"4x50_eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "load a binary dump into emulator memory"},
     {"4x50_esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save emulator memory to file"},
+    {"4x50_chk",    CmdEM4x50Chk,         IfPm3EM4x50,     "check passwords from dictionary"},
     {NULL, NULL, NULL, NULL}
 };
 

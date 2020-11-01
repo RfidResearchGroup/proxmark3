@@ -1090,8 +1090,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_write((em4x50_data_t *)packet->data.asBytes);
             break;
         }
-        case CMD_LF_EM4X50_WRITE_PASSWORD: {
-            em4x50_write_password((em4x50_data_t *)packet->data.asBytes);
+        case CMD_LF_EM4X50_WRITEPWD: {
+            em4x50_writepwd((em4x50_data_t *)packet->data.asBytes);
             break;
         }
         case CMD_LF_EM4X50_READ: {
@@ -1138,6 +1138,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
             emlSet(packet->data.asBytes, packet->oldarg[0], packet->oldarg[1]);
+            break;
+        }
+        case CMD_LF_EM4X50_CHK: {
+            em4x50_chk((uint32_t *)packet->data.asBytes);
             break;
         }
 #endif

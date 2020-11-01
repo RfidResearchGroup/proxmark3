@@ -20,7 +20,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out);
 
 int CmdEM4x50Info(const char *Cmd);
 int CmdEM4x50Write(const char *Cmd);
-int CmdEM4x50WritePassword(const char *Cmd);
+int CmdEM4x50WritePwd(const char *Cmd);
 int CmdEM4x50Read(const char *Cmd);
 int CmdEM4x50Dump(const char *Cmd);
 int CmdEM4x50Wipe(const char *Cmd);
@@ -33,5 +33,6 @@ int CmdEM4x50Sim(const char *Cmd);
 int CmdEM4x50StdRead(const char *Cmd);
 int CmdEM4x50ELoad(const char *Cmd);
 int CmdEM4x50ESave(const char *Cmd);
+int CmdEM4x50Chk(const char *Cmd);
 
 #endif
