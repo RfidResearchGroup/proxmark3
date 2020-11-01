@@ -210,6 +210,10 @@ static uint32_t get_pulse_length(void) {
 
     volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
+    // for manual interruption
+    if (BUTTON_PRESS())
+        return 0;
+    
     while (sample > gLow && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
@@ -1264,18 +1268,24 @@ void em4x50_watch() {
         memset(words, 0, sizeof(words));
         now = 0;
 
-        if (get_signalproperties() && find_em4x50_tag()) {
-            
-            standard_read(&now, words);
+        //if (get_signalproperties()) && find_em4x50_tag()) {
+        if (get_signalproperties()) {
+            Dbprintf("ghet 1");
+            if (find_em4x50_tag()) {
+                Dbprintf("ghet 2");
 
-            if (now > 0) {
+                standard_read(&now, words);
+                Dbprintf("ghet 3");
 
-                Dbprintf("");
-                for (int i = 0; i < now; i++) {
-                    
-                    Dbprintf("EM4x50 TAG ID: "
-                             _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
-                             words[i], reflect32(words[i]));
+                if (now > 0) {
+
+                    Dbprintf("");
+                    for (int i = 0; i < now; i++) {
+                        
+                        Dbprintf("EM4x50 TAG ID: "
+                                 _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
+                                 words[i], reflect32(words[i]));
+                    }
                 }
             }
         }
