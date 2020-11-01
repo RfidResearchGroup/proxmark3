@@ -109,7 +109,8 @@ static uint32_t LastProxToAirDuration;
 // Sequence E: 00001111 modulation with subcarrier during second half
 // Sequence F: 00000000 no modulation with subcarrier
 // Sequence COLL: 11111111 load modulation over the full bitlength.
-//                         Tricks the reader to think that multiple cards answer (at least one card with 1 and at least one card with 0).
+//                         Tricks the reader to think that multiple cards answer.
+//                         (at least one card with 1 and at least one card with 0)
 // READER TO CARD - miller
 // Sequence X: 00001100 drop after half a period
 // Sequence Y: 00000000 no drop
@@ -380,6 +381,7 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
                         return true;                                             // we are finished with decoding the raw data sequence
                     } else {
                         Uart14aReset();                                             // Nothing received - start over
+                        return false;
                     }
                 }
                 if (Uart.state == STATE_14A_START_OF_COMMUNICATION) {                // error - must not follow directly after SOC
@@ -2047,11 +2049,6 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
     b = AT91C_BASE_SSC->SSC_RHR;
     (void) b;
-    /*
-        while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY));
-        b = AT91C_BASE_SSC->SSC_THR;
-        (void) b;
-    */
 
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
@@ -2070,13 +2067,6 @@ int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen) {
             AT91C_BASE_SSC->SSC_THR = resp[i++];
             FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
         }
-
-        /*
-                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-                    b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
-                    (void)b;
-                }
-                */
     }
 
     // Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
@@ -2340,7 +2330,9 @@ void iso14443a_antifuzz(uint32_t flags) {
     uint8_t *received = BigBuf_malloc(MAX_FRAME_SIZE);
     uint8_t *receivedPar = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *resp = BigBuf_malloc(20);
-
+    
+    memset(received, 0x00, MAX_FRAME_SIZE);
+    memset(received, 0x00, MAX_PARITY_SIZE);
     memset(resp, 0xFF, 20);
 
     LED_A_ON();
@@ -2379,6 +2371,7 @@ void iso14443a_antifuzz(uint32_t flags) {
                 colpos = 8;
             }
 
+            // trigger a faulty/collision response
             EmSendCmdEx(resp, 5, true);
             if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("ANTICOLL or SELECT %x", received[1]);
             LED_D_INV();
@@ -2499,16 +2492,19 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
         sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
 
         if (anticollision) {
+
             // SELECT_ALL
             ReaderTransmit(sel_all, sizeof(sel_all), NULL);
             if (!ReaderReceive(resp, resp_par)) {
                 Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
                 return 0;
             }
+
             if (Demod.collisionPos) {            // we had a collision and need to construct the UID bit by bit
                 memset(uid_resp, 0, 5);
                 uint16_t uid_resp_bits = 0;
                 uint16_t collision_answer_offset = 0;
+
                 // anti-collision-loop:
                 while (Demod.collisionPos) {
                     Dbprintf("Multiple tags detected. Collision after Bit %d", Demod.collisionPos);
@@ -2527,6 +2523,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                     ReaderTransmitBits(sel_uid, 16 + uid_resp_bits, NULL);
                     if (!ReaderReceiveOffset(resp, collision_answer_offset, resp_par)) return 0;
                 }
+
                 // finally, add the last bits and BCC of the UID
                 for (uint16_t i = collision_answer_offset; i < (Demod.len - 1) * 8; i++, uid_resp_bits++) {
                     uint16_t UIDbit = (resp[i / 8] >> (i % 8)) & 0x01;
@@ -2762,7 +2759,7 @@ b5,b6 = 00 - DESELECT
 */
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res) {
     uint8_t parity[MAX_PARITY_SIZE] = {0x00};
-    uint8_t real_cmd[cmd_len + 4];
+    uint8_t real_cmd[cmd_len + 4] = {0x00};
 
     if (cmd_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
