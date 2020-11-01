@@ -1072,7 +1072,7 @@ void em4x50_write(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, 136);
 }
 
-void em4x50_write_password(em4x50_data_t *etd) {
+void em4x50_writepwd(em4x50_data_t *etd) {
 
     // simple change of password
 
@@ -1096,7 +1096,7 @@ void em4x50_write_password(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_WRITE_PASSWORD, bsuccess, 0, 0);
+    reply_ng(CMD_LF_EM4X50_WRITEPWD, bsuccess, 0, 0);
 }
 
 void em4x50_wipe(uint32_t *password) {
@@ -1389,6 +1389,7 @@ void em4x50_sim(void) {
     // simulate uploaded data in emulator memory
     // (currently only a one-way communication is possible)
 
+    int status = PM3_SUCCESS;
     uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
@@ -1398,31 +1399,36 @@ void em4x50_sim(void) {
     for (int i = 0; i < EM4X50_NO_WORDS; i++)
         words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
     
-    // extract control data
-    int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
-    int lwr = (words[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
+    if ((words[EM4X50_DEVICE_SERIAL] != 0x0) && (words[EM4X50_DEVICE_ID] != 0X0)) {
 
-    // extract protection data
-    int fwrp = words[EM4X50_PROTECTION] & 0xFF;         // first word read protected
-    int lwrp = (words[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
+        // extract control data
+        int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
+        int lwr = (words[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
 
-    while (!BUTTON_PRESS()) {
-        
-        WDT_HIT();
-        em4x50_sim_send_listen_window();
-        for (int i = fwr; i <= lwr; i++) {
+        // extract protection data
+        int fwrp = words[EM4X50_PROTECTION] & 0xFF;         // first word read protected
+        int lwrp = (words[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
 
+        while (!BUTTON_PRESS()) {
+            
+            WDT_HIT();
             em4x50_sim_send_listen_window();
+            for (int i = fwr; i <= lwr; i++) {
 
-            if ((i >= fwrp) && (i <= lwrp))
-                em4x50_sim_send_word(0x00);
-            else
-                em4x50_sim_send_word(words[i]);
+                em4x50_sim_send_listen_window();
+
+                if ((i >= fwrp) && (i <= lwrp))
+                    em4x50_sim_send_word(0x00);
+                else
+                    em4x50_sim_send_word(words[i]);
+            }
         }
+    } else {
+        status = PM3_ENODATA;
     }
     
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_SIM, 1, 0, 0);
+    reply_ng(CMD_LF_EM4X50_SIM, status, 0, 0);
 }
 
 void em4x50_stdread(void) {
@@ -1441,4 +1447,34 @@ void em4x50_stdread(void) {
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_STDREAD, now, (uint8_t *)words, 4 * now);
+}
+
+void em4x50_chk(uint32_t *numkeys) {
+
+    // reads data that tag transmits "voluntarily" -> standard read mode
+
+    bool bsuccess = false;
+    uint32_t password = 0x0;
+    uint32_t keys[200] = {0x0};
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+
+    em4x50_setup_read();
+
+    // read data from emulator memory
+    for (int i = 0; i < *numkeys; i++)
+        keys[i] = bytes_to_num(em4x50_mem + (i * 4), 4);
+        
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag()) {
+        for (int i = 0; i < *numkeys; i++) {
+            if (login(keys[i])) {
+                bsuccess = true;
+                password = keys[i];
+                break;
+            }
+        }
+    }
+
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X50_CHK, bsuccess, (uint8_t *)&password, 32);
 }
