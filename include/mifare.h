@@ -97,6 +97,7 @@ typedef enum {
 typedef enum {
     MFDES_KDF_ALGO_NONE = 0,
     MFDES_KDF_ALGO_AN10922 = 1,
+    MFDES_KDF_ALGO_GALLAGHER = 2,
 } mifare_des_kdf_algo_t;
 
 //-----------------------------------------------------------------------------

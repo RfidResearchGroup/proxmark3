@@ -336,5 +336,21 @@ FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Ca
         "Name": "MemberCard",
         "Description": "CAR2GO - Member Card",
         "Type": "carsharing"
+    },
+    {
+        "AID": "2F81F4",
+        "Vendor": "Gallagher",
+        "Country": "NZ",
+        "Name": "Access control",
+        "Description": "Card Application Directory (CAD)",
+        "Type": ""
+    },
+    {
+        "AID": "2081F4",
+        "Vendor": "Gallagher",
+        "Country": "NZ",
+        "Name": "Access control",
+        "Description": "Cardax Card Data Application",
+        "Type": ""
     }
 ]

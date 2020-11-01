@@ -33,6 +33,7 @@
 #include "mifare/mifaredefault.h"  // default keys
 #include "mifare/ndef.h"           // NDEF
 #include "mifare/mad.h"
+#include "generator.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -755,6 +756,20 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     if (payload->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
         mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
         if (g_debugMode) {
+            PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
+        }
+    } else if (payload->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
+        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
+        payload->kdfInputLen = 11;
+
+        if (mfdes_kdf_input_gallagher(tag->info.uid, tag->info.uidlen, payload->keyno, tag->selected_application, payload->kdfInput, &payload->kdfInputLen) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
+        }
+
+        mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
+
+        if (g_debugMode) {
+            PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(payload->kdfInput, payload->kdfInputLen));
             PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
         }
     }
@@ -2100,6 +2115,13 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
                 PrintAndLogEx(FAILED, "KDF AN10922 algo requires an input of length 1-31 bytes.");
                 return PM3_EINVARG;
             }
+        case MFDES_KDF_ALGO_GALLAGHER:
+            // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
+            if (cmdAuthAlgo != MFDES_ALGO_AES) {
+                PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
+                return PM3_EINVARG;
+            }
+            // KDF input arg is ignored as it'll be generated.
         case MFDES_KDF_ALGO_NONE:
             break;
         default:
@@ -3924,7 +3946,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
         arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
-        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922)"),
+        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
         arg_param_end
     };
@@ -4052,6 +4074,7 @@ static int AuthCheckDesfire(uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
+                            uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
                             uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
@@ -4213,7 +4236,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, cmdKdfAlgo, kdfInputLen, kdfInput, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[2][keyno][0] = 0x01;
@@ -4302,6 +4325,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_str0("j",  "json",      "<file>",  "Json file to save keys"),
         arg_lit0("v",  "verbose",   "Verbose mode."),
+        arg_int0("f",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
+        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4381,6 +4406,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 8);
 
+    // Get KDF input
+    uint8_t kdfInput[31] = {0};
+    int kdfInputLen = 0;
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 9, 0);
+    CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
+
     CLIParserFree(ctx);
 
     // 1-byte pattern search mode
@@ -4446,6 +4477,17 @@ static int CmdHF14aDesChk(const char *Cmd) {
     uint8_t app_ids[78] = {0};
     uint32_t app_ids_len = 0;
 
+    clearCommandBuffer();
+
+    mfdes_info_res_t info = {0};
+    res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    // TODO: Store this UID someowhere not global
+    memcpy(tag->info.uid, info.uid, info.uidlen);
+    tag->info.uidlen = info.uidlen;
+
     if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         DropField();
@@ -4462,7 +4504,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
 
-        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, foundKeys, &result);
+        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result);
         if (res == PM3_EOPABORTED) {
             break;
         }
