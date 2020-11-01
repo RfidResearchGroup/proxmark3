@@ -33,6 +33,7 @@
 #include "mifare/mifaredefault.h"  // default keys
 #include "mifare/ndef.h"           // NDEF
 #include "mifare/mad.h"
+#include "generator.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -82,6 +83,16 @@ typedef struct mfdes_data {
     uint8_t length[3];
     uint8_t *data;
 } PACKED mfdes_data_t;
+
+typedef struct {
+    uint8_t isOK;
+    uint8_t uid[7];
+    uint8_t uidlen;
+    uint8_t versionHW[7];
+    uint8_t versionSW[7];
+    uint8_t details[14];
+} PACKED mfdes_info_res_t;
+
 
 typedef struct mfdes_value {
     uint8_t fileno;  //01
@@ -664,6 +675,38 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     return DESFIRE_UNKNOWN;
 }
 
+static int mfdes_get_info(mfdes_info_res_t *info) {
+    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
+    PacketResponseNG resp;
+
+    if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    memcpy(info, resp.data.asBytes, sizeof(mfdes_info_res_t));
+
+    if (resp.status != PM3_SUCCESS) {
+        switch (info->isOK) {
+            case 1:
+                PrintAndLogEx(WARNING, "Can't select card");
+                break;
+            case 2:
+                PrintAndLogEx(WARNING, "Card is most likely not DESFire. Wrong size UID");
+                break;
+            case 3:
+            default:
+                PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
+                break;
+        }
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
+}
+
+
 static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
@@ -713,6 +756,20 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     if (payload->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
         mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
         if (g_debugMode) {
+            PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
+        }
+    } else if (payload->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
+        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
+        payload->kdfInputLen = 11;
+
+        if (mfdes_kdf_input_gallagher(tag->info.uid, tag->info.uidlen, payload->keyno, tag->selected_application, payload->kdfInput, &payload->kdfInputLen) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
+        }
+
+        mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
+
+        if (g_debugMode) {
+            PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(payload->kdfInput, payload->kdfInputLen));
             PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
         }
     }
@@ -2058,6 +2115,13 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
                 PrintAndLogEx(FAILED, "KDF AN10922 algo requires an input of length 1-31 bytes.");
                 return PM3_EINVARG;
             }
+        case MFDES_KDF_ALGO_GALLAGHER:
+            // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
+            if (cmdAuthAlgo != MFDES_ALGO_AES) {
+                PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
+                return PM3_EINVARG;
+            }
+            // KDF input arg is ignored as it'll be generated.
         case MFDES_KDF_ALGO_NONE:
             break;
         default:
@@ -3265,43 +3329,14 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     DropField();
-    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
-    PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
-        DropField();
-        return PM3_ETIMEOUT;
+    mfdes_info_res_t info;
+    int res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    struct p {
-        uint8_t isOK;
-        uint8_t uid[7];
-        uint8_t uidlen;
-        uint8_t versionHW[7];
-        uint8_t versionSW[7];
-        uint8_t details[14];
-    } PACKED;
-
-    struct p *package = (struct p *) resp.data.asBytes;
-
-    if (resp.status != PM3_SUCCESS) {
-        switch (package->isOK) {
-            case 1:
-                PrintAndLogEx(WARNING, "Can't select card");
-                break;
-            case 2:
-                PrintAndLogEx(WARNING, "Card is most likely not DESFire. Wrong size UID");
-                break;
-            case 3:
-            default:
-                PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
-                break;
-        }
-        return PM3_ESOFT;
-    }
-
-    nxp_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
+    nxp_cardtype_t cardtype = getCardType(info.versionHW[3], info.versionHW[4]);
     if (cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
         return PM3_SUCCESS;
@@ -3310,30 +3345,30 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, package->uidlen));
-    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), package->details[12], package->details[13]);
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
+    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionHW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionHW[1]);
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionHW[2]);
-    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionHW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6], true));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionHW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
+    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(info.versionHW[3], info.versionHW[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionHW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionHW[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionSW[1]);
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionSW[2]);
-    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  package->versionSW[3], package->versionSW[4]);
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionSW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionSW[6], false));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionSW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionSW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionSW[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionSW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionSW[6], false));
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Card capabilities"));
-    uint8_t major = package->versionSW[3];
-    uint8_t minor = package->versionSW[4];
+    uint8_t major = info.versionSW[3];
+    uint8_t minor = info.versionSW[4];
     if (major == 0 && minor == 4)
         PrintAndLogEx(INFO, "\t0.4 - DESFire MF3ICD40, No support for APDU (only native commands)");
     if (major == 0 && minor == 5)
@@ -3363,7 +3398,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
         if (handler_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
-            desfire_print_signature(package->uid, package->uidlen, signature, signature_len, cardtype);
+            desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
@@ -3911,7 +3946,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
         arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
-        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922)"),
+        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
         arg_param_end
     };
@@ -4039,6 +4074,7 @@ static int AuthCheckDesfire(uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
+                            uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
                             uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
@@ -4200,7 +4236,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, cmdKdfAlgo, kdfInputLen, kdfInput, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[2][keyno][0] = 0x01;
@@ -4289,6 +4325,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_str0("j",  "json",      "<file>",  "Json file to save keys"),
         arg_lit0("v",  "verbose",   "Verbose mode."),
+        arg_int0("f",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
+        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4368,6 +4406,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 8);
 
+    // Get KDF input
+    uint8_t kdfInput[31] = {0};
+    int kdfInputLen = 0;
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 9, 0);
+    CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
+
     CLIParserFree(ctx);
 
     // 1-byte pattern search mode
@@ -4433,6 +4477,17 @@ static int CmdHF14aDesChk(const char *Cmd) {
     uint8_t app_ids[78] = {0};
     uint32_t app_ids_len = 0;
 
+    clearCommandBuffer();
+
+    mfdes_info_res_t info = {0};
+    res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    // TODO: Store this UID someowhere not global
+    memcpy(tag->info.uid, info.uid, info.uidlen);
+    tag->info.uidlen = info.uidlen;
+
     if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         DropField();
@@ -4449,7 +4504,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
 
-        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, foundKeys, &result);
+        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result);
         if (res == PM3_EOPABORTED) {
             break;
         }
