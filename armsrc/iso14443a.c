@@ -1098,7 +1098,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
             sak = 0x0A;
         }
         break;
-        case 10: { // JCOP31/41 Rothult
+        case 10: { // ST25TA IKEA Rothult
             rATQA[0] = 0x42;
             rATQA[1] = 0x00;
             sak = 0x00;
@@ -1627,6 +1627,13 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                     dynamic_response_info.response[1] = 0x63;
                     dynamic_response_info.response[2] = 0x00;
                     dynamic_response_info.response_n = 3;
+                } else if (memcmp("\x03\x00\x20\x00\x01\x10", receivedCmd, 6) == 0) {
+                    Dbprintf("Reader sent password: ");
+                    Dbhexdump(16, receivedCmd + 6, 0);
+                    dynamic_response_info.response[0] = receivedCmd[0];
+                    dynamic_response_info.response[1] = 0x90;
+                    dynamic_response_info.response[2] = 0x00;
+                    dynamic_response_info.response_n = 3;                    
                 } else {
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x90;
