@@ -2122,7 +2122,7 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
                 PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
                 return PM3_EINVARG;
             }
-            // KDF input arg is ignored as it'll be generated.
+        // KDF input arg is ignored as it'll be generated.
         case MFDES_KDF_ALGO_NONE:
             break;
         default:

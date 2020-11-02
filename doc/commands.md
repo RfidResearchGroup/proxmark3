@@ -160,7 +160,7 @@ Check column "offline" for their availability.
 |`hf 14b reader          `|N       |`Act as a 14443B reader to identify a tag`
 |`hf 14b sim             `|N       |`Fake ISO 14443B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO 14443B`
-|`hf 14b sriread         `|N       |`Read contents of a SRI512 | SRIX4K tag`
+|`hf 14b rdbl            `|N       |`Read SRI512/SRIX4x block`
 |`hf 14b sriwrite        `|N       |`Write data to a SRI512 | SRIX4K tag`
 
 
@@ -203,7 +203,7 @@ Check column "offline" for their availability.
 
 ### hf felica
 
- { ISO18092 / Felica RFIDs...       }
+ { ISO18092 / FeliCa RFIDs...       }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -325,6 +325,7 @@ Check column "offline" for their availability.
 |`hf mf chk              `|N       |`Check keys`
 |`hf mf fchk             `|N       |`Check keys fast, targets all keys on card`
 |`hf mf decrypt          `|Y       |`[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace`
+|`hf mf supercard        `|N       |`Extract info from a `super card``
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
 |`hf mf mad              `|N       |`Checks and prints MAD`
@@ -591,10 +592,12 @@ Check column "offline" for their availability.
 |`lf em 4x05_read        `|N       |`read word data from EM4x05/EM4x69`
 |`lf em 4x05_write       `|N       |`write word data to EM4x05/EM4x69`
 |`lf em 4x05_unlock      `|N       |`execute tear off against EM4x05/EM4x69`
+|`lf em 4x05_sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
+|`lf em 4x05_brute       `|N       |`Bruteforce password`
 |`lf em 4x50_dump        `|N       |`dump EM4x50 tag`
 |`lf em 4x50_info        `|N       |`tag information EM4x50`
 |`lf em 4x50_write       `|N       |`write word data to EM4x50`
-|`lf em 4x50_write_password`|N       |`change passwword of EM4x50 tag`
+|`lf em 4x50_write_password`|N       |`change password of EM4x50 tag`
 |`lf em 4x50_read        `|N       |`read word data from EM4x50`
 |`lf em 4x50_wipe        `|N       |`wipe data from EM4x50`
 

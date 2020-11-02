@@ -2283,7 +2283,7 @@ void MifareCIdent(bool is_mfc) {
 
         ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
-        if (res ) {
+        if (res) {
 
             // test for some MFC gen2
             if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {

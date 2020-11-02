@@ -1644,7 +1644,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p *payload = (struct p *)packet->data.asBytes;
             uint8_t *mem = BigBuf_get_addr();
             memcpy(mem + payload->idx, payload->data, payload->bytes_in_packet);
-            
+
             uint8_t a = 0, b = 0;
             compute_crc(CRC_14443_A, mem + payload->idx,  payload->bytes_in_packet, &a, &b);
             int res = PM3_SUCCESS;
@@ -1662,14 +1662,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
 
-            uint8_t *fwdata = BigBuf_get_addr();            
+            uint8_t *fwdata = BigBuf_get_addr();
             uint8_t a = 0, b = 0;
             compute_crc(CRC_14443_A, fwdata, payload->fw_size, &a, &b);
 
             if (payload->crc != (a << 8 | b)) {
                 Dbprintf("CRC Failed, 0x[%04x] != 0x[%02x%02x]", payload->crc, a, b);
                 reply_ng(CMD_SMART_UPGRADE, PM3_ESOFT, NULL, 0);
-            } else {                
+            } else {
                 SmartCardUpgrade(payload->fw_size);
             }
             fwdata = NULL;

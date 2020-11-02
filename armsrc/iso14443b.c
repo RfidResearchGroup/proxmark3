@@ -1541,7 +1541,7 @@ void iso14443b_setup(void) {
 // I tried to be systematic and check every answer of the tag, every CRC, etc...
 //-----------------------------------------------------------------------------
 static int read_srx_block(uint8_t blocknr, uint8_t *block) {
-   
+
     uint8_t cmd[] = {ISO14443B_READ_BLK, blocknr, 0x00, 0x00};
     AddCrc14B(cmd, 2);
 
@@ -1572,10 +1572,10 @@ static int read_srx_block(uint8_t blocknr, uint8_t *block) {
 
     if (DBGLEVEL >= DBG_DEBUG) {
         Dbprintf("Address=%02x, Contents=%08x, CRC=%04x",
-                    blocknr,
-                    (r_block[3] << 24) + (r_block[2] << 16) + (r_block[1] << 8) + r_block[0],
-                    (r_block[4] << 8) + r_block[5]
-            );
+                 blocknr,
+                 (r_block[3] << 24) + (r_block[2] << 16) + (r_block[1] << 8) + r_block[0],
+                 (r_block[4] << 8) + r_block[5]
+                );
     }
 
     return PM3_SUCCESS;
@@ -1586,7 +1586,7 @@ void ReadSTBlock(uint8_t blocknr) {
     iso14b_card_select_t card;
     int res = iso14443b_select_srx_card(&card);
     // 0: OK -1 wrong len, -2: attrib fail, -3:crc fail,
-    switch(res) {
+    switch (res) {
         case -1:
         case -3: {
             reply_ng(CMD_HF_SRI_READ, PM3_EWRONGANSWER, NULL, 0);

@@ -3041,8 +3041,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
 
     if (errors) return usage_t55xx_chk();
-    
-    if (strlen(filename) == 0){
+
+    if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
         use_pwd_file = true;
     }
@@ -3133,9 +3133,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             return PM3_ESOFT;
         }
-        
+
         PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
-        
+
         for (uint32_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {

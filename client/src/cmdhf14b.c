@@ -977,33 +977,33 @@ static int CmdHF14BSriRdBl(const char *Cmd) {
     int blockno = arg_get_int_def(ctx, 1, -1);
     CLIParserFree(ctx);
 
-/*
-    iso14b_card_select_t card;
-    if (get_14b_UID(&card) == false) {
-        PrintAndLogEx(WARNING, "no tag found");
-        return PM3_SUCCESS;
-    }
+    /*
+        iso14b_card_select_t card;
+        if (get_14b_UID(&card) == false) {
+            PrintAndLogEx(WARNING, "no tag found");
+            return PM3_SUCCESS;
+        }
 
-    if (card.uidlen != 8) {
-        PrintAndLogEx(FAILED, "current read command only work with SRI4K / SRI512 tags");
-        return PM3_SUCCESS;
-    }
+        if (card.uidlen != 8) {
+            PrintAndLogEx(FAILED, "current read command only work with SRI4K / SRI512 tags");
+            return PM3_SUCCESS;
+        }
 
-    // detect cardsize
-    // 1 = 4096
-    // 2 = 512
-    uint8_t cardtype = get_st_cardsize(card.uid);
-    uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
-*/
+        // detect cardsize
+        // 1 = 4096
+        // 2 = 512
+        uint8_t cardtype = get_st_cardsize(card.uid);
+        uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
+    */
     struct {
         uint8_t blockno;
     } PACKED payload;
-    
+
     payload.blockno = blockno;
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SRI_READ, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_SRI_READ, (uint8_t *)&payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_SRI_READ, &resp, TIMEOUT) == false) {
         return PM3_ETIMEOUT;
     }

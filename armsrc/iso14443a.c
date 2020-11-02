@@ -1633,7 +1633,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x90;
                     dynamic_response_info.response[2] = 0x00;
-                    dynamic_response_info.response_n = 3;                    
+                    dynamic_response_info.response_n = 3;
                 } else {
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x90;
@@ -2337,7 +2337,7 @@ void iso14443a_antifuzz(uint32_t flags) {
     uint8_t *received = BigBuf_malloc(MAX_FRAME_SIZE);
     uint8_t *receivedPar = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *resp = BigBuf_malloc(20);
-    
+
     memset(received, 0x00, MAX_FRAME_SIZE);
     memset(received, 0x00, MAX_PARITY_SIZE);
     memset(resp, 0xFF, 20);

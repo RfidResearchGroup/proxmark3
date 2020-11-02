@@ -618,7 +618,7 @@ static bool Pack_Optus(wiegand_card_t *card, wiegand_message_t *packed) {
     packed->Length = 34; // Set number of bits
     set_linear_field(packed, card->CardNumber, 1, 16);
     set_linear_field(packed, card->FacilityCode, 22, 11);
-    
+
     return add_HID_header(packed);
 }
 
@@ -673,14 +673,14 @@ static bool Pack_bqt(wiegand_card_t *card, wiegand_message_t *packed) {
 
     set_linear_field(packed, card->FacilityCode, 1, 8);
     set_linear_field(packed, card->CardNumber, 9, 24);
-    
+
     set_bit_by_position(packed,
                         evenparity32(get_linear_field(packed, 1, 16))
                         , 0);
     set_bit_by_position(packed,
                         oddparity32(get_linear_field(packed, 17, 16))
                         , 33);
-    
+
     return add_HID_header(packed);
 }
 
@@ -691,7 +691,7 @@ static bool Unpack_bqt(wiegand_message_t *packed, wiegand_card_t *card) {
 
     card->FacilityCode = get_linear_field(packed, 1, 8);
     card->CardNumber = get_linear_field(packed, 9, 24);
-    
+
     card->ParityValid =
         (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 16))) &&
         (get_bit_by_position(packed, 33) == oddparity32(get_linear_field(packed, 17, 16)));
@@ -707,9 +707,9 @@ static const cardformat_t FormatTable[] = {
     {"Kastle",  Pack_Kastle,  Unpack_Kastle,  "Kastle 32-bit",              {1, 1, 1, 0, 1}}, // from @xilni; PR #23 on RfidResearchGroup/proxmark3
     {"D10202",  Pack_D10202,  Unpack_D10202,  "HID D10202 33-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit",          {1, 1, 0, 0, 1}}, // imported from old pack/unpack
-    {"N10002",  Pack_N10002,  Unpack_N10002,  "HID N10002 34-bit",          {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au    
+    {"N10002",  Pack_N10002,  Unpack_N10002,  "HID N10002 34-bit",          {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"Optus34", Pack_Optus,   Unpack_Optus,   "Indala Optus 34-bit",        {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"Smartpass", Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", {1, 1, 1, 0, 0}}, // from cardinfo.barkweb.com.au    
+    {"Smartpass", Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", {1, 1, 1, 0, 0}}, // from cardinfo.barkweb.com.au
     {"BQT", Pack_bqt, Unpack_bqt, "BQT 34-bit", {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit standard layout", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit",         {1, 1, 0, 1, 1}}, // from Proxmark forums

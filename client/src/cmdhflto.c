@@ -26,10 +26,10 @@
   iceman notes
   We can't dump LTO 5 or 6 tags yet since we don't have a datasheet.
   If you have access to datasheet,  le me know!
- 
-  LTO w Type info 00 01   has 101 blocks.  
+
+  LTO w Type info 00 01   has 101 blocks.
   LTO w Type info 00 03   has 255 blocks.
-  LTO w Type info 00 xx   has NN blocks.  
+  LTO w Type info 00 xx   has NN blocks.
 */
 #define CM_MEM_MAX_SIZE     0x1FE0  // (32byte/block * 255block = 8160byte)
 
@@ -194,8 +194,8 @@ static int CmdHfLTOInfo(const char *Cmd) {
     return infoLTO(true);
 }
 
-static const char* lto_print_size(uint8_t ti) {
-    switch(ti) {
+static const char *lto_print_size(uint8_t ti) {
+    switch (ti) {
         case 1:
             return "101 blocks / 3232 bytes";
         case 3:

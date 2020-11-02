@@ -5296,7 +5296,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     if (reset_card)  {
 
         keep_field_on = false;
-        uint8_t response[6]; 
+        uint8_t response[6];
         int resplen = 0;
 
         // --------------- RESET CARD ----------------
@@ -5312,7 +5312,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     }
 
 
-    uint8_t responseA[22]; 
+    uint8_t responseA[22];
     uint8_t responseB[22];
     int respAlen = 0;
     int respBlen = 0;
@@ -5328,21 +5328,21 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     // --------------- Second ----------------
     activate_field = false;
     keep_field_on = false;
-    
+
     uint8_t aSECOND[] = { 0x00, 0xa6, 0xb0,  0x01,  0x10 };
     res = ExchangeAPDU14a(aSECOND, sizeof(aSECOND), activate_field, keep_field_on, responseB, sizeof(responseB), &respBlen);
     if (res) {
         DropField();
         return res;
     }
-    
-// uint8_t inA[] = { 0x72, 0xD7, 0xF4, 0x3E, 0xFD, 0xAB, 0xF2, 0x35, 0xFD, 0x49, 0xEE, 0xDC, 0x44, 0x95, 0x43, 0xC4};    
+
+// uint8_t inA[] = { 0x72, 0xD7, 0xF4, 0x3E, 0xFD, 0xAB, 0xF2, 0x35, 0xFD, 0x49, 0xEE, 0xDC, 0x44, 0x95, 0x43, 0xC4};
 // uint8_t inB[] = { 0xF0, 0xA2, 0x67, 0x6A, 0x04, 0x6A, 0x72, 0x12, 0x76, 0xA4, 0x1D, 0x02, 0x1F, 0xEA, 0x20, 0x85};
 
     uint8_t outA[16] = {0};
     uint8_t outB[16] = {0};
 
-    uint8_t key[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};    
+    uint8_t key[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
     for (uint8_t i = 0; i < 16; i += 8) {
         des_decrypt(outA + i, responseA + i, key);
         des_decrypt(outB + i, responseB + i, key);
@@ -5362,12 +5362,12 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     if (memcmp(outB, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
         PrintAndLogEx(INFO, "Only one trace recorded");
         return PM3_SUCCESS;
-    }    
+    }
 
-    nonces_t data;    
-    
+    nonces_t data;
+
     // first
-    uint16_t NT0 = (outA[6] << 8) | outA[7];    
+    uint16_t NT0 = (outA[6] << 8) | outA[7];
     data.cuid = bytes_to_num(outA, 4);
     data.nonce = prng_successor(NT0, 31);
     data.nr = bytes_to_num(outA + 8, 4);
@@ -5394,13 +5394,13 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     uint64_t key64 = -1;
     res = mfkey32_moebius(&data, &key64);
-    
+
     if (res) {
         PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%12" PRIX64) " ]"
-            , sprint_hex_inrow(outA, 4)
-            , data.sector
-            , (data.keytype == 0x60) ? 'A' : 'B'
-            , key64);
+                      , sprint_hex_inrow(outA, 4)
+                      , data.sector
+                      , (data.keytype == 0x60) ? 'A' : 'B'
+                      , key64);
     } else {
         PrintAndLogEx(FAILED, "failed to recover any key");
     }

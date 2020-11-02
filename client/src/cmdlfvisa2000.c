@@ -187,21 +187,21 @@ static int CmdVisa2kClone(const char *Cmd) {
     bool q5 = tolower(param_getchar(Cmd, 1)) == 'q';
     if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
-        snprintf(cardtype, sizeof(cardtype) ,"Q5/T5555");
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
     }
 
     // EM4305
     bool em = tolower(param_getchar(Cmd, 1)) == 'e';
     if (em) {
         blocks[0] = EM4305_VISA2000_CONFIG_BLOCK;
-        snprintf(cardtype, sizeof(cardtype) ,"EM4305/4469");
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
-    
+
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
-        
+
     blocks[2] = id;
     blocks[3] = (visa_parity(id) << 4) | visa_chksum(id);
 

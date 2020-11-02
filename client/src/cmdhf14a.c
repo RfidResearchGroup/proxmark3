@@ -566,7 +566,7 @@ static int CmdHF14AReader(const char *Cmd) {
             }
         }
 plot:
-        if (continuous) {            
+        if (continuous) {
             res = handle_hf_plot();
             if (res != PM3_SUCCESS) {
                 break;
@@ -1442,7 +1442,7 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
 
     CLIParserFree(ctx);
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t*)&param, sizeof(param));
+    SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t *)&param, sizeof(param));
     return PM3_SUCCESS;
 }
 
@@ -1494,9 +1494,9 @@ typedef enum {
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
 static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
     int type = MTNONE;
-    
+
     PrintAndLogEx(SUCCESS, "Possible types:");
-    
+
     if ((sak & 0x02) != 0x02) {
         if ((sak & 0x19) == 0x19) {
             printTag("MIFARE Classic 2K");
@@ -1515,7 +1515,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                     printTag("MIFARE Plus S 4K in SL1");
                     printTag("MIFARE Plus X 4K in SL1");
                 }
-                
+
                 type |= MTPLUS;
             } else {
                 if ((atqa & 0x0040) == 0x0040) {
@@ -1550,7 +1550,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                     printTag("MIFARE Plus X 2K in SL1");
                     printTag("MIFARE Plus SE 1K");
                 }
-                
+
                 type |= MTPLUS;
             } else {
                 if ((atqa & 0x0040) == 0x0040) {
@@ -1596,7 +1596,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                     printTag("MIFARE Plus SE 1K");
                     type |= MTPLUS;
                 }
-                
+
                 printTag("NTAG 4xx");
                 type |= MTDESFIRE;
             }
@@ -1613,7 +1613,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
             type |= MTULTRALIGHT;
         }
     }
-    
+
     if (type == MTNONE) {
         PrintAndLogEx(WARNING, "   failed to fingerprint");
     }

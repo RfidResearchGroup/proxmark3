@@ -442,7 +442,7 @@ static int CmdHIDBrute(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
-    
+
     if (verbose) {
         PrintAndLogEx(INFO, "Wiegand format#.. %i", format_idx);
         PrintAndLogEx(INFO, "OEM#............. %u", cn_hi.OEM);
