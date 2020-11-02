@@ -2116,19 +2116,20 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
                 PrintAndLogEx(FAILED, "KDF AN10922 algo requires an input of length 1-31 bytes.");
                 return PM3_EINVARG;
             }
+            break;
         case MFDES_KDF_ALGO_GALLAGHER:
             // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
             if (cmdAuthAlgo != MFDES_ALGO_AES) {
                 PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
                 return PM3_EINVARG;
             }
+            break;
         // KDF input arg is ignored as it'll be generated.
         case MFDES_KDF_ALGO_NONE:
             break;
         default:
             PrintAndLogEx(WARNING, "KDF algo %d is not supported.", cmdKdfAlgo);
             return PM3_EINVARG;
-            break;
     }
 
     // KEY
