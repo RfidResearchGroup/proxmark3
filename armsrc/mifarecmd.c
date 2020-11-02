@@ -2376,6 +2376,9 @@ void MifareHasStaticNonce(void) {
     int retval = PM3_SUCCESS;
     uint32_t nt = 0;
     uint8_t *uid = BigBuf_malloc(10);
+
+    memset(uid, 0x00, 10);
+
     uint8_t data[1] = { NONCE_FAIL };
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -2392,7 +2395,7 @@ void MifareHasStaticNonce(void) {
             goto OUT;
         }
 
-        uint8_t rec[1] = {0x00};
+        uint8_t rec[4] = {0x00};
         uint8_t recpar[1] = {0x00};
         // Transmit MIFARE_CLASSIC_AUTH 0x60, block 0
         int len = mifare_sendcmd_short(pcs, false, MIFARE_AUTH_KEYA, 0, rec, recpar, NULL);
@@ -2412,6 +2415,8 @@ void MifareHasStaticNonce(void) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
         CHK_TIMEOUT();
+        
+        memset(rec, 0x00, sizeof(rec));
     }
 
     if (counter) {
