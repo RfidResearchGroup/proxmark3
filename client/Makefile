@@ -29,26 +29,31 @@ endif
 AMIIBOLIBPATH = ./deps/amiitool
 AMIIBOLIBINC = -I$(AMIIBOLIBPATH)
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
+AMIIBOLIBLD =
 
 ## Cliparser / Argtable3
 CLIPARSERLIBPATH = ./deps/cliparser
 CLIPARSERLIBINC = -I$(CLIPARSERLIBPATH)
 CLIPARSERLIB = $(CLIPARSERLIBPATH)/libcliparser.a
+CLIPARSERLIBLD =
 
 ## Hardnested
 HARDNESTEDLIBPATH = ./deps/hardnested
 HARDNESTEDLIBINC = -I$(HARDNESTEDLIBPATH)
 HARDNESTEDLIB = $(HARDNESTEDLIBPATH)/libhardnested.a
+HARDNESTEDLIBLD =
 
 ## Jansson
 JANSSONLIBPATH = ./deps/jansson
 JANSSONLIBINC = -I$(JANSSONLIBPATH)
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
+JANSSONLIBLD =
 
 ## Lua
 LUALIBPATH = ./deps/liblua
 LUALIBINC = -I$(LUALIBPATH)
 LUALIB = $(LUALIBPATH)/liblua.a
+LUALIBLD =
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
     LUAPLATFORM = mingw
@@ -56,7 +61,7 @@ else
     ifeq ($(platform),Darwin)
         LUAPLATFORM = macosx
     else
-        LUALIB +=  -ldl
+        LUALIBLD +=  -ldl
         LUAPLATFORM = linux
     endif
 endif
@@ -65,16 +70,19 @@ endif
 REVENGLIBPATH = ./deps/reveng
 REVENGLIBINC = -I$(REVENGLIBPATH)
 REVENGLIB = $(REVENGLIBPATH)/libreveng.a
+REVENGLIBLD =
 
 ## Tinycbor
 TINYCBORLIBPATH = ./deps/tinycbor
 TINYCBORLIBINC = -I$(TINYCBORLIBPATH)
 TINYCBORLIB = $(TINYCBORLIBPATH)/tinycbor.a
+TINYCBORLIBLD =
 
 ## Whereami
 WHEREAMILIBPATH = ./deps/whereami
 WHEREAMILIBINC = -I$(WHEREAMILIBPATH)
 WHEREAMILIB = $(WHEREAMILIBPATH)/libwhereami.a
+WHEREAMILIBLD =
 
 ##########################
 # common local libraries #
@@ -91,17 +99,20 @@ MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 
 ## Amiibo
 # not distributed as system library
-LDLIBS += $(AMIIBOLIB)
+STATICLIBS += $(AMIIBOLIB)
+LDLIBS += $(AMIIBOLIBLD)
 INCLUDES += $(AMIIBOLIBINC)
 
 ## Cliparser / Argtable3
 # not distributed as system library
-LDLIBS += $(CLIPARSERLIB)
+STATICLIBS += $(CLIPARSERLIB)
+LDLIBS += $(CLIPARSERLIBLD)
 INCLUDES += $(CLIPARSERLIBINC)
 
 ## Hardnested
 # not distributed as system library
-LDLIBS += $(HARDNESTEDLIB)
+STATICLIBS += $(HARDNESTEDLIB)
+LDLIBS +=$(HARDNESTEDLIBLD)
 INCLUDES += $(HARDNESTEDLIBINC)
 
 ## Jansson
@@ -109,12 +120,14 @@ ifneq ($(SKIPJANSSONSYSTEM),1)
     JANSSONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags jansson 2>/dev/null)
     JANSSONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs jansson 2>/dev/null)
     ifneq ($(JANSSONLDLIBS),)
-        JANSSONLIB = $(JANSSONLDLIBS)
+        JANSSONLIB =
+        JANSSONLIBLD = $(JANSSONLDLIBS)
         JANSSONLIBINC = $(JANSSONINCLUDES)
         JANSSON_FOUND = 1
     endif
 endif
-LDLIBS += $(JANSSONLIB)
+STATICLIBS += $(JANSSONLIB)
+LDLIBS += $(JANSSONLIBLD)
 INCLUDES += $(JANSSONLIBINC)
 
 ## Lua
@@ -122,38 +135,45 @@ ifneq ($(SKIPLUASYSTEM),1)
     LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
     LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua5.2 2>/dev/null)
     ifneq ($(LUALDLIBS),)
-        LUALIB = $(LUALDLIBS)
+        LUALIB =
+        LUALIBLD = $(LUALDLIBS)
         LUALIBINC = $(LUAINCLUDES)
         LUA_FOUND = 1
     endif
 endif
-LDLIBS += $(LUALIB)
+STATICLIBS += $(LUALIB)
+LDLIBS += $(LUALIBLD)
 INCLUDES += $(LUALIBINC)
 
 ## mbed TLS
 # system library cannot be used because it is compiled by default without CMAC support
-LDLIBS +=$(MBEDTLSLIB)
+STATICLIBS += $(MBEDTLSLIB)
+LDLIBS += $(MBEDTLSLIBLD)
 INCLUDES += $(MBEDTLSLIBINC)
 
 ## Reveng
 # not distributed as system library
-LDLIBS += $(REVENGLIB)
+STATICLIBS += $(REVENGLIB)
+LDLIBS += $(REVENGLIBLD)
 INCLUDES += $(REVENGLIBINC)
 
 ## Tinycbor
 # not distributed as system library
-LDLIBS += $(TINYCBORLIB)
+STATICLIBS += $(TINYCBORLIB)
+LDLIBS += $(TINYCBORLIBLD)
 INCLUDES += $(TINYCBORLIBINC)
 
 ## Whereami
 ifneq ($(SKIPWHEREAMISYSTEM),1)
     ifneq (,$(wildcard /usr/include/whereami.h))
-        WHEREAMILIB = -lwhereami
+        WHEREAMILIB =
+        WHEREAMILIBLD = -lwhereami
         WHEREAMILIBINC =
         WHEREAMI_FOUND = 1
     endif
 endif
-LDLIBS += $(WHEREAMILIB)
+STATICLIBS += $(WHEREAMILIB)
+LDLIBS += $(WHEREAMILIBLD)
 INCLUDES += $(WHEREAMILIBINC)
 
 ####################
@@ -176,12 +196,12 @@ ifneq ($(SKIPBT),1)
     BTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags bluez 2>/dev/null)
     BTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs bluez 2>/dev/null)
     ifneq ($(BTLDLIBS),)
-        BTLIB = $(BTLDLIBS)
+        BTLIBLD = $(BTLDLIBS)
         BTLIBINC = $(BTINCLUDES)
         BT_FOUND = 1
     endif
 endif
-LDLIBS += $(BTLIB)
+LDLIBS += $(BTLIBLD)
 INCLUDES += $(BTLIBINC)
 
 ## Math
@@ -198,7 +218,7 @@ ifneq ($(SKIPPYTHON),1)
     PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
     PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
     ifneq ($(PYTHONLDLIBS),)
-        PYTHONLIB = $(PYTHONLDLIBS)
+        PYTHONLIBLD = $(PYTHONLDLIBS)
         PYTHONLIBINC = $(PYTHONINCLUDES)
         PYTHON_FOUND = 1
     else
@@ -206,13 +226,13 @@ ifneq ($(SKIPPYTHON),1)
         PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3-embed 2>/dev/null)
         PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
         ifneq ($(PYTHONLDLIBS),)
-            PYTHONLIB = $(PYTHONLDLIBS)
+            PYTHONLIBLD = $(PYTHONLDLIBS)
             PYTHONLIBINC = $(PYTHONINCLUDES)
             PYTHON_FOUND = 1
         endif
     endif
 endif
-LDLIBS += $(PYTHONLIB)
+LDLIBS += $(PYTHONLIBLD)
 INCLUDES += $(PYTHONLIBINC)
 
 ## QT5 (or QT4 fallback) (optional)
@@ -584,10 +604,9 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: $(AMIIBOLIB) $(CLIPARSERLIB) $(JANSSONLIB) $(HARDNESTEDLIB) $(LUALIB) $(MBEDTLSLIB) $(REVENGLIB) $(TINYCBORLIB) $(WHEREAMILIB)
-proxmark3: $(OBJS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: $(OBJS) $(STATICLIBS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
-	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(LDLIBS) -o $@
+	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(STATICLIBS) $(LDLIBS) -o $@
 
 src/proxgui.cpp: src/ui/ui_overlays.h
 
