@@ -699,7 +699,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             saveFile("iclass_mac_attack", ".bin", dump, datalen);
             free(dump);
 
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass h") "` to recover elite key");
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass -h") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_READER_ATTACK_KEYROLL: {
@@ -765,7 +765,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
             free(dump);
 
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass h") "` to recover elite key");
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass -h") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_CSN:

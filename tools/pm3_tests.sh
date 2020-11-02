@@ -450,10 +450,10 @@ while true; do
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
       if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested t 1 000000000000'" "found:"; then break; fi
-      if ! CheckExecute slow "hf iclass long test"         "$CLIENTBIN -c 'hf iclass loclass t l'" "verified ok"; then break; fi
+      if ! CheckExecute slow "hf iclass long test"         "$CLIENTBIN -c 'hf iclass loclass --long'" "verified ok"; then break; fi
       if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test(s) \[ ok"; then break; fi
       if ! $SLOWTESTS; then
-        if ! CheckExecute "hf iclass test"                 "$CLIENTBIN -c 'hf iclass loclass t'" "key diversification (ok)"; then break; fi
+        if ! CheckExecute "hf iclass test"                 "$CLIENTBIN -c 'hf iclass loclass --test'" "key diversification (ok)"; then break; fi
         if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test(s) \[ ok"; then break; fi
       fi
     fi
