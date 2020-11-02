@@ -871,23 +871,35 @@ static int CmdHFiClassELoad(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    DumpFileType_t dftype = BIN;
+    if (strlen(filename) == 0) {
+        PrintAndLogEx(ERR, "Error: Please specify a filename");
+        return PM3_EINVARG;
+    }
 
-    if (arg_get_lit(ctx, 2)) {
+    DumpFileType_t dftype = BIN;
+    
+    bool use_json = arg_get_lit(ctx, 2);
+    bool use_eml = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+    
+    if (use_json && use_eml) {
+        PrintAndLogEx(ERR, "Error: can't specify both JSON & EML");
+        return PM3_EINVARG;
+    }
+    
+    if (use_json) {
         dftype = JSON;
-    } else if (arg_get_lit(ctx, 3)) {
+    } else if (use_eml) {
         dftype = EML;
     }
 
-    CLIParserFree(ctx);
-
+    size_t bytes_read = 2048;
     uint8_t *dump = calloc(2048, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 
-    size_t bytes_read = 2048;
     int res = 0;
 
     switch (dftype) {
@@ -903,10 +915,10 @@ static int CmdHFiClassELoad(const char *Cmd) {
             res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
             break;
         }
-        case DICTIONARY:
-            PrintAndLogEx(ERR, "No dictionary loaded");
-            free(dump);
-            return PM3_ESOFT;
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
+        }
     }
 
     if (res != PM3_SUCCESS) {
