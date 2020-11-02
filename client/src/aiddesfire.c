@@ -7,14 +7,10 @@
 //-----------------------------------------------------------------------------
 
 #include "aiddesfire.h"
-//#include "ui.h"
-//#include "commonutil.h"  // ARRAYLEN
 #include "pm3_cmd.h"
-//#include "util.h"
 #include "fileutils.h"
 #include "jansson.h"
 
-// https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static json_t *df_known_aids = NULL;
 
 static int open_aiddf_file(json_t **root, bool verbose) {
