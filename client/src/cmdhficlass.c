@@ -66,22 +66,12 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "   -- execute loclass attack online part");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 2"));
     PrintAndLogEx(NORMAL, "   -- simulate full iCLASS 2k tag");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin"));
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 3"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_eload(void) {
-    PrintAndLogEx(NORMAL, "Loads iCLASS tag dump into emulator memory on device\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass eload [h] f <filename>\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h            : Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename> : filename of dump");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 static int usage_hf_iclass_esave(void) {
     PrintAndLogEx(NORMAL, "Save emulator memory to file.");
     PrintAndLogEx(NORMAL, "if not filename is supplied, CSN will be used.");
@@ -884,42 +874,33 @@ static int CmdHFiClassReader(const char *Cmd) {
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass eload",
+                  "Loads iCLASS tag dump into emulator memory on device",
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "filename of dump"),
+        arg_lit0(NULL, "json",              "print from this block (default block6)"),
+        arg_lit0(NULL, "eml",               "end printing at this block (default 0, ALL)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     DumpFileType_t dftype = BIN;
-    char filename[FILE_PATH_SIZE] = {0};
-    bool errors = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_eload();
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "Filename too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            case 'j':
-                dftype = JSON;
-                cmdp++;
-                break;
-            case 'e':
-                dftype = EML;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+
+    if (arg_get_lit(ctx, 2)) {
+        dftype = JSON;
+    } else if (arg_get_lit(ctx, 3)) {
+        dftype = EML;
     }
 
-    //Validations
-    if (errors || cmdp == 0) {
-        return usage_hf_iclass_eload();
-    }
+    CLIParserFree(ctx);
 
     uint8_t *dump = calloc(2048, sizeof(uint8_t));
     if (!dump) {

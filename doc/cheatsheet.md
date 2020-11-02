@@ -135,7 +135,7 @@ Options
 ---
 f <filename>     : load iCLASS tag-dump filename
 
-pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 ```
 
 Clone iCLASS Legacy Sequence
@@ -160,7 +160,7 @@ pm3 --> hf iclass sim 3
 Simulate iCLASS Sequence
 ```
 pm3 --> hf iclass dump k 0
-pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 pm3 --> hf iclass sim 3
 ```
 
