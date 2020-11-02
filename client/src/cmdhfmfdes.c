@@ -4526,7 +4526,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
             continue;
         }
 
-        if (dict_filenamelen && endFilePosition) {
+        if (dict_filenamelen) {
             if (verbose == false)
                 PrintAndLogEx(NORMAL, "d" NOLF);
 
