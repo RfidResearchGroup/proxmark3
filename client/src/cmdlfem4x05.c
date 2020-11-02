@@ -1932,10 +1932,12 @@ int CmdEM4x05Sniff(const char *Cmd) {
     sampleData = !arg_get_lit(ctx, 1);
     fwd = arg_get_lit(ctx, 2);
 
+    CLIParserFree(ctx);
+
     // setup and sample data from Proxmark
     // if not directed to existing sample/graphbuffer
     if (sampleData) {
-        if (!IfPm3Lf()) {
+        if (IfPm3Lf() == false) {
             PrintAndLogEx(WARNING, "Only offline mode is available");
             return PM3_EINVARG;
         }
@@ -1993,7 +1995,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                                 ((strncmp(bits, "01001", 5) == 0) && (bitidx == 12)) ||
                                 ((strncmp(bits, "01100", 5) == 0) && (bitidx == 50)) ||
                                 ((strncmp(bits, "01010", 5) == 0) && (bitidx == 50))) {
-                            memcpy(bits, &bits[1], bitidx - 1);
+                            memmove(bits, &bits[1], bitidx - 1);
                             bitidx--;
                             printf("Trim leading 0\n");
                         }
@@ -2066,9 +2068,9 @@ int CmdEM4x05Sniff(const char *Cmd) {
         // Print results
         if (haveData) { //&& (minWidth > 1) && (maxWidth > minWidth)){
             if (pwd)
-                PrintAndLogEx(SUCCESS, "%6llu | %-10s  | "_YELLOW_("%8s")" | "_YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | "_YELLOW_("%8s")" | "_YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
             else
-                PrintAndLogEx(SUCCESS, "%6llu | %-10s  | "_GREEN_("%8s")" | "_GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | "_GREEN_("%8s")" | "_GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
         }
     }
 

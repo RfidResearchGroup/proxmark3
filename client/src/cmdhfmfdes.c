@@ -4476,7 +4476,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
     }
 
-    if (!verbose)
+    if (verbose == false)
         PrintAndLogEx(INFO, "Search keys:");
 
     bool result = false;
