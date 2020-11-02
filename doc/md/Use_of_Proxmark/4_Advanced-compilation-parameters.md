@@ -96,6 +96,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_LEGIC        | HF Legic Prime standalone - uhei
 | HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
 | HF_MSDSAL  (def)| EMV Read and emulation - Salvador Mendoza
+| HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
 
 By default `STANDALONE=HF_MSDSAL`.
