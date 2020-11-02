@@ -132,7 +132,7 @@ static void download_instructions(uint8_t t) {
             DbpString("The collected data was saved to SPIFFS. The file names below may differ");
             DbpString("1. " _YELLOW_("mem spiffs tree"));
             DbpString("2. " _YELLOW_("mem spiffs dump o " HF_ICLASS_ATTACK_BIN " f " HF_ICLASS_ATTACK_BIN));
-            DbpString("3. " _YELLOW_("hf iclass loclass f " HF_ICLASS_ATTACK_BIN));
+            DbpString("3. " _YELLOW_("hf iclass loclass -f " HF_ICLASS_ATTACK_BIN));
             break;
         }
         case ICE_STATE_READER: {

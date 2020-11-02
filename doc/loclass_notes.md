@@ -8,15 +8,15 @@ LOCLASS, is a two part attack. First is the online part where you gather needed 
 
 The second part is offline,  where the information gathered from the first step is used in a series of DES operations to figure out the used 
 masterkey.
-   run `hf iclass loclass f abc.bin`
+   run `hf iclass loclass -f abc.bin`
 
 If you don't have access to a iClass SE reader configured in Elite mode there is a test file which you can use.
-   `hf iclass loclass f iclass_dump.bin` 
+   `hf iclass loclass -f iclass_dump.bin` 
 
 
 # Unit testing
 In order to verify that loclass is actually working, there is a "unit" test mode.
-run `hf iclass loclass t`.
+run `hf iclass loclass --test`.
 
 This test mode uses two files. 
 
