@@ -262,27 +262,6 @@ static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_loclass(void) {
-    PrintAndLogEx(NORMAL, "Execute the offline part of loclass attack");
-    PrintAndLogEx(NORMAL, "  An iclass dumpfile is assumed to consist of an arbitrary number of");
-    PrintAndLogEx(NORMAL, "  malicious CSNs, and their protocol responses");
-    PrintAndLogEx(NORMAL, "  The binary format of the file is expected to be as follows: ");
-    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "   ... totalling N*24 bytes\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [h] [t [l]] [f <filename>]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h             Show this help");
-    PrintAndLogEx(NORMAL, "  t             Perform self-test");
-    PrintAndLogEx(NORMAL, "  t l           Perform self-test, including long ones");
-    PrintAndLogEx(NORMAL, "  f <filename>  Bruteforce iclass dumpfile");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass loclass f iclass-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass loclass t"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag\n");
     PrintAndLogEx(NORMAL, "Usage: hf iclass chk [h|e|r] [f  (*.dic)]\n");
@@ -2306,26 +2285,42 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 }
 
 static int CmdHFiClass_loclass(const char *Cmd) {
-    char opt = tolower(param_getchar(Cmd, 0));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass loclass",
+                  "Execute the offline part of loclass attack\n"
+                  "  An iclass dumpfile is assumed to consist of an arbitrary number of\n"
+                  "  malicious CSNs, and their protocol responses\n"
+                  "  The binary format of the file is expected to be as follows: \n"
+                  "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
+                  "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
+                  "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
+                  "   ... totalling N*24 bytes",
+                  "hf iclass loclass -f iclass-dump.bin\n"
+                  "hf iclass loclass --test");
 
-    if (strlen(Cmd) < 1 || opt == 'h')
-        return usage_hf_iclass_loclass();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "filename of Bruteforce iclass dumpfile"),
+        arg_lit0(NULL, "test",              "Perform self-test"),
+        arg_lit0(NULL, "long",              "Perform self-test, including long ones"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (opt == 'f') {
-        char fileName[FILE_PATH_SIZE] = {0};
-        if (param_getstr(Cmd, 1, fileName, sizeof(fileName)) > 0) {
-            return bruteforceFileNoKeys(fileName);
-        } else {
-            PrintAndLogEx(WARNING, "You must specify a filename");
-            return PM3_EFILE;
-        }
-    } else if (opt == 't') {
-        char opt2 = tolower(param_getchar(Cmd, 1));
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
+    bool test = arg_get_lit(ctx, 2);
+    bool longtest = arg_get_lit(ctx, 3); 
+
+    CLIParserFree(ctx);
+
+    if (test || longtest) {
         int errors = testCipherUtils();
         errors += testMAC();
         errors += doKeyTests();
-        errors += testElite(opt2 == 'l');
+        errors += testElite(longtest);
 
         if (errors != PM3_SUCCESS)
             PrintAndLogEx(ERR, "There were errors!!!");
@@ -2333,7 +2328,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return usage_hf_iclass_loclass();
+    return bruteforceFileNoKeys(filename);
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
