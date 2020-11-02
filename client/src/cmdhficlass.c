@@ -873,6 +873,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     if (strlen(filename) == 0) {
         PrintAndLogEx(ERR, "Error: Please specify a filename");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
