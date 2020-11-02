@@ -34,6 +34,7 @@
 #include "mifare/ndef.h"           // NDEF
 #include "mifare/mad.h"
 #include "generator.h"
+#include "aiddesfire.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -3612,6 +3613,8 @@ static int CmdHF14ADesDump(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
             PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
             MADDFDecodeAndPrint(short_aid);
+        } else {
+            AIDDFDecodeAndPrint(aid);
         }
         for (uint8_t m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
@@ -3782,6 +3785,8 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
             PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
             MADDFDecodeAndPrint(short_aid);
+        } else {
+            AIDDFDecodeAndPrint(aid);
         }
         for (uint8_t m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
