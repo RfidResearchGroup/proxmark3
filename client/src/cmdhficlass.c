@@ -882,8 +882,8 @@ static int CmdHFiClassELoad(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>", "filename of dump"),
-        arg_lit0(NULL, "json",              "print from this block (default block6)"),
-        arg_lit0(NULL, "eml",               "end printing at this block (default 0, ALL)"),
+        arg_lit0(NULL, "json",              "load JSON type dump"),
+        arg_lit0(NULL, "eml",               "load EML type dump"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
