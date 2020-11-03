@@ -1246,18 +1246,6 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
 
     *responses = responses_init;
 
-    // indices into responses array:
-#define ATQA      0
-#define UIDC1     1
-#define UIDC2     2
-#define UIDC3     3
-#define SAKC1     4
-#define SAKC2     5
-#define SAKC3     6
-#define RATS      7
-#define VERSION   8
-#define SIGNATURE 9
-#define PPS       10
     return true;
 }
 
@@ -1451,23 +1439,23 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
         } else if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
             odd_reply = !odd_reply;
             if (odd_reply)
-                p_response = &responses[ATQA];
+                p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
-            p_response = &responses[ATQA];
+            p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
-            p_response = &responses[UIDC1];
+            p_response = &responses[RESP_INDEX_UIDC1];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
-            p_response = &responses[UIDC2];
+            p_response = &responses[RESP_INDEX_UIDC2];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 2) {  // Received request for UID (cascade 3)
-            p_response = &responses[UIDC3];
+            p_response = &responses[RESP_INDEX_UIDC3];
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {    // Received a SELECT (cascade 1)
-            p_response = &responses[SAKC1];
+            p_response = &responses[RESP_INDEX_SAKC1];
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
-            p_response = &responses[SAKC2];
+            p_response = &responses[RESP_INDEX_SAKC2];
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 9) {  // Received a SELECT (cascade 3)
-            p_response = &responses[SAKC3];
+            p_response = &responses[RESP_INDEX_SAKC3];
         } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
-            p_response = &responses[PPS];
+            p_response = &responses[RESP_INDEX_PPS];
         } else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK && len == 4) {    // Received a (plain) READ
             uint8_t block = receivedCmd[1];
             // if Ultralight or NTAG (4 byte blocks)
@@ -1489,7 +1477,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                 // FM11005SH.   16blocks,  4bytes / block.
                 //   block0 = 2byte Customer ID (CID), 2byte Manufacture ID (MID)
                 //   block1 = 4byte UID.
-                p_response = &responses[UIDC1];
+                p_response = &responses[RESP_INDEX_UIDC1];
             } else { // all other tags (16 byte block tags)
                 uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
                 emlGetMemBt(emdata, block, 16);
@@ -1551,7 +1539,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
             }
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && len == 4 && tagType == 7) {    // Received a READ SIGNATURE --
-            p_response = &responses[SIGNATURE];
+            p_response = &responses[RESP_INDEX_SIGNATURE];
         } else if (receivedCmd[0] == MIFARE_ULEV1_READ_CNT && len == 4 && tagType == 7) {    // Received a READ COUNTER --
             uint8_t index = receivedCmd[1];
             if (index > 2) {
@@ -1600,7 +1588,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
             p_response = NULL;
             order = ORDER_HALTED;
         } else if (receivedCmd[0] == MIFARE_ULEV1_VERSION && len == 3 && (tagType == 2 || tagType == 7)) {
-            p_response = &responses[VERSION];
+            p_response = &responses[RESP_INDEX_VERSION];
         } else if ((receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) && len == 4 && tagType != 2 && tagType != 7) {    // Received an authentication request
             cardAUTHKEY = receivedCmd[0] - 0x60;
             cardAUTHSC = receivedCmd[1] / 4; // received block num
@@ -1618,7 +1606,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                 EmSend4bit(CARD_NACK_NA);
                 p_response = NULL;
             } else {
-                p_response = &responses[RATS];
+                p_response = &responses[RESP_INDEX_RATS];
             }
         } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1) {  // ULC authentication, or Desfire Authentication
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);

@@ -84,6 +84,21 @@ typedef struct {
     uint8_t *parity;
 } tUart14a;
 
+// indices into responses array:
+typedef enum {
+    RESP_INDEX_ATQA,
+    RESP_INDEX_UIDC1,
+    RESP_INDEX_UIDC2,
+    RESP_INDEX_UIDC3,
+    RESP_INDEX_SAKC1,
+    RESP_INDEX_SAKC2,
+    RESP_INDEX_SAKC3,
+    RESP_INDEX_RATS,
+    RESP_INDEX_VERSION,
+    RESP_INDEX_SIGNATURE,
+    RESP_INDEX_PPS
+} resp_index_t;
+
 #ifndef AddCrc14A
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
