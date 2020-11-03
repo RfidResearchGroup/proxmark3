@@ -312,7 +312,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
         PrintAndLogEx(WARNING, "Invalid ATR length. len: %zu, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
 
     if (K > 0)
-        PrintAndLogEx(INFO, "Historical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
+        PrintAndLogEx(INFO, "Historical bytes | len %02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
 
     if (K > 1) {
         PrintAndLogEx(INFO, "\tHistorical bytes");
