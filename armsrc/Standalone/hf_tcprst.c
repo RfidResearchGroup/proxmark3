@@ -94,11 +94,14 @@ void RunMod(void) {
 #define ATQA      0
 #define UIDC1     1
 #define UIDC2     2
-#define SAKC1     3
-#define SAKC2     4
-#define RATS      5
-#define SIGNATURE 7
-#define PPS       8
+#define UIDC3     3
+#define SAKC1     4
+#define SAKC2     5
+#define SAKC3     6
+#define RATS      7
+#define VERSION   8
+#define SIGNATURE 9
+#define PPS       10
 
 //ST25TA Rothult values
 #define SAK 0x20

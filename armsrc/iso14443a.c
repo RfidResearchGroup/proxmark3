@@ -1005,10 +1005,14 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
     static uint8_t rUIDc1[5] = { 0x00 };
     // For UID size 7,
     static uint8_t rUIDc2[5] = { 0x00 };
-    // Prepare the mandatory SAK (for 4 and 7 byte UID)
+    // For UID size 10,
+    static uint8_t rUIDc3[5] = { 0x00 };
+    // Prepare the mandatory SAK (for 4, 7 and 10 byte UID)
     static uint8_t rSAKc1[3]  = { 0x00 };
-    // Prepare the optional second SAK (for 7 byte UID), drop the cascade bit
+    // Prepare the optional second SAK (for 7 and 10 byte UID), drop the cascade bit for 7b
     static uint8_t rSAKc2[3]  = { 0x00 };
+    // Prepare the optional third SAK  (for 10 byte UID), drop the cascade bit
+    static uint8_t rSAKc3[3]  = { 0x00 };
     // dummy ATS (pseudo-ATR), answer to RATS
 //    static uint8_t rRATS[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };
     static uint8_t rRATS[] = { 0x05, 0x75, 0x80, 0x60, 0x02, 0x00, 0x00 };
@@ -1017,7 +1021,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
     static uint8_t rVERSION[10] = { 0x00 };
     // READ_SIG response for EV1/NTAG
     static uint8_t rSIGN[34] = { 0x00 };
-    // PPS respoonse
+    // PPS response
     static uint8_t rPPS[3] = { 0xD0 };
 
     switch (tagType) {
@@ -1101,7 +1105,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
         case 10: { // ST25TA IKEA Rothult
             rATQA[0] = 0x42;
             rATQA[1] = 0x00;
-            sak = 0x00;
+            sak = 0x20;
         }
         break;
 
@@ -1127,11 +1131,25 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
         }
     }
 
-    if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+    if ((flags & FLAG_4B_UID_IN_DATA) == FLAG_4B_UID_IN_DATA) {
+        rUIDc1[0] = data[0];
+        rUIDc1[1] = data[1];
+        rUIDc1[2] = data[2];
+        rUIDc1[3] = data[3];
+        rUIDc1[4] = rUIDc1[0] ^ rUIDc1[1] ^ rUIDc1[2] ^ rUIDc1[3];
+
+        // Configure the ATQA and SAK accordingly
+        rATQA[0] &= 0xBF;
+        rSAKc1[0] = sak & 0xFB;
+        AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
+
+        *cuid = bytes_to_num(data, 4);
+    } else if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
         rUIDc1[0] = 0x88;  // Cascade Tag marker
         rUIDc1[1] = data[0];
         rUIDc1[2] = data[1];
         rUIDc1[3] = data[2];
+        rUIDc1[4] = rUIDc1[0] ^ rUIDc1[1] ^ rUIDc1[2] ^ rUIDc1[3];
 
         rUIDc2[0] = data[3];
         rUIDc2[1] = data[4];
@@ -1140,36 +1158,48 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
         rUIDc2[4] = rUIDc2[0] ^ rUIDc2[1] ^ rUIDc2[2] ^ rUIDc2[3];
 
         // Configure the ATQA and SAK accordingly
+        rATQA[0] &= 0xBF;
         rATQA[0] |= 0x40;
-        sak |= 0x04;
+        rSAKc1[0] = 0x04;
+        rSAKc2[0] = sak & 0xFB;
+        AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
+        AddCrc14A(rSAKc2, sizeof(rSAKc2) - 2);
 
         *cuid = bytes_to_num(data + 3, 4);
-    } else if ((flags & FLAG_4B_UID_IN_DATA) == FLAG_4B_UID_IN_DATA) {
-        memcpy(rUIDc1, data, 4);
+    } else if ((flags & FLAG_10B_UID_IN_DATA) == FLAG_10B_UID_IN_DATA) {
+        rUIDc1[0] = 0x88;  // Cascade Tag marker
+        rUIDc1[1] = data[0];
+        rUIDc1[2] = data[1];
+        rUIDc1[3] = data[2];
+        rUIDc1[4] = rUIDc1[0] ^ rUIDc1[1] ^ rUIDc1[2] ^ rUIDc1[3];
+
+        rUIDc2[0] = 0x88;  // Cascade Tag marker
+        rUIDc2[1] = data[3];
+        rUIDc2[2] = data[4];
+        rUIDc2[3] = data[5];
+        rUIDc2[4] = rUIDc2[0] ^ rUIDc2[1] ^ rUIDc2[2] ^ rUIDc2[3];
+
+        rUIDc3[0] = data[6];
+        rUIDc3[1] = data[7];
+        rUIDc3[2] = data[8];
+        rUIDc3[3] = data[9];
+        rUIDc3[4] = rUIDc3[0] ^ rUIDc3[1] ^ rUIDc3[2] ^ rUIDc3[3];
+
         // Configure the ATQA and SAK accordingly
         rATQA[0] &= 0xBF;
-        sak &= 0xFB;
-        *cuid = bytes_to_num(data, 4);
+        rATQA[0] |= 0x80;
+        rSAKc1[0] = 0x04;
+        rSAKc2[0] = 0x04;
+        rSAKc3[0] = sak & 0xFB;
+        AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
+        AddCrc14A(rSAKc2, sizeof(rSAKc2) - 2);
+        AddCrc14A(rSAKc3, sizeof(rSAKc3) - 2);
+
+        *cuid = bytes_to_num(data + 3 + 3, 4);
     } else {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("[-] ERROR: UID size not defined");
         return false;
     }
-
-    // Calculate BCC for the first 4 bytes of the UID.
-    rUIDc1[4] = rUIDc1[0] ^ rUIDc1[1] ^ rUIDc1[2] ^ rUIDc1[3];
-
-
-    if (tagType == 10) {
-        rSAKc1[0] = 0x04;
-        rSAKc2[0] = 0x20;
-    } else {
-        rSAKc1[0] = sak;
-        rSAKc2[0] = sak & 0xFB;
-    }
-
-    // crc
-    AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
-    AddCrc14A(rSAKc2, sizeof(rSAKc2) - 2);
 
     // Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present,
     // TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
@@ -1179,24 +1209,25 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
 
-#define TAG_RESPONSE_COUNT 9
-    static tag_response_info_t responses_init[TAG_RESPONSE_COUNT] = {
+    static tag_response_info_t responses_init[] = {
         { .response = rATQA,      .response_n = sizeof(rATQA)     },  // Answer to request - respond with card type
         { .response = rUIDc1,     .response_n = sizeof(rUIDc1)    },  // Anticollision cascade1 - respond with uid
         { .response = rUIDc2,     .response_n = sizeof(rUIDc2)    },  // Anticollision cascade2 - respond with 2nd half of uid if asked
+        { .response = rUIDc3,     .response_n = sizeof(rUIDc3)    },  // Anticollision cascade3 - respond with 3rd half of uid if asked
         { .response = rSAKc1,     .response_n = sizeof(rSAKc1)    },  // Acknowledge select - cascade 1
         { .response = rSAKc2,     .response_n = sizeof(rSAKc2)    },  // Acknowledge select - cascade 2
+        { .response = rSAKc3,     .response_n = sizeof(rSAKc3)    },  // Acknowledge select - cascade 3
         { .response = rRATS,      .response_n = sizeof(rRATS)     },  // dummy ATS (pseudo-ATR), answer to RATS
         { .response = rVERSION,   .response_n = sizeof(rVERSION)  },  // EV1/NTAG GET_VERSION response
         { .response = rSIGN,      .response_n = sizeof(rSIGN)     },  // EV1/NTAG READ_SIG response
         { .response = rPPS,       .response_n = sizeof(rPPS)      }   // PPS response
     };
 
-    // "precompile" responses. There are 9 predefined responses with a total of 72 bytes data to transmit.
+    // "precompile" responses. There are 11 predefined responses with a total of 80 bytes data to transmit.
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-    // 72 * 8 data bits, 72 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits -- 677 bytes buffer
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 675
-// 576 + 72 + 9 + 9 + 9 == 675
+    // 80 * 8 data bits, 80 * 1 parity bits, 11 start bits, 11 stop bits, 11 correction bits
+    // 80 * 8 + 80 + 11 + 11 + 11 == 753
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 753
 
     uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
     // modulation buffer pointer and current buffer free space size
@@ -1205,7 +1236,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
 
     // Prepare the responses of the anticollision phase
     // there will be not enough time to do this at the moment the reader sends it REQA
-    for (size_t i = 0; i < TAG_RESPONSE_COUNT; i++) {
+    for (size_t i = 0; i < ARRAYLEN(responses_init); i++) {
         if (prepare_allocated_tag_modulation(&responses_init[i], &free_buffer_pointer, &free_buffer_size) == false) {
             BigBuf_free_keep_EM();
             if (DBGLEVEL >= DBG_ERROR)    Dbprintf("Not enough modulation buffer size, exit after %d elements", i);
@@ -1219,12 +1250,14 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
 #define ATQA      0
 #define UIDC1     1
 #define UIDC2     2
-#define SAKC1     3
-#define SAKC2     4
-#define RATS      5
-#define VERSION   6
-#define SIGNATURE 7
-#define PPS       8
+#define UIDC3     3
+#define SAKC1     4
+#define SAKC2     5
+#define SAKC3     6
+#define RATS      7
+#define VERSION   8
+#define SIGNATURE 9
+#define PPS       10
     return true;
 }
 
@@ -1289,16 +1322,18 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 
     // To control where we are in the protocol
 #define ORDER_NONE           0
-#define ORDER_REQA           1
-#define ORDER_SELECT_ALL_CL1 2
-#define ORDER_SELECT_CL1     3
+//#define ORDER_REQA           1
+//#define ORDER_SELECT_ALL_CL1 2
+//#define ORDER_SELECT_CL1     3
 #define ORDER_HALTED         5
 #define ORDER_WUPA           6
 #define ORDER_AUTH           7
-#define ORDER_SELECT_ALL_CL2 20
-#define ORDER_SELECT_CL2     30
+//#define ORDER_SELECT_ALL_CL2 20
+//#define ORDER_SELECT_CL2     25
+//#define ORDER_SELECT_ALL_CL3 30
+//#define ORDER_SELECT_CL3     35
 #define ORDER_EV1_COMP_WRITE 40
-#define ORDER_RATS           70
+//#define ORDER_RATS           70
 
     uint8_t order = ORDER_NONE;
     int retval = PM3_SUCCESS;
@@ -1423,10 +1458,14 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
             p_response = &responses[UIDC1];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
             p_response = &responses[UIDC2];
+        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 2) {  // Received request for UID (cascade 3)
+            p_response = &responses[UIDC3];
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {    // Received a SELECT (cascade 1)
             p_response = &responses[SAKC1];
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
             p_response = &responses[SAKC2];
+        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 9) {  // Received a SELECT (cascade 3)
+            p_response = &responses[SAKC3];
         } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
             p_response = &responses[PPS];
         } else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK && len == 4) {    // Received a (plain) READ

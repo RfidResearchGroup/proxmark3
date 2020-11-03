@@ -210,8 +210,7 @@ static int usage_hf_14a_config(void) {
 }
 
 static int usage_hf_14a_sim(void) {
-//  PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
-    PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
+    PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
     PrintAndLogEx(NORMAL, "Usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "    h     : This help");
@@ -225,8 +224,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "            8 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
     PrintAndLogEx(NORMAL, "           10 = JCOP 31/41 Rothult");
-//  PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
-    PrintAndLogEx(NORMAL, "    u     : 4, 7 byte UID");
+    PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
     PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
     PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
     PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
@@ -234,7 +232,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344 x"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344556677"));
-//  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 112233445566778899AA"));
     return PM3_SUCCESS;
 }
 static int usage_hf_14a_sniff(void) {
@@ -689,7 +687,9 @@ int CmdHF14ASim(const char *Cmd) {
                 param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
                 uidlen >>= 1;
                 switch (uidlen) {
-                    //case 10: flags |= FLAG_10B_UID_IN_DATA; break;
+                    case 10:
+                        flags |= FLAG_10B_UID_IN_DATA;
+                        break;
                     case 7:
                         flags |= FLAG_7B_UID_IN_DATA;
                         break;
