@@ -212,8 +212,6 @@ static bool Unpack_Kantech(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-
-
 static bool Pack_D10202(wiegand_card_t *card, wiegand_message_t *packed) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
