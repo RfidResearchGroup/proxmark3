@@ -137,11 +137,12 @@ int demodHID(bool verbose) {
     }
 
     wiegand_message_t packed = initialize_message_object(hi2, hi, lo);
-    HIDTryUnpack(&packed, false);
+    if ( HIDTryUnpack(&packed, false) == false) {
+        printDemodBuff(0, false, false, true);
+    }
 
     PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer: ", idx, size);
     if (g_debugMode) {
-        printDemodBuff(0, false, false, true);
         printDemodBuff(0, false, false, false);
     }
 
