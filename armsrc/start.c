@@ -18,14 +18,13 @@
 #include "BigBuf.h"
 #include "string.h"
 
-static uint8_t *next_free_memory;
 extern struct common_area common_area;
 extern char __data_src_start__, __data_start__, __data_end__, __bss_start__, __bss_end__;
 
+
 static void uncompress_data_section(void) {
-    next_free_memory = BigBuf_get_addr();
     int avail_in;
-    memcpy(&avail_in, &__data_start__, sizeof(int));
+    memcpy(&avail_in, &__data_src_start__, sizeof(int));
     int avail_out = &__data_end__ - &__data_start__;  // uncompressed size. Correct.
     // uncompress data segment to RAM
     uintptr_t p = (uintptr_t)&__data_src_start__;
@@ -34,12 +33,20 @@ static void uncompress_data_section(void) {
     if (res < 0)
         return;
     // save the size of the compressed data section
-    common_area.arg1 = res;
+    common_area.arg1 = avail_in;
 }
 
 void __attribute__((section(".startos"))) Vector(void);
 void Vector(void) {
     /* Stack should have been set up by the bootloader */
+
+    if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
+        /* Initialize common area */
+        memset(&common_area, 0, sizeof(common_area));
+        common_area.magic = COMMON_AREA_MAGIC;
+        common_area.version = 1;
+    }
+    common_area.flags.osimage_present = 1;
 
     uncompress_data_section();
 

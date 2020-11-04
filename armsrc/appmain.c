@@ -2299,14 +2299,6 @@ void  __attribute__((noreturn)) AppMain(void) {
         *p = 0xdeadbeef;
     }
 
-    if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
-        /* Initialize common area */
-        memset(&common_area, 0, sizeof(common_area));
-        common_area.magic = COMMON_AREA_MAGIC;
-        common_area.version = 1;
-    }
-    common_area.flags.osimage_present = 1;
-
     LEDsoff();
 
     // The FPGA gets its clock from us from PCK0 output, so set that up.
