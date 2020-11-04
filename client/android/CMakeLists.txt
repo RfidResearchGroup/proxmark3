@@ -9,32 +9,7 @@ set(PM3_ROOT ../../)
 
 add_subdirectory(../deps deps)
 
-# Build zlib deps at external
-if (CMAKE_MAKE_PROGRAM MATCHES ".*ninja.*")
-    set(BZIP2_INCLUDE_DIRS ${BZIP2_ROOT})
-    set(BZIP2_LIBRARIES pm3rrg_rdv4_bzip2)
-elseif (UNIX) # Cross compile at Unix Makefile System.
-    # bzip2 dep.
-    include(ExternalProject)
-    set(CFLAGS_EXTERNAL_LIB "CFLAGS=--target=${CMAKE_C_COMPILER_TARGET} -w")
-    set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
-    ExternalProject_Add(bzip2
-            GIT_REPOSITORY https://android.googlesource.com/platform/external/bzip2
-            GIT_TAG platform-tools-30.0.2
-            PREFIX deps/bzip2
-            #SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
-            CONFIGURE_COMMAND mkdir -p ${BZIP2_BUILD_DIR} && git archive --format tar HEAD | tar -C ${BZIP2_BUILD_DIR} -x
-            BUILD_IN_SOURCE ON
-            BUILD_COMMAND make -C ${BZIP2_BUILD_DIR} -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} libbz2.a
-            INSTALL_COMMAND ""
-            LOG_DOWNLOAD ON
-            )
-    ExternalProject_Add_StepTargets(bzip2 configure build install)
-    set(BZIP2_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
-    set(BZIP2_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2/libbz2.a)
-else ()
-    message(ERROR "Please implement your BZIP2 import.")
-endif ()
+find_package (BZip2 REQUIRED)
 
 # client resources
 add_library(pm3rrg_rdv4 SHARED
@@ -200,9 +175,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/wiegand_formats.c
         ${PM3_ROOT}/client/src/wiegand_formatutils.c
         ${CMAKE_BINARY_DIR}/version_pm3.c
-        # android resources
-        jni_tools.c
-        pm3_main.c
+        ${PM3_ROOT}/client/src/proxmark3.c
         )
 
 # includes
@@ -227,5 +200,4 @@ target_link_libraries(pm3rrg_rdv4
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_whereami
-        android
-        log)
+        )
