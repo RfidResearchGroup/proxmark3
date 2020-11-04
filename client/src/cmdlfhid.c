@@ -140,8 +140,10 @@ int demodHID(bool verbose) {
     HIDTryUnpack(&packed, false);
 
     PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer: ", idx, size);
-    if (g_debugMode)
-        printDemodBuff();
+    if (g_debugMode) {
+        printDemodBuff(0, false, false, true);
+        printDemodBuff(0, false, false, false);
+    }
 
     return PM3_SUCCESS;
 }

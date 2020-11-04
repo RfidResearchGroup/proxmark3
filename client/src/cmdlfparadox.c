@@ -192,8 +192,9 @@ int demodParadox(bool verbose) {
                  );
 
     PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %zu, Printing Demod Buffer:", idx, size);
-    if (g_debugMode)
-        printDemodBuff();
+    if (g_debugMode) {
+        printDemodBuff(0, false, false, false);
+    }
 
     return PM3_SUCCESS;
 }

@@ -203,8 +203,9 @@ int demodPyramid(bool verbose) {
                  );
 
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
-    if (g_debugMode)
-        printDemodBuff();
+    if (g_debugMode) {
+        printDemodBuff(0, false, false, false);
+    }
 
     return PM3_SUCCESS;
 }

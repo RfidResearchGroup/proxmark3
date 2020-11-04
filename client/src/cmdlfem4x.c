@@ -318,8 +318,9 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
 
     PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %zu, Len: %zu, Printing Demod Buffer:", idx, size);
-    if (g_debugMode)
-        printDemodBuff();
+    if (g_debugMode) {
+        printDemodBuff(0, false, false, true);
+    }
 
     if (verbose)
         printEM410x(*hi, *lo);
