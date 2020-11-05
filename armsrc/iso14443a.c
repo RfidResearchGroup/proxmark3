@@ -28,12 +28,9 @@
 
 #define MAX_ISO14A_TIMEOUT 524288
 static uint32_t iso14a_timeout;
-// if iso14443a not active - transmit/receive dont try to execute
-static bool hf_field_active = false;
 
 static uint8_t colpos = 0;
-int g_rsamples = 0;
-uint8_t g_trigger = 0;
+
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
 
@@ -1814,7 +1811,7 @@ static void PrepareDelayedTransfer(uint16_t delay) {
 //-------------------------------------------------------------------------------------
 static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing) {
 
-    if (!hf_field_active) {
+    if (!g_hf_field_active) {
         Dbprintf("Warning: HF field is off, ignoring TransmitFor14443a command");
         return;
     }
@@ -2214,7 +2211,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *received_len) {
 
-    if (!hf_field_active) {
+    if (!g_hf_field_active) {
         Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag_Thinfilm command");
         return false;
     }
@@ -2264,7 +2261,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset) {
     uint32_t c = 0;
 
-    if (!hf_field_active)
+    if (!g_hf_field_active)
         return false;
 
     // Set FPGA mode to "reader listen mode", no modulation (listen
@@ -2758,13 +2755,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
     NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
     iso14a_set_timeout(1060); // 106 * 10ms default
 
-    hf_field_active = true;
-}
-
-void hf_field_off(void) {
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
-    hf_field_active = false;
+    g_hf_field_active = true;
 }
 
 /* Peter Fillmore 2015

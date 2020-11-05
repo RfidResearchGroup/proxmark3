@@ -65,6 +65,9 @@
 #include "spiffs.h"
 #endif
 
+int DBGLEVEL = DBG_ERROR;
+uint8_t g_trigger = 0;
+bool g_hf_field_active = false;
 extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
@@ -86,6 +89,12 @@ int tearoff_hook(void) {
     } else {
         return PM3_SUCCESS;     // SUCCESS = the hook didn't do anything
     }
+}
+
+void hf_field_off(void) {
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    g_hf_field_active = false;
 }
 
 void send_wtx(uint16_t wtx) {

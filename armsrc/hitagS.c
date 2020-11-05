@@ -103,8 +103,6 @@ static bool end = false;
 #define HITAG_T_TAG_CAPTURE_THREE_HALF 41
 #define HITAG_T_TAG_CAPTURE_FOUR_HALF  57
 
-#define DBGLEVEL 0
-
 /*
  * Implementation of the crc8 calculation from Hitag S
  * from http://www.proxmark.org/files/Documents/125%20kHz%20-%20Hitag/HitagS.V11.pdf

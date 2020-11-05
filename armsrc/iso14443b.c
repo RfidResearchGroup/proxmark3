@@ -1365,6 +1365,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t 
     tosend_t *ts = get_tosend();
     CodeIso14443bAsReader(cmd, len);
     TransmitFor14443b_AsReader(start_time);
+    if (g_trigger) LED_A_ON();
     *eof_time = *start_time + (10 * ts->max) + 10 + 2 + 10;
     LogTrace(cmd, len, *start_time, *eof_time, NULL, true);
 }
