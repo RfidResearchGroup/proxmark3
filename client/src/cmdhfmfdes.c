@@ -4625,6 +4625,8 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(ctx, 4);
 
+    CLIParserFree(ctx);
+            
     uint16_t ndefAID = 0xe103;
     if (aidlen == 2)
         ndefAID = (aid[0] << 8) + aid[1];
@@ -4694,6 +4696,33 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
 }
 */
 
+/*
+static int CmdHF14aDesMAD(const char *Cmd) {
+    DropField();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes mad",
+                  "Prints MIFARE Application directory (MAD)",
+                  "hf mfdes mad      -> shows MAD data\n"
+                  "hf mfdes mad -v   -> shows MAD parsed and raw data\n"
+                  "hf mfdes mad -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows MAD data with custom AID and key");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_str0("",    "aid",      "<aid>", "replace default aid for MAD"),
+        arg_str0("k",  "key",      "<key>", "replace default key for MAD"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes mad -v`") " for more details");    
+    return PM3_SUCCESS;
+}
+*/
+
 /*static int CmdTest(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     uint8_t IV[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -4720,28 +4749,32 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("general") " -----------------------"},
+    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
+    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
+    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
+    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
+    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
+    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
-    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
-    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
-    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
-    {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+//    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
+//    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("AID") " -----------------------"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
     {"deleteaid",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
+    {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
+    {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
+    {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
     {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "Create Delete File"},
-    {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
+    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
+    {"getvalue",         CmdHF14ADesGetValueData,     IfPm3Iso14443a,  "Get value of file"},
     {"readdata",         CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record file"},
     {"writedata",        CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
-    {"getvalue",         CmdHF14ADesGetValueData,     IfPm3Iso14443a,  "Get value of file"},
-    {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
-    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
-    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
-    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
-    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
-//    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };
 
