@@ -945,7 +945,8 @@ bool HIDTryUnpack(wiegand_message_t *packed, bool ignore_parity) {
         ++i;
     }
     if (result == false && packed->Length) {
-        PrintAndLogEx(SUCCESS, "Unknown. Bit len %d", packed->Length);
+        PrintAndLogEx(SUCCESS, "(wiegand unpack) unknown bit len %d", packed->Length);
+        PrintAndLogEx(HINT, "Try 0xFFFF's http://cardinfo.barkweb.com.au/");
     }
 
     return result;

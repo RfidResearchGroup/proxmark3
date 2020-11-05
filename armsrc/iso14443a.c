@@ -161,7 +161,7 @@ void printHf14aConfig(void) {
             );
     Dbprintf("  [r] RATS override.......%i %s%s%s",
              hf14aconfig.forcerats,
-             (hf14aconfig.forcerats == 0) ? "( " _GREEN_("No") " q follow standard " : "",
+             (hf14aconfig.forcerats == 0) ? "( " _GREEN_("No") " ) follow standard " : "",
              (hf14aconfig.forcerats == 1) ? "( " _RED_("Yes") " ) always do RATS" : "",
              (hf14aconfig.forcerats == 2) ? "( " _RED_("Yes") " ) always skip RATS" : ""
             );
