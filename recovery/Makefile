@@ -6,10 +6,18 @@ ifneq (,$(FWTAG))
 else
     INSTALLFWTAG = $(notdir $(INSTALLFW))
 endif
+FWMAXSIZE = $(shell echo $$(($(PLATFORM_SIZE)*1024)))
 
 BINS = bootrom.bin fullimage.bin $(INSTALLFW)
 
 all: $(BINS)
+	@FWSIZE=$$(stat -c "%s" $(INSTALLFW));\
+	if [ $$FWSIZE -gt $(FWMAXSIZE) ]; then \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "ERROR: Firmware image too large for your platform! $$FWSIZE > $(FWMAXSIZE)"; \
+		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+		exit 1; \
+	fi
 
 bootrom.bin: ../bootrom/obj/bootrom.elf
 	$(info [=] GEN $@)

@@ -133,6 +133,10 @@ ifeq (,$(PLATFORM_DEFS_INFO_STANDALONE))
     PLATFORM_DEFS_INFO_STANDALONE = No standalone mode selected
 endif
 
+ifeq ($(PLATFORM_SIZE),)
+    PLATFORM_SIZE=512
+endif
+
 PLATFORM_CHANGED=false
 ifneq ($(PLATFORM), $(CACHED_PLATFORM))
     PLATFORM_CHANGED=true
@@ -145,6 +149,7 @@ endif
 export PLATFORM
 export PLATFORM_EXTRAS
 export PLATFORM_EXTRAS_INFO
+export PLATFORM_SIZE
 export PLTNAME
 export PLATFORM_DEFS
 export PLATFORM_DEFS_INFO
@@ -154,6 +159,7 @@ export PLATFORM_CHANGED
 $(info ===================================================================)
 $(info Platform name:     $(PLTNAME))
 $(info PLATFORM:          $(PLATFORM))
+$(info PLATFORM_SIZE:     $(PLATFORM_SIZE))
 $(info Platform extras:   $(PLATFORM_EXTRAS_INFO))
 $(info Included options:  $(PLATFORM_DEFS_INFO))
 $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
