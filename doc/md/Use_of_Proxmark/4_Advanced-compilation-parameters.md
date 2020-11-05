@@ -141,6 +141,8 @@ SKIP_FELICA=1
 ```
 Situation might change when the firmware is growing of course, requiring to skip more elements.
 
+Last note: if you skip a tech, be careful not to use a standalone mode which requires that same tech, else the firmware size reduction won't be much.
+
 ## Next step
 
 See [Compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)
