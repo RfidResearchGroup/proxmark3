@@ -450,7 +450,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 //          2 = use 0x1B authentication.
 // datain : 4 first bytes is data to be written.
 //        : 4/16 next bytes is authentication key.
-void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
+static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, bool reply) {
     uint8_t blockNo = arg0;
     bool useKey = (arg1 == 1); //UL_C
     bool usePwd = (arg1 == 2); //UL_EV1/NTAG
@@ -507,10 +507,15 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 
     if (DBGLEVEL >= 2) DbpString("WRITE BLOCK FINISHED");
 
-    reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+    if (reply)
+        reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
+}
+
+void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
+    MifareUWriteBlockEx(arg0, arg1, datain, true);
 }
 
 // Arg0   : Block to write to.
@@ -2720,7 +2725,8 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t tearoff_time, uint8_t *datain) {
     if (tearoff_time > 43000)
         tearoff_time = 43000;
 
-    MifareUWriteBlock(blockNo, 0, data_fullwrite);
+    MifareUWriteBlockEx(blockNo, 0, data_fullwrite, false);
+
 
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -2729,13 +2735,18 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t tearoff_time, uint8_t *datain) {
 
     // write cmd to send, include CRC
     // 1b write, 1b block, 4b data, 2 crc
-    uint8_t cmd[] = {MIFARE_ULC_WRITE, blockNo, data_testwrite[0], data_testwrite[1], data_testwrite[2], data_testwrite[3], 0, 0};
+    uint8_t cmd[] = {
+            MIFARE_ULC_WRITE, blockNo, 
+            data_testwrite[0], data_testwrite[1], data_testwrite[2], data_testwrite[3],
+            0, 0
+        };
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     // anticollision / select card
     if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
+        reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_EFAILED, NULL, 0);
         return;
     };
     // send
@@ -2753,7 +2764,7 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t tearoff_time, uint8_t *datain) {
 
 //
 // Tear-off attack against MFU counter
-void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time) {
+void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time, uint8_t *datain) {
 
     if (tearoff_time > 43000)
         tearoff_time = 43000;
@@ -2767,10 +2778,10 @@ void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time) {
     uint8_t cmd[] = {
         MIFARE_ULEV1_INCR_CNT,
         counter,
-        0,  // lsb
-        0,
-        0,  // msb
-        0,  // rfu
+            datain[0],  // lsb
+            datain[1],  
+            datain[2],  // msb
+            datain[3],  // rfu
         0,
         0,
     };

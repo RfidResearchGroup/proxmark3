@@ -1503,9 +1503,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint8_t counter;
                 uint32_t tearoff_time;
+                uint8_t value[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareU_Counter_Tearoff(payload->counter, payload->tearoff_time);
+            MifareU_Counter_Tearoff(payload->counter, payload->tearoff_time, payload->value);
             break;
         }
         case CMD_HF_MIFARE_STATIC_NONCE: {
