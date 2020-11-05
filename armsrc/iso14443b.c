@@ -717,6 +717,211 @@ void SimulateIso14443bTag(uint8_t *pupi) {
     switch_off(); //simulate
 }
 
+/*
+void Simulate_iso14443b_srx_tag(uint8_t *uid) {
+
+    LED_A_ON();
+    / SRI512
+    
+    > initiate  06 00       ISO14443B_INITIATE
+    < xx crc crc
+    > select 0e xx          ISO14443B_SELECT
+    < xx nn nn
+    
+    > readblock 08 blck_no  ISO14443B_READ_BLK
+    < d0 d1 d2 d3 2byte crc
+        
+    > get uid               ISO14443B_GET_UID
+    < 81  93  99  20  92  11  02  (8byte UID in MSB  D002 199220 999381)
+
+#define ISO14443B_REQB         0x05
+#define ISO14443B_ATTRIB       0x1D
+#define ISO14443B_HALT         0x50
+#define ISO14443B_INITIATE     0x06
+#define ISO14443B_SELECT       0x0E
+#define ISO14443B_GET_UID      0x0B
+#define ISO14443B_READ_BLK     0x08
+#define ISO14443B_WRITE_BLK    0x09
+#define ISO14443B_RESET        0x0C
+#define ISO14443B_COMPLETION   0x0F
+#define ISO14443B_AUTHENTICATE 0x0A
+#define ISO14443B_PING         0xBA
+#define ISO14443B_PONG         0xAB
+
+
+    static const uint8_t resp_init_srx[] = { 0x73, 0x64, 0xb1 };
+    uint8_t resp_select_srx[] = { 0x73, 0x64, 0xb1 };
+
+    // a default uid, or user supplied
+    uint8_t resp_getuid_srx[10] = {
+        0x81, 0x93, 0x99, 0x20, 0x92, 0x11, 0x02, 0xD0, 0x00, 0x00
+    };
+
+    // ...UID supplied from user. Adjust ATQB response accordingly
+    if (memcmp("\x00\x00\x00\x00\x00\x00\x00\x00", uid, 8) != 0) {
+        memcpy(resp_getuid_srx, uid, 8);
+        AddCrc14B(resp_getuid_srx, 8);
+    }
+
+    // response to HLTB and ATTRIB
+    static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
+
+    // setup device.
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    // connect Demodulated Signal to ADC:
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+    // Set up the synchronous serial port
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
+
+    // allocate command receive buffer
+    BigBuf_free();
+    BigBuf_Clear_ext(false);
+    clear_trace();
+    set_tracing(true);
+
+    uint16_t len, cmdsReceived = 0;
+    int cardSTATE = SIM_NOFIELD;
+    int vHf = 0; // in mV
+
+    tosend_t *ts = get_tosend();
+
+    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+
+    // prepare "ATQB" tag answer (encoded):
+    CodeIso14443bAsTag(respATQB, sizeof(respATQB));
+    uint8_t *encodedATQB = BigBuf_malloc(ts->max);
+    uint16_t encodedATQBLen = ts->max;
+    memcpy(encodedATQB, ts->buf, ts->max);
+
+
+    // prepare "OK" tag answer (encoded):
+    CodeIso14443bAsTag(respOK, sizeof(respOK));
+    uint8_t *encodedOK = BigBuf_malloc(ts->max);
+    uint16_t encodedOKLen = ts->max;
+    memcpy(encodedOK, ts->buf, ts->max);
+
+    // Simulation loop
+    while (BUTTON_PRESS() == false) {
+        WDT_HIT();
+
+        //iceman: limit with 2000 times..
+        if (data_available()) {
+            break;
+        }
+
+        // find reader field
+        if (cardSTATE == SIM_NOFIELD) {
+
+#if defined RDV4
+            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * SumAdc(ADC_CHAN_HF_RDV40, 32)) >> 15;
+#else
+            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+#endif
+            if (vHf > MF_MINFIELDV) {
+                cardSTATE = SIM_IDLE;
+                LED_A_ON();
+            }
+        }
+        if (cardSTATE == SIM_NOFIELD) continue;
+
+        // Get reader command
+        if (!GetIso14443bCommandFromReader(receivedCmd, &len)) {
+            Dbprintf("button pressed, received %d commands", cmdsReceived);
+            break;
+        }
+
+        // ISO14443-B protocol states:
+        // REQ or WUP request in ANY state
+        // WUP in HALTED state
+        if (len == 5) {
+            if ((receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8) == 0x8 && cardSTATE == SIM_HALTED) ||
+                    receivedCmd[0] == ISO14443B_REQB) {
+                LogTrace(receivedCmd, len, 0, 0, NULL, true);
+                cardSTATE = SIM_SELECTING;
+            }
+        }
+
+        /
+        * How should this flow go?
+        *  REQB or WUPB
+        *   send response  ( waiting for Attrib)
+        *  ATTRIB
+        *   send response  ( waiting for commands 7816)
+        *  HALT
+            send halt response ( waiting for wupb )
+        /
+
+        switch (cardSTATE) {
+            //case SIM_NOFIELD:
+            case SIM_HALTED:
+            case SIM_IDLE: {
+                LogTrace(receivedCmd, len, 0, 0, NULL, true);
+                break;
+            }
+            case SIM_SELECTING: {
+                TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                cardSTATE = SIM_WORK;
+                break;
+            }
+            case SIM_HALTING: {
+                TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                cardSTATE = SIM_HALTED;
+                break;
+            }
+            case SIM_ACKNOWLEDGE: {
+                TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                cardSTATE = SIM_IDLE;
+                break;
+            }
+            case SIM_WORK: {
+                if (len == 7 && receivedCmd[0] == ISO14443B_HALT) {
+                    cardSTATE = SIM_HALTED;
+                } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB) {
+                    cardSTATE = SIM_ACKNOWLEDGE;
+                } else {
+                    // Todo:
+                    // - SLOT MARKER
+                    // - ISO7816
+                    // - emulate with a memory dump
+                    if (DBGLEVEL >= DBG_DEBUG)
+                        Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
+
+                    // CRC Check
+                    if (len >= 3) { // if crc exists
+
+                        if (!check_crc(CRC_14443_B, receivedCmd, len)) {
+                            if (DBGLEVEL >= DBG_DEBUG) {
+                                DbpString("CRC fail");
+                            }
+                        }
+                    } else {
+                        if (DBGLEVEL >= DBG_DEBUG) {
+                            DbpString("CRC passed");
+                        }
+                    }
+                    cardSTATE = SIM_IDLE;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        ++cmdsReceived;
+    }
+
+    if (DBGLEVEL >= DBG_DEBUG)
+        Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
+
+    switch_off(); //simulate
+}
+*/
+
 //=============================================================================
 // An ISO 14443 Type B reader. We take layer two commands, code them
 // appropriately, and then send them to the tag. We then listen for the
