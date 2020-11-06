@@ -11,7 +11,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`auto                   `|N       |`Automated detection process for unknown tags`
-|`clear                  `|Y       |`clear screen`
+|`clear                  `|Y       |`Clear screen`
 |`help                   `|Y       |`This help. Use '<command> help' for details of a particular command.`
 |`hints                  `|Y       |`Turn hints on / off`
 |`msleep                 `|Y       |`Add a pause in milliseconds`
@@ -34,8 +34,8 @@ Check column "offline" for their availability.
 |`analyse dates          `|Y       |`Look for datestamps in a given array of bytes`
 |`analyse tea            `|Y       |`Crypto TEA test`
 |`analyse lfsr           `|Y       |`LFSR tests`
-|`analyse a              `|Y       |`num bits test`
-|`analyse nuid           `|Y       |`create NUID from 7byte UID`
+|`analyse a              `|Y       |`Num bits test`
+|`analyse nuid           `|Y       |`Create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
 
@@ -60,7 +60,7 @@ Check column "offline" for their availability.
 |`data undecimate        `|Y       |`Un-decimate samples`
 |`data hide              `|Y       |`Hide graph window`
 |`data hpf               `|Y       |`Remove DC offset from trace`
-|`data iir               `|Y       |`apply IIR buttersworth filter on plotdata`
+|`data iir               `|Y       |`Apply IIR buttersworth filter on plotdata`
 |`data grid              `|Y       |`<x> <y> -- overlay grid on graph window, use zero value to turn off either`
 |`data ltrim             `|Y       |`<samples> -- Trim samples from left of trace`
 |`data mtrim             `|Y       |`<start> <stop> -- Trim out samples from the specified start to the specified stop`
@@ -81,7 +81,7 @@ Check column "offline" for their availability.
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`
 |`data ndef              `|Y       |`Decode NDEF records`
-|`data print             `|Y       |`print the data in the DemodBuffer`
+|`data print             `|Y       |`Print the data in the DemodBuffer`
 |`data samples           `|N       |`[512 - 40000] -- Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save signal trace data  (from graph window)`
 |`data setdebugmode      `|Y       |`<0|1|2> -- Set Debugging Level on client side`
@@ -136,7 +136,7 @@ Check column "offline" for their availability.
 |`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
 |`hf 14a cuids           `|N       |`<n> Collect n>0 ISO14443-a UIDs in one go`
 |`hf 14a sim             `|N       |`<UID> -- Simulate ISO 14443-a tag`
-|`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
+|`hf 14a sniff           `|N       |`Sniff ISO 14443-a traffic`
 |`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
 |`hf 14a raw             `|N       |`Send raw hex data to tag`
@@ -212,16 +212,16 @@ Check column "offline" for their availability.
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
-|`hf felica rdunencrypted`|N       |`read Block Data from authentication-not-required Service.`
-|`hf felica wrunencrypted`|N       |`write Block Data to an authentication-not-required Service.`
-|`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
-|`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
-|`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
-|`hf felica rqsyscode    `|N       |`acquire System Code registered to the card.`
-|`hf felica auth1        `|N       |`authenticate a card. Start mutual authentication with Auth1`
-|`hf felica auth2        `|N       |`allow a card to authenticate a Reader/Writer. Complete mutual authentication`
-|`hf felica rqspecver    `|N       |`acquire the version of card OS.`
-|`hf felica resetmode    `|N       |`reset Mode to Mode 0.`
+|`hf felica rdunencrypted`|N       |`Read Block Data from authentication-not-required Service.`
+|`hf felica wrunencrypted`|N       |`Write Block Data to an authentication-not-required Service.`
+|`hf felica rqservice    `|N       |`Verify the existence of Area and Service, and to acquire Key Version.`
+|`hf felica rqresponse   `|N       |`Verify the existence of a card and its Mode.`
+|`hf felica scsvcode     `|N       |`Acquire Area Code and Service Code.`
+|`hf felica rqsyscode    `|N       |`Acquire System Code registered to the card.`
+|`hf felica auth1        `|N       |`Authenticate a card. Start mutual authentication with Auth1`
+|`hf felica auth2        `|N       |`Allow a card to authenticate a Reader/Writer. Complete mutual authentication`
+|`hf felica rqspecver    `|N       |`Acquire the version of card OS.`
+|`hf felica resetmode    `|N       |`Reset Mode to Mode 0.`
 |`hf felica litesim      `|N       |`<NDEF2> - only reply to poll request`
 |`hf felica litedump     `|N       |`Wait for and try dumping FelicaLite`
 
@@ -352,12 +352,12 @@ Check column "offline" for their availability.
 |`hf mf csave            `|N       |`Save dump from card into file or emulator`
 |`hf mf csetblk          `|N       |`Write block`
 |`hf mf csetuid          `|N       |`Set UID`
-|`hf mf cview            `|N       |`view card`
+|`hf mf cview            `|N       |`View card`
 |`hf mf cwipe            `|N       |`Wipe card to default UID/Sectors/Keys`
 |`hf mf gen3uid          `|N       |`Set UID without manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite full manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock further UID changes`
-|`hf mf ice              `|N       |`collect MIFARE Classic nonces to file`
+|`hf mf ice              `|N       |`Collect MIFARE Classic nonces to file`
 
 
 ### hf mfp
@@ -390,7 +390,7 @@ Check column "offline" for their availability.
 |`hf mfu info            `|N       |`Tag information`
 |`hf mfu dump            `|N       |`Dump Ultralight / Ultralight-C / NTAG tag to binary file`
 |`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
-|`hf mfu eload           `|N       |`load Ultralight .eml dump file into emulator memory`
+|`hf mfu eload           `|N       |`Load Ultralight .eml dump file into emulator memory`
 |`hf mfu rdbl            `|N       |`Read block`
 |`hf mfu wrbl            `|N       |`Write block`
 |`hf mfu cauth           `|N       |`Authentication    - Ultralight C`
@@ -442,9 +442,9 @@ Check column "offline" for their availability.
 |`hf st help             `|Y       |`This help`
 |`hf st info             `|N       |`Tag information`
 |`hf st list             `|Y       |`List ISO 14443A/7816 history`
-|`hf st ndef             `|Y       |`read NDEF file on tag`
-|`hf st protect          `|N       |`change protection on tag`
-|`hf st pwd              `|N       |`change password on tag`
+|`hf st ndef             `|Y       |`Read NDEF file on tag`
+|`hf st protect          `|N       |`Change protection on tag`
+|`hf st pwd              `|N       |`Change password on tag`
 |`hf st sim              `|N       |`Fake ISO 14443A/ST tag`
 
 
@@ -492,7 +492,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
-|`hw connect             `|Y       |`connect Proxmark3 to serial port`
+|`hw connect             `|Y       |`Connect Proxmark3 to serial port`
 |`hw dbg                 `|N       |`Set Proxmark3 debug level`
 |`hw detectreader        `|N       |`['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)`
 |`hw fpgaoff             `|N       |`Set FPGA off`
@@ -537,13 +537,13 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf awid help           `|Y       |`this help`
-|`lf awid demod          `|Y       |`demodulate an AWID FSK tag from the GraphBuffer`
-|`lf awid read           `|N       |`attempt to read and extract tag data`
-|`lf awid clone          `|N       |`clone AWID tag to T55x7 or Q5/T5555`
-|`lf awid sim            `|N       |`simulate AWID tag`
+|`lf awid help           `|Y       |`This help`
+|`lf awid demod          `|Y       |`Demodulate an AWID FSK tag from the GraphBuffer`
+|`lf awid read           `|N       |`Attempt to read and extract tag data`
+|`lf awid clone          `|N       |`Clone AWID tag to T55x7 or Q5/T5555`
+|`lf awid sim            `|N       |`Simulate AWID tag`
 |`lf awid brute          `|N       |`Bruteforce card number against reader`
-|`lf awid watch          `|N       |`continuously watch for cards.  Reader mode`
+|`lf awid watch          `|N       |`Continuously watch for cards.  Reader mode`
 
 
 ### lf cotag
@@ -577,29 +577,29 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em help             `|Y       |`This help`
-|`lf em 410x_demod       `|Y       |`demodulate a EM410x tag from the GraphBuffer`
-|`lf em 410x_read        `|N       |`attempt to read and extract tag data`
-|`lf em 410x_sim         `|N       |`simulate EM410x tag`
-|`lf em 410x_brute       `|N       |`reader bruteforce attack by simulating EM410x tags`
-|`lf em 410x_watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`
-|`lf em 410x_spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
-|`lf em 410x_clone       `|N       |`write EM410x UID to T55x7 or Q5/T5555 tag`
+|`lf em 410x_demod       `|Y       |`Demodulate a EM410x tag from the GraphBuffer`
+|`lf em 410x_read        `|N       |`Attempt to read and extract tag data`
+|`lf em 410x_sim         `|N       |`Simulate EM410x tag`
+|`lf em 410x_brute       `|N       |`Reader bruteforce attack by simulating EM410x tags`
+|`lf em 410x_watch       `|N       |`Watches for EM410x 125/134 kHz tags (option 'h' for 134)`
+|`lf em 410x_spoof       `|N       |`Watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
+|`lf em 410x_clone       `|N       |`Write EM410x UID to T55x7 or Q5/T5555 tag`
 |`lf em 4x05_chk         `|N       |`Check passwords from dictionary`
-|`lf em 4x05_demod       `|Y       |`demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
-|`lf em 4x05_dump        `|N       |`dump EM4x05/EM4x69 tag`
-|`lf em 4x05_wipe        `|N       |`wipe EM4x05/EM4x69 tag`
-|`lf em 4x05_info        `|N       |`tag information EM4x05/EM4x69`
-|`lf em 4x05_read        `|N       |`read word data from EM4x05/EM4x69`
-|`lf em 4x05_write       `|N       |`write word data to EM4x05/EM4x69`
-|`lf em 4x05_unlock      `|N       |`execute tear off against EM4x05/EM4x69`
+|`lf em 4x05_demod       `|Y       |`Demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
+|`lf em 4x05_dump        `|N       |`Dump EM4x05/EM4x69 tag`
+|`lf em 4x05_wipe        `|N       |`Wipe EM4x05/EM4x69 tag`
+|`lf em 4x05_info        `|N       |`Tag information EM4x05/EM4x69`
+|`lf em 4x05_read        `|N       |`Read word data from EM4x05/EM4x69`
+|`lf em 4x05_write       `|N       |`Write word data to EM4x05/EM4x69`
+|`lf em 4x05_unlock      `|N       |`Execute tear off against EM4x05/EM4x69`
 |`lf em 4x05_sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
 |`lf em 4x05_brute       `|N       |`Bruteforce password`
-|`lf em 4x50_dump        `|N       |`dump EM4x50 tag`
-|`lf em 4x50_info        `|N       |`tag information EM4x50`
-|`lf em 4x50_write       `|N       |`write word data to EM4x50`
-|`lf em 4x50_write_password`|N       |`change password of EM4x50 tag`
-|`lf em 4x50_read        `|N       |`read word data from EM4x50`
-|`lf em 4x50_wipe        `|N       |`wipe data from EM4x50`
+|`lf em 4x50_dump        `|N       |`Dump EM4x50 tag`
+|`lf em 4x50_info        `|N       |`Tag information EM4x50`
+|`lf em 4x50_write       `|N       |`Write word data to EM4x50`
+|`lf em 4x50_write_password`|N       |`Change password of EM4x50 tag`
+|`lf em 4x50_read        `|N       |`Read word data from EM4x50`
+|`lf em 4x50_wipe        `|N       |`Wipe data from EM4x50`
 
 
 ### lf fdxb
@@ -608,11 +608,11 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf fdxb help           `|Y       |`this help`
-|`lf fdxb demod          `|Y       |`demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
-|`lf fdxb read           `|N       |`attempt to read at 134kHz and extract tag data`
-|`lf fdxb clone          `|N       |`clone animal ID tag to T55x7 or Q5/T5555`
-|`lf fdxb sim            `|N       |`simulate Animal ID tag`
+|`lf fdxb help           `|Y       |`This help`
+|`lf fdxb demod          `|Y       |`Demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
+|`lf fdxb read           `|N       |`Attempt to read at 134kHz and extract tag data`
+|`lf fdxb clone          `|N       |`Clone animal ID tag to T55x7 or Q5/T5555`
+|`lf fdxb sim            `|N       |`Simulate Animal ID tag`
 
 
 ### lf gallagher
@@ -624,8 +624,8 @@ Check column "offline" for their availability.
 |`lf gallagher help      `|Y       |`This help`
 |`lf gallagher demod     `|Y       |`Demodulate an GALLAGHER tag from the GraphBuffer`
 |`lf gallagher read      `|N       |`Attempt to read and extract tag data from the antenna`
-|`lf gallagher clone     `|N       |`clone GALLAGHER tag to T55x7`
-|`lf gallagher sim       `|N       |`simulate GALLAGHER tag`
+|`lf gallagher clone     `|N       |`Clone GALLAGHER tag to T55x7`
+|`lf gallagher sim       `|N       |`Simulate GALLAGHER tag`
 
 
 ### lf gproxii
@@ -634,11 +634,11 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf gproxii help        `|Y       |`this help`
-|`lf gproxii demod       `|Y       |`demodulate a G Prox II tag from the GraphBuffer`
-|`lf gproxii read        `|N       |`attempt to read and extract tag data from the antenna`
-|`lf gproxii clone       `|N       |`clone Guardall tag to T55x7 or Q5/T5555`
-|`lf gproxii sim         `|N       |`simulate Guardall tag`
+|`lf gproxii help        `|Y       |`This help`
+|`lf gproxii demod       `|Y       |`Demodulate a G Prox II tag from the GraphBuffer`
+|`lf gproxii read        `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf gproxii clone       `|N       |`Clone Guardall tag to T55x7 or Q5/T5555`
+|`lf gproxii sim         `|N       |`Simulate Guardall tag`
 
 
 ### lf hid
@@ -647,13 +647,13 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf hid help            `|Y       |`this help`
-|`lf hid demod           `|Y       |`demodulate HID Prox tag from the GraphBuffer`
-|`lf hid read            `|N       |`attempt to read and extract tag data`
-|`lf hid clone           `|N       |`clone HID tag to T55x7`
-|`lf hid sim             `|N       |`simulate HID tag`
-|`lf hid brute           `|N       |`bruteforce card number against reader`
-|`lf hid watch           `|N       |`continuously watch for cards.  Reader mode`
+|`lf hid help            `|Y       |`This help`
+|`lf hid demod           `|Y       |`Demodulate HID Prox tag from the GraphBuffer`
+|`lf hid read            `|N       |`Attempt to read and extract tag data`
+|`lf hid clone           `|N       |`Clone HID tag to T55x7`
+|`lf hid sim             `|N       |`Simulate HID tag`
+|`lf hid brute           `|N       |`Bruteforce card number against reader`
+|`lf hid watch           `|N       |`Continuously watch for cards.  Reader mode`
 
 
 ### lf hitag
@@ -690,12 +690,12 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf indala help         `|Y       |`this help`
-|`lf indala demod        `|Y       |`demodulate an indala tag (PSK1) from GraphBuffer`
-|`lf indala altdemod     `|Y       |`alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
-|`lf indala read         `|N       |`read an Indala Prox tag from the antenna`
-|`lf indala clone        `|N       |`clone Indala tag to T55x7 or Q5/T5555`
-|`lf indala sim          `|N       |`simulate Indala tag`
+|`lf indala help         `|Y       |`This help`
+|`lf indala demod        `|Y       |`Demodulate an indala tag (PSK1) from GraphBuffer`
+|`lf indala altdemod     `|Y       |`Alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
+|`lf indala read         `|N       |`Read an Indala Prox tag from the antenna`
+|`lf indala clone        `|N       |`Clone Indala tag to T55x7 or Q5/T5555`
+|`lf indala sim          `|N       |`Simulate Indala tag`
 
 
 ### lf io
@@ -704,12 +704,12 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf io help             `|Y       |`this help`
-|`lf io demod            `|Y       |`demodulate an IOProx tag from the GraphBuffer`
-|`lf io read             `|N       |`attempt to read and extract tag data`
-|`lf io clone            `|N       |`clone IOProx tag to T55x7 or Q5/T5555`
-|`lf io sim              `|N       |`simulate IOProx tag`
-|`lf io watch            `|N       |`continuously watch for cards. Reader mode`
+|`lf io help             `|Y       |`This help`
+|`lf io demod            `|Y       |`Demodulate an IOProx tag from the GraphBuffer`
+|`lf io read             `|N       |`Attempt to read and extract tag data`
+|`lf io clone            `|N       |`Clone IOProx tag to T55x7 or Q5/T5555`
+|`lf io sim              `|N       |`Simulate IOProx tag`
+|`lf io watch            `|N       |`Continuously watch for cards. Reader mode`
 
 
 ### lf jablotron
@@ -721,8 +721,8 @@ Check column "offline" for their availability.
 |`lf jablotron help      `|Y       |`This help`
 |`lf jablotron demod     `|Y       |`Demodulate an Jablotron tag from the GraphBuffer`
 |`lf jablotron read      `|N       |`Attempt to read and extract tag data from the antenna`
-|`lf jablotron clone     `|N       |`clone jablotron tag to T55x7 or Q5/T5555`
-|`lf jablotron sim       `|N       |`simulate jablotron tag`
+|`lf jablotron clone     `|N       |`Clone jablotron tag to T55x7 or Q5/T5555`
+|`lf jablotron sim       `|N       |`Simulate jablotron tag`
 
 
 ### lf keri
@@ -734,8 +734,8 @@ Check column "offline" for their availability.
 |`lf keri help           `|Y       |`This help`
 |`lf keri demod          `|Y       |`Demodulate an KERI tag from the GraphBuffer`
 |`lf keri read           `|N       |`Attempt to read and extract tag data from the antenna`
-|`lf keri clone          `|N       |`clone KERI tag to T55x7 or Q5/T5555`
-|`lf keri sim            `|N       |`simulate KERI tag`
+|`lf keri clone          `|N       |`Clone KERI tag to T55x7 or Q5/T5555`
+|`lf keri sim            `|N       |`Simulate KERI tag`
 
 
 ### lf motorola
@@ -747,8 +747,8 @@ Check column "offline" for their availability.
 |`lf motorola help       `|Y       |`This help`
 |`lf motorola demod      `|Y       |`Demodulate an MOTOROLA tag from the GraphBuffer`
 |`lf motorola read       `|N       |`Attempt to read and extract tag data from the antenna`
-|`lf motorola clone      `|N       |`clone MOTOROLA tag to T55x7`
-|`lf motorola sim        `|N       |`simulate MOTOROLA tag`
+|`lf motorola clone      `|N       |`Clone MOTOROLA tag to T55x7`
+|`lf motorola sim        `|N       |`Simulate MOTOROLA tag`
 
 
 ### lf nedap
@@ -774,8 +774,8 @@ Check column "offline" for their availability.
 |`lf nexwatch help       `|Y       |`This help`
 |`lf nexwatch demod      `|Y       |`Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer`
 |`lf nexwatch read       `|N       |`Attempt to Read and Extract tag data from the antenna`
-|`lf nexwatch clone      `|N       |`clone NexWatch tag to T55x7`
-|`lf nexwatch sim        `|N       |`simulate NexWatch tag`
+|`lf nexwatch clone      `|N       |`Clone NexWatch tag to T55x7`
+|`lf nexwatch sim        `|N       |`Simulate NexWatch tag`
 
 
 ### lf noralsy
@@ -787,8 +787,8 @@ Check column "offline" for their availability.
 |`lf noralsy help        `|Y       |`This help`
 |`lf noralsy demod       `|Y       |`Demodulate an Noralsy tag from the GraphBuffer`
 |`lf noralsy read        `|N       |`Attempt to read and extract tag data from the antenna`
-|`lf noralsy clone       `|N       |`clone Noralsy tag to T55x7 or Q5/T5555`
-|`lf noralsy sim         `|N       |`simulate Noralsy tag`
+|`lf noralsy clone       `|N       |`Clone Noralsy tag to T55x7 or Q5/T5555`
+|`lf noralsy sim         `|N       |`Simulate Noralsy tag`
 
 
 ### lf pac
@@ -800,8 +800,8 @@ Check column "offline" for their availability.
 |`lf pac help            `|Y       |`This help`
 |`lf pac demod           `|Y       |`Demodulate a PAC tag from the GraphBuffer`
 |`lf pac read            `|N       |`Attempt to read and extract tag data from the antenna`
-|`lf pac clone           `|N       |`clone PAC tag to T55x7`
-|`lf pac sim             `|N       |`simulate PAC tag`
+|`lf pac clone           `|N       |`Clone PAC tag to T55x7`
+|`lf pac sim             `|N       |`Simulate PAC tag`
 
 
 ### lf paradox
@@ -813,8 +813,8 @@ Check column "offline" for their availability.
 |`lf paradox help        `|Y       |`This help`
 |`lf paradox demod       `|Y       |`Demodulate a Paradox FSK tag from the GraphBuffer`
 |`lf paradox read        `|N       |`Attempt to read and Extract tag data from the antenna`
-|`lf paradox clone       `|N       |`clone paradox tag to T55x7`
-|`lf paradox sim         `|N       |`simulate paradox tag`
+|`lf paradox clone       `|N       |`Clone paradox tag to T55x7`
+|`lf paradox sim         `|N       |`Simulate paradox tag`
 
 
 ### lf pcf7931
@@ -836,10 +836,10 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf presco help         `|Y       |`This help`
-|`lf presco demod        `|Y       |`demodulate Presco tag from the GraphBuffer`
+|`lf presco demod        `|Y       |`Demodulate Presco tag from the GraphBuffer`
 |`lf presco read         `|N       |`Attempt to read and Extract tag data`
-|`lf presco clone        `|N       |`clone presco tag to T55x7 or Q5/T5555`
-|`lf presco sim          `|N       |`simulate presco tag`
+|`lf presco clone        `|N       |`Clone presco tag to T55x7 or Q5/T5555`
+|`lf presco sim          `|N       |`Simulate presco tag`
 
 
 ### lf pyramid
@@ -848,11 +848,11 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`lf pyramid help        `|Y       |`this help`
-|`lf pyramid demod       `|Y       |`demodulate a Pyramid FSK tag from the GraphBuffer`
-|`lf pyramid read        `|N       |`attempt to read and extract tag data`
-|`lf pyramid clone       `|N       |`clone pyramid tag to T55x7 or Q5/T5555`
-|`lf pyramid sim         `|N       |`simulate pyramid tag`
+|`lf pyramid help        `|Y       |`This help`
+|`lf pyramid demod       `|Y       |`Demodulate a Pyramid FSK tag from the GraphBuffer`
+|`lf pyramid read        `|N       |`Attempt to read and extract tag data`
+|`lf pyramid clone       `|N       |`Clone pyramid tag to T55x7 or Q5/T5555`
+|`lf pyramid sim         `|N       |`Simulate pyramid tag`
 
 
 ### lf securakey
@@ -864,8 +864,8 @@ Check column "offline" for their availability.
 |`lf securakey help      `|Y       |`This help`
 |`lf securakey demod     `|Y       |`Demodulate an Securakey tag from the GraphBuffer`
 |`lf securakey read      `|N       |`Attempt to read and extract tag data from the antenna`
-|`lf securakey clone     `|N       |`clone Securakey tag to T55x7`
-|`lf securakey sim       `|N       |`simulate Securakey tag`
+|`lf securakey clone     `|N       |`Clone Securakey tag to T55x7`
+|`lf securakey sim       `|N       |`Simulate Securakey tag`
 
 
 ### lf ti
@@ -919,8 +919,8 @@ Check column "offline" for their availability.
 |`lf viking help         `|Y       |`This help`
 |`lf viking demod        `|Y       |`Demodulate a Viking tag from the GraphBuffer`
 |`lf viking read         `|N       |`Attempt to read and Extract tag data from the antenna`
-|`lf viking clone        `|N       |`clone Viking tag to T55x7 or Q5/T5555`
-|`lf viking sim          `|N       |`simulate Viking tag`
+|`lf viking clone        `|N       |`Clone Viking tag to T55x7 or Q5/T5555`
+|`lf viking sim          `|N       |`Simulate Viking tag`
 
 
 ### lf visa2000
@@ -930,15 +930,15 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf visa2000 help       `|Y       |`This help`
-|`lf visa2000 demod      `|Y       |`demodulate an VISA2000 tag from the GraphBuffer`
-|`lf visa2000 read       `|N       |`attempt to read and extract tag data from the antenna`
-|`lf visa2000 clone      `|N       |`clone Visa2000 tag to T55x7 or Q5/T5555`
-|`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
+|`lf visa2000 demod      `|Y       |`Demodulate an VISA2000 tag from the GraphBuffer`
+|`lf visa2000 read       `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf visa2000 clone      `|N       |`Clone Visa2000 tag to T55x7 or Q5/T5555`
+|`lf visa2000 sim        `|N       |`Simulate Visa2000 tag`
 
 
 ### mem
 
- { Flash Memory manipulation... }
+ { Flash memory manipulation... }
 
 |command                  |offline |description
 |-------                  |------- |-----------
