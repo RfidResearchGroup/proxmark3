@@ -348,6 +348,20 @@ typedef struct {
 
 static int CmdHelp(const char *Cmd);
 
+static const char *getEncryptionAlgoStr(uint8_t algo) {
+    switch(algo) {
+        case MFDES_ALGO_AES :
+            return "AES";
+        case MFDES_ALGO_3DES :
+            return "3DES";
+        case MFDES_ALGO_DES :
+            return "DES";
+        case MFDES_ALGO_3K3DES :
+            return "3K3DES";
+        default :
+            return "";
+    }
+}
 /*
   The 7 MSBits (= n) code the storage size itself based on 2^n,
   the LSBit is set to '0' if the size is exactly 2^n
@@ -1114,6 +1128,12 @@ static int handler_desfire_freemem(uint32_t *free_mem) {
 }
 
 static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t new_algo, uint8_t *old_key, uint8_t old_algo, uint8_t aes_version) {
+
+    if (new_key == NULL || old_key == NULL) {
+        return PM3_EINVARG;
+    }
+
+    // AID == 000000  6bits LSB needs to be 0    
     key_no &= 0x0F;
 
     /*
@@ -1121,24 +1141,34 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
      * changing the card master key to one of them require a key_no tweak.
      */
     if (0x000000 == tag->selected_application) {
+        
+        // PICC master key, 6bits LSB needs to be 0
+        key_no = 0x00;
+        
+        // PICC master key, keyalgo specific 2bit MSB
         switch (new_algo) {
             case MFDES_ALGO_DES:
-                break;
+            case MFDES_ALGO_3DES:
+                break;            // 00xx xxx
             case MFDES_ALGO_3K3DES:
-                key_no |= 0x40;
+                key_no |= 0x40;   // 01xx xxx
                 break;
             case MFDES_ALGO_AES:
-                key_no |= 0x80;
+                key_no |= 0x80;   // 10xx xxx
                 break;
         }
     }
 
-    uint8_t data[24 * 4] = {key_no};
+    // Variable length ciphered key data 26-42 bytes plus padding..
+    uint8_t data[64] = {key_no};
     sAPDU apdu = {0x90, MFDES_CHANGE_KEY, 0x00, 0x00, 0x01, data}; // 0xC4
 
     uint8_t new_key_length = 16;
     switch (new_algo) {
         case MFDES_ALGO_DES:
+            new_key_length = 8;
+            break;
+        case MFDES_ALGO_3DES:
         case MFDES_ALGO_AES:
             new_key_length = 16;
             break;
@@ -1223,7 +1253,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
         tag->session_key = NULL;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // --- GET SIGNATURE
@@ -3908,7 +3938,11 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         PrintAndLogEx(WARNING, "New key must include %d HEX symbols", keylength);
         return PM3_EINVARG;
     }
-
+    
+    PrintAndLogEx(INFO, "changing key number 0x%02x", cmdKeyNo);
+    PrintAndLogEx(INFO, "old key: %s (%s)", sprint_hex_inrow(key, keylen), getEncryptionAlgoStr(cmdAuthAlgo));
+    PrintAndLogEx(INFO, "new key: %s (%s)", sprint_hex_inrow(newkey, newkeylen), getEncryptionAlgoStr(newcmdAuthAlgo));
+    
     int error = mifare_desfire_change_key(cmdKeyNo, newkey, newcmdAuthAlgo, key, cmdAuthAlgo, aesversion);
     if (error == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "  Successfully changed key.");
