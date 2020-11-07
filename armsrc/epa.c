@@ -541,44 +541,44 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
 int EPA_Setup(void) {
 
 #ifdef WITH_ISO14443a
-{
-    // first, look for type A cards
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    // power up the field
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-    iso14a_card_select_t card_a_info;
-    int return_code = iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false);
+    {
+        // first, look for type A cards
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        // power up the field
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
+        iso14a_card_select_t card_a_info;
+        int return_code = iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false);
 
-    if (return_code == 1) {
-        uint8_t pps_response[3];
-        uint8_t pps_response_par[1];
-        // send the PPS request
-        ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
-        return_code = ReaderReceive(pps_response, pps_response_par);
-        if (return_code != 3 || pps_response[0] != 0xD0) {
-            return return_code == 0 ? 2 : return_code;
+        if (return_code == 1) {
+            uint8_t pps_response[3];
+            uint8_t pps_response_par[1];
+            // send the PPS request
+            ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
+            return_code = ReaderReceive(pps_response, pps_response_par);
+            if (return_code != 3 || pps_response[0] != 0xD0) {
+                return return_code == 0 ? 2 : return_code;
+            }
+            Dbprintf("ISO 14443 Type A");
+            iso_type = 'a';
+            return 0;
         }
-        Dbprintf("ISO 14443 Type A");
-        iso_type = 'a';
-        return 0;
     }
-}
 #endif
 #ifdef WITH_ISO14443b
-{
-    // if we're here, there is no type A card, so we look for type B
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    // power up the field
-    iso14443b_setup();
-    iso14b_card_select_t card_b_info;
-    int return_code = iso14443b_select_card(&card_b_info);
+    {
+        // if we're here, there is no type A card, so we look for type B
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        // power up the field
+        iso14443b_setup();
+        iso14b_card_select_t card_b_info;
+        int return_code = iso14443b_select_card(&card_b_info);
 
-    if (return_code == 0) {
-        Dbprintf("ISO 14443 Type B");
-        iso_type = 'b';
-        return 0;
+        if (return_code == 0) {
+            Dbprintf("ISO 14443 Type B");
+            iso_type = 'b';
+            return 0;
+        }
     }
-}
 #endif
     Dbprintf("No card found");
     return 1;

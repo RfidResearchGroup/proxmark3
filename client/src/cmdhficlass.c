@@ -878,16 +878,16 @@ static int CmdHFiClassELoad(const char *Cmd) {
     }
 
     DumpFileType_t dftype = BIN;
-    
+
     bool use_json = arg_get_lit(ctx, 2);
     bool use_eml = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-    
+
     if (use_json && use_eml) {
         PrintAndLogEx(ERR, "Error: can't specify both JSON & EML");
         return PM3_EINVARG;
     }
-    
+
     if (use_json) {
         dftype = JSON;
     } else if (use_eml) {
@@ -2325,7 +2325,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool test = arg_get_lit(ctx, 2);
-    bool longtest = arg_get_lit(ctx, 3); 
+    bool longtest = arg_get_lit(ctx, 3);
 
     CLIParserFree(ctx);
 

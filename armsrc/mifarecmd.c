@@ -2420,7 +2420,7 @@ void MifareHasStaticNonce(void) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
         CHK_TIMEOUT();
-        
+
         memset(rec, 0x00, sizeof(rec));
     }
 
@@ -2736,10 +2736,10 @@ void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t tearoff_time, uint8_t *datain) {
     // write cmd to send, include CRC
     // 1b write, 1b block, 4b data, 2 crc
     uint8_t cmd[] = {
-            MIFARE_ULC_WRITE, blockNo, 
-            data_testwrite[0], data_testwrite[1], data_testwrite[2], data_testwrite[3],
-            0, 0
-        };
+        MIFARE_ULC_WRITE, blockNo,
+        data_testwrite[0], data_testwrite[1], data_testwrite[2], data_testwrite[3],
+        0, 0
+    };
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     // anticollision / select card
@@ -2778,10 +2778,10 @@ void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time, uint8_t *da
     uint8_t cmd[] = {
         MIFARE_ULEV1_INCR_CNT,
         counter,
-            datain[0],  // lsb
-            datain[1],  
-            datain[2],  // msb
-            datain[3],  // rfu
+        datain[0],  // lsb
+        datain[1],
+        datain[2],  // msb
+        datain[3],  // rfu
         0,
         0,
     };

@@ -722,15 +722,15 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
 
     LED_A_ON();
     / SRI512
-    
+
     > initiate  06 00       ISO14443B_INITIATE
     < xx crc crc
     > select 0e xx          ISO14443B_SELECT
     < xx nn nn
-    
+
     > readblock 08 blck_no  ISO14443B_READ_BLK
     < d0 d1 d2 d3 2byte crc
-        
+
     > get uid               ISO14443B_GET_UID
     < 81  93  99  20  92  11  02  (8byte UID in MSB  D002 199220 999381)
 

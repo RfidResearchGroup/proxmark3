@@ -406,7 +406,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
     }
 
     uint8_t *buf = NULL;
-   
+
     if (strip_leading) {
         buf = (DemodBuffer + offset);
 
@@ -427,7 +427,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
     if (len > 512)  {
         len = 512;
     }
-    
+
     if (invert) {
         buf = (DemodBuffer + offset);
         for (size_t i = 0; i < len; i++) {
@@ -439,11 +439,11 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
             }
         }
     }
-    
+
     if (print_hex) {
         buf = (DemodBuffer + offset);
         char hex[512] = {0x00};
-        int num_bits = binarraytohex(hex, sizeof(hex), (char*)buf, len);
+        int num_bits = binarraytohex(hex, sizeof(hex), (char *)buf, len);
         if (num_bits == 0) {
             return PM3_ESOFT;
         }

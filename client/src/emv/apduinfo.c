@@ -527,11 +527,11 @@ void SAPDUPrint(sAPDU apdu, size_t maxdatalen) {
                   apdu.Lc,
                   apdu.Lc
                  );
-    
+
     size_t len = apdu.Lc;
     if (maxdatalen > 0)
         len = MIN(apdu.Lc, maxdatalen);
-        
+
     PrintAndLogEx(INFO, "data { %s%s }", sprint_hex(apdu.data, len), apdu.Lc > len ? "..." : "");
 }
 

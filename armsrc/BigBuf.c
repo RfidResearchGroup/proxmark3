@@ -129,14 +129,14 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
     return (uint8_t *)BigBuf + s_bigbuf_hi;
 }
 
-// allocate a chunk of memory from BigBuf, and returns a pointer to it. 
+// allocate a chunk of memory from BigBuf, and returns a pointer to it.
 // sets the memory to zero
 uint8_t *BigBuf_calloc(uint16_t chunksize) {
     uint8_t *mem = BigBuf_malloc(chunksize);
     if (mem != NULL) {
         memset(mem, 0x00, chunksize);
     }
-    return mem;    
+    return mem;
 }
 
 // free ALL allocated chunks. The whole BigBuf is available for traces or samples again.

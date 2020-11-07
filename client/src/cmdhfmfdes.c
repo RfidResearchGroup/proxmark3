@@ -349,7 +349,7 @@ typedef struct {
 static int CmdHelp(const char *Cmd);
 
 static const char *getEncryptionAlgoStr(uint8_t algo) {
-    switch(algo) {
+    switch (algo) {
         case MFDES_ALGO_AES :
             return "AES";
         case MFDES_ALGO_3DES :
@@ -1133,7 +1133,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
         return PM3_EINVARG;
     }
 
-    // AID == 000000  6bits LSB needs to be 0    
+    // AID == 000000  6bits LSB needs to be 0
     key_no &= 0x0F;
 
     /*
@@ -1141,10 +1141,10 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
      * changing the card master key to one of them require a key_no tweak.
      */
     if (0x000000 == tag->selected_application) {
-        
+
         // PICC master key, 6bits LSB needs to be 0
         key_no = 0x00;
-        
+
         // PICC master key, keyalgo specific 2bit MSB
         switch (new_algo) {
             case MFDES_ALGO_DES:
@@ -3938,11 +3938,11 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         PrintAndLogEx(WARNING, "New key must include %d HEX symbols", keylength);
         return PM3_EINVARG;
     }
-    
+
     PrintAndLogEx(INFO, "changing key number 0x%02x", cmdKeyNo);
     PrintAndLogEx(INFO, "old key: %s (%s)", sprint_hex_inrow(key, keylen), getEncryptionAlgoStr(cmdAuthAlgo));
     PrintAndLogEx(INFO, "new key: %s (%s)", sprint_hex_inrow(newkey, newkeylen), getEncryptionAlgoStr(newcmdAuthAlgo));
-    
+
     int error = mifare_desfire_change_key(cmdKeyNo, newkey, newcmdAuthAlgo, key, cmdAuthAlgo, aesversion);
     if (error == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "  Successfully changed key.");
@@ -4660,7 +4660,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     bool keyB = arg_get_lit(ctx, 4);
 
     CLIParserFree(ctx);
-            
+
     uint16_t ndefAID = 0xe103;
     if (aidlen == 2)
         ndefAID = (aid[0] << 8) + aid[1];
@@ -4752,7 +4752,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes mad -v`") " for more details");    
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes mad -v`") " for more details");
     return PM3_SUCCESS;
 }
 */

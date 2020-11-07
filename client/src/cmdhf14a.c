@@ -1839,7 +1839,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (card.ats_len >= 3) {        // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-    
+
         PrintAndLogEx(INFO, "-------------------------- " _CYAN_("ATS") " --------------------------");
         bool ta1 = 0, tb1 = 0, tc1 = 0;
 
@@ -1851,7 +1851,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(WARNING, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
         }
 
-        PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02x %02x ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 1], card.ats[card.ats_len] );
+        PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02x %02x ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 1], card.ats[card.ats_len]);
         PrintAndLogEx(INFO, "     " _YELLOW_("%02x") "...............  TL    length is " _GREEN_("%d") " bytes", card.ats[0], card.ats[0]);
 
         if (card.ats[0] > 1) { // there is a format byte (T0)
@@ -1913,7 +1913,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                           card.ats[pos],
                           (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
                           (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
-                          );
+                         );
             pos++;
         }
 
@@ -1923,13 +1923,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             tip[0] = '\0';
             if (card.ats[0] - pos >= 7) {
 
-                snprintf(tip, sizeof(tip),"     ");
+                snprintf(tip, sizeof(tip), "     ");
 
                 if ((card.sak & 0x70) == 0x40) {  // and no GetVersion()..
 
                     if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
                         snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K/4K (SL3)");
-                        
+
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
 
                         if ((card.atqa[0] & 0x02) == 0x02)
@@ -1939,7 +1939,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
                         snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (17pF)");
-                        
+
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
                         snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (70pF)");
                     }
@@ -1973,7 +1973,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " --------------------");
 
             if (card.ats[pos] == 0xC1) {
-                PrintAndLogEx(INFO, "    %s%s", sprint_hex(card.ats + pos, calen), tip);                
+                PrintAndLogEx(INFO, "    %s%s", sprint_hex(card.ats + pos, calen), tip);
                 PrintAndLogEx(SUCCESS, "    C1.....................   Mifare or (multiple) virtual cards of various type");
                 PrintAndLogEx(SUCCESS, "       %02x..................   length is " _YELLOW_("%d") " bytes", card.ats[pos + 1], card.ats[pos + 1]);
                 switch (card.ats[pos + 2] & 0xf0) {

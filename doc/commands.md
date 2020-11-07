@@ -410,27 +410,27 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfdes help          `|Y       |`This help`
+|`hf mfdes auth          `|N       |`Tries a MIFARE DesFire Authentication`
+|`hf mfdes changekey     `|N       |`Change Key`
+|`hf mfdes chk           `|N       |`Check keys`
+|`hf mfdes enum          `|N       |`Tries enumerate all applications`
+|`hf mfdes formatpicc    `|N       |`Format PICC`
+|`hf mfdes getuid        `|N       |`Get random uid`
 |`hf mfdes info          `|N       |`Tag information`
 |`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
-|`hf mfdes enum          `|N       |`Tries enumerate all applications`
-|`hf mfdes auth          `|N       |`Tries a MIFARE DesFire Authentication`
-|`hf mfdes getuid        `|N       |`Get random uid`
-|`hf mfdes selectaid     `|N       |`Select Application ID`
 |`hf mfdes createaid     `|N       |`Create Application ID`
 |`hf mfdes deleteaid     `|N       |`Delete Application ID`
+|`hf mfdes selectaid     `|N       |`Select Application ID`
+|`hf mfdes changevalue   `|N       |`Write value of a value file (credit/debit/clear)`
+|`hf mfdes clearfile     `|N       |`Clear record File`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`Create Value File`
 |`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`
 |`hf mfdes deletefile    `|N       |`Create Delete File`
-|`hf mfdes clearfile     `|N       |`Clear record File`
+|`hf mfdes dump          `|N       |`Dump all files`
+|`hf mfdes getvalue      `|N       |`Get value of file`
 |`hf mfdes readdata      `|N       |`Read data from standard/backup/record file`
 |`hf mfdes writedata     `|N       |`Write data to standard/backup/record file`
-|`hf mfdes getvalue      `|N       |`Get value of file`
-|`hf mfdes changevalue   `|N       |`Write value of a value file (credit/debit/clear)`
-|`hf mfdes changekey     `|N       |`Change Key`
-|`hf mfdes formatpicc    `|N       |`Format PICC`
-|`hf mfdes dump          `|N       |`Dump all files`
-|`hf mfdes chk           `|N       |`Check keys`
 
 
 ### hf st
