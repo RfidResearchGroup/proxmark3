@@ -377,7 +377,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 // DESFire answers 0x1C or 67 00
                 // Plus answers 0x0B, 0x09, 0x06
                 // Which tag answers 6D 00 ??
-                if (data[0] != 0x0b && data[0] != 0x09 && data[0] != 0x1C && data[0] != 0x67) {
+                if (data[0] != 0x0b && data[0] != 0x09 && data[0] != 0x1C && data[0] != 0x67 && data[0] != 0x6d) {
                     PrintAndLogEx(INFO, _RED_("Send copy to iceman of this command output!"));
                     PrintAndLogEx(INFO, "data: %s", sprint_hex(data, datalen));
                 }

@@ -8,12 +8,10 @@
 // Proxmark3 RDV40 Smartcard module commands
 //-----------------------------------------------------------------------------
 #include "cmdsmartcard.h"
-
 #include <ctype.h>
 #include <string.h>
-
-#include "cmdparser.h"    // command_t
-#include "commonutil.h"  // ARRAYLEN
+#include "cmdparser.h"          // command_t
+#include "commonutil.h"         // ARRAYLEN
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "proxmark3.h"
@@ -23,6 +21,7 @@
 #include "emv/dump.h"
 #include "ui.h"
 #include "fileutils.h"
+#include "crc16.h"              // crc
 
 static int CmdHelp(const char *Cmd);
 
@@ -313,7 +312,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
         PrintAndLogEx(WARNING, "Invalid ATR length. len: %zu, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
 
     if (K > 0)
-        PrintAndLogEx(INFO, "Historical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
+        PrintAndLogEx(INFO, "Historical bytes | len %02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
 
     if (K > 1) {
         PrintAndLogEx(INFO, "\tHistorical bytes");
@@ -626,45 +625,72 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Sim module firmware uploading to PM3");
 
+    PacketResponseNG resp;
+
     //Send to device
     uint32_t index = 0;
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining = firmware_size;
 
-    // fast push mode
-    conn.block_after_ACK = true;
-
     while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
-        if (bytes_in_packet == bytes_remaining) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
+
+        struct {
+            uint32_t idx;
+            uint32_t bytes_in_packet;
+            uint16_t crc;
+            uint8_t data[400];
+        } PACKED upload;
+
+        uint32_t bytes_in_packet = MIN(sizeof(upload.data), bytes_remaining);
+
+        upload.idx = index + bytes_sent;
+        upload.bytes_in_packet = bytes_in_packet;
+        memcpy(upload.data, firmware + bytes_sent, bytes_in_packet);
+
+        uint8_t a = 0, b = 0;
+        compute_crc(CRC_14443_A, upload.data, bytes_in_packet, &a, &b);
+        upload.crc = (a << 8 | b);
+
         clearCommandBuffer();
-        SendCommandOLD(CMD_SMART_UPLOAD, index + bytes_sent, bytes_in_packet, 0, firmware + bytes_sent, bytes_in_packet);
-        if (!WaitForResponseTimeout(CMD_ACK, NULL, 2000)) {
+        SendCommandNG(CMD_SMART_UPLOAD, (uint8_t *)&upload, sizeof(upload));
+        if (!WaitForResponseTimeout(CMD_SMART_UPLOAD, &resp, 2000)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             free(firmware);
             return PM3_ETIMEOUT;
         }
 
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "uploading to device failed");
+            free(firmware);
+            return resp.status;
+        }
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
         PrintAndLogEx(INPLACE, "%d bytes sent", bytes_sent);
     }
-    free(firmware);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Sim module firmware updating,  don\'t turn off your PM3!");
 
     // trigger the firmware upgrade
     clearCommandBuffer();
-    SendCommandMIX(CMD_SMART_UPGRADE, firmware_size, 0, 0, NULL, 0);
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    struct {
+        uint16_t fw_size;
+        uint16_t crc;
+    } PACKED payload;
+    payload.fw_size = firmware_size;
+
+    uint8_t a = 0, b = 0;
+    compute_crc(CRC_14443_A, firmware, firmware_size, &a, &b);
+    payload.crc = (a << 8 | b);
+
+    free(firmware);
+    SendCommandNG(CMD_SMART_UPGRADE, (uint8_t *)&payload, sizeof(payload));
+    if (!WaitForResponseTimeout(CMD_SMART_UPGRADE, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-    if ((resp.oldarg[0] & 0xFF)) {
+
+    if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Sim module firmware upgrade " _GREEN_("successful"));
         PrintAndLogEx(HINT, "run " _YELLOW_("`hw status`") " to validate the fw version ");
     } else {
@@ -698,13 +724,12 @@ static int CmdSmartInfo(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
+    if (resp.status != PM3_SUCCESS) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ESOFT;
     }
@@ -771,13 +796,12 @@ static int CmdSmartReader(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
+    if (resp.status != PM3_SUCCESS) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ESOFT;
     }
@@ -816,11 +840,10 @@ static int CmdSmartSetClock(const char *Cmd) {
     struct {
         uint32_t new_clk;
     } PACKED payload;
-    
     payload.new_clk = new_clk;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SMART_SETCLOCK, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_SMART_SETCLOCK, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_SMART_SETCLOCK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "smart card select failed");
@@ -1186,14 +1209,13 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500)) {
 
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
+    if (resp.status != PM3_SUCCESS) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }

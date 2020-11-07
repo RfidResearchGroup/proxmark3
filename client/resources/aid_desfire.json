@@ -132,8 +132,7 @@
         "Vendor": "Clipper",
         "Country": "US",
         "Name": "Clipper Card/San Francisco Bay Area ",
-        "Description": "(FIDs 02: current balance; 04: Refill History; 08: Card Information; 0E: Trip History)
-FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Card Publisher)",
+        "Description": "(FIDs 02: current balance; 04: Refill History; 08: Card Information; 0E: Trip History)\\nFFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Card Publisher)",
         "Type": "transport"
     },
     {
@@ -200,7 +199,7 @@ FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Ca
         "Name": "Uni Delft",
         "Description": "",
         "Type": "student"
-    },    
+    },
     {
         "AID": "535504",
         "Vendor": "TU Delft",
@@ -336,5 +335,21 @@ FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Ca
         "Name": "MemberCard",
         "Description": "CAR2GO - Member Card",
         "Type": "carsharing"
+    },
+    {
+        "AID": "2F81F4",
+        "Vendor": "Gallagher",
+        "Country": "NZ",
+        "Name": "Access control",
+        "Description": "Card Application Directory (CAD)",
+        "Type": ""
+    },
+    {
+        "AID": "2081F4",
+        "Vendor": "Gallagher",
+        "Country": "NZ",
+        "Name": "Access control",
+        "Description": "Cardax Card Data Application",
+        "Type": ""
     }
 ]

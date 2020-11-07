@@ -517,3 +517,21 @@ void APDUPrintEx(APDUStruct apdu, size_t maxdatalen) {
     if (maxdatalen > 0)
         PrintAndLogEx(INFO, "data: %s%s", sprint_hex(apdu.data, MIN(apdu.lc, maxdatalen)), apdu.lc > maxdatalen ? "..." : "");
 }
+
+void SAPDUPrint(sAPDU apdu, size_t maxdatalen) {
+    PrintAndLogEx(INFO, "APDU: CLA 0x%02x, INS 0x%02x, P1 0x%02x, P2 0x%02x, Lc 0x%02x(%d)",
+                  apdu.CLA,
+                  apdu.INS,
+                  apdu.P1,
+                  apdu.P2,
+                  apdu.Lc,
+                  apdu.Lc
+                 );
+
+    size_t len = apdu.Lc;
+    if (maxdatalen > 0)
+        len = MIN(apdu.Lc, maxdatalen);
+
+    PrintAndLogEx(INFO, "data { %s%s }", sprint_hex(apdu.data, len), apdu.Lc > len ? "..." : "");
+}
+

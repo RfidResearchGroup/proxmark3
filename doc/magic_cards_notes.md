@@ -267,7 +267,7 @@ Android compatible
   * some cards use a fix "08" or "18" in anticollision, no matter the block0. Including all 7b.
 * BCC:
   * some cards play blindly the block0 BCC byte, beware!
-  * some cards compute a proper BCC in anticollision. Including all 7b comuting their BCC0 and BCC1.
+  * some cards compute a proper BCC in anticollision. Including all 7b computing their BCC0 and BCC1.
 * ATS:
   * some cards don't reply to RATS
   * some reply with an ATS
@@ -363,7 +363,7 @@ Initial UID is AA55C396
 
 ### Identify
 
-Only possible before personalisation.
+Only possible before personalization.
 
 ```
 hf 14a info

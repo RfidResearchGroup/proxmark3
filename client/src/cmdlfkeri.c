@@ -22,7 +22,7 @@
 #include "protocols.h"    // for T55xx config register definitions
 #include "lfdemod.h"      // preamble test
 #include "cmdlft55xx.h"   // verifywrite
-#include "cmdlfem4x05.h"  // 
+#include "cmdlfem4x05.h"  //
 
 static int CmdHelp(const char *Cmd);
 typedef enum  {Scramble = 0, Descramble = 1} KeriMSScramble_t;
@@ -154,7 +154,7 @@ int demodKeri(bool verbose) {
 
         raw1 = bytebits_to_byte(DemodBuffer, 32);
         raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    
+
         CmdPrintDemodBuff("x");
     }
 
@@ -166,7 +166,7 @@ int demodKeri(bool verbose) {
     ID &= 0x7FFFFFFF;
 
     PrintAndLogEx(SUCCESS, "KERI - Internal ID: " _GREEN_("%u") ", Raw: %08X%08X", ID, raw1, raw2);
-    
+
     // Just need to the low 32 bits without the 111 trailer
     CmdKeriMSScramble(Descramble, &fc, &cardid, &raw2);
 
@@ -187,7 +187,7 @@ static int CmdKeriRead(const char *Cmd) {
 
 static int CmdKeriClone(const char *Cmd) {
 
-    bool q5 = false, em4305 = false;
+    bool q5 = false, em = false;
 
     uint8_t keritype[2] = {'i'}; // default to internalid
     int typeLen = 0;
@@ -227,13 +227,13 @@ static int CmdKeriClone(const char *Cmd) {
     char cardtype[16] = {"T55x7"};
     if (arg_get_lit(ctx, 1)) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_PSK1 | T5555_SET_BITRATE(32) | T5555_PSK_RF_2 | 2 << T5555_MAXBLOCK_SHIFT;
-        snprintf(cardtype, sizeof(cardtype) ,"Q5/T5555");
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
         q5 = true;
     }
     if (arg_get_lit(ctx, 5)) {
         blocks[0] = EM4305_KERI_CONFIG_BLOCK;
-        snprintf(cardtype, sizeof(cardtype) ,"EM4305/4469");
-        em4305 = true;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+        em = true;
     }
 
     typeLen = sizeof(keritype);
@@ -242,8 +242,8 @@ static int CmdKeriClone(const char *Cmd) {
     fc = arg_get_int_def(ctx, 3, 0);
     cid = arg_get_int_def(ctx, 4, 0);
     CLIParserFree(ctx);
-    
-    if (q5 && em4305) {
+
+    if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
@@ -273,12 +273,12 @@ static int CmdKeriClone(const char *Cmd) {
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
-    if (em4305) {
+    if (em) {
         res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    
+
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf keri read`") " to verify");
     return res;

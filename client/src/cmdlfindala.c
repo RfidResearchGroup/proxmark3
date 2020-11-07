@@ -268,7 +268,7 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "DEBUG: Indala - printing demodbuffer");
-        printDemodBuff();
+        printDemodBuff(0, false, false, false);
     }
     return PM3_SUCCESS;
 }

@@ -372,3 +372,13 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
 
     return PM3_SUCCESS;
 }
+
+int MADDFDecodeAndPrint(uint32_t short_aid) {
+    open_mad_file(&mad_known_aids, false);
+
+    char fmt[50];
+    sprintf(fmt, "  MAD AID Function 0x%04X    :" _YELLOW_("%s"), short_aid, "%s");
+    print_aid_description(mad_known_aids, short_aid, fmt, false);
+    close_mad_file(mad_known_aids);
+    return PM3_SUCCESS;
+}

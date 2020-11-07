@@ -196,15 +196,16 @@ int demodPyramid(bool verbose) {
         PrintAndLogEx(SUCCESS, "Pyramid - len: " _GREEN_("%d") " -unknown- Card: " _GREEN_("%d") ", Raw: %08x%08x%08x%08x", fmtLen, cardnum, rawHi3, rawHi2, rawHi, rawLo);
     }
 
-    PrintAndLogEx(DEBUG, "DEBUG: Pyramid: checksum : 0x%02X - %02X - %s"
+    PrintAndLogEx(DEBUG, "DEBUG: Pyramid: checksum : 0x%02X - 0x%02X - %s"
                   , checksum
                   , checkCS
                   , (checksum == checkCS) ? _GREEN_("ok") : _RED_("fail")
                  );
 
     PrintAndLogEx(DEBUG, "DEBUG: Pyramid: idx: %d, Len: %d, Printing Demod Buffer:", idx, 128);
-    if (g_debugMode)
-        printDemodBuff();
+    if (g_debugMode) {
+        printDemodBuff(0, false, false, false);
+    }
 
     return PM3_SUCCESS;
 }

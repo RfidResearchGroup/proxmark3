@@ -1,7 +1,7 @@
 <a id="Top"></a>
 # Command Cheat Sheet
 
-|Generic|Low Frequence 125 kHz|High Frequence 13.56 MHz|
+|Generic|Low Frequency 125 kHz|High Frequency 13.56 MHz|
 |---|---|---|
 |[Generic](#Generic)|[T55XX](#T55XX)|[MIFARE](#MIFARE)|
 |[Data](#Data)|[HID Prox](#HID-Prox)|[iCLASS](#iCLASS)|
@@ -135,7 +135,7 @@ Options
 ---
 f <filename>     : load iCLASS tag-dump filename
 
-pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 ```
 
 Clone iCLASS Legacy Sequence
@@ -160,7 +160,7 @@ pm3 --> hf iclass sim 3
 Simulate iCLASS Sequence
 ```
 pm3 --> hf iclass dump k 0
-pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 pm3 --> hf iclass sim 3
 ```
 
@@ -173,7 +173,7 @@ k <key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
 e              : If 'e' is specified, elite computations applied to key
 
 pm3 --> hf iclass sim 2
-pm3 --> hf iclass loclass f iclass_mac_attack.bin
+pm3 --> hf iclass loclass -f iclass_mac_attack.bin
 pm3 --> hf iclass managekeys n 7 k <Kcus>
 pm3 --> hf iclass dump k 7 e
 ```
@@ -324,7 +324,7 @@ pm3 --> script run hf_mf_uidbruteforce -s 0x11223344556677 -e 0x11223344556679 -
 ## Wiegand manipulation
 ^[Top](#top)
 
-List all available weigand formats in client
+List all available wiegand formats in client
 ```
 pm3 --> wiegand list
 ```
@@ -592,7 +592,7 @@ Options
 -k <key>        The current six byte key with write access
 -n <key>        The new key that will be written to the card
 -a <access>     The new access bytes that will be written to the card
--x              Execute the commands aswell
+-x              Execute the commands as well
 
 pm3 --> script run hf_mf_format -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ```

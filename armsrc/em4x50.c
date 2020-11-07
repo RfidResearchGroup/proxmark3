@@ -476,7 +476,7 @@ static bool find_double_listen_window(bool bcommand) {
                     // data transmission from card has to be stopped, because
                     // a commamd shall be issued
 
-                    // unfortunately the posititon in listen window (where
+                    // unfortunately the position in listen window (where
                     // command request has to be sent) has gone, so if a
                     // second window follows - sync on this to issue a command
 
@@ -522,7 +522,7 @@ static bool find_em4x50_tag(void) {
 static bool request_receive_mode(void) {
 
     // To issue a command we have to find a listen window first.
-    // Because identification and sychronization at the same time is not
+    // Because identification and synchronization at the same time is not
     // possible when using pulse lengths a double listen window is used.
     bool bcommand = true;
     return find_double_listen_window(bcommand);
@@ -559,7 +559,7 @@ static bool check_ack(bool bliw) {
                     // "bit" of listen window)
                     wait_timer(FPGA_TIMER_0, T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
 
-                    // check for listen window (if first bit cannot be inerpreted
+                    // check for listen window (if first bit cannot be interpreted
                     // as a valid bit it must belong to a listen window)
                     if (get_next_bit() == EM4X50_BIT_OTHER) {
 
@@ -730,7 +730,7 @@ static bool standard_read(int *now) {
     int fwr = *now;
     uint8_t bits[EM4X50_TAG_WORD] = {0};
 
-    // start with the identification of two succsessive listening windows
+    // start with the identification of two successive listening windows
     if (find_double_listen_window(false)) {
 
         // read and save words until following double listen window is detected
@@ -884,7 +884,7 @@ static int write(uint8_t word[4], uint8_t address) {
         // send data
         em4x50_send_word(word);
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             reply_ng(CMD_LF_EM4X50_WRITE, PM3_ETEAROFF, NULL, 0);
             return PM3_ETEAROFF;
         } else {
@@ -923,7 +923,7 @@ static int write_password(uint8_t password[4], uint8_t new_password[4]) {
         // send address data
         em4x50_send_word(password);
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             reply_ng(CMD_LF_EM4X50_WRITE, PM3_ETEAROFF, NULL, 0);
             return PM3_ETEAROFF;
         } else {
@@ -1021,7 +1021,7 @@ void em4x50_write(em4x50_data_t *etd) {
 
 void em4x50_write_password(em4x50_data_t *etd) {
 
-    // sinmple change of password
+    // simple change of password
 
     bool bsuccess = false;
 
@@ -1073,7 +1073,7 @@ void em4x50_wipe(em4x50_data_t *etd) {
             // to verify result reset EM4x50
             if (reset()) {
 
-                // login not necessary because protectd word has been set to 0
+                // login not necessary because protected word has been set to 0
                 // -> no read protected words
                 // -> selective read can be called immediately
                 if (selective_read(addresses)) {

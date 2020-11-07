@@ -46,6 +46,7 @@
 #include "util.h"
 #include "ticks.h"
 #include "commonutil.h"
+#include "crc16.h"
 
 #ifdef WITH_LCD
 #include "LCD.h"
@@ -64,6 +65,9 @@
 #include "spiffs.h"
 #endif
 
+int DBGLEVEL = DBG_ERROR;
+uint8_t g_trigger = 0;
+bool g_hf_field_active = false;
 extern uint32_t _stack_start, _stack_end;
 struct common_area common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
@@ -85,6 +89,12 @@ int tearoff_hook(void) {
     } else {
         return PM3_SUCCESS;     // SUCCESS = the hook didn't do anything
     }
+}
+
+void hf_field_off(void) {
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    g_hf_field_active = false;
 }
 
 void send_wtx(uint16_t wtx) {
@@ -1181,7 +1191,11 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_ISO14443b
         case CMD_HF_SRI_READ: {
-            ReadSTMemoryIso14443b(packet->oldarg[0]);
+            struct p {
+                uint8_t blockno;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            ReadSTBlock(payload->blockno);
             break;
         }
         case CMD_HF_ISO14443B_SNIFF: {
@@ -1498,9 +1512,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint8_t counter;
                 uint32_t tearoff_time;
+                uint8_t value[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareU_Counter_Tearoff(payload->counter, payload->tearoff_time);
+            MifareU_Counter_Tearoff(payload->counter, payload->tearoff_time, payload->value);
             break;
         }
         case CMD_HF_MIFARE_STATIC_NONCE: {
@@ -1630,13 +1645,44 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SMART_UPLOAD: {
             // upload file from client
+            struct p {
+                uint32_t idx;
+                uint32_t bytes_in_packet;
+                uint16_t crc;
+                uint8_t data[400];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
             uint8_t *mem = BigBuf_get_addr();
-            memcpy(mem + packet->oldarg[0], packet->data.asBytes, PM3_CMD_DATA_SIZE);
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+            memcpy(mem + payload->idx, payload->data, payload->bytes_in_packet);
+
+            uint8_t a = 0, b = 0;
+            compute_crc(CRC_14443_A, mem + payload->idx,  payload->bytes_in_packet, &a, &b);
+            int res = PM3_SUCCESS;
+            if (payload->crc != (a << 8 | b)) {
+                DbpString("CRC Failed");
+                res = PM3_ESOFT;
+            }
+            reply_ng(CMD_SMART_UPLOAD, res, NULL, 0);
             break;
         }
         case CMD_SMART_UPGRADE: {
-            SmartCardUpgrade(packet->oldarg[0]);
+            struct p {
+                uint16_t fw_size;
+                uint16_t crc;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+
+            uint8_t *fwdata = BigBuf_get_addr();
+            uint8_t a = 0, b = 0;
+            compute_crc(CRC_14443_A, fwdata, payload->fw_size, &a, &b);
+
+            if (payload->crc != (a << 8 | b)) {
+                Dbprintf("CRC Failed, 0x[%04x] != 0x[%02x%02x]", payload->crc, a, b);
+                reply_ng(CMD_SMART_UPGRADE, PM3_ESOFT, NULL, 0);
+            } else {
+                SmartCardUpgrade(payload->fw_size);
+            }
+            fwdata = NULL;
             break;
         }
 #endif
@@ -2262,14 +2308,6 @@ void  __attribute__((noreturn)) AppMain(void) {
     for (uint32_t *p = &_stack_start; p < (uint32_t *)((uintptr_t)&_stack_end - 0x200); ++p) {
         *p = 0xdeadbeef;
     }
-
-    if (common_area.magic != COMMON_AREA_MAGIC || common_area.version != 1) {
-        /* Initialize common area */
-        memset(&common_area, 0, sizeof(common_area));
-        common_area.magic = COMMON_AREA_MAGIC;
-        common_area.version = 1;
-    }
-    common_area.flags.osimage_present = 1;
 
     LEDsoff();
 

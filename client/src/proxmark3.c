@@ -502,7 +502,7 @@ static void set_my_user_directory(void) {
         // if not found, default to current directory
         if (my_user_directory == NULL) {
             my_user_directory = GetCurrentDir(_cwd_Buffer, sizeof(_cwd_Buffer));
-            // change all slashs to / (windows should not care...
+            // change all slashes to / (windows should not care...
             for (int i = 0; i < strlen(_cwd_Buffer); i++)
                 if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
             //      my_user_directory = ".";
@@ -1044,7 +1044,7 @@ int main(int argc, char *argv[]) {
     InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
     MainGraphics();
 #  else
-    // for *nix distro's,  check enviroment variable to verify a display
+    // for *nix distro's,  check environment variable to verify a display
     char *display = getenv("DISPLAY");
     if (display && strlen(display) > 1) {
         InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);

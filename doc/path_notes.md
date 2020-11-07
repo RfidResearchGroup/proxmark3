@@ -67,7 +67,7 @@ Dictionaries used by the client will be copied to
 Here you find the default dictionaries used for commands like `hf mf chk`, `hf mf fchk`, `lf t55xx chk`
 A dictionary file is a text based file with one key per line in hexdecimal form.
 The length of the key is decided by the Proxmark3 client for the different commands.  All chars afterwards on line is ignored.
-if key isn't a hex number, the key is igonored.
+if key isn't a hex number, the key is ignored.
 
 - t55xx, Mifare Ultralight/NTAG  - uses 4 hexbytes (11223344)
 - Mifare classic uses 6 hexbytes (112233445566)

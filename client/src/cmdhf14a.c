@@ -27,6 +27,9 @@
 #include "crc16.h"
 #include "util_posix.h"  // msclock
 #include "aidsearch.h"
+#include "cmdhf.h"       // handle HF plot
+#include "protocols.h"   // MAGIC_GEN_1A
+#include "emv/dump.h"    // dump_buffer
 
 bool APDUInFramingEnable = true;
 
@@ -208,8 +211,7 @@ static int usage_hf_14a_config(void) {
 }
 
 static int usage_hf_14a_sim(void) {
-//  PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
-    PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 byte UID\n");
+    PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
     PrintAndLogEx(NORMAL, "Usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "    h     : This help");
@@ -223,8 +225,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "            8 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
     PrintAndLogEx(NORMAL, "           10 = JCOP 31/41 Rothult");
-//  PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
-    PrintAndLogEx(NORMAL, "    u     : 4, 7 byte UID");
+    PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
     PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
     PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
     PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
@@ -232,7 +233,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344 x"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344556677"));
-//  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 112233445566778899AA"));
     return PM3_SUCCESS;
 }
 static int usage_hf_14a_sniff(void) {
@@ -265,6 +266,7 @@ static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
     PrintAndLogEx(NORMAL, "       x    just drop the signal field");
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
+    PrintAndLogEx(NORMAL, "       @    continuous mode. Updates hf plot as well");
     return PM3_SUCCESS;
 }
 
@@ -475,9 +477,9 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 static int CmdHF14AReader(const char *Cmd) {
 
     uint32_t cm = ISO14A_CONNECT;
-    bool disconnectAfter = true, silent = false;
+    bool disconnectAfter = true, silent = false, continuous = false;
     int cmdp = 0;
-
+    int res = PM3_SUCCESS;
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -494,6 +496,9 @@ static int CmdHF14AReader(const char *Cmd) {
             case 'x':
                 cm &= ~ISO14A_CONNECT;
                 break;
+            case '@':
+                continuous = true;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown command.");
                 return PM3_EINVARG;
@@ -503,60 +508,86 @@ static int CmdHF14AReader(const char *Cmd) {
 
     if (!disconnectAfter)
         cm |= ISO14A_NO_DISCONNECT;
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
-
-    if (ISO14A_CONNECT & cm) {
-        PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-            if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
-        /*
-            0: couldn't read
-            1: OK, with ATS
-            2: OK, no ATS
-            3: proprietary Anticollision
-        */
-        uint64_t select_status = resp.oldarg[0];
-
-        if (select_status == 0) {
-            if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        if (select_status == 3) {
-            PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-            PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-        PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
-        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
-
-        if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-            PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
-        }
-
-        if (!disconnectAfter) {
-            if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
-        }
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
+    do {
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+
+        if (ISO14A_CONNECT & cm) {
+            PacketResponseNG resp;
+            if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+
+            iso14a_card_select_t card;
+            memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+            /*
+                0: couldn't read
+                1: OK, with ATS
+                2: OK, no ATS
+                3: proprietary Anticollision
+            */
+            uint64_t select_status = resp.oldarg[0];
+
+            if (select_status == 0) {
+                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+
+            if (select_status == 3) {
+                if (!(silent && continuous)) {
+                    PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+                    PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
+                }
+                DropField();
+                res = PM3_ESOFT;
+                goto plot;
+            }
+            if (!(silent && continuous)) {
+                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+                PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
+                PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+                if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+                    PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
+                }
+            }
+            if (!disconnectAfter) {
+                if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
+            }
+        }
+plot:
+        if (continuous) {
+            res = handle_hf_plot();
+            if (res != PM3_SUCCESS) {
+                break;
+            }
+        }
+
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+    } while (continuous);
 
     if (disconnectAfter) {
-        if (!silent) PrintAndLogEx(INFO, "field dropped.");
+        if (silent == false) {
+            PrintAndLogEx(INFO, "field dropped.");
+        }
     }
 
-    return PM3_SUCCESS;
+    if (continuous)
+        return PM3_SUCCESS;
+    else
+        return res;
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
@@ -657,7 +688,9 @@ int CmdHF14ASim(const char *Cmd) {
                 param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
                 uidlen >>= 1;
                 switch (uidlen) {
-                    //case 10: flags |= FLAG_10B_UID_IN_DATA; break;
+                    case 10:
+                        flags |= FLAG_10B_UID_IN_DATA;
+                        break;
                     case 7:
                         flags |= FLAG_7B_UID_IN_DATA;
                         break;
@@ -1410,7 +1443,7 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
 
     CLIParserFree(ctx);
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t*)&param, sizeof(param));
+    SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t *)&param, sizeof(param));
     return PM3_SUCCESS;
 }
 
@@ -1459,96 +1492,132 @@ typedef enum {
     MTOTHER = 32
 } nxp_mifare_type_t;
 
-// According to NXP AN10833 Rev 3.6 MIFARE Type Identification, Table  6
-static int detect_nxp_card(uint8_t sak, uint16_t atqa) {
+// Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
+static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
     int type = MTNONE;
 
     PrintAndLogEx(SUCCESS, "Possible types:");
 
-    if (sak == 0x00) {
-        printTag("NTAG 20x / 21x / 21x TT / I2C plus");
-        printTag("MIFARE Ultralight / C / EV1 / Nano");
-        type = MTULTRALIGHT;
-    }
-
-    if (sak == 0x01) {
-        printTag("TNP3xxx (Activision Game Appliance)");
-        type = MTCLASSIC;
-    }
-
-    if ((sak & 0x04) == 0x04) {
-        printTag("Any MIFARE CL1 / NTAG424DNA");
-        type |= MTDESFIRE;
-    }
-
-    if ((sak & 0x08) == 0x08) {
-        printTag("MIFARE Classic 1K / Classic 1K CL2");
-        printTag("MIFARE Plus 2K / Plus EV1 2K");
-        printTag("MIFARE Plus CL2 2K / Plus CL2 EV1 2K");
-        type |= MTCLASSIC;
-        type |= MTPLUS;
-    }
-
-    if ((sak & 0x09) == 0x09) {
-        printTag("MIFARE Mini 0.3K / Mini CL2 0.3K");
-        type |= MTMINI;
-    }
-
-    if ((sak & 0x10) == 0x10) {
-        printTag("MIFARE Plus 2K / Plus CL2 2K");
-        type |= MTPLUS;
-    }
-
-    if ((sak & 0x11) == 0x11) {
-        printTag("MIFARE Plus 4K / Plus CL2 4K");
-        type |= MTPLUS;
-    }
-
-    if ((sak & 0x18) == 0x18) {
-        if (atqa == 0x0042) {
-            printTag("MIFARE Plus 4K / Plus EV1 4K");
-            printTag("MIFARE Plus CL2 4K / Plus CL2 EV1 4K");
-            type |= MTPLUS;
-        } else {
-            printTag("MIFARE Classic 4K / Classic 4K CL2");
+    if ((sak & 0x02) != 0x02) {
+        if ((sak & 0x19) == 0x19) {
+            printTag("MIFARE Classic 2K");
             type |= MTCLASSIC;
-        }
-    }
+        } else if ((sak & 0x38) == 0x38) {
+            printTag("SmartMX with MIFARE Classic 4K");
+            type |= MTCLASSIC;
+        } else if ((sak & 0x18) == 0x18) {
+            if (select_status == 1) {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Plus EV1 4K CL2 in SL1");
+                    printTag("MIFARE Plus S 4K CL2 in SL1");
+                    printTag("MIFARE Plus X 4K CL2 in SL1");
+                } else {
+                    printTag("MIFARE Plus EV1 4K in SL1");
+                    printTag("MIFARE Plus S 4K in SL1");
+                    printTag("MIFARE Plus X 4K in SL1");
+                }
 
-    if ((sak & 0x20) == 0x20) {
-        if (atqa == 0x0344) {
-            printTag("MIFARE DESFire MF3ICD40");
-            printTag("MIFARE DESFire EV1 2K/4K/8K / DESFire EV1 CL2 2K/4K/8K");
-            printTag("MIFARE NTAG424DNA");
+                type |= MTPLUS;
+            } else {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Classic 4K CL2");
+                } else {
+                    printTag("MIFARE Classic 4K");
+                }
+
+                type |= MTCLASSIC;
+            }
+        } else if ((sak & 0x09) == 0x09) {
+            if ((atqa & 0x0040) == 0x0040) {
+                printTag("MIFARE Mini 0.3K CL2");
+            } else {
+                printTag("MIFARE Mini 0.3K");
+            }
+
+            type |= MTMINI;
+        } else if ((sak & 0x28) == 0x28) {
+            printTag("SmartMX with MIFARE Classic 1K");
+            type |= MTCLASSIC;
+        } else if ((sak & 0x08) == 0x08) {
+            if (select_status == 1) {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Plus EV1 2K CL2 in SL1");
+                    printTag("MIFARE Plus S 2K CL2 in SL1");
+                    printTag("MIFARE Plus X 2K CL2 in SL1");
+                    printTag("MIFARE Plus SE 1K CL2");
+                } else {
+                    printTag("MIFARE Plus EV1 2K in SL1");
+                    printTag("MIFARE Plus S 2K in SL1");
+                    printTag("MIFARE Plus X 2K in SL1");
+                    printTag("MIFARE Plus SE 1K");
+                }
+
+                type |= MTPLUS;
+            } else {
+                if ((atqa & 0x0040) == 0x0040) {
+                    printTag("MIFARE Classic 1K CL2");
+                } else {
+                    printTag("MIFARE Classic 1K");
+                }
+
+                type |= MTCLASSIC;
+            }
+        } else if ((sak & 0x11) == 0x11) {
+            printTag("MIFARE Plus 4K in SL2");
+            type |= MTPLUS;
+        } else if ((sak & 0x10) == 0x10) {
+            printTag("MIFARE Plus 2K in SL2");
+            type |= MTPLUS;
+        } else if ((sak & 0x01) == 0x01) {
+            printTag("TNP3xxx (TagNPlay, Activision Game Appliance)");
+            type |= MTCLASSIC;
+        } else if ((sak & 0x24) == 0x24) {
+            printTag("MIFARE DESFire CL1");
+            printTag("MIFARE DESFire EV1 CL1");
             type |= MTDESFIRE;
-        } else if (atqa == 0x0304) {
-            printTag("MIFARE NTAG424DNA (Random ID feature)");
+        } else if ((sak & 0x20) == 0x20) {
+            if (select_status == 1) {
+                if ((atqa & 0x0040) == 0x0040) {
+                    if ((atqa & 0x0300) == 0x0300) {
+                        printTag("MIFARE DESFire CL2");
+                        printTag("MIFARE DESFire EV1 256B/2K/4K/8K CL2");
+                        printTag("MIFARE DESFire EV2 2K/4K/8K/16K/32K");
+                        printTag("MIFARE DESFire Light 640B");
+                    } else {
+                        printTag("MIFARE Plus EV1 2K/4K CL2 in SL3");
+                        printTag("MIFARE Plus S 2K/4K CL2 in SL3");
+                        printTag("MIFARE Plus X 2K/4K CL2 in SL3");
+                        printTag("MIFARE Plus SE 1K CL2");
+                        type |= MTPLUS;
+                    }
+                } else {
+                    printTag("MIFARE Plus EV1 2K/4K in SL3");
+                    printTag("MIFARE Plus S 2K/4K in SL3");
+                    printTag("MIFARE Plus X 2K/4K in SL3");
+                    printTag("MIFARE Plus SE 1K");
+                    type |= MTPLUS;
+                }
+
+                printTag("NTAG 4xx");
+                type |= MTDESFIRE;
+            }
+        } else if ((sak & 0x04) == 0x04) {
+            printTag("Any MIFARE CL1");
             type |= MTDESFIRE;
         } else {
-            printTag("MIFARE Plus 2K/4K / Plus EV1 2K/4K");
-            printTag("MIFARE Plus CL2 2K/4K / Plus CL2 EV1 2K/4K");
-            type |= MTPLUS;
-        }
-    }
-
-    if ((sak & 0x24) == 0x24) {
-        if (atqa == 0x0344) {
-            printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
-            type |= MTDESFIRE;
-        }
-    }
-
-    if ((sak & 0x28) == 0x28) {
-        if (atqa == 0x0344) {
-            printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
-            type |= MTDESFIRE;
+            printTag("MIFARE Ultralight");
+            printTag("MIFARE Ultralight C");
+            printTag("MIFARE Ultralight EV1");
+            printTag("MIFARE Ultralight Nano");
+            printTag("MIFARE Hospitality");
+            printTag("NTAG 2xx");
+            type |= MTULTRALIGHT;
         }
     }
 
     if (type == MTNONE) {
         PrintAndLogEx(WARNING, "   failed to fingerprint");
     }
-
     return type;
 }
 
@@ -1634,7 +1703,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
-        nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
+        nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
 
         isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
         isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
@@ -1654,7 +1723,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 isST = true;
                 break;
             case 0x04: // NXP
-                nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
+                nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
 
                 isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
                 isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
@@ -1770,17 +1839,20 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (card.ats_len >= 3) {        // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+
+        PrintAndLogEx(INFO, "-------------------------- " _CYAN_("ATS") " --------------------------");
         bool ta1 = 0, tb1 = 0, tc1 = 0;
-        int pos;
 
         if (select_status == 2) {
-            PrintAndLogEx(INFO, "SAK incorrectly claims that card doesn't support RATS");
+            PrintAndLogEx(INFO, "--> SAK incorrectly claims that card doesn't support RATS <--");
         }
-        PrintAndLogEx(SUCCESS, " ATS: %s", sprint_hex(card.ats, card.ats_len));
-        PrintAndLogEx(SUCCESS, "       -  TL : length is %d bytes", card.ats[0]);
+
         if (card.ats[0] != card.ats_len - 2) {
-            PrintAndLogEx(SUCCESS, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
+            PrintAndLogEx(WARNING, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
         }
+
+        PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02x %02x ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 1], card.ats[card.ats_len]);
+        PrintAndLogEx(INFO, "     " _YELLOW_("%02x") "...............  TL    length is " _GREEN_("%d") " bytes", card.ats[0], card.ats[0]);
 
         if (card.ats[0] > 1) { // there is a format byte (T0)
             ta1 = (card.ats[1] & 0x10) == 0x10;
@@ -1788,16 +1860,17 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             tc1 = (card.ats[1] & 0x40) == 0x40;
             int16_t fsci = card.ats[1] & 0x0f;
 
-            PrintAndLogEx(SUCCESS, "       -  T0 : TA1 is%s present, TB1 is%s present, "
+            PrintAndLogEx(INFO, "        " _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
                           "TC1 is%s present, FSCI is %d (FSC = %d)",
-                          (ta1 ? "" : " NOT"),
-                          (tb1 ? "" : " NOT"),
-                          (tc1 ? "" : " NOT"),
+                          card.ats[1],
+                          (ta1 ? "" : _RED_(" NOT")),
+                          (tb1 ? "" : _RED_(" NOT")),
+                          (tc1 ? "" : _RED_(" NOT")),
                           fsci,
                           fsci < ARRAYLEN(atsFSC) ? atsFSC[fsci] : -1
                          );
         }
-        pos = 2;
+        int pos = 2;
         if (ta1) {
             char dr[16], ds[16];
             dr[0] = ds[0] = '\0';
@@ -1809,19 +1882,23 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             if (card.ats[pos] & 0x04) strcat(dr, "8, ");
             if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
             if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
-            PrintAndLogEx(SUCCESS, "       - TA1 : different divisors are%s supported, "
+            PrintAndLogEx(INFO, "           " _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
                           "DR: [%s], DS: [%s]",
-                          ((card.ats[pos] & 0x80) ? " NOT" : ""),
+                          card.ats[pos],
+                          ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
                           dr,
                           ds
                          );
 
             pos++;
         }
+
         if (tb1) {
             uint32_t sfgi = card.ats[pos] & 0x0F;
             uint32_t fwi = card.ats[pos] >> 4;
-            PrintAndLogEx(SUCCESS, "       - TB1 : SFGI = %d (SFGT = %s%d/fc), FWI = %d (FWT = %d/fc)",
+
+            PrintAndLogEx(INFO, "              " _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
+                          card.ats[pos],
                           (sfgi),
                           sfgi ? "" : "(not needed) ",
                           sfgi ? (1 << 12) << sfgi : 0,
@@ -1832,31 +1909,39 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         if (tc1) {
-            PrintAndLogEx(SUCCESS, "       - TC1 : NAD is%s supported, CID is%s supported",
-                          (card.ats[pos] & 0x01) ? "" : " NOT",
-                          (card.ats[pos] & 0x02) ? "" : " NOT");
+            PrintAndLogEx(INFO, "                 " _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
+                          card.ats[pos],
+                          (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
+                          (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
+                         );
             pos++;
         }
 
-        if (card.ats[0] > pos && card.ats[0] <  card.ats_len - 2) {
-            const char *tip = "";
+        // ATS - Historial bytes and identify based on it
+        if (card.ats[0] > pos && card.ats[0] <=  card.ats_len - 2) {
+            char tip[60];
+            tip[0] = '\0';
             if (card.ats[0] - pos >= 7) {
+
+                snprintf(tip, sizeof(tip), "     ");
 
                 if ((card.sak & 0x70) == 0x40) {  // and no GetVersion()..
 
                     if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                        tip = "-> MIFARE Plus X 2K/4K (SL3)";
+                        snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K/4K (SL3)");
+
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
 
                         if ((card.atqa[0] & 0x02) == 0x02)
-                            tip = "-> MIFARE Plus S 2K (SL3)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 2K (SL3)");
                         else if ((card.atqa[0] & 0x04) == 0x04)
-                            tip = "-> MIFARE Plus S 4K (SL3)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 4K (SL3)");
 
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
-                        tip = "-> MIFARE Plus SE 1K (17pF)";
+                        snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (17pF)");
+
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
-                        tip = "-> MIFARE Plus SE 1K (70pF)";
+                        snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (70pF)");
                     }
 
                 } else {  //SAK B4,5,6
@@ -1865,37 +1950,41 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
 
                         if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                            tip = "-> MIFARE Plus X 2K (SL1)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K (SL1)");
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-                            tip = "-> MIFARE Plus S 2K (SL1)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 2K (SL1)");
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
-                            tip = "-> MIFARE Plus SE 1K (17pF)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (17pF)");
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
-                            tip = "-> MIFARE Plus SE 1K (70pF)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (70pF)");
                         }
                     } else {
                         if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                            tip = "-> MIFARE Plus X 4K (SL1)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 4K (SL1)");
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-                            tip = "-> MIFARE Plus S 4K (SL1)";
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 4K (SL1)");
                         }
                     }
                 }
-
             }
-            PrintAndLogEx(SUCCESS, "       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
+
+            uint8_t calen = card.ats[0] - pos;
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " --------------------");
+
             if (card.ats[pos] == 0xC1) {
-                PrintAndLogEx(SUCCESS, "               c1 -> Mifare or (multiple) virtual cards of various type");
-                PrintAndLogEx(SUCCESS, "                  %02x -> Length is %d bytes", card.ats[pos + 1], card.ats[pos + 1]);
+                PrintAndLogEx(INFO, "    %s%s", sprint_hex(card.ats + pos, calen), tip);
+                PrintAndLogEx(SUCCESS, "    C1.....................   Mifare or (multiple) virtual cards of various type");
+                PrintAndLogEx(SUCCESS, "       %02x..................   length is " _YELLOW_("%d") " bytes", card.ats[pos + 1], card.ats[pos + 1]);
                 switch (card.ats[pos + 2] & 0xf0) {
                     case 0x10:
-                        PrintAndLogEx(SUCCESS, "                     1x -> MIFARE DESFire");
+                        PrintAndLogEx(SUCCESS, "          1x...............   MIFARE DESFire");
                         isMifareDESFire = true;
                         isMifareClassic = false;
                         isMifarePlus = false;
                         break;
                     case 0x20:
-                        PrintAndLogEx(SUCCESS, "                     2x -> MIFARE Plus");
+                        PrintAndLogEx(SUCCESS, "          2x...............   MIFARE Plus");
                         isMifarePlus = true;
                         isMifareDESFire = false;
                         isMifareClassic = false;
@@ -1903,51 +1992,53 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 }
                 switch (card.ats[pos + 2] & 0x0f) {
                     case 0x00:
-                        PrintAndLogEx(SUCCESS, "                     x0 -> <1 kByte");
+                        PrintAndLogEx(SUCCESS, "          x0...............   < 1 kByte");
                         break;
                     case 0x01:
-                        PrintAndLogEx(SUCCESS, "                     x1 -> 1 kByte");
+                        PrintAndLogEx(SUCCESS, "          x1...............   1 kByte");
                         break;
                     case 0x02:
-                        PrintAndLogEx(SUCCESS, "                     x2 -> 2 kByte");
+                        PrintAndLogEx(SUCCESS, "          x2...............   2 kByte");
                         break;
                     case 0x03:
-                        PrintAndLogEx(SUCCESS, "                     x3 -> 4 kByte");
+                        PrintAndLogEx(SUCCESS, "          x3...............   4 kByte");
                         break;
                     case 0x04:
-                        PrintAndLogEx(SUCCESS, "                     x4 -> 8 kByte");
+                        PrintAndLogEx(SUCCESS, "          x4...............   8 kByte");
                         break;
                 }
                 switch (card.ats[pos + 3] & 0xf0) {
                     case 0x00:
-                        PrintAndLogEx(SUCCESS, "                        0x -> Engineering sample");
+                        PrintAndLogEx(SUCCESS, "             0x............   Engineering sample");
                         break;
                     case 0x20:
-                        PrintAndLogEx(SUCCESS, "                        2x -> Released");
+                        PrintAndLogEx(SUCCESS, "             2x............   Released");
                         break;
                 }
                 switch (card.ats[pos + 3] & 0x0f) {
                     case 0x00:
-                        PrintAndLogEx(SUCCESS, "                        x0 -> Generation 1");
+                        PrintAndLogEx(SUCCESS, "             x0............   Generation 1");
                         break;
                     case 0x01:
-                        PrintAndLogEx(SUCCESS, "                        x1 -> Generation 2");
+                        PrintAndLogEx(SUCCESS, "             x1............   Generation 2");
                         break;
                     case 0x02:
-                        PrintAndLogEx(SUCCESS, "                        x2 -> Generation 3");
+                        PrintAndLogEx(SUCCESS, "             x2............   Generation 3");
                         break;
                 }
                 switch (card.ats[pos + 4] & 0x0f) {
                     case 0x00:
-                        PrintAndLogEx(SUCCESS, "                           x0 -> Only VCSL supported");
+                        PrintAndLogEx(SUCCESS, "                x0.........   Only VCSL supported");
                         break;
                     case 0x01:
-                        PrintAndLogEx(SUCCESS, "                           x1 -> VCS, VCSL, and SVC supported");
+                        PrintAndLogEx(SUCCESS, "                x1.........   VCS, VCSL, and SVC supported");
                         break;
                     case 0x0E:
-                        PrintAndLogEx(SUCCESS, "                           xE -> no VCS command supported");
+                        PrintAndLogEx(SUCCESS, "                xE.........   no VCS command supported");
                         break;
                 }
+            } else {
+                dump_buffer(&card.ats[pos], calen, NULL, 1);
             }
         }
 
@@ -2019,7 +2110,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     } else {
         PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
         if ((card.sak & 0x20) == 0x20) {
-            PrintAndLogEx(INFO, "SAK incorrectly claims that card supports RATS");
+            PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
         }
     }
 
@@ -2028,7 +2119,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMagic = detect_mf_magic(true);
     }
     if (isMifareUltralight) {
-        isMagic = detect_mf_magic(false);
+        isMagic = (detect_mf_magic(false) == MAGIC_NTAG21X);
     }
     if (isMifareClassic) {
         int res = detect_classic_static_nonce();
@@ -2066,6 +2157,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isST)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
 
+    PrintAndLogEx(NORMAL, "");
     DropField();
     return select_status;
 }

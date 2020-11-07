@@ -66,7 +66,7 @@ Another possibility is if, when using the button for entering bootloader mode, t
 
 ### Determine if the bootloader was damaged or only the main OS image
 
-Unplug, press the Proxmark3 button and keep it pressed when you plug it on USB. If the red LEDs show a "off/on/off/on" pattern, you're goot, you manually entered into the bootloader mode.
+Unplug, press the Proxmark3 button and keep it pressed when you plug it on USB. If the red LEDs show a "off/on/off/on" pattern, you're good, you manually entered into the bootloader mode.
 On new bootloaders, you can release the button. If the pattern disappears, you're on an older bootloader and you've to do it again and keep the button pressed during all the flashing operation. 
 
 Once in bootloader mode, flash the main image.
@@ -200,7 +200,7 @@ brew remove proxmark3
 brew reinstall proxmark3
 ```
 
-On Ubuntu 16.04 (xenial) you should either conside a later release or you can install a later toolchain.
+On Ubuntu 16.04 (xenial) you should either consider a later release or you can install a later toolchain.
 
 
 sample error output:

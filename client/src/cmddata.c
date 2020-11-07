@@ -398,19 +398,64 @@ static int CmdSetDebugMode(const char *Cmd) {
 //by marshmellow
 // max output to 512 bits if we have more
 // doesn't take inconsideration where the demod offset or bitlen found.
-void printDemodBuff(void) {
-    int len = DemodBufferLen;
-    if (len < 1) {
-        PrintAndLogEx(INFO, "(printDemodBuff) no bits found in demod buffer");
-        return;
+int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex) {
+    size_t len = DemodBufferLen;
+    if (len == 0) {
+        PrintAndLogEx(WARNING, "Demodbuffer is empty");
+        return PM3_EINVARG;
     }
-    if (len > 512) len = 512;
 
-    PrintAndLogEx(NORMAL, "%s", sprint_bin_break(DemodBuffer, len, 32));
+    uint8_t *buf = NULL;
+
+    if (strip_leading) {
+        buf = (DemodBuffer + offset);
+
+        if (len > (DemodBufferLen - offset))
+            len = (DemodBufferLen - offset);
+
+        size_t i;
+        for (i = 0; i < len; i++) {
+            if (buf[i] == 1) break;
+        }
+        offset += i;
+    }
+
+    if (len > (DemodBufferLen - offset)) {
+        len = (DemodBufferLen - offset);
+    }
+
+    if (len > 512)  {
+        len = 512;
+    }
+
+    if (invert) {
+        buf = (DemodBuffer + offset);
+        for (size_t i = 0; i < len; i++) {
+            if (buf[i] == 1)
+                buf[i] = 0;
+            else {
+                if (buf[i] == 0)
+                    buf[i] = 1;
+            }
+        }
+    }
+
+    if (print_hex) {
+        buf = (DemodBuffer + offset);
+        char hex[512] = {0x00};
+        int num_bits = binarraytohex(hex, sizeof(hex), (char *)buf, len);
+        if (num_bits == 0) {
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(SUCCESS, "DemodBuffer: %s", hex);
+    } else {
+        PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, len, 32));
+    }
+    return PM3_SUCCESS;
 }
 
 int CmdPrintDemodBuff(const char *Cmd) {
-    bool hexMode = false;
+    bool print_hex = false;
     bool errors = false;
     bool lstrip = false;
     bool invert = false;
@@ -422,7 +467,7 @@ int CmdPrintDemodBuff(const char *Cmd) {
             case 'h':
                 return usage_data_printdemodbuf();
             case 'x':
-                hexMode = true;
+                print_hex = true;
                 cmdp++;
                 break;
             case 'o':
@@ -452,45 +497,7 @@ int CmdPrintDemodBuff(const char *Cmd) {
     //Validations
     if (errors) return usage_data_printdemodbuf();
 
-    if (DemodBufferLen == 0) {
-        PrintAndLogEx(WARNING, "Demodbuffer is empty");
-        return PM3_ESOFT;
-    }
-    if (lstrip) {
-        char *buf = (char *)(DemodBuffer + offset);
-        length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
-        uint32_t i;
-        for (i = 0; i < length; i++) {
-            if (buf[i] == 1) break;
-        }
-        offset += i;
-    }
-    length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
-
-    if (invert) {
-        char *buf = (char *)(DemodBuffer + offset);
-        for (uint32_t i = 0; i < length; i++) {
-            if (buf[i] == 1)
-                buf[i] = 0;
-            else {
-                if (buf[i] == 0)
-                    buf[i] = 1;
-            }
-        }
-    }
-
-    if (hexMode) {
-        char *buf = (char *)(DemodBuffer + offset);
-        char hex[512] = {0x00};
-        int numBits = binarraytohex(hex, sizeof(hex), buf, length);
-        if (numBits == 0) {
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(SUCCESS, "DemodBuffer: %s", hex);
-    } else {
-        PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 32));
-    }
-    return PM3_SUCCESS;
+    return printDemodBuff(offset, lstrip, invert, print_hex);
 }
 
 //by marshmellow
@@ -596,7 +603,7 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxLen, bool amplify, b
         else
             PrintAndLogEx(DEBUG, "ASK/Raw - Clock: %d - Decoded bitstream:", clk);
 
-        printDemodBuff();
+        printDemodBuff(0, false, false, false);
     }
     uint64_t lo = 0;
     uint32_t hi = 0;
@@ -792,7 +799,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     setClockGrid(clk, startIdx + clk * offset / 2);
     if (g_debugMode || verbose) {
         PrintAndLogEx(DEBUG, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2));
-        printDemodBuff();
+        printDemodBuff(offset, false, false, false);
     }
     return PM3_SUCCESS;
 }
@@ -1204,7 +1211,7 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
         if (verbose || g_debugMode) {
             PrintAndLogEx(DEBUG, "DEBUG: (FSKrawDemod) Using Clock:%u, invert:%u, fchigh:%u, fclow:%u", rfLen, invert, fchigh, fclow);
             PrintAndLogEx(NORMAL, "%s decoded bitstream:", GetFSKType(fchigh, fclow, invert));
-            printDemodBuff();
+            printDemodBuff(0, false, invert, false);
         }
         goto out;
     } else {
@@ -1327,7 +1334,7 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
     if (verbose || g_debugMode) {
         PrintAndLogEx(NORMAL, "NRZ demoded bitstream:");
         // Now output the bitstream to the scrollback by line of 16 bits
-        printDemodBuff();
+        printDemodBuff(0, false, invert, false);
     }
 
     free(bits);
@@ -1352,14 +1359,14 @@ static int CmdNRZrawDemod(const char *Cmd) {
 }
 
 // by marshmellow
-// takes 3 arguments - clock, invert, maxErr as integers
+// takes 3 arguments - clock, invert, max_err as integers
 // attempts to demodulate psk only
 // prints binary found and saves in demodbuffer for further commands
 int CmdPSK1rawDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p1();
-    int clk = 0, invert = 0, maxErr = 100;
-    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+    int clk = 0, invert = 0, max_err = 100;
+    sscanf(Cmd, "%i %i %i", &clk, &invert, &max_err);
     if (clk == 1) {
         invert = 1;
         clk = 0;
@@ -1368,7 +1375,7 @@ int CmdPSK1rawDemod(const char *Cmd) {
         PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
         return PM3_EINVARG;
     }
-    int ans = PSKDemod(clk, invert, maxErr, true);
+    int ans = PSKDemod(clk, invert, max_err, true);
     //output
     if (ans != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
@@ -1376,7 +1383,7 @@ int CmdPSK1rawDemod(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "PSK1 demoded bitstream:");
     // Now output the bitstream to the scrollback by line of 16 bits
-    printDemodBuff();
+    printDemodBuff(0, false, invert, false);
     return PM3_SUCCESS;
 }
 
@@ -1385,8 +1392,8 @@ int CmdPSK1rawDemod(const char *Cmd) {
 static int CmdPSK2rawDemod(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p2();
-    int clk = 0, invert = 0, maxErr = 100;
-    sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
+    int clk = 0, invert = 0, max_err = 100;
+    sscanf(Cmd, "%i %i %i", &clk, &invert, &max_err);
     if (clk == 1) {
         invert = 1;
         clk = 0;
@@ -1395,7 +1402,7 @@ static int CmdPSK2rawDemod(const char *Cmd) {
         PrintAndLogEx(WARNING, "Invalid value for invert: %i", invert);
         return PM3_EINVARG;
     }
-    int ans = PSKDemod(clk, invert, maxErr, true);
+    int ans = PSKDemod(clk, invert, max_err, true);
     if (ans != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
         return PM3_ESOFT;
@@ -1403,7 +1410,7 @@ static int CmdPSK2rawDemod(const char *Cmd) {
     psk1TOpsk2(DemodBuffer, DemodBufferLen);
     PrintAndLogEx(NORMAL, "PSK2 demoded bitstream:");
     // Now output the bitstream to the scrollback by line of 16 bits
-    printDemodBuff();
+    printDemodBuff(0, false, invert, false);
     return PM3_SUCCESS;
 }
 
@@ -1645,6 +1652,7 @@ int CmdTuneSamples(const char *Cmd) {
 
     int timeout = 0;
     int timeout_max = 20;
+    PrintAndLogEx(INFO, "REMINDER: " _YELLOW_("'hw tune' doesn't actively tune your antennas") ", it's only informative");
     PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();

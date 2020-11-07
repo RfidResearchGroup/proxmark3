@@ -55,7 +55,8 @@ typedef enum {
     EM_UNKNOWN,
     EM_4205,
     EM_4305,
-    EM_4X69,
+    EM_4369,
+    EM_4469,
 } em_tech_type_t;
 
 int CmdLFEM4X05(const char *Cmd);

@@ -423,6 +423,47 @@ uint32_t lf_t55xx_white_pwdgen(uint32_t id) {
     return pwd;
 }
 
+// Gallagher Desfire Key Diversification Input for Cardax Card Data Application
+int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint32_t aid, uint8_t *kdfInputOut, uint8_t *kdfInputLen) {
+    if (uid == NULL || (uidLen != 4 && uidLen != 7) || keyNo > 2 || kdfInputOut == NULL || kdfInputLen == NULL) {
+        if (g_debugMode) {
+            PrintAndLogEx(WARNING, "Invalid arguments");
+        }
+        return PM3_EINVARG;
+    }
+
+    // Verify the AppID is a valid Gallagher AppID
+    if ((aid & 0xF0FFFF) != 0x2081F4) {
+        if (g_debugMode) {
+            PrintAndLogEx(WARNING, "Invalid Gallagher AID %06X", aid);
+        }
+        return PM3_EINVARG;
+    }
+
+    int len = 0;
+    // If the keyNo == 1, then omit the UID.
+    if (keyNo != 1) {
+        if (*kdfInputLen < (4 + uidLen)) {
+            return PM3_EINVARG;
+        }
+
+        memcpy(kdfInputOut, uid, uidLen);
+        len += uidLen;
+    } else if (*kdfInputLen < 4) {
+        return PM3_EINVARG;
+    }
+
+    kdfInputOut[len++] = keyNo;
+
+    kdfInputOut[len++] = aid & 0xff;
+    kdfInputOut[len++] = (aid >> 8) & 0xff;
+    kdfInputOut[len++] = (aid >> 16) & 0xff;
+
+    *kdfInputLen = len;
+
+    return PM3_SUCCESS;
+}
+
 //------------------------------------
 // Self tests
 //------------------------------------

@@ -181,7 +181,7 @@ static bool WaitSCL_L(void) {
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 18000;
+    volatile uint32_t delay = 1800;
     while (delay--) {
         // exit on SCL LOW
         if (!SCL_read)
@@ -219,7 +219,7 @@ static bool I2C_WaitForSim(void) {
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
     // 1byte transfer == 1ms  with max frame being 256bytes
-    if (!WaitSCL_H_delay(30 * 1000 * 50))
+    if (!WaitSCL_H_delay(10 * 1000 * 50))
         return false;
 
     return true;
@@ -634,6 +634,9 @@ bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen) {
 
         len = I2C_BufferRead(dest, *destlen, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 
+
+        LED_C_ON();
+
         if (len > 1) {
             break;
         } else if (len == 1) {
@@ -706,12 +709,12 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 }
 
 void SmartCardAtr(void) {
-    smart_card_atr_t card;
     LED_D_ON();
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
-    bool isOK = GetATR(&card, true);
-    reply_mix(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+    smart_card_atr_t card;
+    int res = GetATR(&card, true) ? PM3_SUCCESS : PM3_ETIMEOUT;
+    reply_ng(CMD_SMART_ATR, res, (uint8_t *)&card, sizeof(smart_card_atr_t));
     set_tracing(false);
     LEDsoff();
 }
@@ -804,7 +807,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         }
 
         // writing takes time.
-        WaitMS(100);
+        WaitMS(50);
 
         // read
         res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
@@ -824,7 +827,8 @@ void SmartCardUpgrade(uint64_t arg0) {
         length -= size;
         pos += size;
     }
-    reply_mix(CMD_ACK, isOK, pos, 0, 0, 0);
+
+    reply_ng(CMD_SMART_UPGRADE, (isOK) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
     LED_C_OFF();
     BigBuf_free();
 }

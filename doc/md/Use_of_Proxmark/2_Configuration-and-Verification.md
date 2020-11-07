@@ -25,7 +25,7 @@ Set all t55xx settings to defaults (will set all 4 at once)
 
 To make sure you got the latest sim module firmware.
 
-_Lastest version is v3.11_
+_Latest version is v3.11_
 
 ```
 [usb] pm3 --> hw status

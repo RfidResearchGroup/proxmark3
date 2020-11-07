@@ -34,7 +34,7 @@ LF analog path (MCP6294 opamp. This has a GBW of 10 MHz),  all 'slow' signals.  
 
 
 ## FPGA
-Since the SPARTAN II is a old outdated FPGA, thus is very limited resource there was a need to split LF and HF functionality into two seperate FPGA images.  Which are stored in ARM flash memory as bitstreams.
+Since the SPARTAN II is a old outdated FPGA, thus is very limited resource there was a need to split LF and HF functionality into two separate FPGA images.  Which are stored in ARM flash memory as bitstreams.
 
 We swap between these images by flashing fpga from ARM on the go.  It takes about 1sec.   Hence its usually a bad idea to program your device to continuously execute LF alt HF commands.
 
@@ -43,7 +43,7 @@ The FPGA images is precompiled and located inside the /fpga folder.
   - fpga_lf.bit
 
 There is very rarely changes to the images so there is no need to setup a fpga tool chain to compile it yourself.
-Since the FPGA is very old,  the Xilinix WebPack ISE 10.1  is the last working tool chain.  You can download this legacy development on xilinix and register for a free product installation id.
+Since the FPGA is very old,  the Xilinx WebPack ISE 10.1  is the last working tool chain.  You can download this legacy development on Xilinx and register for a free product installation id.
 Or use mine  `11LTAJ5ZJK3PXTUBMF0C0J6C4`    The package to download is about 7Gb and linux based.   Though I recently managed to install it on WSL for Windows 10.
 
 In order to save space,  these fpga images are LZ4 compressed and included in the fullimage.elf file when compiling the ARM SRC.  `make armsrc`
@@ -131,7 +131,7 @@ it into the memory of the FPGA. This gives some major advantages:
  
 The FPGA has two main tasks. The first task is to demodulate the signal received from the ADC and relay
 this as a digital encoded signal to the ARM. Depending on the task this might be the demodulation of a
-100% Amplitude Shift Keying (ASK) signal from the reader or the load modulation of a card. The encodin
+100% Amplitude Shift Keying (ASK) signal from the reader or the load modulation of a card. The encoding
 schemes used to communicate the signal to the ARM are Modified Miller for the reader and Manchester
 encoding for the card signal.
 
@@ -153,10 +153,10 @@ these samples. When the Proxmark is in sniffing mode this is done for both the M
 Miller at the same time. Whenever one of the decoding procedures returns a valid message, this message
 is stored in another buffer (BigBuf) and both decoding procedures are set to an un-synced state. The
 BigBuf is limited to the available memory on the ARM. The current firmware has 2 KB of memory
-reserved for traces (Besides the tracethe buffer also stores some temporary data that is needed in the
+reserved for traces (Besides the trace, the buffer also stores some temporary data that is needed in the
 processing). When the BigBuf buffer is full the function normally returns. A new function call from the
 client is needed to download the BigBuf contents to the computer. The BigBuf is especially useful for
-ptocol investigation. Every single message is stored in this buffer. When a card is emulated or when the
+protocol investigation. Every single message is stored in this buffer. When a card is emulated or when the
 Proxmark is used as a reader the BigBuf can be used to store status messages or protocol exceptions.
 
 ```
@@ -226,7 +226,7 @@ is the master). The ARM connects to the outside world over USB.
 
 
 ##  FPGA purpose
-Digtal signal processing.
+Digital signal processing.
 In short,  apply low pass / hi pass filtering,   peak detect,  correlate signal meaning IQ pair collecting.
 
 IQ means measure at In-phase and 90 phase shift later Quadrature-phase,    with IQ samples you can plot the signal on a vector plan.

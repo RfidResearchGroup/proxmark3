@@ -32,6 +32,9 @@
 #include "fileutils.h"
 #include "mifare/mifaredefault.h"  // default keys
 #include "mifare/ndef.h"           // NDEF
+#include "mifare/mad.h"
+#include "generator.h"
+#include "aiddesfire.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -63,6 +66,9 @@ typedef struct {
     uint8_t keyno;
     uint8_t keylen;
     uint8_t key[24];
+    uint8_t kdfAlgo;
+    uint8_t kdfInputLen;
+    uint8_t kdfInput[31];
 } PACKED mfdes_authinput_t;
 
 static mfdes_authinput_t currentauth[0xF] = {{.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}, {.keyno = -1}};
@@ -78,6 +84,16 @@ typedef struct mfdes_data {
     uint8_t length[3];
     uint8_t *data;
 } PACKED mfdes_data_t;
+
+typedef struct {
+    uint8_t isOK;
+    uint8_t uid[7];
+    uint8_t uidlen;
+    uint8_t versionHW[7];
+    uint8_t versionSW[7];
+    uint8_t details[14];
+} PACKED mfdes_info_res_t;
+
 
 typedef struct mfdes_value {
     uint8_t fileno;  //01
@@ -332,6 +348,20 @@ typedef struct {
 
 static int CmdHelp(const char *Cmd);
 
+static const char *getEncryptionAlgoStr(uint8_t algo) {
+    switch (algo) {
+        case MFDES_ALGO_AES :
+            return "AES";
+        case MFDES_ALGO_3DES :
+            return "3DES";
+        case MFDES_ALGO_DES :
+            return "DES";
+        case MFDES_ALGO_3K3DES :
+            return "3K3DES";
+        default :
+            return "";
+    }
+}
 /*
   The 7 MSBits (= n) code the storage size itself based on 2^n,
   the LSBit is set to '0' if the size is exactly 2^n
@@ -660,6 +690,38 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     return DESFIRE_UNKNOWN;
 }
 
+static int mfdes_get_info(mfdes_info_res_t *info) {
+    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
+    PacketResponseNG resp;
+
+    if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    memcpy(info, resp.data.asBytes, sizeof(mfdes_info_res_t));
+
+    if (resp.status != PM3_SUCCESS) {
+        switch (info->isOK) {
+            case 1:
+                PrintAndLogEx(WARNING, "Can't select card");
+                break;
+            case 2:
+                PrintAndLogEx(WARNING, "Card is most likely not DESFire. Wrong size UID");
+                break;
+            case 3:
+            default:
+                PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
+                break;
+        }
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
+}
+
+
 static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
@@ -704,6 +766,27 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
         Desfire_des_key_new(keybytes, key);
     } else if (payload->algo == MFDES_ALGO_3K3DES) {
         Desfire_3k3des_key_new_with_version(keybytes, key);
+    }
+
+    if (payload->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
+        mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
+        if (g_debugMode) {
+            PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
+        }
+    } else if (payload->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
+        // We will overrite any provided KDF input since a gallagher specific KDF was requested.
+        payload->kdfInputLen = 11;
+
+        if (mfdes_kdf_input_gallagher(tag->info.uid, tag->info.uidlen, payload->keyno, tag->selected_application, payload->kdfInput, &payload->kdfInputLen) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Could not generate Gallagher KDF input");
+        }
+
+        mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
+
+        if (g_debugMode) {
+            PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(payload->kdfInput, payload->kdfInputLen));
+            PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
+        }
     }
 
     uint8_t subcommand = MFDES_AUTHENTICATE;
@@ -918,7 +1001,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     memset(tag->ivect, 0, MAX_CRYPTO_BLOCK_SIZE);
     tag->authenticated_key_no = payload->keyno;
     if (tag->authentication_scheme == AS_NEW) {
-        cmac_generate_subkeys(tag->session_key);
+        cmac_generate_subkeys(tag->session_key, MCD_RECEIVE);
     }
     return PM3_SUCCESS;
 }
@@ -1045,6 +1128,12 @@ static int handler_desfire_freemem(uint32_t *free_mem) {
 }
 
 static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t new_algo, uint8_t *old_key, uint8_t old_algo, uint8_t aes_version) {
+
+    if (new_key == NULL || old_key == NULL) {
+        return PM3_EINVARG;
+    }
+
+    // AID == 000000  6bits LSB needs to be 0
     key_no &= 0x0F;
 
     /*
@@ -1052,24 +1141,34 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
      * changing the card master key to one of them require a key_no tweak.
      */
     if (0x000000 == tag->selected_application) {
+
+        // PICC master key, 6bits LSB needs to be 0
+        key_no = 0x00;
+
+        // PICC master key, keyalgo specific 2bit MSB
         switch (new_algo) {
             case MFDES_ALGO_DES:
-                break;
+            case MFDES_ALGO_3DES:
+                break;            // 00xx xxx
             case MFDES_ALGO_3K3DES:
-                key_no |= 0x40;
+                key_no |= 0x40;   // 01xx xxx
                 break;
             case MFDES_ALGO_AES:
-                key_no |= 0x80;
+                key_no |= 0x80;   // 10xx xxx
                 break;
         }
     }
 
-    uint8_t data[24 * 4] = {key_no};
+    // Variable length ciphered key data 26-42 bytes plus padding..
+    uint8_t data[64] = {key_no};
     sAPDU apdu = {0x90, MFDES_CHANGE_KEY, 0x00, 0x00, 0x01, data}; // 0xC4
 
     uint8_t new_key_length = 16;
     switch (new_algo) {
         case MFDES_ALGO_DES:
+            new_key_length = 8;
+            break;
+        case MFDES_ALGO_3DES:
         case MFDES_ALGO_AES:
             new_key_length = 16;
             break;
@@ -1154,7 +1253,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
         tag->session_key = NULL;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // --- GET SIGNATURE
@@ -1169,14 +1268,14 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
         PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
         return PM3_EINVARG;
     }
-    // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
-
+    // See tools/recover_pk.py to recover Pk from UIDs and signatures
 #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
     const ecdsa_publickey_t nxp_desfire_public_keys[] = {
         {"NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
         {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
         {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
+        {"DESFire EV3",             "041DB46C145D0A36539C6544BD6D9B0AA62FF91EC48CBC6ABAE36E0089A46F0D08C8A715EA40A63313B92E90DDC1730230E0458A33276FB743"},
         {"NTAG424DNA, NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
         {"DESFire Light",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
         {"Mifare Plus EV1",         "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
@@ -1987,7 +2086,7 @@ static void swap16(uint8_t *data) {
     data[1] = tmp;
 };
 
-static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, uint8_t *key, int cmdKeyNo, mfdes_auth_res_t *rpayload) {
+static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, uint8_t *key, int cmdKeyNo, uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput, mfdes_auth_res_t *rpayload) {
     switch (cmdAuthMode) {
         case MFDES_AUTH_DES:
             if (cmdAuthAlgo != MFDES_ALGO_DES && cmdAuthAlgo != MFDES_ALGO_3DES) {
@@ -2036,6 +2135,33 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
             break;
     }
 
+    switch (cmdKdfAlgo) {
+        case MFDES_KDF_ALGO_AN10922:
+            // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
+            if (cmdAuthAlgo != MFDES_ALGO_AES) {
+                PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
+                return PM3_EINVARG;
+            }
+            if (kdfInputLen < 1 || kdfInputLen > 31) {
+                PrintAndLogEx(FAILED, "KDF AN10922 algo requires an input of length 1-31 bytes.");
+                return PM3_EINVARG;
+            }
+            break;
+        case MFDES_KDF_ALGO_GALLAGHER:
+            // TODO: 2TDEA and 3TDEA keys use an input length of 1-15 bytes
+            if (cmdAuthAlgo != MFDES_ALGO_AES) {
+                PrintAndLogEx(FAILED, "Crypto algo not valid for the KDF AN10922 algo.");
+                return PM3_EINVARG;
+            }
+            break;
+        // KDF input arg is ignored as it'll be generated.
+        case MFDES_KDF_ALGO_NONE:
+            break;
+        default:
+            PrintAndLogEx(WARNING, "KDF algo %d is not supported.", cmdKdfAlgo);
+            return PM3_EINVARG;
+    }
+
     // KEY
     int res = handler_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
@@ -2053,6 +2179,9 @@ static int desfire_authenticate(int cmdAuthMode, int cmdAuthAlgo, uint8_t *aid, 
     payload.mode = cmdAuthMode;
     payload.algo = cmdAuthAlgo;
     payload.keyno = cmdKeyNo;
+    payload.kdfAlgo = cmdKdfAlgo;
+    payload.kdfInputLen = kdfInputLen;
+    memcpy(payload.kdfInput, kdfInput, kdfInputLen);
 
     int error = handler_desfire_auth(&payload, rpayload);
     if (error == PM3_SUCCESS) {
@@ -3232,43 +3361,14 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     DropField();
-    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
-    PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
-        DropField();
-        return PM3_ETIMEOUT;
+    mfdes_info_res_t info;
+    int res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    struct p {
-        uint8_t isOK;
-        uint8_t uid[7];
-        uint8_t uidlen;
-        uint8_t versionHW[7];
-        uint8_t versionSW[7];
-        uint8_t details[14];
-    } PACKED;
-
-    struct p *package = (struct p *) resp.data.asBytes;
-
-    if (resp.status != PM3_SUCCESS) {
-        switch (package->isOK) {
-            case 1:
-                PrintAndLogEx(WARNING, "Can't select card");
-                break;
-            case 2:
-                PrintAndLogEx(WARNING, "Card is most likely not DESFire. Wrong size UID");
-                break;
-            case 3:
-            default:
-                PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
-                break;
-        }
-        return PM3_ESOFT;
-    }
-
-    nxp_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
+    nxp_cardtype_t cardtype = getCardType(info.versionHW[3], info.versionHW[4]);
     if (cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
         return PM3_SUCCESS;
@@ -3277,30 +3377,30 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, package->uidlen));
-    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), package->details[12], package->details[13]);
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
+    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionHW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionHW[1]);
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionHW[2]);
-    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionHW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6], true));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionHW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
+    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(info.versionHW[3], info.versionHW[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionHW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionHW[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionSW[1]);
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionSW[2]);
-    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  package->versionSW[3], package->versionSW[4]);
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionSW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionSW[6], false));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionSW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionSW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionSW[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionSW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionSW[6], false));
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Card capabilities"));
-    uint8_t major = package->versionSW[3];
-    uint8_t minor = package->versionSW[4];
+    uint8_t major = info.versionSW[3];
+    uint8_t minor = info.versionSW[4];
     if (major == 0 && minor == 4)
         PrintAndLogEx(INFO, "\t0.4 - DESFire MF3ICD40, No support for APDU (only native commands)");
     if (major == 0 && minor == 5)
@@ -3330,7 +3430,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
         if (handler_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
-            desfire_print_signature(package->uid, package->uidlen, signature, signature_len, cardtype);
+            desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
         } else {
             PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
         }
@@ -3539,8 +3639,14 @@ static int CmdHF14ADesDump(const char *Cmd) {
         aid[2] = app_ids[i + 2];
 
         PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
-        PrintAndLogEx(SUCCESS, "  AID Function Cluster 0x%02X: " _YELLOW_("%s"), aid[2], cluster_to_text(aid[2]));
-
+        if ((aid[2] >> 4) == 0xF) {
+            uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+            PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
+            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
+            MADDFDecodeAndPrint(short_aid);
+        } else {
+            AIDDFDecodeAndPrint(aid);
+        }
         for (uint8_t m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
                 PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
@@ -3705,8 +3811,14 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         }
 
         PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
-        PrintAndLogEx(SUCCESS, "  AID Function Cluster 0x%02X: " _YELLOW_("%s"), aid[2], cluster_to_text(aid[2]));
-
+        if ((aid[2] >> 4) == 0xF) {
+            uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
+            PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
+            PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, cluster_to_text(short_aid >> 8));
+            MADDFDecodeAndPrint(short_aid);
+        } else {
+            AIDDFDecodeAndPrint(aid);
+        }
         for (uint8_t m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
                 PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
@@ -3827,6 +3939,10 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    PrintAndLogEx(INFO, "changing key number 0x%02x", cmdKeyNo);
+    PrintAndLogEx(INFO, "old key: %s (%s)", sprint_hex_inrow(key, keylen), getEncryptionAlgoStr(cmdAuthAlgo));
+    PrintAndLogEx(INFO, "new key: %s (%s)", sprint_hex_inrow(newkey, newkeylen), getEncryptionAlgoStr(newcmdAuthAlgo));
+
     int error = mifare_desfire_change_key(cmdKeyNo, newkey, newcmdAuthAlgo, key, cmdAuthAlgo, aesversion);
     if (error == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "  Successfully changed key.");
@@ -3870,6 +3986,8 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_strx0("a",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("n",  "keyno",  "<keyno>", "Key number used for authentification"),
         arg_str0("k",  "key",     "<Key>", "Key for checking (HEX 8-24 bytes)"),
+        arg_int0("d",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
+        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3886,6 +4004,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     uint8_t key[24] = {0};
     int keylen = 0;
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
+
+    // Get KDF input
+    uint8_t kdfInput[31] = {0};
+    int kdfInputLen = 0;
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 6, 0);
+    CLIGetHexWithReturn(ctx, 7, kdfInput, &kdfInputLen);
+
     CLIParserFree(ctx);
 
     if (cmdAuthAlgo == MFDES_ALGO_AES) {
@@ -3931,7 +4056,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
     mfdes_auth_res_t rpayload;
-    int error = desfire_authenticate(cmdAuthMode, cmdAuthAlgo, aid, key, cmdKeyNo, &rpayload);
+    int error = desfire_authenticate(cmdAuthMode, cmdAuthAlgo, aid, key, cmdKeyNo, cmdKDFAlgo, kdfInputLen, kdfInput, &rpayload);
     if (error == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
         PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload.sessionkey, keylength));
@@ -3989,6 +4114,7 @@ static int AuthCheckDesfire(uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
+                            uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
                             uint8_t foundKeys[4][0xE][24 + 1], bool *result) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
@@ -4004,6 +4130,14 @@ static int AuthCheckDesfire(uint8_t *aid,
     bool tdes = false;
     bool aes = false;
     bool k3kdes = false;
+
+    uint8_t num_keys = 0;
+    uint8_t key_setting = 0;
+    res = handler_desfire_getkeysettings(&key_setting, &num_keys);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Could not get key settings");
+        return res;
+    }
 
     if (memcmp(aid, "\x00\x00\x00", 3) != 0) {
         uint8_t file_ids[33] = {0};
@@ -4036,7 +4170,7 @@ static int AuthCheckDesfire(uint8_t *aid,
                     usedkeys[read_access] = 1;
 
                     if (res == PM3_SUCCESS) {
-                        switch (fileset_len >> 6) {
+                        switch (num_keys >> 6) {
                             case 0:
                                 des = true;
                                 tdes = true;
@@ -4078,7 +4212,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_DES, aid, deskeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_DES, aid, deskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
                         foundKeys[0][keyno][0] = 0x01;
@@ -4110,7 +4244,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_3DES, aid, aeskeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_DES, MFDES_ALGO_3DES, aid, aeskeyList[curkey], keyno, 0, 0, NULL, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3DES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[1][keyno][0] = 0x01;
@@ -4142,7 +4276,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_AES, MFDES_ALGO_AES, aid, aeskeyList[curkey], keyno, cmdKdfAlgo, kdfInputLen, kdfInput, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(aeskeyList[curkey], 16));
                         foundKeys[2][keyno][0] = 0x01;
@@ -4174,7 +4308,7 @@ static int AuthCheckDesfire(uint8_t *aid,
             if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
                 for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
                     mfdes_auth_res_t rpayload;
-                    error = desfire_authenticate(MFDES_AUTH_ISO, MFDES_ALGO_3K3DES, aid, k3kkeyList[curkey], keyno, &rpayload);
+                    error = desfire_authenticate(MFDES_AUTH_ISO, MFDES_ALGO_3K3DES, aid, k3kkeyList[curkey], keyno, 0, 0, NULL, &rpayload);
                     if (error == PM3_SUCCESS) {
                         PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3K3 Key %u        : " _GREEN_("%s"), curaid, keyno, sprint_hex(k3kkeyList[curkey], 24));
                         foundKeys[3][keyno][0] = 0x01;
@@ -4231,6 +4365,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_str0("j",  "json",      "<file>",  "Json file to save keys"),
         arg_lit0("v",  "verbose",   "Verbose mode."),
+        arg_int0("f",  "kdf",     "<kdf>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
+        arg_str0("i",  "kdfi",    "<kdfi>", "KDF input (HEX 1-31 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4310,6 +4446,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 8);
 
+    // Get KDF input
+    uint8_t kdfInput[31] = {0};
+    int kdfInputLen = 0;
+    uint8_t cmdKDFAlgo  = arg_get_int_def(ctx, 9, 0);
+    CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
+
     CLIParserFree(ctx);
 
     // 1-byte pattern search mode
@@ -4351,33 +4493,40 @@ static int CmdHF14aDesChk(const char *Cmd) {
         endFilePosition = 0;
     }
 
-    if (aeskeyListLen == 0) {
-        PrintAndLogEx(ERR, "Aes key list is empty. Nothing to check.");
+    if (aeskeyListLen == 0 && deskeyListLen == 0 && k3kkeyListLen == 0) {
+        PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
         return PM3_EINVARG;
-    } else {
+    }
+
+    if (aeskeyListLen != 0) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyListLen);
     }
 
-    if (deskeyListLen == 0) {
-        PrintAndLogEx(ERR, "Des key list is empty. Nothing to check.");
-        return PM3_EINVARG;
-    } else {
+    if (deskeyListLen != 0) {
         PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyListLen);
     }
 
-    if (k3kkeyListLen == 0) {
-        PrintAndLogEx(ERR, "K3k key list is empty. Nothing to check.");
-        return PM3_EINVARG;
-    } else {
+    if (k3kkeyListLen != 0) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
     }
 
-    if (!verbose)
+    if (verbose == false)
         PrintAndLogEx(INFO, "Search keys:");
 
     bool result = false;
     uint8_t app_ids[78] = {0};
     uint32_t app_ids_len = 0;
+
+    clearCommandBuffer();
+
+    mfdes_info_res_t info = {0};
+    res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    // TODO: Store this UID someowhere not global
+    memcpy(tag->info.uid, info.uid, info.uidlen);
+    tag->info.uidlen = info.uidlen;
 
     if (handler_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
@@ -4387,7 +4536,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     if (aidlength != 0) {
         memcpy(&app_ids[0], aid, 3);
-        app_ids_len = 1;
+        app_ids_len = 3;
     }
 
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
@@ -4395,7 +4544,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
 
-        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, foundKeys, &result);
+        res = AuthCheckDesfire(&app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result);
         if (res == PM3_EOPABORTED) {
             break;
         }
@@ -4411,7 +4560,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
             continue;
         }
 
-        if (dict_filenamelen && endFilePosition) {
+        if (dict_filenamelen) {
             if (verbose == false)
                 PrintAndLogEx(NORMAL, "d" NOLF);
 
@@ -4510,6 +4659,8 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(ctx, 4);
 
+    CLIParserFree(ctx);
+
     uint16_t ndefAID = 0xe103;
     if (aidlen == 2)
         ndefAID = (aid[0] << 8) + aid[1];
@@ -4579,6 +4730,33 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
 }
 */
 
+/*
+static int CmdHF14aDesMAD(const char *Cmd) {
+    DropField();
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes mad",
+                  "Prints MIFARE Application directory (MAD)",
+                  "hf mfdes mad      -> shows MAD data\n"
+                  "hf mfdes mad -v   -> shows MAD parsed and raw data\n"
+                  "hf mfdes mad -a e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows MAD data with custom AID and key");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_str0("",    "aid",      "<aid>", "replace default aid for MAD"),
+        arg_str0("k",  "key",      "<key>", "replace default key for MAD"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes mad -v`") " for more details");
+    return PM3_SUCCESS;
+}
+*/
+
 /*static int CmdTest(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     uint8_t IV[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -4605,28 +4783,32 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("general") " -----------------------"},
+    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
+    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
+    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
+    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
+    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
+    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
-    {"enum",             CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
-    {"auth",             CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
-    {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get random uid"},
-    {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+//    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
+//    {"mad",             CmdHF14aDesMAD,             IfPm3Iso14443a,  "Prints MAD records from card"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("AID") " -----------------------"},
     {"createaid",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
     {"deleteaid",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
+    {"selectaid",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
+    {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
+    {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
     {"deletefile",       CmdHF14ADesDeleteFile,       IfPm3Iso14443a,  "Create Delete File"},
-    {"clearfile",        CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
+    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
+    {"getvalue",         CmdHF14ADesGetValueData,     IfPm3Iso14443a,  "Get value of file"},
     {"readdata",         CmdHF14ADesReadData,         IfPm3Iso14443a,  "Read data from standard/backup/record file"},
     {"writedata",        CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record file"},
-    {"getvalue",         CmdHF14ADesGetValueData,     IfPm3Iso14443a,  "Get value of file"},
-    {"changevalue",      CmdHF14ADesChangeValue,      IfPm3Iso14443a,  "Write value of a value file (credit/debit/clear)"},
-    {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
-    {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
-    {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
-    {"chk",              CmdHF14aDesChk,              IfPm3Iso14443a,  "Check keys"},
-//    {"ndef",             CmdHF14aDesNDEF,             IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };
 

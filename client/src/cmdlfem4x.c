@@ -199,9 +199,11 @@ void printEM410x(uint32_t hi, uint64_t id) {
     if (hi) {
         //output 88 bit em id
         PrintAndLogEx(NORMAL, "\nEM TAG ID      : "_YELLOW_("%06X%016" PRIX64), hi, id);
+        PrintAndLogEx(NORMAL, "Clock rate     : "_YELLOW_("RF/%d"), g_DemodClock);
     } else {
         //output 40 bit em id
         PrintAndLogEx(NORMAL, "\nEM TAG ID      : "_YELLOW_("%010" PRIX64), id);
+        PrintAndLogEx(NORMAL, "Clock rate     : "_YELLOW_("RF/%d"), g_DemodClock);
         PrintAndLogEx(NORMAL, "\nPossible de-scramble patterns\n");
         PrintAndLogEx(NORMAL, "Unique TAG ID  : %010" PRIX64, id2lo);
         PrintAndLogEx(NORMAL, "HoneyWell IdentKey {");
@@ -316,8 +318,9 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
 
     PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %zu, Len: %zu, Printing Demod Buffer:", idx, size);
-    if (g_debugMode)
-        printDemodBuff();
+    if (g_debugMode) {
+        printDemodBuff(0, false, false, true);
+    }
 
     if (verbose)
         printEM410x(*hi, *lo);
@@ -652,7 +655,7 @@ static command_t CommandTable[] = {
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
     {"4x50_info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
-    {"4x50_write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change passwword of EM4x50 tag"},
+    {"4x50_write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change password of EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
     {"4x50_wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe data from EM4x50"},
     {NULL, NULL, NULL, NULL}

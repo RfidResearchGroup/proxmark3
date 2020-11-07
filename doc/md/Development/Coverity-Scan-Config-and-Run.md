@@ -1,6 +1,6 @@
 
 ## Coverity Scan Config & Run
-Download the Coverity Scan Self-buld and install it.
+Download the Coverity Scan Self-build and install it.
 You will need to configure  ARM-NON-EABI- Compiler for it to use:
 
  Configure

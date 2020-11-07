@@ -98,11 +98,13 @@ static em_tech_type_t em_get_card_type(uint32_t config) {
     uint8_t t = (config >> 1) & 0xF;
     switch (t) {
         case 4:
-            return EM_4X69;
+            return EM_4469;
         case 8:
             return EM_4205;
         case 9:
             return EM_4305;
+        case 12:
+            return EM_4369;
     }
     return EM_UNKNOWN;
 }
@@ -111,10 +113,12 @@ static const char *em_get_card_str(uint32_t config) {
     switch (em_get_card_type(config)) {
         case EM_4305:
             return "EM4305";
-        case EM_4X69:
+        case EM_4469:
             return "EM4469";
         case EM_4205:
             return "EM4205";
+        case EM_4369:
+            return "EM4369";
         case EM_UNKNOWN:
             break;
     }
@@ -171,16 +175,19 @@ static int doPreambleSearch(size_t *startIdx) {
     // do not set it too long else an error preamble followed by 010 could be seen as success.
     size_t size = (11 > DemodBufferLen) ? DemodBufferLen : 11;
     *startIdx = 0;
+
     // skip first two 0 bits as they might have been missed in the demod
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
+    uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
 
     if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
+
         if (!preambleSearchEx(DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
             return PM3_ESOFT;
         }
         return PM3_EFAILED; // Error preamble found
+
     }
     return PM3_SUCCESS;
 }
@@ -211,6 +218,18 @@ static bool detectPSK(void) {
     ans = PSKDemod(0, 0, 6, false);
     if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 Demod failed");
+        return false;
+    }
+
+    // In order to hit the INVERT,  we need to demod here
+    if (DemodBufferLen < 11) {
+        PrintAndLogEx(INFO, " demod buff len less than PREAMBLE lEN");
+    }
+
+    size_t size = (11 > DemodBufferLen) ? DemodBufferLen : 11;
+    size_t startIdx = 0;
+    uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
+    if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, &startIdx, true)) {
 
         //try psk1 inverted
         ans = PSKDemod(0, 1, 6, false);
@@ -218,7 +237,13 @@ static bool detectPSK(void) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 inverted Demod failed");
             return false;
         }
+
+        if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, &startIdx, true)) {
+            PrintAndLogEx(DEBUG, "DEBUG: Error - EM: PSK1 inverted Demod failed 2");
+            return false;
+        }
     }
+
     // either PSK1 or PSK1 inverted is ok from here.
     // lets check PSK2 later.
     return true;
@@ -324,6 +349,7 @@ static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
             res = doPreambleSearch(&idx);
             if (res == PM3_SUCCESS)
                 break;
+
             if (res == PM3_EFAILED)
                 found_err = true;
 
@@ -331,9 +357,11 @@ static int em4x05_demod_resp(uint32_t *word, bool onlyPreamble) {
             res = doPreambleSearch(&idx);
             if (res == PM3_SUCCESS)
                 break;
+
             if (res == PM3_EFAILED)
                 found_err = true;
         }
+
         if (found_err)
             return PM3_EFAILED;
 
@@ -360,7 +388,7 @@ static bool em4x05_verify_write(uint8_t addr, uint32_t pwd, bool use_pwd, uint32
     int res = em4x05_read_word_ext(addr, pwd, use_pwd, &r);
     if (res == PM3_SUCCESS) {
         return (r == data);
-    }    
+    }
     return false;
 }
 
@@ -381,7 +409,7 @@ int em4x05_clone_tag(uint32_t *blockdata, uint8_t numblocks, uint32_t pwd, bool 
         if (i == numblocks - 1) {
             conn.block_after_ACK = false;
         }
-        
+
         if (i != 0) {
             blockdata[i] = reflect(blockdata[i], 32);
         }
@@ -538,7 +566,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     uint32_t word = 0;
 
     const char *info[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
-    const char *info4x69 [] = {"Info", "UID", "Password", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
+    const char *info4x69 [] = {"Info", "UID", "Password", "Lock", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
 
     // EM4305 vs EM4469
     em_tech_type_t card_type = em_get_card_type(block0);
@@ -567,7 +595,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
 
         // To flag any blocks locked we need to read blocks 14 and 15 first
-        // dont swap endin until we get block lock flags.
+        // dont swap endian until we get block lock flags.
         status14 = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
             if ((word & 0x00008000) != 0x00) {
@@ -635,16 +663,14 @@ int CmdEM4x05Dump(const char *Cmd) {
         data[14] = BSWAP_32(data[14]);
         data[15] = BSWAP_32(data[15]);
 
-    } else if (card_type == EM_4X69) {
+    } else if (card_type == EM_4369 || card_type == EM_4469) {
 
-        // To flag any blocks locked we need to read blocks 14 and 15 first
-        // dont swap endin until we get block lock flags.
+        // To flag any blocks locked we need to read block 3 first
+        // dont swap endian until we get block lock flags.
         status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
         if (status14 == PM3_SUCCESS) {
-            if ((word & 0x00008000) != 0x00) {
-                lock_bits = word;
-                gotLockBits = true;
-            }
+            lock_bits = word;
+            gotLockBits = true;
             data[EM4469_PROT_BLOCK] = word;
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
@@ -652,8 +678,8 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         uint32_t lockbit;
 
-        for (; addr < 15; addr++) {
-            lockbit = (lock_bits >> addr) & 1;
+        for (; addr < 16; addr++) {
+            lockbit = (lock_bits >> (addr * 2)) & 3;
             if (addr == 2) {
                 if (usePwd) {
                     data[addr] = BSWAP_32(pwd);
@@ -688,15 +714,17 @@ int CmdEM4x05Dump(const char *Cmd) {
         // saveFile (binary) passes in the .bin extension.
         if (strcmp(filename, "") == 0) {
 
-            if (card_type == EM_4X69) {
-                sprintf(filename, "lf-4x69-%08X-dump", BSWAP_32(data[1]));
+            if (card_type == EM_4369) {
+                sprintf(filename, "lf-4369-%08X-dump", BSWAP_32(data[1]));
+            } else if (card_type == EM_4469) {
+                sprintf(filename, "lf-4469-%08X-dump", BSWAP_32(data[1]));
             } else {
                 sprintf(filename, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
             }
 
         }
         PrintAndLogEx(NORMAL, "");
-        saveFileJSON(filename, (card_type == EM_4X69) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
+        saveFileJSON(filename, (card_type == EM_4369 || card_type == EM_4469) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
 
         saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(filename, ".bin", data, sizeof(data));
@@ -880,7 +908,74 @@ int CmdEM4x05Wipe(const char *Cmd) {
     return success;
 }
 
-static void printEM4x05config(uint32_t wordData) {
+static const char *printEM4x05_known(uint32_t word) {
+
+    switch (word) {
+//        case EM4305_DEFAULT_CONFIG_BLOCK:
+        case EM4305_PRESCO_CONFIG_BLOCK: {
+            return "EM4305 DEFAULT / PRESCO";
+        }
+//        case EM4305_PAXTON_CONFIG_BLOCK:
+        case EM4305_EM_UNIQUE_CONFIG_BLOCK: {
+            return "EM UNIQUE / PAXTON";
+        }
+        case EM4305_VISA2000_CONFIG_BLOCK: {
+            return "VISA2000";
+        }
+        case EM4305_VIKING_CONFIG_BLOCK: {
+            return "VIKING";
+        }
+        case EM4305_NORALSY_CONFIG_BLOCK: {
+            return "NORALSY";
+        }
+        case EM4305_SECURAKEY_CONFIG_BLOCK: {
+            return "SECURAKEY";
+        }
+//        case EM4305_HID_26_CONFIG_BLOCK:
+//        case EM4305_PARADOX_CONFIG_BLOCK:
+        case EM4305_AWID_CONFIG_BLOCK: {
+            return "HID26 / PARADOX / AWID";
+        }
+        case EM4305_PYRAMID_CONFIG_BLOCK: {
+            return "PYRAMID";
+        }
+        case EM4305_IOPROX_CONFIG_BLOCK: {
+            return "IOPROX";
+        }
+//        case EM4305_KERI_CONFIG_BLOCK:
+        case EM4305_INDALA_64_CONFIG_BLOCK: {
+            return "INDALA 64 / KERI";
+        }
+        case EM4305_INDALA_224_CONFIG_BLOCK: {
+            return "INDALA 224";
+        }
+        case EM4305_MOTOROLA_CONFIG_BLOCK: {
+            return "MOTOROLA";
+        }
+        case EM4305_NEXWATCH_CONFIG_BLOCK: {
+            return "NEXWATCH";
+        }
+//        case EM4305_NEDAP_64_CONFIG_BLOCK:
+        case EM4305_JABLOTRON_CONFIG_BLOCK: {
+            return "JABLOTRON / NEDAP 64";
+        }
+        case EM4305_GUARDPROXII_CONFIG_BLOCK: {
+            return "GUARD PROXII";
+        }
+        case EM4305_NEDAP_128_CONFIG_BLOCK: {
+            return "NEDAP 128";
+        }
+        case EM4305_PAC_CONFIG_BLOCK: {
+            return "PAC/Stanley";
+        }
+        case EM4305_VERICHIP_CONFIG_BLOCK: {
+            return "VERICHIP";
+        }
+    }
+    return "";
+}
+
+static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
     uint16_t datarate = (((wordData & 0x3F) + 1) * 2);
     uint8_t encoder = ((wordData >> 6) & 0xF);
     char enc[14];
@@ -966,24 +1061,55 @@ static void printEM4x05config(uint32_t wordData) {
     uint8_t raw = (wordData & EM4x05_READ_AFTER_WRITE) >> 22;
     uint8_t disable = (wordData & EM4x05_DISABLE_ALLOWED) >> 23;
     uint8_t rtf = (wordData & EM4x05_READER_TALK_FIRST) >> 24;
-    uint8_t pigeon = (wordData & (1 << 26)) >> 26;
+    uint8_t invert = (wordData & EM4x05_INVERT) >> 25;
+    uint8_t pigeon = (wordData & EM4x05_PIGEON) >> 26;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Config Information") " ------------------------");
-    PrintAndLogEx(INFO, "ConfigWord: %08X (Word 4)", wordData);
+    PrintAndLogEx(INFO, "ConfigWord: %08X  ( " _YELLOW_("%s") " )", wordData, printEM4x05_known(wordData));
+
     PrintAndLogEx(INFO, " Data Rate:  %02u | "_YELLOW_("RF/%u"), wordData & 0x3F, datarate);
     PrintAndLogEx(INFO, "   Encoder:   %u | " _YELLOW_("%s"), encoder, enc);
-    PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
-    PrintAndLogEx(INFO, "     Delay:   %u | %s", delay, cdelay);
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "    PSK CF:   %u | %s", PSKcf, cf);
+    } else if (PSKcf != 0) {
+        PrintAndLogEx(INFO, "co10..c011:   %u | %s", PSKcf, _RED_("Not used, must be set to logic 0"));
+    }
+    if (card_type == EM_4305) {
+        PrintAndLogEx(INFO, "     Delay:   %u | %s", delay, cdelay);
+    } else if (delay != 0) {
+        PrintAndLogEx(INFO, "co12..c013:   %u | %s", delay, _RED_("Not used, must be set to logic 0"));
+    }
     PrintAndLogEx(INFO, " LastWordR:  %02u | Address of last word for default read - meaning %u blocks are output", LWR, numblks);
     PrintAndLogEx(INFO, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required"));
-    PrintAndLogEx(INFO, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "   ReadHKL:   %u | Read housekeeping words (3,4) login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
+    } else if (readHKL != 0) {
+        PrintAndLogEx(INFO, "      c019:   %u | %s", readHKL, _RED_("Not used, must be set to logic 0"));
+    }
     PrintAndLogEx(INFO, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required"));
-    PrintAndLogEx(INFO, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
-    PrintAndLogEx(INFO, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "  WriteHKL:   %u | Write housekeeping words (2,3,4) login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
+    } else if (writeHKL != 0) {
+        PrintAndLogEx(INFO, "      c021:   %u | %s", writeHKL, _RED_("Not used, must be set to logic 0"));
+    }
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        PrintAndLogEx(INFO, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
+    } else if (raw != 0) {
+        PrintAndLogEx(INFO, "      c022:   %u | %s", raw, _RED_("Not used, must be set to logic 0"));
+    }
     PrintAndLogEx(INFO, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
     PrintAndLogEx(INFO, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
-    PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
+    if (card_type == EM_4369) {
+        PrintAndLogEx(INFO, "    Invert:   %u | Invert data? %s", invert, invert ? _YELLOW_("yes") : "no");
+    } else if (invert != 0) {
+        PrintAndLogEx(INFO, "      c025:   %u | %s", invert, _RED_("Not used, must be set to logic 0"));
+    }
+    if (card_type == EM_4305) {
+        PrintAndLogEx(INFO, "    Pigeon:   %u | Pigeon mode is %s", pigeon, pigeon ? _YELLOW_("enabled") : "disabled");
+    } else if (pigeon != 0) {
+        PrintAndLogEx(INFO, "      c026:   %u | %s", pigeon, _RED_("Not used, must be set to logic 0"));
+    }
 }
 
 static void printEM4x05info(uint32_t block0, uint32_t serial) {
@@ -1011,7 +1137,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
 
-    PrintAndLogEx(SUCCESS, "    Block0: " _GREEN_("%08x") " (Word 0)", block0);
+    PrintAndLogEx(SUCCESS, "    Block0: " _GREEN_("%08x"), block0);
     PrintAndLogEx(SUCCESS, " Chip Type:   %3u | " _YELLOW_("%s"), chipType, em_get_card_str(block0));
 
     switch (cap) {
@@ -1048,6 +1174,7 @@ static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
     }
 }
 
+
 //quick test for EM4x05/EM4x69 tag
 bool em4x05_isblock0(uint32_t *word) {
     return (em4x05_read_word_ext(0, 0, false, word) == PM3_SUCCESS);
@@ -1072,7 +1199,7 @@ int CmdEM4x05Info(const char *Cmd) {
         return PM3_ESOFT;
 
     // based on Block0 ,  decide type.
-    int card_type = em_get_card_type(block0);
+    em_tech_type_t card_type = em_get_card_type(block0);
 
     // read word 1 (serial #) doesn't need pwd
     // continue if failed, .. non blocking fail.
@@ -1082,10 +1209,12 @@ int CmdEM4x05Info(const char *Cmd) {
 
     // read word 4 (config block)
     // needs password if one is set
-    if (em4x05_read_word_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+    if (em4x05_read_word_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "(CmdEM4x05Info) failed to read CONFIG BLOCK");
         return PM3_ESOFT;
+    }
 
-    printEM4x05config(word);
+    printEM4x05config(card_type, word);
 
     // if 4469 read EM4469_PROT_BLOCK
     // if 4305 read 14,15
@@ -1107,13 +1236,14 @@ int CmdEM4x05Info(const char *Cmd) {
                 return PM3_SUCCESS;
             }
         }
-    } else if (card_type == EM_4X69) {
+    } else if (card_type == EM_4369 || card_type == EM_4469) {
         // read word 3 to see which is being used for the protection bits
         if (em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
         }
         printEM4x05ProtectionBits(word, EM4469_PROT_BLOCK);
     }
+
     //something went wrong
     return PM3_ESOFT;
 }
@@ -1169,15 +1299,13 @@ int CmdEM4x05Chk(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
         } else if (status != PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "No answer from tag");
+            PrintAndLogEx(WARNING, "no answer from tag");
         }
     }
 
     // Loop dictionary
     uint8_t *keyBlock = NULL;
     if (found == false) {
-
-        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
         uint32_t keycount = 0;
 
@@ -1189,6 +1317,8 @@ int CmdEM4x05Chk(const char *Cmd) {
 
             return PM3_ESOFT;
         }
+
+        PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
 
         for (uint32_t c = 0; c < keycount; ++c) {
 
@@ -1213,7 +1343,7 @@ int CmdEM4x05Chk(const char *Cmd) {
                 found = true;
                 break;
             } else if (status != PM3_EFAILED) {
-                PrintAndLogEx(WARNING, "No answer from tag");
+                PrintAndLogEx(WARNING, "no answer from tag");
             }
         }
     }
@@ -1690,7 +1820,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
     return exit_code;
 }
 
-static size_t em4x05_Sniff_GetNextBitStart (size_t idx, size_t sc, int *data, size_t *pulsesamples) {
+static size_t em4x05_Sniff_GetNextBitStart(size_t idx, size_t sc, int *data, size_t *pulsesamples) {
     while ((idx < sc) && (data[idx] <= 10)) // find a going high
         idx++;
 
@@ -1698,7 +1828,7 @@ static size_t em4x05_Sniff_GetNextBitStart (size_t idx, size_t sc, int *data, si
         idx++;
 
     (*pulsesamples) = 0;
-    while ((idx < sc) && ((data[idx+1] - data[idx]) < 10 )) {  // find "sharp rise"
+    while ((idx < sc) && ((data[idx + 1] - data[idx]) < 10)) { // find "sharp rise"
         (*pulsesamples)++;
         idx++;
     }
@@ -1706,7 +1836,7 @@ static size_t em4x05_Sniff_GetNextBitStart (size_t idx, size_t sc, int *data, si
     return idx;
 }
 
-uint32_t static em4x05_Sniff_GetBlock (char *bits, bool fwd) {
+uint32_t static em4x05_Sniff_GetBlock(char *bits, bool fwd) {
     uint32_t value = 0;
     uint8_t idx;
     bool parityerror = false;
@@ -1752,7 +1882,7 @@ uint32_t static em4x05_Sniff_GetBlock (char *bits, bool fwd) {
     if (parity != (bits[35] - '0'))
         parityerror = true;
 
-    if (parityerror) printf ("parity error : ");
+    if (parityerror) printf("parity error : ");
 
     if (!fwd) {
         uint32_t t1 = value;
@@ -1793,19 +1923,21 @@ int CmdEM4x05Sniff(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("1", "buf","Use the data in the buffer"),
+        arg_lit0("1", "buf", "Use the data in the buffer"),
         arg_lit0("r", "rev", "Reverse the bit order for data blocks"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    sampleData = !arg_get_lit(ctx,1);
-    fwd = arg_get_lit(ctx,2);
+    sampleData = !arg_get_lit(ctx, 1);
+    fwd = arg_get_lit(ctx, 2);
+
+    CLIParserFree(ctx);
 
     // setup and sample data from Proxmark
     // if not directed to existing sample/graphbuffer
     if (sampleData) {
-        if (!IfPm3Lf()) {
+        if (IfPm3Lf() == false) {
             PrintAndLogEx(WARNING, "Only offline mode is available");
             return PM3_EINVARG;
         }
@@ -1825,26 +1957,26 @@ int CmdEM4x05Sniff(const char *Cmd) {
         haveData = false;
         pwd = false;
 
-        idx = em4x05_Sniff_GetNextBitStart (idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+        idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, GraphBuffer, &pulseSamples);
         pktOffset = idx;
         if (pulseSamples >= 10)  { // Should be 18 so a bit less to allow for processing
-        
+
             // Use first bit to get "0" bit samples as a reference
             ZeroWidth = idx;
-            idx = em4x05_Sniff_GetNextBitStart (idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+            idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, GraphBuffer, &pulseSamples);
             ZeroWidth = idx - ZeroWidth;
 
             if (ZeroWidth <= 50) {
                 pktOffset -= ZeroWidth;
-                memset(bits,0x00,sizeof(bits));
+                memset(bits, 0x00, sizeof(bits));
                 bitidx = 0;
 
                 while ((idx < GraphTraceLen) && !eop) {
                     CycleWidth = idx;
-                    idx = em4x05_Sniff_GetNextBitStart (idx, GraphTraceLen, GraphBuffer, &pulseSamples);
+                    idx = em4x05_Sniff_GetNextBitStart(idx, GraphTraceLen, GraphBuffer, &pulseSamples);
 
                     CycleWidth = idx - CycleWidth;
-                    if ((CycleWidth > 300) || (CycleWidth < (ZeroWidth-5))) { // to long or too short
+                    if ((CycleWidth > 300) || (CycleWidth < (ZeroWidth - 5))) { // to long or too short
                         eop = true;
                         bits[bitidx++] = '0';   // Append last zero from the last bit find
                         cmdText[0] = 0;
@@ -1855,73 +1987,73 @@ int CmdEM4x05Sniff(const char *Cmd) {
                         // Read Word    1001 <adr>          => 4 + 7      => 11
                         // Protect      1100       <data>   => 4 +     45 => 49
                         // Disable      1010       <data>   => 4 +     45 => 49
-                        // -> disaable 1010 11111111 0 11111111 0 11111111 0 11111111 0 00000000 0
+                        // -> disable 1010 11111111 0 11111111 0 11111111 0 11111111 0 00000000 0
 
                         // Check to see if we got the leading 0
-                        if  (((strncmp (bits,"00011",5) == 0)&& (bitidx == 50)) ||
-                             ((strncmp (bits,"00101",5) == 0)&& (bitidx == 57)) ||
-                             ((strncmp (bits,"01001",5) == 0)&& (bitidx == 12)) ||
-                             ((strncmp (bits,"01100",5) == 0)&& (bitidx == 50)) ||
-                             ((strncmp (bits,"01010",5) == 0)&& (bitidx == 50))) {
-                                 memcpy (bits,&bits[1],bitidx-1);
-                                 bitidx--;
-                             printf ("Trim leading 0\n");
+                        if (((strncmp(bits, "00011", 5) == 0) && (bitidx == 50)) ||
+                                ((strncmp(bits, "00101", 5) == 0) && (bitidx == 57)) ||
+                                ((strncmp(bits, "01001", 5) == 0) && (bitidx == 12)) ||
+                                ((strncmp(bits, "01100", 5) == 0) && (bitidx == 50)) ||
+                                ((strncmp(bits, "01010", 5) == 0) && (bitidx == 50))) {
+                            memmove(bits, &bits[1], bitidx - 1);
+                            bitidx--;
+                            printf("Trim leading 0\n");
                         }
                         bits[bitidx] = 0;
-         //   printf ("==> %s\n",bits);
+                        //   printf ("==> %s\n",bits);
                         // logon
-                        if ((strncmp (bits,"0011",4) == 0) && (bitidx == 49)) {
+                        if ((strncmp(bits, "0011", 4) == 0) && (bitidx == 49)) {
                             haveData = true;
                             pwd = true;
-                            sprintf (cmdText,"Logon");
-                            sprintf (blkAddr,"   ");
-                            tmpValue = em4x05_Sniff_GetBlock (&bits[4], fwd);
-                            sprintf (dataText,"%08X",tmpValue);
+                            sprintf(cmdText, "Logon");
+                            sprintf(blkAddr, "   ");
+                            tmpValue = em4x05_Sniff_GetBlock(&bits[4], fwd);
+                            sprintf(dataText, "%08X", tmpValue);
                         }
 
                         // write
-                        if ((strncmp (bits,"0101",4) == 0) && (bitidx == 56)) {
+                        if ((strncmp(bits, "0101", 4) == 0) && (bitidx == 56)) {
                             haveData = true;
-                            sprintf (cmdText,"Write");
+                            sprintf(cmdText, "Write");
                             tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
-                            sprintf (blkAddr,"%d",tmpValue);
+                            sprintf(blkAddr, "%d", tmpValue);
                             if (tmpValue == 2)
                                 pwd = true;
-                            tmpValue = em4x05_Sniff_GetBlock (&bits[11], fwd);
-                            sprintf (dataText,"%08X",tmpValue);
+                            tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
+                            sprintf(dataText, "%08X", tmpValue);
                         }
 
                         // read
-                        if ((strncmp (bits,"1001",4) == 0) && (bitidx == 11)) {
+                        if ((strncmp(bits, "1001", 4) == 0) && (bitidx == 11)) {
                             haveData = true;
                             pwd = false;
-                            sprintf (cmdText,"Read");
+                            sprintf(cmdText, "Read");
                             tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
-                            sprintf (blkAddr,"%d",tmpValue);
-                            sprintf (dataText," ");
+                            sprintf(blkAddr, "%d", tmpValue);
+                            sprintf(dataText, " ");
                         }
 
                         // protect
-                        if ((strncmp (bits,"1100",4) == 0) && (bitidx == 49)) {
+                        if ((strncmp(bits, "1100", 4) == 0) && (bitidx == 49)) {
                             haveData = true;
                             pwd = false;
-                            sprintf (cmdText,"Protect");
-                            sprintf (blkAddr," ");
-                            tmpValue = em4x05_Sniff_GetBlock (&bits[11], fwd);
-                            sprintf (dataText,"%08X",tmpValue);
+                            sprintf(cmdText, "Protect");
+                            sprintf(blkAddr, " ");
+                            tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
+                            sprintf(dataText, "%08X", tmpValue);
                         }
 
                         // disable
-                        if ((strncmp (bits,"1010",4) == 0) && (bitidx == 49)) {
+                        if ((strncmp(bits, "1010", 4) == 0) && (bitidx == 49)) {
                             haveData = true;
                             pwd = false;
-                            sprintf (cmdText,"Disable");
-                            sprintf (blkAddr," ");
-                            tmpValue = em4x05_Sniff_GetBlock (&bits[11], fwd);
-                            sprintf (dataText,"%08X",tmpValue);
+                            sprintf(cmdText, "Disable");
+                            sprintf(blkAddr, " ");
+                            tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
+                            sprintf(dataText, "%08X", tmpValue);
                         }
 
-                      //  bits[bitidx] = 0;
+                        //  bits[bitidx] = 0;
                     } else {
                         i = (CycleWidth - ZeroWidth) / 28;
                         bits[bitidx++] = '0';
@@ -1936,9 +2068,9 @@ int CmdEM4x05Sniff(const char *Cmd) {
         // Print results
         if (haveData) { //&& (minWidth > 1) && (maxWidth > minWidth)){
             if (pwd)
-                PrintAndLogEx(SUCCESS, "%6llu | %-10s  | "_YELLOW_("%8s")" | "_YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | "_YELLOW_("%8s")" | "_YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
             else
-                PrintAndLogEx(SUCCESS, "%6llu | %-10s  | "_GREEN_("%8s")" | "_GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | "_GREEN_("%8s")" | "_GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
         }
     }
 

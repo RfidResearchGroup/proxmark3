@@ -22,10 +22,12 @@
 #include "commonutil.h"
 #include "ticks.h"
 
+#ifdef WITH_ISO14443a
 // Protocol and Parameter Selection Request for ISO 14443 type A cards
 // use regular (1x) speed in both directions
 // CRC is already included
 static const uint8_t pps[] = {0xD0, 0x11, 0x00, 0x52, 0xA6};
+#endif
 
 // APDUs for communication with German Identification Card
 
@@ -116,9 +118,25 @@ static char iso_type = 0;
 static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t respmaxlen) {
     switch (iso_type) {
         case 'a':
+#ifdef WITH_ISO14443a
             return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
+#else
+            (void) apdu;
+            (void) length;
+            (void) response;
+            (void) respmaxlen;
+            return PM3_ENOTIMPL;
+#endif
         case 'b':
+#ifdef WITH_ISO14443b
             return iso14443b_apdu(apdu, length, false, response, respmaxlen, NULL);
+#else
+            (void) apdu;
+            (void) length;
+            (void) response;
+            (void) respmaxlen;
+            return PM3_ENOTIMPL;
+#endif
         default:
             return 0;
     }
@@ -522,39 +540,46 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
 //-----------------------------------------------------------------------------
 int EPA_Setup(void) {
 
-    // first, look for type A cards
-    // power up the field
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-    iso14a_card_select_t card_a_info;
-    int return_code = iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false);
+#ifdef WITH_ISO14443a
+    {
+        // first, look for type A cards
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        // power up the field
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
+        iso14a_card_select_t card_a_info;
+        int return_code = iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false);
 
-    if (return_code == 1) {
-        uint8_t pps_response[3];
-        uint8_t pps_response_par[1];
-        // send the PPS request
-        ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
-        return_code = ReaderReceive(pps_response, pps_response_par);
-        if (return_code != 3 || pps_response[0] != 0xD0) {
-            return return_code == 0 ? 2 : return_code;
+        if (return_code == 1) {
+            uint8_t pps_response[3];
+            uint8_t pps_response_par[1];
+            // send the PPS request
+            ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
+            return_code = ReaderReceive(pps_response, pps_response_par);
+            if (return_code != 3 || pps_response[0] != 0xD0) {
+                return return_code == 0 ? 2 : return_code;
+            }
+            Dbprintf("ISO 14443 Type A");
+            iso_type = 'a';
+            return 0;
         }
-        Dbprintf("ISO 14443 Type A");
-        iso_type = 'a';
-        return 0;
     }
+#endif
+#ifdef WITH_ISO14443b
+    {
+        // if we're here, there is no type A card, so we look for type B
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        // power up the field
+        iso14443b_setup();
+        iso14b_card_select_t card_b_info;
+        int return_code = iso14443b_select_card(&card_b_info);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
-    // if we're here, there is no type A card, so we look for type B
-    // power up the field
-    iso14443b_setup();
-    iso14b_card_select_t card_b_info;
-    return_code = iso14443b_select_card(&card_b_info);
-
-    if (return_code == 0) {
-        Dbprintf("ISO 14443 Type B");
-        iso_type = 'b';
-        return 0;
+        if (return_code == 0) {
+            Dbprintf("ISO 14443 Type B");
+            iso_type = 'b';
+            return 0;
+        }
     }
+#endif
     Dbprintf("No card found");
     return 1;
 }
