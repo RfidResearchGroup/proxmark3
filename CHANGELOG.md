@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
  - Change many commands to cliparser (@iceman1001, @tcprst, @mwalker33,...)
  - ...
+ - Added compilation options for 256k Proxmark versions, see doc (@doegox)
  - Added support for 10b UID in `hf 14a sim` (@doegox)
  - Added `HF_TCPRST` standalone mode which read and emulate IKEA Rothult cards (@tcprst)
  - Add Gallagher key checking/KDF on MIFARE Desfire (@NZSmartie)
