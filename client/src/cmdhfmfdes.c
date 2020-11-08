@@ -1278,7 +1278,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
         {"DESFire EV3",             "041DB46C145D0A36539C6544BD6D9B0AA62FF91EC48CBC6ABAE36E0089A46F0D08C8A715EA40A63313B92E90DDC1730230E0458A33276FB743"},
         {"NTAG424DNA, NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
         {"DESFire Light",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
-        {"Mifare Plus EV1",         "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
+        {"MIFARE Plus EV1",         "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
 
 
@@ -1654,9 +1654,7 @@ static int handler_desfire_createapp(aidhdr_t *aidhdr, bool usename, bool usefid
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"), GetErrorString(res, &sw));
         DropField();
-        return res;
     }
-
     return res;
 }
 
@@ -1669,7 +1667,6 @@ static int handler_desfire_deleteapp(const uint8_t *aid) {
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"), GetErrorString(res, &sw));
         DropField();
-        return res;
     }
     return res;
 }
@@ -2230,12 +2227,12 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     }
 
     int res = handler_desfire_select_application(aid);
+    DropField();
     if (res != PM3_SUCCESS) {
-        DropField();
         PrintAndLogEx(ERR, "Error on selecting aid.");
-        return res;
+    } else {
+        PrintAndLogEx(SUCCESS, "Successfully selected aid.");
     }
-    PrintAndLogEx(SUCCESS, "Successfully selected aid.");
     return res;
 }
 
@@ -2363,7 +2360,9 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     res = handler_desfire_createapp(&aidhdr, usename, usefid);
     DropField();
-    PrintAndLogEx(SUCCESS, "Successfully created aid.");
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Successfully created aid.");
+    }
     return res;
 }
 
@@ -2399,9 +2398,11 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     uint8_t rootaid[3] = {0x00, 0x00, 0x00};
     int res = handler_desfire_select_application(rootaid);
     if (res != PM3_SUCCESS) { DropField(); return res;}
-    res = handler_desfire_deleteapp(aid);
+    res = handler_desfire_deleteapp(aid);   
     DropField();
-    PrintAndLogEx(SUCCESS, "Successfully deleted aid.");
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Successfully deleted aid.");
+    }
     return res;
 }
 
@@ -3603,6 +3604,20 @@ static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
 }
 
 static int CmdHF14ADesDump(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes dump",
+                  "Tries to dump all files on a DESFire tag",
+                  "hf mfdes dump");
+
+    void *argtable[] = {
+        arg_param_begin,
+//        arg_strx0("a",  "aid",      "<aid>", "Use specific AID (3 hex bytes, big endian)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+        
     (void)Cmd; // Cmd is not used so far
     DropField();
 
@@ -3629,7 +3644,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- Mifare DESFire Dump ----------------------");
+    PrintAndLogEx(INFO, "-- " _CYAN_("MIFARE DESFire Dump") " ----------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     for (uint32_t i = 0; i < app_ids_len; i += 3) {
@@ -3791,7 +3806,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- Mifare DESFire Enumerate applications --------------------");
+    PrintAndLogEx(INFO, "-- MIFARE DESFire Enumerate applications --------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
 
@@ -3868,7 +3883,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     uint8_t newkeylength = 8;
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes changekey",
-                  "Changes Mifare DESFire Key\n"
+                  "Changes MIFARE DESFire Key\n"
                   "Make sure to select aid or authenticate aid before running this command.",
                   "hf mfdes changekey -n 0 -t 1 -k 0000000000000000 -u 1 -j 0102030405060708 -> DES,keynumber 0"
                  );
@@ -3969,7 +3984,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes auth",
-                  "Authenticates Mifare DESFire using Key",
+                  "Authenticates MIFARE DESFire using Key",
                   "hf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 -> AES,keynumber 0, aid 0x803201\n"
                   "hf mfdes auth -m 2 -t 2 -a 000000 -n 1 -k 00000000000000000000000000000000 -> 3DES,keynumber 1, aid 0x000000\n"
                   "hf mfdes auth -m 1 -t 1 -a 000000 -n 2 -k 0000000000000000 -> DES,keynumber 2, aid 0x000000\n"
@@ -4348,7 +4363,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chk",
-                  "Checks keys with Mifare Desfire card.",
+                  "Checks keys with MIFARE DESFire card.",
                   "hf mfdes chk -a 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456\n"
                   "hf mfdes chk -d mfdes_default_keys -> check keys from dictionary against all existing aid on card\n"
                   "hf mfdes chk -d mfdes_default_keys -a 123456 -> check keys from dictionary against aid 0x123456\n"
@@ -4587,7 +4602,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     // save keys to json
     if ((jsonnamelen > 0) && result) {
-        // Mifare Desfire info
+        // MIFARE DESFire info
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
         PacketResponseNG resp;
@@ -4644,7 +4659,6 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
         arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_str0("",    "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
-        arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4657,22 +4671,24 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     uint8_t key[16] = {0};
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
-    bool keyB = arg_get_lit(ctx, 4);
 
     CLIParserFree(ctx);
 
-    uint16_t ndefAID = 0xe103;
-    if (aidlen == 2)
-        ndefAID = (aid[0] << 8) + aid[1];
+    uint32_t ndefAID = 0xEEEE10;
+    if (aidlen == 2) {
+        ndefAID = (aid[0] << 16) | (aid[1] << 8) | aid[2];
+    }
 
+    // set default NDEF key
     uint8_t ndefkey[16] = {0};
     memcpy(ndefkey, g_mifarep_ndef_key, 16);
+
+    // user supplied key
     if (keylen == 16) {
         memcpy(ndefkey, key, 16);
     }
 
-    uint8_t data[4096] = {0};
-    int datalen = 0;
+    int file_ids_len = 0;
 
     for (int j = (int)file_ids_len - 1; j >= 0; j--) {
         PrintAndLogEx(SUCCESS, "\n\n   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
@@ -4680,7 +4696,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
         uint8_t filesettings[20] = {0};
         uint32_t fileset_len = 0;
 
-        res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
+        int res = handler_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
         if (res != PM3_SUCCESS) continue;
 
         int maclen = 0; // To be implemented
@@ -4698,19 +4714,20 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
                 return PM3_EMALLOC;
             }
 
-        fdata.data = data;
-        int res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE, filesettings[1]);
-        if (res == PM3_SUCCESS) {
-            uint32_t len = le24toh(fdata.length);
-            NDEFDecodeAndPrint(data, datalen, verbose);
+            fdata.data = data;
+            res = handler_desfire_readdata(&fdata, MFDES_DATA_FILE, filesettings[1]);
+            if (res == PM3_SUCCESS) {
+                uint32_t len = le24toh(fdata.length);
+                NDEFDecodeAndPrint(data, datalen, verbose);
 
-        } else {
-            PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
-            res = handler_desfire_select_application(aid);
-            if (res != PM3_SUCCESS) continue;
+            } else {
+                PrintAndLogEx(ERR, "Couldn't read value. Error %d", res);
+                res = handler_desfire_select_application(aid);
+                if (res != PM3_SUCCESS) continue;
+            }
+
+            free(data);
         }
-
-        free(data);
     }
 
 //    PrintAndLogEx(INFO, "reading data from tag");
@@ -4722,14 +4739,14 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
 
     if (verbose2) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("DESfire NDEF raw") " ----------------");
+        PrintAndLogEx(INFO, "--- " _CYAN_("DESFire NDEF raw") " ----------------");
         dump_buffer(data, datalen, stdout, 1);
     }
+
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndef -vv`") " for more details");
     return PM3_SUCCESS;
 }
 */
-
 /*
 static int CmdHF14aDesMAD(const char *Cmd) {
     DropField();
