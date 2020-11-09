@@ -1760,7 +1760,7 @@ write_dump:
     return PM3_SUCCESS;
 }
 
-static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose) {
+static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode) {
 
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
@@ -1769,7 +1769,7 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bo
         .req.use_replay = replay,
         .req.blockno = blockno,
         .req.send_reply = true,
-        .req.do_auth = true,
+        .req.do_auth = use_secure_pagemode,
     };
     memcpy(payload.req.key, KEY, 8);
     memcpy(payload.data, bldata, sizeof(payload.data));
@@ -1804,6 +1804,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     bool use_replay = false;
     bool errors = false;
     bool verbose = false;
+    bool use_secure_pagemode = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1848,6 +1849,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                     PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
                     errors = true;
                 }
+                use_secure_pagemode = true;
                 cmdp += 2;
                 break;
             case 'r':
@@ -1880,9 +1882,9 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         errors = true;
     }
 
-    if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
+    if (errors || cmdp < 4) return usage_hf_iclass_writeblock();
 
-    int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose);
+    int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose, use_secure_pagemode);
     switch (isok) {
         case PM3_SUCCESS:
             PrintAndLogEx(SUCCESS, "Wrote block %02X successful", blockno);
@@ -3565,10 +3567,11 @@ int info_iclass(void) {
         PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
 
         uint8_t aia[8];
-        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE)
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             memcpy(aia, ns_hdr->app_issuer_area, sizeof(aia));
-        else
+        } else {
             memcpy(aia, hdr->app_issuer_area, sizeof(aia));
+        }
 
         // if CSN ends with FF12E0, it's inside HID CSN range.
         bool isHidRange = (memcmp(hdr->csn + 5, "\xFF\x12\xE0", 3) == 0);
@@ -3583,11 +3586,13 @@ int info_iclass(void) {
             if (se_enabled)
                 PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS SE"));
         } else {
-            PrintAndLogEx(SUCCESS, "    CSN..-.......  " _YELLOW_("outside HID range"));
+            PrintAndLogEx(SUCCESS, "    CSN.......... " _YELLOW_("outside HID range"));
         }
 
         uint8_t cardtype = get_mem_config(hdr);
         PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
+        
+        
     }
 
     DropField();
