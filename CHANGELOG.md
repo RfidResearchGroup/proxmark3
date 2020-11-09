@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix 'hf iclass wrbl' - dealing with tags in unsecured vs secured pagemode now is correct (@iceman1001)
  - Change many commands to cliparser (@iceman1001, @tcprst, @mwalker33,...)
  - ...
  - Added compilation options for 256k Proxmark versions, see doc (@doegox)
