@@ -12,8 +12,10 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "lfadc.h"
+#include "pmflash.h"
 #include "commonutil.h"
 #include "em4x50.h"
+#include "flashmem.h"
 #include "BigBuf.h"
 #include "appmain.h" // tear
 
@@ -32,8 +34,13 @@
 #define EM4X50_T_TAG_FULL_PERIOD            64
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
-#define EM4X50_T_WAITING_FOR_SNGLLIW        100
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
+#define EM4X50_T_WAITING_FOR_SNGLLIW        140     // this value seems to be
+                                                    // critical; if it's too
+                                                    // low (e.g. < 120) some
+                                                    // cards are no longer
+                                                    // readable although
+                                                    // they're ok
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -48,8 +55,8 @@
 #define EM4X50_COMMAND_WRITE_PASSWORD       0x11
 #define EM4X50_COMMAND_SELECTIVE_READ       0x0A
 
-int gHigh = 0;
-int gLow = 0;
+int gHigh = 190;
+int gLow = 60;
 
 // auxiliary functions
 
@@ -144,7 +151,7 @@ static bool get_signalproperties(void) {
 
         // about 2 samples per bit period
         wait_timer0(T0 * EM4X50_T_TAG_HALF_PERIOD);
-
+        
         if (AT91C_BASE_SSC->SSC_RHR > noise) {
             signal_found = true;
             break;
@@ -780,6 +787,8 @@ static bool login(uint32_t password) {
 
         // send password
         em4x50_reader_send_word(password);
+        
+        wait_timer0(T0 * EM4X50_T_TAG_TPP);
 
         // check if ACK is returned
         if (check_ack(false))
@@ -1079,8 +1088,8 @@ void em4x50_write(em4x50_data_t *etd) {
 void em4x50_writepwd(em4x50_data_t *etd) {
 
     // simple change of password
-
-    bool bsuccess = false;
+    
+    int res = PM3_ENODATA;
 
     em4x50_setup_read();
 
@@ -1090,17 +1099,16 @@ void em4x50_writepwd(em4x50_data_t *etd) {
         // login and change password
         if (login(etd->password1)) {
 
-            int res = write_password(etd->password1, etd->password2);
+            res = write_password(etd->password1, etd->password2);
             if (res == PM3_ETEAROFF) {
                 lf_finalize();
                 return;
             }
-            bsuccess = (res == PM3_SUCCESS);
         }
     }
 
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_WRITEPWD, bsuccess, 0, 0);
+    reply_ng(CMD_LF_EM4X50_WRITEPWD, res, 0, 0);
 }
 
 void em4x50_wipe(uint32_t *password) {
@@ -1268,25 +1276,16 @@ void em4x50_watch() {
         memset(words, 0, sizeof(words));
         now = 0;
 
-        //if (get_signalproperties()) && find_em4x50_tag()) {
-        if (get_signalproperties()) {
-            Dbprintf("ghet 1");
-            if (find_em4x50_tag()) {
-                Dbprintf("ghet 2");
+        if (get_signalproperties() && find_em4x50_tag()) {
 
-                standard_read(&now, words);
-                Dbprintf("ghet 3");
+            standard_read(&now, words);
+            if (now > 0) {
 
-                if (now > 0) {
-
-                    Dbprintf("");
-                    for (int i = 0; i < now; i++) {
-                        
-                        Dbprintf("EM4x50 TAG ID: "
-                                 _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
-                                 words[i], reflect32(words[i]));
-                    }
-                }
+                Dbprintf("");
+                for (int i = 0; i < now; i++)
+                    Dbprintf("EM4x50 TAG ID: "
+                             _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
+                             words[i], reflect32(words[i]));
             }
         }
     }
@@ -1340,16 +1339,24 @@ void em4x50_restore(em4x50_data_t *etd) {
     int res = 0;
     int start_word = 0;
     uint8_t status = 0;
-    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+    uint8_t em4x50_mem[DUMP_FILESIZE] = {0x0};
     uint32_t addresses = 0x00001F01; // from fwr = 1 to lwr = 31 (0x1F)
     uint32_t words_client[EM4X50_NO_WORDS] = {0x0};
     uint32_t words_read[EM4X50_NO_WORDS] = {0x0};
 
-    em4x50_setup_read();
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
+    // involved in dealing with emulator memory. But if it is called later, it will
+    // destroy the Emulator Memory.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-    // read data from emulator memory
+    // read data from flash memory
+    Flash_ReadData(0, em4x50_mem, 4 * EM4X50_NO_WORDS);
     for (int i = 0; i < EM4X50_NO_WORDS; i++)
         words_client[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
+
+    em4x50_setup_read();
 
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
@@ -1396,25 +1403,33 @@ void em4x50_restore(em4x50_data_t *etd) {
 
 void em4x50_sim(void) {
 
-    // simulate uploaded data in emulator memory
+    // simulate uploaded data in flash memory
     // (currently only a one-way communication is possible)
 
     int status = PM3_SUCCESS;
-    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+    uint8_t em4x50_mem[DUMP_FILESIZE] = {0x0};
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
+
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
+    // involved in dealing with emulator memory. But if it is called later, it will
+    // destroy the Emulator Memory.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+    // read data from flash memory
+    Flash_ReadData(0, em4x50_mem, 4 * EM4X50_NO_WORDS);
+    for (int i = 0; i < EM4X50_NO_WORDS; i++)
+        words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
 
     em4x50_setup_sim();
 
-    // read data from emulator memory
-    for (int i = 0; i < EM4X50_NO_WORDS; i++)
-        words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
-    
-    if ((words[EM4X50_DEVICE_SERIAL] != 0x0) && (words[EM4X50_DEVICE_ID] != 0X0)) {
+    // only if valid em4x50 data (e.g. uid == serial)
+    if (words[EM4X50_DEVICE_SERIAL] != words[EM4X50_DEVICE_ID]) {
 
         // extract control data
         int fwr = words[CONFIG_BLOCK] & 0xFF;           // first word read
         int lwr = (words[CONFIG_BLOCK] >> 8) & 0xFF;    // last word read
-
         // extract protection data
         int fwrp = words[EM4X50_PROTECTION] & 0xFF;         // first word read protected
         int lwrp = (words[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
@@ -1437,6 +1452,7 @@ void em4x50_sim(void) {
         status = PM3_ENODATA;
     }
     
+    BigBuf_free();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_SIM, status, 0, 0);
 }
@@ -1459,32 +1475,117 @@ void em4x50_stdread(void) {
     reply_ng(CMD_LF_EM4X50_STDREAD, now, (uint8_t *)words, 4 * now);
 }
 
-void em4x50_chk(uint32_t *numkeys) {
+static uint32_t get_pwd(uint8_t *pwds, int cnt) {
 
-    // reads data that tag transmits "voluntarily" -> standard read mode
+    uint32_t pwd = 0x0;
+    
+    for (int j = 0; j < 4; j++)
+        pwd |= (*(pwds + 4 * cnt + j)) << ((3 - j) * 8);
+    
+    return pwd;
+
+}
+
+void em4x50_chk(uint32_t *offset) {
+
+    // check passwords from dictionary in flash memory
 
     bool bsuccess = false;
-    uint32_t password = 0x0;
-    uint32_t keys[200] = {0x0};
-    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
+    int block_count = 1;
+    int pwds_remain = 0;
+    uint8_t counter[2] = {0x00, 0x00};
+    uint16_t isok = 0;
+    uint16_t pwd_count = 0;
+    uint16_t pwd_size_available = 0;
+    uint32_t pwd = 0x0;
+    uint8_t *pwd_block = BigBuf_get_EM_addr();
 
-    em4x50_setup_read();
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
+    // involved in dealing with emulator memory. But if it is called later, it will
+    // destroy the Emulator Memory.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-    // read data from emulator memory
-    for (int i = 0; i < *numkeys; i++)
-        keys[i] = bytes_to_num(em4x50_mem + (i * 4), 4);
+    BigBuf_Clear_EM();
+
+    // initialize passwords and get number of passwords
+    if (Flash_ReadData(*offset, counter, sizeof(counter)) != sizeof(counter))
+        goto OUT;
+
+    *offset += 2;
+    
+    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
+    if (pwd_count == 0)
+        goto OUT;
+
+    pwd_size_available = 4 * pwd_count;
+    
+    // since flash can report way too many pwds, we need to limit it.
+    // bigbuff EM size is determined by CARD_MEMORY_SIZE
+    // a password is 4bytes.
+    // pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
+    if (pwd_size_available > CARD_MEMORY_SIZE) {
+
+        // we have to use more than one block of passwords
+        block_count = (4 * pwd_count) / CARD_MEMORY_SIZE;
+        pwds_remain = pwd_count - block_count * CARD_MEMORY_SIZE / 4;
         
-    // set gHigh and gLow
-    if (get_signalproperties() && find_em4x50_tag()) {
-        for (int i = 0; i < *numkeys; i++) {
-            if (login(keys[i])) {
-                bsuccess = true;
-                password = keys[i];
-                break;
+        if (pwds_remain != 0)
+            block_count++;
+        
+        // adjust pwd_size_available and pwd_count
+        pwd_size_available = CARD_MEMORY_SIZE;
+        pwd_count = pwd_size_available / 4;
+
+        Dbprintf("Passwords divided into %i blocks", block_count);
+        
+    }
+
+    for (int n = 0; n < block_count; n++) {
+
+        // adjust parameters if more than 1 block
+        if (n != 0) {
+            *offset += pwd_size_available;
+
+            // final run with remaining passwords
+            if (n == block_count - 1) {
+                pwd_count = pwds_remain;
+                pwd_size_available = 4 * pwds_remain;
+            }
+        }
+        
+        Dbprintf("Using block #%i with %i passwords", n + 1, pwd_count);
+
+        // read next password block
+        isok = Flash_ReadData(*offset, pwd_block, pwd_size_available);
+        if (isok != pwd_size_available)
+            goto OUT;
+            
+        em4x50_setup_read();
+
+        // set gHigh and gLow
+        if (get_signalproperties() && find_em4x50_tag()) {
+
+            // try to login with current password
+            for (int i = 0; i < pwd_count; i++) {
+
+                // manual interruption
+                if (BUTTON_PRESS())
+                    goto OUT;
+
+                // get next password from flash memory
+                pwd = get_pwd(pwd_block, i);
+                            
+                bsuccess = login(pwd);
+                if (bsuccess)
+                    break;
             }
         }
     }
 
+OUT:
+    
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_CHK, bsuccess, (uint8_t *)&password, 32);
+    reply_ng(CMD_LF_EM4X50_CHK, bsuccess, (uint8_t *)&pwd, 32);
 }
