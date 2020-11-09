@@ -60,7 +60,7 @@ uint8_t k3kdefaultkeys[1][24] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 struct desfire_tag mf_state = {.session_key = NULL, .authentication_scheme = AS_LEGACY, .authenticated_key_no = NOT_YET_AUTHENTICATED, .crypto_buffer = NULL, .crypto_buffer_size = 0, .selected_application = 0};
 static desfiretag_t tag = &mf_state;
 
-typedef struct {
+typedef struct mfdes_authinput {
     uint8_t mode;
     uint8_t algo;
     uint8_t keyno;
@@ -93,7 +93,6 @@ typedef struct {
     uint8_t versionSW[7];
     uint8_t details[14];
 } PACKED mfdes_info_res_t;
-
 
 typedef struct mfdes_value {
     uint8_t fileno;  //01
@@ -340,11 +339,19 @@ typedef enum {
     NTAG413DNA,
 } nxp_cardtype_t;
 
-typedef struct {
+typedef struct dfname {
     uint8_t aid[3];
     uint8_t fid[2];
     uint8_t name[16];
-} dfname_t;
+} PACKED dfname_t;
+
+typedef struct aidhdr {
+    uint8_t aid[3];
+    uint8_t keysetting1;
+    uint8_t keysetting2;
+    uint8_t fid[2];
+    uint8_t name[16];
+} PACKED aidhdr_t;
 
 static int CmdHelp(const char *Cmd);
 
@@ -1544,9 +1551,14 @@ static int handler_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
 
 static int handler_desfire_select_application(uint8_t *aid) {
     if (g_debugMode > 1) {
-        if (aid == NULL) PrintAndLogEx(ERR, "AID=NULL");
+        if (aid == NULL) {
+            PrintAndLogEx(ERR, "AID=NULL");
+        }
     }
-    if (aid == NULL) return PM3_EINVARG;
+    if (aid == NULL) {
+        return PM3_EINVARG;
+    }
+
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     uint32_t recv_len = 0;
     uint16_t sw = 0;
@@ -1620,37 +1632,38 @@ static int handler_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint32_t
     return res;
 }
 
-typedef struct {
-    uint8_t aid[3];
-    uint8_t keysetting1;
-    uint8_t keysetting2;
-    uint8_t fid[2];
-    uint8_t name[16];
-} aidhdr_t;
-
 static int handler_desfire_createapp(aidhdr_t *aidhdr, bool usename, bool usefid) {
     if (aidhdr == NULL) return PM3_EINVARG;
 
     sAPDU apdu = {0x90, MFDES_CREATE_APPLICATION, 0x00, 0x00, sizeof(aidhdr_t), (uint8_t *)aidhdr}; // 0xCA
 
-    if (!usename) {
-        apdu.Lc = apdu.Lc - 16;
+    if (usename == false) {
+        apdu.Lc = apdu.Lc - sizeof(aidhdr->name);
     }
-    if (!usefid) {
-        apdu.Lc = apdu.Lc - 2;
+    if (usefid == false) {
+        apdu.Lc = apdu.Lc - sizeof(aidhdr->fid);
     }
     uint8_t *data = NULL;
-    if (!usefid && usename) {
-        data = (uint8_t *)malloc(apdu.Lc);
+    
+    // skip over FID if not used.
+    if (usefid == false && usename) {
+        data = calloc(apdu.Lc, sizeof(uint8_t));
         apdu.data = data;
-        memcpy(data, aidhdr, apdu.Lc);
-        memcpy(&data[3 + 1 + 1], aidhdr->name, 16);
+        
+        memcpy(data, aidhdr->aid, sizeof(aidhdr->aid));
+        data[3] = aidhdr->keysetting1;
+        data[4] = aidhdr->keysetting2;
+        memcpy(data + 5, aidhdr->name, sizeof(aidhdr->name));
+        
+        PrintAndLogEx(INFO, "new data:  %s", sprint_hex_inrow(data, apdu.Lc));
     }
 
     uint16_t sw = 0;
     uint32_t recvlen = 0;
     int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
-    if (data != NULL) free(data);
+    if (data != NULL) {
+        free(data);
+    }
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"), GetErrorString(res, &sw));
         DropField();
@@ -1659,7 +1672,9 @@ static int handler_desfire_createapp(aidhdr_t *aidhdr, bool usename, bool usefid
 }
 
 static int handler_desfire_deleteapp(const uint8_t *aid) {
-    if (aid == NULL) return PM3_EINVARG;
+    if (aid == NULL) {
+        return PM3_EINVARG;
+    }
     sAPDU apdu = {0x90, MFDES_DELETE_APPLICATION, 0x00, 0x00, 3, (uint8_t *)aid}; // 0xDA
     uint16_t sw = 0;
     uint32_t recvlen = 0;
@@ -2240,7 +2255,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes createaid",
                   "Create Application ID",
-                  "hf mfdes createaid -a 123456 -f 1111 -k 0E -l 2E -n Test"
+                  "hf mfdes createaid -a 123456 -f 1111 -k 0E -l 2E --name Test"
                  );
 
     void *argtable[] = {
@@ -2249,7 +2264,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_strx0("f",  "fid",    "<fid>", "File ID to create (optional)"),
         arg_strx0("k",  "ks1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
         arg_strx0("l",  "ks2",    "<keysetting2>", "Key Setting 2"),
-        arg_str0("n",  "name",    "<name>", "App ISO-4 Name (optional)"),
+        arg_str0(NULL,  "name",   "<name>", "App ISO-4 Name (optional)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2347,9 +2362,20 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     aidhdr.keysetting1 = keysetting1[0];
     aidhdr.keysetting2 = keysetting2[0];
 
-    if (usefid) memcpy(aidhdr.fid, fid, sizeof(fid));
+    if (usefid)
+        memcpy(aidhdr.fid, fid, sizeof(aidhdr.fid));
 
-    if (usename) memcpy(aidhdr.name, name, sizeof(name));
+    if (usename) 
+        memcpy(aidhdr.name, name, sizeof(aidhdr.name));
+
+    PrintAndLogEx(INFO, "Creating AID using:");
+    PrintAndLogEx(INFO, "AID      %s", sprint_hex_inrow(aidhdr.aid, sizeof(aidhdr.aid)));
+    PrintAndLogEx(INFO, "Key set1 0x%02X", aidhdr.keysetting1);
+    PrintAndLogEx(INFO, "Key Set2 0x%02X", aidhdr.keysetting2);
+    if (usefid)
+        PrintAndLogEx(INFO, "FID      %s", sprint_hex_inrow(aidhdr.fid, sizeof(aidhdr.fid)));
+    if (usename)
+        PrintAndLogEx(INFO, "DF Name  %s", aidhdr.name);
 
     uint8_t rootaid[3] = {0x00, 0x00, 0x00};
     int res = handler_desfire_select_application(rootaid);
@@ -2397,7 +2423,10 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
     uint8_t rootaid[3] = {0x00, 0x00, 0x00};
     int res = handler_desfire_select_application(rootaid);
-    if (res != PM3_SUCCESS) { DropField(); return res;}
+    if (res != PM3_SUCCESS) { 
+        DropField();
+        return res;
+    }
     res = handler_desfire_deleteapp(aid);   
     DropField();
     if (res == PM3_SUCCESS) {
