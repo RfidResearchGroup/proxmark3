@@ -285,7 +285,7 @@ uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_
         }
     } else  {
         rv = def;
-    }   
+    }
     return rv;
 }
 

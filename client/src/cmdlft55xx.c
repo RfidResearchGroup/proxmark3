@@ -1024,6 +1024,9 @@ static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
     PrintAndLogEx(NORMAL, msg);
 }
 
+// Define prototype to call from within detect.
+static int CmdT55xxWakeUp (const char *Cmd);
+
 static int CmdT55xxDetect(const char *Cmd) {
 
     bool errors = false;
@@ -1032,9 +1035,16 @@ static int CmdT55xxDetect(const char *Cmd) {
     bool try_with_pwd = false;
     bool try_all_dl_modes = true;
     bool found = false;
+    bool usewake = false;
     uint64_t password = -1;
     uint8_t cmdp = 0;
     uint8_t downlink_mode = 0;
+    char wakecmd[20] = { 0x00 };
+    struct timespec sleepperiod;
+
+    // Setup the 90ms time value to sleep for after the wake, to allow delay init to complete (~70ms)
+    sleepperiod.tv_sec = 0;
+    sleepperiod.tv_nsec = 90000000;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1042,6 +1052,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                 return usage_t55xx_detect();
             case 'p':
                 password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                sprintf (wakecmd,"p %08x q",(uint32_t)(password & 0xFFFFFFFF));
                 usepwd = true;
                 cmdp += 2;
                 break;
@@ -1064,6 +1075,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     }
     if (errors) return usage_t55xx_detect();
 
+    
     // detect called so clear data blocks
     T55x7_ClearAllBlockData();
 
@@ -1072,38 +1084,61 @@ static int CmdT55xxDetect(const char *Cmd) {
         return PM3_ESOFT;
 
     if (useGB == false) {
-        // do ... while to check without password then loop back if password supplied
+        // do ... while not found and not yet tried with wake (for AOR or Init Delay)
         do {
+            // do ... while to check without password then loop back if password supplied
+            do {
 
-            if (try_all_dl_modes) {
-                for (uint8_t m = downlink_mode; m < 4; m++) {
+                if (try_all_dl_modes) {
+                    for (uint8_t m = downlink_mode; m < 4; m++) {
+                        if (usewake) {
+                            // call wake
+                            if (try_with_pwd)
+                                CmdT55xxWakeUp (wakecmd);
+                            else
+                                CmdT55xxWakeUp ("q");
+                            // sleep 90 ms
+                             nanosleep (&sleepperiod, &sleepperiod);
+                        }
 
-                    if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, (try_with_pwd && usepwd), password, m) == false)
-                        continue;
+                        if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, (try_with_pwd && usepwd), password, m) == false)
+                            continue;
 
-                    if (t55xxTryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
-                        continue;
+                        if (t55xxTryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
+                            continue;
 
-                    found = true;
+                        found = true;
 
-                    break;
+                        break;
+                    }
+                } else {
+                    if (usewake) {
+                        // call wake
+                        if (try_with_pwd)
+                            CmdT55xxWakeUp (wakecmd);
+                        else
+                            CmdT55xxWakeUp ("q");
+                        // sleep 90 ms
+                        nanosleep (&sleepperiod, &sleepperiod);
+                    }
+
+                    if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
+                        found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
+                    }
                 }
-            } else {
-                if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
-                    found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
-                }
-            }
 
-            // toggle so we loop back if not found and try with pwd
-            if (!found && usepwd)
-                try_with_pwd = !try_with_pwd;
+                // toggle so we loop back if not found and try with pwd
+                if (!found && usepwd)
+                    try_with_pwd = !try_with_pwd;
 
-            // force exit as detect block has been found
-            if (found)
-                try_with_pwd = false;
+                // force exit as detect block has been found
+                if (found)
+                    try_with_pwd = false;
 
-        } while (try_with_pwd);
-
+            } while (try_with_pwd);
+            // Toggle so we loop back and try with wakeup.
+            usewake = !usewake;
+        } while (!found && usewake);
     } else {
         found = t55xxTryDetectModulation(downlink_mode, T55XX_PrintConfig);
     }
@@ -1619,6 +1654,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     uint8_t downlink_mode = config.downlink_mode;
+    bool quiet = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1634,6 +1670,10 @@ static int CmdT55xxWakeUp(const char *Cmd) {
                     downlink_mode = 0;
 
                 cmdp += 2;
+                break;
+            case 'q':
+                quiet = true;
+                cmdp++;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -1659,7 +1699,9 @@ static int CmdT55xxWakeUp(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
+    if (!quiet)
+        PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
+
     return PM3_SUCCESS;
 }
 
@@ -3041,8 +3083,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     }
 
     if (errors) return usage_t55xx_chk();
-    
-    if (strlen(filename) == 0){
+
+    if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
         use_pwd_file = true;
     }
@@ -3133,9 +3175,9 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             return PM3_ESOFT;
         }
-        
+
         PrintAndLogEx(INFO, "press " _YELLOW_("'enter'") " to cancel the command");
-        
+
         for (uint32_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {

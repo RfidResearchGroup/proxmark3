@@ -63,4 +63,5 @@ extern int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, 
 extern void APDUPrint(APDUStruct apdu);
 extern void APDUPrintEx(APDUStruct apdu, size_t maxdatalen);
 
+void SAPDUPrint(sAPDU apdu, size_t maxdatalen);
 #endif

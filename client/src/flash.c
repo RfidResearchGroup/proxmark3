@@ -122,6 +122,9 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
         }
         if (paddr < FLASH_START || (paddr + filesz) > flash_end) {
             PrintAndLogEx(ERR, "Error: PHDR is not contained in Flash");
+            if ((paddr + filesz) > flash_end) {
+                PrintAndLogEx(ERR, "Firmware probably too big for your device");
+            }
             return PM3_EFILE;
         }
         if (vaddr >= FLASH_START && vaddr < flash_end && (flags & PF_W)) {

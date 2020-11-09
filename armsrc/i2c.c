@@ -670,7 +670,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
     if (I2C_WaitForSim() == false)
         return false;
-   
+
     // read bytes from module
     uint8_t len = sizeof(card_ptr->atr);
     if (sc_rx_bytes(card_ptr->atr, &len) == false)
@@ -713,8 +713,8 @@ void SmartCardAtr(void) {
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
     smart_card_atr_t card;
-    int res = GetATR(&card, true) ? PM3_SUCCESS : PM3_ETIMEOUT;    
-    reply_ng(CMD_SMART_ATR, res, (uint8_t*)&card, sizeof(smart_card_atr_t));
+    int res = GetATR(&card, true) ? PM3_SUCCESS : PM3_ETIMEOUT;
+    reply_ng(CMD_SMART_ATR, res, (uint8_t *)&card, sizeof(smart_card_atr_t));
     set_tracing(false);
     LEDsoff();
 }
@@ -827,7 +827,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         length -= size;
         pos += size;
     }
-    
+
     reply_ng(CMD_SMART_UPGRADE, (isOK) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
     LED_C_OFF();
     BigBuf_free();

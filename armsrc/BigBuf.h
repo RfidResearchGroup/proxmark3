@@ -34,6 +34,7 @@ void BigBuf_Clear_ext(bool verbose);
 void BigBuf_Clear_keep_EM(void);
 void BigBuf_Clear_EM(void);
 uint8_t *BigBuf_malloc(uint16_t);
+uint8_t *BigBuf_calloc(uint16_t);
 void BigBuf_free(void);
 void BigBuf_free_keep_EM(void);
 void BigBuf_print_status(void);
@@ -46,9 +47,7 @@ bool get_tracing(void);
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
 bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, uint8_t *parity, bool reader2tag);
 
-
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length);
-
 
 typedef struct {
     int max;

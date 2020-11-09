@@ -312,7 +312,7 @@ int CmdHFSniff(const char *Cmd) {
 }
 
 int handle_hf_plot(void) {
-    
+
     uint8_t buf[FPGA_TRACE_SIZE];
 
     PacketResponseNG response;
@@ -355,7 +355,7 @@ int CmdHFPlot(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    
+
     {"--------",    CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("High Frequency") " -----------------------"},
     {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...               }"},
     {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...               }"},
@@ -375,7 +375,7 @@ static command_t CommandTable[] = {
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...          }"},
-    {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},    
+    {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},

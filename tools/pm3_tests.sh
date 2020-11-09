@@ -412,7 +412,7 @@ while true; do
                                                                      "Motorola - fmt: 26 FC: 258 Card: 2, Raw: A0000000A0002021"; then break; fi
       if ! CheckExecute slow "lf T55 nedap test"                 "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nedap.pm3; lf search 1'" "NEDAP ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nedap test2"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nedap.pm3; lf nedap demod'" \
-                                                                     "NEDAP - Card: 12345 subtype: 1 customer code: 123, Raw: FF 82 24 65 08 20 99 53"; then break; fi
+                                                                     "NEDAP - Card: 12345 subtype: 1 customer code: 123, Raw: FF82246508209953"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf search 1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf nexwatch demod'" \
                                                                      "Raw : 56000000213C9F8F150C00"; then break; fi
@@ -450,10 +450,10 @@ while true; do
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
       if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested t 1 000000000000'" "found:"; then break; fi
-      if ! CheckExecute slow "hf iclass long test"         "$CLIENTBIN -c 'hf iclass loclass t l'" "verified ok"; then break; fi
+      if ! CheckExecute slow "hf iclass long test"         "$CLIENTBIN -c 'hf iclass loclass --long'" "verified ok"; then break; fi
       if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test(s) \[ ok"; then break; fi
       if ! $SLOWTESTS; then
-        if ! CheckExecute "hf iclass test"                 "$CLIENTBIN -c 'hf iclass loclass t'" "key diversification (ok)"; then break; fi
+        if ! CheckExecute "hf iclass test"                 "$CLIENTBIN -c 'hf iclass loclass --test'" "key diversification (ok)"; then break; fi
         if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test(s) \[ ok"; then break; fi
       fi
     fi

@@ -66,22 +66,12 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "   -- execute loclass attack online part");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 2"));
     PrintAndLogEx(NORMAL, "   -- simulate full iCLASS 2k tag");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin"));
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 3"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_eload(void) {
-    PrintAndLogEx(NORMAL, "Loads iCLASS tag dump into emulator memory on device\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass eload [h] f <filename>\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h            : Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename> : filename of dump");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
+
 static int usage_hf_iclass_esave(void) {
     PrintAndLogEx(NORMAL, "Save emulator memory to file.");
     PrintAndLogEx(NORMAL, "if not filename is supplied, CSN will be used.");
@@ -269,27 +259,6 @@ static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys f mykeys.bin l"));
     PrintAndLogEx(NORMAL, "   -- print keys");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys p"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_hf_iclass_loclass(void) {
-    PrintAndLogEx(NORMAL, "Execute the offline part of loclass attack");
-    PrintAndLogEx(NORMAL, "  An iclass dumpfile is assumed to consist of an arbitrary number of");
-    PrintAndLogEx(NORMAL, "  malicious CSNs, and their protocol responses");
-    PrintAndLogEx(NORMAL, "  The binary format of the file is expected to be as follows: ");
-    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "   ... totalling N*24 bytes\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [h] [t [l]] [f <filename>]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h             Show this help");
-    PrintAndLogEx(NORMAL, "  t             Perform self-test");
-    PrintAndLogEx(NORMAL, "  t l           Perform self-test, including long ones");
-    PrintAndLogEx(NORMAL, "  f <filename>  Bruteforce iclass dumpfile");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass loclass f iclass-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass loclass t"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -730,7 +699,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             saveFile("iclass_mac_attack", ".bin", dump, datalen);
             free(dump);
 
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass h") "` to recover elite key");
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass -h") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_READER_ATTACK_KEYROLL: {
@@ -796,7 +765,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
             free(dump);
 
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass h") "` to recover elite key");
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass -h") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_CSN:
@@ -884,50 +853,54 @@ static int CmdHFiClassReader(const char *Cmd) {
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass eload",
+                  "Loads iCLASS tag dump into emulator memory on device",
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "filename of dump"),
+        arg_lit0(NULL, "json",              "load JSON type dump"),
+        arg_lit0(NULL, "eml",               "load EML type dump"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    if (strlen(filename) == 0) {
+        PrintAndLogEx(ERR, "Error: Please specify a filename");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     DumpFileType_t dftype = BIN;
-    char filename[FILE_PATH_SIZE] = {0};
-    bool errors = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_eload();
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "Filename too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            case 'j':
-                dftype = JSON;
-                cmdp++;
-                break;
-            case 'e':
-                dftype = EML;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+
+    bool use_json = arg_get_lit(ctx, 2);
+    bool use_eml = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (use_json && use_eml) {
+        PrintAndLogEx(ERR, "Error: can't specify both JSON & EML");
+        return PM3_EINVARG;
     }
 
-    //Validations
-    if (errors || cmdp == 0) {
-        return usage_hf_iclass_eload();
+    if (use_json) {
+        dftype = JSON;
+    } else if (use_eml) {
+        dftype = EML;
     }
 
+    size_t bytes_read = 2048;
     uint8_t *dump = calloc(2048, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 
-    size_t bytes_read = 2048;
     int res = 0;
 
     switch (dftype) {
@@ -943,10 +916,10 @@ static int CmdHFiClassELoad(const char *Cmd) {
             res = loadFileJSON(filename, dump, 2048, &bytes_read, NULL);
             break;
         }
-        case DICTIONARY:
-            PrintAndLogEx(ERR, "No dictionary loaded");
-            free(dump);
-            return PM3_ESOFT;
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+            return PM3_EINVARG;
+        }
     }
 
     if (res != PM3_SUCCESS) {
@@ -1787,7 +1760,7 @@ write_dump:
     return PM3_SUCCESS;
 }
 
-static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose) {
+static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode) {
 
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
@@ -1796,7 +1769,7 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bo
         .req.use_replay = replay,
         .req.blockno = blockno,
         .req.send_reply = true,
-        .req.do_auth = true,
+        .req.do_auth = use_secure_pagemode,
     };
     memcpy(payload.req.key, KEY, 8);
     memcpy(payload.data, bldata, sizeof(payload.data));
@@ -1831,6 +1804,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     bool use_replay = false;
     bool errors = false;
     bool verbose = false;
+    bool use_secure_pagemode = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1875,6 +1849,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                     PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
                     errors = true;
                 }
+                use_secure_pagemode = true;
                 cmdp += 2;
                 break;
             case 'r':
@@ -1907,9 +1882,9 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         errors = true;
     }
 
-    if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
+    if (errors || cmdp < 4) return usage_hf_iclass_writeblock();
 
-    int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose);
+    int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose, use_secure_pagemode);
     switch (isok) {
         case PM3_SUCCESS:
             PrintAndLogEx(SUCCESS, "Wrote block %02X successful", blockno);
@@ -2325,26 +2300,42 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 }
 
 static int CmdHFiClass_loclass(const char *Cmd) {
-    char opt = tolower(param_getchar(Cmd, 0));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass loclass",
+                  "Execute the offline part of loclass attack\n"
+                  "  An iclass dumpfile is assumed to consist of an arbitrary number of\n"
+                  "  malicious CSNs, and their protocol responses\n"
+                  "  The binary format of the file is expected to be as follows: \n"
+                  "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
+                  "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
+                  "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>\n"
+                  "   ... totalling N*24 bytes",
+                  "hf iclass loclass -f iclass-dump.bin\n"
+                  "hf iclass loclass --test");
 
-    if (strlen(Cmd) < 1 || opt == 'h')
-        return usage_hf_iclass_loclass();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "filename of Bruteforce iclass dumpfile"),
+        arg_lit0(NULL, "test",              "Perform self-test"),
+        arg_lit0(NULL, "long",              "Perform self-test, including long ones"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (opt == 'f') {
-        char fileName[FILE_PATH_SIZE] = {0};
-        if (param_getstr(Cmd, 1, fileName, sizeof(fileName)) > 0) {
-            return bruteforceFileNoKeys(fileName);
-        } else {
-            PrintAndLogEx(WARNING, "You must specify a filename");
-            return PM3_EFILE;
-        }
-    } else if (opt == 't') {
-        char opt2 = tolower(param_getchar(Cmd, 1));
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
+    bool test = arg_get_lit(ctx, 2);
+    bool longtest = arg_get_lit(ctx, 3);
+
+    CLIParserFree(ctx);
+
+    if (test || longtest) {
         int errors = testCipherUtils();
         errors += testMAC();
         errors += doKeyTests();
-        errors += testElite(opt2 == 'l');
+        errors += testElite(longtest);
 
         if (errors != PM3_SUCCESS)
             PrintAndLogEx(ERR, "There were errors!!!");
@@ -2352,7 +2343,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return usage_hf_iclass_loclass();
+    return bruteforceFileNoKeys(filename);
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
@@ -3576,10 +3567,11 @@ int info_iclass(void) {
         PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
 
         uint8_t aia[8];
-        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE)
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             memcpy(aia, ns_hdr->app_issuer_area, sizeof(aia));
-        else
+        } else {
             memcpy(aia, hdr->app_issuer_area, sizeof(aia));
+        }
 
         // if CSN ends with FF12E0, it's inside HID CSN range.
         bool isHidRange = (memcmp(hdr->csn + 5, "\xFF\x12\xE0", 3) == 0);
@@ -3594,11 +3586,13 @@ int info_iclass(void) {
             if (se_enabled)
                 PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS SE"));
         } else {
-            PrintAndLogEx(SUCCESS, "    CSN..-.......  " _YELLOW_("outside HID range"));
+            PrintAndLogEx(SUCCESS, "    CSN.......... " _YELLOW_("outside HID range"));
         }
 
         uint8_t cardtype = get_mem_config(hdr);
         PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
+        
+        
     }
 
     DropField();

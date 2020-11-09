@@ -68,7 +68,8 @@ int PSKDemod(int clk, int invert, int maxErr, bool verbose);                    
 int NRZrawDemod(int clk, int invert, int maxErr, bool verbose);                                 // used by cmd lf pac, lf t55xx
 
 
-void printDemodBuff(void);
+int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex);
+
 void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx);
 bool getDemodBuff(uint8_t *buff, size_t *size);
 void save_restoreDB(uint8_t saveOpt);// option '1' to save DemodBuffer any other to restore

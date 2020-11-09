@@ -13,9 +13,9 @@
 
 #include "common.h"
 
-extern int g_rsamples;   // = 0;
 extern uint8_t g_trigger;
-
+extern bool g_hf_field_active;
+void hf_field_off(void);
 int tearoff_hook(void);
 
 // ADC Vref = 3300mV, and an (10M+1M):1M voltage divider on the HF input can measure voltages up to 36300 mV

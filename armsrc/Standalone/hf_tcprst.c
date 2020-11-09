@@ -26,7 +26,7 @@ void ModInfo(void) {
 
 /* This standalone implements four different modes: reading, simulating, dumping, & emulating.
 *
-* The initial mode is reading with LEDs A & D. 
+* The initial mode is reading with LEDs A & D.
 * In this mode, the Proxmark is looking for an ST25TA card like those used by the IKEA Rothult,
 * it will act as reader, and store the UID for simulation.
 *
@@ -37,8 +37,8 @@ void ModInfo(void) {
 * Once it gets the key, it will switch to dump mode (LEDs C & D) automatically. During this mode the Proxmark
 * will act as a reader once again, but now we know the Read Protection key to authenticate to the card to dump
 * it's contents so we can achieve full emulation.
-* 
-* Once it dumps the contents of the card, it will switch to emulation mode (LED C) automatically. 
+*
+* Once it dumps the contents of the card, it will switch to emulation mode (LED C) automatically.
 * During this mode the Proxmark should function as the original ST25TA IKEA Rothult Master Key
 *
 * Keep pressing the button down will quit the standalone cycle.
@@ -68,13 +68,13 @@ void RunMod(void) {
     // APDUs necessary to dump NDEF
     // ----------------------------
     // Select NDEF Application
-    uint8_t ndef_app[13] = {0x00, 0xa4, 0x04, 0x00, 0x07, 0xd2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00}; 
+    uint8_t ndef_app[13] = {0x00, 0xa4, 0x04, 0x00, 0x07, 0xd2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00};
     // Select NDEF File
-    uint8_t ndef_sel[7] = {0x00, 0xa4, 0x00, 0x0c, 0x02, 0x00, 0x01};  
+    uint8_t ndef_sel[7] = {0x00, 0xa4, 0x00, 0x0c, 0x02, 0x00, 0x01};
     // Read verification without password
-    uint8_t verify[5] = {0x00, 0x20, 0x00, 0x01, 0x00};  
+    uint8_t verify[5] = {0x00, 0x20, 0x00, 0x01, 0x00};
     // Read verification with password
-    uint8_t verify_pwd[21] = {0x00, 0x20, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; 
+    uint8_t verify_pwd[21] = {0x00, 0x20, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     // Read NDEF file contents
     uint8_t ndef_read[5] = {0x00, 0xb0, 0x00, 0x00, 0x1d};
 
@@ -90,15 +90,6 @@ void RunMod(void) {
     // Did we get the NDEF file contents from the card
     bool gotndef = false;
 
-//For emulation steps
-#define ATQA      0
-#define UIDC1     1
-#define UIDC2     2
-#define SAKC1     3
-#define SAKC2     4
-#define RATS      5
-#define SIGNATURE 7
-#define PPS       8
 
 //ST25TA Rothult values
 #define SAK 0x20
@@ -173,12 +164,12 @@ void RunMod(void) {
                 DbpString(_YELLOW_("+") "Found ISO 14443 Type A!");
 
                 if (card_a_info.sak == SAK && card_a_info.atqa[0] == ATQA0 && card_a_info.atqa[1] == ATQA1 && card_a_info.uidlen == 7) {
-                        DbpString(_YELLOW_("+") "Found ST25TA with UID: ");
-                        Dbhexdump(card_a_info.uidlen, card_a_info.uid, 0);
-                        memcpy(stuid, card_a_info.uid, card_a_info.uidlen);
-                        state = STATE_SIM;
+                    DbpString(_YELLOW_("+") "Found ST25TA with UID: ");
+                    Dbhexdump(card_a_info.uidlen, card_a_info.uid, 0);
+                    memcpy(stuid, card_a_info.uid, card_a_info.uidlen);
+                    state = STATE_SIM;
                 } else {
-                        DbpString("Found non-ST25TA card, ignoring.");
+                    DbpString("Found non-ST25TA card, ignoring.");
                 }
             }
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -232,23 +223,23 @@ void RunMod(void) {
                 if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {         // Received a REQUEST
                     odd_reply = !odd_reply;
                     if (odd_reply)
-                        p_response = &responses[ATQA];
+                        p_response = &responses[RESP_INDEX_ATQA];
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {  // Received a HALT
                     p_response = NULL;
-                } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {  // Received a WAKEUP 
-                    p_response = &responses[ATQA];
+                } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {  // Received a WAKEUP
+                    p_response = &responses[RESP_INDEX_ATQA];
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
-                    p_response = &responses[UIDC1];
+                    p_response = &responses[RESP_INDEX_UIDC1];
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
-                    p_response = &responses[UIDC2];
+                    p_response = &responses[RESP_INDEX_UIDC2];
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {    // Received a SELECT (cascade 1)
-                    p_response = &responses[SAKC1];
+                    p_response = &responses[RESP_INDEX_SAKC1];
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
-                    p_response = &responses[SAKC2];
+                    p_response = &responses[RESP_INDEX_SAKC2];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RATS];
+                    p_response = &responses[RESP_INDEX_RATS];
                 } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
-                    p_response = &responses[PPS];
+                    p_response = &responses[RESP_INDEX_PPS];
                 } else {
                     DbpString(_YELLOW_("[ ") "Card reader command" _YELLOW_(" ]"));
                     Dbhexdump(len, receivedCmd, false);
@@ -337,7 +328,7 @@ void RunMod(void) {
                         Dbhexdump(apdulen - 2, apdubuffer, false);
                         DbpString("----");
 
-                       
+
                         if (i == 4) {
                             if (apdubuffer[1] == 0x1b && apdubuffer[2] == 0xd1 && !gotndef) { //Get NDEF Data
                                 gotndef = true;
@@ -345,7 +336,7 @@ void RunMod(void) {
                                 break;
                             }
                         }
-                       
+
                     } else {
                         DbpString(_YELLOW_("!!") "Error reading the card");
                     }
@@ -413,23 +404,23 @@ void RunMod(void) {
                 if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {         // Received a REQUEST
                     odd_reply = !odd_reply;
                     if (odd_reply)
-                        p_response = &responses[ATQA];
+                        p_response = &responses[RESP_INDEX_ATQA];
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {  // Received a HALT
                     p_response = NULL;
-                } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {  // Received a WAKEUP 
-                    p_response = &responses[ATQA];
+                } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {  // Received a WAKEUP
+                    p_response = &responses[RESP_INDEX_ATQA];
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
-                    p_response = &responses[UIDC1];
+                    p_response = &responses[RESP_INDEX_UIDC1];
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
-                    p_response = &responses[UIDC2];
+                    p_response = &responses[RESP_INDEX_UIDC2];
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {    // Received a SELECT (cascade 1)
-                    p_response = &responses[SAKC1];
+                    p_response = &responses[RESP_INDEX_SAKC1];
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
-                    p_response = &responses[SAKC2];
+                    p_response = &responses[RESP_INDEX_SAKC2];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RATS];
+                    p_response = &responses[RESP_INDEX_RATS];
                 } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
-                    p_response = &responses[PPS];
+                    p_response = &responses[RESP_INDEX_PPS];
                 } else {
                     DbpString(_YELLOW_("[ ") "Card reader command" _YELLOW_(" ]"));
                     Dbhexdump(len, receivedCmd, false);

@@ -94,6 +94,7 @@ add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui
+        ${PM3_ROOT}/client/src/aiddesfire.c
         ${PM3_ROOT}/client/src/aidsearch.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
         ${PM3_ROOT}/client/src/cmdcrc.c

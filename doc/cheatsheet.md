@@ -135,7 +135,7 @@ Options
 ---
 f <filename>     : load iCLASS tag-dump filename
 
-pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 ```
 
 Clone iCLASS Legacy Sequence
@@ -160,7 +160,7 @@ pm3 --> hf iclass sim 3
 Simulate iCLASS Sequence
 ```
 pm3 --> hf iclass dump k 0
-pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 pm3 --> hf iclass sim 3
 ```
 
@@ -173,7 +173,7 @@ k <key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
 e              : If 'e' is specified, elite computations applied to key
 
 pm3 --> hf iclass sim 2
-pm3 --> hf iclass loclass f iclass_mac_attack.bin
+pm3 --> hf iclass loclass -f iclass_mac_attack.bin
 pm3 --> hf iclass managekeys n 7 k <Kcus>
 pm3 --> hf iclass dump k 7 e
 ```

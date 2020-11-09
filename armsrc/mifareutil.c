@@ -20,8 +20,6 @@
 #include "protocols.h"
 #include "desfire_crypto.h"
 
-int DBGLEVEL = DBG_ERROR;
-
 // crypto1 helpers
 void mf_crypto1_decryptEx(struct Crypto1State *pcs, uint8_t *data_in, int len, uint8_t *data_out) {
     if (len != 1) {

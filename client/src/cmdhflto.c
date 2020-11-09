@@ -26,10 +26,10 @@
   iceman notes
   We can't dump LTO 5 or 6 tags yet since we don't have a datasheet.
   If you have access to datasheet,  le me know!
- 
-  LTO w Type info 00 01   has 101 blocks.  
+
+  LTO w Type info 00 01   has 101 blocks.
   LTO w Type info 00 03   has 255 blocks.
-  LTO w Type info 00 xx   has NN blocks.  
+  LTO w Type info 00 xx   has NN blocks.
 */
 #define CM_MEM_MAX_SIZE     0x1FE0  // (32byte/block * 255block = 8160byte)
 
@@ -194,14 +194,16 @@ static int CmdHfLTOInfo(const char *Cmd) {
     return infoLTO(true);
 }
 
-static const char* lto_print_size(uint8_t ti) {
-    switch(ti) {
+static const char *lto_print_size(uint8_t ti) {
+    switch (ti) {
         case 1:
             return "101 blocks / 3232 bytes";
+        case 2:
+            return "95 blocks / 3040 bytes";
         case 3:
             return "255 blocks / 8160 bytes";
         default :
-            return "";
+            return "unknown";
     }
 }
 
@@ -222,6 +224,9 @@ int infoLTO(bool verbose) {
         PrintAndLogEx(SUCCESS, "UID......... " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
         PrintAndLogEx(SUCCESS, "Type info... " _YELLOW_("%s"), sprint_hex_inrow(type_info, sizeof(type_info)));
         PrintAndLogEx(SUCCESS, "Memory...... " _YELLOW_("%s"), lto_print_size(type_info[1]));
+        if (type_info[1] > 3) {
+            PrintAndLogEx(INFO, "Unknown LTO tag, report to @iceman!");
+        }
     }
 
     return ret_val;
@@ -464,10 +469,13 @@ int dumpLTO(uint8_t *dump, bool verbose) {
         return ret_val;
     }
     // 0003 == 255 blocks x 32 = 8160 bytes
+    // 0002 ==  95 blocks x 32 = 3040 bytes
     // 0001 == 101 blocks x 32 = 3232 bytes
     uint8_t blocks = 0xFF;
     if (type_info[1] == 0x01) {
         blocks = 0x65;
+    } else if (type_info[1] == 0x02) {
+        blocks = 0x5F;
     }
     PrintAndLogEx(SUCCESS, "Found LTO tag w " _YELLOW_("%s") " memory", lto_print_size(type_info[1]));
 
