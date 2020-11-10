@@ -285,6 +285,19 @@ ifneq ($(SKIPREADLINE),1)
     READLINE_FOUND = 1
 endif
 
+########
+# SWIG #
+########
+
+ifneq ("$(wildcard src/pm3_luawrap.c)","")
+    SWIG_LUA_FOUND = 1
+endif
+ifneq ($(SKIPPYTHON),1)
+    ifneq ("$(wildcard src/pm3_pywrap.c)","")
+        SWIG_PYTHON_FOUND = 1
+    endif
+endif
+
 #######################################################################################################
 CFLAGS ?= $(DEFCFLAGS)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
@@ -315,6 +328,12 @@ ifeq ($(PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON
 endif
 
+ifeq ($(SWIG_LUA_FOUND),1)
+    PM3CFLAGS += -DHAVE_LUA_SWIG
+endif
+ifeq ($(SWIG_PYTHON_FOUND),1)
+    PM3CFLAGS += -DHAVE_PYTHON_SWIG
+endif
 
 CXXFLAGS ?= -Wall -Werror -O3
 PM3CXXFLAGS = $(CXXFLAGS)
@@ -412,6 +431,13 @@ else
     else
         $(info Whereami library:  system library not found, using local library)
     endif
+endif
+
+ifeq ($(SWIG_LUA_FOUND),1)
+        $(info Lua SWIG:          wrapper found)
+endif
+ifeq ($(SWIG_PYTHON_FOUND),1)
+        $(info Python SWIG:       wrapper found)
 endif
 
 $(info compiler version:  $(shell $(CC) --version|head -n 1))
@@ -572,6 +598,15 @@ SRCS += bucketsort.c \
 		parity.c \
 		util_posix.c
 
+# swig
+
+ifeq ($(SWIG_LUA_FOUND),1)
+    SRCS += pm3_luawrap.c
+endif
+ifeq ($(SWIG_PYTHON_FOUND),1)
+    SRCS += pm3_pywrap.c
+endif
+
 # gui
 ifeq ($(QT_FOUND),1)
     CXXSRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
@@ -712,6 +747,18 @@ ifneq ($(WHEREAMI_FOUND),1)
 endif
 
 ########
+# SWIG #
+########
+
+src/pm3_luawrap.c: pm3.i
+	$(info [=] GEN $@)
+	$(Q)$(SWIG) -lua -o $@ $<
+
+src/pm3_pywrap.c: pm3.i
+	$(info [=] GEN $@)
+	$(Q)$(SWIG) -python -o $@ $<
+
+########
 # misc #
 ########
 
@@ -724,6 +771,14 @@ src/version.c: default_version.c
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
+
+# SWIG files emit a number of warnings, we've to ignore them
+%wrap.o: %wrap.c
+$(OBJDIR)/%wrap.o : %wrap.c $(OBJDIR)/%wrap.d
+	$(info [-] CC $<)
+	$(Q)$(MKDIR) $(dir $@)
+	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -Wno-missing-prototypes -Wno-missing-declarations -Wno-missing-field-initializers -c -o $@ $<
+	$(Q)$(POSTCOMPILE)
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
