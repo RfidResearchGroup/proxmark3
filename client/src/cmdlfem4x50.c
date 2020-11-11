@@ -672,9 +672,10 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     // fills EM4x50 tag with zeros including password
 
+    bool isOK = false;
     int pwdLen = 0;
     uint8_t pwd[4] = {0x0};
-    uint32_t password = 0x0;
+    em4x50_data_t etd = {.pwd_given = false, .word = 0x0, .password2 = 0x0};
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
@@ -696,22 +697,58 @@ int CmdEM4x50Wipe(const char *Cmd) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
         return PM3_EINVARG;
     } else {
-        password = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+        etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+        etd.pwd_given = true;
     }
 
     CLIParserFree(ctx);
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_WIPE, (uint8_t *)&password, sizeof(password));
-    WaitForResponse(CMD_LF_EM4X50_WIPE, &resp);
     
-    // print response
-    bool isOK = resp.status;
-    if (isOK) {
-        PrintAndLogEx(SUCCESS, "Wiping data " _GREEN_("ok"));
+    // clear password
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_WRITEPWD, (uint8_t *)&etd, sizeof(etd));
+    if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITEPWD, &resp, TIMEOUT)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Resetting password " _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "Wiping data " _RED_("failed"));
+        PrintAndLogEx(FAILED, "Resetting password " _RED_("failed"));
         return PM3_ESOFT;
     }
+
+    // from now on new password 0x0
+    etd.password1 = 0x0;
+    
+    // clear data (words 1 to 31)
+    for (int i = 1; i < EM4X50_DEVICE_SERIAL; i++) {
+
+        // no login necessary for blocks 3 to 31
+        etd.pwd_given = (i <= EM4X50_CONTROL);
+        
+        PrintAndLogEx(INPLACE, "Wiping block %i", i);
+
+        etd.addresses = i << 8 | i;
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
+        if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE, &resp, TIMEOUT)) {
+            PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
+
+        isOK = resp.status;
+        if (!isOK) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "Wiping data " _RED_("failed"));
+            return PM3_ESOFT;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Wiping data " _GREEN_("ok"));
+    
+    PrintAndLogEx(INFO, "Done");
 
     return PM3_SUCCESS;
 }
@@ -1313,11 +1350,12 @@ int CmdEM4x50Chk(const char *Cmd) {
         keys[0] = (key_count >> 0) & 0xFF;
         keys[1] = (key_count >> 8) & 0xFF;
 
-        PrintAndLogEx(INFO, "Checking block #%i (%i passwords)", n + 1, key_count);
+        PrintAndLogEx(INPLACE, "Checking block #%i (%i passwords)", n + 1, key_count);
 
         // send to device
         res = em4x50_write_flash(keys, offset, datalen + 2);
         if (res != PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Error uploading to flash.");
             return res;
         }
@@ -1332,15 +1370,18 @@ int CmdEM4x50Chk(const char *Cmd) {
     }
 
     // print response
-    if (status == 1)
+    if (status == 1) {
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Password " _GREEN_("found: %02x %02x %02x %02x"),
                       resp.data.asBytes[3],
                       resp.data.asBytes[2],
                       resp.data.asBytes[1],
                       resp.data.asBytes[0]
                       );
-    else
+    } else {
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(FAILED, "No password found");
+    }
 
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
