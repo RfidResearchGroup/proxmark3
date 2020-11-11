@@ -21,6 +21,7 @@
 #include "em4x50.h"
 
 #define FLASH_MEM_PAGE_SIZE     0x10000
+#define CARD_MEMORY_SIZE        4096
 
 static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
 
@@ -91,7 +92,6 @@ static int em4x50_write_flash(uint8_t *data, int offset, size_t datalen) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             conn.block_after_ACK = false;
-            //free(data);
             return PM3_ETIMEOUT;
         }
 
@@ -104,7 +104,6 @@ static int em4x50_write_flash(uint8_t *data, int offset, size_t datalen) {
     }
 
     conn.block_after_ACK = false;
-    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")" bytes to offset "_GREEN_("%u"), datalen, offset);
     
     return PM3_SUCCESS;
 }
@@ -1032,7 +1031,6 @@ int CmdEM4x50Sim(const char *Cmd) {
 
         if (bytes_read * 8 > FLASH_MEM_MAX_SIZE) {
             PrintAndLogEx(FAILED, "Filesize is larger than available memory");
-            //free(data);
             return PM3_EOVFLOW;
         }
 
@@ -1230,10 +1228,14 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     // upload passwords from dictionary to flash memory and start password check
     
+    bool key_found = false;
     int res = 0, slen = 0;
+    int keys_remain = 0;
+    int block_count = 1;
     size_t datalen = 0;
     uint8_t data[FLASH_MEM_MAX_SIZE] = {0x0};
-    uint32_t keycnt = 0, offset = 0;
+    uint8_t *keys = data;
+    uint32_t key_count = 0, offset = 0;
     char filename[FILE_PATH_SIZE] = {0};
     PacketResponseNG resp;
 
@@ -1263,38 +1265,72 @@ int CmdEM4x50Chk(const char *Cmd) {
         PrintAndLogEx(INFO, "treating file as T55xx passwords");
     }
     
-    res = loadFileDICTIONARY(filename, data + 2, &datalen, 4, &keycnt);
-    if (res || !keycnt) {
-        //free(data);
+    res = loadFileDICTIONARY(filename, data + 2, &datalen, 4, &key_count);
+    if (res || !key_count)
         return PM3_EFILE;
-    }
-    // limited space on flash mem
-    if (keycnt > 0xFFFF)
-        keycnt &= 0xFFFF;
 
-    data[0] = (keycnt >> 0) & 0xFF;
-    data[1] = (keycnt >> 8) & 0xFF;
-    datalen += 2;
+    // limited space on flash mem
+    if (key_count > 0xFFFF)
+        key_count &= 0xFFFF;
 
     if (datalen > FLASH_MEM_MAX_SIZE) {
         PrintAndLogEx(FAILED, "error, filesize is larger than available memory");
-        //free(data);
         return PM3_EOVFLOW;
     }
 
-    // send to device
-    res = em4x50_write_flash(data, offset, datalen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error uploading to flash.");
-        return res;
+    if (datalen > CARD_MEMORY_SIZE) {
+        
+        // we have to use more than one block of passwords
+        block_count = (4 * key_count) / CARD_MEMORY_SIZE;
+        keys_remain = key_count - block_count * CARD_MEMORY_SIZE / 4;
+        
+        if (keys_remain != 0)
+            block_count++;
+        
+        // adjust pwd_size_available and pwd_count
+        datalen = CARD_MEMORY_SIZE;
+        key_count = datalen / 4;
+
+        PrintAndLogEx(INFO, "Passwords divided into %i blocks", block_count);
+    }
+    
+    for (int n = 0; n < block_count; n++) {
+
+        // adjust parameters if more than 1 block
+        if (n != 0) {
+
+            keys += datalen;
+
+            // final run with remaining passwords
+            if (n == block_count - 1) {
+                key_count = keys_remain;
+                datalen = 4 * keys_remain;
+            }
+        }
+        
+        keys[0] = (key_count >> 0) & 0xFF;
+        keys[1] = (key_count >> 8) & 0xFF;
+
+        PrintAndLogEx(INFO, "Checking block #%i (%i passwords)", n + 1, key_count);
+
+        // send to device
+        res = em4x50_write_flash(keys, offset, datalen + 2);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Error uploading to flash.");
+            return res;
+        }
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X50_CHK, (uint8_t *)&offset, sizeof(offset));
+        WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
+        
+        key_found = (bool)resp.status;
+        if (key_found)
+            break;
     }
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_CHK, (uint8_t *)&offset, sizeof(offset));
-    WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
-
     // print response
-    if ((bool)resp.status)
+    if (key_found)
         PrintAndLogEx(SUCCESS, "Password " _GREEN_("found: %02x %02x %02x %02x"),
                       resp.data.asBytes[3],
                       resp.data.asBytes[2],

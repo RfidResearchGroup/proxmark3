@@ -1488,17 +1488,15 @@ static uint32_t get_pwd(uint8_t *pwds, int cnt) {
 
 void em4x50_chk(uint32_t *offset) {
 
-    // check passwords from dictionary in flash memory
+    // check passwords from dictionary content in flash memory
 
     bool bsuccess = false;
-    int block_count = 1;
-    int pwds_remain = 0;
     uint8_t counter[2] = {0x00, 0x00};
     uint16_t isok = 0;
     uint16_t pwd_count = 0;
     uint16_t pwd_size_available = 0;
     uint32_t pwd = 0x0;
-    uint8_t *pwd_block = BigBuf_get_EM_addr();
+    uint8_t *pwds = BigBuf_get_EM_addr();
 
     //-----------------------------------------------------------------------------
     // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
@@ -1513,74 +1511,34 @@ void em4x50_chk(uint32_t *offset) {
     if (Flash_ReadData(*offset, counter, sizeof(counter)) != sizeof(counter))
         goto OUT;
 
-    *offset += 2;
-    
     pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
     if (pwd_count == 0)
         goto OUT;
 
     pwd_size_available = 4 * pwd_count;
     
-    // since flash can report way too many pwds, we need to limit it.
-    // bigbuff EM size is determined by CARD_MEMORY_SIZE
-    // a password is 4bytes.
-    // pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
-    if (pwd_size_available > CARD_MEMORY_SIZE) {
+    isok = Flash_ReadData(*offset + 2, pwds, pwd_size_available);
+    if (isok != pwd_size_available)
+        goto OUT;
+    
+    em4x50_setup_read();
 
-        // we have to use more than one block of passwords
-        block_count = (4 * pwd_count) / CARD_MEMORY_SIZE;
-        pwds_remain = pwd_count - block_count * CARD_MEMORY_SIZE / 4;
-        
-        if (pwds_remain != 0)
-            block_count++;
-        
-        // adjust pwd_size_available and pwd_count
-        pwd_size_available = CARD_MEMORY_SIZE;
-        pwd_count = pwd_size_available / 4;
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag()) {
 
-        Dbprintf("Passwords divided into %i blocks", block_count);
-        
-    }
+        // try to login with current password
+        for (int i = 0; i < pwd_count; i++) {
 
-    for (int n = 0; n < block_count; n++) {
+            // manual interruption
+            if (BUTTON_PRESS())
+                goto OUT;
 
-        // adjust parameters if more than 1 block
-        if (n != 0) {
-            *offset += pwd_size_available;
-
-            // final run with remaining passwords
-            if (n == block_count - 1) {
-                pwd_count = pwds_remain;
-                pwd_size_available = 4 * pwds_remain;
-            }
-        }
-        
-        Dbprintf("Using block #%i with %i passwords", n + 1, pwd_count);
-
-        // read next password block
-        isok = Flash_ReadData(*offset, pwd_block, pwd_size_available);
-        if (isok != pwd_size_available)
-            goto OUT;
-            
-        em4x50_setup_read();
-
-        // set gHigh and gLow
-        if (get_signalproperties() && find_em4x50_tag()) {
-
-            // try to login with current password
-            for (int i = 0; i < pwd_count; i++) {
-
-                // manual interruption
-                if (BUTTON_PRESS())
-                    goto OUT;
-
-                // get next password from flash memory
-                pwd = get_pwd(pwd_block, i);
-                            
-                bsuccess = login(pwd);
-                if (bsuccess)
-                    break;
-            }
+            // get next password from flash memory
+            pwd = get_pwd(pwds, i);
+                        
+            bsuccess = login(pwd);
+            if (bsuccess)
+                break;
         }
     }
 
