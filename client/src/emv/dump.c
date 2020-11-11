@@ -23,23 +23,13 @@
 # define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
 #endif
 
-void dump_buffer_simple(const unsigned char *ptr, size_t len, FILE *f) {
-    int i;
-
-    if (!f)
-        f = stdout;
-
-    for (i = 0; i < len; i ++)
-        fprintf(f, "%s%02hhX", i ? " " : "", ptr[i]);
-}
-
 void dump_buffer(const unsigned char *ptr, size_t len, FILE *f, int level) {
-    int i, j;
+    int j;
 
     if (!f)
         f = stdout;
 
-    for (i = 0; i < len; i += 16) {
+    for (int i = 0; i < len; i += 16) {
         PRINT_INDENT(level);
         fprintf(f, "\t%02x:", i);
         for (j = 0; j < 16; j++) {
