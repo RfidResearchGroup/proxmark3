@@ -312,8 +312,8 @@ static int cmd_hf_fido_register(const char *cmd) {
     int derp = 67 + keyHandleLen;
     int derLen = (buf[derp + 2] << 8) + buf[derp + 3] + 4;
     if (verbose2) {
-        PrintAndLogEx(INFO, "DER certificate[%d]:");
-        PrintAndLogEx(INFO, "------------------DER-------------------", derLen);
+        PrintAndLogEx(INFO, "DER certificate[%d]:", derLen);
+        PrintAndLogEx(INFO, "------------------DER-------------------");
         PrintAndLogEx(INFO, "%s", sprint_hex(buf + derp, derLen));
         PrintAndLogEx(INFO, "----------------DER---------------------");
     } else {
