@@ -1228,7 +1228,7 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     // upload passwords from dictionary to flash memory and start password check
     
-    bool key_found = false;
+    int status = 0;
     int res = 0, slen = 0;
     int keys_remain = 0;
     int block_count = 1;
@@ -1277,7 +1277,9 @@ int CmdEM4x50Chk(const char *Cmd) {
         PrintAndLogEx(FAILED, "error, filesize is larger than available memory");
         return PM3_EOVFLOW;
     }
-
+    
+    PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
+    
     if (datalen > CARD_MEMORY_SIZE) {
         
         // we have to use more than one block of passwords
@@ -1324,13 +1326,13 @@ int CmdEM4x50Chk(const char *Cmd) {
         SendCommandNG(CMD_LF_EM4X50_CHK, (uint8_t *)&offset, sizeof(offset));
         WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
         
-        key_found = (bool)resp.status;
-        if (key_found)
+        status = resp.status;
+        if (status != false)
             break;
     }
 
     // print response
-    if (key_found)
+    if (status == 1)
         PrintAndLogEx(SUCCESS, "Password " _GREEN_("found: %02x %02x %02x %02x"),
                       resp.data.asBytes[3],
                       resp.data.asBytes[2],

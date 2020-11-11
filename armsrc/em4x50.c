@@ -1490,7 +1490,7 @@ void em4x50_chk(uint32_t *offset) {
 
     // check passwords from dictionary content in flash memory
 
-    bool bsuccess = false;
+    int status = 0;
     uint8_t counter[2] = {0x00, 0x00};
     uint16_t isok = 0;
     uint16_t pwd_count = 0;
@@ -1530,14 +1530,16 @@ void em4x50_chk(uint32_t *offset) {
         for (int i = 0; i < pwd_count; i++) {
 
             // manual interruption
-            if (BUTTON_PRESS())
-                goto OUT;
+            if (BUTTON_PRESS()) {
+                status = BUTTON_SINGLE_CLICK;
+                break;
+            }
 
             // get next password from flash memory
             pwd = get_pwd(pwds, i);
                         
-            bsuccess = login(pwd);
-            if (bsuccess)
+            status = login(pwd);
+            if (status == 1)
                 break;
         }
     }
@@ -1545,5 +1547,5 @@ void em4x50_chk(uint32_t *offset) {
 OUT:
     
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_CHK, bsuccess, (uint8_t *)&pwd, 32);
+    reply_ng(CMD_LF_EM4X50_CHK, status, (uint8_t *)&pwd, 32);
 }
