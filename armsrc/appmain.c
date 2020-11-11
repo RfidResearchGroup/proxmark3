@@ -1107,10 +1107,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_read((em4x50_data_t *)packet->data.asBytes);
             break;
         }
-        case CMD_LF_EM4X50_WIPE: {
-            em4x50_wipe((uint32_t *)packet->data.asBytes);
-            break;
-        }
         case CMD_LF_EM4X50_BRUTE: {
             em4x50_brute((em4x50_data_t *)packet->data.asBytes);
             break;

@@ -1111,68 +1111,6 @@ void em4x50_writepwd(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_WRITEPWD, res, 0, 0);
 }
 
-void em4x50_wipe(uint32_t *password) {
-
-    // set all data of EM4x50 tag to 0x0 including password
-
-    bool bsuccess = false;
-    uint32_t addresses = 0x00001E01; // from fwr = 1 to lwr = 31 (0x1E)
-    uint32_t words[EM4X50_NO_WORDS] = {0x0};
-    uint32_t zero = 0x0;
-
-    em4x50_setup_read();
-
-    // set gHigh and gLow
-    if (get_signalproperties() && find_em4x50_tag()) {
-
-        // login first
-        if (login(*password)) {
-
-            // write 0x0 to each address but ignore addresses
-            // 0 -> password, 32 -> serial, 33 -> uid
-            for (int i = 1; i <= 33; i++)
-                write(zero, i);
-
-            // to verify result -> reset EM4x50
-            if (reset()) {
-
-                // login not necessary because protected word has been set to 0
-                // -> no read protected words
-                // -> selective read can be called immediately
-                if (selective_read(addresses, words)) {
-
-                    // check if everything is zero
-                    bsuccess = true;
-                    for (int i = 1; i <= 33; i++)
-                        bsuccess &= (words[i] == 0);
-
-                }
-
-                if (bsuccess) {
-
-                    // so far everything is fine
-                    // last task: reset password
-                    if (login(*password)) {
-
-                        int res = write_password(*password, zero);
-                        if (res == PM3_ETEAROFF) {
-                            lf_finalize();
-                            return;
-                        }
-                        bsuccess = (res == PM3_SUCCESS);
-                    }
-                    // verify by login with new password
-                    if (bsuccess)
-                        bsuccess = login(zero);
-                }
-            }
-        }
-    }
-  
-    lf_finalize();
-    reply_ng(CMD_LF_EM4X50_WIPE, bsuccess, 0, 0);
-}
-
 void em4x50_reset(void) {
 
     // reset EM4x50

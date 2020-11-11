@@ -507,7 +507,6 @@ typedef struct {
 #define CMD_LF_EM4X50_WRITE                                               0x0241
 #define CMD_LF_EM4X50_WRITEPWD                                            0x0242
 #define CMD_LF_EM4X50_READ                                                0x0243
-#define CMD_LF_EM4X50_WIPE                                                0x0244
 #define CMD_LF_EM4X50_BRUTE                                               0x0245
 #define CMD_LF_EM4X50_LOGIN                                               0x0246
 #define CMD_LF_EM4X50_RESET                                               0x0247
