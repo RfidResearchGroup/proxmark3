@@ -21,6 +21,5 @@
 #include <stdio.h> // FILE
 
 void dump_buffer(const unsigned char *ptr, size_t len, FILE *f, int level);
-void dump_buffer_tab(const unsigned char *ptr, size_t len, FILE *f, int tabs);
 
 #endif

@@ -1027,7 +1027,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         return 4;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
@@ -1146,7 +1146,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
     if (makeAPDU && headerlen != 4) {
         PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
         CLIParserFree(ctx);
-        return 1;
+        return PM3_EINVARG;
     }
     extendedAPDU = arg_get_lit(ctx, 6);
     le = arg_get_int_def(ctx, 7, 0);
@@ -1172,19 +1172,19 @@ static int CmdHF14AAPDU(const char *Cmd) {
         if (APDUEncode(&apdu, data, &datalen)) {
             PrintAndLogEx(ERR, "can't make apdu with provided parameters.");
             CLIParserFree(ctx);
-            return 2;
+            return PM3_EINVARG;
         }
 
     } else {
         if (extendedAPDU) {
             PrintAndLogEx(ERR, "make mode not set but here `e` option.");
             CLIParserFree(ctx);
-            return 3;
+            return PM3_EINVARG;
         }
         if (le > 0) {
             PrintAndLogEx(ERR, "make mode not set but here `l` option.");
             CLIParserFree(ctx);
-            return 3;
+            return PM3_EINVARG;
         }
 
         // len = data + PCB(1b) + CRC(2b)
@@ -1192,7 +1192,12 @@ static int CmdHF14AAPDU(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel " : "", leaveSignalON ? "keep " : "", decodeTLV ? "TLV" : "", sprint_hex(data, datalen));
+    PrintAndLogEx(SUCCESS, "( " _YELLOW_("%s%s%s")" )", 
+        activateField ? "select" : "",
+        leaveSignalON ? ", keep" : "",
+        decodeTLV ? ", TLV" : ""
+        );
+    PrintAndLogEx(SUCCESS, ">>> %s", sprint_hex_inrow(data, datalen));
 
     if (decodeAPDU) {
         APDUStruct apdu;
@@ -1208,16 +1213,15 @@ static int CmdHF14AAPDU(const char *Cmd) {
     if (res)
         return res;
 
-    PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(data, datalen));
-
-    PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
+    PrintAndLogEx(SUCCESS, "<<< %s | %s", sprint_hex_inrow(data, datalen), sprint_ascii(data, datalen));
+    PrintAndLogEx(SUCCESS, "<<< status: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
 
     // TLV decoder
     if (decodeTLV && datalen > 4) {
         TLVPrintFromBuffer(data, datalen - 2);
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14ACmdRaw(const char *Cmd) {
@@ -2038,7 +2042,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         break;
                 }
             } else {
-                dump_buffer(&card.ats[pos], calen, NULL, 1);
+                PrintAndLogEx(SUCCESS, "   %s", sprint_hex_inrow(card.ats + pos, calen));
             }
         }
 
