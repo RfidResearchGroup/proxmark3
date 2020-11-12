@@ -188,7 +188,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/emv/crypto.c
         ${PM3_ROOT}/client/src/emv/crypto_polarssl.c
         ${PM3_ROOT}/client/src/emv/dol.c
-        ${PM3_ROOT}/client/src/emv/dump.c
         ${PM3_ROOT}/client/src/emv/emv_pk.c
         ${PM3_ROOT}/client/src/emv/emv_pki.c
         ${PM3_ROOT}/client/src/emv/emv_pki_priv.c
