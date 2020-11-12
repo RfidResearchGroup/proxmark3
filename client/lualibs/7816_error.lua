@@ -68,7 +68,7 @@ end
 
 _errorcodes.tostring = function(command)
     if(type(command) == 'string') then
-        return ("%s (%d)"):format(_reverse_lookup[command] or "ERROR UNDEFINED!", command)
+        return ("%s (%s)"):format(_reverse_lookup[command] or "ERROR UNDEFINED!", command)
     end
     if(type(command) == 'number') then
         return ("%s (%d)"):format(_reverse_lookup[ tostring(command)] or "ERROR UNDEFINED!", command)
