@@ -62,10 +62,10 @@ int gLow = 60;
 
 static void wait_timer0(uint32_t period) {
 
-    // do nothing for <period> using timer <timer>
+    // do nothing for <period> using timer0
 
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV < period);
+    while ((AT91C_BASE_TC0->TC_CV < period) && !BUTTON_PRESS());
 }
 
 static void em4x50_setup_read(void) {
@@ -1413,17 +1413,6 @@ void em4x50_stdread(void) {
     reply_ng(CMD_LF_EM4X50_STDREAD, now, (uint8_t *)words, 4 * now);
 }
 
-static uint32_t get_pwd(uint8_t *pwds, int cnt) {
-
-    uint32_t pwd = 0x0;
-    
-    for (int j = 0; j < 4; j++)
-        pwd |= (*(pwds + 4 * cnt + j)) << ((3 - j) * 8);
-    
-    return pwd;
-
-}
-
 void em4x50_chk(uint32_t *offset) {
 
     // check passwords from dictionary content in flash memory
@@ -1473,8 +1462,10 @@ void em4x50_chk(uint32_t *offset) {
                 break;
             }
 
-            // get next password from flash memory
-            pwd = get_pwd(pwds, i);
+            // get next password
+            pwd = 0x0;
+            for (int j = 0; j < 4; j++)
+                pwd |= (*(pwds + 4 * i + j)) << ((3 - j) * 8);
                         
             status = login(pwd);
             if (status == 1)
