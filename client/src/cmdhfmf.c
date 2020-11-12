@@ -16,7 +16,6 @@
 #include "comms.h"        // clearCommandBuffer
 #include "fileutils.h"
 #include "cmdtrace.h"
-#include "emv/dump.h"
 #include "mifare/mifaredefault.h"          // mifare default key array
 #include "cliparser.h"          // argtable
 #include "hardnested_bf_core.h" // SetSIMDInstr
@@ -5095,7 +5094,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
     if (verbose2) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("MFC NDEF raw") " ----------------");
-        dump_buffer(data, datalen, stdout, 1);
+        print_buffer(data, datalen, 1);
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);

@@ -16,7 +16,6 @@
 #include "ui.h"  // Print...
 
 #include "emv/tlv.h"
-#include "emv/dump.h"
 #include "asn1dump.h"
 #include "util.h"
 
@@ -68,7 +67,7 @@ static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf)
     bool candump = true;
     asn1_tag_dump(tlv, stdout, level, &candump);
     if (is_leaf && candump) {
-        dump_buffer(tlv->value, tlv->len, stdout, level);
+        print_buffer(tlv->value, tlv->len, level);
     }
 }
 

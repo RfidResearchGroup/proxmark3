@@ -35,6 +35,7 @@
 #include "mifare/mad.h"
 #include "generator.h"
 #include "aiddesfire.h"
+#include "util.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -4769,7 +4770,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     if (verbose2) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("DESFire NDEF raw") " ----------------");
-        dump_buffer(data, datalen, stdout, 1);
+        print_buffer(data, datalen, 1);
     }
 
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndef -vv`") " for more details");

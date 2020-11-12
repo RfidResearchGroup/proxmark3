@@ -18,8 +18,8 @@
 #include "comms.h"              // getfromdevice
 #include "emv/emvcore.h"        // decodeTVL
 #include "crypto/libpcrypto.h"  // sha512hash
-#include "emv/dump.h"
 #include "ui.h"
+#include "util.h"
 #include "fileutils.h"
 #include "crc16.h"              // crc
 
@@ -316,7 +316,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
 
     if (K > 1) {
         PrintAndLogEx(INFO, "\tHistorical bytes");
-        dump_buffer(&atr[2 + T1len + TD1len + TDilen], K, NULL, 1);
+        print_buffer(&atr[2 + T1len + TD1len + TDilen], K, 1);
     }
 }
 

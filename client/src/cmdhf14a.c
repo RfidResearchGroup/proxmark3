@@ -29,7 +29,6 @@
 #include "aidsearch.h"
 #include "cmdhf.h"       // handle HF plot
 #include "protocols.h"   // MAGIC_GEN_1A
-#include "emv/dump.h"    // dump_buffer
 
 bool APDUInFramingEnable = true;
 

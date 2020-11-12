@@ -506,7 +506,6 @@ SRCS =  aiddesfire.c \
 		emv/crypto.c\
 		emv/crypto_polarssl.c\
 		emv/dol.c \
-		emv/dump.c \
 		emv/emv_pk.c\
 		emv/emv_pki.c\
 		emv/emv_pki_priv.c\

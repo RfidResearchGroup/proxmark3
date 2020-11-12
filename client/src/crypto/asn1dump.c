@@ -21,7 +21,6 @@
 #include <mbedtls/asn1.h>
 #include <mbedtls/oid.h>
 #include "emv/emv_tags.h"
-#include "emv/dump.h"
 #include "emv/emvjson.h"
 #include "util.h"
 #include "proxmark3.h"

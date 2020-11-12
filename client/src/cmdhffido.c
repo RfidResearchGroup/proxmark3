@@ -19,9 +19,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhffido.h"
-
 #include <unistd.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"
 #include "comms.h"
@@ -33,10 +31,10 @@
 #include "crypto/libpcrypto.h"
 #include "fido/cbortools.h"
 #include "fido/fidocore.h"
-#include "emv/dump.h"
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "cmdtrace.h"
+#include "util.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -88,7 +86,7 @@ static int cmd_hf_fido_info(const char *cmd) {
         } else {
             PrintAndLogEx(INFO, "FIDO authenticator detected (not standard U2F).");
             PrintAndLogEx(INFO, "Non U2F authenticator version:");
-            dump_buffer((const unsigned char *)buf, len, NULL, 0);
+            print_buffer((const unsigned char *)buf, len, 1);
         }
     } else {
         PrintAndLogEx(INFO, "FIDO U2F authenticator detected. Version: %.*s", (int)len, buf);
@@ -296,7 +294,7 @@ static int cmd_hf_fido_register(const char *cmd) {
 
     if (verbose2) {
         PrintAndLogEx(INFO, "------------ " _CYAN_("data") " ----------------------");
-        dump_buffer((const unsigned char *)buf, len, NULL, 0);
+        print_buffer((const unsigned char *)buf, len, 1);
         PrintAndLogEx(INFO, "-------------" _CYAN_("data") " ----------------------");
     }
 

@@ -24,7 +24,6 @@
 #include <stdarg.h>
 
 #include "crypto.h"
-#include "dump.h"
 #include "util.h"
 #include "ui.h"
 
@@ -73,7 +72,7 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 
     /*  if (true){
             PrintAndLogEx(SUCCESS, "Recovered data:\n");
-            dump_buffer(data, data_len, stdout, 0);
+            print_buffer(data, data_len, 1);
         }*/
 
     if (data[data_len - 1] != 0xbc || data[0] != 0x6a || data[1] != msgtype) {
@@ -200,7 +199,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
 
     if (showData) {
         PrintAndLogEx(SUCCESS, "Recovered data:");
-        dump_buffer(data, data_len, stdout, 0);
+        print_buffer(data, data_len, 1);
     }
 
     /* Perform the rest of checks here */
@@ -375,7 +374,7 @@ struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct t
 
     if (showData) {
         PrintAndLogEx(SUCCESS, "Recovered data:");
-        dump_buffer(data, data_len, stdout, 0);
+        print_buffer(data, data_len, 1);
     }
 
     struct tlvdb *dac_db = tlvdb_fixed(0x9f45, 2, data + 3);
@@ -409,7 +408,7 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
 
     if (showData) {
         PrintAndLogEx(SUCCESS, "Recovered data:");
-        dump_buffer(data, data_len, stdout, 0);
+        print_buffer(data, data_len, 1);
     }
 
     size_t idn_len = data[4];
@@ -445,7 +444,7 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
 
     if (showData) {
         PrintAndLogEx(SUCCESS, "Recovered data:");
-        dump_buffer(data, data_len, stdout, 0);
+        print_buffer(data, data_len, 1);
     }
 
     size_t idn_len = data[4];
@@ -511,7 +510,7 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
 
     if (showData) {
         PrintAndLogEx(SUCCESS, "Recovered data:");
-        dump_buffer(data, data_len, stdout, 0);
+        print_buffer(data, data_len, 1);
     }
 
     if (data[3] < 30 || data[3] > data_len - 4) {

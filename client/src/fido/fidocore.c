@@ -22,7 +22,6 @@
 #include "crypto/libpcrypto.h"
 #include "additional_ca.h"
 #include "cose.h"
-#include "emv/dump.h"
 #include "ui.h"
 #include "util.h"
 
