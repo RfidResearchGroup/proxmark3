@@ -63,7 +63,7 @@ exit:
 
 static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     bool candump = true;
-    asn1_tag_dump(tlv, stdout, level, &candump);
+    asn1_tag_dump(tlv, level, &candump);
     if (is_leaf && candump) {
         print_buffer(tlv->value, tlv->len, level);
     }
