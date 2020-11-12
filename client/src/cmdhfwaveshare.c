@@ -83,9 +83,9 @@ static model_t models[] = {
     {"2.9  inch e-paper",               16, 296, 128},
     {"4.2  inch e-paper",              100, 400, 300}, // tested
     {"7.5  inch e-paper",              120, 800, 480},
-    {"2.7  inch e-paper",              121, 276, 176},
+    {"2.7  inch e-paper",              121, 176, 276}, // tested
     {"2.13 inch e-paper B (with red)", 106, 212, 104},
-    {"1.54 inch e-paper B (with red)", 100, 200, 200},
+    {"1.54 inch e-paper B (with red)", 100, 200, 200}, // tested
     {"7.5  inch e-paper HD",           120, 880, 528},
 };
 
