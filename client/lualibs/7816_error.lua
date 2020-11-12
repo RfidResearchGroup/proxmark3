@@ -71,7 +71,8 @@ _errorcodes.tostring = function(command)
         return ("%s (%s)"):format(_reverse_lookup[command] or "ERROR UNDEFINED!", command)
     end
     if(type(command) == 'number') then
-        return ("%s (%d)"):format(_reverse_lookup[ tostring(command)] or "ERROR UNDEFINED!", command)
+        local hx = ("%04X"):format(command)
+        return ("%s (0x%s)"):format(_reverse_lookup[hx] or "ERROR UNDEFINED!", hx)
     end
     return ("Error, numeric or string argument expected, got : %s"):format(tostring(command))
 end
