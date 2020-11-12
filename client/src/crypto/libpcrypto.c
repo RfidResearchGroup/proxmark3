@@ -418,7 +418,7 @@ int ecdsa_nist_test(bool verbose) {
     // make signature
     res = ecdsa_signature_create_test(curveid, T_PRIVATE_KEY, T_Q_X, T_Q_Y, T_K, input, length, signature, &siglen);
 // PrintAndLogEx(INFO, "res: %x signature[%x]: %s", (res < 0)? -res : res, siglen, sprint_hex(signature, siglen));
-    if (res)
+    if (res != PM3_SUCCESS)
         goto exit;
 
     // check vectors
@@ -483,7 +483,7 @@ int ecdsa_nist_test(bool verbose) {
     if (verbose)
         PrintAndLogEx(NORMAL, _GREEN_("passed\n"));
 
-    return 0;
+    return PM3_SUCCESS;
 exit:
     if (verbose)
         PrintAndLogEx(NORMAL, _RED_("failed\n"));

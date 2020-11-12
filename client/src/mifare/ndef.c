@@ -180,7 +180,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
         uint8_t rval[300] = {0};
         uint8_t sval[300] = {0};
         int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
-        if (!res) {
+        if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\t\tr: %s", sprint_hex(rval + 32 - slen, slen));
             PrintAndLogEx(SUCCESS, "\t\ts: %s", sprint_hex(sval + 32 - slen, slen));
         }

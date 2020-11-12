@@ -340,7 +340,7 @@ static int cmd_hf_fido_register(const char *cmd) {
     uint8_t rval[300] = {0};
     uint8_t sval[300] = {0};
     res = ecdsa_asn1_get_signature(&buf[hashp], len - hashp, rval, sval);
-    if (!res) {
+    if (res == PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(INFO, "  r: %s", sprint_hex(rval, 32));
             PrintAndLogEx(INFO, "  s: %s", sprint_hex(sval, 32));
@@ -583,7 +583,7 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
     uint8_t rval[300] = {0};
     uint8_t sval[300] = {0};
     res = ecdsa_asn1_get_signature(&buf[5], len - 5, rval, sval);
-    if (!res) {
+    if (res == PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(INFO, "  r: %s", sprint_hex(rval, 32));
             PrintAndLogEx(INFO, "  s: %s", sprint_hex(sval, 32));

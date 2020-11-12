@@ -363,7 +363,7 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
     uint8_t sval[300] = {0};
 
     int res = ecdsa_asn1_get_signature(sign, signLen, rval, sval);
-    if (!res) {
+    if (res == PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(INFO, "  r: %s", sprint_hex(rval, 32));
             PrintAndLogEx(INFO, "  s: %s", sprint_hex(sval, 32));
