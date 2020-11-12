@@ -28,6 +28,7 @@ static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len, 
     // read data from dump file; file type is derived from file name extension
 
     int res = 0;
+    uint32_t serial = 0x0, device_id = 0x0;
      
     if (str_endswith(filename, ".eml"))
         res = loadFileEML(filename, data, bytes_read) != PM3_SUCCESS;
@@ -38,6 +39,14 @@ static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len, 
 
     if ((res != PM3_SUCCESS) && (*bytes_read != DUMP_FILESIZE))
         return PM3_EFILE;
+
+    // valid em4x50 data?
+    serial = bytes_to_num(data + 4 * EM4X50_DEVICE_SERIAL, 4);
+    device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);
+    if (serial == device_id) {
+        PrintAndLogEx(WARNING, "No valid em4x50 data in file %s.", filename);
+        return PM3_ENODATA;
+    }
 
     return PM3_SUCCESS;
 }
@@ -264,9 +273,9 @@ int CmdEM4x50Info(const char *Cmd) {
     
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_info",
-                  "Read all information of EM4x50 tag. Tag must be on antenna.",
+                  "Tag information EM4x50.",
                   "lf em 4x50_info\n"
-                  "lf em 4x50_info -p 12345678\n"
+                  "lf em 4x50_info -p 12345678 -> uses password 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -331,8 +340,8 @@ int CmdEM4x50Write(const char *Cmd) {
     
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_write",
-                  "Write EM4x50 word. Tag must be on antenna.",
-                  "lf em 4x50_write -b 3 -d 4f22e7ff\n"
+                  "Writes single block/word to EM4x50 tag.",
+                  "lf em 4x50_write -b 3 -d 4f22e7ff -> writes 0x4f22e7ff to block 3\n"
                   "lf em 4x50_write -b 3 -d 4f22e7ff -p 12345678\n"
                  );
 
@@ -424,8 +433,8 @@ int CmdEM4x50WritePwd(const char *Cmd) {
     
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_writepwd",
-                  "Write EM4x50 password. Tag must be on antenna.",
-                  "lf em 4x50_writepwd -p 4f22e7ff -n 12345678\n"
+                  "Writes EM4x50 password.",
+                  "lf em 4x50_writepwd -p 4f22e7ff -n 12345678 -> replaces password 0x4f22e7ff with 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -540,9 +549,9 @@ int CmdEM4x50Read(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_read",
-                  "Read EM4x50 block/word. Tag must be on antenna.",
-                  "lf em 4x50_read -b 3\n"
-                  "lf em 4x50_read -b 32 -p 12345678\n"
+                  "Reads single EM4x50 block/word.",
+                  "lf em 4x50_read -b 3 -> reads block 3\n"
+                  "lf em 4x50_read -b 32 -p 12345678 -> reads block 32 with password 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -590,11 +599,11 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_dump",
-                  "Dump EM4x50 tag. Tag must be on antenna.",
-                  "lf em 4x50_dump\n"
-                  "lf em 4x50_dump -f lf-4x50dump.eml\n"
+                  "Reads all blocks/words from EM4x50 tag and saves dump in bin/eml/json format.",
+                  "lf em 4x50_dump -> saves dump in lf-4x50-<UID>-dump.bin/eml/json\n"
+                  "lf em 4x50_dump -f mydump.eml -> saves dump in mydump.eml\n"
                   "lf em 4x50_dump -p 12345678\n"
-                  "lf em 4x50_dump -f lf-4x50dump.eml -p 12345678\n"
+                  "lf em 4x50_dump -f mydump.eml -p 12345678\n"
                  );
 
     void *argtable[] = {
@@ -680,8 +689,8 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_wipe",
-                  "Wipe EM4x50 tag. Tag must be on antenna.",
-                  "lf em 4x50_wipe -p 12345678\n"
+                  "Wipes EM4x50 tag.",
+                  "lf em 4x50_wipe -p 12345678 -> wipes tag with password 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -765,14 +774,14 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_brute",
-                  "Bruteforce password of EM4x50 tag. Tag must be on antenna.",
-                  "lf em 4x50_brute -f 12330000 -l 12340000\n"
+                  "Tries to bruteforce the password of a EM4x50. Function can be stopped by pressing pm3 button.",
+                  "lf em 4x50_brute -f 12330000 -l 12340000 -> tries passwords from 0x12330000 to 0x1234000000\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "fwr", "<password>", "first password (start), hex, 4 bytes, lsb"),
-        arg_str1("l", "lwr", "<password>", "last password (stop), hex, 4 bytes, lsb"),
+        arg_str1("f", "fp", "<password>", "first password (start), hex, 4 bytes, lsb"),
+        arg_str1("l", "lp", "<password>", "last password (stop), hex, 4 bytes, lsb"),
         arg_param_end
     };
 
@@ -827,8 +836,8 @@ int CmdEM4x50Login(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_login",
-                  "Login into EM4x50 tag. Tag must be on antenna.",
-                  "lf em 4x50_login -p 12345678\n"
+                  "Login into EM4x50 tag.",
+                  "lf em 4x50_login -p 12345678 -< login with password 12345678\n"
                  );
 
     void *argtable[] = {
@@ -869,7 +878,7 @@ int CmdEM4x50Reset(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_reset",
-                  "Reset EM4x50 tag. Tag must be on antenna",
+                  "Reseta EM4x50 tag.",
                   "lf em 4x50_reset\n"
                  );
 
@@ -903,7 +912,7 @@ int CmdEM4x50Watch(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_watch",
-                  "Watch for EM4x50 tag. Tag must be on antenna",
+                  "Watches for EM4x50 tags. Function runs until button is pressed.",
                   "lf em 4x50_watch\n"
                  );
 
@@ -937,11 +946,11 @@ int CmdEM4x50Restore(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_restore",
-                  "Restore EM4x50 dump to tag. Tag must be on antenna",
-                  "lf em 4x50_restore -u 1b5aff5c\n"
-                  "lf em 4x50_restore -f lf-4x50dump.eml\n"
-                  "lf em 4x50_restore -u 1b5aff5c -p 12345678\n"
-                  "lf em 4x50_restore -f lf-4x50dump.eml -p 12345678\n"
+                  "Restores data from dumpfile onto a Em4x50 tag.",
+                  "lf em 4x50_restore -u 1b5aff5c -> uses lf-4x50-1B5AFF5C-dump.bin\n"
+                  "lf em 4x50_restore -f mydump.eml -> uses mydump.eml\n"
+                  "lf em 4x50_restore -u 1b5aff5c -p 12345678 -> \n"
+                  "lf em 4x50_restore -f mydump.eml -p 12345678 -> \n"
                  );
 
     void *argtable[] = {
@@ -1042,9 +1051,9 @@ int CmdEM4x50Sim(const char *Cmd) {
      
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_sim",
-                  "Simulate dump (bin/eml/json) of EM4x50 tag in emulator memory",
-                  "lf em 4x50_sim\n"
-                  "lf em 4x50_sim -f lf-4x50dump.eml\n"
+                  "Simulates a EM4x50 tag",
+                  "lf em 4x50_sim -> simulates EM4x50 data in flash memory.\n"
+                  "lf em 4x50_sim -f mydump.eml -> simulates content of file ./mydump\n"
                  );
 
     void *argtable[] = {
@@ -1111,7 +1120,7 @@ int CmdEM4x50StdRead(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_stdread",
-                  "Show standard read data of EM4x50 tag",
+                  "Shows standard read data of EM4x50 tag.",
                   "lf em 4x50_stdread\n"
                  );
 
@@ -1176,8 +1185,10 @@ int CmdEM4x50ELoad(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_eload",
-                  "Load dump file (bin/eml/json) into flash memory",
-                  "lf em 4x50_eload -f lf-4x50dump.json\n"
+                  "Loads EM4x50 tag dump into flash memory on device.",
+                  "lf em 4x50_eload -f mydump.bin -> uploads bin file ./mydump.bin\n"
+                  "lf em 4x50_eload -f mydump.eml -> uploads eml file ./mydump.eml\n"
+                  "lf em 4x50_eload -f mydump.json -> uploads json file ./mydump.json\n"
                  );
 
     void *argtable[] = {
@@ -1218,9 +1229,11 @@ int CmdEM4x50ESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_esave",
-                  "Save flash memory to file (bin, elm, json)",
-                  "lf em 4x50_esave\n"
-                  "lf em 4x50_esave -f lf-4x50dump.json\n"
+                  "Saves bin/eml/json dump file of flash memory.",
+                  "lf em 4x50_esave -> use UID as filename\n"
+                  "lf em 4x50_esave -f mydump.bin -> saves to bin file ./mydump.bin\n"
+                  "lf em 4x50_esave -f mydump.eml -> saves to eml file ./mydump.eml\n"
+                  "lf em 4x50_esave -f mydump.json -> saves to json file ./mydump.json\n"
                  );
 
     void *argtable[] = {
@@ -1240,7 +1253,7 @@ int CmdEM4x50ESave(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     
-    // valid data regarding em4x50?
+    // valid em4x50 data?
     serial = bytes_to_num(data + 4 * EM4X50_DEVICE_SERIAL, 4);
     device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);
     if (serial == device_id) {
@@ -1263,7 +1276,9 @@ int CmdEM4x50ESave(const char *Cmd) {
 
 int CmdEM4x50Chk(const char *Cmd) {
 
-    // upload passwords from dictionary to flash memory and start password check
+    // upload passwords from given dictionary to flash memory and
+    // start password check;
+    // if no filename is given dictionary "t55xx_default_pwds.dic" is used
     
     int status = 0;
     int res = 0, slen = 0;
@@ -1278,9 +1293,9 @@ int CmdEM4x50Chk(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_chk",
-                  "Check passwords from dictionary in flash memory",
-                  "lf em 4x50_chk\n"
-                  "lf em 4x50_chk -f 4_byte_password_file.dic\n"
+                  "Dictionary attack against EM4x50.",
+                  "lf em 4x50_chk -> uses T55xx default dictionary\n"
+                  "lf em 4x50_chk -f my.dic -> uses dictionary ./my.dic\n"
                  );
 
     void *argtable[] = {
@@ -1292,8 +1307,6 @@ int CmdEM4x50Chk(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &slen);
     CLIParserFree(ctx);
-    
-    //data = calloc(FLASH_MEM_MAX_SIZE, sizeof(uint8_t));
     
     // no filename -> default = t55xx_default_pwds
     if (strlen(filename) == 0) {
