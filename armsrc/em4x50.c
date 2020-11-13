@@ -12,7 +12,6 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "lfadc.h"
-#include "pmflash.h"
 #include "commonutil.h"
 #include "em4x50.h"
 #include "flashmem.h"

@@ -10,15 +10,9 @@
 
 #include "cliparser.h"
 #include "cmdlfem4x50.h"
-#include <ctype.h>
 #include "fileutils.h"
-#include "comms.h"
-#include "util.h"
 #include "commonutil.h"
-#include "cmdparser.h"
 #include "pmflash.h"
-#include "cmdflashmem.h"
-#include "em4x50.h"
 
 #define FLASH_MEM_PAGE_SIZE     0x10000
 #define CARD_MEMORY_SIZE        4096

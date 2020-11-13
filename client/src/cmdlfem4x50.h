@@ -11,7 +11,6 @@
 #ifndef CMDLFEM4X50_H__
 #define CMDLFEM4X50_H__
 
-#include"common.h"
 #include "em4x50.h"
 
 int read_em4x50_uid(void);
