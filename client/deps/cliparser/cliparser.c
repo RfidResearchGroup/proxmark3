@@ -35,8 +35,7 @@
 int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
     *ctx = malloc(sizeof(CLIParserContext));
     if (!*ctx) {
-        printf("ERROR: Insufficient memory\n");
-        fflush(stdout);
+        PrintAndLogEx(ERR, "ERROR: Insufficient memory\n");
         return 2;
     }
     (*ctx)->argtable = NULL;
@@ -220,16 +219,15 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     res = param_gethex_to_eol((char *)tmpstr, 0, data, maxdatalen, datalen);
     switch (res) {
         case 1:
-            printf("Parameter error: Invalid HEX value\n");
+            PrintAndLogEx(ERR, "Parameter error: Invalid HEX value\n");
             break;
         case 2:
-            printf("Parameter error: parameter too large\n");
+            PrintAndLogEx(ERR, "Parameter error: parameter too large\n");
             break;
         case 3:
-            printf("Parameter error: Hex string must have EVEN number of digits\n");
+            PrintAndLogEx(ERR, "Parameter error: Hex string must have EVEN number of digits\n");
             break;
     }
-    fflush(stdout);
     return res;
 }
 
@@ -246,8 +244,7 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
         int len = strlen(argstr->sval[i]);
 
         if (len > ((sizeof(tmpstr) / 2) - ibuf)) {
-            printf("Parameter error: string too long (%i chars), expect MAX %zu chars\n", len + ibuf, (sizeof(tmpstr) / 2));
-            fflush(stdout);
+            PrintAndLogEx(ERR, "Parameter error: string too long (%i chars), expect MAX %zu chars\n", len + ibuf, (sizeof(tmpstr) / 2));
             return 2;
         }
 
@@ -263,8 +260,7 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
         return 0;
 
     if (ibuf > maxdatalen) {
-        printf("Parameter error: string too long (%i chars), expected MAX %i chars\n", ibuf, maxdatalen);
-        fflush(stdout);
+        PrintAndLogEx(ERR, "Parameter error: string too long (%i chars), expected MAX %i chars\n", ibuf, maxdatalen);
         return 2;
     }
 
