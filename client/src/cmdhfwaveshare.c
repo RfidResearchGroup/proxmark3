@@ -84,7 +84,7 @@ static model_t models[] = {
     {"4.2  inch e-paper",              100, 400, 300}, // tested
     {"7.5  inch e-paper",              120, 800, 480},
     {"2.7  inch e-paper",              121, 176, 276}, // tested
-    {"2.13 inch e-paper B (with red)", 106, 212, 104},
+    {"2.13 inch e-paper B (with red)", 106, 104, 212}, // tested
     {"1.54 inch e-paper B (with red)", 100, 200, 200}, // tested
     {"7.5  inch e-paper HD",           120, 880, 528},
 };
@@ -563,7 +563,6 @@ static int transceive_blocking(uint8_t *txBuf, uint16_t txBufLen, uint8_t *rxBuf
         PacketResponseNG resp;
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, txBufLen, 0, txBuf, txBufLen);
         rxBuf[0] = 1;
-
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             if (resp.oldarg[0] > rxBufLen) {
                 PrintAndLogEx(WARNING, "Received %"PRIu64 " bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
@@ -856,7 +855,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         } else if (model_nr == M2in13B) {  //2.13inch B
             for (i = 0; i < 26; i++) {
                 read_black(i, step8, model_nr, black);
-                ret = transceive_blocking(step8, 109, rx, 20, actrxlen, true); // cd 08
+                ret = transceive_blocking(step8, 109, rx, 20, actrxlen, false); // cd 08
                 if (ret != PM3_SUCCESS) {
                     return ret;
                 }
@@ -920,7 +919,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
                 for (i = 0; i < 26; i++) {
                     read_red(i, step13, model_nr, red);
                     //memset(&step13[3], 0xfE, 106);
-                    ret = transceive_blocking(step13, 109, rx, 20, actrxlen, true);
+                    ret = transceive_blocking(step13, 109, rx, 20, actrxlen, false);
                     if (ret != PM3_SUCCESS) {
                         return ret;
                     }
