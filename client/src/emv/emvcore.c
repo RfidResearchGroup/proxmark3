@@ -804,6 +804,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             emv_pk_free(pk);
             emv_pk_free(issuer_pk);
             emv_pk_free(icc_pk);
+            atc_db = NULL;
             return 9;
         }
     } else {
