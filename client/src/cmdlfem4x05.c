@@ -1882,7 +1882,8 @@ uint32_t static em4x05_Sniff_GetBlock(char *bits, bool fwd) {
     if (parity != (bits[35] - '0'))
         parityerror = true;
 
-    if (parityerror) printf("parity error : ");
+    if (parityerror) 
+        PrintAndLogEx(ERR, "parity error : ");
 
     if (!fwd) {
         uint32_t t1 = value;
@@ -1997,10 +1998,10 @@ int CmdEM4x05Sniff(const char *Cmd) {
                                 ((strncmp(bits, "01010", 5) == 0) && (bitidx == 50))) {
                             memmove(bits, &bits[1], bitidx - 1);
                             bitidx--;
-                            printf("Trim leading 0\n");
+                            PrintAndLogEx(INFO, "Trim leading 0");
                         }
                         bits[bitidx] = 0;
-                        //   printf ("==> %s\n",bits);
+
                         // logon
                         if ((strncmp(bits, "0011", 4) == 0) && (bitidx == 49)) {
                             haveData = true;
@@ -2017,8 +2018,9 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             sprintf(cmdText, "Write");
                             tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
                             sprintf(blkAddr, "%d", tmpValue);
-                            if (tmpValue == 2)
+                            if (tmpValue == 2) {
                                 pwd = true;
+                            }
                             tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
                             sprintf(dataText, "%08X", tmpValue);
                         }
@@ -2057,8 +2059,9 @@ int CmdEM4x05Sniff(const char *Cmd) {
                     } else {
                         i = (CycleWidth - ZeroWidth) / 28;
                         bits[bitidx++] = '0';
-                        for (int ii = 0; ii < i; ii++)
+                        for (int ii = 0; ii < i; ii++) {
                             bits[bitidx++] = '1';
+                        }
                     }
                 }
             }
@@ -2068,15 +2071,14 @@ int CmdEM4x05Sniff(const char *Cmd) {
         // Print results
         if (haveData) { //&& (minWidth > 1) && (maxWidth > minWidth)){
             if (pwd)
-                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | "_YELLOW_("%8s")" | "_YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | " _YELLOW_("%8s")" | " _YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
             else
-                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | "_GREEN_("%8s")" | "_GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | " _GREEN_("%8s")" | " _GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
         }
     }
 
     // footer
     PrintAndLogEx(SUCCESS, "---------------------------------------------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "");
-
     return PM3_SUCCESS;
 }
