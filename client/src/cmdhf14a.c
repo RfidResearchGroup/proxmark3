@@ -245,20 +245,7 @@ static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        hf 14a sniff c r"));
     return PM3_SUCCESS;
 }
-static int usage_hf_14a_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-k] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -r    do not read response");
-    PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
-    PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
-    PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
-    PrintAndLogEx(NORMAL, "       -b    number of bits to send. Useful for send partial byte");
-    PrintAndLogEx(NORMAL, "       -t    timeout in ms");
-    PrintAndLogEx(NORMAL, "       -T    use Topaz protocol to send command");
-    PrintAndLogEx(NORMAL, "       -3    ISO14443-3 select only (skip RATS)");
-    return PM3_SUCCESS;
-}
+
 static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a reader [k|s|x] [3]");
     PrintAndLogEx(NORMAL, "       k    keep the field active after command executed");
@@ -1117,14 +1104,14 @@ static int CmdHF14AAPDU(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a apdu",
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
                   "hf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
-                  "hf 14a apdu -sd 00A404000E325041592E5359532E444446303100 -> decode apdu\n"
-                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 -> encode standard apdu\n"
+                  "hf 14a apdu -sd 00A404000E325041592E5359532E444446303100        -> decode apdu\n"
+                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256    -> encode standard apdu\n"
                   "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("s",  "select",   "activate field and select card"),
-        arg_lit0("k",  "keep",     "leave the signal field ON after receive response"),
+        arg_lit0("k",  "keep",     "keep signal field ON after receive"),
         arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0("d",  "decapdu",  "decode apdu request if it possible"),
         arg_str0("m",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
@@ -1224,97 +1211,54 @@ static int CmdHF14AAPDU(const char *Cmd) {
 }
 
 static int CmdHF14ACmdRaw(const char *Cmd) {
-    bool reply = 1;
-    bool crc = false;
-    bool keep_field_on = false;
-    bool active = false;
-    bool active_select = false;
-    bool no_rats = false;
-    uint16_t numbits = 0;
-    bool bTimeout = false;
-    uint32_t timeout = 0;
-    bool topazmode = false;
-    char buf[5] = "";
-    int i = 0;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a raw",
+                  "Sends an raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
+                  "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
+                  "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  NULL, "active signal field ON without select"),
+        arg_int0("b",  NULL, "<dec>", "number of bits to send. Useful for send partial byte"),
+        arg_lit0("c",  NULL, "calculate and append CRC"),
+        arg_lit0("k",  NULL, "keep signal field ON after receive"),
+        arg_lit0("r",  NULL, "do not read response"),
+        arg_lit0("s",  NULL, "active signal field ON with select"),
+        arg_int0("t",  "timeout", "<ms>", "timeout in milliseconds"),
+        arg_lit0("3",  NULL, "ISO14443-3 select only (skip RATS)"),
+        arg_lit0(NULL, "topaz", "use Topaz protocol to send command"),
+        arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+
+    bool active = arg_get_lit(ctx, 1);
+    uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 2, 0);
+    bool crc = arg_get_lit(ctx, 3);
+    bool keep_field_on = arg_get_lit(ctx, 4);
+    bool reply = (arg_get_lit(ctx, 5) == false);
+    bool active_select = arg_get_lit(ctx, 6);
+    uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 7, 0);
+    bool no_rats =  arg_get_lit(ctx, 8);
+    bool topazmode = arg_get_lit(ctx, 9);
+
+    int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    uint16_t datalen = 0;
-    uint32_t temp;
+    CLIGetHexWithReturn(ctx, 10, data, &datalen);
+    CLIParserFree(ctx);
 
-    if (strlen(Cmd) < 2) return usage_hf_14a_raw();
+    bool bTimeout = (timeout) ? true : false;
 
-    // strip
-    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
-
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
-        if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
-                case 'h':
-                    return usage_hf_14a_raw();
-                case 'r':
-                    reply = false;
-                    break;
-                case 'c':
-                    crc = true;
-                    break;
-                case 'k':
-                    keep_field_on = true;
-                    break;
-                case 'a':
-                    active = true;
-                    break;
-                case 's':
-                    active_select = true;
-                    break;
-                case 'b':
-                    sscanf(Cmd + i + 2, "%u", &temp);
-                    numbits = temp & 0xFFFF;
-                    i += 3;
-                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
-                    i -= 2;
-                    break;
-                case 't':
-                    bTimeout = true;
-                    sscanf(Cmd + i + 2, "%u", &temp);
-                    timeout = temp;
-                    i += 3;
-                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
-                    i -= 2;
-                    break;
-                case 'T':
-                    topazmode = true;
-                    break;
-                case '3':
-                    no_rats = true;
-                    break;
-                default:
-                    return usage_hf_14a_raw();
-            }
-            i += 2;
-            continue;
+    // ensure we can add 2byte crc to input data
+    if (datalen >= sizeof(data) + 2) {
+        if (crc) {
+            PrintAndLogEx(FAILED, "Buffer is full, we can't add CRC to your data");
+            return PM3_EINVARG;
         }
-        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
-                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
-                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
-            buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = Cmd[i];
-            i++;
-
-            if (strlen(buf) >= 2) {
-                sscanf(buf, "%x", &temp);
-                data[datalen] = (uint8_t)(temp & 0xff);
-                *buf = 0;
-                if (++datalen >= sizeof(data)) {
-                    if (crc)
-                        PrintAndLogEx(FAILED, "Buffer is full, we can't add CRC to your data");
-                    break;
-                }
-            }
-            continue;
-        }
-        PrintAndLogEx(FAILED, "Invalid char on input");
-        return PM3_ESOFT;
     }
 
     if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
