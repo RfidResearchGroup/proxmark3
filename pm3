@@ -15,7 +15,14 @@ FULLIMAGE="fullimage.elf"
 BOOTIMAGE="bootrom.elf"
 # try pm3 dirs in current repo workdir
 if [ -d "$PM3PATH/client/" ]; then
-    CLIENT="$PM3PATH/client/proxmark3"
+    if [ -x "$PM3PATH/client/proxmark3" ]; then
+        CLIENT="$PM3PATH/client/proxmark3"
+    elif [ -x "$PM3PATH/client/build/proxmark3" ]; then
+        CLIENT="$PM3PATH/client/build/proxmark3"
+    else
+        echo >&2 "[!!] In devel workdir but no executable found, did you compile it?"
+        exit 1
+    fi
 # try install dir
 elif [ -x "$PM3PATH/proxmark3" ]; then
     CLIENT="$PM3PATH/proxmark3"
