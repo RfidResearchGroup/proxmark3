@@ -1312,15 +1312,6 @@ int CmdEM4x50Chk(const char *Cmd) {
     res = loadFileDICTIONARY(filename, data + 2, &datalen, 4, &key_count);
     if (res || !key_count)
         return PM3_EFILE;
-
-    // limited space on flash mem
-    if (key_count > 0xFFFF)
-        key_count &= 0xFFFF;
-
-    if (datalen > FLASH_MEM_MAX_SIZE) {
-        PrintAndLogEx(FAILED, "error, filesize is larger than available memory");
-        return PM3_EOVFLOW;
-    }
     
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
     
