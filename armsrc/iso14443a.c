@@ -1301,7 +1301,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     // We need to listen to the high-frequency, peak-detected path.
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    iso14a_set_timeout(201400); // 106 * 19ms default
+    iso14a_set_timeout(201400); // 106 * 19ms default *100?
 
     int len = 0;
 
@@ -2903,9 +2903,11 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 goto OUT;
         }
     }
-
-    if ((param & ISO14A_SET_TIMEOUT))
+    uint32_t save_iso14a_timeout = 0;
+    if ((param & ISO14A_SET_TIMEOUT)) {
+        save_iso14a_timeout = iso14a_get_timeout();
         iso14a_set_timeout(timeout);
+    }
 
     if ((param & ISO14A_APDU)) {
         uint8_t res;
@@ -2968,6 +2970,10 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
     if ((param & ISO14A_REQUEST_TRIGGER))
         iso14a_set_trigger(false);
+
+    if ((param & ISO14A_SET_TIMEOUT)) {
+        iso14a_set_timeout(save_iso14a_timeout);
+    }
 
     if ((param & ISO14A_NO_DISCONNECT))
         return;
