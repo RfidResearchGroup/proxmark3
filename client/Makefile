@@ -774,7 +774,7 @@ print-%: ; @echo $* = $($*)
 
 # SWIG files emit a number of warnings, we've to ignore them
 %wrap.o: %wrap.c
-$(OBJDIR)/%wrap.o : %wrap.c $(OBJDIR)/%wrap.d
+$(OBJDIR)/%wrap.o : %wrap.c $(OBJDIR)/%.d
 	$(info [-] CC $<)
 	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -Wno-missing-prototypes -Wno-missing-declarations -Wno-missing-field-initializers -c -o $@ $<
