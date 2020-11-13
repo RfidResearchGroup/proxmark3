@@ -157,7 +157,7 @@ enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
 }
 
 static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
-    emv_tag_dump(tlv, stdout, level);
+    emv_tag_dump(tlv, level);
     if (is_leaf) {
         print_buffer(tlv->value, tlv->len, level);
     }

@@ -1153,7 +1153,7 @@ static int CmdEMVExec(const char *Cmd) {
             // 9F27: Cryptogram Information Data (CID)
             const struct tlv *CID = tlvdb_get(tlvRoot, 0x9F27, NULL);
             if (CID) {
-                emv_tag_dump(CID, stdout, 0);
+                emv_tag_dump(CID, 1);
                 PrintAndLogEx(NORMAL, "------------------------------");
                 if (CID->len > 0) {
                     switch (CID->value[0] & EMVAC_AC_MASK) {
