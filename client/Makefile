@@ -600,11 +600,12 @@ SRCS += bucketsort.c \
 
 # swig
 
+SWIGSRCS =
 ifeq ($(SWIG_LUA_FOUND),1)
-    SRCS += pm3_luawrap.c
+    SWIGSRCS += pm3_luawrap.c
 endif
 ifeq ($(SWIG_PYTHON_FOUND),1)
-    SRCS += pm3_pywrap.c
+    SWIGSRCS += pm3_pywrap.c
 endif
 
 # gui
@@ -620,6 +621,7 @@ ifeq ($(platform),Darwin)
 endif
 
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
+OBJS += $(SWIGSRCS:%.c=$(OBJDIR)/%.o)
 OBJS += $(CXXSRCS:%.cpp=$(OBJDIR)/%.o)
 OBJS += $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 
@@ -803,6 +805,7 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(Q)$(POSTCOMPILE)
 
 DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(SRCS)) \
+                   $(patsubst %wrap.c, $(OBJDIR)/%.d, $(SWIGSRCS)) \
                    $(patsubst %.cpp, $(OBJDIR)/%.d, $(CXXSRCS)) \
                    $(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS))
 
