@@ -1225,10 +1225,10 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("b",  NULL, "<dec>", "number of bits to send. Useful for send partial byte"),
         arg_lit0("c",  NULL, "calculate and append CRC"),
         arg_lit0("k",  NULL, "keep signal field ON after receive"),
+        arg_lit0("3",  NULL, "ISO14443-3 select only (skip RATS)"),
         arg_lit0("r",  NULL, "do not read response"),
         arg_lit0("s",  NULL, "active signal field ON with select"),
         arg_int0("t",  "timeout", "<ms>", "timeout in milliseconds"),
-        arg_lit0("3",  NULL, "ISO14443-3 select only (skip RATS)"),
         arg_lit0(NULL, "topaz", "use Topaz protocol to send command"),
         arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
         arg_param_end
