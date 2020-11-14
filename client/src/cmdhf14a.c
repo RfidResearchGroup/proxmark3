@@ -33,7 +33,7 @@
 bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);
-static int waitCmd(uint8_t iSelect, uint32_t timeout);
+static int waitCmd(bool i_select, uint32_t timeout);
 
 static const manufactureName manufactureMapping[] = {
     // ID,  "Vendor Country"
@@ -1314,19 +1314,19 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     if (reply) {
         int res = 0;
         if (active_select)
-            res = waitCmd(1, timeout);
-        if (!res && datalen > 0)
-            waitCmd(0, timeout);
+            res = waitCmd(true, timeout);
+        if (res == PM3_SUCCESS && datalen > 0)
+            waitCmd(false, timeout);
     }
     return PM3_SUCCESS;
 }
 
-static int waitCmd(uint8_t iSelect, uint32_t timeout) {
+static int waitCmd(bool i_select, uint32_t timeout) {
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, timeout + 1500)) {
         uint16_t len = (resp.oldarg[0] & 0xFFFF);
-        if (iSelect) {
+        if (i_select) {
             len = (resp.oldarg[1] & 0xFFFF);
             if (len) {
                 PrintAndLogEx(SUCCESS, "Card selected. UID[%u]:", len);
@@ -1338,11 +1338,11 @@ static int waitCmd(uint8_t iSelect, uint32_t timeout) {
         }
 
         if (!len)
-            return 1;
+            return PM3_ESOFT;
 
         uint8_t *data = resp.data.asBytes;
 
-        if (iSelect == 0 && len >= 3) {
+        if (i_select == false && len >= 3) {
             bool crc = check_crc(CRC_14443_A, data, len);
             
             char s[16];
@@ -1359,9 +1359,9 @@ static int waitCmd(uint8_t iSelect, uint32_t timeout) {
 
     } else {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return 3;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AAntiFuzz(const char *Cmd) {
