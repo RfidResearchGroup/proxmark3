@@ -35,6 +35,7 @@
 #include "mifare/mad.h"
 #include "generator.h"
 #include "aiddesfire.h"
+#include "util.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -728,7 +729,6 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
     return PM3_SUCCESS;
 }
 
-
 static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload) {
     // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
     // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
@@ -777,9 +777,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
 
     if (payload->kdfAlgo == MFDES_KDF_ALGO_AN10922) {
         mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
-        if (g_debugMode) {
-            PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
-        }
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
     } else if (payload->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
         // We will overrite any provided KDF input since a gallagher specific KDF was requested.
         payload->kdfInputLen = 11;
@@ -789,11 +787,9 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
         }
 
         mifare_kdf_an10922(key, payload->kdfInput, payload->kdfInputLen);
+        PrintAndLogEx(DEBUG, "    KDF Input: " _YELLOW_("%s"), sprint_hex(payload->kdfInput, payload->kdfInputLen));
+        PrintAndLogEx(DEBUG, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
 
-        if (g_debugMode) {
-            PrintAndLogEx(INFO, "    KDF Input: " _YELLOW_("%s"), sprint_hex(payload->kdfInput, payload->kdfInputLen));
-            PrintAndLogEx(INFO, " Derrived key: " _GREEN_("%s"), sprint_hex(key->data, key_block_size(key)));
-        }
     }
 
     uint8_t subcommand = MFDES_AUTHENTICATE;
@@ -866,8 +862,8 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     }
 
     if (g_debugMode > 1) {
-        PrintAndLogEx(INFO, "encRndB: %s", sprint_hex(encRndB, 8));
-        PrintAndLogEx(INFO, "RndB: %s", sprint_hex(RndB, 8));
+        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, 8));
+        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, 8));
     }
 
     // - Rotate RndB by 8 bits
@@ -893,24 +889,24 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
             memcpy(tmp, RndA, rndlen);
             memcpy(tmp + rndlen, rotRndB, rndlen);
             if (g_debugMode > 1) {
-                PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(INFO, "Both: %s", sprint_hex(tmp, 16));
+                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+                PrintAndLogEx(DEBUG, "Both: %s", sprint_hex(tmp, 16));
             }
             tdes_nxp_send(tmp, both, 16, key->data, IV, 2);
             if (g_debugMode > 1) {
-                PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, 16));
+                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 16));
             }
         } else if (payload->algo == MFDES_ALGO_3K3DES) {
             uint8_t tmp[32] = {0x00};
             memcpy(tmp, RndA, rndlen);
             memcpy(tmp + rndlen, rotRndB, rndlen);
             if (g_debugMode > 1) {
-                PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-                PrintAndLogEx(INFO, "Both3k3: %s", sprint_hex(tmp, 32));
+                PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+                PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
             }
             tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
             if (g_debugMode > 1) {
-                PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, 32));
+                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
             }
         }
     } else if (payload->mode == MFDES_AUTH_AES) {
@@ -918,8 +914,8 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
         memcpy(tmp, RndA, rndlen);
         memcpy(tmp + rndlen, rotRndB, rndlen);
         if (g_debugMode > 1) {
-            PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-            PrintAndLogEx(INFO, "Both3k3: %s", sprint_hex(tmp, 32));
+            PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+            PrintAndLogEx(DEBUG, "Both3k3: %s", sprint_hex(tmp, 32));
         }
         if (payload->algo == MFDES_ALGO_AES) {
             if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
@@ -927,7 +923,7 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
             }
             mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
             if (g_debugMode > 1) {
-                PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, 32));
+                PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, 32));
             }
         }
     }
@@ -996,8 +992,8 @@ static int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rp
     for (uint32_t x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             if (g_debugMode > 1) {
-                PrintAndLogEx(INFO, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
-                PrintAndLogEx(INFO, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+                PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
+                PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
             }
             return 11;
         }
@@ -4769,7 +4765,7 @@ static int CmdHF14aDesNDEF(const char *Cmd) {
     if (verbose2) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("DESFire NDEF raw") " ----------------");
-        dump_buffer(data, datalen, stdout, 1);
+        print_buffer(data, datalen, 1);
     }
 
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfdes ndef -vv`") " for more details");

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd ..
 rm -rf build
 mkdir build
 (
@@ -7,4 +8,3 @@ mkdir build
   cmake ..
   make -j
 )
-

@@ -1326,7 +1326,7 @@ static int CmdHF15Dump(const char *Cmd) {
     if (fileNameLen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += sprintf(fptr, "hf-15-");
-        FillFileNameByUID(fptr, uid, "-dump", sizeof(uid));
+        FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
     }
     // detect blocksize from card :)
 

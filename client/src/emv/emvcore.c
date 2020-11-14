@@ -19,7 +19,6 @@
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "dol.h"
-#include "dump.h"
 #include "emv_tags.h"
 #include "emvjson.h"
 #include "util_posix.h"
@@ -158,9 +157,9 @@ enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
 }
 
 static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
-    emv_tag_dump(tlv, stdout, level);
+    emv_tag_dump(tlv, level);
     if (is_leaf) {
-        dump_buffer(tlv->value, tlv->len, stdout, level);
+        print_buffer(tlv->value, tlv->len, level);
     }
 }
 
@@ -805,6 +804,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             emv_pk_free(pk);
             emv_pk_free(issuer_pk);
             emv_pk_free(icc_pk);
+            atc_db = NULL;
             return 9;
         }
     } else {

@@ -14,7 +14,6 @@
 
 #include "ui.h"
 #include "util.h" // sprint_hex...
-#include "emv/dump.h"
 #include "crypto/asn1utils.h"
 #include "pm3_cmd.h"
 
@@ -181,7 +180,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
         uint8_t rval[300] = {0};
         uint8_t sval[300] = {0};
         int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
-        if (!res) {
+        if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\t\tr: %s", sprint_hex(rval + 32 - slen, slen));
             PrintAndLogEx(SUCCESS, "\t\ts: %s", sprint_hex(sval + 32 - slen, slen));
         }
@@ -375,15 +374,15 @@ static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 
     if (NDEFHeader.TypeLen) {
         PrintAndLogEx(INFO, "Type data:");
-        dump_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, stdout, 1);
+        print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
     }
     if (NDEFHeader.IDLen) {
         PrintAndLogEx(INFO, "ID data:");
-        dump_buffer(NDEFHeader.ID, NDEFHeader.IDLen, stdout, 1);
+        print_buffer(NDEFHeader.ID, NDEFHeader.IDLen, 1);
     }
     if (NDEFHeader.PayloadLen) {
         PrintAndLogEx(INFO, "Payload data:");
-        dump_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, stdout, 1);
+        print_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, 1);
         if (NDEFHeader.TypeLen)
             ndefDecodePayload(&NDEFHeader);
     }

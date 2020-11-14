@@ -200,6 +200,52 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     PrintAndLogEx(NORMAL, "");
 }
 
+void print_buffer(const uint8_t *data, const size_t len, int level) {
+
+    if (len < 1)
+        return;
+
+    char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+    int i;
+    for (i = 0; i < len; i += 16) {
+
+        // (16 * 3) + (16) +  + 1
+        memset(buf, 0, sizeof(buf));
+        sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
+        
+        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, 16, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);        
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, 16));
+        PrintAndLogEx(INFO, "%s", buf);
+    }
+    
+    // the last odd bytes
+    uint8_t mod = len % 16;
+    
+    if (mod) {
+        memset(buf, 0, sizeof(buf));
+        sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
+        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, mod, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
+        
+        // add the spaces...
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((16 - mod) * 3) , " ");
+        
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, mod));
+        PrintAndLogEx(INFO, "%s", buf);
+    }
+}
+
+void print_blocks(uint32_t *data, size_t len) {
+    PrintAndLogEx(SUCCESS, "Blk | Data ");
+    PrintAndLogEx(SUCCESS, "----+------------");
+
+    if (!data) {
+        PrintAndLogEx(ERR, "..empty data");
+    } else {
+        for (uint8_t i = 0; i < len; i++)
+            PrintAndLogEx(SUCCESS, " %02d | %08X", i, data[i]);
+    }
+}
+
 char *sprint_hex(const uint8_t *data, const size_t len) {
     static char buf[UTIL_BUFFER_SIZE_SPRINT - 3] = {0};
     hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, 1, true);
@@ -342,18 +388,6 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
 }
 char *sprint_ascii(const uint8_t *data, const size_t len) {
     return sprint_ascii_ex(data, len, 0);
-}
-
-void print_blocks(uint32_t *data, size_t len) {
-    PrintAndLogEx(SUCCESS, "Blk | Data ");
-    PrintAndLogEx(SUCCESS, "----+------------");
-
-    if (!data) {
-        PrintAndLogEx(ERR, "..empty data");
-    } else {
-        for (uint8_t i = 0; i < len; i++)
-            PrintAndLogEx(SUCCESS, " %02d | %08X", i, data[i]);
-    }
 }
 
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen) {

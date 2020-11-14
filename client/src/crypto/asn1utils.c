@@ -12,19 +12,16 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <mbedtls/asn1.h>
-
 #include "ui.h"  // Print...
-
 #include "emv/tlv.h"
-#include "emv/dump.h"
 #include "asn1dump.h"
 #include "util.h"
 
 int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval) {
     if (!signature || !signaturelen || !rval || !sval)
-        return 1;
+        return PM3_EINVARG;
 
-    int res = 0;
+    int res = PM3_SUCCESS;
     unsigned char *p = signature;
     const unsigned char *end = p + signaturelen;
     size_t len;
@@ -57,7 +54,7 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
 
         // check size
         if (end != p)
-            return 2;
+            return PM3_ESOFT;
     }
 
 exit:
@@ -66,9 +63,9 @@ exit:
 
 static void print_cb(void *data, const struct tlv *tlv, int level, bool is_leaf) {
     bool candump = true;
-    asn1_tag_dump(tlv, stdout, level, &candump);
+    asn1_tag_dump(tlv, level, &candump);
     if (is_leaf && candump) {
-        dump_buffer(tlv->value, tlv->len, stdout, level);
+        print_buffer(tlv->value, tlv->len, level);
     }
 }
 
@@ -80,10 +77,10 @@ int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent) {
         tlvdb_free(t);
     } else {
         PrintAndLogEx(ERR, "Can't parse data as TLV tree");
-        return 1;
+        return PM3_ESOFT;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 

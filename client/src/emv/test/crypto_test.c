@@ -24,7 +24,6 @@
 
 #include "commonutil.h"     // ARRAYLEN
 #include "../crypto.h"
-#include "../dump.h"
 #include "util_posix.h"
 #include "ui.h"             // printandlog
 

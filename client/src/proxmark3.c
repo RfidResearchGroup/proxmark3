@@ -898,7 +898,7 @@ int main(int argc, char *argv[]) {
 
         // execute pm3 command file
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--script-file") == 0) {
-            if (i + 1 == argc) {
+            if (i + 1 == argc || strlen(argv[i + 1]) == 0) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") " missing script file specification after -s\n");
                 show_help(false, exec_name);
                 return 1;
@@ -910,7 +910,7 @@ int main(int argc, char *argv[]) {
         // execute lua script
         if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--lua") == 0) {
             addLuaExec = true;
-            if (i + 1 == argc) {
+            if (i + 1 == argc || strlen(argv[i + 1]) == 0) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") " missing lua script specification after -l\n");
                 show_help(false, exec_name);
                 return 1;
