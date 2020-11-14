@@ -1240,10 +1240,10 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 2, 0);
     bool crc = arg_get_lit(ctx, 3);
     bool keep_field_on = arg_get_lit(ctx, 4);
-    bool reply = (arg_get_lit(ctx, 5) == false);
-    bool active_select = arg_get_lit(ctx, 6);
-    uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 7, 0);
-    bool no_rats =  arg_get_lit(ctx, 8);
+    bool no_rats =  arg_get_lit(ctx, 5);
+    bool reply = (arg_get_lit(ctx, 6) == false);
+    bool active_select = arg_get_lit(ctx, 7);
+    uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 8, 0);
     bool topazmode = arg_get_lit(ctx, 9);
 
     int datalen = 0;
@@ -1344,13 +1344,15 @@ static int waitCmd(uint8_t iSelect, uint32_t timeout) {
 
         if (iSelect == 0 && len >= 3) {
             bool crc = check_crc(CRC_14443_A, data, len);
+            
+            char s[16];
+            sprintf(s, 
+                (crc) ? _GREEN_("%02X %02X") : _RED_("%02X %02X"), 
+                data[len - 2],
+                data[len - 1]
+                );
 
-            PrintAndLogEx(SUCCESS, "%s[%02X %02X] %s",
-                          sprint_hex(data, len - 2),
-                          data[len - 2],
-                          data[len - 1],
-                          (crc) ? _GREEN_("ok") : _RED_("fail")
-                         );
+            PrintAndLogEx(SUCCESS, "%s[ %s ]",  sprint_hex(data, len - 2), s);
         } else {
             PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
         }
