@@ -292,7 +292,7 @@ endif
 ifneq ("$(wildcard src/pm3_luawrap.c)","")
     SWIG_LUA_FOUND = 1
 endif
-ifneq ($(SKIPPYTHON),1)
+ifeq ($(PYTHON_FOUND),1)
     ifneq ("$(wildcard src/pm3_pywrap.c)","")
         SWIG_PYTHON_FOUND = 1
     endif
