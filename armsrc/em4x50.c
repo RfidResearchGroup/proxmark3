@@ -59,12 +59,16 @@ int gLow = 60;
 
 // auxiliary functions
 
-static void wait_timer0(uint32_t period) {
+static int wait_timer0(uint32_t period) {
 
     // do nothing for <period> using timer0
 
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while ((AT91C_BASE_TC0->TC_CV < period) && !BUTTON_PRESS());
+    while (AT91C_BASE_TC0->TC_CV < period)
+        if (BUTTON_PRESS())
+            return BUTTON_SINGLE_CLICK;
+    
+    return BUTTON_NO_CLICK;
 }
 
 static void em4x50_setup_read(void) {
@@ -149,7 +153,8 @@ static bool get_signalproperties(void) {
         if (BUTTON_PRESS()) return false;
 
         // about 2 samples per bit period
-        wait_timer0(T0 * EM4X50_T_TAG_HALF_PERIOD);
+        if (wait_timer0(T0 * EM4X50_T_TAG_HALF_PERIOD) == BUTTON_SINGLE_CLICK)
+            return false;
         
         if (AT91C_BASE_SSC->SSC_RHR > noise) {
             signal_found = true;
@@ -195,11 +200,13 @@ static bool invalid_bit(void) {
     // "find_double_listen_window" and "check_ack"
 
     // get sample at 3/4 of bit period
-    wait_timer0(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
+    if (wait_timer0(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD) == BUTTON_SINGLE_CLICK)
+        return false;
     uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
-    wait_timer0(T0 * EM4X50_T_TAG_QUARTER_PERIOD);
+    if (wait_timer0(T0 * EM4X50_T_TAG_QUARTER_PERIOD) == BUTTON_SINGLE_CLICK)
+        return false;
 
     // bit in "undefined" state?
     if (sample <= gHigh && sample >= gLow)
@@ -382,7 +389,8 @@ static int find_double_listen_window(bool bcommand) {
                     // second window follows - sync on this to issue a command
 
                     // skip the next bit...
-                    wait_timer0(T0 * EM4X50_T_TAG_FULL_PERIOD);
+                    if (wait_timer0(T0 * EM4X50_T_TAG_FULL_PERIOD) == BUTTON_SINGLE_CLICK)
+                        return false;
 
                     // ...and check if the following bit does make sense
                     // (if not it is the correct position within the second
@@ -604,7 +612,8 @@ static bool check_ack(bool bliw) {
 
                     // wait for 2 bits (remaining "bit" of ACK signal + first
                     // "bit" of listen window)
-                    wait_timer0(T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
+                    if (wait_timer0(T0 * 2 * EM4X50_T_TAG_FULL_PERIOD) == BUTTON_SINGLE_CLICK)
+                        return false;
 
                     // check for listen window (if first bit cannot be interpreted
                     // as a valid bit it must belong to a listen window)
@@ -714,7 +723,7 @@ static int get_word_from_bitstream(uint32_t *data) {
 
     // identify remaining bits based on pulse lengths
     // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
-    while (true) {
+    while (BUTTON_PRESS() == false) {
 
         cnt++;
         word <<= 1;
@@ -768,6 +777,8 @@ static int get_word_from_bitstream(uint32_t *data) {
 
         }
     }
+    
+    return BUTTON_SINGLE_CLICK;
 }
 
 //==============================================================================
@@ -805,7 +816,7 @@ static bool login(uint32_t password) {
 // reset function
 //==============================================================================
 
-static bool reset(void) {
+static int reset(void) {
 
     // resets EM4x50 tag (used by write function)
 
@@ -815,14 +826,14 @@ static bool reset(void) {
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
 
         if (check_ack(false))
-            return true;
+            return PM3_SUCCESS;
 
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
             Dbprintf("error in command request");
     }
 
-    return false;
+    return PM3_EFAILED;
 }
 
 
@@ -830,31 +841,29 @@ static bool reset(void) {
 // read functions
 //==============================================================================
 
-static bool standard_read(int *now, uint32_t *words) {
+static int standard_read(int *now, uint32_t *words) {
 
     // reads data that tag transmits when exposed to reader field
     // (standard read mode); number of read words is saved in <now>
 
-    int fwr = *now;
+    int fwr = *now, res = PM3_EFAILED;
 
     // start with the identification of two successive listening windows
     if (find_double_listen_window(false)) {
 
         // read and save words until following double listen window is detected
-        while (get_word_from_bitstream(&words[*now]) == EM4X50_TAG_WORD)
+        while ((res = get_word_from_bitstream(&words[*now])) == EM4X50_TAG_WORD)
             (*now)++;
 
         // number of detected words
         *now -= fwr;
-
-        return true;
 
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
             Dbprintf("didn't find a listen window");
     }
 
-    return false;
+    return res;
 }
 
 static bool selective_read(uint32_t addresses, uint32_t *words) {
@@ -878,7 +887,7 @@ static bool selective_read(uint32_t addresses, uint32_t *words) {
         if (check_ack(false))
 
             // save and verify via standard read mode (compare number of words)
-            if (standard_read(&now, words))
+            if (standard_read(&now, words) == PM3_SUCCESS)
                 if (now == (lwr - fwr + 1))
                     return true;
 
@@ -1063,7 +1072,7 @@ void em4x50_write(em4x50_data_t *etd) {
         if (res == PM3_SUCCESS) {
 
             // to verify result reset EM4x50
-            if (reset()) {
+            if (reset() == PM3_SUCCESS) {
 
                 // if password is given login
                 if (etd->pwd_given)
@@ -1114,7 +1123,7 @@ void em4x50_reset(void) {
 
     // reset EM4x50
 
-    uint8_t status = 0;
+    uint8_t status = PM3_EFAILED;
 
     em4x50_setup_read();
 
@@ -1215,12 +1224,14 @@ void em4x50_watch() {
 
         if (get_signalproperties() && find_em4x50_tag()) {
 
-            standard_read(&now, words);
+            if (standard_read(&now, words) == BUTTON_SINGLE_CLICK)
+                break;
+            
             if (now > 0) {
 
                 Dbprintf("");
                 for (int i = 0; i < now; i++)
-                    Dbprintf("EM4x50 TAG ID: "
+                    Dbprintf("EM4x50 tag data: "
                              _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
                              words[i], reflect32(words[i]));
             }
@@ -1317,7 +1328,7 @@ void em4x50_restore(em4x50_data_t *etd) {
         }
 
         // to verify result -> reset EM4x50
-        if (reset()) {
+        if (reset() == PM3_SUCCESS) {
 
             // login not necessary because protected word has been set to 0
             // -> no read protected words
