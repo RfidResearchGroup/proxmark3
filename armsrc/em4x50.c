@@ -44,10 +44,6 @@
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
 
-#define EM4X50_BIT_0                        0
-#define EM4X50_BIT_1                        1
-#define EM4X50_BIT_OTHER                    2
-
 #define EM4X50_COMMAND_LOGIN                0x01
 #define EM4X50_COMMAND_RESET                0x80
 #define EM4X50_COMMAND_WRITE                0x12
@@ -97,23 +93,19 @@ static void em4x50_setup_read(void) {
 
     // Enable Peripheral Clock for
     //   TIMER_CLOCK0, used to measure exact timing before answering
-    //   TIMER_CLOCK1, used to capture edges of the tag frames
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);// | (1 << AT91C_ID_TC1);
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
     // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
     // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC1 returned to zero
@@ -233,7 +225,7 @@ static uint32_t get_pulse_length(void) {
     if (timeout == 0)
         return 0;
 
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     timeout = (T0 * 3 * EM4X50_T_TAG_FULL_PERIOD);
 
     while (sample < gHigh && (timeout--))
@@ -249,7 +241,7 @@ static uint32_t get_pulse_length(void) {
     if (timeout == 0)
         return 0;
 
-    return (uint32_t)AT91C_BASE_TC1->TC_CV;
+    return (uint32_t)AT91C_BASE_TC0->TC_CV;
 
 }
 

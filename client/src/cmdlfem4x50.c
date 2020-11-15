@@ -14,8 +14,7 @@
 #include "commonutil.h"
 #include "pmflash.h"
 
-#define FLASH_MEM_PAGE_SIZE     0x10000
-#define CARD_MEMORY_SIZE        4096
+#define CARD_MEMORY_SIZE    4096
 
 static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
 
