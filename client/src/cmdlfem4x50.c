@@ -17,7 +17,7 @@
 #define FLASH_MEM_PAGE_SIZE     0x10000
 #define CARD_MEMORY_SIZE        4096
 
-static int loadFileEM4x50(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
+static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
 
     // read data from dump file; file type is derived from file name extension
 
@@ -919,13 +919,13 @@ int CmdEM4x50Watch(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for EM4x50 cards - place tag on antenna");
+    PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
     
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_WATCH, 0, 0);
-    WaitForResponse(CMD_LF_EM4X50_WATCH, &resp);
+    WaitForResponseTimeoutW(CMD_LF_EM4X50_WATCH,  &resp, -1, false);
 
     PrintAndLogEx(INFO, "Done");
-
     return PM3_SUCCESS;
 }
 
@@ -994,7 +994,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
     // read data from dump file; file type has to be "bin", "eml" or "json"
-    if (loadFileEM4x50(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS)
+    if (em4x50_load_file(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS)
         return PM3_EFILE;
 
     // upload to flash memory
@@ -1064,7 +1064,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     if (slen != 0) {
 
         // load file content
-        if (loadFileEM4x50(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS) {
+        if (em4x50_load_file(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Read error");
             return PM3_EFILE;
         }
@@ -1196,7 +1196,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
     CLIParserFree(ctx);
 
     // read data from dump file; file type has to be "bin", "eml" or "json"
-    if (loadFileEM4x50(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS) {
+    if (em4x50_load_file(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Read error");
         return PM3_EFILE;
     }
