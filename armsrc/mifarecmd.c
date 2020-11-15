@@ -2082,9 +2082,10 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
                 if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
                 errormsg = MAGIC_UID;
+                mifare_classic_halt_ex(NULL);
+                break;
             }
             mifare_classic_halt_ex(NULL);
-            break;
         }
 
         // wipe tag, fill it with zeros
