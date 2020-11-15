@@ -55,16 +55,12 @@ int gLow = 60;
 
 // auxiliary functions
 
-static int wait_timer0(uint32_t period) {
+static void wait_timer(uint32_t period) {
 
     // do nothing for <period> using timer0
 
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV < period)
-        if (BUTTON_PRESS())
-            return BUTTON_SINGLE_CLICK;
-    
-    return BUTTON_NO_CLICK;
+    while (AT91C_BASE_TC0->TC_CV < period);
 }
 
 static void em4x50_setup_read(void) {
@@ -145,8 +141,7 @@ static bool get_signalproperties(void) {
         if (BUTTON_PRESS()) return false;
 
         // about 2 samples per bit period
-        if (wait_timer0(T0 * EM4X50_T_TAG_HALF_PERIOD) == BUTTON_SINGLE_CLICK)
-            return false;
+        wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
         
         if (AT91C_BASE_SSC->SSC_RHR > noise) {
             signal_found = true;
@@ -192,13 +187,12 @@ static bool invalid_bit(void) {
     // "find_double_listen_window" and "check_ack"
 
     // get sample at 3/4 of bit period
-    if (wait_timer0(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD) == BUTTON_SINGLE_CLICK)
-        return false;
+    wait_timer(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
+
     uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
     // wait until end of bit period
-    if (wait_timer0(T0 * EM4X50_T_TAG_QUARTER_PERIOD) == BUTTON_SINGLE_CLICK)
-        return false;
+    wait_timer(T0 * EM4X50_T_TAG_QUARTER_PERIOD);
 
     // bit in "undefined" state?
     if (sample <= gHigh && sample >= gLow)
@@ -215,10 +209,6 @@ static uint32_t get_pulse_length(void) {
 
     volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-    // for manual interruption
-    if (BUTTON_PRESS())
-        return 0;
-    
     while (sample > gLow && (timeout--))
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
@@ -260,7 +250,7 @@ static void em4x50_reader_send_bit(int bit) {
 
     if (bit == 0) {
 
-        // disable modulation (drop the field) for 7 cycles of carrier
+        // disable modulation (drops the field) for 7 cycles of carrier
         // period (Opt64)
         LOW(GPIO_SSC_DOUT);
         while (AT91C_BASE_TC0->TC_CV < T0 * 7);
@@ -381,8 +371,7 @@ static int find_double_listen_window(bool bcommand) {
                     // second window follows - sync on this to issue a command
 
                     // skip the next bit...
-                    if (wait_timer0(T0 * EM4X50_T_TAG_FULL_PERIOD) == BUTTON_SINGLE_CLICK)
-                        return false;
+                    wait_timer(T0 * EM4X50_T_TAG_FULL_PERIOD);
 
                     // ...and check if the following bit does make sense
                     // (if not it is the correct position within the second
@@ -604,8 +593,7 @@ static bool check_ack(bool bliw) {
 
                     // wait for 2 bits (remaining "bit" of ACK signal + first
                     // "bit" of listen window)
-                    if (wait_timer0(T0 * 2 * EM4X50_T_TAG_FULL_PERIOD) == BUTTON_SINGLE_CLICK)
-                        return false;
+                    wait_timer(T0 * 2 * EM4X50_T_TAG_FULL_PERIOD);
 
                     // check for listen window (if first bit cannot be interpreted
                     // as a valid bit it must belong to a listen window)
@@ -790,7 +778,7 @@ static bool login(uint32_t password) {
         // send password
         em4x50_reader_send_word(password);
         
-        wait_timer0(T0 * EM4X50_T_TAG_TPP);
+        wait_timer(T0 * EM4X50_T_TAG_TPP);
 
         // check if ACK is returned
         if (check_ack(false))
@@ -972,7 +960,7 @@ static int write(uint32_t word, uint32_t addresses) {
         } else {
         
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-            wait_timer0(T0 * EM4X50_T_TAG_TWA);
+            wait_timer(T0 * EM4X50_T_TAG_TWA);
 
             // look for ACK sequence
             if (check_ack(false)) {
@@ -1010,7 +998,7 @@ static int write_password(uint32_t password, uint32_t new_password) {
         } else {
 
             // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
-            wait_timer0(T0 * EM4X50_T_TAG_TPP);
+            wait_timer(T0 * EM4X50_T_TAG_TPP);
 
             // look for ACK sequence and send rm request
             // during following listen window
@@ -1020,7 +1008,7 @@ static int write_password(uint32_t password, uint32_t new_password) {
                 em4x50_reader_send_word(new_password);
 
                 // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-                wait_timer0(T0 * EM4X50_T_TAG_TWA);
+                wait_timer(T0 * EM4X50_T_TAG_TWA);
 
                 if (check_ack(false))
                     if (check_ack(false))
