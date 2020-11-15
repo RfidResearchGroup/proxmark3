@@ -802,14 +802,14 @@ static bool login(uint32_t password) {
 
         // check if ACK is returned
         if (check_ack(false))
-            return true;
+            return PM3_SUCCESS;
 
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
             Dbprintf("error in command request");
     }
 
-    return false;
+    return PM3_EFAILED;
 }
 
 //==============================================================================
@@ -822,7 +822,7 @@ static int reset(void) {
 
     if (request_receive_mode()) {
 
-        // send login command
+        // send reset command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
 
         if (check_ack(false))
@@ -866,11 +866,12 @@ static int standard_read(int *now, uint32_t *words) {
     return res;
 }
 
-static bool selective_read(uint32_t addresses, uint32_t *words) {
+static int selective_read(uint32_t addresses, uint32_t *words) {
 
     // reads from "first word read" (fwr) to "last word read" (lwr)
     // result is verified by "standard read mode"
 
+    int status = PM3_EFAILED;
     uint8_t fwr = addresses & 0xFF;         // first word read (first byte)
     uint8_t lwr = (addresses >> 8) & 0xFF;  // last word read (second byte)
     int now = fwr;                          // number of words
@@ -887,16 +888,16 @@ static bool selective_read(uint32_t addresses, uint32_t *words) {
         if (check_ack(false))
 
             // save and verify via standard read mode (compare number of words)
-            if (standard_read(&now, words) == PM3_SUCCESS)
+            if ((status = standard_read(&now, words)) == PM3_SUCCESS)
                 if (now == (lwr - fwr + 1))
-                    return true;
+                    return status;
 
     } else {
         if (DBGLEVEL >= DBG_DEBUG)
             Dbprintf("error in command request");
     }
 
-    return false;
+    return status;
 }
 
 void em4x50_info(em4x50_data_t *etd) {
@@ -915,9 +916,9 @@ void em4x50_info(em4x50_data_t *etd) {
 
         // login with given password
         if (etd->pwd_given)
-            blogin = login(etd->password1);
+            blogin = (login(etd->password1) == PM3_SUCCESS);
 
-        bsuccess = selective_read(addresses, words);
+        bsuccess = (selective_read(addresses, words) == PM3_SUCCESS);
     }
 
     status = (bsuccess << 1) + blogin;
@@ -941,11 +942,10 @@ void em4x50_read(em4x50_data_t *etd) {
 
         // try to login with given password
         if (etd->pwd_given)
-            blogin = login(etd->password1);
+            blogin = (login(etd->password1) == PM3_SUCCESS);
 
         // only one word has to be read -> first word read = last word read
-        bsuccess = selective_read(etd->addresses, words);
-
+        bsuccess = (selective_read(etd->addresses, words) == PM3_SUCCESS);
     }
 
     status = (bsuccess << 1) + blogin;
@@ -961,8 +961,8 @@ void em4x50_read(em4x50_data_t *etd) {
 
 static int write(uint32_t word, uint32_t addresses) {
 
-    // writes <word> to specified <address>
-
+    // writes <word> to specified <addresses>
+    
     if (request_receive_mode()) {
 
         // send write command
@@ -997,7 +997,7 @@ static int write(uint32_t word, uint32_t addresses) {
             Dbprintf("error in command request");
     }
 
-    return false;
+    return PM3_EFAILED;
 }
 
 static int write_password(uint32_t password, uint32_t new_password) {
@@ -1060,7 +1060,7 @@ void em4x50_write(em4x50_data_t *etd) {
 
         // if password is given try to login first
         if (etd->pwd_given)
-            blogin = login(etd->password1);
+            blogin = (login(etd->password1) == PM3_SUCCESS);
 
         // write word to given address
         int res = write(etd->word, etd->addresses);
@@ -1076,10 +1076,10 @@ void em4x50_write(em4x50_data_t *etd) {
 
                 // if password is given login
                 if (etd->pwd_given)
-                    blogin &= login(etd->password1);
+                    blogin &= (login(etd->password1) == PM3_SUCCESS);
 
                 // call a selective read
-                if (selective_read(etd->addresses, words)) {
+                if (selective_read(etd->addresses, words) == PM3_SUCCESS) {
 
                     // compare with given word
                     bsuccess = (words[etd->addresses & 0xFF] == reflect32(etd->word));
@@ -1097,7 +1097,7 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 
     // simple change of password
     
-    int res = PM3_ENODATA;
+    int res = PM3_EFAILED;
 
     em4x50_setup_read();
 
@@ -1105,7 +1105,7 @@ void em4x50_writepwd(em4x50_data_t *etd) {
     if (get_signalproperties() && find_em4x50_tag()) {
 
         // login and change password
-        if (login(etd->password1)) {
+        if (login(etd->password1) == PM3_SUCCESS) {
 
             res = write_password(etd->password1, etd->password2);
             if (res == PM3_ETEAROFF) {
@@ -1139,7 +1139,7 @@ void em4x50_login(uint32_t *password) {
 
     // login into EM4x50
 
-    uint8_t status = false;
+    uint8_t status = PM3_EFAILED;
 
     em4x50_setup_read();
 
@@ -1160,7 +1160,7 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
 
     for (*pwd = start; *pwd <= stop; (*pwd)++) {
 
-        if (login(*pwd)) {
+        if (login(*pwd) == PM3_SUCCESS) {
             pwd_found = true;
             break;
         }
@@ -1311,7 +1311,7 @@ void em4x50_restore(em4x50_data_t *etd) {
 
         // login first if password is available
         if (etd->pwd_given)
-            blogin = login(etd->password1);
+            blogin = (login(etd->password1) == PM3_SUCCESS);
 
         // write data to each address but ignore addresses
         // 0 -> password, 32 -> serial, 33 -> uid
@@ -1333,7 +1333,7 @@ void em4x50_restore(em4x50_data_t *etd) {
             // login not necessary because protected word has been set to 0
             // -> no read protected words
             // -> selective read can be called immediately
-            if (selective_read(addresses, words_read)) {
+            if (selective_read(addresses, words_read) == PM3_SUCCESS) {
 
                 // check if everything is zero
                 bsuccess = true;
@@ -1427,7 +1427,7 @@ void em4x50_chk(uint32_t *offset) {
 
     // check passwords from dictionary content in flash memory
 
-    int status = 0;
+    int status = PM3_EFAILED;
     uint8_t counter[2] = {0x00, 0x00};
     uint16_t isok = 0;
     uint16_t pwd_count = 0;
@@ -1477,8 +1477,7 @@ void em4x50_chk(uint32_t *offset) {
             for (int j = 0; j < 4; j++)
                 pwd |= (*(pwds + 4 * i + j)) << ((3 - j) * 8);
                         
-            status = login(pwd);
-            if (status == 1)
+            if ((status = login(pwd)) == PM3_SUCCESS)
                 break;
         }
     }

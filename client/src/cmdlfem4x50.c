@@ -303,17 +303,18 @@ int CmdEM4x50Info(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (etd.pwd_given) {
-        bool login = resp.status & STATUS_LOGIN;
-        if (login == false) {
-            PrintAndLogEx(FAILED, "Login failed");
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(SUCCESS, "Login with password " _YELLOW_("%08x"), etd.password1);
-    }
-
+    bool login = resp.status & STATUS_LOGIN;
     bool success = (resp.status & STATUS_SUCCESS) >> 1;
+
     if (success) {
+        if (etd.pwd_given) {
+            if (login == false) {
+                PrintAndLogEx(FAILED, "Login failed");
+                return PM3_ESOFT;
+            }
+            PrintAndLogEx(SUCCESS, "Login with password " _YELLOW_("%08x"), etd.password1);
+        }
+
         print_info_result(resp.data.asBytes);
         return PM3_SUCCESS;
     }
@@ -419,7 +420,7 @@ int CmdEM4x50WritePwd(const char *Cmd) {
 
     // envokes changing the password of EM4x50 tag
 
-    int status = 0;
+    int status = PM3_EFAILED;
     int pwdLen = 0, npwdLen = 0;
     uint8_t pwd[4] = {0x0}, npwd[4] = {0x0};
     PacketResponseNG resp;
@@ -474,7 +475,7 @@ int CmdEM4x50WritePwd(const char *Cmd) {
     // print response
     if (status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Writing password " _RED_("failed"));
-        return PM3_ESOFT;
+        return PM3_EFAILED;
     }
 
     PrintAndLogEx(SUCCESS, "Writing new password " _GREEN_("ok"));
@@ -858,12 +859,12 @@ int CmdEM4x50Login(const char *Cmd) {
     WaitForResponse(CMD_LF_EM4X50_LOGIN, &resp);
 
     // print response
-    if ((bool)resp.status)
+    if (resp.status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Login " _GREEN_("ok"));
     else
         PrintAndLogEx(FAILED, "Login " _RED_("failed"));
 
-    return PM3_SUCCESS;
+    return resp.status;
 }
 
 int CmdEM4x50Reset(const char *Cmd) {
@@ -1109,7 +1110,7 @@ int CmdEM4x50Sim(const char *Cmd) {
 
 int CmdEM4x50StdRead(const char *Cmd) {
 
-    int now = 0;
+    int now = 0, status = PM3_EFAILED;
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
@@ -1160,6 +1161,7 @@ int CmdEM4x50StdRead(const char *Cmd) {
                           );
         }
         
+        status = PM3_SUCCESS;
         PrintAndLogEx(INFO, "----+-------------+-------------");
         PrintAndLogEx(SUCCESS, "Standard read " _GREEN_("ok"));
 
@@ -1167,7 +1169,7 @@ int CmdEM4x50StdRead(const char *Cmd) {
         PrintAndLogEx(FAILED, "Standard read " _RED_("failed"));
     }
 
-    return PM3_SUCCESS;
+    return status;
 }
 
 int CmdEM4x50ELoad(const char *Cmd) {
@@ -1274,7 +1276,7 @@ int CmdEM4x50Chk(const char *Cmd) {
     // start password check;
     // if no filename is given dictionary "t55xx_default_pwds.dic" is used
     
-    int status = 0;
+    int status = PM3_EFAILED;
     int res = 0, slen = 0;
     int keys_remain = 0;
     int block_count = 1;
@@ -1362,13 +1364,12 @@ int CmdEM4x50Chk(const char *Cmd) {
         SendCommandNG(CMD_LF_EM4X50_CHK, (uint8_t *)&offset, sizeof(offset));
         WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
         
-        status = resp.status;
-        if (status != false)
+        if ((status = resp.status) == PM3_SUCCESS)
             break;
     }
 
     // print response
-    if (status == 1) {
+    if (status == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Key " _GREEN_("found: %02x %02x %02x %02x"),
                       resp.data.asBytes[3],
