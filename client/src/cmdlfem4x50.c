@@ -890,12 +890,12 @@ int CmdEM4x50Reset(const char *Cmd) {
     WaitForResponse(CMD_LF_EM4X50_RESET, &resp);
 
     // print response
-    if ((bool)resp.status)
+    if (resp.status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Reset " _GREEN_("ok"));
     else
         PrintAndLogEx(FAILED, "Reset " _RED_("failed"));
 
-    return PM3_SUCCESS;
+    return resp.status;
 }
 
 int CmdEM4x50Watch(const char *Cmd) {
@@ -1306,7 +1306,7 @@ int CmdEM4x50Chk(const char *Cmd) {
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
         offset = DEFAULT_T55XX_KEYS_OFFSET;
-        PrintAndLogEx(INFO, "treating file as T55xx passwords");
+        PrintAndLogEx(INFO, "treating file as T55xx keys");
     }
     
     res = loadFileDICTIONARY(filename, data + 2, &datalen, 4, &key_count);
@@ -1328,7 +1328,7 @@ int CmdEM4x50Chk(const char *Cmd) {
         datalen = CARD_MEMORY_SIZE;
         key_count = datalen / 4;
 
-        PrintAndLogEx(INFO, "Passwords divided into %i blocks", block_count);
+        PrintAndLogEx(INFO, "Keys subdivided into %i blocks", block_count);
     }
     
     for (int n = 0; n < block_count; n++) {
@@ -1348,7 +1348,7 @@ int CmdEM4x50Chk(const char *Cmd) {
         keys[0] = (key_count >> 0) & 0xFF;
         keys[1] = (key_count >> 8) & 0xFF;
 
-        PrintAndLogEx(INPLACE, "Checking block #%i (%i passwords)", n + 1, key_count);
+        PrintAndLogEx(INPLACE, "Checking block #%i (%i keys)", n + 1, key_count);
 
         // send to device
         res = em4x50_write_flash(keys, offset, datalen + 2);
@@ -1370,7 +1370,7 @@ int CmdEM4x50Chk(const char *Cmd) {
     // print response
     if (status == 1) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "Password " _GREEN_("found: %02x %02x %02x %02x"),
+        PrintAndLogEx(SUCCESS, "Key " _GREEN_("found: %02x %02x %02x %02x"),
                       resp.data.asBytes[3],
                       resp.data.asBytes[2],
                       resp.data.asBytes[1],
@@ -1378,7 +1378,7 @@ int CmdEM4x50Chk(const char *Cmd) {
                       );
     } else {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(FAILED, "No password found");
+        PrintAndLogEx(FAILED, "No key found");
     }
 
     PrintAndLogEx(INFO, "Done");
