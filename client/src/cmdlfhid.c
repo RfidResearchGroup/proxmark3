@@ -138,9 +138,9 @@ int demodHID(bool verbose) {
 
     wiegand_message_t packed = initialize_message_object(hi2, hi, lo);
     if (HIDTryUnpack(&packed, false) == false) {
-        PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
         printDemodBuff(0, false, false, true);
     }
+    PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
 
     PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer: ", idx, size);
     if (g_debugMode) {
