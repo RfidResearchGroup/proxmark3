@@ -110,26 +110,6 @@ static int em4x50_write_flash(uint8_t *data, int offset, size_t datalen) {
     return PM3_SUCCESS;
 }
 
-/*
-static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t nobytes) {
-
-    // fast push mode
-    conn.block_after_ACK = true;
-
-    for (size_t i = offset; i < nobytes; i += PM3_CMD_DATA_SIZE) {
-
-        size_t len = MIN((nobytes - i), PM3_CMD_DATA_SIZE);
-        if (len == nobytes - i) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-
-        clearCommandBuffer();
-        SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
-    }
-}
-*/
-
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
     // restructure received result in "em4x50_word_t" structure
