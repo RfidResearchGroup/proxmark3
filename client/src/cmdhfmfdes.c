@@ -2422,14 +2422,9 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t rootaid[3] = {0x00, 0x00, 0x00};
-    int res = handler_desfire_select_application(rootaid);
-    if (res != PM3_SUCCESS) { 
-        DropField();
-        return res;
-    }
-    res = handler_desfire_deleteapp(aid);   
+    int res = handler_desfire_deleteapp(aid);
     DropField();
+    tag->rf_field_on = false;
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully deleted aid.");
     }
