@@ -1558,9 +1558,14 @@ static int handler_desfire_select_application(uint8_t *aid) {
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     uint32_t recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t), true);
+    
+    int res = send_desfire_cmd(&apdu, !tag->rf_field_on, NULL, &recv_len, &sw, sizeof(dfname_t), true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"), (aid[2] << 16) + (aid[1] << 8) + aid[0], GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING,
+            _RED_("   Can't select AID 0x%X -> %s"),
+            (aid[2] << 16) + (aid[1] << 8) + aid[0], 
+            GetErrorString(res, &sw)
+        );
         DropField();
         return res;
     }
@@ -2238,9 +2243,9 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     }
 
     int res = handler_desfire_select_application(aid);
-    DropField();
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error on selecting aid.");
+        DropField();
     } else {
         PrintAndLogEx(SUCCESS, "Successfully selected aid.");
     }
