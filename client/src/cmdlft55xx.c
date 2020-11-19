@@ -315,11 +315,13 @@ static int usage_t55xx_wipe(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h               - this help");
     PrintAndLogEx(NORMAL, "     c <block0>      - set configuration from a block0");
+    PrintAndLogEx(NORMAL, "     p <password  - OPTIONAL password (8 hex characters)");
     PrintAndLogEx(NORMAL, "     q               - indicates to use Q5/T5555 default configuration block");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe") "      -  wipes a T55x7 tag,    config block 0x000880E0");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe q") "    -  wipes a Q5/T5555 tag, config block 0x6001F004");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe") "              -  wipes a T55x7 tag,    config block 0x000880E0");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe q") "            -  wipes a Q5/T5555 tag, config block 0x6001F004");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe p 11223344") "   -  wipes a T55x7 tag,    config block 0x000880E0, using password");
     return PM3_SUCCESS;
 }
 static int usage_t55xx_deviceconfig(void) {
