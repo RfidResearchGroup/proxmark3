@@ -50,7 +50,7 @@ static int CmdHelp(const char *Cmd);
 
 static int usage_lf_fdxb_clone(void) {
     PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "Usage: lf fdxb clone [h] [c <country code>] [a <national code>] [e <extended>] <s> <Q5>");
+    PrintAndLogEx(NORMAL, "Usage: lf fdxb clone [h] [c <country code>] [n <national code>] [e <extended>] <s> <Q5>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               : This help");
     PrintAndLogEx(NORMAL, "      c <country>     : (dec) Country code");
