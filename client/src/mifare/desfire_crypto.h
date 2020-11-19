@@ -93,6 +93,7 @@ struct desfire_tag {
     uint8_t *crypto_buffer;
     size_t crypto_buffer_size;
     uint32_t selected_application;
+    bool rf_field_on;
 };
 typedef struct desfire_tag *desfiretag_t;
 

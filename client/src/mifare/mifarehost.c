@@ -859,7 +859,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
     PrintAndLogEx(SUCCESS, "new block 0:  %s", sprint_hex(block0, 16));
 
     if (wipecard)      params |= MAGIC_WIPE;
-    if (oldUID == NULL) params |= MAGIC_UID;
+    if (oldUID != NULL) params |= MAGIC_UID;
 
     return mfCSetBlock(0, block0, oldUID, params);
 }
