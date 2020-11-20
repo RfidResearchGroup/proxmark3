@@ -43,8 +43,8 @@ static int CmdHelp(const char *Cmd);
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
     { 0x76, 0x65, 0x54, 0x43, 0x32, 0x21, 0x10, 0x00 },
-    { 0x5B, 0x7C, 0x62, 0xC4, 0x91, 0xc1, 0x1b, 0x39 },
     { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -3427,6 +3427,7 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
 static int CmdHFiClassAutopwn(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -3448,6 +3449,7 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
     PrintAndLogEx(INFO, "to be implemented");
     return PM3_SUCCESS;
 }
+*/
 
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
@@ -3463,7 +3465,7 @@ static command_t CommandTable[] = {
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write Picopass / iCLASS block"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
-    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "[options..] Automatic key recovery tool for iCLASS"},
+//    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "[options..] Automatic key recovery tool for iCLASS"},
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "[options..] Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},

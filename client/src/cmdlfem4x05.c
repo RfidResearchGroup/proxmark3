@@ -429,7 +429,7 @@ int em4x05_clone_tag(uint32_t *blockdata, uint8_t numblocks, uint32_t pwd, bool 
     }
 
     if (res == 0)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
+        PrintAndLogEx(SUCCESS, "Data written and verified");
 
     return PM3_SUCCESS;
 }
@@ -824,7 +824,7 @@ int CmdEM4x05Write(const char *Cmd) {
     uint32_t dummy = 0;
     int status = em4x05_demod_resp(&dummy, true);
     if (status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
+        PrintAndLogEx(SUCCESS, "Data written and verified");
     else if (status == PM3_EFAILED)
         PrintAndLogEx(ERR, "Tag denied %s operation", protectOperation ? "Protect" : "Write");
     else
@@ -1431,7 +1431,7 @@ static int unlock_write_protect(bool use_pwd, uint32_t pwd, uint32_t data, bool 
     uint32_t dummy = 0;
     int status = em4x05_demod_resp(&dummy, true);
     if (status == PM3_SUCCESS && verbose)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
+        PrintAndLogEx(SUCCESS, "Data written and verified");
     else if (status == PM3_EFAILED)
         PrintAndLogEx(ERR, "Tag denied PROTECT operation");
     else
