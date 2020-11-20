@@ -489,7 +489,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
     }
 
     if (res == 0)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
+        PrintAndLogEx(SUCCESS, "Data written and verified");
 
     return PM3_SUCCESS;
 }
