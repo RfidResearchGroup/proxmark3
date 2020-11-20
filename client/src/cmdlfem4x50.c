@@ -1187,10 +1187,11 @@ int CmdEM4x50Restore(const char *Cmd) {
 
     int uidLen = 0, fnLen = 0, pwdLen = 0, status = 0;
     uint8_t pwd[4] = {0x0}, uid[4] = {0x0};
+    uint8_t data[DUMP_FILESIZE] = {0x0};
     size_t bytes_read = 0;
     char filename[FILE_PATH_SIZE] = {0};
     em4x50_data_t etd = {.pwd_given = false};
-    uint8_t data[DUMP_FILESIZE] = {0x0};
+    PacketResponseNG resp;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_restore",
@@ -1260,25 +1261,20 @@ int CmdEM4x50Restore(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_RESTORE, (uint8_t *)&etd, sizeof(etd));
-    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X50_RESTORE, &resp, 2 * TIMEOUT)) {
         PrintAndLogEx(FAILED, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
     status = resp.status;
-
-    if (status == PM3_ETEAROFF) {
-        return PM3_SUCCESS;
-    } else if (status != PM3_SUCCESS) {
+    if (status == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Restore " _GREEN_("ok"));
+    else
         PrintAndLogEx(FAILED, "Restore " _RED_("failed"));
-        return status;
-    }
 
-    PrintAndLogEx(SUCCESS, "Restore " _GREEN_("ok"));
     PrintAndLogEx(INFO, "Finished restoring");
 
-    return PM3_SUCCESS;
+    return status;
 }
 
 //==============================================================================
@@ -1343,16 +1339,12 @@ int CmdEM4x50Sim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, 0, 0);
-
     WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
     
-    if (resp.status == PM3_ETEAROFF) {
-        return PM3_SUCCESS;
-    } else if (resp.status == PM3_ENODATA) {
+    if (resp.status == PM3_SUCCESS)
+        PrintAndLogEx(INFO, "Done");
+    else
         PrintAndLogEx(FAILED, "No valid em4x50 data in flash memory.");
-        return PM3_ENODATA;
-    }
 
-    PrintAndLogEx(INFO, "Done");
-    return PM3_SUCCESS;
+    return resp.status;
 }

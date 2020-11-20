@@ -1078,7 +1078,7 @@ void em4x50_stdread(void) {
     // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag())
         standard_read(&now, words);
-    
+
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_STDREAD, now, (uint8_t *)words, 4 * now);
@@ -1180,7 +1180,6 @@ static int write(uint32_t word, uint32_t addresses) {
                 // for saving data and should return with ACK
                 if (check_ack(false))
                     return PM3_SUCCESS;
-
             }
         }
     } else {
@@ -1224,7 +1223,6 @@ static int write_password(uint32_t password, uint32_t new_password) {
                 if (check_ack(false))
                     if (check_ack(false))
                         return PM3_SUCCESS;
-
             }
         }
     } else {
@@ -1232,7 +1230,7 @@ static int write_password(uint32_t password, uint32_t new_password) {
             Dbprintf("error in command request");
     }
 
-    return PM3_ESOFT;
+    return PM3_EFAILED;
 }
 
 void em4x50_write(em4x50_data_t *etd) {
