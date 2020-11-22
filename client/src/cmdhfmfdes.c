@@ -395,9 +395,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d - %d bytes") ")", fsize, usize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _GREEN_("%d - %d bytes") " )", fsize, usize, lsize);
     else
-        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d bytes") ")", fsize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _GREEN_("%d bytes") " )", fsize, lsize);
     return buf;
 }
 
@@ -407,14 +407,14 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     char *retStr = buf;
 
     if (id == 0x04) {
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") " )", id);
     } else if (id == 0x05) {
         if (hw)
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") " )", id);
         else
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") " )", id);
     } else {
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("Unknown") ")", id);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Unknown") " )", id);
     }
     return buf;
 }
@@ -425,19 +425,21 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire MF3ICD40") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire MF3ICD40") " )", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV1") " )", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV2") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
+    else if (major == 0x42 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x33 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV3") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV3") " )", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire Light") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire Light") " )", major, minor);
     else if (major == 0x10 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("NTAG413DNA") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("NTAG413DNA") " )", major, minor);
     else
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _YELLOW_("Unknown") " )", major, minor);
     return buf;
 
 //04 01 01 01 00 1A 05
@@ -1381,15 +1383,43 @@ static int handler_desfire_signature(uint8_t *signature, size_t *signature_len) 
     return res;
 }
 
-// --- KEY SETTING
-static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
+// --- KEY VERSION
+static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
+    PrintAndLogEx(SUCCESS, "   Key [%u]  Version : %d (0x%02x)", key_idx, key_version, key_version);
+    return PM3_SUCCESS;
+}
+
+static int handler_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
+    if (num_versions == NULL) {
+        PrintAndLogEx(DEBUG, "NUM_VERSIONS=NULL");
+        return PM3_EINVARG;
+    }
+    sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
+    uint32_t recv_len = 0;
+    uint16_t sw = 0;
+    int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
+
+    if (res != PM3_SUCCESS)
+        return res;
+
+    if (sw != status(MFDES_S_OPERATION_OK))
+        return PM3_ESOFT;
+
+    return res;
+}
+
+// --- KEY SETTING  Application Master Key
+static int desfire_print_amk_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
     PrintAndLogEx(SUCCESS, "  AID Key settings           : 0x%02x", key_settings);
     // 2 MSB denotes
     const char *str =                 "  Max key number and type    : %d, " _YELLOW_("%s");
 
-    if (algo == MFDES_ALGO_DES) PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "(3)DES");
-    else if (algo == MFDES_ALGO_AES) PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "AES");
-    else if (algo == MFDES_ALGO_3K3DES) PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "3K3DES");
+    if (algo == MFDES_ALGO_DES)
+        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "(3)DES");
+    else if (algo == MFDES_ALGO_AES)
+        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "AES");
+    else if (algo == MFDES_ALGO_3K3DES)
+        PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "3K3DES");
 
     //PrintAndLogEx(SUCCESS, "  Max number of keys in AID  : %d", num_keys & 0x3F);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
@@ -1408,14 +1438,69 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys, int 
             PrintAndLogEx(SUCCESS, "  -- All keys (except AMK,see Bit0) within this application are frozen");
             break;
         default:
-            PrintAndLogEx(SUCCESS, "  -- Authentication with the specified key is necessary to change any key.\nA change key and a PICC master key (CMK) can only be changed after authentication with the master key.\nFor keys other then the master or change key, an authentication with the same key is needed.");
+            PrintAndLogEx(SUCCESS, 
+                "  -- Authentication with the specified key is necessary to change any key.\n"
+                "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
+                "For keys other then the master or change key, an authentication with the same key is needed."
+                );
             break;
     }
 
-    PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO");
-    PrintAndLogEx(SUCCESS, "   [0x04] AMK required for create/delete : %s", (key_settings & (1 << 2)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [0x02] Directory list access with AMK : %s", (key_settings & (1 << 1)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [0x01] AMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO");
+    PrintAndLogEx(SUCCESS, "   [1000] AMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "   [0100] AMK required for create/delete : %s", (key_settings & (1 << 2)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "   [0010] Directory list access with AMK : %s", (key_settings & (1 << 1)) ? "NO" : "YES");
+    PrintAndLogEx(SUCCESS, "   [0001] AMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+    return PM3_SUCCESS;
+}
+
+// --- KEY SETTING  PICC Master Key (CMK)
+static int desfire_print_piccmk_keysetting(uint8_t key_settings, uint8_t num_keys, int algo) {
+    //PrintAndLogEx(INFO, "--- " _CYAN_("PICC Master Key (CMK) settings"));
+    // number of Master keys (0x01)
+    PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
+    const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
+
+    if (algo == MFDES_ALGO_DES)
+        PrintAndLogEx(SUCCESS, str, "(3)DES");
+    else if (algo == MFDES_ALGO_AES)
+        PrintAndLogEx(SUCCESS, str, "AES");
+    else if (algo == MFDES_ALGO_3K3DES)
+        PrintAndLogEx(SUCCESS, str, "3K3DES");
+
+    uint8_t cmk_num_versions = 0;
+    if (handler_desfire_keyversion(0, &cmk_num_versions) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "   PICC Master key Version               : " _YELLOW_("%d (0x%02x)"), cmk_num_versions, cmk_num_versions);
+    }
+
+    PrintAndLogEx(INFO, "   ----------------------------------------------------------");
+
+    // Authentication tests
+    int res = test_desfire_authenticate();
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
+
+    res = test_desfire_authenticate_iso();
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
+
+    res = test_desfire_authenticate_aes();
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
+
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");    
+    PrintAndLogEx(INFO, " Key setting: 0x%02X [%c%c%c%c]",  
+        key_settings,
+        (key_settings & (1 << 3)) ? '1' : '0',
+        (key_settings & (1 << 2)) ? '1' : '0',
+        (key_settings & (1 << 1)) ? '1' : '0',
+        (key_settings & (1 << 0)) ? '1' : '0'
+    );
+    
+    PrintAndLogEx(SUCCESS, "   [1...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
+    PrintAndLogEx(SUCCESS, "   [.1..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "   [..1.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
+    PrintAndLogEx(SUCCESS, "   [...1] CMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO (frozen)");
+
     return PM3_SUCCESS;
 }
 
@@ -1442,31 +1527,6 @@ static int handler_desfire_getkeysettings(uint8_t *key_settings, uint8_t *num_ke
 
     *key_settings = data[0];
     *num_keys = data[1];
-    return res;
-}
-
-// --- KEY VERSION
-static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
-    PrintAndLogEx(SUCCESS, "   Key [%u]  Version : %d (0x%02x)", key_idx, key_version, key_version);
-    return PM3_SUCCESS;
-}
-
-static int handler_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
-    if (num_versions == NULL) {
-        PrintAndLogEx(DEBUG, "NUM_VERSIONS=NULL");
-        return PM3_EINVARG;
-    }
-    sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
-    uint32_t recv_len = 0;
-    uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
-
-    if (res != PM3_SUCCESS)
-        return res;
-
-    if (sw != status(MFDES_S_OPERATION_OK))
-        return PM3_ESOFT;
-
     return res;
 }
 
@@ -2006,56 +2066,23 @@ static int handler_desfire_create_backup_file(mfdes_file_t *file) {
 static int getKeySettings(uint8_t *aid) {
     if (aid == NULL) return PM3_EINVARG;
 
+    uint8_t num_keys = 0;
+    uint8_t key_setting = 0;
     int res = 0;
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-
+        
         // CARD MASTER KEY
         //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
 
         // KEY Settings - AMK
-        uint8_t num_keys = 0;
-        uint8_t key_setting = 0;
         mifare_des_authalgo_t algo = MFDES_ALGO_DES;
         res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
 
         if (res == PM3_SUCCESS) {
-            // number of Master keys (0x01)
-            PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
-
-            PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", (key_setting & (1 << 3)) ? _GREEN_("YES") : "NO");
-            PrintAndLogEx(SUCCESS, "   [0x04] CMK required for create/delete : %s", (key_setting & (1 << 2)) ? _GREEN_("YES") : "NO");
-            PrintAndLogEx(SUCCESS, "   [0x02] Directory list access with CMK : %s", (key_setting & (1 << 1)) ? _GREEN_("YES") : "NO");
-            PrintAndLogEx(SUCCESS, "   [0x01] CMK is changeable              : %s", (key_setting & (1 << 0)) ? _GREEN_("YES") : "NO");
+            desfire_print_piccmk_keysetting(key_setting, num_keys, algo);
         } else {
-            PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
+            PrintAndLogEx(WARNING, _RED_("   Can't read PICC Master key settings"));
         }
-
-        const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
-
-        if (algo == MFDES_ALGO_DES) PrintAndLogEx(SUCCESS, str, "(3)DES");
-        else if (algo == MFDES_ALGO_AES) PrintAndLogEx(SUCCESS, str, "AES");
-        else if (algo == MFDES_ALGO_3K3DES) PrintAndLogEx(SUCCESS, str, "3K3DES");
-
-        uint8_t cmk_num_versions = 0;
-        if (handler_desfire_keyversion(0, &cmk_num_versions) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "   PICC Master key Version               : " _YELLOW_("%d (0x%02x)"), cmk_num_versions, cmk_num_versions);
-            PrintAndLogEx(INFO, "   ----------------------------------------------------------");
-        }
-
-        // Authentication tests
-        res = test_desfire_authenticate();
-        if (res == PM3_ETIMEOUT) return res;
-        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-        res = test_desfire_authenticate_iso();
-        if (res == PM3_ETIMEOUT) return res;
-        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-        res = test_desfire_authenticate_aes();
-        if (res == PM3_ETIMEOUT) return res;
-        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     } else {
 
@@ -2065,12 +2092,10 @@ static int getKeySettings(uint8_t *aid) {
         if (res != PM3_SUCCESS) return res;
 
         // KEY Settings - AMK
-        uint8_t num_keys = 0;
-        uint8_t key_setting = 0;
         mifare_des_authalgo_t algo = MFDES_ALGO_DES;
         res = key_setting_to_algo(aid, &key_setting, &algo, &num_keys);
         if (res == PM3_SUCCESS) {
-            desfire_print_keysetting(key_setting, num_keys, algo);
+            desfire_print_amk_keysetting(key_setting, num_keys, algo);
         } else {
             PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
         }
@@ -3436,6 +3461,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
+    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
+    
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
     PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionHW[1]);
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
@@ -3444,6 +3471,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionHW[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
+    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionSW[0]));
     PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionSW[1]);
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionSW[2]);
