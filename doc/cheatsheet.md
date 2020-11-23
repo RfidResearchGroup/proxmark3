@@ -112,7 +112,7 @@ Encrypt iCLASS Block
 Options
 ---
 -d, --data <block data>        data to encrypt
-    --key <transport key>      3DES transport key
+-k, --key <transport key>      3DES transport key
 -v, --verbose                  verbose output
 
 pm3 --> hf iclass encrypt -d 0000000f2aa3dba8
@@ -124,7 +124,7 @@ Options
 ---
 -f, --file <filename>          filename of dumpfile
 -d, --data <encrypted blk>     3DES encrypted data
-    --key <transport key>      3DES transport key
+-k, --key <transport key>      3DES transport key
 -v, --verbose                  verbose output
 
 pm3 --> hf iclass decrypt -d 2AD4C8211F996871

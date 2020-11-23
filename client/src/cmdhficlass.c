@@ -1014,20 +1014,20 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIParserContext *clictx;
     CLIParserInit(&clictx, "hf iclass decrypt",
                   "3DES decrypt data\n"
-                  "This is naive implementation, it tries to decrypt every block after block 6.\n"
+                  "This is a naive implementation, it tries to decrypt every block after block 6.\n"
                   "Correct behaviour would be to decrypt only the application areas where the key is valid,\n"
                   "which is defined by the configuration block.\n"
                   "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
                   "in the resources directory. The file should be 16 bytes binary data",
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
-                  "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin --key 000102030405060708090a0b0c0d0e0f\n"
-                  "hf iclass decrypt -d 1122334455667788 --key 000102030405060708090a0b0c0d0e0f");
+                  "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f\n"
+                  "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "filename of dumpfile"),
         arg_str0("d", "data", "<encrypted blk>", "3DES encrypted data"),
-        arg_str0(NULL, "key", "<transport key>", "3DES transport key"),
+        arg_str0("k", "key", "<transport key>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -1258,12 +1258,12 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
                   "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
                   "in the resources directory. The file should be 16 bytes binary data",
                   "hf iclass encrypt -d 0102030405060708\n"
-                  "hf iclass encrypt -d 0102030405060708 --key 00112233445566778899AABBCCDDEEFF");
+                  "hf iclass encrypt -d 0102030405060708 -k 00112233445566778899AABBCCDDEEFF");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("d", "data", "<block data>", "data to encrypt"),
-        arg_str0(NULL, "key", "<transport key>", "3DES transport key"),
+        arg_str0("k", "key", "<transport key>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
