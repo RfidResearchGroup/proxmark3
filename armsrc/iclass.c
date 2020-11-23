@@ -1853,7 +1853,7 @@ void iClass_WriteBlock(uint8_t *msg) {
 
     // new block data
     memcpy(write + 2, payload->data, 8);
-    
+
     uint8_t pagemap = get_pagemap(&hdr);
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         // Unsecured tags uses CRC16,  but don't include the UPDATE operation code

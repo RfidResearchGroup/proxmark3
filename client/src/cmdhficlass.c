@@ -71,35 +71,6 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-
-static int usage_hf_iclass_esave(void) {
-    PrintAndLogEx(NORMAL, "Save emulator memory to file.");
-    PrintAndLogEx(NORMAL, "if not filename is supplied, CSN will be used.");
-    PrintAndLogEx(NORMAL, "Number of bytes to download defaults to 256. Other value is 2048\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass esave [h] [f <filename>] [s <num of bytes>]\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h            : Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename> : filename of dump");
-    PrintAndLogEx(NORMAL, "  s <bytes>    : (256|2048) number of bytes to save (default 256)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave f hf-iclass-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave s 2048 f hf-iclass-dump.bin"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_hf_iclass_eview(void) {
-    PrintAndLogEx(NORMAL, "It displays emulator memory");
-    PrintAndLogEx(NORMAL, "Number of bytes to download defaults to 256. Other value is 2048\n");
-    PrintAndLogEx(NORMAL, " Usage:  hf iclass eview [s <num of bytes>] <v>");
-    PrintAndLogEx(NORMAL, "     s <bytes>    : (256|2048) number of bytes to save (default 256)");
-    PrintAndLogEx(NORMAL, "     v            : verbose output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass eview"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass eview s 2048 v"));
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "3DES decrypt data\n");
     PrintAndLogEx(NORMAL, "This is naive implementation, it tries to decrypt every block after block 6.");
@@ -779,7 +750,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, CSN, 8);
 
             if (sim_type == ICLASS_SIM_MODE_FULL)
-                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave h") "` to save the emulator memory to file");
+                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
             break;
         }
     }
@@ -961,47 +932,36 @@ static int CmdHFiClassELoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return PM3_SUCCESS;
 }
-
 static int CmdHFiClassESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass esave",
+                  "Save emulator memory to file.\n"
+                  "if filename is not supplied, CSN will be used.",
+                  "hf iclass esave\n"
+                  "hf iclass esave -f hf-iclass-dump\n"
+                  "hf iclass esave -s 2048 -f hf-iclass-dump");
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "filename of dumpfile"),
+        arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     char *fnameptr = filename;
-    int len = 0;
-    uint16_t bytes = 256;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_esave();
-            case 'f':
-                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (len >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "Filename too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            case 's':
-                bytes = param_get32ex(Cmd, cmdp + 1, 256, 10);
-                if (bytes > 4096) {
-                    PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-                    bytes = 4096;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+
+    uint16_t bytes = arg_get_int_def(ctx, 2, 256);
+
+    if (bytes > 4096) {
+        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
+        bytes = 4096;
     }
 
-    //Validations
-    if (errors) {
-        return usage_hf_iclass_esave();
-    }
+    CLIParserFree(ctx);
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
@@ -1017,7 +977,7 @@ static int CmdHFiClassESave(const char *Cmd) {
     }
 
     // user supplied filename?
-    if (len < 1) {
+    if (fnlen < 1) {
         fnameptr += snprintf(fnameptr, sizeof(filename), "hf-iclass-");
         FillFileNameByUID(fnameptr, dump, "-dump", 8);
     }
@@ -1032,44 +992,37 @@ static int CmdHFiClassESave(const char *Cmd) {
 }
 
 static int CmdHFiClassEView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass eview",
+                  "Display emulator memory.\n"
+                  "Number of bytes to download defaults to 256. Other value is 2048.",
+                  "hf iclass eview\n"
+                  "hf iclass eview -s 2048\n"
+                  "hf iclass eview -s 2048 -v");
 
-    uint16_t blocks = 32, bytes = 256;
-    bool errors = false, verbose = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_eview();
-            case 's':
-                bytes = param_get32ex(Cmd, cmdp + 1, 256, 10);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
+        arg_lit0("v", "verbose", "filename of dumpfile"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-                if (bytes > 4096) {
-                    PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-                    bytes = 4096;
-                }
+    uint16_t blocks = 32;
+    uint16_t bytes = arg_get_int_def(ctx, 1, 256);
+    bool verbose = arg_get_lit(ctx, 2);
+    blocks = bytes / 8;
 
-                if (bytes % 8 != 0) {
-                    bytes &= 0xFFF8;
-                    PrintAndLogEx(WARNING, "Number not divided by 8, truncating to %u", bytes);
-                }
+    CLIParserFree(ctx);
 
-                blocks = bytes / 8;
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    if (bytes > 4096) {
+        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
+        bytes = 4096;
     }
 
-    //Validations
-    if (errors || bytes == 0) {
-        return usage_hf_iclass_eview();
+    if (bytes % 8 != 0) {
+        bytes &= 0xFFF8;
+        PrintAndLogEx(WARNING, "Number not divided by 8, truncating to %u", bytes);
     }
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
@@ -3593,8 +3546,8 @@ int info_iclass(void) {
 
         uint8_t cardtype = get_mem_config(hdr);
         PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
-        
-        
+
+
     }
 
     DropField();

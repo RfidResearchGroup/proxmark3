@@ -1027,7 +1027,7 @@ static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
 }
 
 // Define prototype to call from within detect.
-static int CmdT55xxWakeUp (const char *Cmd);
+static int CmdT55xxWakeUp(const char *Cmd);
 
 static int CmdT55xxDetect(const char *Cmd) {
 
@@ -1054,7 +1054,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                 return usage_t55xx_detect();
             case 'p':
                 password = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                sprintf (wakecmd,"p %08x q",(uint32_t)(password & 0xFFFFFFFF));
+                sprintf(wakecmd, "p %08x q", (uint32_t)(password & 0xFFFFFFFF));
                 usepwd = true;
                 cmdp += 2;
                 break;
@@ -1077,7 +1077,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     }
     if (errors) return usage_t55xx_detect();
 
-    
+
     // detect called so clear data blocks
     T55x7_ClearAllBlockData();
 
@@ -1096,11 +1096,11 @@ static int CmdT55xxDetect(const char *Cmd) {
                         if (usewake) {
                             // call wake
                             if (try_with_pwd)
-                                CmdT55xxWakeUp (wakecmd);
+                                CmdT55xxWakeUp(wakecmd);
                             else
-                                CmdT55xxWakeUp ("q");
+                                CmdT55xxWakeUp("q");
                             // sleep 90 ms
-                             nanosleep (&sleepperiod, &sleepperiod);
+                            nanosleep(&sleepperiod, &sleepperiod);
                         }
 
                         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, (try_with_pwd && usepwd), password, m) == false)
@@ -1117,11 +1117,11 @@ static int CmdT55xxDetect(const char *Cmd) {
                     if (usewake) {
                         // call wake
                         if (try_with_pwd)
-                            CmdT55xxWakeUp (wakecmd);
+                            CmdT55xxWakeUp(wakecmd);
                         else
-                            CmdT55xxWakeUp ("q");
+                            CmdT55xxWakeUp("q");
                         // sleep 90 ms
-                        nanosleep (&sleepperiod, &sleepperiod);
+                        nanosleep(&sleepperiod, &sleepperiod);
                     }
 
                     if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
