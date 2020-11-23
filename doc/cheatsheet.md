@@ -121,12 +121,13 @@ Decrypt iCLASS Block / file
 ```
 Options
 ---
-d <encrypted blk> : 16 bytes hex
-f <filename>      : filename of dump
-k <transport key> : 16 bytes hex
+-f, --file <filename>          filename of dumpfile
+-d, --data <encrypted blk>     3DES encrypted data
+    --key <transport key>      3DES transport key
+-v, --verbose                  verbose output
 
-pm3 --> hf iclass decrypt d 2AD4C8211F996871
-pm3 --> hf iclass decrypt f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass decrypt -d 2AD4C8211F996871
+pm3 --> hf iclass decrypt -f hf-iclass-db883702f8ff12e0.bin
 ```
 
 Load iCLASS dump into memory for simulation
