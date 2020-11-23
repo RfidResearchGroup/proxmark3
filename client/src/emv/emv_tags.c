@@ -462,9 +462,9 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
             if (val & 0x80) {
                 PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
                 PrintAndLogEx(NORMAL, "        %s - '%s'",
-                        bitstrings[bit - 1],
-                        (bits->bit == EMV_BIT(byte, bit)) ? bits->name : "Unknown"
-                        );
+                              bitstrings[bit - 1],
+                              (bits->bit == EMV_BIT(byte, bit)) ? bits->name : "Unknown"
+                             );
             }
             if (bits->bit == EMV_BIT(byte, bit))
                 bits ++;
@@ -535,10 +535,10 @@ static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *ta
 static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
     PrintAndLogEx(NORMAL, "    Date: 20%02lu.%lu.%lu",
-            emv_value_numeric(tlv, 0, 2),
-            emv_value_numeric(tlv, 2, 4),
-            emv_value_numeric(tlv, 4, 6)
-        );
+                  emv_value_numeric(tlv, 0, 2),
+                  emv_value_numeric(tlv, 2, 4),
+                  emv_value_numeric(tlv, 4, 6)
+                 );
 }
 
 static uint32_t emv_get_binary(const unsigned char *S) {
@@ -749,12 +749,12 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
 
         PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
         PrintAndLogEx(NORMAL, "    %02x %02x: '%s' '%s' and '%s' if this CVM is unsuccessful",
-                tlv->value[i],
-                tlv->value[i + 1],
-                method,
-                condition,
-                (tlv->value[i] & 0x40) ? "continue" : "fail"
-                );
+                      tlv->value[i],
+                      tlv->value[i + 1],
+                      method,
+                      condition,
+                      (tlv->value[i] & 0x40) ? "continue" : "fail"
+                     );
     }
 }
 

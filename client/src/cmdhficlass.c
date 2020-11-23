@@ -1003,7 +1003,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
-        arg_lit0("v", "verbose"           , "filename of dumpfile"),
+        arg_lit0("v", "verbose", "filename of dumpfile"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3546,8 +3546,8 @@ int info_iclass(void) {
 
         uint8_t cardtype = get_mem_config(hdr);
         PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
-        
-        
+
+
     }
 
     DropField();

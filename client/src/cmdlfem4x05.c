@@ -1882,7 +1882,7 @@ uint32_t static em4x05_Sniff_GetBlock(char *bits, bool fwd) {
     if (parity != (bits[35] - '0'))
         parityerror = true;
 
-    if (parityerror) 
+    if (parityerror)
         PrintAndLogEx(ERR, "parity error : ");
 
     if (!fwd) {

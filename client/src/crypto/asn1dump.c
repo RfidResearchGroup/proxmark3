@@ -116,7 +116,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
             if (longyear == false)
                 PrintAndLogEx(NORMAL, "20" NOLF);
 
-            PrintAndLogEx(NORMAL, "%s-" NOLF, sprint_hex(tlv->value, startindx) );
+            PrintAndLogEx(NORMAL, "%s-" NOLF, sprint_hex(tlv->value, startindx));
 
             if (len < startindx + 2)
                 break;
@@ -276,7 +276,7 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
     asn1_buf.p = (uint8_t *)tlv->value;
     char pstr[300];
     mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf);
-    
+
     PrintAndLogEx(INFO, "%*s %s" NOLF, (level * 4), " ", pstr);
 
     char *jsondesc = asn1_oid_description(pstr, true);

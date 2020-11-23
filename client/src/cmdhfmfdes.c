@@ -1182,7 +1182,7 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     key     8b
     cpy     8b
     crc     2b
-    padding 
+    padding
     */
 
     // Variable length ciphered key data 24-42 bytes plus padding..
@@ -1190,11 +1190,11 @@ static int mifare_desfire_change_key(uint8_t key_no, uint8_t *new_key, uint8_t n
     sAPDU apdu = {0x90, MFDES_CHANGE_KEY, 0x00, 0x00, 0x01, data}; // 0xC4
 
     size_t cmdcnt = 0;
-    
+
     uint8_t new_key_length = 16;
     switch (new_algo) {
         case MFDES_ALGO_DES:
-            // double 
+            // double
             memcpy(data + cmdcnt + 1, new_key, new_key_length);
             memcpy(data + cmdcnt + 1 + new_key_length, new_key, new_key_length);
             break;
@@ -1438,11 +1438,11 @@ static int desfire_print_amk_keysetting(uint8_t key_settings, uint8_t num_keys, 
             PrintAndLogEx(SUCCESS, "  -- All keys (except AMK,see Bit0) within this application are frozen");
             break;
         default:
-            PrintAndLogEx(SUCCESS, 
-                "  -- Authentication with the specified key is necessary to change any key.\n"
-                "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
-                "For keys other then the master or change key, an authentication with the same key is needed."
-                );
+            PrintAndLogEx(SUCCESS,
+                          "  -- Authentication with the specified key is necessary to change any key.\n"
+                          "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
+                          "For keys other then the master or change key, an authentication with the same key is needed."
+                         );
             break;
     }
 
@@ -1487,15 +1487,15 @@ static int desfire_print_piccmk_keysetting(uint8_t key_settings, uint8_t num_key
     if (res == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
 
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");    
-    PrintAndLogEx(INFO, " Key setting: 0x%02X [%c%c%c%c]",  
-        key_settings,
-        (key_settings & (1 << 3)) ? '1' : '0',
-        (key_settings & (1 << 2)) ? '1' : '0',
-        (key_settings & (1 << 1)) ? '1' : '0',
-        (key_settings & (1 << 0)) ? '1' : '0'
-    );
-    
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, " Key setting: 0x%02X [%c%c%c%c]",
+                  key_settings,
+                  (key_settings & (1 << 3)) ? '1' : '0',
+                  (key_settings & (1 << 2)) ? '1' : '0',
+                  (key_settings & (1 << 1)) ? '1' : '0',
+                  (key_settings & (1 << 0)) ? '1' : '0'
+                 );
+
     PrintAndLogEx(SUCCESS, "   [1...] CMK Configuration changeable   : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO (frozen)");
     PrintAndLogEx(SUCCESS, "   [.1..] CMK required for create/delete : %s", (key_settings & (1 << 2)) ? _GREEN_("NO") : "YES");
     PrintAndLogEx(SUCCESS, "   [..1.] Directory list access with CMK : %s", (key_settings & (1 << 1)) ? _GREEN_("NO") : "YES");
@@ -1645,14 +1645,14 @@ static int handler_desfire_select_application(uint8_t *aid) {
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     uint32_t recv_len = 0;
     uint16_t sw = 0;
-    
+
     int res = send_desfire_cmd(&apdu, !tag->rf_field_on, NULL, &recv_len, &sw, sizeof(dfname_t), true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING,
-            _RED_("   Can't select AID 0x%X -> %s"),
-            (aid[2] << 16) + (aid[1] << 8) + aid[0], 
-            GetErrorString(res, &sw)
-        );
+                      _RED_("   Can't select AID 0x%X -> %s"),
+                      (aid[2] << 16) + (aid[1] << 8) + aid[0],
+                      GetErrorString(res, &sw)
+                     );
         DropFieldDesfire();
         return res;
     }
@@ -1732,17 +1732,17 @@ static int handler_desfire_createapp(aidhdr_t *aidhdr, bool usename, bool usefid
         apdu.Lc = apdu.Lc - sizeof(aidhdr->fid);
     }
     uint8_t *data = NULL;
-    
+
     // skip over FID if not used.
     if (usefid == false && usename) {
         data = calloc(apdu.Lc, sizeof(uint8_t));
         apdu.data = data;
-        
+
         memcpy(data, aidhdr->aid, sizeof(aidhdr->aid));
         data[3] = aidhdr->keysetting1;
         data[4] = aidhdr->keysetting2;
         memcpy(data + 5, aidhdr->name, sizeof(aidhdr->name));
-        
+
         PrintAndLogEx(INFO, "new data:  %s", sprint_hex_inrow(data, apdu.Lc));
     }
 
@@ -2070,7 +2070,7 @@ static int getKeySettings(uint8_t *aid) {
     uint8_t key_setting = 0;
     int res = 0;
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-        
+
         // CARD MASTER KEY
         //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
 
@@ -2418,7 +2418,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     if (usefid)
         memcpy(aidhdr.fid, fid, sizeof(aidhdr.fid));
 
-    if (usename) 
+    if (usename)
         memcpy(aidhdr.name, name, sizeof(aidhdr.name));
 
     PrintAndLogEx(INFO, "Creating AID using:");
@@ -2430,14 +2430,14 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     if (usename)
         PrintAndLogEx(INFO, "DF Name  %s", aidhdr.name);
 
-/*
-    uint8_t rootaid[3] = {0x00, 0x00, 0x00};
-    int res = handler_desfire_select_application(rootaid);
-    if (res != PM3_SUCCESS) {
-        DropFieldDesfire();
-        return res;
-    }
-*/
+    /*
+        uint8_t rootaid[3] = {0x00, 0x00, 0x00};
+        int res = handler_desfire_select_application(rootaid);
+        if (res != PM3_SUCCESS) {
+            DropFieldDesfire();
+            return res;
+        }
+    */
 
     int res = handler_desfire_createapp(&aidhdr, usename, usefid);
     DropFieldDesfire();
@@ -3462,7 +3462,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
-    
+
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
     PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), info.versionHW[1]);
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
@@ -3698,7 +3698,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-        
+
     (void)Cmd; // Cmd is not used so far
     DropFieldDesfire();
 
