@@ -111,10 +111,11 @@ Encrypt iCLASS Block
 ```
 Options
 ---
-d <block data>    : 16 bytes hex
-k <transport key> : 16 bytes hex
+-d, --data <block data>        data to encrypt
+    --key <transport key>      3DES transport key
+-v, --verbose                  verbose output
 
-pm3 --> hf iclass encrypt d 0000000f2aa3dba8
+pm3 --> hf iclass encrypt -d 0000000f2aa3dba8
 ```
 
 Decrypt iCLASS Block / file
