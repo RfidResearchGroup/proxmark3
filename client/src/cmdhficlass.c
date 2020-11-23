@@ -71,45 +71,6 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_decrypt(void) {
-    PrintAndLogEx(NORMAL, "3DES decrypt data\n");
-    PrintAndLogEx(NORMAL, "This is naive implementation, it tries to decrypt every block after block 6.");
-    PrintAndLogEx(NORMAL, "Correct behaviour would be to decrypt only the application areas where the key is valid,");
-    PrintAndLogEx(NORMAL, "which is defined by the configuration block.");
-    PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt d <enc data> f <tagdump> k <transport key>\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h                 : Show this help");
-    PrintAndLogEx(NORMAL, "  d <encrypted blk> : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  f <filename>      : filename of dump");
-    PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  v                 : verbose output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt f hf-iclass-AA162D30F8FF12F1-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt f hf-iclass-AA162D30F8FF12F1-dump.bin k 000102030405060708090a0b0c0d0e0f"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt d 1122334455667788 k 000102030405060708090a0b0c0d0e0f"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_hf_iclass_encrypt(void) {
-    PrintAndLogEx(NORMAL, "3DES encrypt data\n");
-    PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file " _YELLOW_("'iclass_decryptionkey.bin'") " must reside");
-    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass encrypt d <blockdata> k <transport key>\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h                 : Show this help");
-    PrintAndLogEx(NORMAL, "  d <block data>    : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  v                 : verbose output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass encrypt d 0102030405060708"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass encrypt d 0102030405060708 k 00112233445566778899AABBCCDDEEFF"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_dump(void) {
     PrintAndLogEx(NORMAL, "Dump all memory from a iCLASS tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass dump f <fileName> k <key> c <creditkey> [e|r|v]\n");
@@ -1003,7 +964,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
-        arg_lit0("v", "verbose", "filename of dumpfile"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1049,74 +1010,82 @@ static int CmdHFiClassEView(const char *Cmd) {
     free(dump);
     return PM3_SUCCESS;
 }
-
 static int CmdHFiClassDecrypt(const char *Cmd) {
+    CLIParserContext *clictx;
+    CLIParserInit(&clictx, "hf iclass decrypt",
+                  "3DES decrypt data\n"
+                  "This is a naive implementation, it tries to decrypt every block after block 6.\n"
+                  "Correct behaviour would be to decrypt only the application areas where the key is valid,\n"
+                  "which is defined by the configuration block.\n"
+                  "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
+                  "in the resources directory. The file should be 16 bytes binary data",
+                  "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
+                  "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f\n"
+                  "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f");
 
-    bool errors = false;
-    bool have_key = false;
-    bool have_data = false;
-    bool have_file = false;
-    bool verbose = false;
-    uint8_t cmdp = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "filename of dumpfile"),
+        arg_str0("d", "data", "<encrypted blk>", "3DES encrypted data"),
+        arg_str0("k", "key", "<transport key>", "3DES transport key"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(clictx, Cmd, argtable, false);
 
-    uint8_t enc_data[8] = {0};
-    uint8_t dec_data[8] = {0};
-
-    size_t keylen = 0;
-    uint8_t key[32] = {0};
-    uint8_t *keyptr = NULL;
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(clictx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     size_t decryptedlen = 0;
     uint8_t *decrypted = NULL;
-    char filename[FILE_PATH_SIZE];
+    bool have_file = false;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_decrypt();
-            case 'd':
-                if (param_gethex(Cmd, cmdp + 1, enc_data, 16)) {
-                    PrintAndLogEx(ERR, "Data must be 16 HEX symbols");
-                    errors = true;
-                    break;
-                }
-                have_data = true;
-                cmdp += 2;
-                break;
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
-                    PrintAndLogEx(WARNING, "No filename found after f");
-                    errors = true;
-                    break;
-                }
-
-                if (loadFile_safe(filename, "", (void **)&decrypted, &decryptedlen) != PM3_SUCCESS) {
-                    errors = true;
-                    break;
-                }
-                have_file = true;
-                cmdp += 2;
-                break;
-            case 'k':
-                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
-                    PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
-                    errors = true;
-                }
-                have_key = true;
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    if (fnlen > 0) {
+        if (loadFile_safe(filename, "", (void **)&decrypted, &decryptedlen) != PM3_SUCCESS) {
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
         }
+        have_file = true;
     }
 
-    if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
+    int enc_data_len = 0;
+    uint8_t enc_data[8] = {0};
+    bool have_data = false;
+
+    CLIGetHexWithReturn(clictx, 2, enc_data, &enc_data_len);
+
+    if (enc_data_len > 0) {
+        if (enc_data_len != 8) {
+            PrintAndLogEx(ERR, "Data must be 8 bytes (16 HEX characters)");
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
+        }
+        have_data = true;
+    }
+
+    int key_len = 0;
+    uint8_t key[16] = {0};
+    uint8_t *keyptr = NULL;
+    bool have_key = false;
+
+    CLIGetHexWithReturn(clictx, 3, key, &key_len);
+
+    if (key_len > 0) {
+        if (key_len != 16) {
+            PrintAndLogEx(ERR, "Transport key must be 16 bytes (32 HEX characters)");
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
+        }
+        have_key = true;
+    }
+
+    bool verbose = arg_get_lit(clictx, 4);
+
+    CLIParserFree(clictx);
+
+    size_t keylen = 0;
+    uint8_t dec_data[8] = {0};
 
     bool use_sc = IsCryptoHelperPresent(verbose);
 
@@ -1283,45 +1252,53 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
 }
 
 static int CmdHFiClassEncryptBlk(const char *Cmd) {
-    bool errors = false;
-    bool have_key = false;
-    bool verbose = false;
-    uint8_t blk_data[8] = {0};
-    uint8_t key[16] = {0};
-    uint8_t *keyptr = NULL;
-    uint8_t cmdp = 0;
+    CLIParserContext *clictx;
+    CLIParserInit(&clictx, "hf iclass encrypt",
+                  "3DES encrypt data\n"
+                  "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
+                  "in the resources directory. The file should be 16 bytes binary data",
+                  "hf iclass encrypt -d 0102030405060708\n"
+                  "hf iclass encrypt -d 0102030405060708 -k 00112233445566778899AABBCCDDEEFF");
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_encrypt();
-            case 'd':
-                if (param_gethex(Cmd, cmdp + 1, blk_data, 16)) {
-                    PrintAndLogEx(ERR, "Block data must include 16 HEX symbols");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'k':
-                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
-                    PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
-                    errors = true;
-                }
-                have_key = true;
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<block data>", "data to encrypt"),
+        arg_str0("k", "key", "<transport key>", "3DES transport key"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(clictx, Cmd, argtable, false);
+
+    int blk_data_len = 0;
+    uint8_t blk_data[8] = {0};
+
+    CLIGetHexWithReturn(clictx, 1, blk_data, &blk_data_len);
+
+    if (blk_data_len != 8) {
+        PrintAndLogEx(ERR, "Block data must be 8 bytes (16 HEX characters)");
+        CLIParserFree(clictx);
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
+    int key_len = 0;
+    uint8_t key[16] = {0};
+    uint8_t *keyptr = NULL;
+    bool have_key = false;
+
+    CLIGetHexWithReturn(clictx, 2, key, &key_len);
+
+    if (key_len > 0) {
+        if (key_len != 16) {
+            PrintAndLogEx(ERR, "Transport key must be 16 bytes (32 HEX characters)");
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
+        }
+        have_key = true;
+    }
+
+    bool verbose = arg_get_lit(clictx, 3);
+
+    CLIParserFree(clictx);
 
     bool use_sc = IsCryptoHelperPresent(verbose);
 
