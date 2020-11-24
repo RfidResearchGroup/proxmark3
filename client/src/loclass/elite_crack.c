@@ -468,9 +468,9 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
 
     mbedtls_des_setkey_enc(&ctx_e, key64_stdformat);
     mbedtls_des_crypt_ecb(&ctx_e, key64_negated, result);
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "-- High security custom key (Kcus) --");
-    PrintAndLogEx(SUCCESS, "Standard format  %s", sprint_hex(key64_stdformat, 8));
+    PrintAndLogEx(SUCCESS, "Standard format  " _GREEN_("%s"), sprint_hex(key64_stdformat, 8));
     PrintAndLogEx(SUCCESS, "iClass format    %s", sprint_hex(key64, 8));
 
     if (master_key != NULL)
