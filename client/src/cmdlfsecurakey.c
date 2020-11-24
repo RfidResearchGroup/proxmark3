@@ -22,21 +22,9 @@
 #include "parity.h"     // for wiegand parity test
 #include "protocols.h"  // t55xx defines
 #include "cmdlft55xx.h" // clone..
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_securakey_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Securakey tag to a T55x7 tag.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf securakey clone [h] [b <raw hex>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf securakey clone b 7FCB400001ADEA5344300000"));
-    return PM3_SUCCESS;
-}
 
 //see ASKDemod for what args are accepted
 int demodSecurakey(bool verbose) {
@@ -120,7 +108,7 @@ int demodSecurakey(bool verbose) {
 
     PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
     PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
-    PrintAndLogEx(INFO, "Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
+    PrintAndLogEx(INFO, "Help the community identify this format further\nby sharing your tag on the pm3 forum or discord");
     return PM3_SUCCESS;
 }
 
@@ -137,36 +125,37 @@ static int CmdSecurakeyRead(const char *Cmd) {
 
 static int CmdSecurakeyClone(const char *Cmd) {
 
-    uint32_t blocks[4];
-    bool errors = false;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey clone",
+                  "clone a Securakey tag to a T55x7 tag.",
+                  "lf securakey clone --raw 7FCB400001ADEA5344300000"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     int datalen = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &datalen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_securakey_clone();
-            case 'b': {
-                // skip first block,  3*4 = 12 bytes left
-                uint8_t rawhex[12] = {0};
-                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if (res != 0)
-                    errors = true;
-
-                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
-                }
-                cmdp += 2;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    if (datalen > 0) {
+        if (datalen != 12) {
+            PrintAndLogEx(ERR, "Data must be 8 bytes (16 HEX characters)");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
     }
+    CLIParserFree(ctx);
 
-    if (errors || cmdp == 0) return usage_lf_securakey_clone();
+    uint32_t blocks[4];
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    }
 
     //Securakey - compat mode, ASK/Man, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_40 | 3 << T55x7_MAXBLOCK_SHIFT;
@@ -181,7 +170,35 @@ static int CmdSecurakeyClone(const char *Cmd) {
 }
 
 static int CmdSecurakeySim(const char *Cmd) {
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    PrintAndLogEx(INFO,  _RED_("To be implemented, feel free to contribute!"));
+    return PM3_SUCCESS;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey sim",
+                  "Enables simulation of viking card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf securakey sim --raw 7FCB400001ADEA5344300000"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("r", "raw", "<hex>", " raw hex data. 12 bytes max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int datalen = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &datalen);
+
+    if (datalen > 0) {
+        if (datalen != 12) {
+            PrintAndLogEx(ERR, "Data must be 8 bytes (16 HEX characters)");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+    CLIParserFree(ctx);
     return PM3_SUCCESS;
 }
 
