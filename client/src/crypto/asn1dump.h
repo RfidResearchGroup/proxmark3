@@ -13,9 +13,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 #include "emv/tlv.h"
 
-bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump);
+bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump);
 
 #endif /* asn1utils.h */

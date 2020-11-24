@@ -285,11 +285,24 @@ ifneq ($(SKIPREADLINE),1)
     READLINE_FOUND = 1
 endif
 
+########
+# SWIG #
+########
+
+ifneq ("$(wildcard src/pm3_luawrap.c)","")
+    SWIG_LUA_FOUND = 1
+endif
+ifeq ($(PYTHON_FOUND),1)
+    ifneq ("$(wildcard src/pm3_pywrap.c)","")
+        SWIG_PYTHON_FOUND = 1
+    endif
+endif
+
 #######################################################################################################
 CFLAGS ?= $(DEFCFLAGS)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
-PM3CFLAGS += -I./src -I../include -I../common -I../common_fpga $(INCLUDES)
+PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 
@@ -315,10 +328,16 @@ ifeq ($(PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON
 endif
 
+ifeq ($(SWIG_LUA_FOUND),1)
+    PM3CFLAGS += -DHAVE_LUA_SWIG
+endif
+ifeq ($(SWIG_PYTHON_FOUND),1)
+    PM3CFLAGS += -DHAVE_PYTHON_SWIG
+endif
 
 CXXFLAGS ?= -Wall -Werror -O3
 PM3CXXFLAGS = $(CXXFLAGS)
-PM3CXXFLAGS += -I../include
+PM3CXXFLAGS += -I../include -I./include
 
 ifeq ($(QT_FOUND),1)
     PM3CFLAGS += -DHAVE_GUI
@@ -414,6 +433,13 @@ else
     endif
 endif
 
+ifeq ($(SWIG_LUA_FOUND),1)
+        $(info Lua SWIG:          wrapper found)
+endif
+ifeq ($(SWIG_PYTHON_FOUND),1)
+        $(info Python SWIG:       wrapper found)
+endif
+
 $(info compiler version:  $(shell $(CC) --version|head -n 1))
 $(info ===================================================================)
 
@@ -506,7 +532,6 @@ SRCS =  aiddesfire.c \
 		emv/crypto.c\
 		emv/crypto_polarssl.c\
 		emv/dol.c \
-		emv/dump.c \
 		emv/emv_pk.c\
 		emv/emv_pki.c\
 		emv/emv_pki_priv.c\
@@ -540,6 +565,7 @@ SRCS =  aiddesfire.c \
 		mifare/mifaredefault.c \
 		mifare/mifarehost.c \
 		mifare/ndef.c \
+		pm3.c \
 		pm3_binlib.c \
 		pm3_bitlib.c \
 		preferences.c \
@@ -572,6 +598,16 @@ SRCS += bucketsort.c \
 		parity.c \
 		util_posix.c
 
+# swig
+
+SWIGSRCS =
+ifeq ($(SWIG_LUA_FOUND),1)
+    SWIGSRCS += pm3_luawrap.c
+endif
+ifeq ($(SWIG_PYTHON_FOUND),1)
+    SWIGSRCS += pm3_pywrap.c
+endif
+
 # gui
 ifeq ($(QT_FOUND),1)
     CXXSRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
@@ -585,6 +621,7 @@ ifeq ($(platform),Darwin)
 endif
 
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
+OBJS += $(SWIGSRCS:%.c=$(OBJDIR)/%.o)
 OBJS += $(CXXSRCS:%.cpp=$(OBJDIR)/%.o)
 OBJS += $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 
@@ -649,6 +686,7 @@ endif
 ifneq (,$(INSTALLSHARE))
 	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
 	    $(Q)$(CP) $(INSTALLSHARE) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
+	    $(Q)$(CP) src/pm3.py $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)/pyscripts
 endif
 	@true
 
@@ -712,6 +750,18 @@ ifneq ($(WHEREAMI_FOUND),1)
 endif
 
 ########
+# SWIG #
+########
+
+src/pm3_luawrap.c: pm3.i
+	$(info [=] GEN $@)
+	$(Q)$(SWIG) -lua -o $@ $<
+
+src/pm3_pywrap.c: pm3.i
+	$(info [=] GEN $@)
+	$(Q)$(SWIG) -python -o $@ $<
+
+########
 # misc #
 ########
 
@@ -724,6 +774,14 @@ src/version.c: default_version.c
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
+
+# SWIG files emit a number of warnings, we've to ignore them
+%wrap.o: %wrap.c
+$(OBJDIR)/%wrap.o : %wrap.c $(OBJDIR)/%.d
+	$(info [-] CC $<)
+	$(Q)$(MKDIR) $(dir $@)
+	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -Wno-missing-prototypes -Wno-missing-declarations -Wno-missing-field-initializers -c -o $@ $<
+	$(Q)$(POSTCOMPILE)
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
@@ -747,6 +805,7 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(Q)$(POSTCOMPILE)
 
 DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(SRCS)) \
+                   $(patsubst %wrap.c, $(OBJDIR)/%.d, $(SWIGSRCS)) \
                    $(patsubst %.cpp, $(OBJDIR)/%.d, $(CXXSRCS)) \
                    $(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS))
 

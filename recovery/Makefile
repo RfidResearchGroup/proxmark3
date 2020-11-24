@@ -11,7 +11,7 @@ FWMAXSIZE = $(shell echo $$(($(PLATFORM_SIZE)*1024)))
 BINS = bootrom.bin fullimage.bin $(INSTALLFW)
 
 all: $(BINS)
-	@FWSIZE=$$(stat -c "%s" $(INSTALLFW));\
+	@FWSIZE=$$(wc -c < $(INSTALLFW));\
 	if [ $$FWSIZE -gt $(FWMAXSIZE) ]; then \
 		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	    echo "ERROR: Firmware image too large for your platform! $$FWSIZE > $(FWMAXSIZE)"; \

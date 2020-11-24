@@ -15,12 +15,12 @@
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"
 #include "ui.h"
+#include "util.h"
 #include "cmdhf14a.h"
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
 #include "cliparser.h"
-#include "emv/dump.h"
 #include "mifare/mifaredefault.h"
 #include "util_posix.h"
 #include "fileutils.h"
@@ -1551,7 +1551,7 @@ static int CmdHFMFPNDEF(const char *Cmd) {
     if (verbose2) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("MF Plus NDEF raw") " ----------------");
-        dump_buffer(data, datalen, stdout, 1);
+        print_buffer(data, datalen, 1);
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);

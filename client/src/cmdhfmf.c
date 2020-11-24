@@ -16,7 +16,6 @@
 #include "comms.h"        // clearCommandBuffer
 #include "fileutils.h"
 #include "cmdtrace.h"
-#include "emv/dump.h"
 #include "mifare/mifaredefault.h"          // mifare default key array
 #include "cliparser.h"          // argtable
 #include "hardnested_bf_core.h" // SetSIMDInstr
@@ -5095,7 +5094,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
     if (verbose2) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("MFC NDEF raw") " ----------------");
-        dump_buffer(data, datalen, stdout, 1);
+        print_buffer(data, datalen, 1);
     }
 
     NDEFDecodeAndPrint(data, datalen, verbose);
@@ -5445,7 +5444,7 @@ static command_t CommandTable[] = {
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},
     {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set simulator memory block"},
     {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emul memory"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " -----------------------"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen1") " -----------------------"},
     {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block"},
     {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector"},
     {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump"},

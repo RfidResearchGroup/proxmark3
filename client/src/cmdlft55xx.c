@@ -315,11 +315,13 @@ static int usage_t55xx_wipe(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h               - this help");
     PrintAndLogEx(NORMAL, "     c <block0>      - set configuration from a block0");
+    PrintAndLogEx(NORMAL, "     p <password  - OPTIONAL password (8 hex characters)");
     PrintAndLogEx(NORMAL, "     q               - indicates to use Q5/T5555 default configuration block");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe") "      -  wipes a T55x7 tag,    config block 0x000880E0");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe q") "    -  wipes a Q5/T5555 tag, config block 0x6001F004");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe") "              -  wipes a T55x7 tag,    config block 0x000880E0");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe q") "            -  wipes a Q5/T5555 tag, config block 0x6001F004");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf t55xx wipe p 11223344") "   -  wipes a T55x7 tag,    config block 0x000880E0, using password");
     return PM3_SUCCESS;
 }
 static int usage_t55xx_deviceconfig(void) {
@@ -487,7 +489,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
     }
 
     if (res == 0)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
+        PrintAndLogEx(SUCCESS, "Data written and verified");
 
     return PM3_SUCCESS;
 }
@@ -1024,6 +1026,9 @@ static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
     PrintAndLogEx(NORMAL, msg);
 }
 
+// Define prototype to call from within detect.
+static int CmdT55xxWakeUp(const char *Cmd);
+
 static int CmdT55xxDetect(const char *Cmd) {
 
     bool errors = false;
@@ -1032,9 +1037,16 @@ static int CmdT55xxDetect(const char *Cmd) {
     bool try_with_pwd = false;
     bool try_all_dl_modes = true;
     bool found = false;
+    bool usewake = false;
     uint64_t password = -1;
     uint8_t cmdp = 0;
     uint8_t downlink_mode = 0;
+    char wakecmd[20] = { 0x00 };
+    struct timespec sleepperiod;
+
+    // Setup the 90ms time value to sleep for after the wake, to allow delay init to complete (~70ms)
+    sleepperiod.tv_sec = 0;
+    sleepperiod.tv_nsec = 90000000;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1042,6 +1054,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                 return usage_t55xx_detect();
             case 'p':
                 password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                sprintf(wakecmd, "p %08x q", (uint32_t)(password & 0xFFFFFFFF));
                 usepwd = true;
                 cmdp += 2;
                 break;
@@ -1064,6 +1077,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     }
     if (errors) return usage_t55xx_detect();
 
+
     // detect called so clear data blocks
     T55x7_ClearAllBlockData();
 
@@ -1072,38 +1086,61 @@ static int CmdT55xxDetect(const char *Cmd) {
         return PM3_ESOFT;
 
     if (useGB == false) {
-        // do ... while to check without password then loop back if password supplied
+        // do ... while not found and not yet tried with wake (for AOR or Init Delay)
         do {
+            // do ... while to check without password then loop back if password supplied
+            do {
 
-            if (try_all_dl_modes) {
-                for (uint8_t m = downlink_mode; m < 4; m++) {
+                if (try_all_dl_modes) {
+                    for (uint8_t m = downlink_mode; m < 4; m++) {
+                        if (usewake) {
+                            // call wake
+                            if (try_with_pwd)
+                                CmdT55xxWakeUp(wakecmd);
+                            else
+                                CmdT55xxWakeUp("q");
+                            // sleep 90 ms
+                            nanosleep(&sleepperiod, &sleepperiod);
+                        }
 
-                    if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, (try_with_pwd && usepwd), password, m) == false)
-                        continue;
+                        if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, (try_with_pwd && usepwd), password, m) == false)
+                            continue;
 
-                    if (t55xxTryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
-                        continue;
+                        if (t55xxTryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
+                            continue;
 
-                    found = true;
+                        found = true;
 
-                    break;
+                        break;
+                    }
+                } else {
+                    if (usewake) {
+                        // call wake
+                        if (try_with_pwd)
+                            CmdT55xxWakeUp(wakecmd);
+                        else
+                            CmdT55xxWakeUp("q");
+                        // sleep 90 ms
+                        nanosleep(&sleepperiod, &sleepperiod);
+                    }
+
+                    if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
+                        found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
+                    }
                 }
-            } else {
-                if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
-                    found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
-                }
-            }
 
-            // toggle so we loop back if not found and try with pwd
-            if (!found && usepwd)
-                try_with_pwd = !try_with_pwd;
+                // toggle so we loop back if not found and try with pwd
+                if (!found && usepwd)
+                    try_with_pwd = !try_with_pwd;
 
-            // force exit as detect block has been found
-            if (found)
-                try_with_pwd = false;
+                // force exit as detect block has been found
+                if (found)
+                    try_with_pwd = false;
 
-        } while (try_with_pwd);
-
+            } while (try_with_pwd);
+            // Toggle so we loop back and try with wakeup.
+            usewake = !usewake;
+        } while (!found && usewake);
     } else {
         found = t55xxTryDetectModulation(downlink_mode, T55XX_PrintConfig);
     }
@@ -1619,6 +1656,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     uint8_t downlink_mode = config.downlink_mode;
+    bool quiet = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1634,6 +1672,10 @@ static int CmdT55xxWakeUp(const char *Cmd) {
                     downlink_mode = 0;
 
                 cmdp += 2;
+                break;
+            case 'q':
+                quiet = true;
+                cmdp++;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -1659,7 +1701,9 @@ static int CmdT55xxWakeUp(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
+    if (!quiet)
+        PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
+
     return PM3_SUCCESS;
 }
 

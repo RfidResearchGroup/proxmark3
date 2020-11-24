@@ -43,8 +43,8 @@ static int CmdHelp(const char *Cmd);
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
     { 0x76, 0x65, 0x54, 0x43, 0x32, 0x21, 0x10, 0x00 },
-    { 0x5B, 0x7C, 0x62, 0xC4, 0x91, 0xc1, 0x1b, 0x39 },
     { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -68,74 +68,6 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "   -- simulate full iCLASS 2k tag");
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin"));
     PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 3"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_iclass_esave(void) {
-    PrintAndLogEx(NORMAL, "Save emulator memory to file.");
-    PrintAndLogEx(NORMAL, "if not filename is supplied, CSN will be used.");
-    PrintAndLogEx(NORMAL, "Number of bytes to download defaults to 256. Other value is 2048\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass esave [h] [f <filename>] [s <num of bytes>]\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h            : Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename> : filename of dump");
-    PrintAndLogEx(NORMAL, "  s <bytes>    : (256|2048) number of bytes to save (default 256)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave f hf-iclass-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass esave s 2048 f hf-iclass-dump.bin"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_hf_iclass_eview(void) {
-    PrintAndLogEx(NORMAL, "It displays emulator memory");
-    PrintAndLogEx(NORMAL, "Number of bytes to download defaults to 256. Other value is 2048\n");
-    PrintAndLogEx(NORMAL, " Usage:  hf iclass eview [s <num of bytes>] <v>");
-    PrintAndLogEx(NORMAL, "     s <bytes>    : (256|2048) number of bytes to save (default 256)");
-    PrintAndLogEx(NORMAL, "     v            : verbose output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass eview"));
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass eview s 2048 v"));
-    return PM3_SUCCESS;
-}
-static int usage_hf_iclass_decrypt(void) {
-    PrintAndLogEx(NORMAL, "3DES decrypt data\n");
-    PrintAndLogEx(NORMAL, "This is naive implementation, it tries to decrypt every block after block 6.");
-    PrintAndLogEx(NORMAL, "Correct behaviour would be to decrypt only the application areas where the key is valid,");
-    PrintAndLogEx(NORMAL, "which is defined by the configuration block.");
-    PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt d <enc data> f <tagdump> k <transport key>\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h                 : Show this help");
-    PrintAndLogEx(NORMAL, "  d <encrypted blk> : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  f <filename>      : filename of dump");
-    PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  v                 : verbose output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt f hf-iclass-AA162D30F8FF12F1-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt f hf-iclass-AA162D30F8FF12F1-dump.bin k 000102030405060708090a0b0c0d0e0f"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt d 1122334455667788 k 000102030405060708090a0b0c0d0e0f"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-static int usage_hf_iclass_encrypt(void) {
-    PrintAndLogEx(NORMAL, "3DES encrypt data\n");
-    PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file " _YELLOW_("'iclass_decryptionkey.bin'") " must reside");
-    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass encrypt d <blockdata> k <transport key>\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h                 : Show this help");
-    PrintAndLogEx(NORMAL, "  d <block data>    : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
-    PrintAndLogEx(NORMAL, "  v                 : verbose output");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass encrypt d 0102030405060708"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass encrypt d 0102030405060708 k 00112233445566778899AABBCCDDEEFF"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -779,7 +711,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, CSN, 8);
 
             if (sim_type == ICLASS_SIM_MODE_FULL)
-                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave h") "` to save the emulator memory to file");
+                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
             break;
         }
     }
@@ -961,47 +893,36 @@ static int CmdHFiClassELoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return PM3_SUCCESS;
 }
-
 static int CmdHFiClassESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass esave",
+                  "Save emulator memory to file.\n"
+                  "if filename is not supplied, CSN will be used.",
+                  "hf iclass esave\n"
+                  "hf iclass esave -f hf-iclass-dump\n"
+                  "hf iclass esave -s 2048 -f hf-iclass-dump");
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "filename of dumpfile"),
+        arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     char *fnameptr = filename;
-    int len = 0;
-    uint16_t bytes = 256;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_esave();
-            case 'f':
-                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (len >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "Filename too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            case 's':
-                bytes = param_get32ex(Cmd, cmdp + 1, 256, 10);
-                if (bytes > 4096) {
-                    PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-                    bytes = 4096;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+
+    uint16_t bytes = arg_get_int_def(ctx, 2, 256);
+
+    if (bytes > 4096) {
+        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
+        bytes = 4096;
     }
 
-    //Validations
-    if (errors) {
-        return usage_hf_iclass_esave();
-    }
+    CLIParserFree(ctx);
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
@@ -1017,7 +938,7 @@ static int CmdHFiClassESave(const char *Cmd) {
     }
 
     // user supplied filename?
-    if (len < 1) {
+    if (fnlen < 1) {
         fnameptr += snprintf(fnameptr, sizeof(filename), "hf-iclass-");
         FillFileNameByUID(fnameptr, dump, "-dump", 8);
     }
@@ -1032,44 +953,37 @@ static int CmdHFiClassESave(const char *Cmd) {
 }
 
 static int CmdHFiClassEView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass eview",
+                  "Display emulator memory.\n"
+                  "Number of bytes to download defaults to 256. Other value is 2048.",
+                  "hf iclass eview\n"
+                  "hf iclass eview -s 2048\n"
+                  "hf iclass eview -s 2048 -v");
 
-    uint16_t blocks = 32, bytes = 256;
-    bool errors = false, verbose = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_eview();
-            case 's':
-                bytes = param_get32ex(Cmd, cmdp + 1, 256, 10);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-                if (bytes > 4096) {
-                    PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-                    bytes = 4096;
-                }
+    uint16_t blocks = 32;
+    uint16_t bytes = arg_get_int_def(ctx, 1, 256);
+    bool verbose = arg_get_lit(ctx, 2);
+    blocks = bytes / 8;
 
-                if (bytes % 8 != 0) {
-                    bytes &= 0xFFF8;
-                    PrintAndLogEx(WARNING, "Number not divided by 8, truncating to %u", bytes);
-                }
+    CLIParserFree(ctx);
 
-                blocks = bytes / 8;
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    if (bytes > 4096) {
+        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
+        bytes = 4096;
     }
 
-    //Validations
-    if (errors || bytes == 0) {
-        return usage_hf_iclass_eview();
+    if (bytes % 8 != 0) {
+        bytes &= 0xFFF8;
+        PrintAndLogEx(WARNING, "Number not divided by 8, truncating to %u", bytes);
     }
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
@@ -1096,74 +1010,82 @@ static int CmdHFiClassEView(const char *Cmd) {
     free(dump);
     return PM3_SUCCESS;
 }
-
 static int CmdHFiClassDecrypt(const char *Cmd) {
+    CLIParserContext *clictx;
+    CLIParserInit(&clictx, "hf iclass decrypt",
+                  "3DES decrypt data\n"
+                  "This is a naive implementation, it tries to decrypt every block after block 6.\n"
+                  "Correct behaviour would be to decrypt only the application areas where the key is valid,\n"
+                  "which is defined by the configuration block.\n"
+                  "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
+                  "in the resources directory. The file should be 16 bytes binary data",
+                  "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
+                  "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f\n"
+                  "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f");
 
-    bool errors = false;
-    bool have_key = false;
-    bool have_data = false;
-    bool have_file = false;
-    bool verbose = false;
-    uint8_t cmdp = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "filename of dumpfile"),
+        arg_str0("d", "data", "<encrypted blk>", "3DES encrypted data"),
+        arg_str0("k", "key", "<transport key>", "3DES transport key"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(clictx, Cmd, argtable, false);
 
-    uint8_t enc_data[8] = {0};
-    uint8_t dec_data[8] = {0};
-
-    size_t keylen = 0;
-    uint8_t key[32] = {0};
-    uint8_t *keyptr = NULL;
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(clictx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     size_t decryptedlen = 0;
     uint8_t *decrypted = NULL;
-    char filename[FILE_PATH_SIZE];
+    bool have_file = false;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_decrypt();
-            case 'd':
-                if (param_gethex(Cmd, cmdp + 1, enc_data, 16)) {
-                    PrintAndLogEx(ERR, "Data must be 16 HEX symbols");
-                    errors = true;
-                    break;
-                }
-                have_data = true;
-                cmdp += 2;
-                break;
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
-                    PrintAndLogEx(WARNING, "No filename found after f");
-                    errors = true;
-                    break;
-                }
-
-                if (loadFile_safe(filename, "", (void **)&decrypted, &decryptedlen) != PM3_SUCCESS) {
-                    errors = true;
-                    break;
-                }
-                have_file = true;
-                cmdp += 2;
-                break;
-            case 'k':
-                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
-                    PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
-                    errors = true;
-                }
-                have_key = true;
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    if (fnlen > 0) {
+        if (loadFile_safe(filename, "", (void **)&decrypted, &decryptedlen) != PM3_SUCCESS) {
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
         }
+        have_file = true;
     }
 
-    if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
+    int enc_data_len = 0;
+    uint8_t enc_data[8] = {0};
+    bool have_data = false;
+
+    CLIGetHexWithReturn(clictx, 2, enc_data, &enc_data_len);
+
+    if (enc_data_len > 0) {
+        if (enc_data_len != 8) {
+            PrintAndLogEx(ERR, "Data must be 8 bytes (16 HEX characters)");
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
+        }
+        have_data = true;
+    }
+
+    int key_len = 0;
+    uint8_t key[16] = {0};
+    uint8_t *keyptr = NULL;
+    bool have_key = false;
+
+    CLIGetHexWithReturn(clictx, 3, key, &key_len);
+
+    if (key_len > 0) {
+        if (key_len != 16) {
+            PrintAndLogEx(ERR, "Transport key must be 16 bytes (32 HEX characters)");
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
+        }
+        have_key = true;
+    }
+
+    bool verbose = arg_get_lit(clictx, 4);
+
+    CLIParserFree(clictx);
+
+    size_t keylen = 0;
+    uint8_t dec_data[8] = {0};
 
     bool use_sc = IsCryptoHelperPresent(verbose);
 
@@ -1330,45 +1252,53 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
 }
 
 static int CmdHFiClassEncryptBlk(const char *Cmd) {
-    bool errors = false;
-    bool have_key = false;
-    bool verbose = false;
-    uint8_t blk_data[8] = {0};
-    uint8_t key[16] = {0};
-    uint8_t *keyptr = NULL;
-    uint8_t cmdp = 0;
+    CLIParserContext *clictx;
+    CLIParserInit(&clictx, "hf iclass encrypt",
+                  "3DES encrypt data\n"
+                  "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
+                  "in the resources directory. The file should be 16 bytes binary data",
+                  "hf iclass encrypt -d 0102030405060708\n"
+                  "hf iclass encrypt -d 0102030405060708 -k 00112233445566778899AABBCCDDEEFF");
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_encrypt();
-            case 'd':
-                if (param_gethex(Cmd, cmdp + 1, blk_data, 16)) {
-                    PrintAndLogEx(ERR, "Block data must include 16 HEX symbols");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'k':
-                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
-                    PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
-                    errors = true;
-                }
-                have_key = true;
-                cmdp += 2;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<block data>", "data to encrypt"),
+        arg_str0("k", "key", "<transport key>", "3DES transport key"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(clictx, Cmd, argtable, false);
+
+    int blk_data_len = 0;
+    uint8_t blk_data[8] = {0};
+
+    CLIGetHexWithReturn(clictx, 1, blk_data, &blk_data_len);
+
+    if (blk_data_len != 8) {
+        PrintAndLogEx(ERR, "Block data must be 8 bytes (16 HEX characters)");
+        CLIParserFree(clictx);
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
+    int key_len = 0;
+    uint8_t key[16] = {0};
+    uint8_t *keyptr = NULL;
+    bool have_key = false;
+
+    CLIGetHexWithReturn(clictx, 2, key, &key_len);
+
+    if (key_len > 0) {
+        if (key_len != 16) {
+            PrintAndLogEx(ERR, "Transport key must be 16 bytes (32 HEX characters)");
+            CLIParserFree(clictx);
+            return PM3_EINVARG;
+        }
+        have_key = true;
+    }
+
+    bool verbose = arg_get_lit(clictx, 3);
+
+    CLIParserFree(clictx);
 
     bool use_sc = IsCryptoHelperPresent(verbose);
 
@@ -1760,7 +1690,7 @@ write_dump:
     return PM3_SUCCESS;
 }
 
-static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose) {
+static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode) {
 
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
@@ -1769,7 +1699,7 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bo
         .req.use_replay = replay,
         .req.blockno = blockno,
         .req.send_reply = true,
-        .req.do_auth = true,
+        .req.do_auth = use_secure_pagemode,
     };
     memcpy(payload.req.key, KEY, 8);
     memcpy(payload.data, bldata, sizeof(payload.data));
@@ -1804,6 +1734,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     bool use_replay = false;
     bool errors = false;
     bool verbose = false;
+    bool use_secure_pagemode = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1848,6 +1779,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                     PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
                     errors = true;
                 }
+                use_secure_pagemode = true;
                 cmdp += 2;
                 break;
             case 'r':
@@ -1880,9 +1812,9 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         errors = true;
     }
 
-    if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
+    if (errors || cmdp < 4) return usage_hf_iclass_writeblock();
 
-    int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose);
+    int isok = iclass_write_block(blockno, bldata, KEY, use_credit_key, elite, rawkey, use_replay, verbose, use_secure_pagemode);
     switch (isok) {
         case PM3_SUCCESS:
             PrintAndLogEx(SUCCESS, "Wrote block %02X successful", blockno);
@@ -3425,6 +3357,7 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
 static int CmdHFiClassAutopwn(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -3446,6 +3379,7 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
     PrintAndLogEx(INFO, "to be implemented");
     return PM3_SUCCESS;
 }
+*/
 
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
@@ -3461,7 +3395,7 @@ static command_t CommandTable[] = {
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write Picopass / iCLASS block"},
 
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
-    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "[options..] Automatic key recovery tool for iCLASS"},
+//    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "[options..] Automatic key recovery tool for iCLASS"},
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "[options..] Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
@@ -3565,10 +3499,11 @@ int info_iclass(void) {
         PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
 
         uint8_t aia[8];
-        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE)
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             memcpy(aia, ns_hdr->app_issuer_area, sizeof(aia));
-        else
+        } else {
             memcpy(aia, hdr->app_issuer_area, sizeof(aia));
+        }
 
         // if CSN ends with FF12E0, it's inside HID CSN range.
         bool isHidRange = (memcmp(hdr->csn + 5, "\xFF\x12\xE0", 3) == 0);
@@ -3583,11 +3518,13 @@ int info_iclass(void) {
             if (se_enabled)
                 PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS SE"));
         } else {
-            PrintAndLogEx(SUCCESS, "    CSN..-.......  " _YELLOW_("outside HID range"));
+            PrintAndLogEx(SUCCESS, "    CSN.......... " _YELLOW_("outside HID range"));
         }
 
         uint8_t cardtype = get_mem_config(hdr);
         PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
+
+
     }
 
     DropField();

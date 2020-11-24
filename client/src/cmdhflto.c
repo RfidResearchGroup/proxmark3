@@ -28,6 +28,7 @@
   If you have access to datasheet,  le me know!
 
   LTO w Type info 00 01   has 101 blocks.
+  LTO w Type info 00 02   has  95 blocks.
   LTO w Type info 00 03   has 255 blocks.
   LTO w Type info 00 xx   has NN blocks.
 */
@@ -242,18 +243,18 @@ static int CmdHfLTOList(const char *Cmd) {
     return CmdTraceList(args);
 }
 
-static int lto_rdbl(uint8_t blk, uint8_t *block_responce, uint8_t *block_cnt_responce, bool verbose) {
+static int lto_rdbl(uint8_t blk, uint8_t *block_response, uint8_t *block_cnt_response, bool verbose) {
 
     uint16_t resp_len = 18;
     uint8_t rdbl_cmd[] = {0x30, blk};
     uint8_t rdbl_cnt_cmd[] = {0x80};
 
-    int status = lto_send_cmd_raw(rdbl_cmd, sizeof(rdbl_cmd), block_responce, &resp_len, true, false, verbose);
+    int status = lto_send_cmd_raw(rdbl_cmd, sizeof(rdbl_cmd), block_response, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         return PM3_EWRONGANSWER; // READ BLOCK failed
     }
 
-    status = lto_send_cmd_raw(rdbl_cnt_cmd, sizeof(rdbl_cnt_cmd), block_cnt_responce, &resp_len, false, false, verbose);
+    status = lto_send_cmd_raw(rdbl_cnt_cmd, sizeof(rdbl_cnt_cmd), block_cnt_response, &resp_len, false, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         return PM3_EWRONGANSWER; // READ BLOCK CONTINUE failed
     }

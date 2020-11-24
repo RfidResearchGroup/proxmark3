@@ -15,22 +15,16 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <string.h>
 #include <jansson.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/oid.h>
 #include "emv/emv_tags.h"
-#include "emv/dump.h"
 #include "emv/emvjson.h"
 #include "util.h"
 #include "proxmark3.h"
 #include "fileutils.h"
 #include "pm3_cmd.h"
-
-#ifndef PRINT_INDENT
-# define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
-#endif
 
 enum asn1_tag_t {
     ASN1_TAG_GENERIC,
@@ -109,65 +103,62 @@ static const struct asn1_tag *asn1_get_tag(const struct tlv *tlv) {
     return tag ? tag : &asn1_tags[0];
 }
 
-static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool longyear, bool *needdump) {
+static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag *tag, int level, bool longyear, bool *needdump) {
     int len = tlv->len;
     *needdump = false;
 
     int startindx = longyear ? 4 : 2;
 
     if (len > 4) {
-        fprintf(f, "\tvalue: '");
+        PrintAndLogEx(NORMAL, "    value: '" NOLF);
         while (true) {
             // year
-            if (!longyear)
-                fprintf(f, "20");
-            fwrite(tlv->value, 1, longyear ? 4 : 2, f);
-            fprintf(f, "-");
+            if (longyear == false)
+                PrintAndLogEx(NORMAL, "20" NOLF);
+
+            PrintAndLogEx(NORMAL, "%s-" NOLF, sprint_hex(tlv->value, startindx));
+
             if (len < startindx + 2)
                 break;
+
             // month
-            fwrite(&tlv->value[startindx], 1, 2, f);
-            fprintf(f, "-");
+            PrintAndLogEx(NORMAL, "%02x%02x-" NOLF, tlv->value[startindx], tlv->value[startindx + 1]);
             if (len < startindx + 4)
                 break;
+
             // day
-            fwrite(&tlv->value[startindx + 2], 1, 2, f);
-            fprintf(f, " ");
+            PrintAndLogEx(NORMAL, "%02x%02x " NOLF, tlv->value[startindx + 2], tlv->value[startindx + 3]);
             if (len < startindx + 6)
                 break;
             // hour
-            fwrite(&tlv->value[startindx + 4], 1, 2, f);
-            fprintf(f, ":");
+            PrintAndLogEx(NORMAL, "%02x%02x:" NOLF, tlv->value[startindx + 4], tlv->value[startindx + 5]);
             if (len < startindx + 8)
                 break;
             // min
-            fwrite(&tlv->value[startindx + 6], 1, 2, f);
-            fprintf(f, ":");
+            PrintAndLogEx(NORMAL, "%02x%02x:" NOLF, tlv->value[startindx + 6], tlv->value[startindx + 7]);
             if (len < startindx + 10)
                 break;
             // sec
-            fwrite(&tlv->value[startindx + 8], 1, 2, f);
+            PrintAndLogEx(NORMAL, "%02x%02x" NOLF, tlv->value[startindx + 8], tlv->value[startindx + 9]);
             if (len < startindx + 11)
                 break;
             // time zone
-            fprintf(f, " zone: %.*s", len - 10 - (longyear ? 4 : 2), &tlv->value[startindx + 10]);
-
+            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - 10 - (longyear ? 4 : 2), &tlv->value[startindx + 10]);
             break;
         }
-        fprintf(f, "'\n");
+        PrintAndLogEx(NORMAL, "'");
     } else {
-        fprintf(f, "\n");
+        PrintAndLogEx(NORMAL, "");
         *needdump = true;
     }
 }
 
-static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
-    fprintf(f, "\tvalue: '");
-    fwrite(tlv->value, 1, tlv->len, f);
-    fprintf(f, "'\n");
+static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+    PrintAndLogEx(NORMAL, "    value: '" NOLF);
+    PrintAndLogEx(NORMAL, "%s'", sprint_hex(tlv->value, tlv->len));
 }
 
-static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level, bool *needdump) {
+static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, int level, bool *needdump) {
     *needdump = false;
     for (size_t i = 0; i < tlv->len; i++)
         if (!isspace(tlv->value[i]) && !isprint(tlv->value[i])) {
@@ -176,10 +167,10 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
         }
 
     if (*needdump) {
-        fprintf(f, "'\n");
+        PrintAndLogEx(NORMAL, "'");
     } else {
-        fprintf(f, "\t\t");
-        asn1_tag_dump_string(tlv, tag, f, level);
+        PrintAndLogEx(NORMAL, "        " NOLF);
+        asn1_tag_dump_string(tlv, tag, level);
     }
 }
 
@@ -213,25 +204,26 @@ static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, u
     return ret;
 }
 
-static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
-    PRINT_INDENT(level);
+static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+    PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
     if (tlv->len > 0) {
-        fprintf(f, "\tvalue: %s\n", tlv->value[0] ? "true" : "false");
+        PrintAndLogEx(NORMAL, "    value: %s", tlv->value[0] ? "true" : "false");
     } else {
-        fprintf(f, "n/a\n");
+        PrintAndLogEx(NORMAL, "n/a");
     }
 }
 
-static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
-    PRINT_INDENT(level);
+static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+    PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
     if (tlv->len == 4) {
         int32_t val = 0;
-        for (size_t i = 0; i < tlv->len; i++)
+        for (size_t i = 0; i < tlv->len; i++) {
             val = (val << 8) + tlv->value[i];
-        fprintf(f, "\tvalue4b: %d\n", val);
+        }
+        PrintAndLogEx(NORMAL, "    value4b: %d", val);
         return;
     }
-    fprintf(f, "\tvalue: %lu\n", asn1_value_integer(tlv, 0, tlv->len * 2));
+    PrintAndLogEx(NORMAL, "    value: %lu", asn1_value_integer(tlv, 0, tlv->len * 2));
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
@@ -277,77 +269,77 @@ error:
     return NULL;
 }
 
-static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag *tag, FILE *f, int level) {
-    PRINT_INDENT(level);
+static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+
     mbedtls_asn1_buf asn1_buf;
     asn1_buf.len = tlv->len;
     asn1_buf.p = (uint8_t *)tlv->value;
     char pstr[300];
     mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf);
-    fprintf(f, " %s", pstr);
+
+    PrintAndLogEx(INFO, "%*s %s" NOLF, (level * 4), " ", pstr);
 
     char *jsondesc = asn1_oid_description(pstr, true);
     if (jsondesc) {
-        fprintf(f, " -  %s", jsondesc);
+        PrintAndLogEx(NORMAL, " -  %s" NOLF, jsondesc);
     } else {
         const char *ppstr;
         mbedtls_oid_get_attr_short_name(&asn1_buf, &ppstr);
         if (ppstr && strnlen(ppstr, 1)) {
-            fprintf(f, " (%s)\n", ppstr);
+            PrintAndLogEx(NORMAL, " (%s)", ppstr);
             return;
         }
         mbedtls_oid_get_sig_alg_desc(&asn1_buf, &ppstr);
         if (ppstr && strnlen(ppstr, 1)) {
-            fprintf(f, " (%s)\n", ppstr);
+            PrintAndLogEx(NORMAL, " (%s)", ppstr);
             return;
         }
         mbedtls_oid_get_extended_key_usage(&asn1_buf, &ppstr);
         if (ppstr && strnlen(ppstr, 1)) {
-            fprintf(f, " (%s)\n", ppstr);
+            PrintAndLogEx(NORMAL, " (%s)", ppstr);
             return;
         }
     }
-    fprintf(f, "\n");
+    PrintAndLogEx(NORMAL, "");
 }
 
-bool asn1_tag_dump(const struct tlv *tlv, FILE *f, int level, bool *candump) {
-    if (!tlv) {
-        fprintf(f, "NULL\n");
+bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
+    if (tlv == NULL) {
+        PrintAndLogEx(FAILED, "NULL\n");
         return false;
     }
 
     const struct asn1_tag *tag = asn1_get_tag(tlv);
 
-    PRINT_INDENT(level);
-    fprintf(f, "--%2x[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
+    PrintAndLogEx(INFO, "%*s--%2x[%02zx] '%s':" NOLF, (level * 4), " ", tlv->tag, tlv->len, tag->name);
 
     switch (tag->type) {
         case ASN1_TAG_GENERIC:
-            fprintf(f, "\n");
+            PrintAndLogEx(NORMAL, "");
             break;
         case ASN1_TAG_STRING:
-            asn1_tag_dump_string(tlv, tag, f, level);
+            asn1_tag_dump_string(tlv, tag, level);
             *candump = false;
             break;
         case ASN1_TAG_OCTET_STRING:
-            asn1_tag_dump_octet_string(tlv, tag, f, level, candump);
+            asn1_tag_dump_octet_string(tlv, tag, level, candump);
             break;
         case ASN1_TAG_BOOLEAN:
-            asn1_tag_dump_boolean(tlv, tag, f, level);
+            asn1_tag_dump_boolean(tlv, tag, level);
             *candump = false;
             break;
         case ASN1_TAG_INTEGER:
-            asn1_tag_dump_integer(tlv, tag, f, level);
+            asn1_tag_dump_integer(tlv, tag, level);
             *candump = false;
             break;
         case ASN1_TAG_UTC_TIME:
-            asn1_tag_dump_str_time(tlv, tag, f, level, false, candump);
+            asn1_tag_dump_str_time(tlv, tag, level, false, candump);
             break;
         case ASN1_TAG_STR_TIME:
-            asn1_tag_dump_str_time(tlv, tag, f, level, true, candump);
+            asn1_tag_dump_str_time(tlv, tag, level, true, candump);
             break;
         case ASN1_TAG_OBJECT_ID:
-            asn1_tag_dump_object_id(tlv, tag, f, level);
+            asn1_tag_dump_object_id(tlv, tag, level);
             *candump = false;
             break;
     };

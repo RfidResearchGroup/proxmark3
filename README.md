@@ -34,7 +34,7 @@
 |[Notes on file formats used with Proxmark3](/doc/extensions_notes.md)|[Notes on MFU binary format](/doc/mfu_binary_format_notes.md)|[Notes on FPGA & ARM](/doc/fpga_arm_notes.md)|
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic cards](/doc/magic_cards_notes.md)|
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
-|[Notes on cliparser usage](/doc/cliparser.md)|||
+|[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)||
 
 ## Build for non-RDV4 Proxmark3 platforms
 
@@ -57,7 +57,7 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 This repo compiles nicely on 
    - Proxspace v3.x
-     - [latest release v3.7](https://github.com/Gator96100/ProxSpace/releases)
+     - [latest release v3.7.1](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/mingw environment with Qt5.6.1 & GCC 4.9
    - Ubuntu 16.04 -> 20.04
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian

@@ -18,15 +18,10 @@
 #endif
 
 #include "emv_tags.h"
-
 #include <stdlib.h>
 #include <string.h>
-
 #include "commonutil.h"
-
-#ifndef PRINT_INDENT
-# define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
-#endif
+#include "ui.h"
 
 enum emv_tag_t {
     EMV_TAG_GENERIC,
@@ -455,19 +450,21 @@ static const char *bitstrings[] = {
     "1.......",
 };
 
-static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     const struct emv_tag_bit *bits = tag->data;
     unsigned bit, byte;
 
     for (byte = 1; byte <= tlv->len; byte ++) {
         unsigned char val = tlv->value[byte - 1];
-        PRINT_INDENT(level);
-        fprintf(f, "\tByte %u (%02x)\n", byte, val);
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Byte %u (%02x)", byte, val);
         for (bit = 8; bit > 0; bit--, val <<= 1) {
             if (val & 0x80) {
-                PRINT_INDENT(level);
-                fprintf(f, "\t\t%s - '%s'\n", bitstrings[bit - 1],
-                        bits->bit == EMV_BIT(byte, bit) ? bits->name : "Unknown");
+                PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+                PrintAndLogEx(NORMAL, "        %s - '%s'",
+                              bitstrings[bit - 1],
+                              (bits->bit == EMV_BIT(byte, bit)) ? bits->name : "Unknown"
+                             );
             }
             if (bits->bit == EMV_BIT(byte, bit))
                 bits ++;
@@ -475,7 +472,7 @@ static void emv_tag_dump_bitmask(const struct tlv *tlv, const struct emv_tag *ta
     }
 }
 
-static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     const unsigned char *buf = tlv->value;
     size_t left = tlv->len;
 
@@ -484,22 +481,20 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, F
         const struct emv_tag *doltag;
 
         if (!tlv_parse_tl(&buf, &left, &doltlv)) {
-            PRINT_INDENT(level);
-            fprintf(f, "Invalid Tag-Len\n");
+            PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+            PrintAndLogEx(NORMAL, "Invalid Tag-Len");
             continue;
         }
 
         doltag = emv_get_tag(&doltlv);
 
-        PRINT_INDENT(level);
-        fprintf(f, "\tTag %4x len %02zx ('%s')\n", doltlv.tag, doltlv.len, doltag->name);
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Tag %4x len %02zx ('%s')", doltlv.tag, doltlv.len, doltag->name);
     }
 }
 
-static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
-    fprintf(f, "\tString value '");
-    fwrite(tlv->value, 1, tlv->len, f);
-    fprintf(f, "'\n");
+static void emv_tag_dump_string(const struct tlv *tlv, const struct emv_tag *tag, int level) {
+    PrintAndLogEx(NORMAL, "    String value '%s'", sprint_hex_inrow(tlv->value, tlv->len));
 }
 
 static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, unsigned end) {
@@ -532,17 +527,18 @@ static unsigned long emv_value_numeric(const struct tlv *tlv, unsigned start, un
     return ret;
 }
 
-static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
-    PRINT_INDENT(level);
-    fprintf(f, "\tNumeric value %lu\n", emv_value_numeric(tlv, 0, tlv->len * 2));
+static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *tag, int level) {
+    PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+    PrintAndLogEx(NORMAL, "    Numeric value %lu", emv_value_numeric(tlv, 0, tlv->len * 2));
 }
 
-static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
-    PRINT_INDENT(level);
-    fprintf(f, "\tDate: 20%02lu.%lu.%lu\n",
-            emv_value_numeric(tlv, 0, 2),
-            emv_value_numeric(tlv, 2, 4),
-            emv_value_numeric(tlv, 4, 6));
+static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, int level) {
+    PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+    PrintAndLogEx(NORMAL, "    Date: 20%02lu.%lu.%lu",
+                  emv_value_numeric(tlv, 0, 2),
+                  emv_value_numeric(tlv, 2, 4),
+                  emv_value_numeric(tlv, 4, 6)
+                 );
 }
 
 static uint32_t emv_get_binary(const unsigned char *S) {
@@ -550,44 +546,44 @@ static uint32_t emv_get_binary(const unsigned char *S) {
 }
 
 // https://github.com/binaryfoo/emv-bertlv/blob/master/src/main/resources/fields/visa-cvr.txt
-static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
-    if (!tlv || tlv->len < 1) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tINVALID!\n");
+static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, int level) {
+    if (tlv == NULL || tlv->len < 1) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    INVALID length!");
         return;
     }
 
     if (tlv->len != tlv->value[0] + 1) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tINVALID length!\n");
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    INVALID length!");
         return;
     }
 
     if (tlv->len >= 2) {
         // AC1
-        PRINT_INDENT(level);
-        if ((tlv->value[1] & 0xC0) == 0x00) fprintf(f, "\tAC1: AAC (Transaction declined)\n");
-        if ((tlv->value[1] & 0xC0) == 0x40) fprintf(f, "\tAC1: TC (Transaction approved)\n");
-        if ((tlv->value[1] & 0xC0) == 0x80) fprintf(f, "\tAC1: ARQC (Online authorisation requested)\n");
-        if ((tlv->value[1] & 0xC0) == 0xC0) fprintf(f, "\tAC1: RFU\n");
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        if ((tlv->value[1] & 0xC0) == 0x00) PrintAndLogEx(NORMAL, "    AC1: AAC (Transaction declined)");
+        if ((tlv->value[1] & 0xC0) == 0x40) PrintAndLogEx(NORMAL, "    AC1: TC (Transaction approved)");
+        if ((tlv->value[1] & 0xC0) == 0x80) PrintAndLogEx(NORMAL, "    AC1: ARQC (Online authorisation requested)");
+        if ((tlv->value[1] & 0xC0) == 0xC0) PrintAndLogEx(NORMAL, "    AC1: RFU");
         // AC2
-        PRINT_INDENT(level);
-        if ((tlv->value[1] & 0x30) == 0x00) fprintf(f, "\tAC2: AAC (Transaction declined)\n");
-        if ((tlv->value[1] & 0x30) == 0x10) fprintf(f, "\tAC2: TC (Transaction approved)\n");
-        if ((tlv->value[1] & 0x30) == 0x20) fprintf(f, "\tAC2: not requested (ARQC)\n");
-        if ((tlv->value[1] & 0x30) == 0x30) fprintf(f, "\tAC2: RFU\n");
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        if ((tlv->value[1] & 0x30) == 0x00) PrintAndLogEx(NORMAL, "    AC2: AAC (Transaction declined)");
+        if ((tlv->value[1] & 0x30) == 0x10) PrintAndLogEx(NORMAL, "    AC2: TC (Transaction approved)");
+        if ((tlv->value[1] & 0x30) == 0x20) PrintAndLogEx(NORMAL, "    AC2: not requested (ARQC)");
+        if ((tlv->value[1] & 0x30) == 0x30) PrintAndLogEx(NORMAL, "    AC2: RFU");
     }
     if (tlv->len >= 3 && (tlv->value[2] >> 4)) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tPIN try: %x\n", tlv->value[2] >> 4);
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    PIN try: %x", tlv->value[2] >> 4);
     }
     if (tlv->len >= 4 && (tlv->value[3] & 0x0F)) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tIssuer discretionary bits: %x\n", tlv->value[3] & 0x0F);
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Issuer discretionary bits: %x", tlv->value[3] & 0x0F);
     }
     if (tlv->len >= 5 && (tlv->value[4] >> 4)) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tSuccessfully processed issuer script commands: %x\n", tlv->value[4] >> 4);
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Successfully processed issuer script commands: %x", tlv->value[4] >> 4);
     }
 
     // mask 0F 0F F0 0F
@@ -610,68 +606,73 @@ static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, F
     };
 
     if (data[0] || data[1] || data[2] || data[3])
-        emv_tag_dump_bitmask(&bit_tlv, &bit_tag, f, level);
+        emv_tag_dump_bitmask(&bit_tlv, &bit_tag, level);
 }
 
 // EMV Book 3
-static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
-    if (!tlv || tlv->len < 1) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tINVALID!\n");
+static void emv_tag_dump_cid(const struct tlv *tlv, const struct emv_tag *tag, int level) {
+    if (tlv == NULL || tlv->len < 1) {
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    INVALID!");
         return;
     }
 
-    PRINT_INDENT(level);
-    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_AAC)       fprintf(f, "\tAC1: AAC (Transaction declined)\n");
-    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_TC)        fprintf(f, "\tAC1: TC (Transaction approved)\n");
-    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_ARQC)      fprintf(f, "\tAC1: ARQC (Online authorisation requested)\n");
-    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_AC_MASK)   fprintf(f, "\tAC1: RFU\n");
+    PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+
+    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_AAC)
+        PrintAndLogEx(NORMAL, "    AC1: AAC (Transaction declined)");
+    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_TC)
+        PrintAndLogEx(NORMAL, "    AC1: TC (Transaction approved)");
+    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_ARQC)
+        PrintAndLogEx(NORMAL, "    AC1: ARQC (Online authorisation requested)");
+    if ((tlv->value[0] & EMVAC_AC_MASK) == EMVAC_AC_MASK)
+        PrintAndLogEx(NORMAL, "    AC1: RFU");
 
     if (tlv->value[0] & EMVCID_ADVICE) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tAdvice required!\n");
+        PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Advice required!");
     }
 
     if (tlv->value[0] & EMVCID_REASON_MASK) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tReason/advice/referral code: ");
+        PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    Reason/advice/referral code: " NOLF);
         switch ((tlv->value[0] & EMVCID_REASON_MASK)) {
             case 0:
-                fprintf(f, "No information given\n");
+                PrintAndLogEx(NORMAL, "No information given");
                 break;
             case 1:
-                fprintf(f, "Service not allowed\n");
+                PrintAndLogEx(NORMAL, "Service not allowed");
                 break;
             case 2:
-                fprintf(f, "PIN Try Limit exceeded\n");
+                PrintAndLogEx(NORMAL, "PIN Try Limit exceeded");
                 break;
             case 3:
-                fprintf(f, "Issuer authentication failed\n");
+                PrintAndLogEx(NORMAL, "Issuer authentication failed");
                 break;
             default:
-                fprintf(f, "\tRFU: %2x\n", (tlv->value[0] & EMVCID_REASON_MASK));
+                PrintAndLogEx(NORMAL, "    RFU: %2x", (tlv->value[0] & EMVCID_REASON_MASK));
                 break;
         }
     }
 }
 
-static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     uint32_t X, Y;
     int i;
 
     if (tlv->len < 10 || tlv->len % 2) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tINVALID!\n");
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    INVALID!");
         return;
     }
 
     X = emv_get_binary(tlv->value);
     Y = emv_get_binary(tlv->value + 4);
 
-    PRINT_INDENT(level);
-    fprintf(f, "\tX: %u\n", X);
-    PRINT_INDENT(level);
-    fprintf(f, "\tY: %u\n", Y);
+    PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+    PrintAndLogEx(NORMAL, "    X: %u", X);
+    PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+    PrintAndLogEx(NORMAL, "    Y: %u", Y);
 
     for (i = 8; i < tlv->len; i += 2) {
         const char *method;
@@ -746,73 +747,76 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
                 break;
         }
 
-        PRINT_INDENT(level);
-        fprintf(f, "\t%02x %02x: '%s' '%s' and '%s' if this CVM is unsuccessful\n",
-                tlv->value[i], tlv->value[i + 1],
-                method, condition, (tlv->value[i] & 0x40) ? "continue" : "fail");
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    %02x %02x: '%s' '%s' and '%s' if this CVM is unsuccessful",
+                      tlv->value[i],
+                      tlv->value[i + 1],
+                      method,
+                      condition,
+                      (tlv->value[i] & 0x40) ? "continue" : "fail"
+                     );
     }
 }
 
-static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, FILE *f, int level) {
+static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     if (tlv->len < 4 || tlv->len % 4) {
-        PRINT_INDENT(level);
-        fprintf(f, "\tINVALID!\n");
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "    INVALID!");
         return;
     }
 
     for (int i = 0; i < tlv->len / 4; i++) {
-        PRINT_INDENT(level);
-        fprintf(f, "SFI[%02x] start:%02x end:%02x offline:%02x\n", tlv->value[i * 4 + 0] >> 3, tlv->value[i * 4 + 1], tlv->value[i * 4 + 2], tlv->value[i * 4 + 3]);
+        PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
+        PrintAndLogEx(NORMAL, "SFI[%02x] start:%02x end:%02x offline:%02x", tlv->value[i * 4 + 0] >> 3, tlv->value[i * 4 + 1], tlv->value[i * 4 + 2], tlv->value[i * 4 + 3]);
     }
 }
 
-bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level) {
-    if (!tlv) {
-        fprintf(f, "NULL\n");
+bool emv_tag_dump(const struct tlv *tlv, int level) {
+    if (tlv == NULL) {
+        PrintAndLogEx(FAILED, "NULL");
         return false;
     }
 
     const struct emv_tag *tag = emv_get_tag(tlv);
 
-    PRINT_INDENT(level);
-    fprintf(f, "--%2x[%02zx] '%s':", tlv->tag, tlv->len, tag->name);
+    PrintAndLogEx(INFO, "%*s--%2x[%02zx] '%s':" NOLF, (level * 4), " ", tlv->tag, tlv->len, tag->name);
 
     switch (tag->type) {
         case EMV_TAG_GENERIC:
-            fprintf(f, "\n");
+            PrintAndLogEx(NORMAL, "");
             break;
         case EMV_TAG_BITMASK:
-            fprintf(f, "\n");
-            emv_tag_dump_bitmask(tlv, tag, f, level);
+            PrintAndLogEx(NORMAL, "");
+            emv_tag_dump_bitmask(tlv, tag, level);
             break;
         case EMV_TAG_DOL:
-            fprintf(f, "\n");
-            emv_tag_dump_dol(tlv, tag, f, level);
+            PrintAndLogEx(NORMAL, "");
+            emv_tag_dump_dol(tlv, tag, level);
             break;
         case EMV_TAG_CVM_LIST:
-            fprintf(f, "\n");
-            emv_tag_dump_cvm_list(tlv, tag, f, level);
+            PrintAndLogEx(NORMAL, "");
+            emv_tag_dump_cvm_list(tlv, tag, level);
             break;
         case EMV_TAG_AFL:
-            fprintf(f, "\n");
-            emv_tag_dump_afl(tlv, tag, f, level);
+            PrintAndLogEx(NORMAL, "");
+            emv_tag_dump_afl(tlv, tag, level);
             break;
         case EMV_TAG_STRING:
-            emv_tag_dump_string(tlv, tag, f, level);
+            emv_tag_dump_string(tlv, tag, level);
             break;
         case EMV_TAG_NUMERIC:
-            emv_tag_dump_numeric(tlv, tag, f, level);
+            emv_tag_dump_numeric(tlv, tag, level);
             break;
         case EMV_TAG_YYMMDD:
-            emv_tag_dump_yymmdd(tlv, tag, f, level);
+            emv_tag_dump_yymmdd(tlv, tag, level);
             break;
         case EMV_TAG_CVR:
-            fprintf(f, "\n");
-            emv_tag_dump_cvr(tlv, tag, f, level);
+            PrintAndLogEx(NORMAL, "");
+            emv_tag_dump_cvr(tlv, tag, level);
             break;
         case EMV_TAG_CID:
-            fprintf(f, "\n");
-            emv_tag_dump_cid(tlv, tag, f, level);
+            PrintAndLogEx(NORMAL, "");
+            emv_tag_dump_cid(tlv, tag, level);
             break;
     };
 

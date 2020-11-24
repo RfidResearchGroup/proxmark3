@@ -19,9 +19,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhffido.h"
-
 #include <unistd.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"
 #include "comms.h"
@@ -33,10 +31,10 @@
 #include "crypto/libpcrypto.h"
 #include "fido/cbortools.h"
 #include "fido/fidocore.h"
-#include "emv/dump.h"
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "cmdtrace.h"
+#include "util.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -88,7 +86,7 @@ static int cmd_hf_fido_info(const char *cmd) {
         } else {
             PrintAndLogEx(INFO, "FIDO authenticator detected (not standard U2F).");
             PrintAndLogEx(INFO, "Non U2F authenticator version:");
-            dump_buffer((const unsigned char *)buf, len, NULL, 0);
+            print_buffer((const unsigned char *)buf, len, 1);
         }
     } else {
         PrintAndLogEx(INFO, "FIDO U2F authenticator detected. Version: %.*s", (int)len, buf);
@@ -292,11 +290,11 @@ static int cmd_hf_fido_register(const char *cmd) {
     if (APDULogging)
         PrintAndLogEx(INFO, "---------------------------------------------------------------");
 
-    PrintAndLogEx(NORMAL, "data len: %zu", len);
+    PrintAndLogEx(INFO, "data len: %zu", len);
 
     if (verbose2) {
         PrintAndLogEx(INFO, "------------ " _CYAN_("data") " ----------------------");
-        dump_buffer((const unsigned char *)buf, len, NULL, 0);
+        print_buffer((const unsigned char *)buf, len, 1);
         PrintAndLogEx(INFO, "-------------" _CYAN_("data") " ----------------------");
     }
 
@@ -312,13 +310,14 @@ static int cmd_hf_fido_register(const char *cmd) {
     int derp = 67 + keyHandleLen;
     int derLen = (buf[derp + 2] << 8) + buf[derp + 3] + 4;
     if (verbose2) {
-        PrintAndLogEx(NORMAL, "DER certificate[%d]:\n------------------DER-------------------", derLen);
-        dump_buffer_simple((const unsigned char *)&buf[derp], derLen, NULL);
-        PrintAndLogEx(NORMAL, "\n----------------DER---------------------");
+        PrintAndLogEx(INFO, "DER certificate[%d]:", derLen);
+        PrintAndLogEx(INFO, "------------------DER-------------------");
+        PrintAndLogEx(INFO, "%s", sprint_hex(buf + derp, derLen));
+        PrintAndLogEx(INFO, "----------------DER---------------------");
     } else {
         if (verbose)
-            PrintAndLogEx(NORMAL, "------------------DER-------------------");
-        PrintAndLogEx(NORMAL, "DER certificate[%d]: %s...", derLen, sprint_hex(&buf[derp], 20));
+            PrintAndLogEx(INFO, "------------------DER-------------------");
+        PrintAndLogEx(INFO, "DER certificate[%d]: %s...", derLen, sprint_hex(&buf[derp], 20));
     }
 
     // check and print DER certificate
@@ -326,9 +325,9 @@ static int cmd_hf_fido_register(const char *cmd) {
 
     // print DER certificate in TLV view
     if (showDERTLV) {
-        PrintAndLogEx(NORMAL, "----------------DER TLV-----------------");
+        PrintAndLogEx(INFO, "----------------DER TLV-----------------");
         asn1_print(&buf[derp], derLen, "  ");
-        PrintAndLogEx(NORMAL, "----------------DER TLV-----------------");
+        PrintAndLogEx(INFO, "----------------DER TLV-----------------");
     }
 
     FIDOCheckDERAndGetKey(&buf[derp], derLen, verbose, public_key, sizeof(public_key));
@@ -341,10 +340,10 @@ static int cmd_hf_fido_register(const char *cmd) {
     uint8_t rval[300] = {0};
     uint8_t sval[300] = {0};
     res = ecdsa_asn1_get_signature(&buf[hashp], len - hashp, rval, sval);
-    if (!res) {
+    if (res == PM3_SUCCESS) {
         if (verbose) {
-            PrintAndLogEx(NORMAL, "  r: %s", sprint_hex(rval, 32));
-            PrintAndLogEx(NORMAL, "  s: %s", sprint_hex(sval, 32));
+            PrintAndLogEx(INFO, "  r: %s", sprint_hex(rval, 32));
+            PrintAndLogEx(INFO, "  s: %s", sprint_hex(sval, 32));
         }
 
         uint8_t xbuf[4096] = {0};
@@ -357,7 +356,7 @@ static int cmd_hf_fido_register(const char *cmd) {
                          &buf[1], 65,             // user public key
                          NULL, 0);
         (void)res;
-        //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+        //PrintAndLogEx(INFO, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
         res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[hashp], len - hashp, true);
         if (res) {
             if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
@@ -574,7 +573,7 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "---------------------------------------------------------------");
+    PrintAndLogEx(INFO, "---------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "User presence: %s", (buf[0] ? "verified" : "not verified"));
     uint32_t cntr = (uint32_t)bytes_to_num(&buf[1], 4);
     PrintAndLogEx(SUCCESS, "Counter: %d", cntr);
@@ -584,10 +583,10 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
     uint8_t rval[300] = {0};
     uint8_t sval[300] = {0};
     res = ecdsa_asn1_get_signature(&buf[5], len - 5, rval, sval);
-    if (!res) {
+    if (res == PM3_SUCCESS) {
         if (verbose) {
-            PrintAndLogEx(NORMAL, "  r: %s", sprint_hex(rval, 32));
-            PrintAndLogEx(NORMAL, "  s: %s", sprint_hex(sval, 32));
+            PrintAndLogEx(INFO, "  r: %s", sprint_hex(rval, 32));
+            PrintAndLogEx(INFO, "  s: %s", sprint_hex(sval, 32));
         }
         if (public_key_loaded) {
             uint8_t xbuf[4096] = {0};
@@ -599,7 +598,7 @@ static int cmd_hf_fido_authenticate(const char *cmd) {
                              data, 32,      // challenge parameter
                              NULL, 0);
             (void)res;
-            //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
+            //PrintAndLogEx(INFO, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
             res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[5], len - 5, true);
             if (res) {
                 if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
@@ -718,7 +717,7 @@ static int cmd_hf_fido_2make_credential(const char *cmd) {
         PrintAndLogEx(ERR, "ERROR: Can't found the json file.");
         return res;
     }
-    PrintAndLogEx(NORMAL, "fname: %s\n", fname);
+    PrintAndLogEx(INFO, "fname: %s\n", fname);
     json_t *root = json_load_file(fname, 0, &error);
     if (!root) {
         PrintAndLogEx(ERR, "ERROR: json error on line %d: %s", error.line, error.text);
@@ -843,7 +842,7 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
         PrintAndLogEx(ERR, "ERROR: Can't found the json file.");
         return res;
     }
-    PrintAndLogEx(NORMAL, "fname: %s\n", fname);
+    PrintAndLogEx(INFO, "fname: %s\n", fname);
     json_t *root = json_load_file(fname, 0, &error);
     if (!root) {
         PrintAndLogEx(ERR, "ERROR: json error on line %d: %s", error.line, error.text);
@@ -876,9 +875,9 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
 
     if (showCBOR) {
         PrintAndLogEx(SUCCESS, "CBOR get assertion request:");
-        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
         TinyCborPrintFIDOPackage(fido2CmdGetAssertion, false, data, datalen);
-        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
     }
 
     res = FIDO2GetAssertion(data, datalen, buf,  sizeof(buf), &len, &sw);
@@ -901,9 +900,9 @@ static int cmd_hf_fido_2get_assertion(const char *cmd) {
     PrintAndLogEx(SUCCESS, "GetAssertion result (%zu b) OK.", len);
     if (showCBOR) {
         PrintAndLogEx(SUCCESS, "CBOR get assertion response:");
-        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
         TinyCborPrintFIDOPackage(fido2CmdGetAssertion, true, &buf[1], len - 1);
-        PrintAndLogEx(NORMAL, "---------------- " _CYAN_("CBOR") " ------------------");
+        PrintAndLogEx(INFO, "---------------- " _CYAN_("CBOR") " ------------------");
     }
 
     // parse returned cbor

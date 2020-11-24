@@ -50,6 +50,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
 
+void print_buffer(const uint8_t *data, const size_t len, int level);
 void print_blocks(uint32_t *data, size_t len);
 
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);

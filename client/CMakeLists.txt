@@ -188,7 +188,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/emv/crypto.c
         ${PM3_ROOT}/client/src/emv/crypto_polarssl.c
         ${PM3_ROOT}/client/src/emv/dol.c
-        ${PM3_ROOT}/client/src/emv/dump.c
         ${PM3_ROOT}/client/src/emv/emv_pk.c
         ${PM3_ROOT}/client/src/emv/emv_pki.c
         ${PM3_ROOT}/client/src/emv/emv_pki_priv.c
@@ -289,6 +288,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/graph.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/preferences.c
+        ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
         ${PM3_ROOT}/client/src/prng.c
@@ -361,7 +361,7 @@ if (NOT SKIPPYTHON EQUAL 1)
         add_definitions(-DHAVE_PYTHON)
         set(ADDITIONAL_DIRS ${PYTHON3_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
         set(ADDITIONAL_LNK ${PYTHON3_LIBRARIES} ${ADDITIONAL_LNK})
-        set(ADDITIONAL_LNKDIRS ${PYTHON3_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})   
+        set(ADDITIONAL_LNKDIRS ${PYTHON3_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
     endif (PYTHON3EMBED_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
 
@@ -425,7 +425,7 @@ if (SKIPPYTHON EQUAL 1)
 else (SKIPPYTHON EQUAL 1)
     if (PYTHON3EMBED_FOUND)
         message(STATUS "Python3 library:   Python3 embed found, enabled")
-    elseif (PYTHON_FOUND)
+    elseif (PYTHON3_FOUND)
         message(STATUS "Python3 library:   Python3 found, enabled")
     else (PYTHON3EMBED_FOUND)
         message(STATUS "Python3 library:   Python3 not found, disabled")
@@ -455,6 +455,28 @@ else (SKIPWHEREAMISYSTEM EQUAL 1)
         message(STATUS "Whereami library:  system library not found, using local library")
     endif (WHEREAMI_FOUND)
 endif (SKIPWHEREAMISYSTEM EQUAL 1)
+
+# Lua SWIG
+if (EXISTS ${PM3_ROOT}/client/src/pm3_luawrap.c)
+    set (TARGET_SOURCES
+            ${PM3_ROOT}/client/src/pm3_luawrap.c
+            ${TARGET_SOURCES})
+    add_definitions(-DHAVE_LUA_SWIG)
+    message(STATUS "Lua SWIG:          wrapper found")
+endif (EXISTS ${PM3_ROOT}/client/src/pm3_luawrap.c)
+
+# Python SWIG
+if (NOT SKIPPYTHON EQUAL 1)
+    if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+        if (EXISTS ${PM3_ROOT}/client/src/pm3_pywrap.c)
+            set (TARGET_SOURCES
+                    ${PM3_ROOT}/client/src/pm3_pywrap.c
+                    ${TARGET_SOURCES})
+            add_definitions(-DHAVE_PYTHON_SWIG)
+            message(STATUS "Python SWIG:       wrapper found")
+        endif (EXISTS ${PM3_ROOT}/client/src/pm3_pywrap.c)
+    endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
+endif (NOT SKIPPYTHON EQUAL 1)
 message(STATUS "===================================================================")
 
 add_executable(proxmark3

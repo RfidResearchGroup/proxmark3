@@ -29,12 +29,11 @@
 #include "aidsearch.h"
 #include "cmdhf.h"       // handle HF plot
 #include "protocols.h"   // MAGIC_GEN_1A
-#include "emv/dump.h"    // dump_buffer
 
 bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);
-static int waitCmd(uint8_t iSelect, uint32_t timeout);
+static int waitCmd(bool i_select, uint32_t timeout);
 
 static const manufactureName manufactureMapping[] = {
     // ID,  "Vendor Country"
@@ -246,20 +245,7 @@ static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("        hf 14a sniff c r"));
     return PM3_SUCCESS;
 }
-static int usage_hf_14a_raw(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-k] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -r    do not read response");
-    PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "       -k    keep signal field ON after receive");
-    PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
-    PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
-    PrintAndLogEx(NORMAL, "       -b    number of bits to send. Useful for send partial byte");
-    PrintAndLogEx(NORMAL, "       -t    timeout in ms");
-    PrintAndLogEx(NORMAL, "       -T    use Topaz protocol to send command");
-    PrintAndLogEx(NORMAL, "       -3    ISO14443-3 select only (skip RATS)");
-    return PM3_SUCCESS;
-}
+
 static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a reader [k|s|x] [3]");
     PrintAndLogEx(NORMAL, "       k    keep the field active after command executed");
@@ -551,8 +537,8 @@ static int CmdHF14AReader(const char *Cmd) {
                 res = PM3_ESOFT;
                 goto plot;
             }
+            PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             if (!(silent && continuous)) {
-                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
                 PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
                 PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
@@ -1027,7 +1013,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         return 4;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
@@ -1118,14 +1104,14 @@ static int CmdHF14AAPDU(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a apdu",
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
                   "hf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
-                  "hf 14a apdu -sd 00A404000E325041592E5359532E444446303100 -> decode apdu\n"
-                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 -> encode standard apdu\n"
+                  "hf 14a apdu -sd 00A404000E325041592E5359532E444446303100        -> decode apdu\n"
+                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256    -> encode standard apdu\n"
                   "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("s",  "select",   "activate field and select card"),
-        arg_lit0("k",  "keep",     "leave the signal field ON after receive response"),
+        arg_lit0("k",  "keep",     "keep signal field ON after receive"),
         arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0("d",  "decapdu",  "decode apdu request if it possible"),
         arg_str0("m",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
@@ -1146,7 +1132,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
     if (makeAPDU && headerlen != 4) {
         PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
         CLIParserFree(ctx);
-        return 1;
+        return PM3_EINVARG;
     }
     extendedAPDU = arg_get_lit(ctx, 6);
     le = arg_get_int_def(ctx, 7, 0);
@@ -1172,19 +1158,19 @@ static int CmdHF14AAPDU(const char *Cmd) {
         if (APDUEncode(&apdu, data, &datalen)) {
             PrintAndLogEx(ERR, "can't make apdu with provided parameters.");
             CLIParserFree(ctx);
-            return 2;
+            return PM3_EINVARG;
         }
 
     } else {
         if (extendedAPDU) {
             PrintAndLogEx(ERR, "make mode not set but here `e` option.");
             CLIParserFree(ctx);
-            return 3;
+            return PM3_EINVARG;
         }
         if (le > 0) {
             PrintAndLogEx(ERR, "make mode not set but here `l` option.");
             CLIParserFree(ctx);
-            return 3;
+            return PM3_EINVARG;
         }
 
         // len = data + PCB(1b) + CRC(2b)
@@ -1192,7 +1178,12 @@ static int CmdHF14AAPDU(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel " : "", leaveSignalON ? "keep " : "", decodeTLV ? "TLV" : "", sprint_hex(data, datalen));
+    PrintAndLogEx(SUCCESS, "( " _YELLOW_("%s%s%s")" )",
+                  activateField ? "select" : "",
+                  leaveSignalON ? ", keep" : "",
+                  decodeTLV ? ", TLV" : ""
+                 );
+    PrintAndLogEx(SUCCESS, ">>> %s", sprint_hex_inrow(data, datalen));
 
     if (decodeAPDU) {
         APDUStruct apdu;
@@ -1208,110 +1199,66 @@ static int CmdHF14AAPDU(const char *Cmd) {
     if (res)
         return res;
 
-    PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(data, datalen));
-
-    PrintAndLogEx(SUCCESS, "APDU response: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
+    PrintAndLogEx(SUCCESS, "<<< %s | %s", sprint_hex_inrow(data, datalen), sprint_ascii(data, datalen));
+    PrintAndLogEx(SUCCESS, "<<< status: %02x %02x - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
 
     // TLV decoder
     if (decodeTLV && datalen > 4) {
         TLVPrintFromBuffer(data, datalen - 2);
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14ACmdRaw(const char *Cmd) {
-    bool reply = 1;
-    bool crc = false;
-    bool keep_field_on = false;
-    bool active = false;
-    bool active_select = false;
-    bool no_rats = false;
-    uint16_t numbits = 0;
-    bool bTimeout = false;
-    uint32_t timeout = 0;
-    bool topazmode = false;
-    char buf[5] = "";
-    int i = 0;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a raw",
+                  "Sends an raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
+                  "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
+                  "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  NULL, "active signal field ON without select"),
+        arg_int0("b",  NULL, "<dec>", "number of bits to send. Useful for send partial byte"),
+        arg_lit0("c",  NULL, "calculate and append CRC"),
+        arg_lit0("k",  NULL, "keep signal field ON after receive"),
+        arg_lit0("3",  NULL, "ISO14443-3 select only (skip RATS)"),
+        arg_lit0("r",  NULL, "do not read response"),
+        arg_lit0("s",  NULL, "active signal field ON with select"),
+        arg_int0("t",  "timeout", "<ms>", "timeout in milliseconds"),
+        arg_lit0(NULL, "topaz", "use Topaz protocol to send command"),
+        arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+
+    bool active = arg_get_lit(ctx, 1);
+    uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 2, 0);
+    bool crc = arg_get_lit(ctx, 3);
+    bool keep_field_on = arg_get_lit(ctx, 4);
+    bool no_rats =  arg_get_lit(ctx, 5);
+    bool reply = (arg_get_lit(ctx, 6) == false);
+    bool active_select = arg_get_lit(ctx, 7);
+    uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 8, 0);
+    bool topazmode = arg_get_lit(ctx, 9);
+
+    int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    uint16_t datalen = 0;
-    uint32_t temp;
+    CLIGetHexWithReturn(ctx, 10, data, &datalen);
+    CLIParserFree(ctx);
 
-    if (strlen(Cmd) < 2) return usage_hf_14a_raw();
+    bool bTimeout = (timeout) ? true : false;
 
-    // strip
-    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
-
-    while (Cmd[i] != '\0') {
-        if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
-        if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
-                case 'h':
-                    return usage_hf_14a_raw();
-                case 'r':
-                    reply = false;
-                    break;
-                case 'c':
-                    crc = true;
-                    break;
-                case 'k':
-                    keep_field_on = true;
-                    break;
-                case 'a':
-                    active = true;
-                    break;
-                case 's':
-                    active_select = true;
-                    break;
-                case 'b':
-                    sscanf(Cmd + i + 2, "%u", &temp);
-                    numbits = temp & 0xFFFF;
-                    i += 3;
-                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
-                    i -= 2;
-                    break;
-                case 't':
-                    bTimeout = true;
-                    sscanf(Cmd + i + 2, "%u", &temp);
-                    timeout = temp;
-                    i += 3;
-                    while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
-                    i -= 2;
-                    break;
-                case 'T':
-                    topazmode = true;
-                    break;
-                case '3':
-                    no_rats = true;
-                    break;
-                default:
-                    return usage_hf_14a_raw();
-            }
-            i += 2;
-            continue;
+    // ensure we can add 2byte crc to input data
+    if (datalen >= sizeof(data) + 2) {
+        if (crc) {
+            PrintAndLogEx(FAILED, "Buffer is full, we can't add CRC to your data");
+            return PM3_EINVARG;
         }
-        if ((Cmd[i] >= '0' && Cmd[i] <= '9') ||
-                (Cmd[i] >= 'a' && Cmd[i] <= 'f') ||
-                (Cmd[i] >= 'A' && Cmd[i] <= 'F')) {
-            buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = Cmd[i];
-            i++;
-
-            if (strlen(buf) >= 2) {
-                sscanf(buf, "%x", &temp);
-                data[datalen] = (uint8_t)(temp & 0xff);
-                *buf = 0;
-                if (++datalen >= sizeof(data)) {
-                    if (crc)
-                        PrintAndLogEx(FAILED, "Buffer is full, we can't add CRC to your data");
-                    break;
-                }
-            }
-            continue;
-        }
-        PrintAndLogEx(FAILED, "Invalid char on input");
-        return PM3_ESOFT;
     }
 
     if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
@@ -1367,19 +1314,19 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     if (reply) {
         int res = 0;
         if (active_select)
-            res = waitCmd(1, timeout);
-        if (!res && datalen > 0)
-            waitCmd(0, timeout);
+            res = waitCmd(true, timeout);
+        if (res == PM3_SUCCESS && datalen > 0)
+            waitCmd(false, timeout);
     }
     return PM3_SUCCESS;
 }
 
-static int waitCmd(uint8_t iSelect, uint32_t timeout) {
+static int waitCmd(bool i_select, uint32_t timeout) {
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, timeout + 1500)) {
         uint16_t len = (resp.oldarg[0] & 0xFFFF);
-        if (iSelect) {
+        if (i_select) {
             len = (resp.oldarg[1] & 0xFFFF);
             if (len) {
                 PrintAndLogEx(SUCCESS, "Card selected. UID[%u]:", len);
@@ -1391,28 +1338,30 @@ static int waitCmd(uint8_t iSelect, uint32_t timeout) {
         }
 
         if (!len)
-            return 1;
+            return PM3_ESOFT;
 
         uint8_t *data = resp.data.asBytes;
 
-        if (iSelect == 0 && len >= 3) {
+        if (i_select == false && len >= 3) {
             bool crc = check_crc(CRC_14443_A, data, len);
 
-            PrintAndLogEx(SUCCESS, "%s[%02X %02X] %s",
-                          sprint_hex(data, len - 2),
-                          data[len - 2],
-                          data[len - 1],
-                          (crc) ? _GREEN_("ok") : _RED_("fail")
-                         );
+            char s[16];
+            sprintf(s,
+                    (crc) ? _GREEN_("%02X %02X") : _RED_("%02X %02X"),
+                    data[len - 2],
+                    data[len - 1]
+                   );
+
+            PrintAndLogEx(SUCCESS, "%s[ %s ]",  sprint_hex(data, len - 2), s);
         } else {
             PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
         }
 
     } else {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return 3;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AAntiFuzz(const char *Cmd) {
@@ -2038,7 +1987,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         break;
                 }
             } else {
-                dump_buffer(&card.ats[pos], calen, NULL, 1);
+                PrintAndLogEx(SUCCESS, "   %s", sprint_hex_inrow(card.ats + pos, calen));
             }
         }
 

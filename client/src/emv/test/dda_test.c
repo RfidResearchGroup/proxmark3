@@ -23,11 +23,10 @@
 #include "dda_test.h"
 #include "../emv_pk.h"
 #include "../crypto.h"
-#include "../dump.h"
 #include "../tlv.h"
 #include "../emv_pki.h"
 #include "ui.h"         // printandlog
-
+#include "util.h"       // print_buffer
 
 struct emv_pk mchip_05 = {
     .rid = { 0xa0, 0x00, 0x00, 0x00, 0x04, },
@@ -161,7 +160,7 @@ static int dda_test_raw(bool verbose) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "issuer cert:");
-        dump_buffer(ipk_data, ipk_data_len, stdout, 0);
+        print_buffer(ipk_data, ipk_data_len, 1);
     }
 
     size_t ipk_pk_len = ipk_data[13];
@@ -191,7 +190,7 @@ static int dda_test_raw(bool verbose) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "crypto hash:");
-        dump_buffer(h, 20, stdout, 0);
+        print_buffer(h, 20, 1);
     }
 
     if (memcmp(ipk_data + ipk_data_len - 21, h, 20)) {
@@ -220,7 +219,7 @@ static int dda_test_raw(bool verbose) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "icc cert:");
-        dump_buffer(iccpk_data, iccpk_data_len, stdout, 0);
+        print_buffer(iccpk_data, iccpk_data_len, 1);
     }
 
     size_t iccpk_pk_len = iccpk_data[19];
@@ -249,7 +248,7 @@ static int dda_test_raw(bool verbose) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "crypto hash1.1:");
-        dump_buffer(h, 20, stdout, 0);
+        print_buffer(h, 20, 1);
     }
 
     if (memcmp(iccpk_data + iccpk_data_len - 21, h, 20)) {
@@ -276,7 +275,7 @@ static int dda_test_raw(bool verbose) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "sdad:");
-        dump_buffer(sdad, sdad_len, stdout, 0);
+        print_buffer(sdad, sdad_len, 1);
     }
 
     ch = crypto_hash_open(HASH_SHA_1);
@@ -297,7 +296,7 @@ static int dda_test_raw(bool verbose) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "crypto hash2:");
-        dump_buffer(h2, 20, stdout, 0);
+        print_buffer(h2, 20, 1);
     }
 
     crypto_hash_close(ch);
@@ -356,7 +355,7 @@ static int dda_test_pk(bool verbose) {
 
     if (verbose) {
         PrintAndLogEx(INFO, "IDN:");
-        dump_buffer(idn->value, idn->len, stdout, 0);
+        print_buffer(idn->value, idn->len, 1);
     }
 
     tlvdb_free(idndb);

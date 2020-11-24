@@ -1776,13 +1776,19 @@ void iClass_Dump(uint8_t *msg) {
     BigBuf_free();
 }
 
-static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac) {
+static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, bool use_mac) {
 
     // write command: cmd, 1 blockno, 8 data, 4 mac
-    uint8_t write[16] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
+    uint8_t write[14] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
+    uint8_t write_len = 14;
     memcpy(write + 2, data, 8);
-    memcpy(write + 10, mac, 4);
-    AddCrc(write + 1, 13);
+
+    if (use_mac) {
+        memcpy(write + 10, mac, 4);
+    } else {
+        AddCrc(write + 1, 9);
+        write_len -= 2;
+    }
 
     uint8_t resp[10] = {0};
     uint32_t eof_time = 0, start_time = 0;
@@ -1819,7 +1825,8 @@ void iClass_WriteBlock(uint8_t *msg) {
 
     iclass_writeblock_req_t *payload = (iclass_writeblock_req_t *)msg;
 
-    uint8_t write[16] = { 0x80 | ICLASS_CMD_UPDATE, payload->req.blockno };
+    uint8_t write[14] = { 0x80 | ICLASS_CMD_UPDATE, payload->req.blockno };
+    uint8_t write_len = 14;
 
     Iso15693InitReader();
 
@@ -1844,23 +1851,30 @@ void iClass_WriteBlock(uint8_t *msg) {
         }
     }
 
-    // calc new mac for write
-    uint8_t wb[9];
-    wb[0] = payload->req.blockno;
-    memcpy(wb + 1, payload->data, 8);
+    // new block data
+    memcpy(write + 2, payload->data, 8);
 
-    if (payload->req.use_replay) {
-        doMAC_N(wb, sizeof(wb), payload->req.key + 4, mac);
+    uint8_t pagemap = get_pagemap(&hdr);
+    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+        // Unsecured tags uses CRC16,  but don't include the UPDATE operation code
+        // byte0 = update op
+        // byte1 = block no
+        // byte2..9 = new block data
+        AddCrc(write + 1, 9);
+        write_len -= 2;
     } else {
+        // Secure tags uses MAC
+        uint8_t wb[9];
+        wb[0] = payload->req.blockno;
+        memcpy(wb + 1, payload->data, 8);
+
         if (payload->req.use_credit_key)
             doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
         else
             doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
-    }
 
-    memcpy(write + 2, payload->data, 8);   // data
-    memcpy(write + 10, mac, sizeof(mac));  // mac
-    AddCrc(write + 1, 13);
+        memcpy(write + 10, mac, sizeof(mac));
+    }
 
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
@@ -1869,7 +1883,7 @@ void iClass_WriteBlock(uint8_t *msg) {
     uint8_t tries = 3;
     while (tries-- > 0) {
 
-        iclass_send_as_reader(write, sizeof(write), &start_time, &eof_time);
+        iclass_send_as_reader(write, write_len, &start_time, &eof_time);
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occured
             res = false;
@@ -1961,22 +1975,30 @@ void iClass_Restore(iclass_restore_req_t *msg) {
     }
 
     // main loop
+    bool use_mac;
     for (uint8_t i = 0; i < msg->item_cnt; i++) {
 
         iclass_restore_item_t item = msg->blocks[i];
 
-        // calc new mac for data, using 1b blockno, 8b data,
-        uint8_t wb[9] = {0};
-        wb[0] = item.blockno;
-        memcpy(wb + 1, item.data, 8);
+        uint8_t pagemap = get_pagemap(&hdr);
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+            // Unsecured tags uses CRC16
+            use_mac = false;
+        } else {
+            // Secure tags uses MAC
+            use_mac = true;
+            uint8_t wb[9] = {0};
+            wb[0] = item.blockno;
+            memcpy(wb + 1, item.data, 8);
 
-        if (msg->req.use_credit_key)
-            doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
-        else
-            doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+            if (msg->req.use_credit_key)
+                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+            else
+                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+        }
 
         // data + mac
-        if (iclass_writeblock_ext(item.blockno, item.data, mac)) {
+        if (iclass_writeblock_ext(item.blockno, item.data, mac, use_mac)) {
             Dbprintf("Write block [%02x] " _GREEN_("successful"), item.blockno);
             written++;
         } else {

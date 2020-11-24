@@ -27,7 +27,7 @@ LD = g++
 SH = sh
 BASH = bash
 PERL = perl
-CCC =foo
+SWIG = swig
 CC_VERSION = $(shell $(CC) -dumpversion 2>/dev/null|sed 's/\..*//')
 CC_VERSION := $(or $(strip $(CC_VERSION)),0)
 
