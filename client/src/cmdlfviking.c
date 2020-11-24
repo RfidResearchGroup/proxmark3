@@ -9,13 +9,10 @@
 // ASK/Manchester, RF/32, 64 bits (complete)
 //-----------------------------------------------------------------------------
 #include "cmdlfviking.h"
-
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
 #include "common.h"
-
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
@@ -23,35 +20,9 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 #include "commonutil.h"     // num_to_bytes
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_viking_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Viking AM tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "Usage: lf viking clone <Card ID - 8 hex digits> <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  <Card Number>  : 8 digit hex viking card number");
-    PrintAndLogEx(NORMAL, "  <Q5>           : specify writing to Q5/T5555 tag)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking clone 1A337 Q5") "     - encode for Q5/T5555 tag");
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_viking_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of viking card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "Per viking format, the card number is 8 digit hex number.  Larger values are truncated.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf viking sim <Card-Number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  <Card Number>   : 8 digit hex viking card number");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf viking sim 1A337"));
-    return PM3_SUCCESS;
-}
 
 //see ASKDemod for what args are accepted
 int demodViking(bool verbose) {
@@ -95,31 +66,48 @@ static int CmdVikingRead(const char *Cmd) {
 }
 
 static int CmdVikingClone(const char *Cmd) {
-    uint32_t id = 0;
-    uint64_t rawID = 0;
-    bool Q5 = false;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_viking_clone();
 
-    id = param_get32ex(Cmd, 0, 0, 16);
-    if (id == 0) return usage_lf_viking_clone();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf viking clone",
+                  "clone a Viking AM tag to a T55x7 or Q5/T5555 tag.",
+                  "lf viking clone --cn 01A337\n"
+                  "lf viking clone --cn 01A337 --q5   -> encode for Q5/T5555 tag"
+                 );
 
-    cmdp = tolower(param_getchar(Cmd, 1));
-    if (cmdp == 'q')
-        Q5 = true;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0(NULL, "cn", "<hex>", "8 digit hex viking card number"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    rawID = getVikingBits(id);
+    int raw_len = 0;
+    uint8_t raw[4] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    uint32_t id = bytes_to_num(raw, raw_len);
+    if (id == 0) {
+        PrintAndLogEx(ERR, "Cardnumber can't be zero");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool q5 = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    uint64_t rawID = getVikingBits(id);
 
     struct p {
         bool Q5;
         uint8_t blocks[8];
     } PACKED payload;
-    payload.Q5 = Q5;
+    payload.Q5 = q5;
 
     num_to_bytes(rawID, 8, &payload.blocks[0]);
 
     PrintAndLogEx(INFO, "Preparing to clone Viking tag on " _YELLOW_("%s") " - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s")
-                  , (Q5) ? "Q5/T5555" : "T55x7"
+                  , (q5) ? "Q5/T5555" : "T55x7"
                   , id
                   ,  sprint_hex(payload.blocks, sizeof(payload.blocks))
                  );
@@ -138,15 +126,35 @@ static int CmdVikingClone(const char *Cmd) {
 }
 
 static int CmdVikingSim(const char *Cmd) {
-    uint32_t id = 0;
-    uint64_t rawID = 0;
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_viking_sim();
 
-    id = param_get32ex(Cmd, 0, 0, 16);
-    if (id == 0) return usage_lf_viking_sim();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf viking sim",
+                  "Enables simulation of viking card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "Per viking format, the card number is 8 digit hex number.  Larger values are truncated.",
+                  "lf viking sim --cn 01A337"
+                 );
 
-    rawID = getVikingBits(id);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0(NULL, "cn", "<hex>", "8 digit hex viking card number"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int raw_len = 0;
+    uint8_t raw[4] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    uint32_t id = bytes_to_num(raw, raw_len);
+    if (id == 0) {
+        PrintAndLogEx(ERR, "Cardnumber can't be zero");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    CLIParserFree(ctx);
+
+    uint64_t rawID = getVikingBits(id);
 
     PrintAndLogEx(SUCCESS, "Simulating Viking - ID " _YELLOW_("%08X") " raw " _YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
