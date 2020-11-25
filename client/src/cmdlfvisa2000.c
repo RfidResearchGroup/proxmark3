@@ -207,7 +207,7 @@ static int CmdVisa2kClone(const char *Cmd) {
     blocks[2] = id;
     blocks[3] = (visa_parity(id) << 4) | visa_chksum(id);
 
-    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to " _YELLOW_("%s") " with CardId: %"PRIu64, cardtype, id);
+    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to " _YELLOW_("%s") " with CardId: %"PRIu32, cardtype, id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
