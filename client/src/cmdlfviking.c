@@ -88,15 +88,17 @@ static int CmdVikingClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf viking clone",
-                  "clone a Viking AM tag to a T55x7 or Q5/T5555 tag.",
+                  "clone a Viking AM tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
                   "lf viking clone --cn 01A337\n"
                   "lf viking clone --cn 01A337 --q5   -> encode for Q5/T5555 tag"
+                  "lf viking clone --cn 112233 --em   -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_strx0(NULL, "cn", "<hex>", "8 digit hex viking card number"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -104,29 +106,41 @@ static int CmdVikingClone(const char *Cmd) {
     int raw_len = 0;
     uint8_t raw[4] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
 
     uint32_t id = bytes_to_num(raw, raw_len);
     if (id == 0) {
         PrintAndLogEx(ERR, "Cardnumber can't be zero");
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool q5 = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     uint64_t rawID = getVikingBits(id);
 
     struct p {
         bool Q5;
+        bool EM;
         uint8_t blocks[8];
     } PACKED payload;
     payload.Q5 = q5;
+    payload.EM = em;
 
     num_to_bytes(rawID, 8, &payload.blocks[0]);
 
+    char cardtype[16] = {"T55x7"};
+    if (q5) 
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    else if (em)
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+
     PrintAndLogEx(INFO, "Preparing to clone Viking tag on " _YELLOW_("%s") " - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s")
-                  , (q5) ? "Q5/T5555" : "T55x7"
+                  , cardtype
                   , id
                   ,  sprint_hex(payload.blocks, sizeof(payload.blocks))
                  );
@@ -228,7 +242,7 @@ uint64_t getVikingBits(uint32_t id) {
     ret |= checksum;
     return ret;
 }
-// by marshmellow
+
 // find viking preamble 0xF200 in already demoded data
 int detectViking(uint8_t *src, size_t *size) {
     //make sure buffer has data

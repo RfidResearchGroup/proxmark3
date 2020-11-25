@@ -1037,10 +1037,11 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_VIKING_CLONE: {
             struct p {
                 bool Q5;
+                bool EM;
                 uint8_t blocks[8];
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            CopyVikingtoT55xx(payload->blocks, payload->Q5);
+            CopyVikingtoT55xx(payload->blocks, payload->Q5, payload->EM);
             break;
         }
         case CMD_LF_COTAG_READ: {
