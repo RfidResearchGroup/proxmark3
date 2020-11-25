@@ -104,9 +104,11 @@ int demodSecurakey(bool verbose) {
     if (bitLen <= 32)
         PrintAndLogEx(SUCCESS, "Wiegand: " _GREEN_("%08X") " parity (%s)", (lWiegand << (bitLen / 2)) | rWiegand, parity ? _GREEN_("ok") : _RED_("fail"));
 
-    PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
-    PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
-    PrintAndLogEx(INFO, "Help the community identify this format further\nby sharing your tag on the pm3 forum or discord");
+    if ( verbose ) {
+        PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
+        PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
+        PrintAndLogEx(INFO, "Help the community identify this format further\nby sharing your tag on the pm3 forum or discord");
+    }
     return PM3_SUCCESS;
 }
 
@@ -115,10 +117,28 @@ static int CmdSecurakeyDemod(const char *Cmd) {
     return demodSecurakey(true);
 }
 
-static int CmdSecurakeyRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 8000);
-    return demodSecurakey(true);
+static int CmdSecurakeyReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey reader",
+                  "read a Securakey tag",
+                  "lf securakey reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 8000);
+        demodSecurakey(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdSecurakeyClone(const char *Cmd) {
@@ -220,11 +240,11 @@ static int CmdSecurakeySim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod", CmdSecurakeyDemod, AlwaysAvailable, "Demodulate an Securakey tag from the GraphBuffer"},
-    {"read",  CmdSecurakeyRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdSecurakeyClone, IfPm3Lf,         "clone Securakey tag to T55x7"},
-    {"sim",   CmdSecurakeySim,   IfPm3Lf,         "simulate Securakey tag"},
+    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"demod",   CmdSecurakeyDemod,  AlwaysAvailable, "Demodulate an Securakey tag from the GraphBuffer"},
+    {"reader",  CmdSecurakeyReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone",   CmdSecurakeyClone,  IfPm3Lf,         "clone Securakey tag to T55x7"},
+    {"sim",     CmdSecurakeySim,    IfPm3Lf,         "simulate Securakey tag"},
     {NULL, NULL, NULL, NULL}
 };
 
