@@ -21,6 +21,7 @@
 #include "protocols.h"  // t55xx defines
 #include "cmdlft55xx.h" // clone..
 #include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
 
@@ -145,13 +146,17 @@ static int CmdSecurakeyClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf securakey clone",
-                  "clone a Securakey tag to a T55x7 tag.",
-                  "lf securakey clone --raw 7FCB400001ADEA5344300000"
+                  "clone a Securakey tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf securakey clone --raw 7FCB400001ADEA5344300000\n"
+                  "lf securakey clone --q5 --raw 7FCB400001ADEA5344300000 -> encode for Q5/T5555 tag\n"
+                  "lf securakey clone --em --raw 7FCB400001ADEA5344300000 -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes"),
+        arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -160,13 +165,19 @@ static int CmdSecurakeyClone(const char *Cmd) {
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     if (raw_len != 12) {
         PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)");
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    CLIParserFree(ctx);
 
     uint32_t blocks[4];
     for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
@@ -175,11 +186,28 @@ static int CmdSecurakeyClone(const char *Cmd) {
 
     //Securakey - compat mode, ASK/Man, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_40 | 3 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(40) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
 
-    PrintAndLogEx(INFO, "Preparing to clone Securakey to T55x7 with raw hex");
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_SECURAKEY_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+    PrintAndLogEx(INFO, "Preparing to clone Securakey to " _YELLOW_("%s") "  with raw hex", cardtype);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf securakey reader`") " to verify");
     return res;
