@@ -1348,7 +1348,7 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     int key_len = 0;
     uint8_t key[8] = {0};
-    bool have_debit_key = false;
+    bool auth = false;
 
     CLIGetHexWithReturn(ctx, 2, key, &key_len);
 
@@ -1361,7 +1361,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     }
 
     if (key_len > 0) {
-        have_debit_key = true;
+        auth = true;
         if (key_len != 8) {
             PrintAndLogEx(ERR, "Debit key is incorrect length");
             CLIParserFree(ctx);
@@ -1371,7 +1371,7 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     if (deb_key_nr >= 0) {
         if (deb_key_nr < ICLASS_KEYS_MAX) {
-            have_debit_key = true;
+            auth = true;
             memcpy(key, iClass_Key_Table[deb_key_nr], 8);
             PrintAndLogEx(INFO, "AA1 (debit) index %u", deb_key_nr);
         } else {
@@ -1396,6 +1396,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     }
 
     if (credit_key_len > 0) {
+        auth = true;
         have_credit_key = true;
         if (key_len != 8) {
             PrintAndLogEx(ERR, "Credit key is incorrect length");
@@ -1406,6 +1407,7 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     if (credit_key_nr >= 0) {
         if (credit_key_nr < ICLASS_KEYS_MAX) {
+            auth = true;
             have_credit_key = true;
             memcpy(key, iClass_Key_Table[credit_key_nr], 8);
             PrintAndLogEx(INFO, "AA2 (credit) index %u", credit_key_nr);
@@ -1482,11 +1484,11 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         PrintAndLogEx(INFO, "Dumping all available memory, block 3 - %u (0x%02x)", app_limit1, app_limit1);
-        if (have_debit_key) {
+        if (auth) {
             PrintAndLogEx(INFO, "No keys needed, ignoring user supplied key");
         }
     } else {
-        if (have_debit_key == false) {
+        if (auth == false) {
             PrintAndLogEx(FAILED, "Run command with keys");
             return PM3_ESOFT;
         }
@@ -1499,7 +1501,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         .req.use_credit_key = false,
         .req.use_replay = use_replay,
         .req.send_reply = true,
-        .req.do_auth = have_debit_key,
+        .req.do_auth = auth,
         .end_block = app_limit1,
     };
     memcpy(payload.req.key, key, 8);
@@ -1937,13 +1939,13 @@ static int CmdHFiClassRestore(const char *Cmd) {
     if (verbose) {
         PrintAndLogEx(INFO, "Preparing to restore block range %02d..%02d", startblock, endblock);
 
-        PrintAndLogEx(INFO, "------+----------------------");
-        PrintAndLogEx(INFO, "block | data");
-        PrintAndLogEx(INFO, "------+----------------------");
+        PrintAndLogEx(INFO, "---------+----------------------");
+        PrintAndLogEx(INFO, " block#  | data");
+        PrintAndLogEx(INFO, "---------+----------------------");
 
         for (uint8_t i = 0; i < payload->item_cnt; i++) {
             iclass_restore_item_t item = payload->blocks[i];
-            PrintAndLogEx(INFO, "  %02d  | %s", item.blockno, sprint_hex_inrow(item.data, sizeof(item.data)));
+            PrintAndLogEx(INFO, "%3d/0x%02X | %s", item.blockno, item.blockno, sprint_hex_inrow(item.data, sizeof(item.data)));
         }
     }
 
@@ -2277,9 +2279,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     int i = startblock;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "blk | data                    | ascii    |lck| info");
-    PrintAndLogEx(INFO, "----+-------------------------+----------+---+--------------");
-    PrintAndLogEx(INFO, " 00 | " _GREEN_("%s") " |   | CSN ", sprint_hex_ascii(iclass_dump, 8));
+    PrintAndLogEx(INFO, " block#  | data                    | ascii    |lck| info");
+    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+--------------");
+    PrintAndLogEx(INFO, "  0/0x00 | " _GREEN_("%s") " |   | CSN ", sprint_hex_ascii(iclass_dump, 8));
 
     if (i != 1)
         PrintAndLogEx(INFO, "....");
@@ -2332,18 +2334,18 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                 s = info_nonks[i];
             }
 
-            PrintAndLogEx(INFO, " %02d | %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
+            PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s ", i, i, sprint_hex_ascii(blk, 8), lockstr, s);
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
             const char *s = info_ks[6];
             if (i < 6) {
                 s = info_ks[i];
             }
-            PrintAndLogEx(INFO, " %02d | %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
+            PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s ", i, i, sprint_hex_ascii(blk, 8), lockstr, s);
         }
         i++;
     }
-    PrintAndLogEx(INFO, "----+-------------------------+----------+---+--------------");
+    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+--------------");
     PrintAndLogEx(NORMAL, "");
 }
 
