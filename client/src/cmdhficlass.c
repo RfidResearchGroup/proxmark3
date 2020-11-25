@@ -71,25 +71,6 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_restore(void) {
-    PrintAndLogEx(NORMAL, "Restore data from dumpfile onto a iCLASS tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass restore f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h            : Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to restore");
-    PrintAndLogEx(NORMAL, "  b <block>    : The first block to restore as 2 hex symbols");
-    PrintAndLogEx(NORMAL, "  l <last blk> : The last block to restore as 2 hex symbols");
-    PrintAndLogEx(NORMAL, "  k <key>      : Access key as 16 hex symbols or 1 hex to select key from memory");
-    PrintAndLogEx(NORMAL, "  c            : If 'c' is specified, the key set is assumed to be the credit key\n");
-    PrintAndLogEx(NORMAL, "  e            : If 'e' is specified, elite computations applied to key");
-    PrintAndLogEx(NORMAL, "  r            : If 'r' is specified, no computations applied to key (raw)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass restore f hf-iclass-AA162D30F8FF12F1-dump.bin b 06 l 1A k 1122334455667788 e"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass restore f hf-iclass-AA162D30F8FF12F1-dump b 05 l 19 k 0"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass restore f hf-iclass-AA162D30F8FF12F1-dump b 06 l 19 k 0 e"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_writeblock(void) {
     PrintAndLogEx(NORMAL, "Write data to a iCLASS tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass wrbl b <block> d <data> k <key> [c|e|r|v]\n");
@@ -1821,92 +1802,75 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
 }
 
 static int CmdHFiClassRestore(const char *Cmd) {
-    char filename[FILE_PATH_SIZE] = { 0x00 };
-    char tempStr[50] = {0};
-    uint8_t KEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t keyNbr = 0;
-    uint8_t fileNameLen = 0;
-    uint8_t startblock = 0;
-    uint8_t endblock = 0;
-    uint8_t dataLen = 0;
-    bool got_startblk = false, got_endblk = false;
-    bool use_credit_key = false;
-    bool elite = false;
-    bool rawkey = false;
-    bool errors = false;
-    bool verbose = false;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass restore",
+                  "Restore data from dumpfile onto a iCLASS tag",
+                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 06 --last 1A -k 1122334455667788 --elite\n"
+                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 05 --last 19 --ki 0\n"
+                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 06 --last 19 --ki 0 --elite");
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_restore();
-            case 'b':
-                startblock = param_get8ex(Cmd, cmdp + 1, 07, 16);
-                got_startblk = true;
-                cmdp += 2;
-                break;
-            case 'c':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("CREDIT"));
-                use_credit_key = true;
-                cmdp++;
-                break;
-            case 'e':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
-                elite = true;
-                cmdp++;
-                break;
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                if (fileNameLen < 1) {
-                    PrintAndLogEx(WARNING, "No filename found after f");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'k':
-                dataLen = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (dataLen == 16) {
-                    errors = param_gethex(tempStr, 0, KEY, dataLen);
-                } else if (dataLen == 1) {
-                    keyNbr = param_get8(Cmd, cmdp + 1);
-                    if (keyNbr < ICLASS_KEYS_MAX) {
-                        PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8));
-                        memcpy(KEY, iClass_Key_Table[keyNbr], 8);
-                    } else {
-                        PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
-                        errors = true;
-                    }
-                } else {
-                    PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'l':
-                endblock = param_get8ex(Cmd, cmdp + 1, 07, 16);
-                got_endblk = true;
-                cmdp += 2;
-                break;
-            case 'r':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
-                rawkey = true;
-                cmdp++;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "specify a filename to restore"),
+        arg_str0("k", "key", "<key>", "Access key as 16 hex symbols"),
+        arg_int0(NULL, "ki", "<key idx>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int1(NULL, "first", "<first block>", "The first block number to restore as an integer"),
+        arg_int1(NULL, "last", "<last block>", "The last block number to restore as an integer"),
+        arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
+        arg_lit0(NULL, "elite", "elite computations applied to key"),
+        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int key_len = 0;
+    uint8_t key[8] = {0};
+
+    CLIGetHexWithReturn(ctx, 2, key, &key_len);
+
+    int key_nr = arg_get_int_def(ctx, 3, -1);
+
+    if (key_len > 0 && key_nr >= 0) {
+        PrintAndLogEx(ERR, "Please specify key or index, not both");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
-    if (got_endblk == false || got_startblk == false)
-        errors = true;
 
-    if (errors || cmdp < 8) return usage_hf_iclass_restore();
+    if (key_len > 0) {
+        if (key_len != 8) {
+            PrintAndLogEx(ERR, "Key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else if (key_nr >= 0) {
+        if (key_nr < ICLASS_KEYS_MAX) {
+            memcpy(key, iClass_Key_Table[key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else {
+        PrintAndLogEx(ERR, "Please specify a key or key index");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int startblock = arg_get_int_def(ctx, 4, 0);
+    int endblock = arg_get_int_def(ctx, 5, 0);
+
+    bool use_credit_key = arg_get_lit(ctx, 6);
+    bool elite = arg_get_lit(ctx, 7);
+    bool rawkey = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
+
+    CLIParserFree(ctx);
 
     if (rawkey + elite > 1) {
         PrintAndLogEx(FAILED, "Can not use both 'e', 'r'");
@@ -1954,7 +1918,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     payload->req.blockno = startblock;
     payload->req.send_reply = true;
     payload->req.do_auth = true;
-    memcpy(payload->req.key, KEY, 8);
+    memcpy(payload->req.key, key, 8);
 
     payload->item_cnt = (endblock - startblock + 1);
 
@@ -1971,7 +1935,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     free(dump);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "Preparing to restore block range 0x%02x..0x%02x", startblock, endblock);
+        PrintAndLogEx(INFO, "Preparing to restore block range %02d..%02d", startblock, endblock);
 
         PrintAndLogEx(INFO, "------+----------------------");
         PrintAndLogEx(INFO, "block | data");
@@ -1979,7 +1943,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
         for (uint8_t i = 0; i < payload->item_cnt; i++) {
             iclass_restore_item_t item = payload->blocks[i];
-            PrintAndLogEx(INFO, "  %02X  | %s", item.blockno, sprint_hex_inrow(item.data, sizeof(item.data)));
+            PrintAndLogEx(INFO, "  %02d  | %s", item.blockno, sprint_hex_inrow(item.data, sizeof(item.data)));
         }
     }
 
@@ -2313,9 +2277,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     int i = startblock;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, " blk| data                    | ascii    |lck| info");
+    PrintAndLogEx(INFO, "blk | data                    | ascii    |lck| info");
     PrintAndLogEx(INFO, "----+-------------------------+----------+---+--------------");
-    PrintAndLogEx(INFO, "0x00| " _GREEN_("%s") " |   | CSN ", sprint_hex_ascii(iclass_dump, 8));
+    PrintAndLogEx(INFO, " 00 | " _GREEN_("%s") " |   | CSN ", sprint_hex_ascii(iclass_dump, 8));
 
     if (i != 1)
         PrintAndLogEx(INFO, "....");
@@ -2368,14 +2332,14 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                 s = info_nonks[i];
             }
 
-            PrintAndLogEx(INFO, "0x%02X| %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
+            PrintAndLogEx(INFO, " %02d | %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
             const char *s = info_ks[6];
             if (i < 6) {
                 s = info_ks[i];
             }
-            PrintAndLogEx(INFO, "0x%02X| %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
+            PrintAndLogEx(INFO, " %02d | %s | %s | %s ", i, sprint_hex_ascii(blk, 8), lockstr, s);
         }
         i++;
     }
@@ -2388,14 +2352,14 @@ static int CmdHFiClassView(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass view",
                   "Print a iCLASS tag dump file",
                   "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
-                  "hf iclass view --startblock 1 --file hf-iclass-AA162D30F8FF12F1-dump.bin\n");
+                  "hf iclass view --first 1 --file hf-iclass-AA162D30F8FF12F1-dump.bin\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>",  "filename of dump"),
-        arg_int0("s", "startblock", "<dec>", "print from this block (default block6)"),
-        arg_int0("e", "endblock", "<dec>",   "end printing at this block (default 0, ALL)"),
-        arg_lit0("v", "verbose",             "verbose output"),
+        arg_int0(NULL, "first", "<first block>", "Begin printing from this block (default block6)"),
+        arg_int0(NULL, "last", "<last block>", "End printing at this block (default 0, ALL)"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2420,8 +2384,7 @@ static int CmdHFiClassView(const char *Cmd) {
     if (verbose) {
         PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, (uint16_t)(bytes_read >> 3), (uint16_t)(bytes_read >> 3));
-        PrintAndLogEx(INFO, "Printing blocks from");
-        PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") " end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
+        PrintAndLogEx(INFO, "Printing blocks from: " _YELLOW_("%02d") " to: " _YELLOW_("%02d"), (startblock == 0) ? 6 : startblock, endblock);
     }
 
     PrintAndLogEx(NORMAL, "");
