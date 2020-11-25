@@ -59,10 +59,30 @@ static int CmdVikingDemod(const char *Cmd) {
 }
 
 //see ASKDemod for what args are accepted
-static int CmdVikingRead(const char *Cmd) {
-    (void)Cmd;
-    lf_read(false, 10000);
-    return demodViking(true);
+static int CmdVikingReader(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf viking reader",
+                  "read a Viking AM tag",
+                  "lf viking reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+
+        lf_read(false, 10000);
+        demodViking(true);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdVikingClone(const char *Cmd) {
@@ -184,7 +204,7 @@ static int CmdVikingSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"demod",   CmdVikingDemod, AlwaysAvailable, "Demodulate a Viking tag from the GraphBuffer"},
-    {"read",    CmdVikingRead,  IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
+    {"reader",  CmdVikingReader,  IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
     {"clone",   CmdVikingClone, IfPm3Lf,         "clone Viking tag to T55x7 or Q5/T5555"},
     {"sim",     CmdVikingSim,   IfPm3Lf,         "simulate Viking tag"},
     {NULL, NULL, NULL, NULL}
