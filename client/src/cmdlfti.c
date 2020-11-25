@@ -8,10 +8,10 @@
 // Low frequency TI commands
 //-----------------------------------------------------------------------------
 
+#include "cmdlfti.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"
 #include "comms.h"
@@ -19,7 +19,7 @@
 #include "ui.h"
 #include "proxgui.h"
 #include "graph.h"
-#include "cmdlfti.h"
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -277,10 +277,27 @@ static int CmdTIDemod(const char *Cmd) {
 }
 
 // read a TI tag and return its ID
-static int CmdTIRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_TI_READ, NULL, 0);
+static int CmdTIReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf ti reader",
+                  "read a TI tag",
+                  "lf ti reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_TI_READ, NULL, 0);
+    } while (cm && !kbd_enter_pressed());
+
     return PM3_SUCCESS;
 }
 
@@ -300,15 +317,15 @@ static int CmdTIWrite(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_TI_WRITE, arg0, arg1, arg2, NULL, 0);
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf ti read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf ti reader`") " to verify");
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",      CmdHelp,        AlwaysAvailable, "This help"},
-    {"demod",     CmdTIDemod,     AlwaysAvailable, "Demodulate raw bits for TI-type LF tag from the GraphBuffer"},
-    {"read",      CmdTIRead,      IfPm3Lf,         "Read and decode a TI 134 kHz tag"},
-    {"write",     CmdTIWrite,     IfPm3Lf,         "Write new data to a r/w TI 134 kHz tag"},
+    {"help",    CmdHelp,      AlwaysAvailable, "This help"},
+    {"demod",   CmdTIDemod,   AlwaysAvailable, "Demodulate raw bits for TI-type LF tag from the GraphBuffer"},
+    {"reader",  CmdTIReader,  IfPm3Lf,         "Read and decode a TI 134 kHz tag"},
+    {"write",   CmdTIWrite,   IfPm3Lf,         "Write new data to a r/w TI 134 kHz tag"},
     {NULL, NULL, NULL, NULL}
 };
 
