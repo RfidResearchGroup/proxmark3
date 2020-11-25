@@ -8,10 +8,8 @@
 // ASK/Manchester, RF/40, 96 bits long (unknown cs)
 //-----------------------------------------------------------------------------
 #include "cmdlfsecurakey.h"
-
 #include <string.h>         // memcpy
 #include <ctype.h>          // tolower
-
 #include "commonutil.h"     // ARRAYLEN
 #include "cmdparser.h"      // command_t
 #include "comms.h"
@@ -133,22 +131,20 @@ static int CmdSecurakeyClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes max"),
+        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int datalen = 0;
+    int raw_len = 0;
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
-    CLIGetHexWithReturn(ctx, 1, raw, &datalen);
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
-    if (datalen > 0) {
-        if (datalen != 12) {
-            PrintAndLogEx(ERR, "Data must be 8 bytes (16 HEX characters)");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
+    if (raw_len != 12) {
+        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
     CLIParserFree(ctx);
 
@@ -170,35 +166,56 @@ static int CmdSecurakeyClone(const char *Cmd) {
 }
 
 static int CmdSecurakeySim(const char *Cmd) {
-    PrintAndLogEx(INFO,  _RED_("To be implemented, feel free to contribute!"));
-    return PM3_SUCCESS;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf securakey sim",
-                  "Enables simulation of viking card with specified card number.\n"
+                  "Enables simulation of secura card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf securakey sim --raw 7FCB400001ADEA5344300000"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("r", "raw", "<hex>", " raw hex data. 12 bytes max"),
+        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int datalen = 0;
+
+    int raw_len = 0;
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
-    CLIGetHexWithReturn(ctx, 1, raw, &datalen);
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
-    if (datalen > 0) {
-        if (datalen != 12) {
-            PrintAndLogEx(ERR, "Data must be 8 bytes (16 HEX characters)");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
+    if (raw_len != 12) {
+        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
     CLIParserFree(ctx);
+
+    PrintAndLogEx(SUCCESS, "Simulating SecuraKey -  raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
+
+    uint8_t bs[sizeof(raw) * 8];
+    bytes_to_bytebits(raw, sizeof(raw), bs);
+
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding = 1;
+    payload->invert = 0;
+    payload->separator = 0;
+    payload->clock = 40;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
+
+    PrintAndLogEx(INFO, "Done");
+    if (resp.status != PM3_EOPABORTED)
+        return resp.status;
+
     return PM3_SUCCESS;
 }
 

@@ -446,6 +446,25 @@ void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
     }
 }
 
+void bytes_to_bytebits(void* src, size_t srclen, void* dest) {
+
+    uint8_t *s = (uint8_t*)src;
+    uint8_t *d = (uint8_t*)dest;
+
+    uint32_t i = srclen * 8;
+    while (srclen--) {
+        uint8_t b = s[srclen];
+        d[--i] = (b >> 0) & 1;
+        d[--i] = (b >> 1) & 1;
+        d[--i] = (b >> 2) & 1;
+        d[--i] = (b >> 3) & 1;
+        d[--i] = (b >> 4) & 1;
+        d[--i] = (b >> 5) & 1;
+        d[--i] = (b >> 6) & 1;
+        d[--i] = (b >> 7) & 1;
+    }
+}
+
 // aa,bb,cc,dd,ee,ff,gg,hh, ii,jj,kk,ll,mm,nn,oo,pp
 // to
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
