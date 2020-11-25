@@ -62,9 +62,16 @@ Dump iCLASS card contents
 ```
 Options
 ---
-k <key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
+-f, --file <filename>          filename to save dump to
+-k, --key <key>                debit key as 16 hex symbols OR NR/MAC for replay
+    --ki <key idx>             debit key index to select key from memory 'hf iclass managekeys'
+    --credit <credit key>      credit key as 16 hex symbols
+    --ci <credit idx>          credit key index to select key from memory 'hf iclass managekeys'
+    --elite                    elite computations applied to key
+    --raw                      raw, the key is interpreted as raw block 3/4
+    --nr                       replay of NR/MAC
 
-m3 --> hf iclass dump k 0
+pm3 --> hf iclass dump --ki 0
 ```
 
 Read iCLASS Block
@@ -161,7 +168,7 @@ pm3 --> hf iclass sim 3
 
 Simulate iCLASS Sequence
 ```
-pm3 --> hf iclass dump k 0
+pm3 --> hf iclass dump --ki 0
 pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 pm3 --> hf iclass sim 3
 ```
@@ -177,7 +184,7 @@ e              : If 'e' is specified, elite computations applied to key
 pm3 --> hf iclass sim 2
 pm3 --> hf iclass loclass -f iclass_mac_attack.bin
 pm3 --> hf iclass managekeys n 7 k <Kcus>
-pm3 --> hf iclass dump k 7 e
+pm3 --> hf iclass dump --ki 7 --elite
 ```
 
 Verify custom iCLASS key
