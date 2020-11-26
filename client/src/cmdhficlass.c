@@ -91,25 +91,6 @@ static int usage_hf_iclass_writeblock(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_readblock(void) {
-    PrintAndLogEx(NORMAL, "Read a iCLASS block from tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass rdbl b <block> k <key> [c|e|r|v]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h         : Show this help");
-    PrintAndLogEx(NORMAL, "  b <block> : The block number as 2 hex symbols");
-    PrintAndLogEx(NORMAL, "  k <key>   : access Key as 16 hex symbols or 1 hex to select key from memory OR NR/MAC for replay");
-    PrintAndLogEx(NORMAL, "  c         : credit key assumed\n");
-    PrintAndLogEx(NORMAL, "  e         : elite computations applied to key");
-    PrintAndLogEx(NORMAL, "  r         : raw, no computations applied to key");
-    PrintAndLogEx(NORMAL, "  n         : replay of NR/MAC");
-    PrintAndLogEx(NORMAL, "  v         : verbose output");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass rdbl b 06 k 0011223344556677"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass rdbl b 1B k 0011223344556677 c"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass rdbl b 0A k 0"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, "Calculate new key for updating\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass calc_newkey o <old key> n <new key> s [csn] e\n");
@@ -1373,7 +1354,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         if (deb_key_nr < ICLASS_KEYS_MAX) {
             auth = true;
             memcpy(key, iClass_Key_Table[deb_key_nr], 8);
-            PrintAndLogEx(INFO, "AA1 (debit) index %u", deb_key_nr);
+            PrintAndLogEx(SUCCESS, "Using AA1 (debit) key[%d] " _GREEN_("%s"), deb_key_nr, sprint_hex(iClass_Key_Table[deb_key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
             CLIParserFree(ctx);
@@ -1410,7 +1391,7 @@ static int CmdHFiClassDump(const char *Cmd) {
             auth = true;
             have_credit_key = true;
             memcpy(key, iClass_Key_Table[credit_key_nr], 8);
-            PrintAndLogEx(INFO, "AA2 (credit) index %u", credit_key_nr);
+            PrintAndLogEx(SUCCESS, "Using AA2 (credit) key[%d] " _GREEN_("%s"), credit_key_nr, sprint_hex(iClass_Key_Table[credit_key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
             CLIParserFree(ctx);
@@ -2019,94 +2000,88 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
 }
 
 static int CmdHFiClass_ReadBlock(const char *Cmd) {
-    uint8_t blockno = 0;
-    uint8_t keyType = 0x88; //debit key
-    uint8_t KEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t key_idx = 0;
-    uint8_t key_len = 0;
-    char tempStr[50] = {0};
-    bool got_blockno = false;
-    bool elite = false;
-    bool rawkey = false;
-    bool use_replay = false;
-    bool errors = false;
-    bool auth = false;
-    bool verbose = false;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass rdbl",
+                  "Read a iCLASS block from tag",
+                  "hf iclass rdbl -b 6 -k 0011223344556677\n"
+                  "hf iclass rdbl -b 27 -k 0011223344556677 --credit\n"
+                  "hf iclass rdbl -b 10 --ki 0");
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_readblock();
-            case 'b':
-                blockno = param_get8ex(Cmd, cmdp + 1, 7, 16);
-                got_blockno = true;
-                cmdp += 2;
-                break;
-            case 'c':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("KC credit"));
-                keyType = 0x18;
-                cmdp++;
-                break;
-            case 'e':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
-                elite = true;
-                cmdp++;
-                break;
-            case 'k':
-                auth = true;
-                key_len = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (key_len == 16) {
-                    errors = param_gethex(tempStr, 0, KEY, key_len);
-                } else if (key_len == 1) {
-                    key_idx = param_get8(Cmd, cmdp + 1);
-                    if (key_idx < ICLASS_KEYS_MAX) {
-                        memcpy(KEY, iClass_Key_Table[key_idx], 8);
-                    } else {
-                        PrintAndLogEx(WARNING, "\nERROR: key index is invalid\n");
-                        errors = true;
-                    }
-                } else {
-                    PrintAndLogEx(WARNING, "\nERROR: incorrect key length\n");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'r':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
-                rawkey = true;
-                cmdp++;
-                break;
-            case 'n':
-                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("replay NR/MAC mode"));
-                use_replay = true;
-                cmdp++;
-                break;
-            case 'v':
-                verbose = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<key>", "Access key as 16 hex symbols"),
+        arg_int0(NULL, "ki", "<key idx>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int1("b", "block", "<block>", "The block number to read as an integer"),
+        arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
+        arg_lit0(NULL, "elite", "elite computations applied to key"),
+        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "nr", "replay of NR/MAC"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int key_len = 0;
+    uint8_t key[8] = {0};
+
+    CLIGetHexWithReturn(ctx, 1, key, &key_len);
+
+    int key_nr = arg_get_int_def(ctx, 2, -1);
+
+    if (key_len > 0 && key_nr >= 0) {
+        PrintAndLogEx(ERR, "Please specify key or index, not both");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
-    if (got_blockno == false)
-        errors = true;
+
+    bool auth = false;
+
+    if (key_len > 0) {
+        auth = true;
+        if (key_len != 8) {
+            PrintAndLogEx(ERR, "Key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else if (key_nr >= 0) {
+        if (key_nr < ICLASS_KEYS_MAX) {
+            auth = true;
+            memcpy(key, iClass_Key_Table[key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else {
+        PrintAndLogEx(ERR, "Please specify a key or key index");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int blockno = arg_get_int_def(ctx, 3, 0);
+
+    uint8_t keyType = 0x88; //debit key
+    if (arg_get_lit(ctx, 4)) {
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
+        keyType = 0x18; //credit key
+    }
+
+    bool elite = arg_get_lit(ctx, 5);
+    bool rawkey = arg_get_lit(ctx, 6);
+    bool use_replay = arg_get_lit(ctx, 7);
+    bool verbose = arg_get_lit(ctx, 8);
+
+    CLIParserFree(ctx);
 
     if ((use_replay + rawkey + elite) > 1) {
-        PrintAndLogEx(FAILED, "Can not use a combo of 'e', 'r', 'n'");
-        errors = true;
+        PrintAndLogEx(ERR, "Can not use a combo of 'e', 'r', 'n'");
+        return PM3_EINVARG;
     }
 
-    if (errors) return usage_hf_iclass_readblock();
-
     if (verbose) {
-        if (key_len == 1)
-            PrintAndLogEx(SUCCESS, "Using key[%d] %s", key_idx, sprint_hex(KEY, 8));
-        else
-            PrintAndLogEx(SUCCESS, "Using key %s", sprint_hex(KEY, 8));
+        if (key_len > 0)
+            PrintAndLogEx(SUCCESS, "Using key %s", sprint_hex(key, 8));
     }
 
     if (auth == false && verbose) {
@@ -2115,7 +2090,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     }
 
     uint8_t data[8] = {0};
-    int res = iclass_read_block(KEY, blockno, keyType, elite, rawkey, use_replay, verbose, auth, data);
+    int res = iclass_read_block(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, data);
     if (res != PM3_SUCCESS)
         return res;
 
