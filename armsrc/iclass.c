@@ -1999,10 +1999,10 @@ void iClass_Restore(iclass_restore_req_t *msg) {
 
         // data + mac
         if (iclass_writeblock_ext(item.blockno, item.data, mac, use_mac)) {
-            Dbprintf("Write block [%02x] " _GREEN_("successful"), item.blockno);
+            Dbprintf("Write block [%3d/0x%02X] " _GREEN_("successful"), item.blockno, item.blockno);
             written++;
         } else {
-            Dbprintf("Write block [%02x] " _RED_("failed"), item.blockno);
+            Dbprintf("Write block [%3d/0x%02X] " _RED_("failed"), item.blockno, item.blockno);
         }
     }
 
