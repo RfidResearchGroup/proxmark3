@@ -105,7 +105,7 @@ int demodSecurakey(bool verbose) {
     if (bitLen <= 32)
         PrintAndLogEx(SUCCESS, "Wiegand: " _GREEN_("%08X") " parity (%s)", (lWiegand << (bitLen / 2)) | rWiegand, parity ? _GREEN_("ok") : _RED_("fail"));
 
-    if ( verbose ) {
+    if (verbose) {
         PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
         PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
         PrintAndLogEx(INFO, "Help the community identify this format further\nby sharing your tag on the pm3 forum or discord");

@@ -220,10 +220,10 @@ static int CmdPyramidClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1(NULL,"fc", "<dec>", "8-bit value facility code"),
+        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
         arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
-        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),        
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -301,7 +301,7 @@ static int CmdPyramidSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1(NULL,"fc", "<dec>", "8-bit value facility code"),
+        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
         arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
         arg_param_end
     };
