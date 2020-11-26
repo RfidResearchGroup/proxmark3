@@ -142,7 +142,7 @@ static int CmdVikingClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Viking tag on " _YELLOW_("%s") " - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s")
                   , cardtype
                   , id
-                  ,  sprint_hex(payload.blocks, sizeof(payload.blocks))
+                  , sprint_hex(payload.blocks, sizeof(payload.blocks))
                  );
 
     clearCommandBuffer();
