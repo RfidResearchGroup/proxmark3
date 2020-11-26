@@ -98,7 +98,7 @@ static int CmdVikingClone(const char *Cmd) {
         arg_param_begin,
         arg_strx0(NULL, "cn", "<hex>", "8 digit hex viking card number"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
-        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),        
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -134,7 +134,7 @@ static int CmdVikingClone(const char *Cmd) {
     num_to_bytes(rawID, 8, &payload.blocks[0]);
 
     char cardtype[16] = {"T55x7"};
-    if (q5) 
+    if (q5)
         snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
     else if (em)
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");

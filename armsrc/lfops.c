@@ -2258,7 +2258,7 @@ void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em) {
     if (q5) {
         data[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
     } else if (em) {
-        data[0] = (EM4x05_SET_BITRATE(32) | EM4x05_MODULATION_MANCHESTER | EM4x05_SET_NUM_BLOCKS(2) );
+        data[0] = (EM4x05_SET_BITRATE(32) | EM4x05_MODULATION_MANCHESTER | EM4x05_SET_NUM_BLOCKS(2));
     }
 
     data[1] = bytes_to_num(blocks, 4);
