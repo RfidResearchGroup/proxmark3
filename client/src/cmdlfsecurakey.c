@@ -175,7 +175,7 @@ static int CmdSecurakeyClone(const char *Cmd) {
     }
 
     if (raw_len != 12) {
-        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)");
+        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
         return PM3_EINVARG;
     }
 
@@ -233,13 +233,12 @@ static int CmdSecurakeySim(const char *Cmd) {
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParserFree(ctx);
 
     if (raw_len != 12) {
         PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Simulating SecuraKey -  raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
 
