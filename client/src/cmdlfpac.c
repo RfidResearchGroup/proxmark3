@@ -25,36 +25,10 @@
 #include "protocols.h"  // t55xx defines
 #include "cmdlft55xx.h" // clone
 #include "parity.h"
+#include "cmdlfem4x05.h"   //
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_pac_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a PAC/Stanley tag to a T55x7 tag.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf pac clone [h] [c <card id>] [b <raw hex>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  c <card id>     : 8 byte card ID");
-    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 16 bytes max");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac clone c CD4F5552 "));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac clone b FF2049906D8511C593155B56D5B2649F "));
-    return PM3_SUCCESS;
-}
-static int usage_lf_pac_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of PAC/Stanley card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "The card ID is 8 byte number. Larger values are truncated.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf pac sim <Card-ID>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  <Card ID>       : 8 byte PAC/Stanley card id");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf pac sim 12345678"));
-    return PM3_SUCCESS;
-}
 
 // PAC_8byte format: preamble (8 mark/idle bits), ascii STX (02), ascii '2' (32), ascii '0' (30), ascii bytes 0..7 (cardid), then xor checksum of cardid bytes
 // all bytes following 8 bit preamble are one start bit (0), 7 data bits (lsb first), odd parity bit, and one stop bit (1)
@@ -189,93 +163,180 @@ static int CmdPacDemod(const char *Cmd) {
     return demodPac(true);
 }
 
-static int CmdPacRead(const char *Cmd) {
-    (void)Cmd;
-    lf_read(false, 4096 * 2 + 20);
-    return demodPac(true);
+static int CmdPacReader(const char *Cmd) {
+    
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pac reader",
+                  "read a pac tag",
+                  "lf pac reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 4096 * 2 + 20);
+        demodPac(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdPacClone(const char *Cmd) {
 
-    uint32_t blocks[5];
-    bool errors = false;
-    uint8_t cmdp = 0;
-    int datalen = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pac clone",
+                  "clone a PAC/Stanley tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf pac clone --cn CD4F5552\n"
+                  "lf pac clone --cn CD4F5552 --q5      -> encode for Q5/T5555 tag\n"
+                  "lf pac clone --cn CD4F5552 --em      -> encode for EM4305/4469\n"
+                  "lf pac clone --raw FF2049906D8511C593155B56D5B2649F"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_pac_clone();
-            case 'c': {
-                // skip first block,  4*4 = 16 bytes left
-                uint8_t rawhex[16] = {0};
-                char cardid[9];
-                int res = param_getstr(Cmd, cmdp + 1, cardid, sizeof(cardid));
-                if (res < 8)
-                    errors = true;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "cn", "<dec>", "8 byte PAC/Stanley card ID"),
+        arg_str0("r", "raw", "<hex>", "raw hex data. 16 bytes max"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-                pacCardIdToRaw(rawhex, cardid);
-                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
-                }
-                cmdp += 2;
-                break;
-            }
-            case 'b': {
-                // skip first block,  4*4 = 16 bytes left
-                uint8_t rawhex[16] = {0};
-                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if (res != 0)
-                    errors = true;
+    uint8_t cnstr[9];
+    int cnlen = 9; 
+    memset(cnstr, 0x00, sizeof(cnstr));
+    CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
 
-                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
-                }
-                cmdp += 2;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    // skip first block,  4*4 = 16 bytes left
+    int raw_len = 0;
+    uint8_t raw[16] = {0};
+    CLIGetHexWithReturn(ctx, 2, raw, &raw_len);
+
+    bool q5 = arg_get_lit(ctx, 3);
+    bool em = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+    if (cnlen && raw_len) {
+        PrintAndLogEx(FAILED, "Can't specify both CardID and raw hex at the same time");
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp == 0) return usage_lf_pac_clone();
+    if (cnlen && cnlen < 8) {
+        PrintAndLogEx(FAILED, "Card ID must be 8 or 9 hex digits (%d)", cnlen);
+        return PM3_EINVARG;
+    }
 
-    //Pac - compat mode, NRZ, data rate 32, 3 data blocks
+    if (cnlen == 8 || cnlen == 9) {
+        pacCardIdToRaw(raw, (char*)cnstr);
+    }
+
+    uint32_t blocks[5];
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    }
+
+    // Pac - compat mode, NRZ, data rate 32, 3 data blocks
     blocks[0] = T55x7_MODULATION_DIRECT | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_DIRECT | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
 
-    PrintAndLogEx(INFO, "Preparing to clone PAC/Stanley tag to T55x7 with raw hex");
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_PAC_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+    PrintAndLogEx(INFO, "Preparing to clone PAC/Stanley tag to " _YELLOW_("%s") " with raw hex " _GREEN_("%s")
+        , cardtype
+        , sprint_hex_inrow(raw, sizeof(raw))
+        );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pac read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pac reader`") " to verify");
     return res;
 }
 
 static int CmdPacSim(const char *Cmd) {
 
-    // NRZ sim.
-    char cardid[9] = { 0 };
-    uint8_t rawBytes[16] = { 0 };
-    uint32_t rawBlocks[4];
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pac_sim();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pac sim",
+                  "Enables simulation of PAC/Stanley card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "The card ID is 8 byte number. Larger values are truncated.",
+                  "lf pac sim --cn CD4F5552\n"
+                  "lf pac sim --raw FF2049906D8511C593155B56D5B2649F"
+                 );
 
-    int res = param_getstr(Cmd, 0, cardid, sizeof(cardid));
-    if (res < 8) return usage_lf_pac_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "cn", "<dec>", "8 byte PAC/Stanley card ID"),
+        arg_str0("r", "raw", "<hex>", "raw hex data. 16 bytes max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t bs[128];
-    pacCardIdToRaw(rawBytes, cardid);
-    for (size_t i = 0; i < ARRAYLEN(rawBlocks); i++) {
-        rawBlocks[i] = bytes_to_num(rawBytes + (i * sizeof(uint32_t)), sizeof(uint32_t));
-        num_to_bytebits(rawBlocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
+    uint8_t cnstr[10];
+    int cnlen = 9; 
+    memset(cnstr, 0x00, sizeof(cnstr));
+    CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
+
+    // skip first block,  4*4 = 16 bytes left
+    int raw_len = 0;
+    uint8_t raw[16] = {0};
+    CLIGetHexWithReturn(ctx, 2, raw, &raw_len);
+    CLIParserFree(ctx);
+
+    if (cnlen && raw_len) {
+        PrintAndLogEx(FAILED, "Can't specify both CardID and raw hex at the same time");
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%s")" raw "_YELLOW_("%08X%08X%08X%08X"), cardid, rawBlocks[0], rawBlocks[1], rawBlocks[2], rawBlocks[3]);
+    if (cnlen && cnlen < 8) {
+        PrintAndLogEx(FAILED, "Card ID must be 8 or 9 hex digits (%d)", cnlen);
+        return PM3_EINVARG;
+    }
 
+    if (cnlen == 8 || cnlen == 9) {
+        pacCardIdToRaw(raw, (char*)cnstr);
+    }
+    uint8_t bs[128];
+    for (size_t i = 0; i < 4; i++) {
+        uint32_t tmp = bytes_to_num(raw + (i * sizeof(uint32_t)), sizeof(uint32_t));
+        num_to_bytebits(tmp, sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
+    }
+
+    if (cnlen == 8 || cnlen == 9) {
+        PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%s")" raw " _YELLOW_("%s")
+            , cnstr
+            , sprint_hex_inrow(raw, raw_len)
+            );
+    } else {
+        PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, raw_len));
+    }
+
+    // NRZ sim.
     lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));
     payload->invert = 0;
     payload->separator = 0;
@@ -297,11 +358,11 @@ static int CmdPacSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,      AlwaysAvailable, "This help"},
-    {"demod", CmdPacDemod,  AlwaysAvailable, "Demodulate a PAC tag from the GraphBuffer"},
-    {"read",  CmdPacRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdPacClone,  IfPm3Lf,         "clone PAC tag to T55x7"},
-    {"sim",   CmdPacSim,    IfPm3Lf,         "simulate PAC tag"},
+    {"help",  CmdHelp,        AlwaysAvailable, "This help"},
+    {"demod", CmdPacDemod,    AlwaysAvailable, "Demodulate a PAC tag from the GraphBuffer"},
+    {"reader",  CmdPacReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone", CmdPacClone,    IfPm3Lf,         "clone PAC tag to T55x7"},
+    {"sim",   CmdPacSim,      IfPm3Lf,         "simulate PAC tag"},
     {NULL, NULL, NULL, NULL}
 };
 
