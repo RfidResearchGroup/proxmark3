@@ -947,8 +947,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "filename of dumpfile"),
-        arg_str0("d", "data", "<encrypted blk>", "3DES encrypted data"),
-        arg_str0("k", "key", "<transport key>", "3DES transport key"),
+        arg_str0("d", "data", "<hex>", "3DES encrypted data"),
+        arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -1183,8 +1183,8 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", "<block data>", "data to encrypt"),
-        arg_str0("k", "key", "<transport key>", "3DES transport key"),
+        arg_str1("d", "data", "<hex>", "data to encrypt"),
+        arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -1292,10 +1292,10 @@ static int CmdHFiClassDump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "filename to save dump to"),
-        arg_str0("k", "key", "<key>", "debit key as 16 hex symbols OR NR/MAC for replay"),
-        arg_int0(NULL, "ki", "<key idx>", "debit key index to select key from memory 'hf iclass managekeys'"),
-        arg_str0(NULL, "credit", "<credit key>", "credit key as 16 hex symbols"),
-        arg_int0(NULL, "ci", "<credit idx>", "credit key index to select key from memory 'hf iclass managekeys'"),
+        arg_str0("k", "key", "<hex>", "debit key as 16 hex symbols OR NR/MAC for replay"),
+        arg_int0(NULL, "ki", "<dec>", "debit key index to select key from memory 'hf iclass managekeys'"),
+        arg_str0(NULL, "credit", "<hex>", "credit key as 16 hex symbols"),
+        arg_int0(NULL, "ci", "<dec>", "credit key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "raw, the key is interpreted as raw block 3/4"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
@@ -1664,10 +1664,10 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<key>", "Access key as 16 hex symbols"),
-        arg_int0(NULL, "ki", "<key idx>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1("b", "block", "<block>", "The block number to read as an integer"),
-        arg_str1("d", "data", "<data>", "data to write as 16 hex symbols"),
+        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int1("b", "block", "<dec>", "The block number to read as an integer"),
+        arg_str1("d", "data", "<hex>", "data to write as 16 hex symbols"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
@@ -1763,10 +1763,10 @@ static int CmdHFiClassRestore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>", "specify a filename to restore"),
-        arg_str0("k", "key", "<key>", "Access key as 16 hex symbols"),
-        arg_int0(NULL, "ki", "<key idx>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1(NULL, "first", "<first block>", "The first block number to restore as an integer"),
-        arg_int1(NULL, "last", "<last block>", "The last block number to restore as an integer"),
+        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int1(NULL, "first", "<dec>", "The first block number to restore as an integer"),
+        arg_int1(NULL, "last", "<dec>", "The last block number to restore as an integer"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
@@ -1977,9 +1977,9 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<key>", "Access key as 16 hex symbols"),
-        arg_int0(NULL, "ki", "<key idx>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1("b", "block", "<block>", "The block number to read as an integer"),
+        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int1("b", "block", "<dec>", "The block number to read as an integer"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
@@ -2298,8 +2298,8 @@ static int CmdHFiClassView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>",  "filename of dump"),
-        arg_int0(NULL, "first", "<first block>", "Begin printing from this block (default block6)"),
-        arg_int0(NULL, "last", "<last block>", "End printing at this block (default 0, ALL)"),
+        arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default block6)"),
+        arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -3224,7 +3224,7 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("r",  "reverse",        "reverse permuted key"),
-        arg_str1(NULL, "key", "<bytes>", "input key"),
+        arg_str1(NULL, "key", "<hex>", "input key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

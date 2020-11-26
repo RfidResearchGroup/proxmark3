@@ -63,10 +63,10 @@ Dump iCLASS card contents
 Options
 ---
 -f, --file <filename>          filename to save dump to
--k, --key <key>                debit key as 16 hex symbols OR NR/MAC for replay
-    --ki <key idx>             debit key index to select key from memory 'hf iclass managekeys'
-    --credit <credit key>      credit key as 16 hex symbols
-    --ci <credit idx>          credit key index to select key from memory 'hf iclass managekeys'
+-k, --key <hex>                debit key as 16 hex symbols OR NR/MAC for replay
+    --ki <dec>                 debit key index to select key from memory 'hf iclass managekeys'
+    --credit <hex>             credit key as 16 hex symbols
+    --ci <dec>                 credit key index to select key from memory 'hf iclass managekeys'
     --elite                    elite computations applied to key
     --raw                      raw, the key is interpreted as raw block 3/4
     --nr                       replay of NR/MAC
@@ -78,9 +78,9 @@ Read iCLASS Block
 ```
 Options
 ---
--k, --key <key>                Access key as 16 hex symbols
--b, --block <block>            The block number to read as an integer
-    --ki <key idx>             Key index to select key from memory 'hf iclass managekeys'
+-k, --key <hex>                Access key as 16 hex symbols
+-b, --block <dec>              The block number to read as an integer
+    --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
     --credit                   key is assumed to be the credit key
     --elite                    elite computations applied to key
     --raw                      no computations applied to key (raw)
@@ -93,14 +93,14 @@ Write to iCLASS Block
 ```
 Options
 ---
--k, --key <key>                Access key as 16 hex symbols
--b, --block <block>            The block number to read as an integer
--d, --data <data>              data to write as 16 hex symbols
-    --ki <key idx>                 Key index to select key from memory 'hf iclass managekeys'
-    --credit                       key is assumed to be the credit key
-    --elite                        elite computations applied to key
-    --raw                          no computations applied to key (raw)
-    --nr                           replay of NR/MAC
+-k, --key <hex>                Access key as 16 hex symbols
+-b, --block <dec>              The block number to read as an integer
+-d, --data <hex>               data to write as 16 hex symbols
+    --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
+    --credit                   key is assumed to be the credit key
+    --elite                    elite computations applied to key
+    --raw                      no computations applied to key (raw)
+    --nr                       replay of NR/MAC
 
 pm3 --> hf iclass wrbl -b 7 -d 6ce099fe7e614fd0 --ki 0
 ```
@@ -128,8 +128,8 @@ Encrypt iCLASS Block
 ```
 Options
 ---
--d, --data <block data>        data to encrypt
--k, --key <transport key>      3DES transport key
+-d, --data <hex>               data to encrypt
+-k, --key <hex>                3DES transport key
 -v, --verbose                  verbose output
 
 pm3 --> hf iclass encrypt -d 0000000f2aa3dba8
@@ -140,8 +140,8 @@ Decrypt iCLASS Block / file
 Options
 ---
 -f, --file <filename>          filename of dumpfile
--d, --data <encrypted blk>     3DES encrypted data
--k, --key <transport key>      3DES transport key
+-d, --data <hex>               3DES encrypted data
+-k, --key <hex>                3DES transport key
 -v, --verbose                  verbose output
 
 pm3 --> hf iclass decrypt -d 2AD4C8211F996871
