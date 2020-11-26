@@ -93,11 +93,16 @@ Write to iCLASS Block
 ```
 Options
 ---
-b <block>  : The block number as 2 hex symbols
-d <data>   : Set the Data to write as 16 hex symbols
-k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+-k, --key <key>                Access key as 16 hex symbols
+-b, --block <block>            The block number to read as an integer
+-d, --data <data>              data to write as 16 hex symbols
+    --ki <key idx>                 Key index to select key from memory 'hf iclass managekeys'
+    --credit                       key is assumed to be the credit key
+    --elite                        elite computations applied to key
+    --raw                          no computations applied to key (raw)
+    --nr                           replay of NR/MAC
 
-pm3 --> hf iclass wrbl b 07 d 6ce099fe7e614fd0 k 0
+pm3 --> hf iclass wrbl -b 7 -d 6ce099fe7e614fd0 --ki 0
 ```
 
 Print keystore
@@ -155,7 +160,7 @@ pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 Clone iCLASS Legacy Sequence
 ```
 pm3 --> hf iclass rdbl -b 7 --ki 0
-pm3 --> hf iclass wrbl b 7 d 6ce099fe7e614fd0 k 0
+pm3 --> hf iclass wrbl -b 7 -d 6ce099fe7e614fd0 --ki 0
 ```
 
 Simulate iCLASS
