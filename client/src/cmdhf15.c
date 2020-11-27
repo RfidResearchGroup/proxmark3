@@ -1725,7 +1725,7 @@ static int CmdHF15Write(const char *Cmd) {
     AddCrc15(req, reqlen);
     reqlen += 2;
 
-    PrintAndLogEx(INFO, "iso15693 writing to page %02d (0x%02X) | data ", pagenum, pagenum);
+    PrintAndLogEx(INFO, "iso15693 writing to page %02d (0x%02X) | data [ %s ] ", pagenum, pagenum, sprint_hex(req, reqlen));
 
     PacketResponseNG resp;
     clearCommandBuffer();

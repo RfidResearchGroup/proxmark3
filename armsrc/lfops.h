@@ -41,7 +41,7 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low);
 
 void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT); // Clone an HID card to T5557/T5567
 
-void CopyVikingtoT55xx(uint8_t *blocks, uint8_t Q5);
+void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em);
 
 int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo);
 

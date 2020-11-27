@@ -11,7 +11,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`auto                   `|N       |`Automated detection process for unknown tags`
-|`clear                  `|Y       |`clear screen`
+|`clear                  `|Y       |`Clear screen`
 |`help                   `|Y       |`This help. Use '<command> help' for details of a particular command.`
 |`hints                  `|Y       |`Turn hints on / off`
 |`msleep                 `|Y       |`Add a pause in milliseconds`
@@ -38,6 +38,7 @@ Check column "offline" for their availability.
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
+|`analyse foo            `|Y       |`muxer`
 
 
 ### data
@@ -256,7 +257,6 @@ Check column "offline" for their availability.
 |`hf iclass restore      `|N       |`[options..] Restore a dump file onto a Picopass / iCLASS tag`
 |`hf iclass sniff        `|N       |`            Eavesdrop Picopass / iCLASS communication`
 |`hf iclass wrbl         `|N       |`[options..] Write Picopass / iCLASS block`
-|`hf iclass autopwn      `|N       |`[options..] Automatic key recovery tool for iCLASS`
 |`hf iclass chk          `|N       |`[options..] Check keys`
 |`hf iclass loclass      `|Y       |`[options..] Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`[options..] Uses authentication trace to check for key in dictionary file`
@@ -773,7 +773,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf nexwatch help       `|Y       |`This help`
 |`lf nexwatch demod      `|Y       |`Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer`
-|`lf nexwatch read       `|N       |`Attempt to Read and Extract tag data from the antenna`
+|`lf nexwatch reader     `|N       |`Attempt to Read and Extract tag data from the antenna`
 |`lf nexwatch clone      `|N       |`clone NexWatch tag to T55x7`
 |`lf nexwatch sim        `|N       |`simulate NexWatch tag`
 
@@ -786,7 +786,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf noralsy help        `|Y       |`This help`
 |`lf noralsy demod       `|Y       |`Demodulate an Noralsy tag from the GraphBuffer`
-|`lf noralsy read        `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf noralsy reader      `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf noralsy clone       `|N       |`clone Noralsy tag to T55x7 or Q5/T5555`
 |`lf noralsy sim         `|N       |`simulate Noralsy tag`
 
@@ -799,7 +799,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf pac help            `|Y       |`This help`
 |`lf pac demod           `|Y       |`Demodulate a PAC tag from the GraphBuffer`
-|`lf pac read            `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf pac reader          `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf pac clone           `|N       |`clone PAC tag to T55x7`
 |`lf pac sim             `|N       |`simulate PAC tag`
 
@@ -812,8 +812,8 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf paradox help        `|Y       |`This help`
 |`lf paradox demod       `|Y       |`Demodulate a Paradox FSK tag from the GraphBuffer`
-|`lf paradox read        `|N       |`Attempt to read and Extract tag data from the antenna`
-|`lf paradox clone       `|N       |`clone paradox tag to T55x7`
+|`lf paradox reader      `|N       |`Attempt to read and Extract tag data from the antenna`
+|`lf paradox clone       `|N       |`clone paradox tag`
 |`lf paradox sim         `|N       |`simulate paradox tag`
 
 
@@ -837,7 +837,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf presco help         `|Y       |`This help`
 |`lf presco demod        `|Y       |`demodulate Presco tag from the GraphBuffer`
-|`lf presco read         `|N       |`Attempt to read and Extract tag data`
+|`lf presco reader       `|N       |`Attempt to read and Extract tag data`
 |`lf presco clone        `|N       |`clone presco tag to T55x7 or Q5/T5555`
 |`lf presco sim          `|N       |`simulate presco tag`
 
@@ -850,7 +850,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf pyramid help        `|Y       |`this help`
 |`lf pyramid demod       `|Y       |`demodulate a Pyramid FSK tag from the GraphBuffer`
-|`lf pyramid read        `|N       |`attempt to read and extract tag data`
+|`lf pyramid reader      `|N       |`attempt to read and extract tag data`
 |`lf pyramid clone       `|N       |`clone pyramid tag to T55x7 or Q5/T5555`
 |`lf pyramid sim         `|N       |`simulate pyramid tag`
 
@@ -863,7 +863,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf securakey help      `|Y       |`This help`
 |`lf securakey demod     `|Y       |`Demodulate an Securakey tag from the GraphBuffer`
-|`lf securakey read      `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf securakey reader    `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf securakey clone     `|N       |`clone Securakey tag to T55x7`
 |`lf securakey sim       `|N       |`simulate Securakey tag`
 
@@ -876,7 +876,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf ti help             `|Y       |`This help`
 |`lf ti demod            `|Y       |`Demodulate raw bits for TI-type LF tag from the GraphBuffer`
-|`lf ti read             `|N       |`Read and decode a TI 134 kHz tag`
+|`lf ti reader           `|N       |`Read and decode a TI 134 kHz tag`
 |`lf ti write            `|N       |`Write new data to a r/w TI 134 kHz tag`
 
 
@@ -918,7 +918,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf viking help         `|Y       |`This help`
 |`lf viking demod        `|Y       |`Demodulate a Viking tag from the GraphBuffer`
-|`lf viking read         `|N       |`Attempt to read and Extract tag data from the antenna`
+|`lf viking reader       `|N       |`Attempt to read and Extract tag data from the antenna`
 |`lf viking clone        `|N       |`clone Viking tag to T55x7 or Q5/T5555`
 |`lf viking sim          `|N       |`simulate Viking tag`
 
@@ -931,14 +931,14 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf visa2000 help       `|Y       |`This help`
 |`lf visa2000 demod      `|Y       |`demodulate an VISA2000 tag from the GraphBuffer`
-|`lf visa2000 read       `|N       |`attempt to read and extract tag data from the antenna`
+|`lf visa2000 reader     `|N       |`attempt to read and extract tag data from the antenna`
 |`lf visa2000 clone      `|N       |`clone Visa2000 tag to T55x7 or Q5/T5555`
 |`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
 
 
 ### mem
 
- { Flash Memory manipulation... }
+ { Flash memory manipulation... }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -953,7 +953,7 @@ Check column "offline" for their availability.
 
 ### reveng
 
- { CRC calculations from RevEng software }
+ { CRC calculations from RevEng software... }
 
 [=] reveng: no mode switch specified. Use reveng -h for help.
 
@@ -975,7 +975,7 @@ Check column "offline" for their availability.
 
 ### script
 
- { Scripting commands }
+ { Scripting commands... }
 
 |command                  |offline |description
 |-------                  |------- |-----------

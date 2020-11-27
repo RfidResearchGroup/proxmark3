@@ -5444,7 +5444,7 @@ static command_t CommandTable[] = {
     {"esave",       CmdHF14AMfESave,        IfPm3Iso14443a,  "Save to file emul dump"},
     {"eset",        CmdHF14AMfESet,         IfPm3Iso14443a,  "Set simulator memory block"},
     {"eview",       CmdHF14AMfEView,        IfPm3Iso14443a,  "View emul memory"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " -----------------------"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic gen1") " -----------------------"},
     {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block"},
     {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector"},
     {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump"},

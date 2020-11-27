@@ -541,7 +541,7 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
             res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen);
             cbor_check(res);
             if (verbose2) {
-                PrintAndLogEx(INFO, "DER certificate[%zu]:", derLen); 
+                PrintAndLogEx(INFO, "DER certificate[%zu]:", derLen);
                 PrintAndLogEx(INFO, "------------------DER-------------------");
                 PrintAndLogEx(INFO, "%s", sprint_hex(der, derLen));
                 PrintAndLogEx(INFO, "----------------DER---------------------");

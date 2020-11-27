@@ -9,20 +9,21 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfnexwatch.h"
-#include <inttypes.h>       // PRIu
+#include <inttypes.h>      // PRIu
 #include <string.h>
-#include <ctype.h>          // tolower
-#include <stdlib.h>         // free, alloc
-
-#include "commonutil.h"     // ARRAYLEN
-#include "cmdparser.h"      // command_t
+#include <ctype.h>         // tolower
+#include <stdlib.h>        // free, alloc
+#include "commonutil.h"    // ARRAYLEN
+#include "cmdparser.h"     // command_t
 #include "comms.h"
 #include "ui.h"
-#include "cmddata.h"        // preamblesearch
+#include "cmddata.h"       // preamblesearch
 #include "cmdlf.h"
 #include "lfdemod.h"
-#include "protocols.h"      // t55xx defines
-#include "cmdlft55xx.h"     // clone..
+#include "protocols.h"     // t55xx defines
+#include "cmdlft55xx.h"    // clone..
+#include "cmdlfem4x05.h"   //
+#include "cliparser.h"
 
 typedef enum {
     SCRAMBLE,
@@ -30,49 +31,6 @@ typedef enum {
 } NexWatchScramble_t;
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_nexwatch_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Nexwatch tag to a T55x7 tag.");
-    PrintAndLogEx(NORMAL, "You can use raw hex values or create a credential based on id, mode");
-    PrintAndLogEx(NORMAL, "and type of credential (Nexkey/Quadrakey)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf nexwatch clone [h] [b <raw hex>] [c <id>] [m <mode>] [n|q]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      r <raw hex>   : raw hex data. 12 bytes max");
-    PrintAndLogEx(NORMAL, "      c <id>        : card id (decimal)");
-    PrintAndLogEx(NORMAL, "      m <mode>      : mode (decimal) (0-15, defaults to 1)");
-    PrintAndLogEx(NORMAL, "      n             : Nexkey credential");
-    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone r 5600000000213C9F8F150C"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone c 521512301 m 1 n") "     -- Nexkey credential");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch clone c 521512301 m 1 q") "     -- Quadrakey credential");
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_nexwatch_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of Nexwatch card");
-    PrintAndLogEx(NORMAL, "You can use raw hex values or create a credential based on id, mode");
-    PrintAndLogEx(NORMAL, "and type of credential (Nexkey/Quadrakey)");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf nexwatch sim [h] <r raw hex> [c <id>] [m <mode>] [n|q]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h            : this help");
-    PrintAndLogEx(NORMAL, "      r <raw hex>  : raw hex data. 16 bytes max");
-    PrintAndLogEx(NORMAL, "      c <id>        : card id (decimal)");
-    PrintAndLogEx(NORMAL, "      m <mode>      : mode (decimal) (0-15, defaults to 1)");
-    PrintAndLogEx(NORMAL, "      n             : Nexkey credential");
-    PrintAndLogEx(NORMAL, "      q             : Quadrakey credential");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim r 5600000000213C9F8F150C"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim c 521512301 m 1 n") "      -- Nexkey credential");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf nexwatch sim c 521512301 m 1 q") "      -- Quadrakey credential");
-    return PM3_SUCCESS;
-}
 
 // scramble parity (1234) -> (4231)
 static uint8_t nexwatch_parity_swap(uint8_t parity) {
@@ -263,168 +221,230 @@ static int CmdNexWatchDemod(const char *Cmd) {
     return demodNexWatch(true);
 }
 
-//by marshmellow
-//see ASKDemod for what args are accepted
-static int CmdNexWatchRead(const char *Cmd) {
-    (void)Cmd;
-    lf_read(false, 20000);
-    return demodNexWatch(true);
+static int CmdNexWatchReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf nexwatch reader",
+                  "read a nexwatch tag",
+                  "lf nexwatch reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 20000);
+        demodNexWatch(!cm);
+    } while (cm && !kbd_enter_pressed());
+    return PM3_SUCCESS;
 }
 
 static int CmdNexWatchClone(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf nexwatch clone",
+                  "clone a Nexwatch tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
+                  "You can use raw hex values or create a credential based on id, mode\n"
+                  "and type of credential (Nexkey / Quadrakey)",
+                  "lf nexwatch clone --raw 5600000000213C9F8F150C00\n"
+                  "lf nexwatch clone --cn 521512301 -m 1 -n    -> Nexkey credential\n"
+                  "lf nexwatch clone --cn 521512301 -m 1 -q    -> Quadrakey credential\n"
+                 );
 
-    // 56000000 00213C9F 8F150C00
-    uint32_t blocks[4];
-    bool use_raw = false;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    int datalen = 0;
-    uint8_t magic = 0xBE;
-    uint32_t cn = 0;
-    uint8_t rawhex[12] = {0x56, 0};
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes"),
+        arg_u64_0(NULL, "cn", "<dec>", "card id"),
+        arg_u64_0("m", "mode", "<dec>", "mode (decimal) (0-15, defaults to 1)"),
+        arg_lit0("n", NULL, "Nexkey credential"),
+        arg_lit0("q", NULL, "Quadrakey credential"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_nexwatch_clone();
-            case 'r': {
-                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if (res != 0)
-                    errors = true;
+    int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0x56, 0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
-                use_raw = true;
-                cmdp += 2;
-                break;
-            }
-            case 'c': {
-                cn = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                uint32_t scrambled;
-                nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
-                num_to_bytes(scrambled, 4, rawhex + 5);
-                cmdp += 2;
-                break;
-            }
-            case 'm': {
-                uint8_t mode = param_get8ex(Cmd, cmdp + 1, 1, 10);
-                mode &= 0x0F;
-                rawhex[9] |= (mode << 4);
-                cmdp += 2;
-                break;
-            }
-            case 'n': {
-                magic = 0x88;
-                cmdp++;
-                break;
-            }
-            case 'q': {
-                magic = 0xBE;
-                cmdp++;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    uint32_t cn = arg_get_u32_def(ctx, 2, -1);
+    uint32_t mode = arg_get_u32_def(ctx, 3, -1);
+    bool use_nexkey = arg_get_lit(ctx, 4);
+    bool use_quadrakey = arg_get_lit(ctx, 5);
+    bool q5 = arg_get_lit(ctx, 6);
+    bool em = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if (use_nexkey && use_quadrakey) {
+        PrintAndLogEx(FAILED, "Can't specify both Nexkey and Quadrakey at the same time");
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp == 0) return usage_lf_nexwatch_clone();
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
+    // 56000000 00213C9F 8F150C00
+    bool use_raw = (raw_len != 0);
+
+    if (use_raw && cn != -1) {
+        PrintAndLogEx(FAILED, "Can't specify both Raw and Card id at the same time");
+        return PM3_EINVARG;
+    }
+
+    if (cn != -1) {
+        uint32_t scrambled;
+        nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
+        num_to_bytes(scrambled, 4, raw + 5);
+    }
+
+    if (mode != -1) {
+        if (mode > 15) {
+            mode = 1;
+        }
+        mode &= 0x0F;
+        raw[9] |= (mode << 4);
+    }
+
+    uint8_t magic = 0xBE;
+    if (use_nexkey)
+        magic = 0x88;
+
+    if (use_quadrakey)
+        magic = 0xBE;
+
+    uint32_t blocks[4];
 
     //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_NEXWATCH_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
 
     if (use_raw == false) {
-        uint8_t parity = nexwatch_parity(rawhex + 5) & 0xF;
-        rawhex[9] |= parity;
-        rawhex[10] |= nexwatch_checksum(magic, cn, parity);
+        uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
+        raw[9] |= parity;
+        raw[10] |= nexwatch_checksum(magic, cn, parity);
     }
 
     for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-        blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
     }
 
-    PrintAndLogEx(INFO, "Preparing to clone NexWatch to T55x7 with raw hex");
+    PrintAndLogEx(INFO, "Preparing to clone NexWatch to " _YELLOW_("%s") " raw " _YELLOW_("%s"), cardtype, sprint_hex_inrow(raw, sizeof(raw)));
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf nexwatch read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf nexwatch reader`") " to verify");
     return res;
 }
 
 static int CmdNexWatchSim(const char *Cmd) {
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool use_raw = false;
-    uint8_t rawhex[12] = {0x56, 0};
-    int rawlen = sizeof(rawhex);
-    uint8_t magic = 0xBE;
-    uint32_t cn = 0;
-    uint8_t bs[128];
-    memset(bs, 0, sizeof(bs));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf nexwatch sim",
+                  "Enables simulation of secura card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "You can use raw hex values or create a credential based on id, mode\n"
+                  "and type of credential (Nexkey/Quadrakey)",
+                  "lf nexwatch sim --raw 5600000000213C9F8F150C00\n"
+                  "lf nexwatch sim --cn 521512301 -m 1 -n    -> Nexkey credential\n"
+                  "lf nexwatch sim --cn 521512301 -m 1 -q    -> Quadrakey credential"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_nexwatch_clone();
-            case 'r': {
-                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &rawlen);
-                if (res != 0)
-                    errors = true;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes"),
+        arg_u64_0(NULL, "cn", "<dec>", "card id"),
+        arg_u64_0("m", "mode", "<dec>", "mode (decimal) (0-15, defaults to 1)"),
+        arg_lit0("n", NULL, "Nexkey credential"),
+        arg_lit0("q", NULL, "Quadrakey credential"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-                use_raw = true;
-                cmdp += 2;
-                break;
-            }
-            case 'c': {
-                cn = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                uint32_t scrambled;
-                nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
-                num_to_bytes(scrambled, 4, rawhex + 5);
-                cmdp += 2;
-                break;
-            }
-            case 'm': {
-                uint8_t mode = param_get8ex(Cmd, cmdp + 1, 1, 10);
-                mode &= 0x0F;
-                rawhex[9] |= (mode << 4);
-                cmdp += 2;
-                break;
-            }
-            case 'n': {
-                magic = 0x88;
-                cmdp++;
-                break;
-            }
-            case 'q': {
-                magic = 0xBE;
-                cmdp++;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+     int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0x56, 0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    uint32_t cn = arg_get_u32_def(ctx, 2, -1);
+    uint32_t mode = arg_get_u32_def(ctx, 3, -1);
+    bool use_nexkey = arg_get_lit(ctx, 4);
+    bool use_quadrakey = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    if (use_nexkey && use_quadrakey) {
+        PrintAndLogEx(FAILED, "Can't specify both Nexkey and Quadrakey at the same time");
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp == 0) return usage_lf_nexwatch_sim();
+    bool use_raw = (raw_len != 0);
+
+    if (use_raw && cn != -1) {
+        PrintAndLogEx(FAILED, "Can't specify both Raw and Card id at the same time");
+        return PM3_EINVARG;
+    }
+
+    if (cn != -1) {
+        uint32_t scrambled;
+        nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
+        num_to_bytes(scrambled, 4, raw + 5);
+    }
+
+    if (mode != -1) {
+        if (mode > 15) {
+            mode = 1;
+        }
+        mode &= 0x0F;
+        raw[9] |= (mode << 4);
+    }
+
+    uint8_t magic = 0xBE;
+    if (use_nexkey)
+        magic = 0x88;
+
+    if (use_quadrakey)
+        magic = 0xBE;
 
     if (use_raw == false) {
-        uint8_t parity = nexwatch_parity(rawhex + 5) & 0xF;
-        rawhex[9] |= parity;
-        rawhex[10] |= nexwatch_checksum(magic, cn, parity);
+        uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
+        raw[9] |= parity;
+        raw[10] |= nexwatch_checksum(magic, cn, parity);
     }
 
-    // hex to bits.
-    uint32_t rawblocks[3];
-    for (size_t i = 0; i < ARRAYLEN(rawblocks); i++) {
-        rawblocks[i] = bytes_to_num(rawhex + (i * sizeof(uint32_t)), sizeof(uint32_t));
-        num_to_bytebits(rawblocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
+    uint8_t bs[96];
+    memset(bs, 0, sizeof(bs));
+
+    // hex to bits.  (3 * 32 == 96) 
+    for (size_t i = 0; i < 3; i++) {
+        uint32_t tmp = bytes_to_num(raw + (i * sizeof(uint32_t)), sizeof(uint32_t));
+        num_to_bytebits(tmp, sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating NexWatch - raw: %s", sprint_hex_inrow(rawhex, rawlen));
+    PrintAndLogEx(SUCCESS, "Simulating NexWatch - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
     payload->carrier = 2;
@@ -447,11 +467,11 @@ static int CmdNexWatchSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod", CmdNexWatchDemod,  AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
-    {"read",  CmdNexWatchRead,   IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
-    {"clone", CmdNexWatchClone,  IfPm3Lf,         "clone NexWatch tag to T55x7"},
-    {"sim",   CmdNexWatchSim,    IfPm3Lf,         "simulate NexWatch tag"},
+    {"help",   CmdHelp,           AlwaysAvailable, "This help"},
+    {"demod",  CmdNexWatchDemod,  AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
+    {"reader", CmdNexWatchReader, IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
+    {"clone",  CmdNexWatchClone,  IfPm3Lf,         "clone NexWatch tag to T55x7"},
+    {"sim",    CmdNexWatchSim,    IfPm3Lf,         "simulate NexWatch tag"},
     {NULL, NULL, NULL, NULL}
 };
 

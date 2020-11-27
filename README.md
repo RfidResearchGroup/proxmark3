@@ -21,7 +21,7 @@
 |[Donations](#Donations)|[Maintainers](/doc/md/Development/Maintainers.md)|[Command Cheat sheet](/doc/cheatsheet.md)|
 ||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
-||**[JTAG](/doc/jtag_notes.md)**||
+||**[JTAG](/doc/jtag_notes.md)**|[T55xx Guide](/doc/T5577_Guide.md)|
 
 
 ## Notes / helpful documents
@@ -57,7 +57,7 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 This repo compiles nicely on 
    - Proxspace v3.x
-     - [latest release v3.7](https://github.com/Gator96100/ProxSpace/releases)
+     - [latest release v3.7.1](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/mingw environment with Qt5.6.1 & GCC 4.9
    - Ubuntu 16.04 -> 20.04
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora, Debian

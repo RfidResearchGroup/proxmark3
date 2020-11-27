@@ -1178,11 +1178,11 @@ static int CmdHF14AAPDU(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    PrintAndLogEx(SUCCESS, "( " _YELLOW_("%s%s%s")" )", 
-        activateField ? "select" : "",
-        leaveSignalON ? ", keep" : "",
-        decodeTLV ? ", TLV" : ""
-        );
+    PrintAndLogEx(SUCCESS, "( " _YELLOW_("%s%s%s")" )",
+                  activateField ? "select" : "",
+                  leaveSignalON ? ", keep" : "",
+                  decodeTLV ? ", TLV" : ""
+                 );
     PrintAndLogEx(SUCCESS, ">>> %s", sprint_hex_inrow(data, datalen));
 
     if (decodeAPDU) {
@@ -1217,7 +1217,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                   "Sends an raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
                   "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
                   "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1344,13 +1344,13 @@ static int waitCmd(bool i_select, uint32_t timeout) {
 
         if (i_select == false && len >= 3) {
             bool crc = check_crc(CRC_14443_A, data, len);
-            
+
             char s[16];
-            sprintf(s, 
-                (crc) ? _GREEN_("%02X %02X") : _RED_("%02X %02X"), 
-                data[len - 2],
-                data[len - 1]
-                );
+            sprintf(s,
+                    (crc) ? _GREEN_("%02X %02X") : _RED_("%02X %02X"),
+                    data[len - 2],
+                    data[len - 1]
+                   );
 
             PrintAndLogEx(SUCCESS, "%s[ %s ]",  sprint_hex(data, len - 2), s);
         } else {

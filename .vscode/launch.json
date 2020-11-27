@@ -18,13 +18,21 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            "windows": {
+                "processId": "${input:ProcessIDWindows}",
+                "miDebuggerPath": "${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe",
+                "externalConsole": true,//for ProxSpace externalConsole=true is required, because the internal cosole stops updating after a while
+                "environment": [{
+                    "name": "PATH","value": "${workspaceFolder}/../../msys2/mingw64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin"
+                }]
+            }
         },{
             "name": "(gdb) Build & Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${cwd}/client/proxmark3",
-            "args": ["/dev/ttyACM0"],
+            "args": ["/dev/ttyACM0"], 
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -38,7 +46,15 @@
                 }
             ],
             "preLaunchTask": "client: Debug: clean & make",
-            "miDebuggerPath": "/usr/bin/gdb"
+            "miDebuggerPath": "/usr/bin/gdb",
+            "windows": {
+                "args": ["COM5"],
+                "miDebuggerPath": "${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe",
+                "externalConsole": true,//for ProxSpace externalConsole=true is required, because the internal cosole stops updating after a while
+                "environment": [{
+                    "name": "PATH","value": "${workspaceFolder}/../../msys2/mingw64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin"
+                }]
+            }
         }
     ],
     "inputs": [
@@ -50,6 +66,15 @@
             "args": {
                 "command": "pgrep -n proxmark3",
             }
+            
+        },{
+            "id": "ProcessIDWindows",
+            "type": "command",
+            "command": "shellCommand.execute",
+            "args": {
+                "command": "${workspaceFolder}/../../runme64.bat -c \"cat /proc/$(pgrep -n proxmark3)/winpid\"",
+            }
+            
         }
     ]
 }

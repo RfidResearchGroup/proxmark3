@@ -7,6 +7,18 @@
             "label": "all: Make & run",
             "type": "shell",
             "command": "make -j && ./pm3",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
             "problemMatcher": [
                 "$gcc"
             ],
@@ -19,6 +31,18 @@
             "label": "choose: Make",
             "type": "shell",
             "command": "make ${input:componentType} -j",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
             "problemMatcher": [
                 "$gcc"
             ],
@@ -28,6 +52,18 @@
             "label": "client: Debug: make",
             "type": "shell",
             "command": "make client -j DEBUG=1",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
             "problemMatcher": [
                 "$gcc"
             ],
@@ -37,6 +73,18 @@
             "label": "client: Debug: clean & make",
             "type": "shell",
             "command": "make client/clean && make client -j DEBUG=1",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }   
+                }
+              },
             "problemMatcher": [
                 "$gcc"
             ],
@@ -46,18 +94,54 @@
             "label": "fullimage: Make & Flash",
             "type": "shell",
             "command": "make fullimage && ./pm3-flash-fullimage",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
             "problemMatcher": []
         },
         {
             "label": "BOOTROM: Make & Flash",
             "type": "shell",
             "command": "make bootrom && ./pm3-flash-bootrom",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
             "problemMatcher": []
         },
         {
             "label": "Run client",
             "type": "shell",
             "command": "./pm3",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
             "problemMatcher": []
         }
     ],

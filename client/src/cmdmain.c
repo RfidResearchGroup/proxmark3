@@ -120,7 +120,7 @@ static int lf_search_plus(const char *Cmd) {
     return retval;
 }
 
-static int CmdAuto(const char *Cmd) {   
+static int CmdAuto(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "auto",
                   "Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE",
@@ -136,7 +136,7 @@ static int CmdAuto(const char *Cmd) {
 
     PrintAndLogEx(INFO, "lf search");
     int ret = CmdLFfind("");
-    if (ret == PM3_SUCCESS) 
+    if (ret == PM3_SUCCESS)
         return ret;
 
     PrintAndLogEx(INFO, "hf search");
@@ -193,7 +193,7 @@ static int CmdHints(const char *Cmd) {
         PrintAndLogEx(ERR, "you can't turn off and on at the same time");
         return PM3_EINVARG;
     }
-        
+
     if (turn_off) {
         session.show_hints = false;
     } else if (turn_on) {

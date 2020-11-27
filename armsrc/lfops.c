@@ -2252,11 +2252,14 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 }
 
 // clone viking tag to T55xx
-void CopyVikingtoT55xx(uint8_t *blocks, uint8_t Q5) {
+void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em) {
 
     uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), 0, 0};
-    if (Q5)
+    if (q5) {
         data[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
+    } else if (em) {
+        data[0] = (EM4x05_SET_BITRATE(32) | EM4x05_MODULATION_MANCHESTER | EM4x05_SET_NUM_BLOCKS(2));
+    }
 
     data[1] = bytes_to_num(blocks, 4);
     data[2] = bytes_to_num(blocks + 4, 4);

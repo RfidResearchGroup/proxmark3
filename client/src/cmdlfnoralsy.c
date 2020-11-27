@@ -8,51 +8,22 @@
 // ASK/Manchester, STT, RF/32, 96 bits long (some bits unknown)
 //-----------------------------------------------------------------------------
 #include "cmdlfnoralsy.h"
-
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-#include "commonutil.h"     // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "cmdlft55xx.h" // verifywrite
+#include "protocols.h"    // for T55xx config register definitions
+#include "lfdemod.h"      // parityTest
+#include "cmdlft55xx.h"   // verifywrite
+#include "cmdlfem4x05.h"  //
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_noralsy_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Noralsy tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "Usage: lf noralsy clone [h] <card id> <year> <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          : This help");
-    PrintAndLogEx(NORMAL, "      <card id>  : Noralsy card ID");
-    PrintAndLogEx(NORMAL, "      <year>     : Tag allocation year");
-    PrintAndLogEx(NORMAL, "      <Q5>       : specify writing to Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf noralsy clone 112233"));
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_noralsy_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of Noralsy card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf noralsy sim [h] <card id> <year>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          : This help");
-    PrintAndLogEx(NORMAL, "      <card id>  : Noralsy card ID");
-    PrintAndLogEx(NORMAL, "      <year>     : Tag allocation year");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf noralsy sim 112233"));
-    return PM3_SUCCESS;
-}
 
 static uint8_t noralsy_chksum(uint8_t *bits, uint8_t len) {
     uint8_t sum = 0;
@@ -136,28 +107,72 @@ static int CmdNoralsyDemod(const char *Cmd) {
     return demodNoralsy(true);
 }
 
-static int CmdNoralsyRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 8000);
-    return demodNoralsy(true);
+static int CmdNoralsyReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf noralsy reader",
+                  "read a noralsy tag",
+                  "lf noralsy reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 8000);
+        demodNoralsy(!cm);
+    } while (cm && !kbd_enter_pressed());
+    return PM3_SUCCESS;
 }
 
 static int CmdNoralsyClone(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf noralsy clone",
+                  "clone a noralsy tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf noralsy clone --cn 112233\n"
+                  "lf noralsy clone --cn 112233 --q5      -> encode for Q5/T5555 tag\n"
+                  "lf noralsy clone --cn 112233 --em      -> encode for EM4305/4469"
+                 );
 
-    uint16_t year = 0;
-    uint32_t id = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "cn", "<dec>", "Noralsy card ID"),
+        arg_u64_0("y", "year", "<dec>", "tag allocation year"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint32_t id = arg_get_u32_def(ctx, 1, 0);
+    uint16_t year = arg_get_u32_def(ctx, 2, 2000);
+    bool q5 = arg_get_lit(ctx, 3);
+    bool em = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
     uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
-
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_noralsy_clone();
-
-    id = param_get32ex(Cmd, 0, 0, 10);
-    year = param_get32ex(Cmd, 1, 2000, 10);
-
+    char cardtype[16] = {"T55x7"};
     //Q5
-    bool q5 = tolower(param_getchar(Cmd, 2) == 'q');
-    if (q5)
+    if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_NORALSY_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
 
     uint8_t *bits = calloc(96, sizeof(uint8_t));
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
@@ -172,36 +187,50 @@ static int CmdNoralsyClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone Noralsy to " _YELLOW_("%s") " with CardId: %u", (q5) ? "Q5/T5555" : "T55x7", id);
+    PrintAndLogEx(INFO, "Preparing to clone Noralsy to " _YELLOW_("%s") " with Card id: " _GREEN_("%u"), cardtype, id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf noralsy read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf noralsy reader`") " to verify");
     return res;
 }
 
 static int CmdNoralsySim(const char *Cmd) {
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf noralsy sim",
+                  "Enables simulation of Noralsy card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.\n",
+                  "lf noralsy sim --cn 1337\n"
+                  "lf noralsy sim --cn 1337 --year 2010"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "cn", "<dec>", "Noralsy card ID"),
+        arg_u64_0("y", "year", "<dec>", "tag allocation year"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t id = arg_get_u32_def(ctx, 1, 0);
+    uint16_t year = arg_get_u32_def(ctx, 2, 2000);
+    CLIParserFree(ctx);
+
     uint8_t bs[96];
     memset(bs, 0, sizeof(bs));
-
-    uint16_t year = 0;
-    uint32_t id = 0;
-
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h')
-        return usage_lf_noralsy_sim();
-
-    id = param_get32ex(Cmd, 0, 0, 10);
-    year = param_get32ex(Cmd, 1, 2000, 10);
 
     if (getnoralsyBits(id, year, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Noralsy - CardId: %u", id);
+    PrintAndLogEx(SUCCESS, "Simulating Noralsy - CardId: " _YELLOW_("%u") " year " _YELLOW_("%u"), id, year);
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
     payload->encoding = 1;
@@ -225,11 +254,11 @@ static int CmdNoralsySim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,         AlwaysAvailable, "This help"},
-    {"demod",   CmdNoralsyDemod, AlwaysAvailable, "Demodulate an Noralsy tag from the GraphBuffer"},
-    {"read",    CmdNoralsyRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdNoralsyClone, IfPm3Lf,         "clone Noralsy tag to T55x7 or Q5/T5555"},
-    {"sim",     CmdNoralsySim,   IfPm3Lf,         "simulate Noralsy tag"},
+    {"help",    CmdHelp,          AlwaysAvailable, "This help"},
+    {"demod",   CmdNoralsyDemod,  AlwaysAvailable, "Demodulate an Noralsy tag from the GraphBuffer"},
+    {"reader",  CmdNoralsyReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone",   CmdNoralsyClone,  IfPm3Lf,         "clone Noralsy tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdNoralsySim,    IfPm3Lf,         "simulate Noralsy tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -272,7 +301,6 @@ int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
     return PM3_SUCCESS;
 }
 
-// by iceman
 // find Noralsy preamble in already demoded data
 int detectNoralsy(uint8_t *dest, size_t *size) {
     if (*size < 96) return -1; //make sure buffer has data

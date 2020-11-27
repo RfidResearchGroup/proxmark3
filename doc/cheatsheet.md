@@ -62,30 +62,47 @@ Dump iCLASS card contents
 ```
 Options
 ---
-k <key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
+-f, --file <filename>          filename to save dump to
+-k, --key <hex>                debit key as 16 hex symbols OR NR/MAC for replay
+    --ki <dec>                 debit key index to select key from memory 'hf iclass managekeys'
+    --credit <hex>             credit key as 16 hex symbols
+    --ci <dec>                 credit key index to select key from memory 'hf iclass managekeys'
+    --elite                    elite computations applied to key
+    --raw                      raw, the key is interpreted as raw block 3/4
+    --nr                       replay of NR/MAC
 
-m3 --> hf iclass dump k 0
+pm3 --> hf iclass dump --ki 0
 ```
 
 Read iCLASS Block
 ```
 Options
 ---
-b <block>  : The block number as 2 hex symbols
-k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+-k, --key <hex>                Access key as 16 hex symbols
+-b, --block <dec>              The block number to read as an integer
+    --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
+    --credit                   key is assumed to be the credit key
+    --elite                    elite computations applied to key
+    --raw                      no computations applied to key (raw)
+    --nr                       replay of NR/MAC
 
-pm3 --> hf iclass rdbl b 7 k 0
+pm3 --> hf iclass rdbl -b 7 --ki 0
 ```
 
 Write to iCLASS Block
 ```
 Options
 ---
-b <block>  : The block number as 2 hex symbols
-d <data>   : Set the Data to write as 16 hex symbols
-k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+-k, --key <hex>                Access key as 16 hex symbols
+-b, --block <dec>              The block number to read as an integer
+-d, --data <hex>               data to write as 16 hex symbols
+    --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
+    --credit                   key is assumed to be the credit key
+    --elite                    elite computations applied to key
+    --raw                      no computations applied to key (raw)
+    --nr                       replay of NR/MAC
 
-pm3 --> hf iclass wrbl b 07 d 6ce099fe7e614fd0 k 0
+pm3 --> hf iclass wrbl -b 7 -d 6ce099fe7e614fd0 --ki 0
 ```
 
 Print keystore
@@ -111,22 +128,24 @@ Encrypt iCLASS Block
 ```
 Options
 ---
-d <block data>    : 16 bytes hex
-k <transport key> : 16 bytes hex
+-d, --data <hex>               data to encrypt
+-k, --key <hex>                3DES transport key
+-v, --verbose                  verbose output
 
-pm3 --> hf iclass encrypt d 0000000f2aa3dba8
+pm3 --> hf iclass encrypt -d 0000000f2aa3dba8
 ```
 
 Decrypt iCLASS Block / file
 ```
 Options
 ---
-d <encrypted blk> : 16 bytes hex
-f <filename>      : filename of dump
-k <transport key> : 16 bytes hex
+-f, --file <filename>          filename of dumpfile
+-d, --data <hex>               3DES encrypted data
+-k, --key <hex>                3DES transport key
+-v, --verbose                  verbose output
 
-pm3 --> hf iclass decrypt d 2AD4C8211F996871
-pm3 --> hf iclass decrypt f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass decrypt -d 2AD4C8211F996871
+pm3 --> hf iclass decrypt -f hf-iclass-db883702f8ff12e0.bin
 ```
 
 Load iCLASS dump into memory for simulation
@@ -140,8 +159,8 @@ pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 
 Clone iCLASS Legacy Sequence
 ```
-pm3 --> hf iclass rdbl b 7 k 0
-pm3 --> hf iclass wrbl b 7 d 6ce099fe7e614fd0 k 0
+pm3 --> hf iclass rdbl -b 7 --ki 0
+pm3 --> hf iclass wrbl -b 7 -d 6ce099fe7e614fd0 --ki 0
 ```
 
 Simulate iCLASS
@@ -159,7 +178,7 @@ pm3 --> hf iclass sim 3
 
 Simulate iCLASS Sequence
 ```
-pm3 --> hf iclass dump k 0
+pm3 --> hf iclass dump --ki 0
 pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 pm3 --> hf iclass sim 3
 ```
@@ -175,7 +194,7 @@ e              : If 'e' is specified, elite computations applied to key
 pm3 --> hf iclass sim 2
 pm3 --> hf iclass loclass -f iclass_mac_attack.bin
 pm3 --> hf iclass managekeys n 7 k <Kcus>
-pm3 --> hf iclass dump k 7 e
+pm3 --> hf iclass dump --ki 7 --elite
 ```
 
 Verify custom iCLASS key

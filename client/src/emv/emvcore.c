@@ -778,7 +778,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
     if (sdad_tlv) {
         PrintAndLogEx(INFO, "* * Got Signed Dynamic Application Data (9F4B) form GPO. Maybe fDDA...");
 
-        const struct tlvdb *atc_db = emv_pki_recover_atc_ex(icc_pk, tlv, true);
+        struct tlvdb *atc_db = emv_pki_recover_atc_ex(icc_pk, tlv, true);
         if (!atc_db) {
             PrintAndLogEx(ERR, "Error: Can't recover IDN (ICC Dynamic Number)");
             emv_pk_free(pk);
@@ -804,9 +804,10 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             emv_pk_free(pk);
             emv_pk_free(issuer_pk);
             emv_pk_free(icc_pk);
-            atc_db = NULL;
+            tlvdb_free(atc_db);
             return 9;
         }
+
     } else {
         struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
         if (dac_db) {

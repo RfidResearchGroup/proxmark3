@@ -212,23 +212,23 @@ void print_buffer(const uint8_t *data, const size_t len, int level) {
         // (16 * 3) + (16) +  + 1
         memset(buf, 0, sizeof(buf));
         sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
-        
-        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, 16, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);        
+
+        hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, 16, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, 16));
         PrintAndLogEx(INFO, "%s", buf);
     }
-    
+
     // the last odd bytes
     uint8_t mod = len % 16;
-    
+
     if (mod) {
         memset(buf, 0, sizeof(buf));
         sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, mod, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
-        
+
         // add the spaces...
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((16 - mod) * 3) , " ");
-        
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((16 - mod) * 3), " ");
+
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, mod));
         PrintAndLogEx(INFO, "%s", buf);
     }
@@ -443,6 +443,25 @@ void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
     for (size_t i = 0 ; i < len ; ++i) {
         dest[i] =  n & 1;
         n >>= 1;
+    }
+}
+
+void bytes_to_bytebits(void* src, size_t srclen, void* dest) {
+
+    uint8_t *s = (uint8_t*)src;
+    uint8_t *d = (uint8_t*)dest;
+
+    uint32_t i = srclen * 8;
+    while (srclen--) {
+        uint8_t b = s[srclen];
+        d[--i] = (b >> 0) & 1;
+        d[--i] = (b >> 1) & 1;
+        d[--i] = (b >> 2) & 1;
+        d[--i] = (b >> 3) & 1;
+        d[--i] = (b >> 4) & 1;
+        d[--i] = (b >> 5) & 1;
+        d[--i] = (b >> 6) & 1;
+        d[--i] = (b >> 7) & 1;
     }
 }
 
