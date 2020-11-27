@@ -32,7 +32,7 @@ static int CmdHelp(const char *Cmd);
 
 // PAC_8byte format: preamble (8 mark/idle bits), ascii STX (02), ascii '2' (32), ascii '0' (30), ascii bytes 0..7 (cardid), then xor checksum of cardid bytes
 // all bytes following 8 bit preamble are one start bit (0), 7 data bits (lsb first), odd parity bit, and one stop bit (1)
-static int demodbuf_to_pacid(uint8_t *src, const size_t src_size, uint8_t *dst, const size_t dst_size) {
+static int pac_buf_to_cardid(uint8_t *src, const size_t src_size, uint8_t *dst, const size_t dst_size) {
     const size_t byteLength = 10; // start bit, 7 data bits, parity bit, stop bit
     const size_t startIndex = 8 + (3 * byteLength) + 1; // skip 8 bits preamble, STX, '2', '0', and first start bit
     const size_t dataLength = 9;
@@ -67,35 +67,33 @@ static int demodbuf_to_pacid(uint8_t *src, const size_t src_size, uint8_t *dst, 
     return PM3_SUCCESS;
 }
 
-/*
 // convert a 16 byte array of raw demod data (FF204990XX...) to 8 bytes of PAC_8byte ID
 // performs no parity or checksum validation
-static void pacRawToCardId(uint8_t* outCardId, const uint8_t* rawBytes) {
+static void pac_raw_to_cardid(const uint8_t* src, uint8_t *dst) {
     for (int i = 4; i < 12; i++) {
         uint8_t shift = 7 - (i + 3) % 4 * 2;
         size_t index = i + (i - 1) / 4;
 
-        outCardId[i - 4] = reflect8((((rawBytes[index] << 8) | (rawBytes[index + 1])) >> shift) & 0xFE);
+        dst[i - 4] = reflect8((((src[index] << 8) | (src[index + 1])) >> shift) & 0xFE);
     }
 }
-*/
 
 // convert 8 bytes of PAC_8byte ID to 16 byte array of raw data (FF204990XX...)
-static void pacCardIdToRaw(uint8_t *outRawBytes, const char *cardId) {
+static void pac_cardid_to_raw(const char *src, uint8_t *dst) {
     uint8_t idbytes[10];
 
     // prepend PAC_8byte card type "20"
     idbytes[0] = '2';
     idbytes[1] = '0';
     for (size_t i = 0; i < 8; i++)
-        idbytes[i + 2] = toupper(cardId[i]);
+        idbytes[i + 2] = toupper(src[i]);
 
     // initialise array with start and stop bits
     for (size_t i = 0; i < 16; i++)
-        outRawBytes[i] = 0x40 >> (i + 3) % 5 * 2;
+        dst[i] = 0x40 >> (i + 3) % 5 * 2;
 
-    outRawBytes[0] = 0xFF; // mark + stop
-    outRawBytes[1] = 0x20; // start + reflect8(STX)
+    dst[0] = 0xFF; // mark + stop
+    dst[1] = 0x20; // start + reflect8(STX)
 
     uint8_t checksum = 0;
     for (size_t i = 2; i < 13; i++) {
@@ -112,8 +110,8 @@ static void pacCardIdToRaw(uint8_t *outRawBytes, const char *cardId) {
         }
         pattern <<= shift;
 
-        outRawBytes[index] |= pattern >> 8 & 0xFF;
-        outRawBytes[index + 1] |= pattern & 0xFF;
+        dst[index] |= pattern >> 8 & 0xFF;
+        dst[index + 1] |= pattern & 0xFF;
     }
 }
 
@@ -150,7 +148,7 @@ int demodPac(bool verbose) {
 
     const size_t idLen = 9; // 8 bytes + null terminator
     uint8_t cardid[idLen];
-    int retval = demodbuf_to_pacid(DemodBuffer, DemodBufferLen, cardid, sizeof(cardid));
+    int retval = pac_buf_to_cardid(DemodBuffer, DemodBufferLen, cardid, sizeof(cardid));
 
     if (retval == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "PAC/Stanley - Card: " _GREEN_("%s") ", Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
@@ -238,7 +236,9 @@ static int CmdPacClone(const char *Cmd) {
     }
 
     if (cnlen == 8 || cnlen == 9) {
-        pacCardIdToRaw(raw, (char*)cnstr);
+        pac_cardid_to_raw((char*)cnstr, raw);
+    } else {
+        pac_raw_to_cardid(raw, cnstr);
     }
 
     uint32_t blocks[5];
@@ -261,10 +261,12 @@ static int CmdPacClone(const char *Cmd) {
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
 
-    PrintAndLogEx(INFO, "Preparing to clone PAC/Stanley tag to " _YELLOW_("%s") " with raw hex " _GREEN_("%s")
+    PrintAndLogEx(INFO, "Preparing to clone PAC/Stanley tag to " _YELLOW_("%s") " with ID " _GREEN_("%s")  " raw " _GREEN_("%s")
         , cardtype
+        , cnstr
         , sprint_hex_inrow(raw, sizeof(raw))
         );
+
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
@@ -319,22 +321,21 @@ static int CmdPacSim(const char *Cmd) {
     }
 
     if (cnlen == 8 || cnlen == 9) {
-        pacCardIdToRaw(raw, (char*)cnstr);
+        pac_cardid_to_raw((char*)cnstr, raw);
+    } else {
+        pac_raw_to_cardid(raw, cnstr);
     }
+
     uint8_t bs[128];
     for (size_t i = 0; i < 4; i++) {
         uint32_t tmp = bytes_to_num(raw + (i * sizeof(uint32_t)), sizeof(uint32_t));
         num_to_bytebits(tmp, sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
     }
 
-    if (cnlen == 8 || cnlen == 9) {
-        PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%s")" raw " _YELLOW_("%s")
-            , cnstr
-            , sprint_hex_inrow(raw, raw_len)
-            );
-    } else {
-        PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, raw_len));
-    }
+    PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%s")" raw " _YELLOW_("%s")
+        , cnstr
+        , sprint_hex_inrow(raw, sizeof(raw))
+        );
 
     // NRZ sim.
     lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));
