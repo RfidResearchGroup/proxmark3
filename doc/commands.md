@@ -38,6 +38,7 @@ Check column "offline" for their availability.
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
+|`analyse foo            `|Y       |`muxer`
 
 
 ### data
@@ -772,7 +773,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf nexwatch help       `|Y       |`This help`
 |`lf nexwatch demod      `|Y       |`Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer`
-|`lf nexwatch read       `|N       |`Attempt to Read and Extract tag data from the antenna`
+|`lf nexwatch reader     `|N       |`Attempt to Read and Extract tag data from the antenna`
 |`lf nexwatch clone      `|N       |`clone NexWatch tag to T55x7`
 |`lf nexwatch sim        `|N       |`simulate NexWatch tag`
 
@@ -785,7 +786,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf noralsy help        `|Y       |`This help`
 |`lf noralsy demod       `|Y       |`Demodulate an Noralsy tag from the GraphBuffer`
-|`lf noralsy read        `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf noralsy reader      `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf noralsy clone       `|N       |`clone Noralsy tag to T55x7 or Q5/T5555`
 |`lf noralsy sim         `|N       |`simulate Noralsy tag`
 
@@ -798,7 +799,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf pac help            `|Y       |`This help`
 |`lf pac demod           `|Y       |`Demodulate a PAC tag from the GraphBuffer`
-|`lf pac read            `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf pac reader          `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf pac clone           `|N       |`clone PAC tag to T55x7`
 |`lf pac sim             `|N       |`simulate PAC tag`
 
@@ -811,8 +812,8 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf paradox help        `|Y       |`This help`
 |`lf paradox demod       `|Y       |`Demodulate a Paradox FSK tag from the GraphBuffer`
-|`lf paradox read        `|N       |`Attempt to read and Extract tag data from the antenna`
-|`lf paradox clone       `|N       |`clone paradox tag to T55x7`
+|`lf paradox reader      `|N       |`Attempt to read and Extract tag data from the antenna`
+|`lf paradox clone       `|N       |`clone paradox tag`
 |`lf paradox sim         `|N       |`simulate paradox tag`
 
 
@@ -836,7 +837,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf presco help         `|Y       |`This help`
 |`lf presco demod        `|Y       |`demodulate Presco tag from the GraphBuffer`
-|`lf presco read         `|N       |`Attempt to read and Extract tag data`
+|`lf presco reader       `|N       |`Attempt to read and Extract tag data`
 |`lf presco clone        `|N       |`clone presco tag to T55x7 or Q5/T5555`
 |`lf presco sim          `|N       |`simulate presco tag`
 
