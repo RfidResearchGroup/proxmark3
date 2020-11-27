@@ -12,6 +12,7 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "lfadc.h"
+#include "lfdemod.h"
 #include "commonutil.h"
 #include "em4x50.h"
 #include "flashmem.h"
@@ -191,6 +192,8 @@ static bool get_signalproperties(void) {
     uint32_t sample_max_sum = 0;
     memcpy(sample_max, 0x00, sizeof(sample_max));
 
+    LED_A_ON();
+
     // wait until signal/noise > 1 (max. 32 periods)
     for (int i = 0; i < T0 * no_periods; i++) {
 
@@ -198,15 +201,18 @@ static bool get_signalproperties(void) {
 
         // about 2 samples per bit period
         wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
-        
-        if (AT91C_BASE_SSC->SSC_RHR > noise) {
+      
+        // ignore first samples
+        if ((i > SIGNAL_IGNORE_FIRST_SAMPLES) && (AT91C_BASE_SSC->SSC_RHR > noise)) {
             signal_found = true;
             break;
         }
     }
 
-    if (signal_found == false)
+    if (signal_found == false) {
+        LED_A_OFF();
         return false;
+    }
 
     // calculate mean maximum value of 32 periods, each period has a length of
     // 3 single "full periods" to eliminate the influence of a listen window
@@ -231,6 +237,8 @@ static bool get_signalproperties(void) {
     // set global envelope variables
     gHigh = sample_ref + pct * (sample_max_mean - sample_ref) / 100;
     gLow = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
+
+    LED_A_OFF();
     
     return true;
 }
@@ -295,6 +303,7 @@ static bool check_pulse_length(uint32_t pl, int length) {
     
     // check if pulse length <pl> corresponds to given length <length>
     return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
+    
 }
 
 static void em4x50_reader_send_bit(int bit) {
@@ -404,6 +413,8 @@ static int find_double_listen_window(bool bcommand) {
     // -> 34 words + 34 single listen windows -> about 1600 pulses
 
     int cnt_pulses = 0;
+    
+    LED_B_ON();
 
     while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
 
@@ -438,12 +449,16 @@ static int find_double_listen_window(bool bcommand) {
                         em4x50_reader_send_bit(0);
                         em4x50_reader_send_bit(0);
 
+                        LED_B_OFF();
+
                         return true;
                     }
 
                 }
 
                 if (check_pulse_length(get_pulse_length(), 3 * EM4X50_T_TAG_FULL_PERIOD)) {
+
+                    LED_B_OFF();
 
                     // return although second listen window consists of one
                     // more bit period but this period is necessary for
@@ -455,6 +470,8 @@ static int find_double_listen_window(bool bcommand) {
         cnt_pulses++;
     }
 
+    LED_B_OFF();
+    
     return false;
 }
 
@@ -462,7 +479,11 @@ static bool find_em4x50_tag(void) {
 
     // function is used to check wether a tag on the proxmark is an
     // EM4x50 tag or not -> speed up "lf search" process
+    LED_B_ON();
+    
     return find_single_listen_window();
+    
+    LED_B_OFF();
 }
 
 static int request_receive_mode(void) {
@@ -537,6 +558,8 @@ static int get_word_from_bitstream(uint32_t *data) {
     uint32_t pl = 0;
     uint64_t word = 0x0;
     
+    LED_C_ON();
+    
     *data = 0x0;
 
     // initial bit value depends on last pulse length of listen window
@@ -607,13 +630,16 @@ static int get_word_from_bitstream(uint32_t *data) {
 
         } else if (check_pulse_length(pl, 3 * EM4X50_T_TAG_FULL_PERIOD)) {
 
+            LED_C_OFF();
+
             // pulse length of 3 indicates listen window -> clear last
             // bit (= 0) and return (without parities)
             word >>= 2;
             return (extract_parities(word, data)) ? --cnt : 0;
-
         }
     }
+    
+    LED_C_OFF();
     
     return BUTTON_SINGLE_CLICK;
 }
