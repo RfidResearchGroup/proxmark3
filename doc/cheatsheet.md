@@ -109,19 +109,20 @@ Print keystore
 ```
 Options
 ---
-p           : print keys loaded into memory
+-p, --print                    Print keys loaded into memory
 
-pm3 --> hf iclass managekeys p
+
+pm3 --> hf iclass managekeys -p
 ```
 
 Add key to keystore [0-7]
 ```
 Options
 ---
-n <keynbr>    : specify the keyNbr to set in memory
-k <key>       : set a key in memory
+-f, --file <filename>          Specify a filename to use with load or save operations
+    --ki <dec>                 Specify key index to set key in memory
 
-pm3 --> hf iclass managekeys n 3 k AFA785A7DAB33378
+pm3 --> hf iclass managekeys --ki 3 -k AFA785A7DAB33378
 ```
 
 Encrypt iCLASS Block

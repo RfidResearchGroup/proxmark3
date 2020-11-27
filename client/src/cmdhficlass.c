@@ -92,29 +92,6 @@ static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_managekeys(void) {
-    PrintAndLogEx(NORMAL, "Manage iCLASS Keys in client memory:\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h            : Show this help");
-    PrintAndLogEx(NORMAL, "  n <keynbr>   : specify the keyNbr to set in memory");
-    PrintAndLogEx(NORMAL, "  k <key>      : set a key in memory");
-    PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to use with load or save operations");
-    PrintAndLogEx(NORMAL, "  s            : save keys in memory to file specified by filename");
-    PrintAndLogEx(NORMAL, "  l            : load keys to memory from file specified by filename");
-    PrintAndLogEx(NORMAL, "  p            : print keys loaded into memory\n");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "   -- set key");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys n 0 k 1122334455667788"));
-    PrintAndLogEx(NORMAL, "   -- save key file");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys f mykeys.bin s"));
-    PrintAndLogEx(NORMAL, "   -- load key file");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys f mykeys.bin l"));
-    PrintAndLogEx(NORMAL, "   -- print keys");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys p"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file\n");
     PrintAndLogEx(NORMAL, "Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]\n");
@@ -2505,83 +2482,88 @@ static int printKeys(void) {
 }
 
 static int CmdHFiClassManageKeys(const char *Cmd) {
-    uint8_t keyNbr = 0;
-    uint8_t dataLen = 0;
-    uint8_t KEY[8] = {0};
-    char filename[FILE_PATH_SIZE];
-    uint8_t fileNameLen = 0;
-    bool errors = false;
-    uint8_t operation = 0;
-    char tempStr[20];
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass managekeys",
+                  "Manage iCLASS Keys in client memory",
+                  "hf iclass managekeys --ki 0 -k 1122334455667788 -> set key\n"
+                  "hf iclass managekeys -f mykeys.bin --save       -> save key file\n"
+                  "hf iclass managekeys -f mykeys.bin --load       -> load key file\n"
+                  "hf iclass managekeys -p                         -> print keys");
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_managekeys();
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                if (fileNameLen < 1) {
-                    PrintAndLogEx(ERR, "No filename found");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'n':
-                keyNbr = param_get8(Cmd, cmdp + 1);
-                if (keyNbr >= ICLASS_KEYS_MAX) {
-                    PrintAndLogEx(ERR, "Invalid block number, MAX is " _YELLOW_("%d"), ICLASS_KEYS_MAX);
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'k':
-                operation += 3; //set key
-                dataLen = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (dataLen == 16) { //ul-c or ev1/ntag key length
-                    errors = param_gethex(tempStr, 0, KEY, dataLen);
-                } else {
-                    PrintAndLogEx(WARNING, "\nERROR: Key is incorrect length\n");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'p':
-                operation += 4; //print keys in memory
-                cmdp++;
-                break;
-            case 'l':
-                operation += 5; //load keys from file
-                cmdp++;
-                break;
-            case 's':
-                operation += 6; //save keys to file
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "Specify a filename to use with load or save operations"),
+        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_lit0(NULL, "save", "Save keys in memory to file specified by filename"),
+        arg_lit0(NULL, "load", "Load keys to memory from file specified by filename"),
+        arg_lit0("p", "print", "Print keys loaded into memory"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int key_len = 0;
+    uint8_t key[8] = {0};
+    CLIGetHexWithReturn(ctx, 2, key, &key_len);
+    uint8_t operation = 0;
+
+    if (key_len > 0) {
+        operation += 3;
+        if (key_len != 8) {
+            PrintAndLogEx(ERR, "Key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
     }
-    if (errors) return usage_hf_iclass_managekeys();
+
+    int key_nr = arg_get_int_def(ctx, 3, -1);
+
+    if (key_nr >= 0) {
+        if (key_nr < ICLASS_KEYS_MAX) {
+            PrintAndLogEx(SUCCESS, "Setting key[%d] " _GREEN_("%s"), key_nr);
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    if (arg_get_lit(ctx, 4)) {  //save
+        operation += 6;
+    }
+    if (arg_get_lit(ctx, 5)) {  //load
+        operation += 5;
+    }
+    if (arg_get_lit(ctx, 6)) {  //print
+        operation += 4;
+    }
+
+    CLIParserFree(ctx);
 
     if (operation == 0) {
-        PrintAndLogEx(WARNING, "no operation specified (load, save, or print)\n");
-        return usage_hf_iclass_managekeys();
+        PrintAndLogEx(ERR, "No operation specified (load, save, or print)\n");
+        return PM3_EINVARG;
     }
     if (operation > 6) {
-        PrintAndLogEx(WARNING, "Too many operations specified\n");
-        return usage_hf_iclass_managekeys();
+        PrintAndLogEx(ERR, "Too many operations specified\n");
+        return PM3_EINVARG;
     }
-    if (operation > 4 && fileNameLen == 0) {
-        PrintAndLogEx(WARNING, "You must enter a filename when loading or saving\n");
-        return usage_hf_iclass_managekeys();
+    if (operation > 4 && fnlen == 0) {
+        PrintAndLogEx(ERR, "You must enter a filename when loading or saving\n");
+        return PM3_EINVARG;
+    }
+    if (key_len > 0 && key_nr == -1) {
+        PrintAndLogEx(ERR, "Please specify key index when specifying key");
+        return PM3_EINVARG;
     }
 
     switch (operation) {
         case 3:
-            memcpy(iClass_Key_Table[keyNbr], KEY, 8);
+            memcpy(iClass_Key_Table[key_nr], key, 8);
             return PM3_SUCCESS;
         case 4:
             return printKeys();
@@ -2613,7 +2595,7 @@ static void add_key(uint8_t *key) {
     if (i == ICLASS_KEYS_MAX) {
         PrintAndLogEx(INFO, "Couldn't find an empty keyslot");
     } else {
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf iclass managekeys p`") " to view keys");
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf iclass managekeys -p`") " to view keys");
     }
 }
 
