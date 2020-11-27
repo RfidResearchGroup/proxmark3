@@ -115,21 +115,6 @@ static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_chk(void) {
-    PrintAndLogEx(NORMAL, "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass chk [h|e|r] [f  (*.dic)]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h             Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename>  Dictionary file with default iclass keys");
-    PrintAndLogEx(NORMAL, "  r             raw");
-    PrintAndLogEx(NORMAL, "  e             elite");
-    PrintAndLogEx(NORMAL, "  c             credit key  (if not use, default is debit)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass chk f dictionaries/iclass_default_keys.dic"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass chk f dictionaries/iclass_default_keys.dic e"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file\n");
     PrintAndLogEx(NORMAL, "Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]\n");
@@ -2730,59 +2715,40 @@ static int iclass_chk_keys(uint8_t *keyBlock, uint32_t keycount) {
 */
 
 static int CmdHFiClassCheckKeys(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass chk",
+                  "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
+                  "hf iclass chk -f dictionaries/iclass_default_keys.dic\n"
+                  "hf iclass chk -f dictionaries/iclass_default_keys.dic --elite");
 
-    // empty string
-    if (strlen(Cmd) == 0) return usage_hf_iclass_chk();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "Dictionary file with default iclass keys"),
+        arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
+        arg_lit0(NULL, "elite", "elite computations applied to key"),
+        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool use_credit_key = arg_get_lit(ctx, 2);
+    bool use_elite = arg_get_lit(ctx, 3);
+    bool use_raw = arg_get_lit(ctx, 4);
+
+    CLIParserFree(ctx);
 
     uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    // elite key,  raw key, standard key
-    bool use_elite = false;
-    bool use_raw = false;
-    bool use_credit_key = false;
     bool found_key = false;
     //bool found_credit = false;
     bool got_csn = false;
-    bool errors = false;
-    uint8_t cmdp = 0x00;
-
-    char filename[FILE_PATH_SIZE] = {0};
-    uint8_t fileNameLen = 0;
 
     uint64_t t1 = msclock();
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_chk();
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                if (fileNameLen < 1) {
-                    PrintAndLogEx(WARNING, _RED_("no filename found after f"));
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'e':
-                use_elite = true;
-                cmdp++;
-                break;
-            case 'c':
-                use_credit_key = true;
-                cmdp++;
-                break;
-            case 'r':
-                use_raw = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    if (errors) return usage_hf_iclass_chk();
 
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
