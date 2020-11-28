@@ -1286,7 +1286,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     if (credit_key_len > 0) {
         auth = true;
         have_credit_key = true;
-        if (key_len != 8) {
+        if (credit_key_len != 8) {
             PrintAndLogEx(ERR, "Credit key is incorrect length");
             CLIParserFree(ctx);
             return PM3_EINVARG;
