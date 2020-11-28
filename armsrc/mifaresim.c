@@ -535,8 +535,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
         WDT_HIT();
 
-        if (counter == 2000) {
+        if (counter == 1000) {
             if (data_available()) {
+                Dbprintf("----------- " _GREEN_("BREAKING") " ----------");
                 break;
             }
             counter = 0;
