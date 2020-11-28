@@ -71,23 +71,6 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_lookup(void) {
-    PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file\n");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h             Show this help");
-    PrintAndLogEx(NORMAL, "  f <filename>  Dictionary file with default iclass keys");
-    PrintAndLogEx(NORMAL, "  u             CSN");
-    PrintAndLogEx(NORMAL, "  p             EPURSE");
-    PrintAndLogEx(NORMAL, "  m             macs");
-    PrintAndLogEx(NORMAL, "  r             raw");
-    PrintAndLogEx(NORMAL, "  e             elite");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic e"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 static int cmp_uint32(const void *a, const void *b) {
 
@@ -2900,89 +2883,84 @@ out:
 // this method tries to identify in which configuration mode a iCLASS / iCLASS SE reader is in.
 // Standard or Elite / HighSecurity mode.  It uses a default key dictionary list in order to work.
 static int CmdHFiClassLookUp(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass lookup",
+                  "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file",
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f dictionaries/iclass_default_keys.dic\n"
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f dictionaries/iclass_default_keys.dic --elite");
 
-    uint8_t CSN[8];
-    uint8_t EPURSE[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t MACS[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t CCNR[12];
-    uint8_t MAC_TAG[4] = { 0, 0, 0, 0 };
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "Dictionary file with default iclass keys"),
+        arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 bytes (16 hex symbols)"),
+        arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 bytes (16 hex symbols)"),
+        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "elite", "Elite computations applied to key"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    // elite key,  raw key, standard key
-    bool use_elite = false;
-    bool use_raw = false;
-    bool errors = false;
-    uint8_t cmdp = 0x00;
-
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    iclass_prekey_t *prekey = NULL;
-    int len = 0;
-    // if empty string
-    if (strlen(Cmd) == 0) errors = true;
-    // time
-    uint64_t t1 = msclock();
+    int csn_len = 0;
+    uint8_t csn[8] = {0};
+    CLIGetHexWithReturn(ctx, 2, csn, &csn_len);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_lookup();
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) < 1) {
-                    PrintAndLogEx(WARNING, "No filename found after f");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'u':
-                param_gethex_ex(Cmd, cmdp + 1, CSN, &len);
-                if (len >> 1 != sizeof(CSN)) {
-                    PrintAndLogEx(WARNING, "Wrong CSN length, expected %zu got [%d]", sizeof(CSN), len >> 1);
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'm':
-                param_gethex_ex(Cmd, cmdp + 1, MACS, &len);
-                if (len >> 1 != sizeof(MACS)) {
-                    PrintAndLogEx(WARNING, "Wrong MACS length, expected %zu got [%d]  ", sizeof(MACS), len >> 1);
-                    errors = true;
-                } else {
-                    memcpy(MAC_TAG, MACS + 4, 4);
-                }
-                cmdp += 2;
-                break;
-            case 'p':
-                param_gethex_ex(Cmd, cmdp + 1, EPURSE, &len);
-                if (len >> 1 != sizeof(EPURSE)) {
-                    PrintAndLogEx(WARNING, "Wrong EPURSE length, expected %zu got [%d]  ", sizeof(EPURSE), len >> 1);
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'e':
-                use_elite = true;
-                cmdp++;
-                break;
-            case 'r':
-                use_raw = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    if (csn_len > 0) {
+        if (csn_len != 8) {
+            PrintAndLogEx(ERR, "CSN is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
     }
 
-    if (errors) return usage_hf_iclass_lookup();
+    int epurse_len = 0;
+    uint8_t epurse[8] = {0};
+    CLIGetHexWithReturn(ctx, 3, epurse, &epurse_len);
+
+    if (epurse_len > 0) {
+        if (epurse_len != 8) {
+            PrintAndLogEx(ERR, "ePurse is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int macs_len = 0;
+    uint8_t macs[8] = {0};
+    CLIGetHexWithReturn(ctx, 4, macs, &macs_len);
+
+    if (macs_len > 0) {
+        if (macs_len != 8) {
+            PrintAndLogEx(ERR, "MAC is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    bool use_elite = arg_get_lit(ctx, 5);
+    bool use_raw = arg_get_lit(ctx, 6);
+
+    CLIParserFree(ctx);
+
+    uint8_t CCNR[12];
+    uint8_t MAC_TAG[4] = { 0, 0, 0, 0 };
+
+    iclass_prekey_t *prekey = NULL;
+
+    // time
+    uint64_t t1 = msclock();
 
     // stupid copy.. CCNR is a combo of epurse and reader nonce
-    memcpy(CCNR, EPURSE, 8);
-    memcpy(CCNR + 8, MACS, 4);
+    memcpy(CCNR, epurse, 8);
+    memcpy(CCNR + 8, macs, 4);
 
-    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(CSN, sizeof(CSN)));
-    PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(EPURSE, sizeof(EPURSE)));
-    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(MACS, sizeof(MACS)));
+    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
+    PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, sizeof(epurse)));
+    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, sizeof(macs)));
     PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
     PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
 
@@ -3004,7 +2982,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Generating diversified keys...");
-    GenerateMacKeyFrom(CSN, CCNR, use_raw, use_elite, keyBlock, keycount, prekey);
+    GenerateMacKeyFrom(csn, CCNR, use_raw, use_elite, keyBlock, keycount, prekey);
 
     if (use_elite)
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));

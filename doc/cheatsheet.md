@@ -202,13 +202,14 @@ Verify custom iCLASS key
 ```
 Options
 ---
-f <filename> : Dictionary file with default iCLASS keys
-u            : CSN
-p            : EPURSE
-m            : macs
-e            : elite
+-f, --file <filename>          Dictionary file with default iclass keys
+    --csn <hex>                Specify CSN as 8 bytes (16 hex symbols)
+    --epurse <hex>             Specify ePurse as 8 bytes (16 hex symbols)
+    --macs <hex>               MACs
+    --raw                      no computations applied to key (raw)
+    --elite                    Elite computations applied to key
 
-pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f iclass_default_keys e
+pm3 --> hf iclass lookup --csn 010a0ffff7ff12e0 --epurse feffffffffffffff --macs 66348979153c41b9 -f iclass_default_keys --elite
 ```
 
 ## MIFARE
