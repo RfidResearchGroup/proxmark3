@@ -101,9 +101,7 @@ hf legic crc
 hf legic eload
 hf legic esave
 hf legic wipe
-hf lto dump
 hf lto restore
-hf lto info
 hf lto rdbl
 hf lto wrbl
 hf lto list

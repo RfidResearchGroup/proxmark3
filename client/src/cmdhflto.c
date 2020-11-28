@@ -13,6 +13,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "cmdtrace.h"
@@ -36,16 +37,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lto_info(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto info [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h    this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto info"));
-    return PM3_SUCCESS;
-}
-
 static int usage_lto_rdbl(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf lto rdbl [h] s <start block> e <end block>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -67,17 +58,6 @@ static int usage_lto_wrbl(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("           hf lto wrbl b 128 d 0001020304050607080910111213141516171819202122232425262728293031") " - write 00..31 to block address 128");
-    return PM3_SUCCESS;
-}
-
-static int usage_lto_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto dump [h|p] f <filename>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           f     file name");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto dump f myfile"));
     return PM3_SUCCESS;
 }
 
@@ -173,24 +153,16 @@ static int lto_select(uint8_t *id_response, uint8_t id_len, uint8_t *type_respon
 }
 
 static int CmdHfLTOInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto info",
+                  "Get info from LTO tags",
+                  "hf lto info");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_info();
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors) {
-        return usage_lto_info();
-    }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     return infoLTO(true);
 }
@@ -504,35 +476,25 @@ int dumpLTO(uint8_t *dump, bool verbose) {
 }
 
 static int CmdHfLTODump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto dump",
+                  "Dump data from LTO tag",
+                  "hf lto dump -f myfile");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    uint32_t dump_len = CM_MEM_MAX_SIZE;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "specify a filename for dumpfile"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_dump();
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "filename too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    CLIParserFree(ctx);
 
-    if (errors) {
-        usage_lto_dump();
-        return PM3_EINVARG;
-    }
+    uint32_t dump_len = CM_MEM_MAX_SIZE;
 
     uint8_t *dump = calloc(dump_len, sizeof(uint8_t));
     if (!dump) {
