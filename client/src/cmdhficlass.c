@@ -2530,9 +2530,9 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
 
     if (key_nr >= 0) {
         if (key_nr < ICLASS_KEYS_MAX) {
-            PrintAndLogEx(SUCCESS, "Setting key[%d] " _GREEN_("%s"), key_nr);
+            PrintAndLogEx(SUCCESS, "Current key[%d] " _YELLOW_("%s"), key_nr, sprint_hex_inrow(iClass_Key_Table[key_nr], 8));
         } else {
-            PrintAndLogEx(ERR, "Key number is invalid");
+            PrintAndLogEx(ERR, "Key index is out-of-range");
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -2570,6 +2570,7 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
     switch (operation) {
         case 3:
             memcpy(iClass_Key_Table[key_nr], key, 8);
+            PrintAndLogEx(SUCCESS, "    New key[%d] " _GREEN_("%s"), key_nr, sprint_hex_inrow(iClass_Key_Table[key_nr], 8));
             return PM3_SUCCESS;
         case 4:
             return printKeys();
