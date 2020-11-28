@@ -515,7 +515,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds", t1 / 1000);
 
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") " again and collect new data");
+        PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim -t 2`") " again and collect new data");
         return PM3_ESOFT;
     }
 
