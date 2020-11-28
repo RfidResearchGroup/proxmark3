@@ -855,7 +855,7 @@ int CmdEM4x50Watch(const char *Cmd) {
 
 int CmdEM4x50Dump(const char *Cmd) {
 
-    int fnLen = 0, pwdLen = 0;
+    int fnLen = 0, pwdLen = 0, status = 0;
     uint8_t pwd[4] = {0x0};
     char filename[FILE_PATH_SIZE] = {0};
     char *fptr = filename;
@@ -908,8 +908,8 @@ int CmdEM4x50Dump(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    bool success = (resp.status & STATUS_SUCCESS) >> 1;
-    if (success == false) {
+    status = resp.status;
+    if (status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Reading tag " _RED_("failed"));
         return PM3_ESOFT;
     }
