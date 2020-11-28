@@ -34,6 +34,7 @@
 #define EM4X50_T_TAG_FULL_PERIOD            64
 #define EM4X50_T_TAG_TPP                    64
 #define EM4X50_T_TAG_TWA                    64
+#define EM4X50_T_TAG_WAITING_FOR_SIGNAL     75
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 #define EM4X50_T_WAITING_FOR_SNGLLIW        140     // this value seems to be
                                                     // critical;
@@ -195,7 +196,7 @@ static bool get_signalproperties(void) {
     LED_A_ON();
 
     // wait until signal/noise > 1 (max. 32 periods)
-    for (int i = 0; i < T0 * no_periods; i++) {
+    for (int i = 0; i < EM4X50_T_TAG_WAITING_FOR_SIGNAL; i++) {
 
         if (BUTTON_PRESS()) return false;
 
@@ -385,6 +386,8 @@ static bool find_single_listen_window(void) {
     // find single listen window
 
     int cnt_pulses = 0;
+    
+    LED_B_ON();
 
     while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW) {
 
@@ -394,13 +397,16 @@ static bool find_single_listen_window(void) {
 
             if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
-                // listen window found
+                // found listen window
+                LED_B_OFF();
                 return true;
             }
         }
         cnt_pulses++;
     }
 
+    LED_B_OFF();
+    
     return false;
 }
 
@@ -418,10 +424,16 @@ static int find_double_listen_window(bool bcommand) {
 
     while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
 
+        if (BUTTON_PRESS())
+            return BUTTON_SINGLE_CLICK;
+
         // identification of listen window is done via evaluation of
         // pulse lengths
         if (check_pulse_length(get_pulse_length(), 3 * EM4X50_T_TAG_FULL_PERIOD)) {
 
+            //if (BUTTON_PRESS())
+            //    return BUTTON_SINGLE_CLICK;
+            
             if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
                 // first listen window found
@@ -451,7 +463,7 @@ static int find_double_listen_window(bool bcommand) {
 
                         LED_B_OFF();
 
-                        return true;
+                        return PM3_SUCCESS;
                     }
 
                 }
@@ -463,7 +475,7 @@ static int find_double_listen_window(bool bcommand) {
                     // return although second listen window consists of one
                     // more bit period but this period is necessary for
                     // evaluating further pulse lengths
-                    return true;
+                    return PM3_SUCCESS;
                 }
             }
         }
@@ -472,18 +484,14 @@ static int find_double_listen_window(bool bcommand) {
 
     LED_B_OFF();
     
-    return false;
+    return PM3_EFAILED;
 }
 
 static bool find_em4x50_tag(void) {
 
     // function is used to check wether a tag on the proxmark is an
     // EM4x50 tag or not -> speed up "lf search" process
-    LED_B_ON();
-    
     return find_single_listen_window();
-    
-    LED_B_OFF();
 }
 
 static int request_receive_mode(void) {
@@ -505,6 +513,9 @@ static bool check_ack(bool bliw) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     while (AT91C_BASE_TC0->TC_CV < T0 * 4 * EM4X50_T_TAG_FULL_PERIOD) {
 
+        if (BUTTON_PRESS())
+            return false;
+        
         if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
             // The received signal is either ACK or NAK.
@@ -803,7 +814,7 @@ static bool login(uint32_t password) {
     // simple login to EM4x50,
     // used in operations that require authentication
 
-    if (request_receive_mode()) {
+    if (request_receive_mode() == PM3_SUCCESS) {
 
         // send login command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_LOGIN);
@@ -835,8 +846,19 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
     for (*pwd = start; *pwd <= stop; (*pwd)++) {
 
         if (login(*pwd) == PM3_SUCCESS) {
+            
             pwd_found = true;
-            break;
+
+            // to be safe login 5 more times
+            for (int i = 0; i < 5; i++) {
+                if (login(*pwd) != PM3_SUCCESS) {
+                    pwd_found = false;
+                    break;
+                }
+            }
+            
+            if (pwd_found)
+                break;
         }
         
         // print password every 500 iterations
@@ -970,7 +992,7 @@ static int reset(void) {
 
     // resets EM4x50 tag (used by write function)
 
-    if (request_receive_mode()) {
+    if (request_receive_mode() == PM3_SUCCESS) {
 
         // send reset command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_RESET);
@@ -1014,7 +1036,7 @@ static int standard_read(int *now, uint32_t *words) {
     int fwr = *now, res = PM3_EFAILED;
 
     // start with the identification of two successive listening windows
-    if (find_double_listen_window(false)) {
+    if ((res = find_double_listen_window(false)) == PM3_SUCCESS) {
 
         // read and save words until following double listen window is detected
         while ((res = get_word_from_bitstream(&words[*now])) == EM4X50_TAG_WORD)
@@ -1041,7 +1063,7 @@ static int selective_read(uint32_t addresses, uint32_t *words) {
     uint8_t lwr = (addresses >> 8) & 0xFF;  // last word read (second byte)
     int now = fwr;                          // number of words
 
-    if (request_receive_mode()) {
+    if (request_receive_mode() == PM3_SUCCESS) {
 
         // send selective read command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_SELECTIVE_READ);
@@ -1180,7 +1202,7 @@ static int write(uint32_t word, uint32_t addresses) {
 
     // writes <word> to specified <addresses>
     
-    if (request_receive_mode()) {
+    if (request_receive_mode() == PM3_SUCCESS) {
 
         // send write command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_WRITE);
@@ -1220,7 +1242,7 @@ static int write_password(uint32_t password, uint32_t new_password) {
 
     // changes password from <password> to <new_password>
 
-    if (request_receive_mode()) {
+    if (request_receive_mode() == PM3_SUCCESS) {
 
         // send write password command
         em4x50_reader_send_byte_with_parity(EM4X50_COMMAND_WRITE_PASSWORD);
@@ -1503,7 +1525,7 @@ int em4x50_standalone_read(uint32_t *words) {
     em4x50_setup_read();
 
     if (get_signalproperties() && find_em4x50_tag())
-        if (find_double_listen_window(false))
+        if (find_double_listen_window(false) == PM3_SUCCESS)
             while (get_word_from_bitstream(&words[now]) == EM4X50_TAG_WORD)
                 now++;
 
