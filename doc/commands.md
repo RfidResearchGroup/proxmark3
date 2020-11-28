@@ -38,7 +38,6 @@ Check column "offline" for their availability.
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
-|`analyse foo            `|Y       |`muxer`
 
 
 ### data
@@ -733,7 +732,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf keri help           `|Y       |`This help`
 |`lf keri demod          `|Y       |`Demodulate an KERI tag from the GraphBuffer`
-|`lf keri read           `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf keri reader         `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf keri clone          `|N       |`clone KERI tag to T55x7 or Q5/T5555`
 |`lf keri sim            `|N       |`simulate KERI tag`
 
@@ -746,7 +745,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf motorola help       `|Y       |`This help`
 |`lf motorola demod      `|Y       |`Demodulate an MOTOROLA tag from the GraphBuffer`
-|`lf motorola read       `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf motorola reader     `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf motorola clone      `|N       |`clone MOTOROLA tag to T55x7`
 |`lf motorola sim        `|N       |`simulate MOTOROLA tag`
 
