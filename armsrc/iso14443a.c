@@ -20,6 +20,7 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "util.h"
+#include "util.h"
 #include "parity.h"
 #include "mifareutil.h"
 #include "commonutil.h"
@@ -1979,9 +1980,11 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     for (;;) {
         WDT_HIT();
 
-        if (check == 2000) {
-            if (BUTTON_PRESS())
+        if (check == 1000) {
+            if (BUTTON_PRESS() || data_available()) {
+                Dbprintf("----------- " _GREEN_("BREAKING") " ----------");
                 return 1;
+            }
             check = 0;
         }
         ++check;

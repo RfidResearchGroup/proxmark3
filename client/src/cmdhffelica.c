@@ -49,7 +49,7 @@ static int usage_hf_felica_sim(void) {
 
 static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "\nInfo: It get data from the field and saves it into command buffer. ");
-    PrintAndLogEx(NORMAL, "        Buffer accessible from command 'hf list felica'");
+    PrintAndLogEx(NORMAL, "        Buffer accessible from command 'hf felica list'");
     PrintAndLogEx(NORMAL, "\nUsage:  hf felica sniff [-h] [-s] [-t]");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -s    samples to skip (decimal) max 9999");

@@ -109,19 +109,20 @@ Print keystore
 ```
 Options
 ---
-p           : print keys loaded into memory
+-p, --print                    Print keys loaded into memory
 
-pm3 --> hf iclass managekeys p
+
+pm3 --> hf iclass managekeys -p
 ```
 
 Add key to keystore [0-7]
 ```
 Options
 ---
-n <keynbr>    : specify the keyNbr to set in memory
-k <key>       : set a key in memory
+-f, --file <filename>          Specify a filename to use with load or save operations
+    --ki <dec>                 Specify key index to set key in memory
 
-pm3 --> hf iclass managekeys n 3 k AFA785A7DAB33378
+pm3 --> hf iclass managekeys --ki 3 -k AFA785A7DAB33378
 ```
 
 Encrypt iCLASS Block
@@ -167,20 +168,23 @@ Simulate iCLASS
 ```
 Options
 ---
-0 <CSN>     simulate the given CSN
+-t, --type <int>               Simulation type to use
+    --csn <hex>                Specify CSN as 8 bytes (16 hex symbols) to use with sim type 0
+Types:
+0           simulate the given CSN
 1           simulate default CSN
 2           Runs online part of LOCLASS attack
 3           Full simulation using emulator memory (see 'hf iclass eload')
 4           Runs online part of LOCLASS attack against reader in keyroll mode
 
-pm3 --> hf iclass sim 3
+pm3 --> hf iclass sim -t 3
 ```
 
 Simulate iCLASS Sequence
 ```
 pm3 --> hf iclass dump --ki 0
 pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
-pm3 --> hf iclass sim 3
+pm3 --> hf iclass sim -t 3
 ```
 
 Extract custom iCLASS key (loclass attack)
@@ -189,11 +193,11 @@ Options
 ---
 f <filename>   : specify a filename to clone from
 k <key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
-e              : If 'e' is specified, elite computations applied to key
+--elite        : Elite computations applied to key
 
-pm3 --> hf iclass sim 2
+pm3 --> hf iclass sim -t 2
 pm3 --> hf iclass loclass -f iclass_mac_attack.bin
-pm3 --> hf iclass managekeys n 7 k <Kcus>
+pm3 --> hf iclass managekeys --ki 7 -k <Kcus>
 pm3 --> hf iclass dump --ki 7 --elite
 ```
 
@@ -201,13 +205,14 @@ Verify custom iCLASS key
 ```
 Options
 ---
-f <filename> : Dictionary file with default iCLASS keys
-u            : CSN
-p            : EPURSE
-m            : macs
-e            : elite
+-f, --file <filename>          Dictionary file with default iclass keys
+    --csn <hex>                Specify CSN as 8 bytes (16 hex symbols)
+    --epurse <hex>             Specify ePurse as 8 bytes (16 hex symbols)
+    --macs <hex>               MACs
+    --raw                      no computations applied to key (raw)
+    --elite                    Elite computations applied to key
 
-pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f iclass_default_keys e
+pm3 --> hf iclass lookup --csn 010a0ffff7ff12e0 --epurse feffffffffffffff --macs 66348979153c41b9 -f iclass_default_keys --elite
 ```
 
 ## MIFARE
