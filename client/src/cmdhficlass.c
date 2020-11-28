@@ -295,6 +295,7 @@ static void print_picopass_info(const picopass_hdr *hdr) {
     fuse_config(hdr);
     mem_app_config(hdr);
 }
+
 static void print_picopass_header(const picopass_hdr *hdr) {
     PrintAndLogEx(INFO, "--------------------------- " _CYAN_("card") " ---------------------------");
     PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
@@ -741,6 +742,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return PM3_SUCCESS;
 }
+
 static int CmdHFiClassESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass esave",
@@ -858,6 +860,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     free(dump);
     return PM3_SUCCESS;
 }
+
 static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIParserContext *clictx;
     CLIParserInit(&clictx, "hf iclass decrypt",
@@ -2703,8 +2706,8 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass chk",
                   "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
-                  "hf iclass chk -f dictionaries/iclass_default_keys.dic\n"
-                  "hf iclass chk -f dictionaries/iclass_default_keys.dic --elite");
+                  "hf iclass chk -f iclass_default_keys.dic\n"
+                  "hf iclass chk -f iclass_default_keys.dic --elite");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2883,14 +2886,15 @@ out:
     return PM3_SUCCESS;
 }
 
+
 // this method tries to identify in which configuration mode a iCLASS / iCLASS SE reader is in.
 // Standard or Elite / HighSecurity mode.  It uses a default key dictionary list in order to work.
 static int CmdHFiClassLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass lookup",
                   "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file",
-                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f dictionaries/iclass_default_keys.dic\n"
-                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f dictionaries/iclass_default_keys.dic --elite");
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic\n"
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2952,20 +2956,19 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     uint8_t CCNR[12];
     uint8_t MAC_TAG[4] = { 0, 0, 0, 0 };
 
-    iclass_prekey_t *prekey = NULL;
-
-    // time
-    uint64_t t1 = msclock();
-
     // stupid copy.. CCNR is a combo of epurse and reader nonce
     memcpy(CCNR, epurse, 8);
     memcpy(CCNR + 8, macs, 4);
+    memcpy(MAC_TAG, macs + 4, 4);
 
     PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
     PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, sizeof(epurse)));
     PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, sizeof(macs)));
     PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
     PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+
+    // run time
+    uint64_t t1 = msclock();
 
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
@@ -2978,7 +2981,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     }
 
     //iclass_prekey_t
-    prekey = calloc(keycount, sizeof(iclass_prekey_t));
+    iclass_prekey_t *prekey = calloc(keycount, sizeof(iclass_prekey_t));
     if (!prekey) {
         free(keyBlock);
         return PM3_EMALLOC;
@@ -3011,7 +3014,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "time in iclass lookup " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in iclass lookup " _YELLOW_("%.3f") " seconds", (float)t1 / 1000.0);
 
     free(prekey);
     free(keyBlock);
@@ -3019,43 +3022,150 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// precalc diversified keys and their MAC
-void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_premac_t *list) {
+typedef struct {
+    uint8_t thread_idx;
+    uint8_t use_raw; 
+    uint8_t use_elite;
+    uint32_t keycnt;
+    uint8_t csn[8];
+    uint8_t cc_nr[12];
+    uint8_t *keys;
+    union {
+        iclass_premac_t *premac;
+        iclass_prekey_t *prekey;
+    } list;
+} PACKED iclass_thread_arg_t;
+
+static size_t iclass_tc = 1;
+
+static void* bf_generate_mac(void *thread_arg) {
+    
+    iclass_thread_arg_t *targ = (iclass_thread_arg_t *)thread_arg;
+    const uint8_t idx = targ->thread_idx;
+    const uint8_t use_raw = targ->use_raw;
+    const uint8_t use_elite = targ->use_elite;
+    const uint32_t keycnt = targ->keycnt;
+    
+    uint8_t *keys = targ->keys;
+    iclass_premac_t *list = targ->list.premac;
+    
+    uint8_t csn[8];
+    uint8_t cc_nr[12];
+    memcpy(csn, targ->csn, sizeof(csn));
+    memcpy(cc_nr, targ->cc_nr, sizeof(cc_nr));
+    
     uint8_t key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-//iceman: threading
-    for (uint32_t i = 0; i < keycnt; i++) {
+    
+    for (uint32_t i = idx; i < keycnt; i += iclass_tc) {
 
         memcpy(key, keys + 8 * i, 8);
 
         if (use_raw)
             memcpy(div_key, key, 8);
         else
-            HFiClassCalcDivKey(CSN, key, div_key, use_elite);
+            HFiClassCalcDivKey(csn, key, div_key, use_elite);
 
-        doMAC(CCNR, div_key, list[i].mac);
+        doMAC(cc_nr, div_key, list[i].mac);
     }
+    return NULL;
+}
+
+// precalc diversified keys and their MAC
+void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_premac_t *list) {
+
+    iclass_tc = num_CPUs();
+    pthread_t threads[iclass_tc];
+    iclass_thread_arg_t args[iclass_tc];
+    // init thread arguments
+    for (uint8_t i = 0; i < iclass_tc; i++) {
+        args[i].thread_idx = i;
+        args[i].use_raw = use_raw; 
+        args[i].use_elite = use_elite;
+        args[i].keycnt = keycnt;
+        args[i].keys = keys;
+        args[i].list.premac = list;
+        
+        memcpy(args[i].csn, CSN, sizeof(args[i].csn) );
+        memcpy(args[i].cc_nr, CCNR, sizeof(args[i].cc_nr) );
+    }
+
+    for (int i = 0; i < iclass_tc; i++) {
+        int res = pthread_create(&threads[i], NULL, bf_generate_mac, (void *)&args[i]);
+        if (res) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "Failed to create pthreads. Quitting");
+            return;
+        }
+    }
+
+    for (int i = 0; i < iclass_tc; i++)
+        pthread_join(threads[i], NULL);
+}
+
+static void* bf_generate_mackey(void *thread_arg) {
+    
+    iclass_thread_arg_t *targ = (iclass_thread_arg_t *)thread_arg;
+    const uint8_t idx = targ->thread_idx;
+    const uint8_t use_raw = targ->use_raw;
+    const uint8_t use_elite = targ->use_elite;
+    const uint32_t keycnt = targ->keycnt;
+    
+    uint8_t *keys = targ->keys;
+    iclass_prekey_t *list = targ->list.prekey;
+    
+    uint8_t csn[8];
+    uint8_t cc_nr[12];
+    memcpy(csn, targ->csn, sizeof(csn));
+    memcpy(cc_nr, targ->cc_nr, sizeof(cc_nr));
+   
+    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    for (uint32_t i = idx; i < keycnt; i += iclass_tc) {
+
+        memcpy(list[i].key, keys + 8 * i, 8);
+
+        if (use_raw)
+            memcpy(div_key, list[i].key, 8);
+        else
+            HFiClassCalcDivKey(csn, list[i].key, div_key, use_elite);
+
+        doMAC(cc_nr, div_key, list[i].mac);
+    }
+    return NULL;
 }
 
 void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, uint32_t keycnt, iclass_prekey_t *list) {
 
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-//iceman: threading
-    for (uint32_t i = 0; i < keycnt; i++) {
-
-        memcpy(list[i].key, keys + 8 * i, 8);
-
-        // generate diversifed key
-        if (use_raw)
-            memcpy(div_key, list[i].key, 8);
-        else
-            HFiClassCalcDivKey(CSN, list[i].key, div_key, use_elite);
-
-        // generate MAC
-        doMAC(CCNR, div_key, list[i].mac);
+    iclass_tc = num_CPUs();
+    pthread_t threads[iclass_tc];
+    iclass_thread_arg_t args[iclass_tc];
+    // init thread arguments
+    for (uint8_t i = 0; i < iclass_tc; i++) {
+        args[i].thread_idx = i;
+        args[i].use_raw = use_raw; 
+        args[i].use_elite = use_elite;
+        args[i].keycnt = keycnt;
+        args[i].keys = keys;
+        args[i].list.prekey = list;
+        
+        memcpy(args[i].csn, CSN, sizeof(args[i].csn) );
+        memcpy(args[i].cc_nr, CCNR, sizeof(args[i].cc_nr) );
     }
+
+    for (int i = 0; i < iclass_tc; i++) {
+        int res = pthread_create(&threads[i], NULL, bf_generate_mackey, (void *)&args[i]);
+        if (res) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "Failed to create pthreads. Quitting");
+            return;
+        }
+    }
+
+    for (int i = 0; i < iclass_tc; i++)
+        pthread_join(threads[i], NULL);
+    
+    PrintAndLogEx(NORMAL, "");
 }
 
 // print diversified keys
@@ -3250,7 +3360,7 @@ static command_t CommandTable[] = {
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
     {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iclass commands"},
-    {"permute",     CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
+    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
     {"view",        CmdHFiClassView,            AlwaysAvailable, "[options..] Display content from tag dump file"},
 
     {NULL, NULL, NULL, NULL}
