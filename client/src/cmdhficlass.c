@@ -71,27 +71,6 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-static int usage_hf_iclass_calc_newkey(void) {
-    PrintAndLogEx(NORMAL, "Calculate new key for updating\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass calc_newkey o <old key> n <new key> s [csn] e\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h           : Show this help");
-    PrintAndLogEx(NORMAL, "  o <old key> : *specify a key as 16 hex symbols or a key number as 1 symbol");
-    PrintAndLogEx(NORMAL, "  n <new key> : *specify a key as 16 hex symbols or a key number as 1 symbol");
-    PrintAndLogEx(NORMAL, "  s <csn>     : specify a card Serial number to diversify the key (if omitted will attempt to read a csn)");
-    PrintAndLogEx(NORMAL, "  e           : specify new key as elite calc");
-    PrintAndLogEx(NORMAL, "  ee          : specify old and new key as elite calc");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "   -- e key to e key given csn");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass calcnewkey o 1122334455667788 n 2233445566778899 s deadbeafdeadbeaf ee"));
-    PrintAndLogEx(NORMAL, "   -- std key to e key read csn");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass calcnewkey o 1122334455667788 n 2233445566778899 e"));
-    PrintAndLogEx(NORMAL, "   -- std to std read csn");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass calcnewkey o 1122334455667788 n 2233445566778899"));
-    PrintAndLogEx(NORMAL, "\nNOTE: * = required");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file\n");
     PrintAndLogEx(NORMAL, "Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]\n");
@@ -2339,89 +2318,127 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
 }
 
 static int CmdHFiClassCalcNewKey(const char *Cmd) {
-    uint8_t OLDKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t NEWKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t xor_div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t keyNbr = 0;
-    uint8_t dataLen = 0;
-    char tempStr[50] = {0};
-    bool givenCSN = false;
-    bool old_elite = false;
-    bool elite = false;
-    bool errors = false;
-    uint8_t cmdp = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass calcnewkey",
+                  "Calculate new keys for updating (blocks 3 & 4)",
+                  "hf iclass calcnewkey --old 1122334455667788 --new 2233445566778899 --csn deadbeafdeadbeaf --elite2 -> e key to e key given csn\n"
+                  "hf iclass calcnewkey --old 1122334455667788 --new 2233445566778899 --elite                         -> std key to e key read csn\n"
+                  "hf iclass calcnewkey --old 1122334455667788 --new 2233445566778899                                 -> std to std read csn");
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_iclass_calc_newkey();
-            case 'e':
-                dataLen = param_getstr(Cmd, cmdp, tempStr, sizeof(tempStr));
-                if (dataLen == 2)
-                    old_elite = true;
-                elite = true;
-                cmdp++;
-                break;
-            case 'n':
-                dataLen = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (dataLen == 16) {
-                    errors = param_gethex(tempStr, 0, NEWKEY, dataLen);
-                } else if (dataLen == 1) {
-                    keyNbr = param_get8(Cmd, cmdp + 1);
-                    if (keyNbr < ICLASS_KEYS_MAX) {
-                        memcpy(NEWKEY, iClass_Key_Table[keyNbr], 8);
-                    } else {
-                        PrintAndLogEx(WARNING, "\nERROR: NewKey Nbr is invalid\n");
-                        errors = true;
-                    }
-                } else {
-                    PrintAndLogEx(WARNING, "\nERROR: NewKey is incorrect length\n");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 'o':
-                dataLen = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (dataLen == 16) {
-                    errors = param_gethex(tempStr, 0, OLDKEY, dataLen);
-                } else if (dataLen == 1) {
-                    keyNbr = param_get8(Cmd, cmdp + 1);
-                    if (keyNbr < ICLASS_KEYS_MAX) {
-                        memcpy(OLDKEY, iClass_Key_Table[keyNbr], 8);
-                    } else {
-                        PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
-                        errors = true;
-                    }
-                } else {
-                    PrintAndLogEx(WARNING, "\nERROR: Credit Key is incorrect length\n");
-                    errors = true;
-                }
-                cmdp += 2;
-                break;
-            case 's':
-                givenCSN = true;
-                if (param_gethex(Cmd, cmdp + 1, CSN, 16))
-                    return usage_hf_iclass_calc_newkey();
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "old", "<hex>", "Specify key as 8 bytes (16 hex symbols)"),
+        arg_int0(NULL, "oki", "<dec>", "Old key index to select key from memory 'hf iclass managekeys'"),
+        arg_str0(NULL, "new", "<hex>", "Specify key as 8 bytes (16 hex symbols)"),
+        arg_int0(NULL, "nki", "<dec>", "New key index to select key from memory 'hf iclass managekeys'"),
+        arg_str0(NULL, "csn", "<hex>", "Specify a Card Serial Number (CSN) to diversify the key (if omitted will attempt to read a CSN)"),
+        arg_lit0(NULL, "elite", "Elite computations applied to new key"),
+        arg_lit0(NULL, "elite2", "Elite computations applied to both old and new key"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int old_key_len = 0;
+    uint8_t old_key[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, old_key, &old_key_len);
+
+    int old_key_nr = arg_get_int_def(ctx, 2, -1);
+
+    if (old_key_len > 0 && old_key_nr >= 0) {
+        PrintAndLogEx(ERR, "Please specify old key or index, not both");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (old_key_len > 0) {
+        if (old_key_len != 8) {
+            PrintAndLogEx(ERR, "Old key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else if (old_key_nr >= 0) {
+        if (old_key_nr < ICLASS_KEYS_MAX) {
+            memcpy(old_key, iClass_Key_Table[old_key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using old key[%d] " _GREEN_("%s"), old_key_nr, sprint_hex(iClass_Key_Table[old_key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else {
+        PrintAndLogEx(ERR, "Please specify an old key or old key index");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int new_key_len = 0;
+    uint8_t new_key[8] = {0};
+    CLIGetHexWithReturn(ctx, 3, new_key, &new_key_len);
+
+    int new_key_nr = arg_get_int_def(ctx, 4, -1);
+
+    if (new_key_len > 0 && new_key_nr >= 0) {
+        PrintAndLogEx(ERR, "Please specify new key or index, not both");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (new_key_len > 0) {
+        if (new_key_len != 8) {
+            PrintAndLogEx(ERR, "New key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else if (new_key_nr >= 0) {
+        if (new_key_nr < ICLASS_KEYS_MAX) {
+            memcpy(new_key, iClass_Key_Table[new_key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using new key[%d] " _GREEN_("%s"), new_key_nr, sprint_hex(iClass_Key_Table[new_key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else {
+        PrintAndLogEx(ERR, "Please specify an new key or old key index");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int csn_len = 0;
+    uint8_t csn[8] = {0};
+    CLIGetHexWithReturn(ctx, 5, csn, &csn_len);
+    bool givenCSN = false;
+
+    if (csn_len > 0) {
+        givenCSN = true;
+        if (csn_len != 8) {
+            PrintAndLogEx(ERR, "CSN is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
     }
-    if (errors || cmdp < 4) return usage_hf_iclass_calc_newkey();
+
+    bool elite = arg_get_lit(ctx, 6);
+    bool old_elite = false;
+
+    if (arg_get_lit(ctx, 7)) {
+        elite = true;
+        old_elite = true;
+    }
+
+    CLIParserFree(ctx);
+
+    uint8_t xor_div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     if (givenCSN == false) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (select_only(CSN, CCNR, true) == false) {
+        if (select_only(csn, CCNR, true) == false) {
             DropField();
             return PM3_ESOFT;
         }
     }
 
-    HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, old_elite, true);
+    HFiClassCalcNewKey(csn, old_key, new_key, xor_div_key, elite, old_elite, true);
 
     return PM3_SUCCESS;
 }
