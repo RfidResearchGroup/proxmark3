@@ -37,18 +37,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lto_rdbl(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto rdbl [h] s <start block> e <end block>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           s     start block in decimal >= 0");
-    PrintAndLogEx(NORMAL, "           e     end block in decimal <= 254");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto rdbl s 0 e 254") " - Read data block from 0 to 254");
-    return PM3_SUCCESS;
-}
-
 static int usage_lto_wrbl(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf lto wrbl [h] b <block> d <data>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -265,48 +253,31 @@ int rdblLTO(uint8_t st_blk, uint8_t end_blk, bool verbose) {
 }
 
 static int CmdHfLTOReadBlock(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto rdbl",
+                  "Reead blocks from LTO tag",
+                  "hf lto rdbl --first 0 --last 254");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    uint8_t st_blk = 0;
-    uint8_t end_blk = 254;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "first", "<dec>", "The first block number to read as an integer"),
+        arg_int0(NULL, "last", "<dec>", "The last block number to read as an integer"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_rdbl();
-            case 's':
-                st_blk = param_get8(Cmd, cmdp + 1);
-                if (end_blk < st_blk) {
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
+    int startblock = arg_get_int_def(ctx, 1, 0);
+    int endblock = arg_get_int_def(ctx, 2, 254);
 
-            case 'e':
-                end_blk = param_get8(Cmd, cmdp + 1);
-                if (end_blk < st_blk) {
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    CLIParserFree(ctx);
 
     //Validations
-    if (errors) {
-        usage_lto_rdbl();
+    if (endblock < startblock) {
+        PrintAndLogEx(ERR, "First block must be less than last block");
         return PM3_EINVARG;
     }
 
-    return rdblLTO(st_blk, end_blk, true);
+    return rdblLTO(startblock, endblock, true);
 }
 
 static int lto_wrbl(uint8_t blk, uint8_t *data, bool verbose) {
