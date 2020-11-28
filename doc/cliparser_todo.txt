@@ -13,7 +13,6 @@ analyse a
 analyse nuid
 analyse demodbuff
 analyse freq
-analyse foo
 data biphaserawdecode
 data detectclock
 data fsktonrz
@@ -29,6 +28,7 @@ data grid
 data ltrim
 data mtrim
 data norm
+data plot
 data rtrim
 data setgraphmarkers
 data shiftgraphzero
@@ -119,6 +119,7 @@ hf mf restore
 hf mf setmod
 hf mf wrbl
 hf mf sim
+hf mf ecfill
 hf mf eclr
 hf mf egetblk
 hf mf egetsc
@@ -261,9 +262,7 @@ lf jablotron read
 lf jablotron clone
 lf jablotron sim
 lf keri demod
-lf keri read
 lf motorola demod
-lf motorola read
 lf motorola sim
 lf nedap demod
 lf nedap generate
