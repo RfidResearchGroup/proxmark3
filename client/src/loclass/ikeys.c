@@ -210,12 +210,12 @@ static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *o
         return;
 
     bool pn = tailBit(p_in);
-    if (pn) { 
+    if (pn) {
         // pn = 1
         uint8_t zl = getSixBitByte(z, l);
         push6bits(out, zl + 1);
         permute(p_in, z, l + 1, r, out);
-    } else { 
+    } else {
         // otherwise
         uint8_t zr = getSixBitByte(z, r);
         push6bits(out, zr);
@@ -256,8 +256,8 @@ void hash0(uint64_t c, uint8_t k[8]) {
     c = swapZvalues(c);
 
     if (g_debugMode > 0) {
-    PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
-    printState("origin", c);
+        PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+        printState("origin", c);
     }
     //These 64 bits are divided as c = x, y, z [0] , . . . , z [7]
     // x = 8 bits
@@ -421,7 +421,7 @@ static int testDES(uint8_t *key, testcase_t testcase) {
     uint8_t des_encrypted_csn[8] = {0};
     uint8_t decrypted[8] = {0};
     uint8_t div_key[8] = {0};
-    
+
     mbedtls_des_context ctx_enc;
     mbedtls_des_context ctx_dec;
 
@@ -466,12 +466,12 @@ static int testDES(uint8_t *key, testcase_t testcase) {
 static bool des_getParityBitFromKey(uint8_t key) {
     // The top 7 bits is used
     bool parity = ((key & 0x80) >> 7)
-                ^ ((key & 0x40) >> 6)
-                ^ ((key & 0x20) >> 5)
-                ^ ((key & 0x10) >> 4)
-                ^ ((key & 0x08) >> 3)
-                ^ ((key & 0x04) >> 2)
-                ^ ((key & 0x02) >> 1);
+                  ^ ((key & 0x40) >> 6)
+                  ^ ((key & 0x20) >> 5)
+                  ^ ((key & 0x10) >> 4)
+                  ^ ((key & 0x08) >> 3)
+                  ^ ((key & 0x04) >> 2)
+                  ^ ((key & 0x02) >> 1);
     return !parity;
 }
 
@@ -613,7 +613,7 @@ static int testDES2(uint8_t *key, uint64_t csn, uint64_t expected) {
     uint64_t crypt_csn = x_bytes_to_num(result, 8);
 
     PrintAndLogEx(DEBUG, "   {csn}    %"PRIx64, crypt_csn);
-    PrintAndLogEx(DEBUG, "   expected %"PRIx64 "    (%s)", expected, (expected == crypt_csn) ? _GREEN_("ok") : _RED_("fail") );
+    PrintAndLogEx(DEBUG, "   expected %"PRIx64 "    (%s)", expected, (expected == crypt_csn) ? _GREEN_("ok") : _RED_("fail"));
 
     if (expected != crypt_csn)
         return PM3_ESOFT;

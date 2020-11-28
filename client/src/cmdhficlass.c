@@ -3024,7 +3024,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
 typedef struct {
     uint8_t thread_idx;
-    uint8_t use_raw; 
+    uint8_t use_raw;
     uint8_t use_elite;
     uint32_t keycnt;
     uint8_t csn[8];
@@ -3038,25 +3038,25 @@ typedef struct {
 
 static size_t iclass_tc = 1;
 
-static void* bf_generate_mac(void *thread_arg) {
-    
+static void *bf_generate_mac(void *thread_arg) {
+
     iclass_thread_arg_t *targ = (iclass_thread_arg_t *)thread_arg;
     const uint8_t idx = targ->thread_idx;
     const uint8_t use_raw = targ->use_raw;
     const uint8_t use_elite = targ->use_elite;
     const uint32_t keycnt = targ->keycnt;
-    
+
     uint8_t *keys = targ->keys;
     iclass_premac_t *list = targ->list.premac;
-    
+
     uint8_t csn[8];
     uint8_t cc_nr[12];
     memcpy(csn, targ->csn, sizeof(csn));
     memcpy(cc_nr, targ->cc_nr, sizeof(cc_nr));
-    
+
     uint8_t key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    
+
     for (uint32_t i = idx; i < keycnt; i += iclass_tc) {
 
         memcpy(key, keys + 8 * i, 8);
@@ -3080,14 +3080,14 @@ void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, 
     // init thread arguments
     for (uint8_t i = 0; i < iclass_tc; i++) {
         args[i].thread_idx = i;
-        args[i].use_raw = use_raw; 
+        args[i].use_raw = use_raw;
         args[i].use_elite = use_elite;
         args[i].keycnt = keycnt;
         args[i].keys = keys;
         args[i].list.premac = list;
-        
-        memcpy(args[i].csn, CSN, sizeof(args[i].csn) );
-        memcpy(args[i].cc_nr, CCNR, sizeof(args[i].cc_nr) );
+
+        memcpy(args[i].csn, CSN, sizeof(args[i].csn));
+        memcpy(args[i].cc_nr, CCNR, sizeof(args[i].cc_nr));
     }
 
     for (int i = 0; i < iclass_tc; i++) {
@@ -3103,22 +3103,22 @@ void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, 
         pthread_join(threads[i], NULL);
 }
 
-static void* bf_generate_mackey(void *thread_arg) {
-    
+static void *bf_generate_mackey(void *thread_arg) {
+
     iclass_thread_arg_t *targ = (iclass_thread_arg_t *)thread_arg;
     const uint8_t idx = targ->thread_idx;
     const uint8_t use_raw = targ->use_raw;
     const uint8_t use_elite = targ->use_elite;
     const uint32_t keycnt = targ->keycnt;
-    
+
     uint8_t *keys = targ->keys;
     iclass_prekey_t *list = targ->list.prekey;
-    
+
     uint8_t csn[8];
     uint8_t cc_nr[12];
     memcpy(csn, targ->csn, sizeof(csn));
     memcpy(cc_nr, targ->cc_nr, sizeof(cc_nr));
-   
+
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     for (uint32_t i = idx; i < keycnt; i += iclass_tc) {
@@ -3143,14 +3143,14 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
     // init thread arguments
     for (uint8_t i = 0; i < iclass_tc; i++) {
         args[i].thread_idx = i;
-        args[i].use_raw = use_raw; 
+        args[i].use_raw = use_raw;
         args[i].use_elite = use_elite;
         args[i].keycnt = keycnt;
         args[i].keys = keys;
         args[i].list.prekey = list;
-        
-        memcpy(args[i].csn, CSN, sizeof(args[i].csn) );
-        memcpy(args[i].cc_nr, CCNR, sizeof(args[i].cc_nr) );
+
+        memcpy(args[i].csn, CSN, sizeof(args[i].csn));
+        memcpy(args[i].cc_nr, CCNR, sizeof(args[i].cc_nr));
     }
 
     for (int i = 0; i < iclass_tc; i++) {
@@ -3164,7 +3164,7 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
 
     for (int i = 0; i < iclass_tc; i++)
         pthread_join(threads[i], NULL);
-    
+
     PrintAndLogEx(NORMAL, "");
 }
 

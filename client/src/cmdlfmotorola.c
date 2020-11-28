@@ -218,9 +218,9 @@ static int CmdMotorolaClone(const char *Cmd) {
 
     // config for Motorola 64 format (RF/32;PSK1 with RF/2; Maxblock=2)
     PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit to " _YELLOW_("%s")  " with raw " _GREEN_("%s")
-        , cardtype
-        , sprint_hex_inrow(raw, sizeof(raw))
-        );
+                  , cardtype
+                  , sprint_hex_inrow(raw, sizeof(raw))
+                 );
     print_blocks(blocks, ARRAYLEN(blocks));
 
     int res;

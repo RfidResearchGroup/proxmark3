@@ -69,7 +69,7 @@ static int pac_buf_to_cardid(uint8_t *src, const size_t src_size, uint8_t *dst, 
 
 // convert a 16 byte array of raw demod data (FF204990XX...) to 8 bytes of PAC_8byte ID
 // performs no parity or checksum validation
-static void pac_raw_to_cardid(const uint8_t* src, uint8_t *dst) {
+static void pac_raw_to_cardid(const uint8_t *src, uint8_t *dst) {
     for (int i = 4; i < 12; i++) {
         uint8_t shift = 7 - (i + 3) % 4 * 2;
         size_t index = i + (i - 1) / 4;
@@ -162,7 +162,7 @@ static int CmdPacDemod(const char *Cmd) {
 }
 
 static int CmdPacReader(const char *Cmd) {
-    
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf pac reader",
                   "read a pac tag",
@@ -208,7 +208,7 @@ static int CmdPacClone(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t cnstr[9];
-    int cnlen = 9; 
+    int cnlen = 9;
     memset(cnstr, 0x00, sizeof(cnstr));
     CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
 
@@ -236,7 +236,7 @@ static int CmdPacClone(const char *Cmd) {
     }
 
     if (cnlen == 8 || cnlen == 9) {
-        pac_cardid_to_raw((char*)cnstr, raw);
+        pac_cardid_to_raw((char *)cnstr, raw);
     } else {
         pac_raw_to_cardid(raw, cnstr);
     }
@@ -262,10 +262,10 @@ static int CmdPacClone(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Preparing to clone PAC/Stanley tag to " _YELLOW_("%s") " with ID " _GREEN_("%s")  " raw " _GREEN_("%s")
-        , cardtype
-        , cnstr
-        , sprint_hex_inrow(raw, sizeof(raw))
-        );
+                  , cardtype
+                  , cnstr
+                  , sprint_hex_inrow(raw, sizeof(raw))
+                 );
 
     print_blocks(blocks,  ARRAYLEN(blocks));
 
@@ -300,7 +300,7 @@ static int CmdPacSim(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t cnstr[10];
-    int cnlen = 9; 
+    int cnlen = 9;
     memset(cnstr, 0x00, sizeof(cnstr));
     CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
 
@@ -321,7 +321,7 @@ static int CmdPacSim(const char *Cmd) {
     }
 
     if (cnlen == 8 || cnlen == 9) {
-        pac_cardid_to_raw((char*)cnstr, raw);
+        pac_cardid_to_raw((char *)cnstr, raw);
     } else {
         pac_raw_to_cardid(raw, cnstr);
     }
@@ -333,9 +333,9 @@ static int CmdPacSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%s")" raw " _YELLOW_("%s")
-        , cnstr
-        , sprint_hex_inrow(raw, sizeof(raw))
-        );
+                  , cnstr
+                  , sprint_hex_inrow(raw, sizeof(raw))
+                 );
 
     // NRZ sim.
     lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));

@@ -732,7 +732,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf keri help           `|Y       |`This help`
 |`lf keri demod          `|Y       |`Demodulate an KERI tag from the GraphBuffer`
-|`lf keri reader         `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf keri read           `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf keri clone          `|N       |`clone KERI tag to T55x7 or Q5/T5555`
 |`lf keri sim            `|N       |`simulate KERI tag`
 
@@ -745,7 +745,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf motorola help       `|Y       |`This help`
 |`lf motorola demod      `|Y       |`Demodulate an MOTOROLA tag from the GraphBuffer`
-|`lf motorola reader     `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf motorola read       `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf motorola clone      `|N       |`clone MOTOROLA tag to T55x7`
 |`lf motorola sim        `|N       |`simulate MOTOROLA tag`
 
@@ -772,7 +772,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf nexwatch help       `|Y       |`This help`
 |`lf nexwatch demod      `|Y       |`Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer`
-|`lf nexwatch reader     `|N       |`Attempt to Read and Extract tag data from the antenna`
+|`lf nexwatch read       `|N       |`Attempt to Read and Extract tag data from the antenna`
 |`lf nexwatch clone      `|N       |`clone NexWatch tag to T55x7`
 |`lf nexwatch sim        `|N       |`simulate NexWatch tag`
 
@@ -785,7 +785,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf noralsy help        `|Y       |`This help`
 |`lf noralsy demod       `|Y       |`Demodulate an Noralsy tag from the GraphBuffer`
-|`lf noralsy reader      `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf noralsy read        `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf noralsy clone       `|N       |`clone Noralsy tag to T55x7 or Q5/T5555`
 |`lf noralsy sim         `|N       |`simulate Noralsy tag`
 
@@ -798,7 +798,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf pac help            `|Y       |`This help`
 |`lf pac demod           `|Y       |`Demodulate a PAC tag from the GraphBuffer`
-|`lf pac reader          `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf pac read            `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf pac clone           `|N       |`clone PAC tag to T55x7`
 |`lf pac sim             `|N       |`simulate PAC tag`
 
