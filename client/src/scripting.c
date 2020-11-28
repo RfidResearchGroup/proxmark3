@@ -1350,7 +1350,7 @@ int set_pm3_libraries(lua_State *L) {
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
         {"mfDarkside",                  l_mfDarkside},
         {"foobar",                      l_foobar},
-        {"kbd_enter_pressed",               l_kbd_enter_pressed},
+        {"kbd_enter_pressed",           l_kbd_enter_pressed},
         {"clearCommandBuffer",          l_clearCommandBuffer},
         {"console",                     l_CmdConsole},
         {"iso15693_crc",                l_iso15693_crc},
