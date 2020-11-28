@@ -61,17 +61,6 @@ static int usage_lto_wrbl(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_lto_restore(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto restore [h] f <filename>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           f     file name [.bin|.eml]");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto restore f hf_lto_92C7842CFF.bin|.eml"));
-    return PM3_SUCCESS;
-}
-
 static void lto_switch_off_field(void) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
 }
@@ -558,32 +547,23 @@ int restoreLTO(uint8_t *dump, bool verbose) {
 }
 
 static int CmdHfLTRestore(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto restore",
+                  "Restore data from dumpfile to LTO tag",
+                  "hf lto restore -f hf-lto-92C7842CFF.bin|.eml");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "specify a filename for dumpfile"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_restore();
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (strlen(filename) < 5)
-                    errors = true;
-
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    if (errors || strlen(Cmd) == 0) {
-        return usage_lto_restore();
-    }
+    CLIParserFree(ctx);
 
     size_t dump_len = 0;
     char *lowstr = str_dup(filename);
