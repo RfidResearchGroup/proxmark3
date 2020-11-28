@@ -2865,14 +2865,13 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         if (found_key) {
             break;
         }
-
     }
 
 out:
     t1 = msclock() - t1;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "time in iclass chk " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in iclass chk " _YELLOW_("%.3f") " seconds", (float)t1 / 1000.0);
     DropField();
 
     if (found_key) {
