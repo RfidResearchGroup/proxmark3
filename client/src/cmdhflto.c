@@ -37,18 +37,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lto_wrbl(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto wrbl [h] b <block> d <data>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           b     block address (decimal, 0 - 254) ");
-    PrintAndLogEx(NORMAL, "           d     32 bytes of data to write (64 hex characters, no space)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto wrbl b 128 d 0001020304050607080910111213141516171819202122232425262728293031") " - write 00..31 to block address 128");
-    return PM3_SUCCESS;
-}
-
 static void lto_switch_off_field(void) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
 }
@@ -339,46 +327,33 @@ int wrblLTO(uint8_t blk, uint8_t *data, bool verbose) {
 }
 
 static int CmdHfLTOWriteBlock(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto wrbl",
+                  "Write data to block on LTO tag",
+                  "hf lto wrbl --block 128 -d 0001020304050607080910111213141516171819202122232425262728293031");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool b_opt_selected = false;
-    bool d_opt_selected = false;
-    uint8_t blk = 128;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "32 bytes of data to write (64 hex symbols, no spaces)"),
+        arg_int1(NULL, "block", "<dec>", "The  block number to write to as an integer"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int block_data_len = 0;
     uint8_t block_data[32] = {0};
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_wrbl();
-            case 'b':
-                blk = param_get8(Cmd, cmdp + 1);
-                b_opt_selected = true;
-                cmdp += 2;
-                break;
-            case 'd':
-                if (param_gethex(Cmd, cmdp + 1, block_data, 64)) {
-                    PrintAndLogEx(WARNING, "block data must include 64 HEX symbols");
-                    errors = true;
-                    break;
-                }
-                d_opt_selected = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    CLIGetHexWithReturn(ctx, 1, block_data, &block_data_len);
+
+    if (block_data_len != 32) {
+        PrintAndLogEx(ERR, "Block data is incorrect length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
-    //Validations
-    if (errors) {
-        return usage_lto_wrbl();
-    } else if (b_opt_selected == false || d_opt_selected == false) {
-        PrintAndLogEx(WARNING, "Need to specify block address and data.");
-        return usage_lto_wrbl();
-    }
+    int blk = arg_get_int_def(ctx, 2, 0);
+
+    CLIParserFree(ctx);
 
     int res = wrblLTO(blk, block_data, true);
     if (res == PM3_SUCCESS)

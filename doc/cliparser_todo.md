@@ -101,7 +101,6 @@ hf legic crc
 hf legic eload
 hf legic esave
 hf legic wipe
-hf lto wrbl
 hf lto list
 hf mf list
 hf mf darkside
