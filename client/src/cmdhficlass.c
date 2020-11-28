@@ -51,27 +51,6 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 };
 
-static int usage_hf_iclass_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate a iCLASS legacy/standard tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iCLASS sim [h] <option> [CSN]\n");
-    PrintAndLogEx(NORMAL, "Options");
-    PrintAndLogEx(NORMAL, "  h         : Show this help");
-    PrintAndLogEx(NORMAL, "  0 <CSN>   : simulate the given CSN");
-    PrintAndLogEx(NORMAL, "  1         : simulate default CSN");
-    PrintAndLogEx(NORMAL, "  2         : Reader-attack, gather reader responses to extract elite key");
-    PrintAndLogEx(NORMAL, "  3         : Full simulation using emulator memory (see 'hf iclass eload')");
-    PrintAndLogEx(NORMAL, "  4         : Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 0 031FEC8AF7FF12E0"));
-    PrintAndLogEx(NORMAL, "   -- execute loclass attack online part");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 2"));
-    PrintAndLogEx(NORMAL, "   -- simulate full iCLASS 2k tag");
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin"));
-    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 3"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static int cmp_uint32(const void *a, const void *b) {
 
     const iclass_prekey_t *x = (const iclass_prekey_t *)a;
@@ -379,24 +358,48 @@ static int CmdHFiClassSniff(const char *Cmd) {
 }
 
 static int CmdHFiClassSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass sim",
+                  "Simulate a iCLASS legacy/standard tag",
+                  "hf iclass sim -t 0 --csn 031FEC8AF7FF12E0                -> simulate with specficied CSN\n"
+                  "hf iclass sim -t 1                                       -> simulate with default CSN\n"
+                  "hf iclass sim -t 2                                       -> execute loclass attack online part\n"
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin   -> simulate full iCLASS 2k tag\n"
+                  "hf iclass sim -t 3                                       -> simulate full iCLASS 2k tag\n"
+                  "hf iclass sim -t 4                                       -> Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_hf_iclass_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("t", "type", NULL, "Simulation type to use"),
+        arg_str0(NULL, "csn", "<hex>", "Specify CSN as 8 bytes (16 hex symbols) to use with sim type 0"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t CSN[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t sim_type = param_get8ex(Cmd, 0, 0, 10);
+    int sim_type = arg_get_int(ctx, 1);
 
-    if (sim_type == 0) {
-        if (param_gethex(Cmd, 1, CSN, 16)) {
-            PrintAndLogEx(ERR, "A CSN should consist of 16 HEX symbols");
-            return usage_hf_iclass_sim();
+    int csn_len = 0;
+    uint8_t csn[8] = {0};
+    CLIGetHexWithReturn(ctx, 2, csn, &csn_len);
+
+    if (sim_type == 0 && csn_len > 0) {
+        if (csn_len != 8) {
+            PrintAndLogEx(ERR, "CSN is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
-        PrintAndLogEx(INFO, " simtype: %02x CSN: %s", sim_type, sprint_hex(CSN, 8));
+        PrintAndLogEx(INFO, " simtype: %02x CSN: %s", sim_type, sprint_hex(csn, 8));
+    } else if (sim_type == 0 && csn_len == 0) {
+        PrintAndLogEx(ERR, "Simtype 0 requires CSN argument (--csn)");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
+
+    CLIParserFree(ctx);
 
     if (sim_type > 4) {
         PrintAndLogEx(ERR, "Undefined simtype %d", sim_type);
-        return usage_hf_iclass_sim();
+        return PM3_EINVARG;
     }
 
     // remember to change the define NUM_CSNS to match.
@@ -550,10 +553,10 @@ static int CmdHFiClassSim(const char *Cmd) {
         case ICLASS_SIM_MODE_FULL:
         default: {
             PrintAndLogEx(INFO, "Starting iCLASS simulation");
-            PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
+            PrintAndLogEx(INFO, "press " _YELLOW_("`button`") " to cancel");
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, CSN, 8);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, csn, 8);
 
             if (sim_type == ICLASS_SIM_MODE_FULL)
                 PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
