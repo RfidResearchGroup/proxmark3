@@ -1168,7 +1168,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
         }
 
         isOK = resp.status;
-        if (!isOK) {
+        if (isOK != PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, "Wiping data " _RED_("failed"));
             return PM3_ESOFT;
