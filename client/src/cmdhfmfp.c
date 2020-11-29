@@ -266,7 +266,17 @@ static int get_plus_version(uint8_t *version, int *version_len) {
 }
 
 static int CmdHFMFPInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp info",
+                  "Get info from MIFARE Plus tags",
+                  "hf mfp info");
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");

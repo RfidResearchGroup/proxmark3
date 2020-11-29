@@ -139,7 +139,6 @@ hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
-hf mfp info
 hf mfu info
 hf mfu dump
 hf mfu restore
