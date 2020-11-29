@@ -117,9 +117,9 @@ int demodGuard(bool verbose) {
 
 static int CmdGuardDemod(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf gprox demod",
-                  "Try to find Guardall preamble, if found decode / descramble data",
-                  "lf gprox demod"
+    CLIParserInit(&ctx, "lf gproxii demod",
+                  "Try to find Guardall Prox-II preamble, if found decode / descramble data",
+                  "lf gproxii demod"
                  );
 
     void *argtable[] = {
@@ -133,9 +133,9 @@ static int CmdGuardDemod(const char *Cmd) {
 
 static int CmdGuardReader(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf gprox reader",
+    CLIParserInit(&ctx, "lf gproxii reader",
                   "read a Guardall tag",
-                  "lf gprox reader -@   -> continuous reader mode"
+                  "lf gproxii reader -@   -> continuous reader mode"
                  );
 
     void *argtable[] = {
@@ -157,13 +157,13 @@ static int CmdGuardReader(const char *Cmd) {
 
 static int CmdGuardClone(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf gprox clone",
+    CLIParserInit(&ctx, "lf gproxii clone",
                   "clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
                   "Currently work only on 26bit",
-                  "lf gprox clone --fmt 26 --fc 123 --cn 1337\n"
-                  "lf gprox clone --q5 --fmt 26 --fc 123 --cn 1337   -> encode for Q5/T5555 tag\n"
-                  "lf gprox clone --em --fmt 26 --fc 123 --cn 1337   -> encode for EM4305/4469"
+                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337\n"
+                  "lf gproxii clone --q5 --fmt 26 --fc 123 --cn 1337   -> encode for Q5/T5555 tag\n"
+                  "lf gproxii clone --em --fmt 26 --fc 123 --cn 1337   -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {
@@ -235,19 +235,19 @@ static int CmdGuardClone(const char *Cmd) {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gprox reader`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gproxii reader`") " to verify");
     return res;
 }
 
 static int CmdGuardSim(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf gprox sim",
+    CLIParserInit(&ctx, "lf gproxii sim",
                   "Enables simulation of Guardall card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.\n"
                   "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
                   "Currently work only on 26bit",
-                  "lf gprox sim --fmt 26 --fc 123 --cn 1337\n"
+                  "lf gproxii sim --fmt 26 --fc 123 --cn 1337\n"
                  );
 
     void *argtable[] = {
