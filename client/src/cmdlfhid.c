@@ -19,13 +19,10 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfhid.h"
-
 #include <stdio.h>
 #include <string.h>
-
 #include <ctype.h>
 #include <inttypes.h>
-
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "commonutil.h"  // ARRAYLEN
@@ -38,6 +35,7 @@
 #include "lfdemod.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 #ifndef BITS
 # define BITS 96
@@ -153,15 +151,44 @@ int demodHID(bool verbose) {
 }
 
 static int CmdHIDDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hid demod",
+                  "Try to find HID Prox preamble, if found decode / descramble data",
+                  "lf hid demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodHID(true);
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdHIDRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 16000);
-    return demodHID(true);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hid reader",
+                  "read a HID Prox tag",
+                  "lf hid reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 16000);
+        demodHID(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 // this read loops on device side.
@@ -212,7 +239,6 @@ static int CmdHIDSim(const char *Cmd) {
         arg_int0("i",    NULL,     "<dec>", "issue level"),
         arg_int0("o",   "oem",     "<dec>", "OEM code"),
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
-//        arg_lit0("q",   "Q5",               "optional - specify writing to Q5/T5555 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -231,8 +257,6 @@ static int CmdHIDSim(const char *Cmd) {
     int raw_len = 0;
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
-
-    //bool q5 = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     wiegand_message_t packed;
