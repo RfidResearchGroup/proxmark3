@@ -38,6 +38,7 @@ Check column "offline" for their availability.
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
+|`analyse foo            `|Y       |`muxer`
 
 
 ### data
@@ -267,7 +268,7 @@ Check column "offline" for their availability.
 |`hf iclass encrypt      `|Y       |`[options..] Encrypt given block data`
 |`hf iclass decrypt      `|Y       |`[options..] Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`[options..] Manage keys to use with iclass commands`
-|`hf iclass permute      `|N       |`            Permute function from 'heart of darkness' paper`
+|`hf iclass permutekey   `|N       |`            Permute function from 'heart of darkness' paper`
 |`hf iclass view         `|Y       |`[options..] Display content from tag dump file`
 
 
@@ -692,7 +693,7 @@ Check column "offline" for their availability.
 |`lf indala help         `|Y       |`this help`
 |`lf indala demod        `|Y       |`demodulate an indala tag (PSK1) from GraphBuffer`
 |`lf indala altdemod     `|Y       |`alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
-|`lf indala read         `|N       |`read an Indala Prox tag from the antenna`
+|`lf indala reader       `|N       |`read an Indala Prox tag from the antenna`
 |`lf indala clone        `|N       |`clone Indala tag to T55x7 or Q5/T5555`
 |`lf indala sim          `|N       |`simulate Indala tag`
 
@@ -705,7 +706,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf io help             `|Y       |`this help`
 |`lf io demod            `|Y       |`demodulate an IOProx tag from the GraphBuffer`
-|`lf io read             `|N       |`attempt to read and extract tag data`
+|`lf io reader           `|N       |`attempt to read and extract tag data`
 |`lf io clone            `|N       |`clone IOProx tag to T55x7 or Q5/T5555`
 |`lf io sim              `|N       |`simulate IOProx tag`
 |`lf io watch            `|N       |`continuously watch for cards. Reader mode`
@@ -719,7 +720,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf jablotron help      `|Y       |`This help`
 |`lf jablotron demod     `|Y       |`Demodulate an Jablotron tag from the GraphBuffer`
-|`lf jablotron read      `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf jablotron reader    `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf jablotron clone     `|N       |`clone jablotron tag to T55x7 or Q5/T5555`
 |`lf jablotron sim       `|N       |`simulate jablotron tag`
 
@@ -732,7 +733,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf keri help           `|Y       |`This help`
 |`lf keri demod          `|Y       |`Demodulate an KERI tag from the GraphBuffer`
-|`lf keri read           `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf keri reader         `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf keri clone          `|N       |`clone KERI tag to T55x7 or Q5/T5555`
 |`lf keri sim            `|N       |`simulate KERI tag`
 
@@ -745,7 +746,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf motorola help       `|Y       |`This help`
 |`lf motorola demod      `|Y       |`Demodulate an MOTOROLA tag from the GraphBuffer`
-|`lf motorola read       `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf motorola reader     `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf motorola clone      `|N       |`clone MOTOROLA tag to T55x7`
 |`lf motorola sim        `|N       |`simulate MOTOROLA tag`
 
@@ -772,7 +773,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf nexwatch help       `|Y       |`This help`
 |`lf nexwatch demod      `|Y       |`Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer`
-|`lf nexwatch read       `|N       |`Attempt to Read and Extract tag data from the antenna`
+|`lf nexwatch reader     `|N       |`Attempt to Read and Extract tag data from the antenna`
 |`lf nexwatch clone      `|N       |`clone NexWatch tag to T55x7`
 |`lf nexwatch sim        `|N       |`simulate NexWatch tag`
 
@@ -785,7 +786,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf noralsy help        `|Y       |`This help`
 |`lf noralsy demod       `|Y       |`Demodulate an Noralsy tag from the GraphBuffer`
-|`lf noralsy read        `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf noralsy reader      `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf noralsy clone       `|N       |`clone Noralsy tag to T55x7 or Q5/T5555`
 |`lf noralsy sim         `|N       |`simulate Noralsy tag`
 
@@ -798,7 +799,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf pac help            `|Y       |`This help`
 |`lf pac demod           `|Y       |`Demodulate a PAC tag from the GraphBuffer`
-|`lf pac read            `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf pac reader          `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf pac clone           `|N       |`clone PAC tag to T55x7`
 |`lf pac sim             `|N       |`simulate PAC tag`
 

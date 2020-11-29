@@ -13,6 +13,7 @@ analyse a
 analyse nuid
 analyse demodbuff
 analyse freq
+analyse foo
 data biphaserawdecode
 data detectclock
 data fsktonrz
@@ -89,6 +90,7 @@ hf fido list
 hf fido info
 hf iclass info
 hf iclass list
+hf iclass permutekey
 hf legic list
 hf legic reader
 hf legic info
@@ -249,16 +251,10 @@ lf idteck demod
 lf idteck read
 lf indala demod
 lf indala altdemod
-lf indala read
 lf indala sim
-lf io demod
-lf io read
 lf io clone
 lf io sim
 lf io watch
-lf jablotron demod
-lf jablotron read
-lf jablotron clone
 lf jablotron sim
 lf keri demod
 lf motorola demod
@@ -275,10 +271,6 @@ lf paradox demod
 lf pcf7931 read
 lf pcf7931 write
 lf pcf7931 config
-lf presco demod
-lf pyramid demod
-lf securakey demod
-lf ti demod
 lf ti write
 lf t55xx config
 lf t55xx dangerraw
@@ -300,8 +292,6 @@ lf t55xx recoverpw
 lf t55xx sniff
 lf t55xx special
 lf t55xx wipe
-lf viking demod
-lf visa2000 demod
 mem spiffs
 smart list
 smart info
