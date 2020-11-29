@@ -681,7 +681,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf idteck help         `|Y       |`This help`
 |`lf idteck demod        `|Y       |`Demodulate an Idteck tag from the GraphBuffer`
-|`lf idteck read         `|N       |`Attempt to read and Extract tag data from the antenna`
+|`lf idteck reader       `|N       |`Attempt to read and Extract tag data from the antenna`
 
 
 ### lf indala
@@ -875,7 +875,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf ti help             `|Y       |`This help`
-|`lf ti demod            `|Y       |`Demodulate raw bits for TI-type LF tag from the GraphBuffer`
+|`lf ti demod            `|Y       |`Demodulate raw bits for TI LF tag from the GraphBuffer`
 |`lf ti reader           `|N       |`Read and decode a TI 134 kHz tag`
 |`lf ti write            `|N       |`Write new data to a r/w TI 134 kHz tag`
 

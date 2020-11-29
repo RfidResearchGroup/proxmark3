@@ -229,10 +229,6 @@ lf fdxb demod
 lf fdxb read
 lf fdxb clone
 lf fdxb sim
-lf gproxii demod
-lf gproxii reader
-lf gproxii clone
-lf gproxii sim
 lf hid read
 lf hitag list
 lf hitag info
@@ -242,7 +238,6 @@ lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc
-lf idteck read
 lf indala demod
 lf indala altdemod
 lf indala sim
@@ -257,7 +252,6 @@ lf nedap sim
 lf pcf7931 read
 lf pcf7931 write
 lf pcf7931 config
-lf ti write
 lf t55xx config
 lf t55xx dangerraw
 lf t55xx detect
