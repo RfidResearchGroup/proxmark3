@@ -178,7 +178,18 @@ int demodPyramid(bool verbose) {
 }
 
 static int CmdPyramidDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pyramid demod",
+                  "Try to find Farpoint/Pyramid preamble, if found decode / descramble data",
+                  "lf pyramid demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodPyramid(true);
 }
 

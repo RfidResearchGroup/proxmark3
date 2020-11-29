@@ -272,7 +272,18 @@ out:
 }
 
 static int CmdTIDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf ti demod",
+                  "Try to find TI preamble, if found decode / descramble data",
+                  "lf ti demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodTI(true);
 }
 

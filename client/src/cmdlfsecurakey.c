@@ -114,7 +114,18 @@ int demodSecurakey(bool verbose) {
 }
 
 static int CmdSecurakeyDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey demod",
+                  "Try to find Securakey preamble, if found decode / descramble data",
+                  "lf securakey demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodSecurakey(true);
 }
 

@@ -112,7 +112,18 @@ int demodPresco(bool verbose) {
 }
 
 static int CmdPrescoDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf presco demod",
+                  "Try to find presco preamble, if found decode / descramble data",
+                  "lf presco demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodPresco(true);
 }
 
