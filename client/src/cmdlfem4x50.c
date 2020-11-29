@@ -525,7 +525,8 @@ int CmdEM4x50Chk(const char *Cmd) {
         SendCommandNG(CMD_LF_EM4X50_CHK, (uint8_t *)&offset, sizeof(offset));
         WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
         
-        if ((status = resp.status) == PM3_SUCCESS)
+        status = resp.status;   // status = -1 -> BUTTON_SINGLE_CLICK
+        if ((status == PM3_SUCCESS) || (status == -1))
             break;
     }
 
