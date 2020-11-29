@@ -8,18 +8,18 @@
 // ASK/Manchester, RF/40, 96 bits long (unknown cs)
 //-----------------------------------------------------------------------------
 #include "cmdlfsecurakey.h"
-#include <string.h>         // memcpy
-#include <ctype.h>          // tolower
-#include "commonutil.h"     // ARRAYLEN
-#include "cmdparser.h"      // command_t
+#include <string.h>       // memcpy
+#include <ctype.h>        // tolower
+#include "commonutil.h"   // ARRAYLEN
+#include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
-#include "parity.h"     // for wiegand parity test
-#include "protocols.h"  // t55xx defines
-#include "cmdlft55xx.h" // clone..
+#include "lfdemod.h"      // preamble test
+#include "parity.h"       // for wiegand parity test
+#include "protocols.h"    // t55xx defines
+#include "cmdlft55xx.h"   // clone..
 #include "cliparser.h"
 #include "cmdlfem4x05.h"  // EM defines
 
@@ -251,7 +251,7 @@ static int CmdSecurakeySim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating SecuraKey -  raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
+    PrintAndLogEx(SUCCESS, "Simulating SecuraKey - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
 
     uint8_t bs[sizeof(raw) * 8];
     bytes_to_bytebits(raw, sizeof(raw), bs);
