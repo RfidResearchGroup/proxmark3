@@ -29,7 +29,7 @@ void em4x50_reset(void);
 void em4x50_watch(void);
 void em4x50_restore(em4x50_data_t *etd);
 void em4x50_sim(void);
-void em4x50_stdread(void);
+void em4x50_reader(void);
 void em4x50_chk(uint32_t *numkeys);
 
 #endif /* EM4X50_H */
