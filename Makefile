@@ -251,7 +251,7 @@ print-%: ; @echo $* = $($*)
 
 cliparser:
 	# Get list of all commands
-	cat doc/commands.md | grep -e ^\|\` | cut -f 2 -d "\`" | grep -v help | awk '{$$1=$$1};1' > cliparser_all_commands.tmp
+	cat doc/commands.md | grep -e ^\|\` | cut -f 2 -d "\`" | grep -v 'help\|list' | awk '{$$1=$$1};1' > cliparser_all_commands.tmp
 	# Get list of cliparserized commands
 	grep -r CLIParserInit ./client/src/ | cut -f 2 -d "\"" | awk '{$$1=$$1};1' > cliparser_done.tmp
 	# Determine commands that still need cliparser conversion

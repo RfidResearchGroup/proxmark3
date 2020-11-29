@@ -45,20 +45,15 @@ data print
 data samples
 data setdebugmode
 data tune
-emv list
-hf list
 hf tune
 hf search
 hf sniff
-hf 14a list
 hf 14a reader
 hf 14a cuids
 hf 14a sim
 hf 14a sniff
 hf 14a config
-hf 14b list
 hf 14b sriwrite
-hf 15 list
 hf 15 dump
 hf 15 info
 hf 15 raw
@@ -70,7 +65,6 @@ hf 15 writeafi
 hf 15 writedsfid
 hf epa cnonces
 hf epa preplay
-hf felica list
 hf felica reader
 hf felica sniff
 hf felica raw
@@ -86,12 +80,9 @@ hf felica rqspecver
 hf felica resetmode
 hf felica litesim
 hf felica litedump
-hf fido list
 hf fido info
 hf iclass info
-hf iclass list
 hf iclass permutekey
-hf legic list
 hf legic reader
 hf legic info
 hf legic dump
@@ -103,8 +94,6 @@ hf legic crc
 hf legic eload
 hf legic esave
 hf legic wipe
-hf lto list
-hf mf list
 hf mf darkside
 hf mf nested
 hf mf hardnested
@@ -157,12 +146,8 @@ hf mfu otptear
 hf mfdes enum
 hf mfdes getuid
 hf mfdes info
-hf mfdes list
-hf st list
 hf thinfilm info
-hf thinfilm list
 hf thinfilm sim
-hf topaz list
 hf topaz info
 hf topaz reader
 hf topaz sim
@@ -230,7 +215,6 @@ lf fdxb read
 lf fdxb clone
 lf fdxb sim
 lf hid read
-lf hitag list
 lf hitag info
 lf hitag reader
 lf hitag sim
@@ -273,14 +257,12 @@ lf t55xx sniff
 lf t55xx special
 lf t55xx wipe
 mem spiffs
-smart list
 smart info
 smart reader
 smart raw
 smart upgrade
 smart setclock
 smart brute
-script list
 script run
 usart btpin
 usart btfactory
@@ -290,4 +272,3 @@ usart txrx
 usart txhex
 usart rxhex
 usart config
-wiegand list
