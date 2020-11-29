@@ -510,7 +510,6 @@ typedef struct {
 #define CMD_LF_EM4X50_BRUTE                                               0x0245
 #define CMD_LF_EM4X50_LOGIN                                               0x0246
 #define CMD_LF_EM4X50_RESET                                               0x0247
-#define CMD_LF_EM4X50_WATCH                                               0x0248
 #define CMD_LF_EM4X50_RESTORE                                             0x0249
 #define CMD_LF_EM4X50_SIM                                                 0x0250
 #define CMD_LF_EM4X50_READER                                              0x0251

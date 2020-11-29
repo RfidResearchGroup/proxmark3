@@ -819,37 +819,6 @@ int CmdEM4x50Reader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdEM4x50Watch(const char *Cmd) {
-
-    // continously envoke reading of a EM4x50 tag
-
-    PacketResponseNG resp;
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_watch",
-                  "Watches for EM4x50 tags. Function runs until button is pressed.",
-                  "lf em 4x50_watch\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    PrintAndLogEx(SUCCESS, "Watching for EM4x50 cards - place tag on antenna");
-    PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
-    
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_WATCH, 0, 0);
-    WaitForResponseTimeoutW(CMD_LF_EM4X50_WATCH,  &resp, -1, false);
-
-    PrintAndLogEx(INFO, "Done");
-    return PM3_SUCCESS;
-}
-
 int CmdEM4x50Dump(const char *Cmd) {
 
     int fnLen = 0, pwdLen = 0, status = 0;

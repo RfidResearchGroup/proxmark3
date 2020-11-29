@@ -1155,42 +1155,6 @@ void em4x50_reader(void) {
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
 }
 
-void em4x50_watch() {
-
-    // read continuously and display standard reads of tag
-
-    int now = 0;
-    uint32_t words[EM4X50_NO_WORDS] = {0x0};
-    
-    em4x50_setup_read();
-
-    while (BUTTON_PRESS() == false) {
-
-        WDT_HIT();
-        memset(words, 0, sizeof(words));
-        now = 0;
-
-        if (get_signalproperties() && find_em4x50_tag()) {
-
-            if (standard_read(&now, words) == PM3_EOPABORTED)
-                break;
-            
-            if (now > 0) {
-
-                Dbprintf("");
-                for (int i = 0; i < now; i++)
-                    Dbprintf("EM4x50 tag data: "
-                             _GREEN_("%08x") " (msb) - " _GREEN_("%08x") " (lsb)",
-                             words[i], reflect32(words[i]));
-            }
-        }
-    }
-
-    LOW(GPIO_SSC_DOUT);
-    lf_finalize();
-    reply_ng(CMD_LF_EM4X50_WATCH, 1, 0, 0);
-}
-
 //==============================================================================
 // write functions
 //==============================================================================

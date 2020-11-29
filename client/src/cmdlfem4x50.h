@@ -26,7 +26,6 @@ int CmdEM4x50Wipe(const char *Cmd);
 int CmdEM4x50Brute(const char *Cmd);
 int CmdEM4x50Login(const char *Cmd);
 int CmdEM4x50Reset(const char *Cmd);
-int CmdEM4x50Watch(const char *Cmd);
 int CmdEM4x50Restore(const char *Cmd);
 int CmdEM4x50Sim(const char *Cmd);
 int CmdEM4x50Reader(const char *Cmd);
