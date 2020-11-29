@@ -101,7 +101,7 @@ static int CmdIdteckDemod(const char *Cmd) {
     return demodIdteck(true);
 }
 
-static int CmdIdteckRead(const char *Cmd) {
+static int CmdIdteckReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf idteck reader",
                   "read a Idteck tag",
@@ -126,9 +126,9 @@ static int CmdIdteckRead(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        AlwaysAvailable, "This help"},
-    {"demod",   CmdIdteckDemod, AlwaysAvailable, "Demodulate an Idteck tag from the GraphBuffer"},
-    {"read",    CmdIdteckRead,  IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
+    {"help",    CmdHelp,         AlwaysAvailable, "This help"},
+    {"demod",   CmdIdteckDemod,  AlwaysAvailable, "Demodulate an Idteck tag from the GraphBuffer"},
+    {"reader",  CmdIdteckReader, IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
     {NULL, NULL, NULL, NULL}
 };
 
