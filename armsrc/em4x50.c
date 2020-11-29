@@ -1495,39 +1495,3 @@ void em4x50_sim(void) {
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_SIM, status, 0, 0);
 }
-
-//==============================================================================
-// standalone mode functions
-//==============================================================================
-
-int em4x50_standalone_brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
-
-    // envoke password search in standalone mode
-
-    int status = false;
-
-    em4x50_setup_read();
-
-    if (get_signalproperties() && find_em4x50_tag())
-        status = brute(start, stop, pwd);
-    else
-        status = PM3_ETIMEOUT;
-
-    lf_finalize();
-
-    return status;
-}
-
-int em4x50_standalone_read(uint32_t *words) {
-
-    int now = 0;
-
-    em4x50_setup_read();
-
-    if (get_signalproperties() && find_em4x50_tag())
-        if (find_double_listen_window(false) == PM3_SUCCESS)
-            while (get_word_from_bitstream(&words[now]) == EM4X50_TAG_WORD)
-                now++;
-
-    return now;
-}
