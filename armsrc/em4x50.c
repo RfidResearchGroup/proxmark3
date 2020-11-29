@@ -425,15 +425,12 @@ static int find_double_listen_window(bool bcommand) {
     while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
 
         if (BUTTON_PRESS())
-            return BUTTON_SINGLE_CLICK;
+            return PM3_EOPABORTED;
 
         // identification of listen window is done via evaluation of
         // pulse lengths
         if (check_pulse_length(get_pulse_length(), 3 * EM4X50_T_TAG_FULL_PERIOD)) {
 
-            //if (BUTTON_PRESS())
-            //    return BUTTON_SINGLE_CLICK;
-            
             if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
                 // first listen window found
@@ -652,7 +649,7 @@ static int get_word_from_bitstream(uint32_t *data) {
     
     LED_C_OFF();
     
-    return BUTTON_SINGLE_CLICK;
+    return PM3_EOPABORTED;
 }
 
 //==============================================================================
@@ -964,7 +961,7 @@ void em4x50_chk(uint32_t *offset) {
 
             // manual interruption
             if (BUTTON_PRESS()) {
-                status = BUTTON_SINGLE_CLICK;
+                status = PM3_EOPABORTED;
                 break;
             }
 
@@ -1114,24 +1111,6 @@ void em4x50_read(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, 136);
 }
 
-void em4x50_stdread(void) {
-
-    // reads data that tag transmits "voluntarily" -> standard read mode
-
-    int now = 0;
-    uint32_t words[EM4X50_NO_WORDS] = {0x0};
-
-    em4x50_setup_read();
-
-    // set gHigh and gLow
-    if (get_signalproperties() && find_em4x50_tag())
-        standard_read(&now, words);
-
-    LOW(GPIO_SSC_DOUT);
-    lf_finalize();
-    reply_ng(CMD_LF_EM4X50_STDREAD, now, (uint8_t *)words, 4 * now);
-}
-
 void em4x50_info(em4x50_data_t *etd) {
 
     // collects as much information as possible via selective read mode
@@ -1158,6 +1137,24 @@ void em4x50_info(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, 136);
 }
 
+void em4x50_reader(void) {
+
+    // reads data that tag transmits "voluntarily" -> standard read mode
+
+    int now = 0;
+    uint32_t words[EM4X50_NO_WORDS] = {0x0};
+
+    em4x50_setup_read();
+
+    // set gHigh and gLow
+    if (get_signalproperties() && find_em4x50_tag())
+        standard_read(&now, words);
+
+    LOW(GPIO_SSC_DOUT);
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
+}
+
 void em4x50_watch() {
 
     // read continuously and display standard reads of tag
@@ -1175,7 +1172,7 @@ void em4x50_watch() {
 
         if (get_signalproperties() && find_em4x50_tag()) {
 
-            if (standard_read(&now, words) == BUTTON_SINGLE_CLICK)
+            if (standard_read(&now, words) == PM3_EOPABORTED)
                 break;
             
             if (now > 0) {
