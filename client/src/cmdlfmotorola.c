@@ -116,9 +116,19 @@ int demodMotorola(bool verbose) {
     return PM3_SUCCESS;
 }
 
-//see PSKDemod for what args are accepted
 static int CmdMotorolaDemod(const char *Cmd) {
-    (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf motorola demod",
+                  "Try to find Motorola preamble, if found decode / descramble data",
+                  "lf motorola demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodMotorola(true);
 }
 
@@ -235,7 +245,20 @@ static int CmdMotorolaClone(const char *Cmd) {
 }
 
 static int CmdMotorolaSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf motorola sim",
+                  "Enables simulation of Motorola card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf motorola sim"
+                 );
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    
     // PSK sim.
     PrintAndLogEx(INFO, " PSK1 at 66 kHz... Interesting.");
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");

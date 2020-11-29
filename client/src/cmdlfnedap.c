@@ -11,10 +11,8 @@
 
 #define _GNU_SOURCE
 #include <string.h>
-
 #include <ctype.h>
 #include <stdlib.h>
-
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "crc16.h"
@@ -24,6 +22,8 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 #include "protocols.h"
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 #define FIXED_71    0x71
 #define FIXED_40    0x40
@@ -262,7 +262,18 @@ int demodNedap(bool verbose) {
 }
 
 static int CmdLFNedapDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf nedap demod",
+                  "Try to find Nedap preamble, if found decode / descramble data",
+                  "lf nedap demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodNedap(true);
 }
 /* Index map                                                      E                                                                              E

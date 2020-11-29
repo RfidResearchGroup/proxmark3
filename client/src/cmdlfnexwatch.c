@@ -217,14 +217,25 @@ int demodNexWatch(bool verbose) {
 }
 
 static int CmdNexWatchDemod(const char *Cmd) {
-    (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf nexwatch demod",
+                  "Try to find Nexwatch preamble, if found decode / descramble data",
+                  "lf nexwatch demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodNexWatch(true);
 }
 
 static int CmdNexWatchReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf nexwatch reader",
-                  "read a nexwatch tag",
+                  "read a Nexwatch tag",
                   "lf nexwatch reader -@   -> continuous reader mode"
                  );
 

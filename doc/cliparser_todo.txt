@@ -257,17 +257,10 @@ lf io sim
 lf io watch
 lf jablotron sim
 lf keri demod
-lf motorola demod
-lf motorola sim
-lf nedap demod
 lf nedap generate
 lf nedap read
 lf nedap clone
 lf nedap sim
-lf nexwatch demod
-lf noralsy demod
-lf pac demod
-lf paradox demod
 lf pcf7931 read
 lf pcf7931 write
 lf pcf7931 config

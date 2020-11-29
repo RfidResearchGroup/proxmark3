@@ -157,7 +157,18 @@ int demodPac(bool verbose) {
 }
 
 static int CmdPacDemod(const char *Cmd) {
-    (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pac demod",
+                  "Try to find PAC/Stanley preamble, if found decode / descramble data",
+                  "lf pac demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodPac(true);
 }
 
@@ -165,7 +176,7 @@ static int CmdPacReader(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf pac reader",
-                  "read a pac tag",
+                  "read a PAC/Stanley tag",
                   "lf pac reader -@   -> continuous reader mode"
                  );
 

@@ -170,7 +170,18 @@ int demodParadox(bool verbose) {
 }
 
 static int CmdParadoxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf paradox demod",
+                  "Try to find Paradox preamble, if found decode / descramble data",
+                  "lf paradox demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodParadox(true);
 }
 
