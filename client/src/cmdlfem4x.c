@@ -664,7 +664,7 @@ static command_t CommandTable[] = {
     {"4x50_watch",  CmdEM4x50Watch,       IfPm3EM4x50,     "watch for EM4x50 tags"},
     {"4x50_restore",CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
     {"4x50_sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate EM4x50 tag"},
-    {"4x50_stdread",CmdEM4x50StdRead,     IfPm3EM4x50,     "show standard read mode data of EM4x50"},
+    {"4x50_reader", CmdEM4x50Reader,      IfPm3EM4x50,     "show standard read mode data of EM4x50"},
     {"4x50_eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to flash memory"},
     {"4x50_esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save flash memory to file"},
     {"4x50_chk",    CmdEM4x50Chk,         IfPm3EM4x50,     "check passwords from dictionary"},
