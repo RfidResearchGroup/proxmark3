@@ -525,8 +525,8 @@ int CmdEM4x50Chk(const char *Cmd) {
         SendCommandNG(CMD_LF_EM4X50_CHK, (uint8_t *)&offset, sizeof(offset));
         WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
         
-        status = resp.status;   // status = -1 -> BUTTON_SINGLE_CLICK
-        if ((status == PM3_SUCCESS) || (status == -1))
+        status = resp.status;
+        if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
             break;
     }
 
@@ -701,70 +701,6 @@ int CmdEM4x50Read(const char *Cmd) {
     return em4x50_read(&etd, NULL);
 }
 
-int CmdEM4x50StdRead(const char *Cmd) {
-
-    int now = 0, status = PM3_EFAILED;
-    PacketResponseNG resp;
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_stdread",
-                  "Shows standard read data of EM4x50 tag.",
-                  "lf em 4x50_stdread\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    // start
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_STDREAD, 0, 0);
-    if (!WaitForResponseTimeout(CMD_LF_EM4X50_STDREAD, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
-    }
-
-    now = resp.status;
-    
-    // print response
-    if (now > 0) {
-
-        em4x50_word_t words[EM4X50_NO_WORDS];
-        
-        prepare_result(resp.data.asBytes, 0, now - 1, words);
-
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "  # | word (msb)  | word (lsb)  ");
-        PrintAndLogEx(INFO, "----+-------------+-------------");
-
-        for (int i = 0; i < now; i++) {
-
-            char r[30] = {0};
-            for (int j = 3; j >= 0; j--)
-                sprintf(r + strlen(r), "%02x ", reflect8(words[i].byte[j]));
-
-            PrintAndLogEx(INFO, " %2i | " _GREEN_("%s") "| %s",
-                          i,
-                          sprint_hex(words[i].byte, 4),
-                          r
-                          );
-        }
-        
-        status = PM3_SUCCESS;
-        PrintAndLogEx(INFO, "----+-------------+-------------");
-        PrintAndLogEx(SUCCESS, "Standard read " _GREEN_("ok"));
-
-    } else {
-        PrintAndLogEx(FAILED, "Standard read " _RED_("failed"));
-    }
-
-    return status;
-}
-
 int CmdEM4x50Info(const char *Cmd) {
 
     // envoke reading of a EM4x50 tag which has to be on the antenna because
@@ -821,6 +757,66 @@ int CmdEM4x50Info(const char *Cmd) {
         PrintAndLogEx(FAILED, "Reading tag " _RED_("failed"));
 
     return status;
+}
+
+int CmdEM4x50Reader(const char *Cmd) {
+
+    int now = 0;
+    PacketResponseNG resp;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x50_reader",
+                  "Shows standard read data of EM4x50 tag.",
+                  "lf em 4x50_reader\n"
+                  "lf em 4x50_reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    // start
+    do {
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X50_READER, 0, 0);
+        WaitForResponse(CMD_LF_EM4X50_READER, &resp);
+
+        now = resp.status;
+        
+        // print response
+        if (now > 0) {
+
+            em4x50_word_t words[EM4X50_NO_WORDS];
+            prepare_result(resp.data.asBytes, 0, now - 1, words);
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, " word (msb)  | word (lsb)  ");
+            PrintAndLogEx(INFO, "-------------+-------------");
+
+            for (int i = 0; i < now; i++) {
+
+                char r[30] = {0};
+                for (int j = 3; j >= 0; j--)
+                    sprintf(r + strlen(r), "%02x ", reflect8(words[i].byte[j]));
+
+                PrintAndLogEx(INFO, _GREEN_(" %s") "| %s",
+                              sprint_hex(words[i].byte, 4),
+                              r
+                              );
+            }
+            
+            PrintAndLogEx(INFO, "-------------+-------------");
+        }
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 int CmdEM4x50Watch(const char *Cmd) {
