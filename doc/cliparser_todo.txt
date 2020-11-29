@@ -237,7 +237,6 @@ lf gproxii demod
 lf gproxii read
 lf gproxii clone
 lf gproxii sim
-lf hid demod
 lf hid read
 lf hitag list
 lf hitag info
@@ -247,7 +246,6 @@ lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc
-lf idteck demod
 lf idteck read
 lf indala demod
 lf indala altdemod
@@ -256,7 +254,6 @@ lf io clone
 lf io sim
 lf io watch
 lf jablotron sim
-lf keri demod
 lf nedap generate
 lf nedap read
 lf nedap clone
