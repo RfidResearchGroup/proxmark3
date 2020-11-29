@@ -229,9 +229,8 @@ lf fdxb demod
 lf fdxb read
 lf fdxb clone
 lf fdxb sim
-lf gallagher read
 lf gproxii demod
-lf gproxii read
+lf gproxii reader
 lf gproxii clone
 lf gproxii sim
 lf hid read

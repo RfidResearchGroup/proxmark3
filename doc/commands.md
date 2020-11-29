@@ -623,7 +623,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf gallagher help      `|Y       |`This help`
 |`lf gallagher demod     `|Y       |`Demodulate an GALLAGHER tag from the GraphBuffer`
-|`lf gallagher read      `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf gallagher reader    `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf gallagher clone     `|N       |`clone GALLAGHER tag to T55x7`
 |`lf gallagher sim       `|N       |`simulate GALLAGHER tag`
 
@@ -636,7 +636,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf gproxii help        `|Y       |`this help`
 |`lf gproxii demod       `|Y       |`demodulate a G Prox II tag from the GraphBuffer`
-|`lf gproxii read        `|N       |`attempt to read and extract tag data from the antenna`
+|`lf gproxii reader      `|N       |`attempt to read and extract tag data from the antenna`
 |`lf gproxii clone       `|N       |`clone Guardall tag to T55x7 or Q5/T5555`
 |`lf gproxii sim         `|N       |`simulate Guardall tag`
 
