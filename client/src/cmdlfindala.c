@@ -9,13 +9,10 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfindala.h"
-
 #include <stdlib.h>
 #include <string.h>
-
 #include <ctype.h>
 #include <inttypes.h>
-
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "graph.h"
@@ -28,6 +25,8 @@
 #include "cmdlf.h"      // lf_read
 #include "protocols.h"  // t55 defines
 #include "cmdlft55xx.h" // verifywrite
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 #define INDALA_ARR_LEN 64
 
@@ -499,16 +498,33 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-static int CmdIndalaRead(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_indala_demod();
+static int CmdIndalaReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf indala reader",
+                  "read a Indala Prox tag",
+                  "lf indala reader -@   -> continuous reader mode"
+                 );
 
-    int clk = 32, invert = 0, maxErr = 100;
-    if (strlen(Cmd) > 0) {
-        sscanf(Cmd, "%i %i %i", &clk, &invert, &maxErr);
-    }
-    lf_read(false, 30000);
-    return demodIndalaEx(clk, invert, maxErr, true);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "clock", "<dec>", "optional - set clock (as integer), if not set, autodetect."),
+        arg_int0(NULL, "maxerr", "<dec>", "optional - set maximum allowed errors, default = 100"),
+        arg_lit0("i", "invert", "optional - invert output"),
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t clk = arg_get_u32_def(ctx, 1, 32);
+    uint32_t max_err = arg_get_u32_def(ctx, 2, 100);
+    bool invert = arg_get_lit(ctx, 3);
+    bool cm = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 30000);
+        demodIndalaEx(clk, invert, max_err, !cm);
+    } while (cm && !kbd_enter_pressed());
+    return PM3_SUCCESS;
 }
 
 static int CmdIndalaSim(const char *Cmd) {
@@ -699,7 +715,7 @@ static command_t CommandTable[] = {
     {"help",     CmdHelp,            AlwaysAvailable, "this help"},
     {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an indala tag (PSK1) from GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-    {"read",     CmdIndalaRead,      IfPm3Lf,         "read an Indala Prox tag from the antenna"},
+    {"reader",   CmdIndalaReader,    IfPm3Lf,         "read an Indala Prox tag from the antenna"},
     {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala tag to T55x7 or Q5/T5555"},
     {"sim",      CmdIndalaSim,       IfPm3Lf,         "simulate Indala tag"},
     {NULL, NULL, NULL, NULL}
