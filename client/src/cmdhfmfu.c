@@ -155,15 +155,17 @@ static int usage_hf_mfu_eload(void) {
 static int usage_hf_mfu_sim(void) {
     PrintAndLogEx(NORMAL, "\nEmulating Ultralight tag from emulator memory\n");
     PrintAndLogEx(NORMAL, "\nBe sure to load the emulator memory first!\n");
-    PrintAndLogEx(NORMAL, "Usage: hf mfu sim t 7 u <uid>");
+    PrintAndLogEx(NORMAL, "Usage: hf mfu sim t 7 u <uid> [n <num>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "    h       : this help");
     PrintAndLogEx(NORMAL, "    t 7     : 7 = NTAG or Ultralight sim (required)");
+    PrintAndLogEx(NORMAL, "    n <num> : exit simulation after <num> blocks have been read by reader. 0 = infinite (optional)");
     PrintAndLogEx(NORMAL, "    u <uid> : 4 or 7 byte UID (optional)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu sim t 7"));
     PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu sim t 7 u 1122344556677"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu sim t 7 u 1122344556677 n 5"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }

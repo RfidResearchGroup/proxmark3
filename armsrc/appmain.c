@@ -1274,9 +1274,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t tagtype;
                 uint8_t flags;
                 uint8_t uid[10];
+                uint8_t exitAfter;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            SimulateIso14443aTag(payload->tagtype, payload->flags, payload->uid);  // ## Simulate iso14443a tag - pass tag type & UID
+            SimulateIso14443aTag(payload->tagtype, payload->flags, payload->uid, payload->exitAfter);  // ## Simulate iso14443a tag - pass tag type & UID
             break;
         }
         case CMD_HF_ISO14443A_ANTIFUZZ: {

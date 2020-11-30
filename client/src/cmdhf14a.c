@@ -211,7 +211,7 @@ static int usage_hf_14a_config(void) {
 
 static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n");
-    PrintAndLogEx(NORMAL, "Usage: hf 14a sim [h] t <type> u <uid> [x] [e] [v]");
+    PrintAndLogEx(NORMAL, "Usage: hf 14a sim [h] t <type> u <uid> [n <numreads>] [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "    h     : This help");
     PrintAndLogEx(NORMAL, "    t     : 1 = MIFARE Classic 1k");
@@ -225,6 +225,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "            9 = FM11RF005SH Shanghai Metro");
     PrintAndLogEx(NORMAL, "           10 = JCOP 31/41 Rothult");
     PrintAndLogEx(NORMAL, "    u     : 4, 7 or 10 byte UID");
+    PrintAndLogEx(NORMAL, "    n     : (Optional) Exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
     PrintAndLogEx(NORMAL, "    x     : (Optional) Performs the 'reader attack', nr/ar attack against a reader");
     PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
     PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
@@ -657,6 +658,7 @@ int CmdHF14ASim(const char *Cmd) {
     bool errors = false;
     sector_t *k_sector = NULL;
     uint8_t k_sectorsCount = 40;
+    uint8_t exitAfterNReads = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -693,6 +695,10 @@ int CmdHF14ASim(const char *Cmd) {
                 }
                 cmdp += 2;
                 break;
+            case 'n':
+                exitAfterNReads = param_get8(Cmd, cmdp + 1);
+                cmdp += 2;
+                break;
             case 'v':
                 verbose = true;
                 cmdp++;
@@ -722,10 +728,12 @@ int CmdHF14ASim(const char *Cmd) {
         uint8_t tagtype;
         uint8_t flags;
         uint8_t uid[10];
+        uint8_t exitAfter;
     } PACKED payload;
 
     payload.tagtype = tagtype;
     payload.flags = flags;
+    payload.exitAfter = exitAfterNReads;
     memcpy(payload.uid, uid, uidlen);
 
     clearCommandBuffer();
