@@ -197,10 +197,6 @@ lf em 4x50_write
 lf em 4x50_write_password
 lf em 4x50_read
 lf em 4x50_wipe
-lf fdxb demod
-lf fdxb read
-lf fdxb clone
-lf fdxb sim
 lf hid read
 lf hitag info
 lf hitag reader
