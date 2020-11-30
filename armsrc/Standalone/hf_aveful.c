@@ -243,7 +243,7 @@ void RunMod(void) {
                 uint8_t flags = FLAG_7B_UID_IN_DATA;
 
                 Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
-                SimulateIso14443aTag(7, flags, card.uid);
+                SimulateIso14443aTag(7, flags, card.uid, 0);
 
                 // Go back to search state if user presses pm3-button
                 state = STATE_SEARCH;
