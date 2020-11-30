@@ -167,7 +167,7 @@ static int CmdHIDDemod(const char *Cmd) {
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-static int CmdHIDRead(const char *Cmd) {
+static int CmdHIDReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid reader",
                   "read a HID Prox tag",
@@ -318,6 +318,8 @@ static int CmdHIDClone(const char *Cmd) {
                   "lf hid clone -r 01f0760643c3              -> HID P10001 40 bit\n"
                   "lf hid clone -r 01400076000c86            -> HID Corporate 48 bit\n"
                   "lf hid clone -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit\n"
+                  "lf hid clone -w H10301 --fc 118 --cn 1603 --q5  -> HID 10301 26 bit, encode for Q5/T5555 tag\n"
+                  "lf hid clone -w H10301 --fc 118 --cn 1603 --em  -> HID 10301 26 bit, encode for EM4305/4469"
                  );
 
 
@@ -329,7 +331,8 @@ static int CmdHIDClone(const char *Cmd) {
         arg_int0("i",    NULL,     "<dec>", "issue level"),
         arg_int0("o",   "oem",     "<dec>", "OEM code"),
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
-//        arg_lit0("q",   "Q5",               "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -349,8 +352,14 @@ static int CmdHIDClone(const char *Cmd) {
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
 
-    //bool q5 = arg_get_lit(ctx, 7);
+    bool q5 = arg_get_lit(ctx, 7);
+    bool em = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
@@ -375,6 +384,17 @@ static int CmdHIDClone(const char *Cmd) {
         }
     }
 
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
     if (raw_len == 0) {
         PrintAndLogEx(INFO, "Preparing to clone HID tag");
         HIDTryUnpack(&packed, false);
@@ -387,11 +407,22 @@ static int CmdHIDClone(const char *Cmd) {
     payload.hi = packed.Mid;
     payload.lo = packed.Bot;
     payload.longFMT = (packed.Mid > 0xFFF);
+    payload.Q5 = q5;
+    payload.EM = em;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_CLONE, (uint8_t *)&payload, sizeof(payload));
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid read`") " to verify");
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_HID_CLONE, &resp);
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Done");
+    } else {
+        PrintAndLogEx(FAILED, "Failed cloning");
+        return resp.status;
+    }
+
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid reader`") " to verify");
     return PM3_SUCCESS;
 }
 
@@ -561,7 +592,7 @@ static int CmdHIDBrute(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdHIDDemod,    AlwaysAvailable, "demodulate HID Prox tag from the GraphBuffer"},
-    {"read",    CmdHIDRead,     IfPm3Lf,         "attempt to read and extract tag data"},
+    {"reader",  CmdHIDReader,   IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID tag to T55x7"},
     {"sim",     CmdHIDSim,      IfPm3Lf,         "simulate HID tag"},
     {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce card number against reader"},

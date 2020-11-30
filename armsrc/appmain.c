@@ -874,7 +874,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_HID_CLONE: {
             lf_hidsim_t *payload = (lf_hidsim_t *)packet->data.asBytes;
-            CopyHIDtoT55x7(payload->hi2, payload->hi, payload->lo, payload->longFMT);
+            CopyHIDtoT55x7(payload->hi2, payload->hi, payload->lo, payload->longFMT, payload->Q5, payload->EM);
             break;
         }
         case CMD_LF_IO_WATCH: {
