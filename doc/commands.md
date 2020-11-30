@@ -539,7 +539,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf awid help           `|Y       |`this help`
 |`lf awid demod          `|Y       |`demodulate an AWID FSK tag from the GraphBuffer`
-|`lf awid read           `|N       |`attempt to read and extract tag data`
+|`lf awid reader         `|N       |`attempt to read and extract tag data`
 |`lf awid clone          `|N       |`clone AWID tag to T55x7 or Q5/T5555`
 |`lf awid sim            `|N       |`simulate AWID tag`
 |`lf awid brute          `|N       |`Bruteforce card number against reader`
