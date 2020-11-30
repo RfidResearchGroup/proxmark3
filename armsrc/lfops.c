@@ -2190,10 +2190,8 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags) {
     reply_ng(CMD_LF_T55XX_WAKEUP, PM3_SUCCESS, NULL, 0);
 }
 
-
 /*-------------- Cloning routines -----------*/
 static void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
-
     t55xx_write_block_t cmd;
     cmd.pwd     = 0;
     cmd.flags   = 0;
@@ -2203,11 +2201,18 @@ static void WriteT55xx(uint32_t *blockdata, uint8_t startblock, uint8_t numblock
         cmd.blockno = i - 1;
         T55xxWriteBlock((uint8_t *)&cmd);
     }
-
 }
+/* disabled until verified.
+static void WriteEM4x05(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
+    for (uint8_t i = numblocks + startblock; i > startblock; i--) {
+        EM4xWriteWord(i - 1, blockdata[i - 1], 0, false);
+    }
+}
+*/
+
 
 // Copy HID id to card and setup block 0 config
-void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
+void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool q5, bool em) {
     uint32_t data[] = {0, 0, 0, 0, 0, 0, 0};
     uint8_t last_block = 0;
 
@@ -2244,11 +2249,21 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
     data[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2a | last_block << T55x7_MAXBLOCK_SHIFT;
 
     //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(50) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
+    if (q5) {
+        data[0] = T5555_SET_BITRATE(50) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
+    } else if (em) {
+        data[0] = (EM4x05_SET_BITRATE(50) | EM4x05_MODULATION_FSK2 | EM4x05_INVERT | EM4x05_SET_NUM_BLOCKS(last_block));
+    }
 
     LED_D_ON();
-    WriteT55xx(data, 0, last_block + 1);
+    if (em) {
+        Dbprintf("Clone HID Prox to EM4x05 is untested and disabled until verified");
+        //WriteEM4x05(data, 0, last_block + 1);
+    } else {
+        WriteT55xx(data, 0, last_block + 1);
+    }
     LED_D_OFF();
+    reply_ng(CMD_LF_HID_CLONE, PM3_SUCCESS, NULL, 0);
 }
 
 // clone viking tag to T55xx
@@ -2265,7 +2280,12 @@ void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em) {
     data[2] = bytes_to_num(blocks + 4, 4);
 
     // Program the data blocks for supplied ID and the block 0 config
-    WriteT55xx(data, 0, 3);
+    if (em) {
+        Dbprintf("Clone Viking to EM4x05 is untested and disabled until verified");
+        //WriteEM4x05(data, 0, 3);
+    } else {
+        WriteT55xx(data, 0, 3);
+    }
     LED_D_OFF();
     reply_ng(CMD_LF_VIKING_CLONE, PM3_SUCCESS, NULL, 0);
 }

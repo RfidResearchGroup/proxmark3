@@ -121,7 +121,7 @@ void RunMod(void) {
             Dbprintf("[=]    cloning %x | %x%08x", selected, high[selected], low[selected]);
 
             // high2, high, low,  no longFMT
-            CopyHIDtoT55x7(0, high[selected], low[selected], 0);
+            CopyHIDtoT55x7(0, high[selected], low[selected], 0, false, false);
 
             DbpString("[=] cloned done");
 
