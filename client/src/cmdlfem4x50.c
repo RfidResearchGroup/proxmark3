@@ -1156,6 +1156,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     uint8_t data[DUMP_FILESIZE] = {0x0};
     size_t bytes_read = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    char *fptr = filename;
     em4x50_data_t etd = {.pwd_given = false};
     PacketResponseNG resp;
 
@@ -1192,12 +1193,9 @@ int CmdEM4x50Restore(const char *Cmd) {
     }
     
     if (uidLen) {
-        snprintf(filename, FILE_PATH_SIZE, "./lf-4x50-%02x%02x%02x%02x-dump.bin",
-                 uid[0],
-                 uid[1],
-                 uid[2],
-                 uid[3]
-                 );
+        PrintAndLogEx(INFO, "Using UID as filename");
+        fptr += sprintf(fptr, "lf-4x50-");
+        FillFileNameByUID(fptr, uid, "-dump", 4);
     }
     
     if (pwdLen) {
