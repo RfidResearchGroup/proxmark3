@@ -7,22 +7,22 @@
 // Low frequency FDX-A FECAVA Destron tag commands
 //-----------------------------------------------------------------------------
 #include "cmdlfdestron.h"
-
-#include <ctype.h>          //tolower
-#include <string.h>         // memcpy
-#include "commonutil.h"     // ARRAYLEN
+#include <ctype.h>        // tolower
+#include <string.h>       // memcpy
+#include "commonutil.h"   // ARRAYLEN
 #include "common.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
-#include "protocols.h"  // t55xx defines
-#include "cmdlft55xx.h" // clone..
-#include "cmdlf.h"      // cmdlfconfig
-#include "cliparser.h" // cli parse input
+#include "lfdemod.h"      // preamble test
+#include "protocols.h"    // t55xx defines
+#include "cmdlft55xx.h"   // clone..
+#include "cmdlf.h"        // cmdlfconfig
 #include "parity.h"
+#include "cliparser.h"    // cli parse input
+#include "cmdlfem4x05.h"  // EM defines
 
 #define DESTRON_FRAME_SIZE 96
 #define DESTRON_PREAMBLE_SIZE 16
@@ -36,6 +36,7 @@ int demodDestron(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Destron: FSK Demod failed");
         return PM3_ESOFT;
     }
+
     size_t size = DemodBufferLen;
     int ans = detectDestron(DemodBuffer, &size);
     if (ans < 0) {
@@ -50,12 +51,13 @@ int demodDestron(bool verbose) {
 
         return PM3_ESOFT;
     }
+
     setDemodBuff(DemodBuffer, DESTRON_FRAME_SIZE, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     uint8_t bits[DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE] = {0};
     size_t bitlen = DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE;
-    memcpy(bits, DemodBuffer + 16, DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE);
+    memcpy(bits, DemodBuffer + DESTRON_PREAMBLE_SIZE, DESTRON_FRAME_SIZE - DESTRON_PREAMBLE_SIZE);
 
     uint8_t alignPos = 0;
     uint16_t errCnt = manrawdecode(bits, &bitlen, 0, &alignPos);
@@ -75,75 +77,155 @@ int demodDestron(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Destron: parity errors: %d", parity_err);
         return PM3_ESOFT;
     }
-    PrintAndLogEx(SUCCESS, "FDX-A FECAVA Destron: " _GREEN_("%02X%02X%02X%02X%02X"), data[0], data[1], data[2], data[3], data[4]);
+    PrintAndLogEx(SUCCESS, "FDX-A FECAVA Destron: " _GREEN_("%s"), sprint_hex_inrow(data, 5));
     return PM3_SUCCESS;
 }
 
 static int CmdDestronDemod(const char *Cmd) {
-    (void)Cmd;
-    return demodDestron(true);
-}
-
-static int CmdDestronRead(const char *Cmd) {
-    lf_read(false, 16000);
-    return demodDestron(true);
-}
-
-static int CmdDestronClone(const char *Cmd) {
-
-    uint32_t blocks[4] = {0};
-    uint8_t data[8];
-    int datalen = 0;
-
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf destron clone",
-                  "Enables cloning of Destron card with specified uid onto T55x7",
-                  "lf destron clone 1A2B3C4D5E"
+    CLIParserInit(&ctx, "lf destron demod",
+                  "Try to find Destron preamble, if found decode / descramble data",
+                  "lf destron demod"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx1(NULL, NULL, "<uid (hex)>", NULL),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    return demodDestron(true);
+}
+
+static int CmdDestronReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf destron reader",
+                  "read a Destron tag",
+                  "lf destron reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 16000);
+        demodDestron(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
+}
+
+static int CmdDestronClone(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf destron clone",
+                  "clone a Destron tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf destron clone --uid 1A2B3C4D5E\n"
+                  "lf destron clone --q5  --uid 1A2B3C4D5E   -> encode for Q5/T5555 tag\n"
+                  "lf destron clone --em  --uid 1A2B3C4D5E   -> encode for EM4305/4469"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx1("u", "uid", "<hex>", "5 bytes max"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
 
     //TODO add selection of chip for Q5 or T55x7
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t data[8];
+    int datalen = 0;
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
+    if (datalen > 5) {
+        PrintAndLogEx(FAILED, "Uid is max 5 bytes. (got %u)", datalen);
+        return PM3_EINVARG;
+    }
+
+    uint32_t blocks[4] = {0};
+    blocks[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2 | 3 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2  | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_DESTRON_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
 
     uint8_t data_ex[12 + 24] = {0}; // ManchesterEncode need extra room
     for (int i = 0; i < datalen; i++) {
         data_ex[i + 1] = ~(data [i] | (oddparity8(data[i]) << 7));
     }
+
+    // manchester encode it
     for (int i = 0; i < 3; i++) {
         blocks[i + 1] = manchesterEncode2Bytes((data_ex[i * 2] << 8) + data_ex[i * 2 + 1]);
     }
     // inject preamble
     blocks[1] = (blocks[1] & 0xFFFF) | 0xAAE20000;
 
-    PrintAndLogEx(INFO, "Preparing to clone Destron tag with ID: %s", sprint_hex(data, datalen));
-    blocks[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2 | 3 << T55x7_MAXBLOCK_SHIFT;
+    PrintAndLogEx(INFO, "Preparing to clone Destron tag to " _YELLOW_("%s") " with ID: " _YELLOW_("%s")
+            , cardtype
+            , sprint_hex_inrow(data, datalen)
+            );
+
 
     print_blocks(blocks, ARRAYLEN(blocks));
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf Destron read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf destron reader`") " to verify");
     return res;
 }
 
 static int CmdDestronSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf destron sim",
+                  "Try to find Destron preamble, if found decode / descramble data",
+                  "lf destron sim"
+                 );
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod", CmdDestronDemod,  AlwaysAvailable, "Demodulate an Destron tag from the GraphBuffer"},
-    {"read",  CmdDestronRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdDestronClone,  IfPm3Lf,         "Clone Destron tag to T55x7"},
-    {"sim",   CmdDestronSim,    IfPm3Lf,         "Simulate Destron tag"},
+    {"help",   CmdHelp,          AlwaysAvailable, "This help"},
+    {"demod",  CmdDestronDemod,  AlwaysAvailable, "Demodulate an Destron tag from the GraphBuffer"},
+    {"reader", CmdDestronReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone",  CmdDestronClone,  IfPm3Lf,         "Clone Destron tag to T55x7"},
+    {"sim",    CmdDestronSim,    IfPm3Lf,         "Simulate Destron tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -185,5 +267,5 @@ int detectDestron(uint8_t *dest, size_t *size) {
 }
 
 int readDestronUid(void) {
-    return (CmdDestronRead("") == PM3_SUCCESS);
+    return (CmdDestronReader("") == PM3_SUCCESS);
 }
