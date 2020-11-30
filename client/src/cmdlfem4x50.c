@@ -786,7 +786,7 @@ int CmdEM4x50Reader(const char *Cmd) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_LF_EM4X50_READER, 0, 0);
-        WaitForResponse(CMD_LF_EM4X50_READER, &resp);
+        WaitForResponseTimeoutW(CMD_LF_EM4X50_READER,  &resp, -1, false);
 
         now = resp.status;
         
