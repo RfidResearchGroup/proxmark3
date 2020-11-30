@@ -114,7 +114,7 @@ static int CmdDestronClone(const char *Cmd) {
 
     uint8_t data_ex[12 + 24] = {0}; // ManchesterEncode need extra room
     for (int i = 0; i < datalen; i++) {
-        data_ex[i + 1] = ~data [i] | (evenparity8(data[i]) << 7);
+        data_ex[i + 1] = ~(data [i] | (oddparity8(data[i]) << 7));
     }
     for (int i = 0; i < 3; i++) {
         blocks[i + 1] = manchesterEncode2Bytes((data_ex[i * 2] << 8) + data_ex[i * 2 + 1]);
