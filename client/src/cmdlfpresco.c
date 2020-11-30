@@ -40,7 +40,7 @@ static int detectPresco(uint8_t *dest, size_t *size) {
 
 // convert base 12 ID to sitecode & usercode & 8 bit other unknown code
 static int getWiegandFromPrintedPresco(void *arr,  uint32_t *fullcode) {
-    char *s = (char*)arr;
+    char *s = (char *)arr;
     uint8_t val = 0;
     for (int i = 0; i < strlen(s); ++i) {
         // Get value from number string.
@@ -103,16 +103,27 @@ int demodPresco(bool verbose) {
     uint32_t sitecode = (fullcode >> 24) & 0x000000FF;
 
     PrintAndLogEx(SUCCESS, "Presco Site code: " _GREEN_("%u") " User code: " _GREEN_("%u") " Full code: " _GREEN_("%08X") " Raw: " _YELLOW_("%08X%08X%08X%08X")
-            , sitecode
-            , usercode
-            , fullcode
-            , raw1, raw2, raw3, raw4
-            );
+                  , sitecode
+                  , usercode
+                  , fullcode
+                  , raw1, raw2, raw3, raw4
+                 );
     return PM3_SUCCESS;
 }
 
 static int CmdPrescoDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf presco demod",
+                  "Try to find presco preamble, if found decode / descramble data",
+                  "lf presco demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodPresco(true);
 }
 
@@ -120,8 +131,8 @@ static int CmdPrescoDemod(const char *Cmd) {
 static int CmdPrescoReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf presco reader",
-                 "read a presco tag",
-                 "lf presco reader -@   -> continuous reader mode"
+                  "read a presco tag",
+                  "lf presco reader -@   -> continuous reader mode"
                  );
 
     void *argtable[] = {
@@ -162,11 +173,11 @@ static int CmdPrescoClone(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int hex_len = 0;
-    uint8_t hex[4] = {0,0,0,0};
+    uint8_t hex[4] = {0, 0, 0, 0};
     CLIGetHexWithReturn(ctx, 1, hex, &hex_len);
 
     uint8_t idstr[11];
-    int slen = 9; 
+    int slen = 9;
     memset(idstr, 0x00, sizeof(idstr));
     CLIGetStrWithReturn(ctx, 2, idstr, &slen);
 
@@ -227,11 +238,11 @@ static int CmdPrescoClone(const char *Cmd) {
     blocks[4] = fullcode;
 
     PrintAndLogEx(INFO, "Preparing to clone Presco to " _GREEN_("%s") " with Site code: " _GREEN_("%u") " User code: " _GREEN_("%u") " Full code: " _GREEN_("%08x")
-        , cardtype
-        , sitecode
-        , usercode
-        , fullcode
-        );
+                  , cardtype
+                  , sitecode
+                  , usercode
+                  , fullcode
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
@@ -265,11 +276,11 @@ static int CmdPrescoSim(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int hex_len = 0;
-    uint8_t hex[4] = {0,0,0,0};
+    uint8_t hex[4] = {0, 0, 0, 0};
     CLIGetHexWithReturn(ctx, 1, hex, &hex_len);
 
     uint8_t idstr[11];
-    int slen = 9; 
+    int slen = 9;
     memset(idstr, 0x00, sizeof(idstr));
     CLIGetStrWithReturn(ctx, 2, idstr, &slen);
     CLIParserFree(ctx);
@@ -300,10 +311,10 @@ static int CmdPrescoSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Presco - Site Code: " _GREEN_("%u") " User Code: " _GREEN_("%u") " Full Code: " _GREEN_("%08X")
-            , sitecode
-            , usercode
-            , fullcode)
-            ;
+                  , sitecode
+                  , usercode
+                  , fullcode)
+    ;
 
     uint8_t bs[128];
     getPrescoBits(fullcode, bs);

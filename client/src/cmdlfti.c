@@ -272,7 +272,18 @@ out:
 }
 
 static int CmdTIDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf ti demod",
+                  "Try to find TI preamble, if found decode / descramble data",
+                  "lf ti demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodTI(true);
 }
 
@@ -303,19 +314,43 @@ static int CmdTIReader(const char *Cmd) {
 
 // write new data to a r/w TI tag
 static int CmdTIWrite(const char *Cmd) {
-    int res = 0;
-    uint64_t arg0, arg1, arg2;
-    res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &arg0, &arg1, &arg2);
 
-    if (res == 2)
-        arg2 = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf ti write",
+                  "write to a r/w TI tag.",
+                  "lf ti write --raw 1122334455667788\n"
+                  "lf ti write --raw 1122334455667788 --crc 1122\n"
+                 );
 
-    if (res < 2) {
-        PrintAndLogEx(WARNING, "Please specify the data as two hex strings, optionally the CRC as a third");
-        return PM3_EINVARG;
-    }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("r", "raw", "<hex>", "raw hex data. 8 bytes max"),
+        arg_str0(NULL, "crc", "<hex>", "optional - crc"),
+        arg_param_end        
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int raw_len = 0;
+    uint8_t raw[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    int crc_len = 0;
+    uint8_t crc[2] = {0};
+    CLIGetHexWithReturn(ctx, 2, crc, &crc_len);
+    CLIParserFree(ctx);
+
+    struct {
+        uint32_t high;
+        uint32_t low;
+        uint16_t crc;
+    } PACKED payload;
+
+    payload.high = bytes_to_num(raw, 4);
+    payload.low = bytes_to_num(raw + 4, 4);
+    payload.crc = bytes_to_num(crc, crc_len);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_TI_WRITE, arg0, arg1, arg2, NULL, 0);
+    SendCommandNG(CMD_LF_TI_WRITE, (uint8_t*)&payload, sizeof(payload));
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf ti reader`") " to verify");
     return PM3_SUCCESS;
@@ -323,7 +358,7 @@ static int CmdTIWrite(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,      AlwaysAvailable, "This help"},
-    {"demod",   CmdTIDemod,   AlwaysAvailable, "Demodulate raw bits for TI-type LF tag from the GraphBuffer"},
+    {"demod",   CmdTIDemod,   AlwaysAvailable, "Demodulate raw bits for TI LF tag from the GraphBuffer"},
     {"reader",  CmdTIReader,  IfPm3Lf,         "Read and decode a TI 134 kHz tag"},
     {"write",   CmdTIWrite,   IfPm3Lf,         "Write new data to a r/w TI 134 kHz tag"},
     {NULL, NULL, NULL, NULL}

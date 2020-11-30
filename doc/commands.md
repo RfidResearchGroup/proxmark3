@@ -38,6 +38,7 @@ Check column "offline" for their availability.
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
+|`analyse foo            `|Y       |`muxer`
 
 
 ### data
@@ -267,7 +268,7 @@ Check column "offline" for their availability.
 |`hf iclass encrypt      `|Y       |`[options..] Encrypt given block data`
 |`hf iclass decrypt      `|Y       |`[options..] Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`[options..] Manage keys to use with iclass commands`
-|`hf iclass permute      `|N       |`            Permute function from 'heart of darkness' paper`
+|`hf iclass permutekey   `|N       |`            Permute function from 'heart of darkness' paper`
 |`hf iclass view         `|Y       |`[options..] Display content from tag dump file`
 
 
@@ -538,7 +539,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf awid help           `|Y       |`this help`
 |`lf awid demod          `|Y       |`demodulate an AWID FSK tag from the GraphBuffer`
-|`lf awid read           `|N       |`attempt to read and extract tag data`
+|`lf awid reader         `|N       |`attempt to read and extract tag data`
 |`lf awid clone          `|N       |`clone AWID tag to T55x7 or Q5/T5555`
 |`lf awid sim            `|N       |`simulate AWID tag`
 |`lf awid brute          `|N       |`Bruteforce card number against reader`
@@ -553,7 +554,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf cotag help          `|Y       |`This help`
 |`lf cotag demod         `|Y       |`Tries to decode a COTAG signal`
-|`lf cotag read          `|N       |`Attempt to read and extract tag data`
+|`lf cotag reader        `|N       |`Attempt to read and extract tag data`
 
 
 ### lf destron
@@ -564,7 +565,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf destron help        `|Y       |`This help`
 |`lf destron demod       `|Y       |`Demodulate an Destron tag from the GraphBuffer`
-|`lf destron read        `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf destron reader      `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf destron clone       `|N       |`Clone Destron tag to T55x7`
 |`lf destron sim         `|N       |`Simulate Destron tag`
 
@@ -609,7 +610,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf fdxb help           `|Y       |`this help`
 |`lf fdxb demod          `|Y       |`demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
-|`lf fdxb read           `|N       |`attempt to read at 134kHz and extract tag data`
+|`lf fdxb reader         `|N       |`attempt to read at 134kHz and extract tag data`
 |`lf fdxb clone          `|N       |`clone animal ID tag to T55x7 or Q5/T5555`
 |`lf fdxb sim            `|N       |`simulate Animal ID tag`
 
@@ -622,7 +623,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf gallagher help      `|Y       |`This help`
 |`lf gallagher demod     `|Y       |`Demodulate an GALLAGHER tag from the GraphBuffer`
-|`lf gallagher read      `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf gallagher reader    `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf gallagher clone     `|N       |`clone GALLAGHER tag to T55x7`
 |`lf gallagher sim       `|N       |`simulate GALLAGHER tag`
 
@@ -635,7 +636,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf gproxii help        `|Y       |`this help`
 |`lf gproxii demod       `|Y       |`demodulate a G Prox II tag from the GraphBuffer`
-|`lf gproxii read        `|N       |`attempt to read and extract tag data from the antenna`
+|`lf gproxii reader      `|N       |`attempt to read and extract tag data from the antenna`
 |`lf gproxii clone       `|N       |`clone Guardall tag to T55x7 or Q5/T5555`
 |`lf gproxii sim         `|N       |`simulate Guardall tag`
 
@@ -680,7 +681,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf idteck help         `|Y       |`This help`
 |`lf idteck demod        `|Y       |`Demodulate an Idteck tag from the GraphBuffer`
-|`lf idteck read         `|N       |`Attempt to read and Extract tag data from the antenna`
+|`lf idteck reader       `|N       |`Attempt to read and Extract tag data from the antenna`
 
 
 ### lf indala
@@ -692,7 +693,7 @@ Check column "offline" for their availability.
 |`lf indala help         `|Y       |`this help`
 |`lf indala demod        `|Y       |`demodulate an indala tag (PSK1) from GraphBuffer`
 |`lf indala altdemod     `|Y       |`alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
-|`lf indala read         `|N       |`read an Indala Prox tag from the antenna`
+|`lf indala reader       `|N       |`read an Indala Prox tag from the antenna`
 |`lf indala clone        `|N       |`clone Indala tag to T55x7 or Q5/T5555`
 |`lf indala sim          `|N       |`simulate Indala tag`
 
@@ -705,7 +706,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf io help             `|Y       |`this help`
 |`lf io demod            `|Y       |`demodulate an IOProx tag from the GraphBuffer`
-|`lf io read             `|N       |`attempt to read and extract tag data`
+|`lf io reader           `|N       |`attempt to read and extract tag data`
 |`lf io clone            `|N       |`clone IOProx tag to T55x7 or Q5/T5555`
 |`lf io sim              `|N       |`simulate IOProx tag`
 |`lf io watch            `|N       |`continuously watch for cards. Reader mode`
@@ -719,7 +720,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf jablotron help      `|Y       |`This help`
 |`lf jablotron demod     `|Y       |`Demodulate an Jablotron tag from the GraphBuffer`
-|`lf jablotron read      `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf jablotron reader    `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf jablotron clone     `|N       |`clone jablotron tag to T55x7 or Q5/T5555`
 |`lf jablotron sim       `|N       |`simulate jablotron tag`
 
@@ -874,7 +875,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf ti help             `|Y       |`This help`
-|`lf ti demod            `|Y       |`Demodulate raw bits for TI-type LF tag from the GraphBuffer`
+|`lf ti demod            `|Y       |`Demodulate raw bits for TI LF tag from the GraphBuffer`
 |`lf ti reader           `|N       |`Read and decode a TI 134 kHz tag`
 |`lf ti write            `|N       |`Write new data to a r/w TI 134 kHz tag`
 

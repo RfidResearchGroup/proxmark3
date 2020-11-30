@@ -217,14 +217,25 @@ int demodNexWatch(bool verbose) {
 }
 
 static int CmdNexWatchDemod(const char *Cmd) {
-    (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf nexwatch demod",
+                  "Try to find Nexwatch preamble, if found decode / descramble data",
+                  "lf nexwatch demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodNexWatch(true);
 }
 
 static int CmdNexWatchReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf nexwatch reader",
-                  "read a nexwatch tag",
+                  "read a Nexwatch tag",
                   "lf nexwatch reader -@   -> continuous reader mode"
                  );
 
@@ -385,7 +396,7 @@ static int CmdNexWatchSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-     int raw_len = 0;
+    int raw_len = 0;
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0x56, 0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
@@ -438,7 +449,7 @@ static int CmdNexWatchSim(const char *Cmd) {
     uint8_t bs[96];
     memset(bs, 0, sizeof(bs));
 
-    // hex to bits.  (3 * 32 == 96) 
+    // hex to bits.  (3 * 32 == 96)
     for (size_t i = 0; i < 3; i++) {
         uint32_t tmp = bytes_to_num(raw + (i * sizeof(uint32_t)), sizeof(uint32_t));
         num_to_bytebits(tmp, sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));

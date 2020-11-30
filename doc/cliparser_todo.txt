@@ -1,8 +1,6 @@
 clear
 pref
 rem
-quit
-exit
 analyse lcr
 analyse crc
 analyse chksum
@@ -13,6 +11,7 @@ analyse a
 analyse nuid
 analyse demodbuff
 analyse freq
+analyse foo
 data biphaserawdecode
 data detectclock
 data fsktonrz
@@ -44,20 +43,15 @@ data print
 data samples
 data setdebugmode
 data tune
-emv list
-hf list
 hf tune
 hf search
 hf sniff
-hf 14a list
 hf 14a reader
 hf 14a cuids
 hf 14a sim
 hf 14a sniff
 hf 14a config
-hf 14b list
 hf 14b sriwrite
-hf 15 list
 hf 15 dump
 hf 15 info
 hf 15 raw
@@ -69,7 +63,6 @@ hf 15 writeafi
 hf 15 writedsfid
 hf epa cnonces
 hf epa preplay
-hf felica list
 hf felica reader
 hf felica sniff
 hf felica raw
@@ -85,11 +78,9 @@ hf felica rqspecver
 hf felica resetmode
 hf felica litesim
 hf felica litedump
-hf fido list
 hf fido info
 hf iclass info
-hf iclass list
-hf legic list
+hf iclass permutekey
 hf legic reader
 hf legic info
 hf legic dump
@@ -101,13 +92,6 @@ hf legic crc
 hf legic eload
 hf legic esave
 hf legic wipe
-hf lto dump
-hf lto restore
-hf lto info
-hf lto rdbl
-hf lto wrbl
-hf lto list
-hf mf list
 hf mf darkside
 hf mf nested
 hf mf hardnested
@@ -144,7 +128,6 @@ hf mf gen3uid
 hf mf gen3blk
 hf mf gen3freeze
 hf mf ice
-hf mfp info
 hf mfu info
 hf mfu dump
 hf mfu restore
@@ -161,12 +144,8 @@ hf mfu otptear
 hf mfdes enum
 hf mfdes getuid
 hf mfdes info
-hf mfdes list
-hf st list
 hf thinfilm info
-hf thinfilm list
 hf thinfilm sim
-hf topaz list
 hf topaz info
 hf topaz reader
 hf topaz sim
@@ -199,17 +178,6 @@ lf simpsk
 lf simbidir
 lf sniff
 lf tune
-lf awid demod
-lf awid read
-lf awid clone
-lf awid sim
-lf awid brute
-lf awid watch
-lf cotag demod
-lf cotag read
-lf destron demod
-lf destron read
-lf destron sim
 lf em 410x_demod
 lf em 410x_read
 lf em 410x_sim
@@ -229,21 +197,7 @@ lf em 4x50_write
 lf em 4x50_write_password
 lf em 4x50_read
 lf em 4x50_wipe
-lf fdxb demod
-lf fdxb read
-lf fdxb clone
-lf fdxb sim
-lf gallagher demod
-lf gallagher read
-lf gallagher clone
-lf gallagher sim
-lf gproxii demod
-lf gproxii read
-lf gproxii clone
-lf gproxii sim
-lf hid demod
 lf hid read
-lf hitag list
 lf hitag info
 lf hitag reader
 lf hitag sim
@@ -251,41 +205,20 @@ lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc
-lf idteck demod
-lf idteck read
 lf indala demod
 lf indala altdemod
-lf indala read
 lf indala sim
-lf io demod
-lf io read
 lf io clone
 lf io sim
 lf io watch
-lf jablotron demod
-lf jablotron read
-lf jablotron clone
 lf jablotron sim
-lf keri demod
-lf motorola demod
-lf motorola sim
-lf nedap demod
 lf nedap generate
 lf nedap read
 lf nedap clone
 lf nedap sim
-lf nexwatch demod
-lf noralsy demod
-lf pac demod
-lf paradox demod
 lf pcf7931 read
 lf pcf7931 write
 lf pcf7931 config
-lf presco demod
-lf pyramid demod
-lf securakey demod
-lf ti demod
-lf ti write
 lf t55xx config
 lf t55xx dangerraw
 lf t55xx detect
@@ -306,17 +239,12 @@ lf t55xx recoverpw
 lf t55xx sniff
 lf t55xx special
 lf t55xx wipe
-lf viking demod
-lf visa2000 demod
-mem spiffs
-smart list
 smart info
 smart reader
 smart raw
 smart upgrade
 smart setclock
 smart brute
-script list
 script run
 usart btpin
 usart btfactory
@@ -326,4 +254,3 @@ usart txrx
 usart txhex
 usart rxhex
 usart config
-wiegand list

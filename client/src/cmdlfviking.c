@@ -54,7 +54,18 @@ int demodViking(bool verbose) {
 }
 
 static int CmdVikingDemod(const char *Cmd) {
-    (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf viking demod",
+                  "Try to find Viking AM preamble, if found decode / descramble data",
+                  "lf viking demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodViking(true);
 }
 

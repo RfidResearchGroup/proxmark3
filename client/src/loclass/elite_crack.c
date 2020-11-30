@@ -232,7 +232,7 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable) {
 
     if (g_debugMode > 0) {
         PrintAndLogEx(DEBUG, "High security custom key (Kcus):");
-        PrintAndLogEx(DEBUG, "z0  %s", sprint_hex(z[0],8));
+        PrintAndLogEx(DEBUG, "z0  %s", sprint_hex(z[0], 8));
     }
 
     uint8_t y[8][8] = {{0}, {0}};
@@ -308,7 +308,7 @@ typedef struct {
 static size_t loclass_tc = 1;
 static int loclass_found = 0;
 
-static void* bf_thread(void* thread_arg) {
+static void *bf_thread(void *thread_arg) {
 
     loclass_thread_arg_t *targ = (loclass_thread_arg_t *)thread_arg;
     const uint32_t endmask = targ->endmask;
@@ -332,7 +332,7 @@ static void* bf_thread(void* thread_arg) {
     int found;
     while (!(brute & endmask)) {
 
-        found = __atomic_load_n (&loclass_found, __ATOMIC_SEQ_CST);
+        found = __atomic_load_n(&loclass_found, __ATOMIC_SEQ_CST);
 
         if (found != 0xFF) return NULL;
 
@@ -370,13 +370,13 @@ static void* bf_thread(void* thread_arg) {
         // success
         if (memcmp(calculated_MAC, mac, 4) == 0) {
 
-            loclass_thread_ret_t *r = (loclass_thread_ret_t*)malloc(sizeof(loclass_thread_ret_t));
+            loclass_thread_ret_t *r = (loclass_thread_ret_t *)malloc(sizeof(loclass_thread_ret_t));
 
             for (uint8_t i = 0 ; i < numbytes_to_recover; i++) {
                 r->values[i] = keytable[bytes_to_recover[i]] & 0xFF;
             }
             __atomic_store_n(&loclass_found, targ->thread_idx, __ATOMIC_SEQ_CST);
-            pthread_exit ((void*)r);
+            pthread_exit((void *)r);
         }
 
         brute += loclass_tc;
@@ -385,19 +385,19 @@ static void* bf_thread(void* thread_arg) {
 
         if (numbytes_to_recover == 3) {
             if ((brute > 0) && ((brute & 0xFFFF) == 0)) {
-                PrintAndLogEx(INPLACE, "[ %02x %02x %02x ] %8u / %u", bytes_to_recover[0], bytes_to_recover[1], bytes_to_recover[2] , brute, 0xFFFFFF);
+                PrintAndLogEx(INPLACE, "[ %02x %02x %02x ] %8u / %u", bytes_to_recover[0], bytes_to_recover[1], bytes_to_recover[2], brute, 0xFFFFFF);
             }
         } else if (numbytes_to_recover == 2) {
             if ((brute > 0) && ((brute & 0x3F) == 0))
-                PrintAndLogEx(INPLACE, "[ %02x %02x ] %5u / %u" _CLR_ , bytes_to_recover[0], bytes_to_recover[1], brute, 0xFFFF);
+                PrintAndLogEx(INPLACE, "[ %02x %02x ] %5u / %u" _CLR_, bytes_to_recover[0], bytes_to_recover[1], brute, 0xFFFF);
         } else {
             if ((brute > 0) && ((brute & 0x1F) == 0))
                 PrintAndLogEx(INPLACE, "[ %02x ] %3u / %u" _CLR_, bytes_to_recover[0], brute, 0xFF);
         }
     }
     pthread_exit(NULL);
-    
-    void* dummyptr = NULL;
+
+    void *dummyptr = NULL;
     return dummyptr;
 }
 
@@ -455,9 +455,9 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
         args[i].numbytes_to_recover = numbytes_to_recover;
         args[i].endmask = 1 << 8 * numbytes_to_recover;
 
-        memcpy((void*)&args[i].item, (void*)&item, sizeof(loclass_dumpdata_t));
-        memcpy(args[i].bytes_to_recover, bytes_to_recover, sizeof(args[i].bytes_to_recover) );
-        memcpy(args[i].key_index, key_index, sizeof(args[i].key_index) );
+        memcpy((void *)&args[i].item, (void *)&item, sizeof(loclass_dumpdata_t));
+        memcpy(args[i].bytes_to_recover, bytes_to_recover, sizeof(args[i].bytes_to_recover));
+        memcpy(args[i].key_index, key_index, sizeof(args[i].key_index));
         memcpy(args[i].keytable, keytable, sizeof(args[i].keytable));
     }
 
@@ -472,7 +472,7 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
         }
     }
     // wait for threads to terminate:
-    void* ptrs[loclass_tc];
+    void *ptrs[loclass_tc];
     for (int i = 0; i < loclass_tc; i++)
         pthread_join(threads[i], &ptrs[i]);
 
@@ -526,18 +526,18 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
     uint8_t key_index[8] = {0};
     hash1(item.csn, key_index);
 */
-    /*
-     * Determine which bytes to retrieve. A hash is typically
-     * 01010000454501
-     * We go through that hash, and in the corresponding keytable, we put markers
-     * on what state that particular index is:
-     * - CRACKED (this has already been cracked)
-     * - BEING_CRACKED (this is being bruteforced now)
-     * - CRACK_FAILED (self-explaining...)
-     *
-     * The markers are placed in the high area of the 16 bit key-table.
-     * Only the lower eight bits correspond to the (hopefully cracked) key-value.
-     **/
+/*
+ * Determine which bytes to retrieve. A hash is typically
+ * 01010000454501
+ * We go through that hash, and in the corresponding keytable, we put markers
+ * on what state that particular index is:
+ * - CRACKED (this has already been cracked)
+ * - BEING_CRACKED (this is being bruteforced now)
+ * - CRACK_FAILED (self-explaining...)
+ *
+ * The markers are placed in the high area of the 16 bit key-table.
+ * Only the lower eight bits correspond to the (hopefully cracked) key-value.
+ **/
 
 
 /*
@@ -571,13 +571,13 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
     //A uint32 has room for 4 bytes, we'll only need 24 of those bits to bruteforce up to three bytes,
     uint32_t brute = 0;
 */
-    /*
-       Determine where to stop the bruteforce. A 1-byte attack stops after 256 tries,
-       (when brute reaches 0x100). And so on...
-       bytes_to_recover = 1 --> endmask = 0x000000100
-       bytes_to_recover = 2 --> endmask = 0x000010000
-       bytes_to_recover = 3 --> endmask = 0x001000000
-    */
+/*
+   Determine where to stop the bruteforce. A 1-byte attack stops after 256 tries,
+   (when brute reaches 0x100). And so on...
+   bytes_to_recover = 1 --> endmask = 0x000000100
+   bytes_to_recover = 2 --> endmask = 0x000010000
+   bytes_to_recover = 3 --> endmask = 0x001000000
+*/
 /*
     uint32_t endmask =  1 << 8 * numbytes_to_recover;
     PrintAndLogEx(NORMAL, "----------------------------");
@@ -903,11 +903,11 @@ int testElite(bool slowtests) {
     int res = PM3_SUCCESS;
     PrintAndLogEx(INFO, "Testing hash1...");
     res += _testHash1();
-    PrintAndLogEx((res == PM3_SUCCESS) ? SUCCESS : WARNING, "    hash1 (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail") );
+    PrintAndLogEx((res == PM3_SUCCESS) ? SUCCESS : WARNING, "    hash1 (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
 
     PrintAndLogEx(INFO, "Testing key diversification...");
     res += _test_iclass_key_permutation();
-    PrintAndLogEx((res == PM3_SUCCESS) ? SUCCESS : WARNING, "    key diversification (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail") );
+    PrintAndLogEx((res == PM3_SUCCESS) ? SUCCESS : WARNING, "    key diversification (%s)", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
 
     if (slowtests)
         res += _testBruteforce();

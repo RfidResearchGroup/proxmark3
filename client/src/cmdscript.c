@@ -32,12 +32,12 @@
 #include "fileutils.h"
 
 #ifdef HAVE_LUA_SWIG
-extern int luaopen_pm3(lua_State* L);
+extern int luaopen_pm3(lua_State *L);
 #endif
 
 #ifdef HAVE_PYTHON
 #ifdef HAVE_PYTHON_SWIG
-extern PyObject* PyInit__pm3(void);
+extern PyObject *PyInit__pm3(void);
 #endif // HAVE_PYTHON_SWIG
 
 // Partly ripped from PyRun_SimpleFileExFlags

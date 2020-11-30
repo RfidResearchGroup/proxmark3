@@ -9,23 +9,22 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlffdxb.h"
-
 #include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h>       // tolower
-
+#include <ctype.h>        // tolower
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "commonutil.h"
-
-#include "ui.h"         // PrintAndLog
+#include "ui.h"           // PrintAndLog
 #include "cmddata.h"
-#include "cmdlf.h"      // lf read
-#include "crc16.h"      // for checksum crc-16_ccitt
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "cmdlft55xx.h" // verifywrite
+#include "cmdlf.h"        // lf read
+#include "crc16.h"        // for checksum crc-16_ccitt
+#include "protocols.h"    // for T55xx config register definitions
+#include "lfdemod.h"      // parityTest
+#include "cmdlft55xx.h"   // verifywrite
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 /*
     FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
@@ -48,55 +47,63 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lf_fdxb_clone(void) {
-    PrintAndLogEx(NORMAL, "Clone a FDX-B animal tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "Usage: lf fdxb clone [h] [c <country code>] [n <national code>] [e <extended>] <s> <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h               : This help");
-    PrintAndLogEx(NORMAL, "      c <country>     : (dec) Country code");
-    PrintAndLogEx(NORMAL, "      n <national>    : (dec) National code");
-    PrintAndLogEx(NORMAL, "      e <extended>    : (hex) Extended data");
-    PrintAndLogEx(NORMAL, "      s               : Set animal bit");
-    PrintAndLogEx(NORMAL, "      <Q5>            : Specify writing to Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb clone c 999 n 112233 s"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb clone c 999 n 112233 e 16a"));
-    return PM3_SUCCESS;
-}
+static int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint16_t extended, uint8_t *bits) {
 
-static int usage_lf_fdxb_read(void) {
-    PrintAndLogEx(NORMAL, "Read FDX-B animal tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf fdxb read [h] [@]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h               : This help");
-    PrintAndLogEx(NORMAL, "      @               : run continuously until a key is pressed (optional)");
-    PrintAndLogEx(NORMAL, "Note that the continuous mode is less verbose");
-    return PM3_SUCCESS;
-}
+    // add preamble ten 0x00 and one 0x01
+    memset(bits, 0x00, 10);
+    bits[10] = 1;
 
-static int usage_lf_fdxb_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of FDX-B animal tag");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf fdxb sim [h] [c <country code>] [n <national code>] [e <extended>] <s> <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h               : This help");
-    PrintAndLogEx(NORMAL, "      c <country>     : (dec) Country code");
-    PrintAndLogEx(NORMAL, "      n <national>    : (dec) National code");
-    PrintAndLogEx(NORMAL, "      e <extended>    : (hex) Extended data");
-    PrintAndLogEx(NORMAL, "      s               : Set animal bit");
-    PrintAndLogEx(NORMAL, "      <Q5>            : Specify writing to Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb sim c 999 n 112233 s"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf fdxb sim c 999 n 112233 e 16a"));
+    // 128bits
+    // every 9th bit is 0x01, but we can just fill the rest with 0x01 and overwrite
+    memset(bits, 0x01, 128);
+
+    // add preamble ten 0x00 and one 0x01
+    memset(bits, 0x00, 10);
+
+    // add reserved
+    num_to_bytebitsLSBF(0x00, 7, bits + 66);
+    num_to_bytebitsLSBF(0x00 >> 7, 7, bits + 74);
+
+    // add animal flag - OK
+    bits[81] = is_animal;
+
+    // add extended flag - OK
+    bits[65] = is_extended;
+
+    // add national code 40bits - OK
+    num_to_bytebitsLSBF(national_code >> 0, 8, bits + 11);
+    num_to_bytebitsLSBF(national_code >> 8, 8, bits + 20);
+    num_to_bytebitsLSBF(national_code >> 16, 8, bits + 29);
+    num_to_bytebitsLSBF(national_code >> 24, 8, bits + 38);
+    num_to_bytebitsLSBF(national_code >> 32, 6, bits + 47);
+
+    // add country code - OK
+    num_to_bytebitsLSBF(country_code >> 0, 2, bits + 53);
+    num_to_bytebitsLSBF(country_code >> 2, 8, bits + 56);
+
+    // add crc-16 - OK
+    uint8_t raw[8];
+    for (uint8_t i = 0; i < 8; ++i)
+        raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
+
+    init_table(CRC_11784);
+    uint16_t crc = crc16_fdxb(raw, 8);
+    num_to_bytebitsLSBF(crc >> 0, 8, bits + 83);
+    num_to_bytebitsLSBF(crc >> 8, 8, bits + 92);
+
+    // extended data - OK
+    num_to_bytebitsLSBF(extended >> 0, 8, bits + 101);
+    num_to_bytebitsLSBF(extended >> 8, 8, bits + 110);
+    num_to_bytebitsLSBF(extended >> 16, 8, bits + 119);
+
+    // 8  16 24 32 40 48 49
+    // A8 28 0C 92 EA 6F 00 01
+    // A8 28 0C 92 EA 6F 80 00
     return PM3_SUCCESS;
 }
 
 // clearing the topbit needed for the preambl detection.
-static void verify_values(uint64_t *animalid, uint32_t *countryid, uint32_t *extended, uint8_t *is_animal) {
+static void verify_values(uint64_t *animalid, uint32_t *countryid, uint16_t *extended) {
     if ((*animalid & 0x3FFFFFFFFF) != *animalid) {
         *animalid &= 0x3FFFFFFFFF;
         PrintAndLogEx(INFO, "Animal ID truncated to 38bits: " _YELLOW_("%"PRIx64), *animalid);
@@ -109,8 +116,6 @@ static void verify_values(uint64_t *animalid, uint32_t *countryid, uint32_t *ext
         *extended &= 0xFFF;
         PrintAndLogEx(INFO, "Extended truncated to 24bits: " _YELLOW_("0x%03X"), *extended);
     }
-
-    *is_animal &= 0x01;
 }
 
 static inline uint32_t bitcount(uint32_t a) {
@@ -607,71 +612,75 @@ int demodFDXB(bool verbose) {
 }
 
 static int CmdFdxBDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf fdxb demod",
+                  "Try to find FDX-B preamble, if found decode / descramble data",
+                  "lf fdxb demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodFDXB(true);
 }
 
-static int CmdFdxBRead(const char *Cmd) {
+static int CmdFdxBReader(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf fdxb reader",
+                  "read a FDX-B animal tag\n"
+                  "Note that the continuous mode is less verbose",
+                  "lf fdxb reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
     sample_config config;
     memset(&config, 0, sizeof(sample_config));
-    int retval = lf_getconfig(&config);
-    if (retval != PM3_SUCCESS) {
+    int res = lf_getconfig(&config);
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "failed to get current device LF config");
-        return retval;
+        return res;
     }
 
-    bool errors = false;
-    bool continuous = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_fdxb_read();
-            case '@':
-                continuous = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors) return usage_lf_fdxb_read();
     int16_t tmp_div = config.divisor;
     if (tmp_div != LF_DIVISOR_134) {
         config.divisor = LF_DIVISOR_134;
         config.verbose = false;
-        retval = lf_config(&config);
-        if (retval != PM3_SUCCESS) {
+        res = lf_config(&config);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "failed to change LF configuration");
-            return retval;
+            return res;
         }
     }
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
+
     int ret = PM3_SUCCESS;
     do {
-        retval = lf_read(false, 10000);
-        if (retval != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "failed to get LF read from device");
-            return retval;
-        }
-        ret = demodFDXB(!continuous); // be verbose only if not in continuous mode
-        if (kbd_enter_pressed()) {
-            break;
-        }
-        PrintAndLogEx(INPLACE, "");
-    } while (continuous);
+        lf_read(false, 10000);
+        ret = demodFDXB(!cm); // be verbose only if not in continuous mode
+        //PrintAndLogEx(INPLACE, "");
+    } while (cm && !kbd_enter_pressed());
+
     if (tmp_div != LF_DIVISOR_134) {
         config.divisor = tmp_div;
-        retval = lf_config(&config);
-        if (retval != PM3_SUCCESS) {
+        res = lf_config(&config);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "failed to restore LF configuration");
-            return retval;
+            return res;
         }
     }
     return ret;
@@ -679,145 +688,159 @@ static int CmdFdxBRead(const char *Cmd) {
 
 static int CmdFdxBClone(const char *Cmd) {
 
-    uint32_t country_code = 0, extended = 0;
-    uint64_t national_code = 0;
-    uint8_t is_animal = 0, cmdp = 0;
-    bool errors = false, has_extended = false,  q5 = false;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf fdxb clone",
+                  "clone a FDX-B tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf fdxb clone --country 999 --national 1337 --animal\n"
+                  "lf fdxb clone --country 999 --national 1337 --extended 016A\n"
+                  "lf fdxb clone --q5 --country 999 --national 1337   -> encode for Q5/T5555 tag\n"
+                  "lf fdxb clone --em --country 999 --national 1337   -> encode for EM4305/4469"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_fdxb_clone();
-            case 'c': {
-                country_code = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            }
-            case 'n': {
-                national_code = param_get64ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            }
-            case 'e': {
-                extended = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                has_extended = true;
-                cmdp += 2;
-                break;
-            }
-            case 's': {
-                is_animal = 1;
-                cmdp++;
-                break;
-            }
-            case 'q': {
-                q5 = true;
-                cmdp++;
-                break;
-            }
-            default: {
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-            }
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("c", "country", "<dec>", "country code"),
+        arg_u64_1("n", "national", "<dec>", "national code"),
+        arg_str0(NULL, "extended", "<hex>", "extended data"),
+        arg_lit0("a", "animal", "optional - set animal bit"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint32_t country_code = arg_get_u32_def(ctx, 1, 0);
+    uint64_t national_code = arg_get_u64_def(ctx, 2, 0);
+
+    int extended_len = 0;
+    uint8_t edata[2] = {0};
+    CLIGetHexWithReturn(ctx, 3, edata, &extended_len);
+
+    bool is_animal = arg_get_lit(ctx, 4);
+    bool q5 = arg_get_lit(ctx, 5);
+    bool em = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
     }
-    if (errors || strlen(Cmd) == 0) return usage_lf_fdxb_clone();
 
-    verify_values(&national_code, &country_code, &extended, &is_animal);
+    uint16_t extended = 0;
+    bool has_extended = false; 
+    if (extended_len) {
+        extended = bytes_to_num(edata, extended_len);
+        has_extended = true;
+    }
 
-    PrintAndLogEx(INFO, "      Country code %"PRIu32, country_code);
-    PrintAndLogEx(INFO, "     National code %"PRIu64, national_code);
-    PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "     Extended data 0x%"PRIX32, extended);
-    PrintAndLogEx(INFO, "               RFU 0");
+    verify_values(&national_code, &country_code, &extended);
 
-    uint8_t *bits = calloc(128, sizeof(uint8_t));
-    if (getFDXBBits(national_code, country_code, is_animal, has_extended, extended, bits) != PM3_SUCCESS) {
+    PrintAndLogEx(INFO, "Country code........ %"PRIu32, country_code);
+    PrintAndLogEx(INFO, "National code....... %"PRIu64, national_code);
+    PrintAndLogEx(INFO, "Set animal bit...... %c", (is_animal) ? 'Y' : 'N');
+    PrintAndLogEx(INFO, "Set data block bit.. %c", (has_extended) ? 'Y' : 'N');
+    PrintAndLogEx(INFO, "Extended data....... 0x%"PRIX32, extended);
+    PrintAndLogEx(INFO, "RFU................. 0");
+
+    uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (getFDXBBits(national_code, country_code, is_animal, has_extended, extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
-        free(bits);
+        free(bs);
         return PM3_ESOFT;
     }
 
     uint32_t blocks[5] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
+    char cardtype[16] = {"T55x7"};
 
-    //Q5
-    if (q5)
+    // Q5
+    if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_FDXB_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
 
     // convert from bit stream to block data
-    blocks[1] = bytebits_to_byte(bits, 32);
-    blocks[2] = bytebits_to_byte(bits + 32, 32);
-    blocks[3] = bytebits_to_byte(bits + 64, 32);
-    blocks[4] = bytebits_to_byte(bits + 96, 32);
+    blocks[1] = bytebits_to_byte(bs, 32);
+    blocks[2] = bytebits_to_byte(bs + 32, 32);
+    blocks[3] = bytebits_to_byte(bs + 64, 32);
+    blocks[4] = bytebits_to_byte(bs + 96, 32);
 
-    free(bits);
+    free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone FDX-B to " _YELLOW_("%s") " with animal ID: " _GREEN_("%04u-%"PRIu64), (q5) ? "Q5/T5555" : "T55x7", country_code, national_code);
+    PrintAndLogEx(INFO, "Preparing to clone FDX-B to " _YELLOW_("%s") " with animal ID: " _GREEN_("%04u-%"PRIu64)
+            , cardtype
+            , country_code
+            , national_code
+            );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdxb read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdxb reader`") " to verify");
     return res;
 }
 
 static int CmdFdxBSim(const char *Cmd) {
 
-    uint32_t country_code = 0, extended = 0;
-    uint64_t national_code = 0;
-    uint8_t is_animal = 0, cmdp = 0;
-    bool errors = false, has_extended = false;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf fdxb sim",
+                  "Enables simulation of  FDX-B animal tag.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf fdxb sim --country 999 --national 1337 --animal\n"
+                  "lf fdxb sim --country 999 --national 1337 --extended 016A\n"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_fdxb_sim();
-            case 'c': {
-                country_code = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            }
-            case 'n': {
-                national_code = param_get64ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            }
-            case 'e': {
-                extended = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                has_extended = true;
-                cmdp += 2;
-                break;
-            }
-            case 's': {
-                is_animal = 1;
-                cmdp++;
-                break;
-            }
-            default: {
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-            }
-        }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("c", "country", "<dec>", "country code"),
+        arg_u64_1("n", "national", "<dec>", "national code"),
+        arg_str0(NULL, "extended", "<hex>", "extended data"),
+        arg_lit0("a", "animal", "optional - set animal bit"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint32_t country_code = arg_get_u32_def(ctx, 1, 0);
+    uint64_t national_code = arg_get_u64_def(ctx, 2, 0);
+    int extended_len = 0;
+    uint8_t edata[2] = {0};
+    CLIGetHexWithReturn(ctx, 3, edata, &extended_len);
+
+    bool is_animal = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    uint16_t extended = 0;
+    bool has_extended = false; 
+    if (extended_len) {
+        extended = bytes_to_num(edata, extended_len);
+        has_extended = true;
     }
-    if (errors) return usage_lf_fdxb_sim();
 
-    verify_values(&national_code, &country_code, &extended, &is_animal);
+    verify_values(&national_code, &country_code, &extended);
 
-    PrintAndLogEx(INFO, "      Country code %"PRIu32, country_code);
-    PrintAndLogEx(INFO, "     National code %"PRIu64, national_code);
-    PrintAndLogEx(INFO, "    Set animal bit %c", (is_animal) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "Set data block bit %c", (has_extended) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "     Extended data 0x%"PRIX32, extended);
-    PrintAndLogEx(INFO, "               RFU 0");
+    PrintAndLogEx(INFO, "Country code........ %"PRIu32, country_code);
+    PrintAndLogEx(INFO, "National code....... %"PRIu64, national_code);
+    PrintAndLogEx(INFO, "Set animal bit...... %c", (is_animal) ? 'Y' : 'N');
+    PrintAndLogEx(INFO, "Set data block bit.. %c", (has_extended) ? 'Y' : 'N');
+    PrintAndLogEx(INFO, "Extended data....... 0x%"PRIX16, extended);
+    PrintAndLogEx(INFO, "RFU................. 0");
 
-    PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _GREEN_("%04u-%"PRIu64), country_code, national_code);
+    PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _YELLOW_("%04u-%"PRIu64), country_code, national_code);
 
-    uint8_t *bits = calloc(128, sizeof(uint8_t));
-    if (getFDXBBits(national_code, country_code, is_animal, (extended > 0), extended, bits) != PM3_SUCCESS) {
+    uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (getFDXBBits(national_code, country_code, is_animal, (extended > 0), extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
-        free(bits);
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -827,12 +850,12 @@ static int CmdFdxBSim(const char *Cmd) {
     payload->invert = 1;
     payload->separator = 0;
     payload->clock = 32;
-    memcpy(payload->data, bits, 128);
+    memcpy(payload->data, bs, 128);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + 128);
 
-    free(bits);
+    free(bs);
     free(payload);
 
     PacketResponseNG resp;
@@ -846,11 +869,11 @@ static int CmdFdxBSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,     AlwaysAvailable, "this help"},
-    {"demod",   CmdFdxBDemod, AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
-    {"read",    CmdFdxBRead,  IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
-    {"clone",   CmdFdxBClone, IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
-    {"sim",     CmdFdxBSim,   IfPm3Lf,         "simulate Animal ID tag"},
+    {"help",    CmdHelp,      AlwaysAvailable, "this help"},
+    {"demod",   CmdFdxBDemod,  AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
+    {"reader",  CmdFdxBReader, IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
+    {"clone",   CmdFdxBClone,  IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdFdxBSim,    IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -878,59 +901,3 @@ int detectFDXB(uint8_t *dest, size_t *size) {
     //return start position
     return (int)startIdx;
 }
-
-int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits) {
-
-    // add preamble ten 0x00 and one 0x01
-    memset(bits, 0x00, 10);
-    bits[10] = 1;
-
-    // 128bits
-    // every 9th bit is 0x01, but we can just fill the rest with 0x01 and overwrite
-    memset(bits, 0x01, 128);
-
-    // add preamble ten 0x00 and one 0x01
-    memset(bits, 0x00, 10);
-
-    // add reserved
-    num_to_bytebitsLSBF(0x00, 7, bits + 66);
-    num_to_bytebitsLSBF(0x00 >> 7, 7, bits + 74);
-
-    // add animal flag - OK
-    bits[81] = is_animal;
-
-    // add extended flag - OK
-    bits[65] = is_extended;
-
-    // add national code 40bits - OK
-    num_to_bytebitsLSBF(national_code >> 0, 8, bits + 11);
-    num_to_bytebitsLSBF(national_code >> 8, 8, bits + 20);
-    num_to_bytebitsLSBF(national_code >> 16, 8, bits + 29);
-    num_to_bytebitsLSBF(national_code >> 24, 8, bits + 38);
-    num_to_bytebitsLSBF(national_code >> 32, 6, bits + 47);
-
-    // add country code - OK
-    num_to_bytebitsLSBF(country_code >> 0, 2, bits + 53);
-    num_to_bytebitsLSBF(country_code >> 2, 8, bits + 56);
-
-    // add crc-16 - OK
-    uint8_t raw[8];
-    for (uint8_t i = 0; i < 8; ++i)
-        raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
-
-    init_table(CRC_11784);
-    uint16_t crc = crc16_fdxb(raw, 8);
-    num_to_bytebitsLSBF(crc >> 0, 8, bits + 83);
-    num_to_bytebitsLSBF(crc >> 8, 8, bits + 92);
-
-    // extended data - OK
-    num_to_bytebitsLSBF(extended >> 0, 8, bits + 101);
-    num_to_bytebitsLSBF(extended >> 8, 8, bits + 110);
-    num_to_bytebitsLSBF(extended >> 16, 8, bits + 119);
-
-    // 8  16 24 32 40 48 49
-    // A8 28 0C 92 EA 6F 00 01
-    // A8 28 0C 92 EA 6F 80 00
-    return PM3_SUCCESS;
-}
-

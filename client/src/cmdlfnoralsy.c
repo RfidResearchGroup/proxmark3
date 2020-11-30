@@ -103,14 +103,25 @@ int demodNoralsy(bool verbose) {
 }
 
 static int CmdNoralsyDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf noralsy demod",
+                  "Try to find Noralsy preamble, if found decode / descramble data",
+                  "lf noralsy demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodNoralsy(true);
 }
 
 static int CmdNoralsyReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf noralsy reader",
-                  "read a noralsy tag",
+                  "read a Noralsy tag",
                   "lf noralsy reader -@   -> continuous reader mode"
                  );
 
@@ -133,7 +144,7 @@ static int CmdNoralsyReader(const char *Cmd) {
 static int CmdNoralsyClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf noralsy clone",
-                  "clone a noralsy tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "clone a Noralsy tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
                   "lf noralsy clone --cn 112233\n"
                   "lf noralsy clone --cn 112233 --q5      -> encode for Q5/T5555 tag\n"
                   "lf noralsy clone --cn 112233 --em      -> encode for EM4305/4469"

@@ -446,10 +446,10 @@ void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest) {
     }
 }
 
-void bytes_to_bytebits(void* src, size_t srclen, void* dest) {
+void bytes_to_bytebits(void *src, size_t srclen, void *dest) {
 
-    uint8_t *s = (uint8_t*)src;
-    uint8_t *d = (uint8_t*)dest;
+    uint8_t *s = (uint8_t *)src;
+    uint8_t *d = (uint8_t *)dest;
 
     uint32_t i = srclen * 8;
     while (srclen--) {

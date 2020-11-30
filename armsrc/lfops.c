@@ -803,7 +803,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc) {
     AcquireTiType();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("Now use `lf ti read` to check");
+    DbpString("Now use `lf ti reader` to check");
     StopTicks();
 }
 

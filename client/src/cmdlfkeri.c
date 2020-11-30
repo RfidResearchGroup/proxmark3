@@ -175,7 +175,18 @@ int demodKeri(bool verbose) {
 }
 
 static int CmdKeriDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf keri demod",
+                  "Try to find KERI preamble, if found decode / descramble data",
+                  "lf keri demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodKeri(true);
 }
 

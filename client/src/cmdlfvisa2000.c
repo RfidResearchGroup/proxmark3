@@ -133,7 +133,18 @@ int demodVisa2k(bool verbose) {
 }
 
 static int CmdVisa2kDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf visa2000 demod",
+                  "Try to find visa2000 preamble, if found decode / descramble data",
+                  "lf visa2000 demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodVisa2k(true);
 }
 

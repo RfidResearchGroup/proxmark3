@@ -9,13 +9,10 @@
 // PSK
 //-----------------------------------------------------------------------------
 #include "cmdlfidteck.h"
-
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
 #include "common.h"
-
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
@@ -23,6 +20,8 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 #include "commonutil.h"     // num_to_bytes
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
 
@@ -87,20 +86,49 @@ int demodIdteck(bool verbose) {
 }
 
 static int CmdIdteckDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf idteck demod",
+                  "Try to find Idteck preamble, if found decode / descramble data",
+                  "lf idteck demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodIdteck(true);
 }
 
-static int CmdIdteckRead(const char *Cmd) {
-    (void)Cmd;
-    lf_read(false, 5000);
-    return demodIdteck(true);
+static int CmdIdteckReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf idteck reader",
+                  "read a Idteck tag",
+                  "lf idteck reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 5000);
+        demodIdteck(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        AlwaysAvailable, "This help"},
-    {"demod",   CmdIdteckDemod, AlwaysAvailable, "Demodulate an Idteck tag from the GraphBuffer"},
-    {"read",    CmdIdteckRead,  IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
+    {"help",    CmdHelp,         AlwaysAvailable, "This help"},
+    {"demod",   CmdIdteckDemod,  AlwaysAvailable, "Demodulate an Idteck tag from the GraphBuffer"},
+    {"reader",  CmdIdteckReader, IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
     {NULL, NULL, NULL, NULL}
 };
 

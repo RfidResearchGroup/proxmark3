@@ -907,7 +907,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_TI_WRITE: {
-            WriteTItag(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            struct p {
+                uint32_t high;
+                uint32_t low;
+                uint16_t crc;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            WriteTItag(payload->high, payload->low, packet->crc);
             break;
         }
         case CMD_LF_SIMULATE: {

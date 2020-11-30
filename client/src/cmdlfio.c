@@ -9,23 +9,22 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfio.h"
-
-#include <stdio.h>      // sscanf
+#include <stdio.h>        // sscanf
 #include <stdlib.h>
 #include <string.h>
-
 #include <ctype.h>
-
-#include "commonutil.h"     //ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "graph.h"
 #include "cmdlf.h"
-#include "ui.h"         // PrintAndLog
-#include "lfdemod.h"    // parityTest, bitbytes_to_byte
-#include "protocols.h"  // for T55xx config register definitions
+#include "ui.h"           // PrintAndLog
+#include "lfdemod.h"      // parityTest, bitbytes_to_byte
+#include "protocols.h"    // for T55xx config register definitions
 #include "cmddata.h"
-#include "cmdlft55xx.h" // verifywrite
+#include "cmdlft55xx.h"   // verifywrite
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
 
@@ -192,14 +191,43 @@ int demodIOProx(bool verbose) {
 }
 
 static int CmdIOProxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf io demod",
+                  "Try to find IO Prox preamble, if found decode / descramble data",
+                  "lf io demod\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodIOProx(true);
 }
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-static int CmdIOProxRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 12000);
-    return demodIOProx(true);
+static int CmdIOProxReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf io reader",
+                  "read a IO Prox tag",
+                  "lf io reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 12000);
+        demodIOProx(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 static int CmdIOProxSim(const char *Cmd) {
     uint16_t cn = 0;
@@ -297,12 +325,12 @@ static int CmdIOProxClone(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        AlwaysAvailable, "this help"},
-    {"demod",   CmdIOProxDemod, AlwaysAvailable, "demodulate an IOProx tag from the GraphBuffer"},
-    {"read",    CmdIOProxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdIOProxClone, IfPm3Lf,         "clone IOProx tag to T55x7 or Q5/T5555"},
-    {"sim",     CmdIOProxSim,   IfPm3Lf,         "simulate IOProx tag"},
-    {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards. Reader mode"},
+    {"help",    CmdHelp,         AlwaysAvailable, "this help"},
+    {"demod",   CmdIOProxDemod,  AlwaysAvailable, "demodulate an IOProx tag from the GraphBuffer"},
+    {"reader",  CmdIOProxReader, IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",   CmdIOProxClone,  IfPm3Lf,         "clone IOProx tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdIOProxSim,    IfPm3Lf,         "simulate IOProx tag"},
+    {"watch",   CmdIOProxWatch,  IfPm3Lf,         "continuously watch for cards. Reader mode"},
     {NULL, NULL, NULL, NULL}
 };
 

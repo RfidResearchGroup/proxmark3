@@ -170,7 +170,18 @@ int demodParadox(bool verbose) {
 }
 
 static int CmdParadoxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf paradox demod",
+                  "Try to find Paradox preamble, if found decode / descramble data",
+                  "lf paradox demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodParadox(true);
 }
 
@@ -240,7 +251,7 @@ static int CmdParadoxClone(const char *Cmd) {
     for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
         blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
     }
-    
+
     // Paradox - FSK2a, data rate 50, 3 data blocks
     blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT;
     char cardtype[16] = {"T55x7"};
@@ -255,7 +266,7 @@ static int CmdParadoxClone(const char *Cmd) {
         blocks[0] = EM4305_PARADOX_CONFIG_BLOCK;
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
-    
+
     PrintAndLogEx(INFO, "Preparing to clone Paradox to " _YELLOW_("%s") " with raw hex", cardtype);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
@@ -323,7 +334,8 @@ static int CmdParadoxSim(const char *Cmd) {
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
 
-    return PM3_SUCCESS;}
+    return PM3_SUCCESS;
+}
 /*
 
     if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_paradox_sim();
