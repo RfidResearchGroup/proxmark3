@@ -565,7 +565,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf destron help        `|Y       |`This help`
 |`lf destron demod       `|Y       |`Demodulate an Destron tag from the GraphBuffer`
-|`lf destron read        `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf destron reader      `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf destron clone       `|N       |`Clone Destron tag to T55x7`
 |`lf destron sim         `|N       |`Simulate Destron tag`
 

@@ -1,8 +1,6 @@
 clear
 pref
 rem
-quit
-exit
 analyse lcr
 analyse crc
 analyse chksum
@@ -180,9 +178,6 @@ lf simpsk
 lf simbidir
 lf sniff
 lf tune
-lf destron demod
-lf destron read
-lf destron sim
 lf em 410x_demod
 lf em 410x_read
 lf em 410x_sim
@@ -248,7 +243,6 @@ lf t55xx recoverpw
 lf t55xx sniff
 lf t55xx special
 lf t55xx wipe
-mem spiffs
 smart info
 smart reader
 smart raw
