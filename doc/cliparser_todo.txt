@@ -180,8 +180,6 @@ lf simpsk
 lf simbidir
 lf sniff
 lf tune
-lf cotag demod
-lf cotag read
 lf destron demod
 lf destron read
 lf destron sim

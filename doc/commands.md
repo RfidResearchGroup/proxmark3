@@ -554,7 +554,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf cotag help          `|Y       |`This help`
 |`lf cotag demod         `|Y       |`Tries to decode a COTAG signal`
-|`lf cotag read          `|N       |`Attempt to read and extract tag data`
+|`lf cotag reader        `|N       |`Attempt to read and extract tag data`
 
 
 ### lf destron
