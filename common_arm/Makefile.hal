@@ -143,9 +143,10 @@ PLATFORM_DEFS+=$(STANDALONE_PLATFORM_DEFS)
 
 $(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))
 
-# Misc
-#PLATFORM_DEFS += -DWITH_LCD
-
+# Misc (LCD support)
+ifneq (,$(findstring WITH_LCD,$(PLATFORM_DEFS)))
+    #PLATFORM_DEFS += -DWITH_LCD
+endif
 
 # Add flags dependencies :
 
