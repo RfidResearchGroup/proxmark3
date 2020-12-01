@@ -78,7 +78,6 @@ hf felica resetmode
 hf felica litesim
 hf felica litedump
 hf fido info
-hf iclass permutekey
 hf legic reader
 hf legic info
 hf legic dump

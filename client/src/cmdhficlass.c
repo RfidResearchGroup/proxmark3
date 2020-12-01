@@ -3283,10 +3283,10 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     int len = 0;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf iclass permute",
+    CLIParserInit(&ctx, "hf iclass permutekey",
                   "Permute function from 'heart of darkness' paper.",
-                  "hf iclass permute --reverse --key 0123456789abcdef\n"
-                  "hf iclass permute --key ff55330f0055330f\n");
+                  "hf iclass permutekey --reverse --key 0123456789abcdef\n"
+                  "hf iclass permutekey --key ff55330f0055330f\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3484,10 +3484,7 @@ int info_iclass(void) {
 
         uint8_t cardtype = get_mem_config(hdr);
         PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
-
-
     }
-
     DropField();
     return PM3_SUCCESS;
 }
