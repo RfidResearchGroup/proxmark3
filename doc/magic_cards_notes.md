@@ -238,6 +238,8 @@ hf 14a info
 
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID aka MCT
 
+(MCT is sometimes used by sellers as it can be written to with Mifare Classic Tool)
+
 ### Identify
 
 ```
