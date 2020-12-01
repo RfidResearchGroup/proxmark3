@@ -197,7 +197,6 @@ lf em 4x50_write
 lf em 4x50_write_password
 lf em 4x50_read
 lf em 4x50_wipe
-lf hid read
 lf hitag info
 lf hitag reader
 lf hitag sim
@@ -209,8 +208,6 @@ lf indala demod
 lf indala altdemod
 lf indala sim
 lf io clone
-lf io sim
-lf io watch
 lf jablotron sim
 lf nedap generate
 lf nedap read

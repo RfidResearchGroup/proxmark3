@@ -649,7 +649,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf hid help            `|Y       |`this help`
 |`lf hid demod           `|Y       |`demodulate HID Prox tag from the GraphBuffer`
-|`lf hid read            `|N       |`attempt to read and extract tag data`
+|`lf hid reader          `|N       |`attempt to read and extract tag data`
 |`lf hid clone           `|N       |`clone HID tag to T55x7`
 |`lf hid sim             `|N       |`simulate HID tag`
 |`lf hid brute           `|N       |`bruteforce card number against reader`
