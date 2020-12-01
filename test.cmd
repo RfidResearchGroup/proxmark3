@@ -1,2 +1,0 @@
-hw version
-hw version
