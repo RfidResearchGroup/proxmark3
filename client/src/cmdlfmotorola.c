@@ -33,6 +33,7 @@ int demodMotorola(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
         return PM3_ESOFT;
     }
+
     size_t size = DemodBufferLen;
     int ans = detectMotorola(DemodBuffer, &size);
     if (ans < 0) {
@@ -165,10 +166,11 @@ static int CmdMotorolaReader(const char *Cmd) {
     };
     lf_config(&sc);
 
+    int res;
     do {
         // 64 * 32 * 2 * n-ish
         lf_read(false, 5000);
-        demodMotorola(!cm);
+        res = demodMotorola(!cm);
     } while (cm && !kbd_enter_pressed());
 
     // reset back to 125 kHz
@@ -176,7 +178,7 @@ static int CmdMotorolaReader(const char *Cmd) {
     sc.samples_to_skip = 0;
     lf_config(&sc);
 
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdMotorolaClone(const char *Cmd) {
