@@ -210,9 +210,6 @@ lf nedap generate
 lf nedap read
 lf nedap clone
 lf nedap sim
-lf pcf7931 read
-lf pcf7931 write
-lf pcf7931 config
 lf t55xx config
 lf t55xx dangerraw
 lf t55xx detect

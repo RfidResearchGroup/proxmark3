@@ -824,7 +824,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf pcf7931 help        `|Y       |`This help`
-|`lf pcf7931 read        `|N       |`Read content of a PCF7931 transponder`
+|`lf pcf7931 reader      `|N       |`Read content of a PCF7931 transponder`
 |`lf pcf7931 write       `|N       |`Write data on a PCF7931 transponder.`
 |`lf pcf7931 config      `|Y       |`Configure the password, the tags initialization delay and time offsets (optional)`
 
