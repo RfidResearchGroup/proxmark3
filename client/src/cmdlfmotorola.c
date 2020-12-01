@@ -148,6 +148,10 @@ static int CmdMotorolaReader(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
     // Motorola Flexpass seem to work at 74 kHz
     // and take about 4400 samples to befor modulating
     sample_config sc = {
