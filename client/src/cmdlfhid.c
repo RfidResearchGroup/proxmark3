@@ -45,8 +45,7 @@ static int CmdHelp(const char *Cmd);
 
 // sending three times.  Didn't seem to break the previous sim?
 static int sendPing(void) {
-    SendCommandNG(CMD_PING, NULL, 0);
-    SendCommandNG(CMD_PING, NULL, 0);
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
     SendCommandNG(CMD_PING, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -223,7 +222,8 @@ static int CmdHIDSim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid sim",
-                  "Enables simulation of HID card with card number.",
+                  "Enables simulation of HID card with card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf hid sim -r 2006ec0c86                -> HID 10301 26 bit\n"
                   "lf hid sim -r 2e0ec00c87                -> HID Corporate 35 bit\n"
                   "lf hid sim -r 01f0760643c3              -> HID P10001 40 bit\n"
