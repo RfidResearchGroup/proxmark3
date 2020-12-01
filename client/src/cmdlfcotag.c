@@ -122,13 +122,21 @@ static int CmdCOTAGReader(const char *Cmd) {
     SendCommandNG(CMD_LF_COTAG_READ, (uint8_t *)&payload, sizeof(payload));
 
     uint8_t timeout = 3;
+    int res = PM3_SUCCESS;
     while (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 2000)) {
         timeout--;
         PrintAndLogEx(NORMAL, "." NOLF);
         if (timeout == 0) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "command execution time out");
-            return PM3_ETIMEOUT;
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            timeout = 1;
+            res = PM3_ETIMEOUT;
         }
+    }
+
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     if (timeout != 3)
@@ -157,7 +165,6 @@ static command_t CommandTable[] = {
     {"reader",  CmdCOTAGReader,  IfPm3Lf,         "Attempt to read and extract tag data"},
     {NULL, NULL, NULL, NULL}
 };
-
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
