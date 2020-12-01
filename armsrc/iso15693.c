@@ -1765,7 +1765,7 @@ void SimTagIso15693(uint8_t *uid) {
             uint8_t resp_sysinfo[CMD_SYSINFO_RESP] = {0};
     
             resp_sysinfo[0] = 0;    // Response flags.
-            resp_sysinfo[1] = 0x0F; // Information flags.
+            resp_sysinfo[1] = 0x0F; // Information flags (0x0F - DSFID, AFI, Mem size, IC)
     
             // 64-bit UID
             resp_sysinfo[2] = uid[7];
@@ -1780,9 +1780,9 @@ void SimTagIso15693(uint8_t *uid) {
             resp_sysinfo[10] = 0;    // DSFID
             resp_sysinfo[11] = 0;    // AFI
 
-            resp_sysinfo[12] = 0x1B; // Memory size [0].
-            resp_sysinfo[13] = 0x03; // Memory size [1].
-            resp_sysinfo[14] = 0x01; // Memory size [2].
+            resp_sysinfo[12] = 0x1B; // Memory size.
+            resp_sysinfo[13] = 0x03; // Memory size.
+            resp_sysinfo[14] = 0x01; // IC reference.
     
             // CRC
             AddCrc15(resp_sysinfo, 15);
