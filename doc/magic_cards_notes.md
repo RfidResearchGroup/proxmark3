@@ -10,7 +10,7 @@ Useful docs:
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
-  * [MIFARE Classic DirectWrite aka Gen2 aka CUID aka MCT](#mifare-classic-directwrite-aka-gen2-aka-cuid-aka-mct)
+  * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
@@ -236,9 +236,9 @@ hf 14a info
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
-## MIFARE Classic DirectWrite aka Gen2 aka CUID aka MCT
+## MIFARE Classic DirectWrite aka Gen2 aka CUID
 
-(MCT is sometimes used by sellers as it can be written to with Mifare Classic Tool)
+(also referred as MCT compatible by some sellers)
 
 ### Identify
 
