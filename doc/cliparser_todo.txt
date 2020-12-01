@@ -1,6 +1,5 @@
 clear
 pref
-rem
 analyse lcr
 analyse crc
 analyse chksum
@@ -207,7 +206,6 @@ lf hitag cc
 lf indala demod
 lf indala altdemod
 lf indala sim
-lf jablotron sim
 lf nedap generate
 lf nedap read
 lf nedap clone
