@@ -170,5 +170,5 @@ int CmdLFCOTAG(const char *Cmd) {
 }
 
 int readCOTAGUid(void) {
-    return (CmdCOTAGReader("") == PM3_SUCCESS);
+    return (CmdCOTAGReader("-2") == PM3_SUCCESS);
 }
