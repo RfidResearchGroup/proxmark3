@@ -207,7 +207,6 @@ lf hitag cc
 lf indala demod
 lf indala altdemod
 lf indala sim
-lf io clone
 lf jablotron sim
 lf nedap generate
 lf nedap read

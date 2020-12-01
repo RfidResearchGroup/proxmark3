@@ -316,7 +316,8 @@ static int CmdHIDClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid clone",
-                  "Clone HID to T55x7. Tag must be on antenna!",
+                  "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
+                  "Tag must be on the antenna when issuing this command.",
                   "lf hid clone -r 2006ec0c86                -> HID 10301 26 bit\n"
                   "lf hid clone -r 2e0ec00c87                -> HID Corporate 35 bit\n"
                   "lf hid clone -r 01f0760643c3              -> HID P10001 40 bit\n"
