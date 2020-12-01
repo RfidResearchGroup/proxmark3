@@ -162,6 +162,19 @@ static int CmdAuto(const char *Cmd) {
 }
 
 int CmdRem(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "rem",
+                  "Add a text line in log file",
+                  "rem"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     char buf[22] = {0};
     AppendDate(buf, sizeof(buf), NULL);
     PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
