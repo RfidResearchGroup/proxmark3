@@ -759,8 +759,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf nedap help          `|Y       |`This help`
 |`lf nedap demod         `|Y       |`Demodulate Nedap tag from the GraphBuffer`
-|`lf nedap generate      `|Y       |`Generate Nedap bitstream in DemodBuffer`
-|`lf nedap read          `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf nedap reader        `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf nedap clone         `|N       |`Clone Nedap tag to T55x7 or Q5/T5555`
 |`lf nedap sim           `|N       |`Simulate Nedap tag`
 

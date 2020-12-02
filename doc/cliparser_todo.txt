@@ -204,10 +204,6 @@ lf hitag cc
 lf indala demod
 lf indala altdemod
 lf indala sim
-lf nedap generate
-lf nedap read
-lf nedap clone
-lf nedap sim
 lf t55xx config
 lf t55xx dangerraw
 lf t55xx detect
