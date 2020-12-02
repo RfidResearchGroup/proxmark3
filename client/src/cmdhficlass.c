@@ -588,7 +588,6 @@ int read_iclass_csn(bool loop, bool verbose) {
     int res = PM3_SUCCESS;
 
     do {
-
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
         PacketResponseNG resp;
@@ -610,6 +609,7 @@ int read_iclass_csn(bool loop, bool verbose) {
             }
 
             picopass_hdr *hdr = (picopass_hdr *)resp.data.asBytes;
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(hdr->csn, sizeof(hdr->csn)));
         }
     } while (loop && kbd_enter_pressed() == false);
