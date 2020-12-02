@@ -123,14 +123,13 @@ static int CmdCOTAGReader(const char *Cmd) {
 
     uint8_t timeout = 3;
     int res = PM3_SUCCESS;
-    while (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 2000)) {
+    while (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 1000)) {
         timeout--;
         PrintAndLogEx(NORMAL, "." NOLF);
         if (timeout == 0) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "command execution time out");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            timeout = 1;
             res = PM3_ETIMEOUT;
         }
     }
