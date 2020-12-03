@@ -16,6 +16,8 @@
 
 #define CARD_MEMORY_SIZE    4096
 
+#define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
+
 //==============================================================================
 // output functions
 //==============================================================================
@@ -153,6 +155,21 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
     return PM3_SUCCESS;
 }
 
+static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
+    // fast push mode
+    conn.block_after_ACK = true;
+    for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
+
+        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
+        if (len == numofbytes - i) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
+        clearCommandBuffer();
+        SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
+    }
+}
+
 static int em4x50_wipe_flash(int page) {
     
     int isok = 0;
@@ -221,14 +238,14 @@ static int em4x50_write_flash(uint8_t *data, int offset, size_t datalen) {
 
 int CmdEM4x50ELoad(const char *Cmd) {
 
-    int slen = 0, res = 0;
+    int slen = 0;
     size_t bytes_read = 0;
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t data[DUMP_FILESIZE] = {0x0};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_eload",
-                  "Loads EM4x50 tag dump into flash memory on device.",
+                  "Loads EM4x50 tag dump into emulator memory on device.",
                   "lf em 4x50_eload -f mydump.bin -> uploads bin file ./mydump.bin\n"
                   "lf em 4x50_eload -f mydump.eml -> uploads eml file ./mydump.eml\n"
                   "lf em 4x50_eload -f mydump.json -> uploads json file ./mydump.json\n"
@@ -250,13 +267,9 @@ int CmdEM4x50ELoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    // upload to flash memory
-    PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to flash memory", filename);
-    res = em4x50_write_flash(data, 0, DUMP_FILESIZE);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error uploading to flash.");
-        return res;
-    }
+    // upload to emulator memory
+    PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to emulator memory", filename);
+    em4x50_seteml(data, 0, DUMP_FILESIZE);
     
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
@@ -272,7 +285,7 @@ int CmdEM4x50ESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_esave",
-                  "Saves bin/eml/json dump file of flash memory.",
+                  "Saves bin/eml/json dump file of emulator memory.",
                   "lf em 4x50_esave -> use UID as filename\n"
                   "lf em 4x50_esave -f mydump.bin -> saves to bin file ./mydump.bin\n"
                   "lf em 4x50_esave -f mydump.eml -> saves to eml file ./mydump.eml\n"
@@ -289,10 +302,11 @@ int CmdEM4x50ESave(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &slen);
     CLIParserFree(ctx);
 
-    // download flash memory
-    PrintAndLogEx(SUCCESS, "Reading flash memory...");
-    if (!GetFromDevice(FLASH_MEM, data, DUMP_FILESIZE, 0, NULL, 0, NULL, -1, true)) {
+    // download emulator memory
+    PrintAndLogEx(SUCCESS, "Reading emulator memory...");
+    if (!GetFromDevice(BIG_BUF_EML, data, DUMP_FILESIZE, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(data);
         return PM3_ETIMEOUT;
     }
     
@@ -347,7 +361,7 @@ int CmdEM4x50Login(const char *Cmd) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
         return PM3_EINVARG;
     } else {
-        password = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+        password = BYTES2UINT32(pwd);
     }
 
     CLIParserFree(ctx);
@@ -401,8 +415,8 @@ int CmdEM4x50Brute(const char *Cmd) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwd2Len);
             return PM3_EINVARG;
     } else {
-        etd.password1 = (pwd1[0] << 24) | (pwd1[1] << 16) | (pwd1[2] << 8) | pwd1[3];
-        etd.password2 = (pwd2[0] << 24) | (pwd2[1] << 16) | (pwd2[2] << 8) | pwd2[3];
+        etd.password1 = BYTES2UINT32(pwd1);
+        etd.password2 = BYTES2UINT32(pwd2);
     }
 
     CLIParserFree(ctx);
@@ -691,7 +705,7 @@ int CmdEM4x50Read(const char *Cmd) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
             return PM3_EINVARG;
         } else {
-            etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+            etd.password1 = BYTES2UINT32(pwd);
             etd.pwd_given = true;
         }
     }
@@ -733,7 +747,7 @@ int CmdEM4x50Info(const char *Cmd) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
             return PM3_EINVARG;
         } else {
-            etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+            etd.password1 = BYTES2UINT32(pwd);
             etd.pwd_given = true;
         }
     }
@@ -858,7 +872,7 @@ int CmdEM4x50Dump(const char *Cmd) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
             return PM3_EINVARG;
         } else {
-            etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+            etd.password1 = BYTES2UINT32(pwd);
             etd.pwd_given = true;
         }
     }
@@ -954,14 +968,14 @@ int CmdEM4x50Write(const char *Cmd) {
         PrintAndLogEx(FAILED, "word/data length must be 4 bytes instead of %d", wordLen);
         return PM3_EINVARG;
     } else {
-        etd.word = (word[0] << 24) | (word[1] << 16) | (word[2] << 8) | word[3];
+        etd.word = BYTES2UINT32(word);
     }
     if (pwdLen) {
         if (pwdLen != 4) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
             return PM3_EINVARG;
         } else {
-            etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+            etd.password1 = BYTES2UINT32(pwd);
             etd.pwd_given = true;
         }
     }
@@ -1029,13 +1043,13 @@ int CmdEM4x50WritePwd(const char *Cmd) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
         return PM3_EINVARG;
     } else {
-        etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+        etd.password1 = BYTES2UINT32(pwd);
     }
     if (npwdLen != 4) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", npwdLen);
         return PM3_EINVARG;
     } else {
-        etd.password2 = (npwd[0] << 24) | (npwd[1] << 16) | (npwd[2] << 8) | npwd[3];
+        etd.password2 = BYTES2UINT32(npwd);
     }
 
     CLIParserFree(ctx);
@@ -1093,7 +1107,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
         return PM3_EINVARG;
     } else {
-        etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+        etd.password1 = BYTES2UINT32(pwd);
         etd.pwd_given = true;
     }
 
@@ -1203,7 +1217,7 @@ int CmdEM4x50Restore(const char *Cmd) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwdLen);
             return PM3_EINVARG;
         } else {
-            etd.password1 = (pwd[0] << 24) | (pwd[1] << 16) | (pwd[2] << 8) | pwd[3];
+            etd.password1 = BYTES2UINT32(pwd);
             etd.pwd_given = true;
         }
     }
@@ -1235,8 +1249,6 @@ int CmdEM4x50Restore(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Restore " _GREEN_("ok"));
     else
         PrintAndLogEx(FAILED, "Restore " _RED_("failed"));
-
-    PrintAndLogEx(INFO, "Finished restoring");
 
     return status;
 }
