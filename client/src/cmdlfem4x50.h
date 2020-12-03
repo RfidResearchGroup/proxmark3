@@ -14,6 +14,8 @@
 #include"common.h"
 #include "em4x50.h"
 
+int CmdLFEM4X50(const char *Cmd);
+
 int read_em4x50_uid(void);
 bool detect_4x50_block(void);
 int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose);

@@ -572,34 +572,14 @@ Check column "offline" for their availability.
 
 ### lf em
 
- { EM4X CHIPs & RFIDs...      }
+ { EM CHIPs & RFIDs...        }
 
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em help             `|Y       |`This help`
-|`lf em 410x_demod       `|Y       |`demodulate a EM410x tag from the GraphBuffer`
-|`lf em 410x_read        `|N       |`attempt to read and extract tag data`
-|`lf em 410x_sim         `|N       |`simulate EM410x tag`
-|`lf em 410x_brute       `|N       |`reader bruteforce attack by simulating EM410x tags`
-|`lf em 410x_watch       `|N       |`watches for EM410x 125/134 kHz tags (option 'h' for 134)`
-|`lf em 410x_spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)`
-|`lf em 410x_clone       `|N       |`write EM410x UID to T55x7 or Q5/T5555 tag`
-|`lf em 4x05_chk         `|N       |`Check passwords from dictionary`
-|`lf em 4x05_demod       `|Y       |`demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
-|`lf em 4x05_dump        `|N       |`dump EM4x05/EM4x69 tag`
-|`lf em 4x05_wipe        `|N       |`wipe EM4x05/EM4x69 tag`
-|`lf em 4x05_info        `|N       |`tag information EM4x05/EM4x69`
-|`lf em 4x05_read        `|N       |`read word data from EM4x05/EM4x69`
-|`lf em 4x05_write       `|N       |`write word data to EM4x05/EM4x69`
-|`lf em 4x05_unlock      `|N       |`execute tear off against EM4x05/EM4x69`
-|`lf em 4x05_sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
-|`lf em 4x05_brute       `|N       |`Bruteforce password`
-|`lf em 4x50_dump        `|N       |`dump EM4x50 tag`
-|`lf em 4x50_info        `|N       |`tag information EM4x50`
-|`lf em 4x50_write       `|N       |`write word data to EM4x50`
-|`lf em 4x50_write_password`|N       |`change password of EM4x50 tag`
-|`lf em 4x50_read        `|N       |`read word data from EM4x50`
-|`lf em 4x50_wipe        `|N       |`wipe data from EM4x50`
+|`lf em 410x             `|Y       |`EM 410x commands...`
+|`lf em 4x05             `|Y       |`EM 4x05 commands...`
+|`lf em 4x50             `|Y       |`EM 4x50 commands...`
 
 
 ### lf fdxb
