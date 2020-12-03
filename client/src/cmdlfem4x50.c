@@ -1143,8 +1143,8 @@ int CmdEM4x50Restore(const char *Cmd) {
                   "Restores data from dumpfile onto a Em4x50 tag.",
                   "lf em 4x50_restore -u 1b5aff5c -> uses lf-4x50-1B5AFF5C-dump.bin\n"
                   "lf em 4x50_restore -f mydump.eml -> uses mydump.eml\n"
-                  "lf em 4x50_restore -u 1b5aff5c -p 12345678 -> \n"
-                  "lf em 4x50_restore -f mydump.eml -p 12345678 -> \n"
+                  "lf em 4x50_restore -u 1b5aff5c -p 12345678\n"
+                  "lf em 4x50_restore -f mydump.eml -p 12345678\n"
                  );
 
     void *argtable[] = {
