@@ -660,7 +660,6 @@ static command_t CommandTable[] = {
     {"4x50_wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe EM4x50 tag"},
     {"4x50_brute",  CmdEM4x50Brute,       IfPm3EM4x50,     "guess password of EM4x50"},
     {"4x50_login",  CmdEM4x50Login,       IfPm3EM4x50,     "login into EM4x50"},
-    {"4x50_reset",  CmdEM4x50Reset,       IfPm3EM4x50,     "reset EM4x50"},
     {"4x50_restore",CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
     {"4x50_sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate EM4x50 tag"},
     {"4x50_reader", CmdEM4x50Reader,      IfPm3EM4x50,     "show standard read mode data of EM4x50"},

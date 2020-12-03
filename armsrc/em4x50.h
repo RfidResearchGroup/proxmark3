@@ -18,14 +18,12 @@ int em4x50_standalone_brute(uint32_t start, uint32_t stop, uint32_t *pwd);
 bool em4x50_sim_send_listen_window(void);
 bool em4x50_sim_send_word(uint32_t word);
 
-
 void em4x50_info(em4x50_data_t *etd);
 void em4x50_write(em4x50_data_t *etd);
 void em4x50_writepwd(em4x50_data_t *etd);
 void em4x50_read(em4x50_data_t *etd);
 void em4x50_brute(em4x50_data_t *etd);
 void em4x50_login(uint32_t *password);
-void em4x50_reset(void);
 void em4x50_restore(em4x50_data_t *etd);
 void em4x50_sim(void);
 void em4x50_reader(void);

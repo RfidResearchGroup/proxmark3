@@ -1005,22 +1005,6 @@ static int reset(void) {
     return PM3_EFAILED;
 }
 
-void em4x50_reset(void) {
-
-    // reset EM4x50
-
-    uint8_t status = PM3_EFAILED;
-
-    em4x50_setup_read();
-
-    // set gHigh and gLow
-    if (get_signalproperties() && find_em4x50_tag())
-        status = reset();
-
-    lf_finalize();
-    reply_ng(CMD_LF_EM4X50_RESET, status, 0, 0);
-}
-
 //==============================================================================
 // read functions
 //==============================================================================

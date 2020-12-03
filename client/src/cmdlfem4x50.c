@@ -563,42 +563,6 @@ int CmdEM4x50Chk(const char *Cmd) {
 }
 
 //==============================================================================
-// reset functions
-//==============================================================================
-
-int CmdEM4x50Reset(const char *Cmd) {
-
-    PacketResponseNG resp;
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_reset",
-                  "Reseta EM4x50 tag.",
-                  "lf em 4x50_reset\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    // start
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_RESET, 0, 0);
-    WaitForResponse(CMD_LF_EM4X50_RESET, &resp);
-
-    // print response
-    if (resp.status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Reset " _GREEN_("ok"));
-    else
-        PrintAndLogEx(FAILED, "Reset " _RED_("failed"));
-
-    return resp.status;
-}
-
-//==============================================================================
 // read functions
 //==============================================================================
 

@@ -1122,10 +1122,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_login((uint32_t *)packet->data.asBytes);
             break;
         }
-        case CMD_LF_EM4X50_RESET: {
-            em4x50_reset();
-            break;
-        }
         case CMD_LF_EM4X50_RESTORE: {
             em4x50_restore((em4x50_data_t *)packet->data.asBytes);
             break;
