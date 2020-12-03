@@ -156,6 +156,7 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
 }
 
 static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
+
     // fast push mode
     conn.block_after_ACK = true;
     for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
@@ -1194,27 +1195,34 @@ int CmdEM4x50Restore(const char *Cmd) {
     if (em4x50_load_file(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS)
         return PM3_EFILE;
 
-    // upload to flash memory
-    status = em4x50_write_flash(data, 0, bytes_read);
-    if (status != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error uploading to flash.");
-        return status;
+    for (int i = 1; i < EM4X50_DEVICE_SERIAL; i++) {
+
+        PrintAndLogEx(INPLACE, "Restoring block %i", i);
+
+        etd.addresses = i << 8 | i;
+        etd.word = reflect32(BYTES2UINT32((data + 4 * i)));
+        
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
+        if (!WaitForResponseTimeout(CMD_LF_EM4X50_WRITE, &resp, TIMEOUT)) {
+            PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
+
+        status = resp.status;
+        if (status != PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "Restoring data " _RED_("failed"));
+            return PM3_ESOFT;
+        }
     }
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_RESTORE, (uint8_t *)&etd, sizeof(etd));
-    if (!WaitForResponseTimeout(CMD_LF_EM4X50_RESTORE, &resp, 2 * TIMEOUT)) {
-        PrintAndLogEx(FAILED, "Timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
-    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Restoring data " _GREEN_("ok"));
+    
+    PrintAndLogEx(INFO, "Done");
 
-    status = resp.status;
-    if (status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Restore " _GREEN_("ok"));
-    else
-        PrintAndLogEx(FAILED, "Restore " _RED_("failed"));
-
-    return status;
+    return PM3_SUCCESS;
 }
 
 //==============================================================================
