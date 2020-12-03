@@ -117,6 +117,10 @@ static int CmdIdteckReader(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
     do {
         lf_read(false, 5000);
         demodIdteck(!cm);

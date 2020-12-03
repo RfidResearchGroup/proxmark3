@@ -1,6 +1,5 @@
 clear
 pref
-rem
 analyse lcr
 analyse crc
 analyse chksum
@@ -79,8 +78,6 @@ hf felica resetmode
 hf felica litesim
 hf felica litedump
 hf fido info
-hf iclass info
-hf iclass permutekey
 hf legic reader
 hf legic info
 hf legic dump
@@ -197,7 +194,6 @@ lf em 4x50_write
 lf em 4x50_write_password
 lf em 4x50_read
 lf em 4x50_wipe
-lf hid read
 lf hitag info
 lf hitag reader
 lf hitag sim
@@ -205,20 +201,6 @@ lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc
-lf indala demod
-lf indala altdemod
-lf indala sim
-lf io clone
-lf io sim
-lf io watch
-lf jablotron sim
-lf nedap generate
-lf nedap read
-lf nedap clone
-lf nedap sim
-lf pcf7931 read
-lf pcf7931 write
-lf pcf7931 config
 lf t55xx config
 lf t55xx dangerraw
 lf t55xx detect

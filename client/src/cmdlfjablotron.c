@@ -29,21 +29,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lf_jablotron_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of jablotron card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf jablotron sim [h] <card ID>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          : This help");
-    PrintAndLogEx(NORMAL, "      <card ID>  : jablotron card ID");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron sim 112233"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static uint8_t jablontron_chksum(uint8_t *bits) {
     uint8_t chksum = 0;
     for (int i = 16; i < 56; i += 8) {
@@ -151,6 +136,10 @@ static int CmdJablotronReader(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
     do {
         lf_read(false, 16000);
         demodJablotron(!cm);
@@ -247,12 +236,26 @@ static int CmdJablotronClone(const char *Cmd) {
 }
 
 static int CmdJablotronSim(const char *Cmd) {
-    uint64_t fullcode = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf jablotron sim",
+                  "Enables simulation of jablotron card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf jablotron sim --cn 01b669"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "cn", "<hex>", "Jablotron card ID - 5 bytes max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    fullcode = param_get64ex(Cmd, 0, 0, 16);
+    int raw_len = 0;
+    uint8_t raw[5] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParserFree(ctx);
+
+    uint64_t fullcode = bytes_to_num(raw, raw_len);
 
     // clearing the topbit needed for the preambl detection.
     if ((fullcode & 0x7FFFFFFFFF) != fullcode) {

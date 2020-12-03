@@ -128,7 +128,7 @@ static int CmdHfLTOInfo(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-
+    CLIParserFree(ctx);
     return infoLTO(true);
 }
 

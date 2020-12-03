@@ -649,7 +649,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf hid help            `|Y       |`this help`
 |`lf hid demod           `|Y       |`demodulate HID Prox tag from the GraphBuffer`
-|`lf hid read            `|N       |`attempt to read and extract tag data`
+|`lf hid reader          `|N       |`attempt to read and extract tag data`
 |`lf hid clone           `|N       |`clone HID tag to T55x7`
 |`lf hid sim             `|N       |`simulate HID tag`
 |`lf hid brute           `|N       |`bruteforce card number against reader`
@@ -759,8 +759,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf nedap help          `|Y       |`This help`
 |`lf nedap demod         `|Y       |`Demodulate Nedap tag from the GraphBuffer`
-|`lf nedap generate      `|Y       |`Generate Nedap bitstream in DemodBuffer`
-|`lf nedap read          `|N       |`Attempt to read and extract tag data from the antenna`
+|`lf nedap reader        `|N       |`Attempt to read and extract tag data from the antenna`
 |`lf nedap clone         `|N       |`Clone Nedap tag to T55x7 or Q5/T5555`
 |`lf nedap sim           `|N       |`Simulate Nedap tag`
 
@@ -824,7 +823,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf pcf7931 help        `|Y       |`This help`
-|`lf pcf7931 read        `|N       |`Read content of a PCF7931 transponder`
+|`lf pcf7931 reader      `|N       |`Read content of a PCF7931 transponder`
 |`lf pcf7931 write       `|N       |`Write data on a PCF7931 transponder.`
 |`lf pcf7931 config      `|Y       |`Configure the password, the tags initialization delay and time offsets (optional)`
 

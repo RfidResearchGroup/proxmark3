@@ -568,6 +568,17 @@ static int CmdHFiClassSim(const char *Cmd) {
 }
 
 static int CmdHFiClassInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass info",
+                  "Act as a iCLASS reader. Reads / fingerprints a iCLASS tag.",
+                  "hf iclass info");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return info_iclass();
 }
 
@@ -576,8 +587,7 @@ int read_iclass_csn(bool loop, bool verbose) {
     uint32_t flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE);
     int res = PM3_SUCCESS;
 
-    while (kbd_enter_pressed() == false) {
-
+    do {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
         PacketResponseNG resp;
@@ -585,27 +595,24 @@ int read_iclass_csn(bool loop, bool verbose) {
 
             uint8_t status = resp.oldarg[0] & 0xff;
 
-            if (loop == false) {
+            if (loop) {
+                if (status == 0xFF) {
+                    continue;
+                }
+            } else {
+
                 if (status == 0 || status == 0xFF) {
                     if (verbose) PrintAndLogEx(WARNING, "iCLASS / ISO15693 card select failed");
                     res = PM3_EOPABORTED;
                     break;
                 }
-            } else {
-                if (status == 0xFF)
-                    continue;
             }
 
             picopass_hdr *hdr = (picopass_hdr *)resp.data.asBytes;
-
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(hdr->csn, sizeof(hdr->csn)));
-            PrintAndLogEx(SUCCESS, " Config: " _GREEN_("%s"), sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
-
-            if (loop == false)
-                break;
+            PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(hdr->csn, sizeof(hdr->csn)));
         }
-    }
+    } while (loop && kbd_enter_pressed() == false);
 
     DropField();
     return res;
@@ -615,22 +622,24 @@ static int CmdHFiClassReader(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass reader",
-                  "Act as a iCLASS reader.  Look for iCLASS tags until Enter or the pm3 button is pressed\n",
-                  "hf iclass reader\n"
-                  "hf iclass reader -1");
+                  "Act as a iCLASS reader. Look for iCLASS tags until Enter or the pm3 button is pressed",
+                  "hf iclass reader -@   -> continuous reader mode"
+                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("1", "one", "read once"),
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool read_once = arg_get_lit(ctx, 1);
+    bool cm = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Starting iCLASS reader mode");
-    PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
-    return read_iclass_csn(!read_once, true);
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    return read_iclass_csn(cm, true);
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {
@@ -3272,10 +3281,10 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
     int len = 0;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf iclass permute",
+    CLIParserInit(&ctx, "hf iclass permutekey",
                   "Permute function from 'heart of darkness' paper.",
-                  "hf iclass permute --reverse --key 0123456789abcdef\n"
-                  "hf iclass permute --key ff55330f0055330f\n");
+                  "hf iclass permutekey --reverse --key 0123456789abcdef\n"
+                  "hf iclass permutekey --key ff55330f0055330f\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3473,10 +3482,7 @@ int info_iclass(void) {
 
         uint8_t cardtype = get_mem_config(hdr);
         PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
-
-
     }
-
     DropField();
     return PM3_SUCCESS;
 }

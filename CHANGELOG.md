@@ -22,6 +22,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - EM4x50: switched to cliparser for all functions (@tharexde)
  - EM4x50: stabilized and accelerated tag detection (@tharexde)
  - EM4x50: removed global tag structure on device side (@tharexde)
+ - Fix `hf 15 sim` - Added basic response to GET_SYSTEM_INFO and READBLOCK requests in order to fix iso15693 tag sim
  - Added `mf mfu sim t 7 n <numreads>` - MFU emulation now supports automatic exit after <num> blocks read. (@cyberpunk-re)
  - Added T55xx Guide to assist in learning how to use the T55xx chip (@mwalker33)
  - Fix 'hf iclass wrbl' - dealing with tags in unsecured vs secured pagemode now is correct (@iceman1001)

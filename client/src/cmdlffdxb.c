@@ -47,7 +47,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint16_t extended, uint8_t *bits) {
+static int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits) {
 
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
@@ -103,7 +103,7 @@ static int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is
 }
 
 // clearing the topbit needed for the preambl detection.
-static void verify_values(uint64_t *animalid, uint32_t *countryid, uint16_t *extended) {
+static void verify_values(uint64_t *animalid, uint32_t *countryid, uint32_t *extended) {
     if ((*animalid & 0x3FFFFFFFFF) != *animalid) {
         *animalid &= 0x3FFFFFFFFF;
         PrintAndLogEx(INFO, "Animal ID truncated to 38bits: " _YELLOW_("%"PRIx64), *animalid);
@@ -112,8 +112,8 @@ static void verify_values(uint64_t *animalid, uint32_t *countryid, uint16_t *ext
         *countryid &= 0x3FF;
         PrintAndLogEx(INFO, "Country ID truncated to 10bits:" _YELLOW_("%03d"), *countryid);
     }
-    if ((*extended & 0xFFF) != *extended) {
-        *extended &= 0xFFF;
+    if ((*extended & 0xFFFFFF) != *extended) {
+        *extended &= 0xFFFFFF;
         PrintAndLogEx(INFO, "Extended truncated to 24bits: " _YELLOW_("0x%03X"), *extended);
     }
 }
@@ -713,7 +713,7 @@ static int CmdFdxBClone(const char *Cmd) {
     uint64_t national_code = arg_get_u64_def(ctx, 2, 0);
 
     int extended_len = 0;
-    uint8_t edata[2] = {0};
+    uint8_t edata[3] = {0};
     CLIGetHexWithReturn(ctx, 3, edata, &extended_len);
 
     bool is_animal = arg_get_lit(ctx, 4);
@@ -726,7 +726,7 @@ static int CmdFdxBClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint16_t extended = 0;
+    uint32_t extended = 0;
     bool has_extended = false; 
     if (extended_len) {
         extended = bytes_to_num(edata, extended_len);
@@ -813,13 +813,13 @@ static int CmdFdxBSim(const char *Cmd) {
     uint32_t country_code = arg_get_u32_def(ctx, 1, 0);
     uint64_t national_code = arg_get_u64_def(ctx, 2, 0);
     int extended_len = 0;
-    uint8_t edata[2] = {0};
+    uint8_t edata[3] = {0};
     CLIGetHexWithReturn(ctx, 3, edata, &extended_len);
 
     bool is_animal = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
-    uint16_t extended = 0;
+    uint32_t extended = 0;
     bool has_extended = false; 
     if (extended_len) {
         extended = bytes_to_num(edata, extended_len);

@@ -509,10 +509,21 @@ void doCotagAcquisition(void) {
     bool firsthigh = false, firstlow = false;
     uint16_t i = 0, noise_counter = 0;
 
+    uint16_t checker = 0;
+
     while ((i < bufsize - 1) && (noise_counter < COTAG_T1 << 1)) {
 
         if (BUTTON_PRESS())
             break;
+        
+        if (checker == 4000) {
+            if (data_available())
+                break;
+            else
+                checker = 0;
+        } else {
+            ++checker;
+        }
 
         WDT_HIT();
 
@@ -567,11 +578,21 @@ uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen) {
     bool firsthigh = false, firstlow = false;
     uint8_t curr = 0, prev = 0;
     uint16_t i = 0;
-    uint16_t period = 0;
+    uint16_t period = 0, checker = 0;
 
     while ((i < destlen) && BUTTON_PRESS() == false) {
 
         WDT_HIT();
+
+        if (checker == 4000) {
+            if (data_available())
+                break;
+            else
+                checker = 0;
+        } else {
+            ++checker;
+        }
+
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
