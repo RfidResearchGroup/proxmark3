@@ -1331,7 +1331,7 @@ void em4x50_restore(em4x50_data_t *etd) {
     // restore em4x50 dump file to tag
 
     bool bsuccess = false;
-    int status = PM3_EFAILED;
+    int status = PM3_SUCCESS;
     int start_word = 3; // first block/address with user data
     uint8_t em4x50_mem[DUMP_FILESIZE] = {0x0};
     uint32_t addresses = 0x00001F01; // from fwr = 1 to lwr = 31 (0x1F)
@@ -1357,35 +1357,38 @@ void em4x50_restore(em4x50_data_t *etd) {
 
         // login first if password is available
         if (etd->pwd_given) {
-            if (login(etd->password1) == PM3_SUCCESS) {
+            if ((status = login(etd->password1)) == PM3_SUCCESS) {
 
                 // successful login allows words 1 and 2 to be written
                 start_word = 1;
             }
         }
 
-        // write data to each address but ignore addresses
-        // 0 -> password, 32 -> serial, 33 -> uid
-        for (int i = start_word; i < EM4X50_NO_WORDS - 2; i++) {
-            status = write(words_client[i], i);
-            if (status == PM3_ETEAROFF) {
-                lf_finalize();
-                return;
+        if (status == PM3_SUCCESS) {
+
+            // write data to each address but ignore addresses
+            // 0 -> password, 32 -> serial, 33 -> uid
+            for (int i = start_word; i < EM4X50_NO_WORDS - 2; i++) {
+                status = write(words_client[i], i);
+                if (status == PM3_ETEAROFF) {
+                    lf_finalize();
+                    return;
+                }
             }
-        }
 
-        // to verify result -> reset EM4x50
-        if (reset() == PM3_SUCCESS) {
+            // to verify result -> reset EM4x50
+            if (reset() == PM3_SUCCESS) {
 
-            // login not necessary because protected word has been set to 0
-            // -> no read protected words
-            // -> selective read can be called immediately
-            if (selective_read(addresses, words_read) == PM3_SUCCESS) {
+                // login not necessary because protected word has been set to 0
+                // -> no read protected words
+                // -> selective read can be called immediately
+                if (selective_read(addresses, words_read) == PM3_SUCCESS) {
 
-                // check if everything is zero
-                bsuccess = true;
-                for (int i = start_word; i < EM4X50_NO_WORDS - 2; i++)
-                    bsuccess &= (reflect32(words_read[i]) == words_client[i]);
+                    // check if everything is zero
+                    bsuccess = true;
+                    for (int i = start_word; i < EM4X50_NO_WORDS - 2; i++)
+                        bsuccess &= (reflect32(words_read[i]) == words_client[i]);
+                }
             }
         }
     }
