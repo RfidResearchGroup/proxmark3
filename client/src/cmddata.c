@@ -1702,9 +1702,11 @@ int CmdTuneSamples(const char *Cmd) {
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
         PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->peak_f));
 
+    // Empirical measures in mV
     const double vdd_rdv4 = 9000;
-    const double vdd_other = 5400; // Empirical measures in mV
+    const double vdd_other = 5400;
     double vdd = IfPm3Rdv4Fw() ? vdd_rdv4 : vdd_other;
+
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0) {
 
         // Q measure with Q=f/delta_f
@@ -1737,9 +1739,15 @@ int CmdTuneSamples(const char *Cmd) {
         // cross-check results
         if (lfq1 > 3) {
             double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
-            if ((approx_vdd > (vdd_rdv4 + vdd_other) / 2) && (! IfPm3Rdv4Fw()))
+            // Got 8858 on a RDV4 with large antenna 134/14
+            // Got 8761 on a non-RDV4
+            const double approx_vdd_other_max = 8840;
+
+            // 1% over threshold and supposedly non-RDV4
+            if ((approx_vdd > approx_vdd_other_max * 1.01) && (! IfPm3Rdv4Fw()))
                 PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_OTHER firmware on a RDV4") ", please check your setup");
-            if ((approx_vdd < (vdd_rdv4 + vdd_other) / 2) && (IfPm3Rdv4Fw()))
+            // 1% below threshold and supposedly RDV4
+            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw()))
                 PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a non-RDV4") ", please check your setup");
         }
     }
