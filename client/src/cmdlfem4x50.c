@@ -350,7 +350,7 @@ int CmdEM4x50Login(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "passsword", "<password>", "password, hex, 4 bytes, lsb"),
+        arg_str1("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
@@ -398,8 +398,8 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "fp", "<password>", "first password (start), hex, 4 bytes, lsb"),
-        arg_str1("l", "lp", "<password>", "last password (stop), hex, 4 bytes, lsb"),
+        arg_str1("f", "fp", "<hex>", "first password (start), 4 bytes, lsb"),
+        arg_str1("l", "lp", "<hex>", "last password (stop), 4 bytes, lsb"),
         arg_param_end
     };
 
@@ -647,8 +647,8 @@ int CmdEM4x50Read(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("b", "block", "<address>", "block/word address, dec"),
-        arg_str0("p", "passsword", "<password>", "password, hex, 4 bytes, lsb"),
+        arg_int1("b", "block", "<dec>", "block/word address"),
+        arg_str0("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
@@ -698,7 +698,7 @@ int CmdEM4x50Info(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("p", "passsword", "<password>", "password, hex, 4 bytes, lsb"),
+        arg_str0("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
@@ -818,7 +818,7 @@ int CmdEM4x50Dump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "filename", "<filename>", "dump filename (bin/eml/json)"),
-        arg_str0("p", "passsword", "<password>", "password, hex, 4 bytes, lsb"),
+        arg_str0("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
@@ -909,9 +909,9 @@ int CmdEM4x50Write(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("b", "block", "<address>", "block/word address, dec"),
-        arg_str1("d", "data", "<data>", "data, hex, 4 bytes, lsb"),
-        arg_str0("p", "passsword", "<password>", "password, hex, 4 bytes, lsb"),
+        arg_int1("b", "block", "<dec>", "block/word address, dec"),
+        arg_str1("d", "data", "<hex>", "data, 4 bytes, lsb"),
+        arg_str0("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
     
@@ -993,8 +993,8 @@ int CmdEM4x50WritePwd(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "pwd", "<password>", "password, hex, 4 bytes, lsb"),
-        arg_str1("n", "newpwd", "<password>", "new password, hex, 4 bytes, lsb"),
+        arg_str1("p", "pwd", "<hex>", "password, 4 bytes, lsb"),
+        arg_str1("n", "newpwd", "<hex>", "new password, 4 bytes, lsb"),
         arg_param_end
     };
     
@@ -1060,7 +1060,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "passsword", "<password>", "password, hex, 4 bytes, lsb"),
+        arg_str1("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
@@ -1149,9 +1149,9 @@ int CmdEM4x50Restore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<uid>", "uid, hex, 4 bytes, msb, restore from lf-4x50-<uid>-dump.bin"),
+        arg_str0("u", "uid", "<hex>", "uid, 4 bytes, msb, restore from lf-4x50-<uid>-dump.bin"),
         arg_str0("f", "filename", "<filename>", "dump filename (bin/eml/json)"),
-        arg_str0("p", "passsword", "<password>", "password, hex, 4 bytes, lsb"),
+        arg_str0("p", "passsword", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
 
