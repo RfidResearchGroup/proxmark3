@@ -17,6 +17,7 @@
 #include "em4x50.h"
 #include "flashmem.h"
 #include "BigBuf.h"
+#include "spiffs.h"
 #include "appmain.h" // tear
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
@@ -916,41 +917,33 @@ void em4x50_brute(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_BRUTE, bsuccess, (uint8_t *)(&pwd), 32);
 }
 
-void em4x50_chk(uint32_t *offset) {
+void em4x50_chk(uint8_t *filename) {
 
     // check passwords from dictionary content in flash memory
 
     int status = PM3_EFAILED;
-    uint8_t counter[2] = {0x00, 0x00};
-    uint16_t isok = 0;
     uint16_t pwd_count = 0;
-    uint16_t pwd_size_available = 0;
     uint32_t pwd = 0x0;
-    uint8_t *pwds = BigBuf_get_EM_addr();
 
+#ifdef WITH_FLASH
     //-----------------------------------------------------------------------------
-    // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
-    // involved in dealing with emulator memory. But if it is called later, it will
-    // destroy the Emulator Memory.
+    // without calling FpgaDownloadAndGo the initial em4x50_chk call doesn't find
+    // a password (altough the correct password is in the dictionary)
     //-----------------------------------------------------------------------------
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-    BigBuf_Clear_EM();
+    BigBuf_free();
 
-    // initialize passwords and get number of passwords
-    if (Flash_ReadData(*offset, counter, sizeof(counter)) != sizeof(counter))
-        goto OUT;
+    int changed = rdv40_spiffs_lazy_mount();
+    uint32_t size = size_in_spiffs((char *)filename);
+    pwd_count = size / 4;
+    uint8_t *pwds = BigBuf_malloc(size);
 
-    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
-    if (pwd_count == 0)
-        goto OUT;
+    rdv40_spiffs_read_as_filetype((char *)filename, pwds, size, RDV40_SPIFFS_SAFETY_SAFE);
 
-    pwd_size_available = 4 * pwd_count;
-    
-    isok = Flash_ReadData(*offset + 2, pwds, pwd_size_available);
-    if (isok != pwd_size_available)
-        goto OUT;
-    
+    if (changed)
+        rdv40_spiffs_lazy_unmount();
+
     em4x50_setup_read();
 
     // set gHigh and gLow
@@ -975,8 +968,10 @@ void em4x50_chk(uint32_t *offset) {
         }
     }
 
-OUT:
-    
+    BigBuf_free();
+
+#endif
+
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_CHK, status, (uint8_t *)&pwd, 32);
 }

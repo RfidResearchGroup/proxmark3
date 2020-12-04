@@ -13,6 +13,8 @@
 #include "fileutils.h"
 #include "commonutil.h"
 #include "pmflash.h"
+#include "cmdflashmemspiffs.h"
+#include "cmdparser.h"
 
 #define CARD_MEMORY_SIZE    4096
 
@@ -171,6 +173,7 @@ static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
     }
 }
 
+
 static int em4x50_wipe_flash(int page) {
     
     int isok = 0;
@@ -192,6 +195,7 @@ static int em4x50_wipe_flash(int page) {
     
     return PM3_SUCCESS;
 }
+
 
 static int em4x50_write_flash(uint8_t *data, int offset, size_t datalen) {
     
@@ -448,19 +452,18 @@ int CmdEM4x50Brute(const char *Cmd) {
 
 int CmdEM4x50Chk(const char *Cmd) {
 
-    // upload passwords from given dictionary to flash memory and
-    // start password check;
+    // upload passwords from given dictionary to device and start check;
     // if no filename is given dictionary "t55xx_default_pwds.dic" is used
     
     int status = PM3_EFAILED;
     int res = 0, slen = 0;
-    int keys_remain = 0;
-    int block_count = 1;
     size_t datalen = 0;
     uint8_t data[FLASH_MEM_MAX_SIZE] = {0x0};
     uint8_t *keys = data;
     uint32_t key_count = 0, offset = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    uint8_t destfn[32] = "em4x50_chk.bin";
+
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
@@ -487,63 +490,26 @@ int CmdEM4x50Chk(const char *Cmd) {
         PrintAndLogEx(INFO, "treating file as T55xx keys");
     }
     
-    res = loadFileDICTIONARY(filename, data + 2, &datalen, 4, &key_count);
+    res = loadFileDICTIONARY(filename, data, &datalen, 4, &key_count);
     if (res || !key_count)
         return PM3_EFILE;
     
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
-    
-    if (datalen > CARD_MEMORY_SIZE) {
         
-        // we have to use more than one block of passwords
-        block_count = (4 * key_count) / CARD_MEMORY_SIZE;
-        keys_remain = key_count - block_count * CARD_MEMORY_SIZE / 4;
-        
-        if (keys_remain != 0)
-            block_count++;
-        
-        // adjust pwd_size_available and pwd_count
-        datalen = CARD_MEMORY_SIZE;
-        key_count = datalen / 4;
-
-        PrintAndLogEx(INFO, "Keys subdivided into %i blocks", block_count);
-    }
-    
-    for (int n = 0; n < block_count; n++) {
-
-        // adjust parameters if more than 1 block
-        if (n != 0) {
-
-            keys += datalen;
-
-            // final run with remaining passwords
-            if (n == block_count - 1) {
-                key_count = keys_remain;
-                datalen = 4 * keys_remain;
-            }
-        }
-        
-        keys[0] = (key_count >> 0) & 0xFF;
-        keys[1] = (key_count >> 8) & 0xFF;
-
-        PrintAndLogEx(INPLACE, "Checking block #%i (%i keys)", n + 1, key_count);
-
-        // send to device
-        res = em4x50_write_flash(keys, offset, datalen + 2);
+    if (IfPm3Flash()) {
+        // upload to flash.
+        res = flashmem_spiffs_load(destfn, keys, datalen + 2);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "Error uploading to flash.");
+            PrintAndLogEx(WARNING, "\nSPIFFS upload failed");
             return res;
         }
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_LF_EM4X50_CHK, (uint8_t *)&offset, sizeof(offset));
-        WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
-        
-        status = resp.status;
-        if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
-            break;
     }
+    
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_CHK, destfn, sizeof(destfn));
+    WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
+    
+    status = resp.status;
 
     // print response
     if (status == PM3_SUCCESS) {
