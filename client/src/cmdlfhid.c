@@ -60,7 +60,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
 
     if (HIDPack(format_idx, card, &packed) == false) {
         PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-        return PM3_ESOFT;
+        return PM3_ESOFT;        
     }
 
     if (verbose) {
@@ -76,6 +76,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
     payload.hi2 = packed.Top;
     payload.hi = packed.Mid;
     payload.lo = packed.Bot;
+    payload.longFMT = (packed.Mid > 0xFFF);
 
     clearCommandBuffer();
 
@@ -246,8 +247,8 @@ static int CmdHIDSim(const char *Cmd) {
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_u64_0(NULL, "fc",      "<dec>", "facility code"),
         arg_u64_0(NULL, "cn",      "<dec>", "card number"),
-        arg_int0("i",    NULL,     "<dec>", "issue level"),
-        arg_int0("o",   "oem",     "<dec>", "OEM code"),
+        arg_u64_0("i",    NULL,     "<dec>", "issue level"),
+        arg_u64_0("o",   "oem",     "<dec>", "OEM code"),
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
         arg_param_end
     };
@@ -477,11 +478,11 @@ static int CmdHIDBrute(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose logging, show all tries"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-        arg_int0(NULL, "fc",     "<dec>",    "facility code"),
-        arg_int0(NULL, "cn",     "<dec>",    "card number to start with"),
-        arg_int0("i",  "issue",  "<dec>",    "issue level"),
-        arg_int0("o", "oem",     "<dec>",    "OEM code"),
-        arg_int0("d", "delay",   "<dec>",    "delay betweens attempts in ms. Default 1000ms"),
+        arg_u64_0(NULL, "fc",     "<dec>",    "facility code"),
+        arg_u64_0(NULL, "cn",     "<dec>",    "card number to start with"),
+        arg_u64_0("i",  "issue",  "<dec>",    "issue level"),
+        arg_u64_0("o", "oem",     "<dec>",    "OEM code"),
+        arg_u64_0("d", "delay",   "<dec>",    "delay betweens attempts in ms. Default 1000ms"),
         arg_lit0(NULL, "up",                 "direction to increment card number. (default is both directions)"),
         arg_lit0(NULL, "down",               "direction to decrement card number. (default is both directions)"),
         arg_param_end
@@ -499,11 +500,11 @@ static int CmdHIDBrute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    cn_hi.FacilityCode = arg_get_int_def(ctx, 3, 0);
-    cn_hi.CardNumber = arg_get_int_def(ctx, 4, 0);
-    cn_hi.IssueLevel = arg_get_int_def(ctx, 5, 0);
-    cn_hi.OEM = arg_get_int_def(ctx, 6, 0);
-    delay = arg_get_int_def(ctx, 7, 1000);
+    cn_hi.FacilityCode = arg_get_u32_def(ctx, 3, 0);
+    cn_hi.CardNumber = arg_get_u32_def(ctx, 4, 0);
+    cn_hi.IssueLevel = arg_get_u32_def(ctx, 5, 0);
+    cn_hi.OEM = arg_get_u32_def(ctx, 6, 0);
+    delay = arg_get_u32_def(ctx, 7, 1000);
 
     if (arg_get_lit(ctx, 8) && arg_get_lit(ctx, 9)) {
         direction = 0;
