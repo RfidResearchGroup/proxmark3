@@ -34,7 +34,7 @@ static int CmdHelp(const char *Cmd);
 static int CmdIOProxWatch(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf io watch",
-                  "Enables IOProx compatible reader mode printing details.\n"
+                  "Enables ioProx compatible reader mode printing details.\n"
                   "By default, values are printed and logged until the button is pressed or another USB command is issued.",
                   "lf io watch"
                  );
@@ -57,7 +57,7 @@ static int CmdIOProxWatch(const char *Cmd) {
 }
 
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
-//print ioprox ID and some format details
+//print ioProx ID and some format details
 int demodIOProx(bool verbose) {
     (void) verbose; // unused so far
     int idx = 0, retval = PM3_SUCCESS;
@@ -157,7 +157,7 @@ int demodIOProx(bool verbose) {
 static int CmdIOProxDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf io demod",
-                  "Try to find IOProx preamble, if found decode / descramble data",
+                  "Try to find ioProx preamble, if found decode / descramble data",
                   "lf io demod"
                  );
 
@@ -173,7 +173,7 @@ static int CmdIOProxDemod(const char *Cmd) {
 static int CmdIOProxReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf io reader",
-                  "read a IOProx tag",
+                  "read a ioProx tag",
                   "lf io reader -@   -> continuous reader mode"
                  );
 
@@ -198,7 +198,7 @@ static int CmdIOProxSim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf io sim",
-                  "Enables simulation of IOProx card with specified facility-code and card number.\n"
+                  "Enables simulation of ioProx card with specified facility-code and card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf io sim --vn 1 --fc 101 --cn 1337"
                  );
@@ -220,10 +220,10 @@ static int CmdIOProxSim(const char *Cmd) {
 
     if ((cn & 0xFFFF) != cn) {
         cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn);
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating IOProx version: " _YELLOW_("%u") " FC: " _YELLOW_("%u (0x%02x)") " CN: " _YELLOW_("%u"), version, fc, fc, cn);
+    PrintAndLogEx(SUCCESS, "Simulating ioProx version: " _YELLOW_("%u") " FC: " _YELLOW_("%u (0x%02x)") " CN: " _YELLOW_("%u"), version, fc, fc, cn);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
     uint8_t bs[64];
@@ -233,7 +233,7 @@ static int CmdIOProxSim(const char *Cmd) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
-    // IOProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
+    // ioProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Invert and clk setting
     // size --- 64 bits == 8 bytes
@@ -259,7 +259,7 @@ static int CmdIOProxClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf io clone",
-                  "Enables simulation of IOProx card with specified facility-code and card number.\n"
+                  "Enables simulation of ioProx card with specified facility-code and card number.\n"
                   "Tag must be on the antenna when issuing this command.",
                   "lf io clone --vn 1 --fc 101 --cn 1337"
                  );
@@ -292,7 +292,7 @@ static int CmdIOProxClone(const char *Cmd) {
 
     if ((cn & 0xFFFF) != cn) {
         cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn);
     }
 
     if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
@@ -317,7 +317,7 @@ static int CmdIOProxClone(const char *Cmd) {
     blocks[1] = bytebits_to_byte(bits, 32);
     blocks[2] = bytebits_to_byte(bits + 32, 32);
 
-    PrintAndLogEx(INFO, "Preparing to clone IOProx to " _YELLOW_("%s") " with Version: " _GREEN_("%u") " FC: " _GREEN_("%u (0x%02x)") " CN: " _GREEN_("%u")
+    PrintAndLogEx(INFO, "Preparing to clone ioProx to " _YELLOW_("%s") " with Version: " _GREEN_("%u") " FC: " _GREEN_("%u (0x%02x)") " CN: " _GREEN_("%u")
             , cardtype
             , version
             , fc
@@ -339,10 +339,10 @@ static int CmdIOProxClone(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "this help"},
-    {"demod",   CmdIOProxDemod,  AlwaysAvailable, "demodulate an IOProx tag from the GraphBuffer"},
+    {"demod",   CmdIOProxDemod,  AlwaysAvailable, "demodulate an ioProx tag from the GraphBuffer"},
     {"reader",  CmdIOProxReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdIOProxClone,  IfPm3Lf,         "clone IOProx tag to T55x7 or Q5/T5555"},
-    {"sim",     CmdIOProxSim,    IfPm3Lf,         "simulate IOProx tag"},
+    {"clone",   CmdIOProxClone,  IfPm3Lf,         "clone ioProx tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdIOProxSim,    IfPm3Lf,         "simulate ioProx tag"},
     {"watch",   CmdIOProxWatch,  IfPm3Lf,         "continuously watch for cards. Reader mode"},
     {NULL, NULL, NULL, NULL}
 };
