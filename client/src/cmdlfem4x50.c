@@ -500,9 +500,12 @@ int CmdEM4x50Chk(const char *Cmd) {
         // upload to flash.
         res = flashmem_spiffs_load(destfn, keys, datalen + 2);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "\nSPIFFS upload failed");
+            PrintAndLogEx(WARNING, "SPIFFS upload failed");
             return res;
         }
+    } else {
+        PrintAndLogEx(WARNING, "no flash memory available");
+        return PM3_EFLASH;
     }
     
     clearCommandBuffer();
