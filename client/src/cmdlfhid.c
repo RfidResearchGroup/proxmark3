@@ -63,8 +63,14 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
         return PM3_ESOFT;
     }
 
-    if (verbose)
-        PrintAndLogEx(INFO, "Trying FC: %u; CN: %"PRIu64";  Issue level: %u; OEM: %u", card->FacilityCode, card->CardNumber, card->IssueLevel, card->OEM);
+    if (verbose) {
+        PrintAndLogEx(INFO, "Trying FC: " _YELLOW_("%u") " CN: " _YELLOW_("%"PRIu64) " Issue level: " _YELLOW_("%u") " OEM: " _YELLOW_("%u")
+                , card->FacilityCode
+                , card->CardNumber
+                , card->IssueLevel
+                , card->OEM
+                );
+    }
 
     lf_hidsim_t payload;
     payload.hi2 = packed.Top;
@@ -517,20 +523,20 @@ static int CmdHIDBrute(const char *Cmd) {
         PrintAndLogEx(INFO, "Card#............ %" PRIu64, cn_hi.CardNumber);
         switch (direction) {
             case 0:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH"));
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH") " delay " _YELLOW_("%d"), delay);
                 break;
             case 1:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("UP"));
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("UP") " delay " _YELLOW_("%d"), delay);
                 break;
             case 2:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN"));
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN") " delay " _YELLOW_("%d"), delay);
                 break;
             default:
                 break;
         }
     }
-    PrintAndLogEx(INFO, "Brute-forcing HID reader");
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation or press `enter` to exit");
+    PrintAndLogEx(INFO, "Started brute-forcing HID Prox reader");
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation or press " _GREEN_("`<enter>`") " to exit");
 
     // copy values to low.
     cn_low = cn_hi;
@@ -556,7 +562,9 @@ static int CmdHIDBrute(const char *Cmd) {
         if (direction != 2) {
             if (cn_hi.CardNumber < 0xFFFF) {
                 cn_hi.CardNumber++;
-                if (sendTry(format_idx, &cn_hi, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+                if (sendTry(format_idx, &cn_hi, delay, verbose) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
             } else {
                 fin_hi = true;
             }
@@ -566,7 +574,9 @@ static int CmdHIDBrute(const char *Cmd) {
         if (direction != 1) {
             if (cn_low.CardNumber > 0) {
                 cn_low.CardNumber--;
-                if (sendTry(format_idx, &cn_low, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+                if (sendTry(format_idx, &cn_low, delay, verbose) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
             } else {
                 fin_low = true;
             }
