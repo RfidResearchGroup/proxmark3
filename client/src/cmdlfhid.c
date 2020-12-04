@@ -464,7 +464,7 @@ static int CmdHIDBrute(const char *Cmd) {
                   "lf hid brute -w H10301 --fc 224\n"
                   "lf hid brute -w H10301 --fc 21 -d 2000\n"
                   "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000\n"
-                  "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000 --up -v\n"
+                  "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000 --up\n"
                  );
 
     void *argtable[] = {
