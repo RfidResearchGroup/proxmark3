@@ -151,7 +151,7 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
     uint64_t foo = uid2 & 0x7FFFFFFF;
 
     if (DemodBufferLen == 64) {
-        PrintAndLogEx(SUCCESS, "Indala - len " _GREEN_("%zu") " Raw: %x%08x", DemodBufferLen, uid1, uid2);
+        PrintAndLogEx(SUCCESS, "Indala (len %zu)  Raw: " _GREEN_("%x%08x"), DemodBufferLen, uid1, uid2);
 
         uint16_t p1  = 0;
         p1 |= DemodBuffer[32 + 3] << 8;
@@ -616,7 +616,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala clone",
-                  "clone INDALA UID to T55x7 or Q5/T5555 tag\n"
+                  "clone Indala UID to T55x7 or Q5/T5555 tag\n"
                   _RED_("\nWarning, encoding with FC/CN doesn't always work"),
                   "lf indala clone --heden 888\n"
                   "lf indala clone --fc 123 --cn 1337\n"
@@ -769,7 +769,7 @@ static int CmdIndalaClone(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,            AlwaysAvailable, "this help"},
-    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an indala tag (PSK1) from GraphBuffer"},
+    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an Indala tag (PSK1) from GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"reader",   CmdIndalaReader,    IfPm3Lf,         "read an Indala tag from the antenna"},
     {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala tag to T55x7 or Q5/T5555"},
