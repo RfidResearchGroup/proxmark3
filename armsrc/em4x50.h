@@ -26,6 +26,6 @@ void em4x50_brute(em4x50_data_t *etd);
 void em4x50_login(uint32_t *password);
 void em4x50_sim(void);
 void em4x50_reader(void);
-void em4x50_chk(uint32_t *numkeys);
+void em4x50_chk(uint8_t *filename);
 
 #endif /* EM4X50_H */

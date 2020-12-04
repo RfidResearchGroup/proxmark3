@@ -1141,7 +1141,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_EM4X50_CHK: {
-            em4x50_chk((uint32_t *)packet->data.asBytes);
+            em4x50_chk((uint8_t *)packet->data.asBytes);
             break;
         }
 #endif
