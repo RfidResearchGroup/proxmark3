@@ -464,13 +464,14 @@ static int CmdHIDBrute(const char *Cmd) {
                   "lf hid brute -w H10301 --fc 224\n"
                   "lf hid brute -w H10301 --fc 21 -d 2000\n"
                   "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000\n"
+                  "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000 --up -v\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose logging, show all tries"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-        arg_int0(NULL, "fn",     "<dec>",    "facility code"),
+        arg_int0(NULL, "fc",     "<dec>",    "facility code"),
         arg_int0(NULL, "cn",     "<dec>",    "card number to start with"),
         arg_int0("i",  "issue",  "<dec>",    "issue level"),
         arg_int0("o", "oem",     "<dec>",    "OEM code"),
