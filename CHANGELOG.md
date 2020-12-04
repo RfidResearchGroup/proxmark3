@@ -3,15 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - EM4x50: new function 4x50_reset: reset tag (@tharexde)
  - EM4x50: new function 4x50_login: authenticate against tag (@tharexde)
  - EM4x50: new function 4x50_brute: guess password within a given password range (@tharexde)
  - EM4x50: new function 4x50_chk: guess password from dictionary (without option -> T55xx default dictionary or -f user dictionary) (@tharexde)
  - EM4x50: new function 4x50_reader: read data from tag (configured data -> standard read mode), incl. option -@  (@tharexde)
  - EM4x50: new function 4x50_sim: simulate dump from file or flash (@tharexde)
- - EM4x50: new function 4x50_restore: restore dump file (bin, eml, json) onto tag (via flash memory)  (@tharexde)
- - EM4x50: new function 4x50_esave: dump em4x50 content from flash memory to file (bin + eml + json) (@tharexde)
- - EM4x50: new function 4x50_eload: upload em4x50 file content (bin, eml, json) to flash memory  (@tharexde)
+ - EM4x50: new function 4x50_restore: restore dump file (bin, eml, json) onto tag  (@tharexde)
+ - EM4x50: new function 4x50_esave: dump em4x50 content in emulator memory to file (bin + eml + json) (@tharexde)
+ - EM4x50: new function 4x50_eload: upload em4x50 file content (bin, eml, json) to emulator memory  (@tharexde)
  - EM4x50: added LED signals (@tharexde)
  - EM4x50: added json format for 4x50_dump (@tharexde)
  - EM4x50: relocated write requests in function 4x50_wipe from device to client (@tharexde)
