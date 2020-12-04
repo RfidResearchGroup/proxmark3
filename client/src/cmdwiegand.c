@@ -151,8 +151,8 @@ int CmdWiegandDecode(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
     {"list",    CmdWiegandList,    AlwaysAvailable, "List available wiegand formats"},
-    {"encode",  CmdWiegandEncode,  AlwaysAvailable, "Encode to wiegand raw hex"},
-    {"decode",  CmdWiegandDecode,  AlwaysAvailable, "Convert raw hex to decoded wiegand format"},
+    {"encode",  CmdWiegandEncode,  AlwaysAvailable, "Encode to wiegand raw hex (currently for HID Prox)"},
+    {"decode",  CmdWiegandDecode,  AlwaysAvailable, "Convert raw hex to decoded wiegand format (currently for HID Prox)"},
     {NULL, NULL, NULL, NULL}
 };
 
