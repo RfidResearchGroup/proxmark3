@@ -16,8 +16,6 @@
 #include "cmdflashmemspiffs.h"
 #include "cmdparser.h"
 
-#define CARD_MEMORY_SIZE    4096
-
 #define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
 
 //==============================================================================
@@ -456,13 +454,14 @@ int CmdEM4x50Chk(const char *Cmd) {
     // if no filename is given dictionary "t55xx_default_pwds.dic" is used
     
     int status = PM3_EFAILED;
-    int res = 0, slen = 0;
+    int keyblock = 2000;    // block with 2000 bytes -> 500 keys
+    int res = 0, slen = 0, bytes_remaining = 0;
     size_t datalen = 0;
     uint8_t data[FLASH_MEM_MAX_SIZE] = {0x0};
     uint8_t *keys = data;
-    uint32_t key_count = 0, offset = 0;
-    char filename[FILE_PATH_SIZE] = {0};
+    uint32_t key_count = 0;
     uint8_t destfn[32] = "em4x50_chk.bin";
+    char filename[FILE_PATH_SIZE] = {0};
 
     PacketResponseNG resp;
 
@@ -486,7 +485,6 @@ int CmdEM4x50Chk(const char *Cmd) {
     // no filename -> default = t55xx_default_pwds
     if (strlen(filename) == 0) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
-        offset = DEFAULT_T55XX_KEYS_OFFSET;
         PrintAndLogEx(INFO, "treating file as T55xx keys");
     }
     
@@ -496,24 +494,36 @@ int CmdEM4x50Chk(const char *Cmd) {
     
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
         
-    if (IfPm3Flash()) {
-        // upload to flash.
-        res = flashmem_spiffs_load(destfn, keys, datalen + 2);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "SPIFFS upload failed");
-            return res;
-        }
-    } else {
+    if (IfPm3Flash() == false) {
         PrintAndLogEx(WARNING, "no flash memory available");
         return PM3_EFLASH;
     }
     
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_CHK, destfn, sizeof(destfn));
-    WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
-    
-    status = resp.status;
+    bytes_remaining = datalen;
+    while (bytes_remaining > 0) {
+        
+        PrintAndLogEx(INPLACE, "Remaining keys: %i ", bytes_remaining / 4);
 
+        // upload to flash.
+        datalen = MIN(bytes_remaining, keyblock);
+        res = flashmem_spiffs_load(destfn, keys, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "SPIFFS upload failed");
+            return res;
+        }
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X50_CHK, destfn, sizeof(destfn));
+        WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
+        
+        status = resp.status;
+        if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
+            break;
+
+        bytes_remaining -= keyblock;
+        keys += keyblock;
+    }
+    
     // print response
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
