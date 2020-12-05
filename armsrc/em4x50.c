@@ -926,11 +926,6 @@ void em4x50_chk(uint8_t *filename) {
     uint32_t pwd = 0x0;
 
 #ifdef WITH_FLASH
-    //-----------------------------------------------------------------------------
-    // without calling FpgaDownloadAndGo the initial em4x50_chk call doesn't find
-    // a password (altough the correct password is in the dictionary)
-    //-----------------------------------------------------------------------------
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     BigBuf_free();
 
