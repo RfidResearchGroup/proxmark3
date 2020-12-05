@@ -50,6 +50,11 @@ proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image /usr/loca
 
 > Depending on the firmware version your Proxmark3 can also appear as `/dev/tty.usbmodem881`.
 
+If your proxmark3 comes with an out-of-date bootloader it can be necessary to flash only the bootrom first and then re-run one of the above commands:
+
+```sh
+proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf
+```
 
 ## Run the client
 
