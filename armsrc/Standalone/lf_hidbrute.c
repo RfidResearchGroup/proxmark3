@@ -95,7 +95,7 @@ void RunMod(void) {
 
             WAIT_BUTTON_RELEASED();
 
-            CopyHIDtoT55x7(0, high[selected], low[selected], 0);
+            CopyHIDtoT55x7(0, high[selected], low[selected], 0, false, false);
             Dbprintf("[=] cloned %x %x %08x", selected, high[selected], low[selected]);
 
             LEDsoff();

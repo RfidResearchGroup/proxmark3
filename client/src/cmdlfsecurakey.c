@@ -8,35 +8,22 @@
 // ASK/Manchester, RF/40, 96 bits long (unknown cs)
 //-----------------------------------------------------------------------------
 #include "cmdlfsecurakey.h"
-
-#include <string.h>         // memcpy
-#include <ctype.h>          // tolower
-
-#include "commonutil.h"     // ARRAYLEN
-#include "cmdparser.h"      // command_t
+#include <string.h>       // memcpy
+#include <ctype.h>        // tolower
+#include "commonutil.h"   // ARRAYLEN
+#include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
-#include "parity.h"     // for wiegand parity test
-#include "protocols.h"  // t55xx defines
-#include "cmdlft55xx.h" // clone..
+#include "lfdemod.h"      // preamble test
+#include "parity.h"       // for wiegand parity test
+#include "protocols.h"    // t55xx defines
+#include "cmdlft55xx.h"   // clone..
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_securakey_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Securakey tag to a T55x7 tag.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf securakey clone [h] [b <raw hex>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf securakey clone b 7FCB400001ADEA5344300000"));
-    return PM3_SUCCESS;
-}
 
 //see ASKDemod for what args are accepted
 int demodSecurakey(bool verbose) {
@@ -118,79 +105,188 @@ int demodSecurakey(bool verbose) {
     if (bitLen <= 32)
         PrintAndLogEx(SUCCESS, "Wiegand: " _GREEN_("%08X") " parity (%s)", (lWiegand << (bitLen / 2)) | rWiegand, parity ? _GREEN_("ok") : _RED_("fail"));
 
-    PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
-    PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
-    PrintAndLogEx(INFO, "Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
+    if (verbose) {
+        PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
+        PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
+        PrintAndLogEx(INFO, "Help the community identify this format further\nby sharing your tag on the pm3 forum or discord");
+    }
     return PM3_SUCCESS;
 }
 
 static int CmdSecurakeyDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey demod",
+                  "Try to find Securakey preamble, if found decode / descramble data",
+                  "lf securakey demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodSecurakey(true);
 }
 
-static int CmdSecurakeyRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 8000);
-    return demodSecurakey(true);
+static int CmdSecurakeyReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey reader",
+                  "read a Securakey tag",
+                  "lf securakey reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        lf_read(false, 8000);
+        demodSecurakey(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdSecurakeyClone(const char *Cmd) {
 
-    uint32_t blocks[4];
-    bool errors = false;
-    uint8_t cmdp = 0;
-    int datalen = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey clone",
+                  "clone a Securakey tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf securakey clone --raw 7FCB400001ADEA5344300000\n"
+                  "lf securakey clone --q5 --raw 7FCB400001ADEA5344300000 -> encode for Q5/T5555 tag\n"
+                  "lf securakey clone --em --raw 7FCB400001ADEA5344300000 -> encode for EM4305/4469"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_securakey_clone();
-            case 'b': {
-                // skip first block,  3*4 = 12 bytes left
-                uint8_t rawhex[12] = {0};
-                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if (res != 0)
-                    errors = true;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("r", "raw", "<hex>", "raw hex data. 12 bytes"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
-                }
-                cmdp += 2;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp == 0) return usage_lf_securakey_clone();
+    if (raw_len != 12) {
+        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+        return PM3_EINVARG;
+    }
+
+    uint32_t blocks[4];
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    }
 
     //Securakey - compat mode, ASK/Man, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_40 | 3 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(40) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
 
-    PrintAndLogEx(INFO, "Preparing to clone Securakey to T55x7 with raw hex");
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_SECURAKEY_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+    PrintAndLogEx(INFO, "Preparing to clone Securakey to " _YELLOW_("%s") "  with raw hex", cardtype);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf securakey read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf securakey reader`") " to verify");
     return res;
 }
 
 static int CmdSecurakeySim(const char *Cmd) {
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf securakey sim",
+                  "Enables simulation of secura card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf securakey sim --raw 7FCB400001ADEA5344300000"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParserFree(ctx);
+
+    if (raw_len != 12) {
+        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "Simulating SecuraKey - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
+
+    uint8_t bs[sizeof(raw) * 8];
+    bytes_to_bytebits(raw, sizeof(raw), bs);
+
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding = 1;
+    payload->invert = 0;
+    payload->separator = 0;
+    payload->clock = 40;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
+
+    PrintAndLogEx(INFO, "Done");
+    if (resp.status != PM3_EOPABORTED)
+        return resp.status;
+
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod", CmdSecurakeyDemod, AlwaysAvailable, "Demodulate an Securakey tag from the GraphBuffer"},
-    {"read",  CmdSecurakeyRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdSecurakeyClone, IfPm3Lf,         "clone Securakey tag to T55x7"},
-    {"sim",   CmdSecurakeySim,   IfPm3Lf,         "simulate Securakey tag"},
+    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"demod",   CmdSecurakeyDemod,  AlwaysAvailable, "Demodulate an Securakey tag from the GraphBuffer"},
+    {"reader",  CmdSecurakeyReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone",   CmdSecurakeyClone,  IfPm3Lf,         "clone Securakey tag to T55x7"},
+    {"sim",     CmdSecurakeySim,    IfPm3Lf,         "simulate Securakey tag"},
     {NULL, NULL, NULL, NULL}
 };
 

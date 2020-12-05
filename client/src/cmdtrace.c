@@ -519,8 +519,8 @@ static int CmdTraceLoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "trace load",
                   "Load protocol data from binary file to trace buffer\n"
-                  "File extension is (.trace)",
-                  "trace load -f mytracefile"
+                  "File extension is <.trace>",
+                  "trace load -f mytracefile    -> w/o file extension"
                  );
 
     void *argtable[] = {
@@ -555,13 +555,13 @@ static int CmdTraceSave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "trace save",
                   "Save protocol data from trace buffer to binary file\n"
-                  "File extension is (.trace)",
-                  "trace save -f mytracefile"
+                  "File extension is <.trace>",
+                  "trace save -f mytracefile    -> w/o file extension"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("f", "file", "<filename>", "trace file to load"),
+        arg_strx0("f", "file", "<filename>", "trace file to save"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

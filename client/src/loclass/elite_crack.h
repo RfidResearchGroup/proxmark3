@@ -38,6 +38,22 @@
 
 #ifndef ELITE_CRACK_H
 #define ELITE_CRACK_H
+
+//Crack status, see below
+#define LOCLASS_CRACKED         0x0100
+#define LOCLASS_BEING_CRACKED   0x0200
+#define LOCLASS_CRACK_FAILED    0x0400
+
+/**
+  This is how we expect each 'entry' in a dumpfile to look
+**/
+typedef struct {
+    uint8_t csn[8];
+    uint8_t cc_nr[12];
+    uint8_t mac[4];
+} loclass_dumpdata_t;
+
+
 void permutekey(uint8_t key[8], uint8_t dest[8]);
 /**
  * Permutes  a key from iclass specific format to NIST format
@@ -46,10 +62,6 @@ void permutekey(uint8_t key[8], uint8_t dest[8]);
  * @param dest
  */
 void permutekey_rev(uint8_t key[8], uint8_t dest[8]);
-//Crack status, see below
-#define CRACKED         0x0100
-#define BEING_CRACKED   0x0200
-#define CRACK_FAILED    0x0400
 
 /**
  * Perform a bruteforce against a file which has been saved by pm3
@@ -69,7 +81,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]);
  */
 int bruteforceFileNoKeys(const char *filename);
 /**
- * @brief Same as bruteforcefile, but uses a an array of dumpdata instead
+ * @brief Same as bruteforcefile, but uses a an array of loclass_dumpdata_t instead
  * @param dump
  * @param dumpsize
  * @param keytable
@@ -78,26 +90,17 @@ int bruteforceFileNoKeys(const char *filename);
 int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]);
 
 /**
-  This is how we expect each 'entry' in a dumpfile to look
-**/
-typedef struct {
-    uint8_t csn[8];
-    uint8_t cc_nr[12];
-    uint8_t mac[4];
-} dumpdata;
-
-/**
  * @brief Performs brute force attack against a dump-data item, containing csn, cc_nr and mac.
  *This method calculates the hash1 for the CSN, and determines what bytes need to be bruteforced
  *on the fly. If it finds that more than three bytes need to be bruteforced, it aborts.
  *It updates the keytable with the findings, also using the upper half of the 16-bit ints
  *to signal if the particular byte has been cracked or not.
  *
- * @param dump The dumpdata from iclass reader attack.
+ * @param loclass_dumpdata_t The dumpdata from iclass reader attack.
  * @param keytable where to write found values.
  * @return
  */
-int bruteforceItem(dumpdata item, uint16_t keytable[]);
+int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]);
 /**
  * Hash1 takes CSN as input, and determines what bytes in the keytable will be used
  * when constructing the K_sel.
@@ -118,7 +121,7 @@ void hash2(uint8_t *key64, uint8_t *outp_keytable);
  * @param master_key where to put the master key
  * @return 0 for ok, 1 for failz
  */
-int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]);
+int calculateMasterKey(uint8_t first16bytes[], uint8_t master_key[]);
 
 /**
  * @brief Test function
@@ -140,6 +143,5 @@ int testElite(bool slowtests);
 { {0x0c,0x90,0x32,0xf3,0x5d,0xff,0x12,0xe0} , {0x0d,0x0f,0x0a,0x00,0x45,0x01,0x05,0x45} , {10,13}},
 
 **/
-
 
 #endif

@@ -13,6 +13,7 @@
 #include <string.h>
 #include "proxguiqt.h"
 #include "proxmark3.h"
+#include "ui.h"  // for prints
 
 static ProxGuiQT *gui = NULL;
 static WorkerThread *main_loop_thread = NULL;
@@ -28,8 +29,15 @@ void WorkerThread::run() {
 }
 
 extern "C" void ShowGraphWindow(void) {
-    if (!gui)
+    if (!gui) {
+        // Show a notice if X11/XQuartz isn't available
+#if defined(__MACH__) && defined(__APPLE__)
+        PrintAndLogEx(WARNING, "You appear to be on a MacOS device without XQuartz.\nYou may need to install XQuartz (https://www.xquartz.org/) to make the plot work.");
+#else
+        PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPlot may not work until you resolve these issues.");
+#endif
         return;
+    }
 
     gui->ShowGraphWindow();
 }

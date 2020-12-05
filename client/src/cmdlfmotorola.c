@@ -9,22 +9,20 @@
 // PSK1, RF/32, 64 bits long,  at 74 kHz
 //-----------------------------------------------------------------------------
 #include "cmdlfmotorola.h"
-
-#include <ctype.h>          //tolower
-
-#include "commonutil.h"     // ARRAYLEN
+#include <ctype.h>        // tolower
+#include "commonutil.h"   // ARRAYLEN
 #include "common.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
-#include "protocols.h"  // t55xx defines
-#include "cmdlft55xx.h" // clone..
-#include "cmdlf.h"      // cmdlfconfig
-#include "cliparser.h" // cli parse input
-
+#include "lfdemod.h"      // preamble test
+#include "protocols.h"    // t55xx defines
+#include "cmdlft55xx.h"   // clone..
+#include "cmdlf.h"        // cmdlfconfig
+#include "cliparser.h"    // cli parse input
+#include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
 
@@ -35,6 +33,7 @@ int demodMotorola(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
         return PM3_ESOFT;
     }
+
     size_t size = DemodBufferLen;
     int ans = detectMotorola(DemodBuffer, &size);
     if (ans < 0) {
@@ -118,13 +117,42 @@ int demodMotorola(bool verbose) {
     return PM3_SUCCESS;
 }
 
-//see PSKDemod for what args are accepted
 static int CmdMotorolaDemod(const char *Cmd) {
-    (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf motorola demod",
+                  "Try to find Motorola preamble, if found decode / descramble data",
+                  "lf motorola demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodMotorola(true);
 }
 
-static int CmdMotorolaRead(const char *Cmd) {
+static int CmdMotorolaReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf motorola reader",
+                  "read a Motorola tag",
+                  "lf motorola reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
     // Motorola Flexpass seem to work at 74 kHz
     // and take about 4400 samples to befor modulating
     sample_config sc = {
@@ -138,66 +166,105 @@ static int CmdMotorolaRead(const char *Cmd) {
     };
     lf_config(&sc);
 
-    // 64 * 32 * 2 * n-ish
-    lf_read(false, 5000);
+    int res;
+    do {
+        // 64 * 32 * 2 * n-ish
+        lf_read(false, 5000);
+        res = demodMotorola(!cm);
+    } while (cm && !kbd_enter_pressed());
 
     // reset back to 125 kHz
     sc.divisor = LF_DIVISOR_125;
     sc.samples_to_skip = 0;
     lf_config(&sc);
-    return demodMotorola(true);
+
+    return res;
 }
 
 static int CmdMotorolaClone(const char *Cmd) {
-
-    uint32_t blocks[3] = {0};
-    uint8_t data[8];
-    int datalen = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf motorola clone",
-                  "clone Motorola UID to T55x7 or Q5/T5555 tag\n"
+                  "clone Motorola UID to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "defaults to 64 bit format",
-                  "lf motorola clone -r a0000000a0002021"
+                  "lf motorola clone --raw a0000000a0002021\n"
+                  "lf motorola clone --q5 --raw a0000000a0002021   -> encode for Q5/T5555 tag\n"
+                  "lf motorola clone --em --raw a0000000a0002021   -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx1("r", "raw",  "<hex>", "raw bytes"),
-        arg_lit0("q", "Q5",    "optional - specify writing to Q5/T5555 tag"),
+        arg_strx1("r", "raw", "<hex>", "raw hex bytes. 8 bytes"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    CLIGetHexWithReturn(ctx, 1, data, &datalen);
-    bool is_t5555 = arg_get_lit(ctx, 2);
+
+    int raw_len = 0;
+    uint8_t raw[8];
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    //TODO add selection of chip for Q5 or T55x7
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
-    PrintAndLogEx(INFO, "Target chip " _YELLOW_("%s"), (is_t5555) ? "Q5/T5555" : "T55x7");
+    //TODO add selection of chip for Q5 or T55x7
+    uint32_t blocks[3] = {0};
+
+    blocks[0] =  T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_MOTOROLA_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+    blocks[1] = bytes_to_num(raw, 4);
+    blocks[2] = bytes_to_num(raw + 4, 4);
 
     // config for Motorola 64 format (RF/32;PSK1 with RF/2; Maxblock=2)
-    PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit tag");
-    PrintAndLogEx(INFO, "Using raw " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
-
-    if (is_t5555)
-        blocks[0] = T5555_FIXED | T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
-    else
-        blocks[0] =  T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
-
-
-    blocks[1] = bytes_to_num(data, 4);
-    blocks[2] = bytes_to_num(data + 4, 4);
-
+    PrintAndLogEx(INFO, "Preparing to clone Motorola 64bit to " _YELLOW_("%s")  " with raw " _GREEN_("%s")
+                  , cardtype
+                  , sprint_hex_inrow(raw, sizeof(raw))
+                 );
     print_blocks(blocks, ARRAYLEN(blocks));
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf motorola read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf motorola reader`") " to verify");
     return res;
 }
 
 static int CmdMotorolaSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf motorola sim",
+                  "Enables simulation of Motorola card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf motorola sim"
+                 );
 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    
     // PSK sim.
     PrintAndLogEx(INFO, " PSK1 at 66 kHz... Interesting.");
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
@@ -205,11 +272,11 @@ static int CmdMotorolaSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,           AlwaysAvailable, "This help"},
-    {"demod", CmdMotorolaDemod,  AlwaysAvailable, "Demodulate an MOTOROLA tag from the GraphBuffer"},
-    {"read",  CmdMotorolaRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdMotorolaClone,  IfPm3Lf,         "clone MOTOROLA tag to T55x7"},
-    {"sim",   CmdMotorolaSim,    IfPm3Lf,         "simulate MOTOROLA tag"},
+    {"help",   CmdHelp,           AlwaysAvailable, "This help"},
+    {"demod",  CmdMotorolaDemod,  AlwaysAvailable, "Demodulate an MOTOROLA tag from the GraphBuffer"},
+    {"reader", CmdMotorolaReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone",  CmdMotorolaClone,  IfPm3Lf,         "clone MOTOROLA tag to T55x7"},
+    {"sim",    CmdMotorolaSim,    IfPm3Lf,         "simulate MOTOROLA tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -266,5 +333,5 @@ int detectMotorola(uint8_t *dest, size_t *size) {
 }
 
 int readMotorolaUid(void) {
-    return (CmdMotorolaRead("") == PM3_SUCCESS);
+    return (CmdMotorolaReader("") == PM3_SUCCESS);
 }

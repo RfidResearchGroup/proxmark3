@@ -8,8 +8,7 @@
 // Low frequency EM4x commands
 //-----------------------------------------------------------------------------
 
-#include "cmdlfem4x.h"
-#include "cmdlfem4x05.h"
+#include "cmdlfem410x.h"
 #include "cmdlfem4x50.h"
 
 #include <stdio.h>
@@ -631,33 +630,14 @@ static int CmdEM410xClone(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
-    {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 410x") " -----------------------"},
-    //{"410x_demod",  CmdEMdemodASK,        IfPm3Lf,         "Extract ID from EM410x tag on antenna)"},
-    {"410x_demod",  CmdEM410xDemod,       AlwaysAvailable, "demodulate a EM410x tag from the GraphBuffer"},
-    {"410x_read",   CmdEM410xRead,        IfPm3Lf,         "attempt to read and extract tag data"},
-    {"410x_sim",    CmdEM410xSim,         IfPm3Lf,         "simulate EM410x tag"},
-    {"410x_brute",  CmdEM410xBrute,       IfPm3Lf,         "reader bruteforce attack by simulating EM410x tags"},
-    {"410x_watch",  CmdEM410xWatch,       IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
-    {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
-    {"410x_clone",  CmdEM410xClone,       IfPm3Lf,         "write EM410x UID to T55x7 or Q5/T5555 tag"},
-    {"----------",  CmdHelp,              AlwaysAvailable,         "-------------------- " _CYAN_("EM 4x05 / 4x69") " -------------------"},
-    {"4x05_chk",    CmdEM4x05Chk,         IfPm3Lf,         "Check passwords from dictionary"},
-    {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
-    {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
-    {"4x05_wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},
-    {"4x05_info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
-    {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
-    {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
-    {"4x05_unlock", CmdEM4x05Unlock,      IfPm3Lf,         "execute tear off against EM4x05/EM4x69"},
-    {"4x05_sniff",  CmdEM4x05Sniff,       AlwaysAvailable, "Attempt to recover em4x05 commands from sample buffer"},
-    {"4x05_brute",  CmdEM4x05Brute,       IfPm3Lf,         "Bruteforce password"},
-    {"----------",  CmdHelp,              AlwaysAvailable,         "----------------------- " _CYAN_("EM 4x50") " -----------------------"},
-    {"4x50_dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
-    {"4x50_info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},
-    {"4x50_write",  CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
-    {"4x50_write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change password of EM4x50 tag"},
-    {"4x50_read",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
-    {"4x50_wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe data from EM4x50"},
+    //{"demod",  CmdEMdemodASK,        IfPm3Lf,         "Extract ID from EM410x tag on antenna)"},
+    {"demod",  CmdEM410xDemod,       AlwaysAvailable, "demodulate a EM410x tag from the GraphBuffer"},
+    {"read",   CmdEM410xRead,        IfPm3Lf,         "attempt to read and extract tag data"},
+    {"sim",    CmdEM410xSim,         IfPm3Lf,         "simulate EM410x tag"},
+    {"brute",  CmdEM410xBrute,       IfPm3Lf,         "reader bruteforce attack by simulating EM410x tags"},
+    {"watch",  CmdEM410xWatch,       IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
+    {"spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
+    {"clone",  CmdEM410xClone,       IfPm3Lf,         "write EM410x UID to T55x7 or Q5/T5555 tag"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -667,7 +647,7 @@ static int CmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdLFEM4X(const char *Cmd) {
+int CmdLFEM410X(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }

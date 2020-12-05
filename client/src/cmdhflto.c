@@ -13,6 +13,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "cmdtrace.h"
@@ -35,62 +36,6 @@
 #define CM_MEM_MAX_SIZE     0x1FE0  // (32byte/block * 255block = 8160byte)
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lto_info(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto info [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h    this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto info"));
-    return PM3_SUCCESS;
-}
-
-static int usage_lto_rdbl(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto rdbl [h] s <start block> e <end block>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           s     start block in decimal >= 0");
-    PrintAndLogEx(NORMAL, "           e     end block in decimal <= 254");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto rdbl s 0 e 254") " - Read data block from 0 to 254");
-    return PM3_SUCCESS;
-}
-
-static int usage_lto_wrbl(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto wrbl [h] b <block> d <data>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           b     block address (decimal, 0 - 254) ");
-    PrintAndLogEx(NORMAL, "           d     32 bytes of data to write (64 hex characters, no space)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto wrbl b 128 d 0001020304050607080910111213141516171819202122232425262728293031") " - write 00..31 to block address 128");
-    return PM3_SUCCESS;
-}
-
-static int usage_lto_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto dump [h|p] f <filename>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           f     file name");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto dump f myfile"));
-    return PM3_SUCCESS;
-}
-
-static int usage_lto_restore(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf lto restore [h] f <filename>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h     this help");
-    PrintAndLogEx(NORMAL, "           f     file name [.bin|.eml]");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("           hf lto restore f hf_lto_92C7842CFF.bin|.eml"));
-    return PM3_SUCCESS;
-}
 
 static void lto_switch_off_field(void) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
@@ -173,25 +118,17 @@ static int lto_select(uint8_t *id_response, uint8_t id_len, uint8_t *type_respon
 }
 
 static int CmdHfLTOInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto info",
+                  "Get info from LTO tags",
+                  "hf lto info");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_info();
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors) {
-        return usage_lto_info();
-    }
-
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return infoLTO(true);
 }
 
@@ -304,48 +241,31 @@ int rdblLTO(uint8_t st_blk, uint8_t end_blk, bool verbose) {
 }
 
 static int CmdHfLTOReadBlock(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto rdbl",
+                  "Reead blocks from LTO tag",
+                  "hf lto rdbl --first 0 --last 254");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    uint8_t st_blk = 0;
-    uint8_t end_blk = 254;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "first", "<dec>", "The first block number to read as an integer"),
+        arg_int0(NULL, "last", "<dec>", "The last block number to read as an integer"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_rdbl();
-            case 's':
-                st_blk = param_get8(Cmd, cmdp + 1);
-                if (end_blk < st_blk) {
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
+    int startblock = arg_get_int_def(ctx, 1, 0);
+    int endblock = arg_get_int_def(ctx, 2, 254);
 
-            case 'e':
-                end_blk = param_get8(Cmd, cmdp + 1);
-                if (end_blk < st_blk) {
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    CLIParserFree(ctx);
 
     //Validations
-    if (errors) {
-        usage_lto_rdbl();
+    if (endblock < startblock) {
+        PrintAndLogEx(ERR, "First block must be less than last block");
         return PM3_EINVARG;
     }
 
-    return rdblLTO(st_blk, end_blk, true);
+    return rdblLTO(startblock, endblock, true);
 }
 
 static int lto_wrbl(uint8_t blk, uint8_t *data, bool verbose) {
@@ -407,46 +327,33 @@ int wrblLTO(uint8_t blk, uint8_t *data, bool verbose) {
 }
 
 static int CmdHfLTOWriteBlock(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto wrbl",
+                  "Write data to block on LTO tag",
+                  "hf lto wrbl --block 128 -d 0001020304050607080910111213141516171819202122232425262728293031");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool b_opt_selected = false;
-    bool d_opt_selected = false;
-    uint8_t blk = 128;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "32 bytes of data to write (64 hex symbols, no spaces)"),
+        arg_int1(NULL, "block", "<dec>", "The  block number to write to as an integer"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int block_data_len = 0;
     uint8_t block_data[32] = {0};
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_wrbl();
-            case 'b':
-                blk = param_get8(Cmd, cmdp + 1);
-                b_opt_selected = true;
-                cmdp += 2;
-                break;
-            case 'd':
-                if (param_gethex(Cmd, cmdp + 1, block_data, 64)) {
-                    PrintAndLogEx(WARNING, "block data must include 64 HEX symbols");
-                    errors = true;
-                    break;
-                }
-                d_opt_selected = true;
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    CLIGetHexWithReturn(ctx, 1, block_data, &block_data_len);
+
+    if (block_data_len != 32) {
+        PrintAndLogEx(ERR, "Block data is incorrect length");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
-    //Validations
-    if (errors) {
-        return usage_lto_wrbl();
-    } else if (b_opt_selected == false || d_opt_selected == false) {
-        PrintAndLogEx(WARNING, "Need to specify block address and data.");
-        return usage_lto_wrbl();
-    }
+    int blk = arg_get_int_def(ctx, 2, 0);
+
+    CLIParserFree(ctx);
 
     int res = wrblLTO(blk, block_data, true);
     if (res == PM3_SUCCESS)
@@ -504,35 +411,25 @@ int dumpLTO(uint8_t *dump, bool verbose) {
 }
 
 static int CmdHfLTODump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto dump",
+                  "Dump data from LTO tag",
+                  "hf lto dump -f myfile");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    uint32_t dump_len = CM_MEM_MAX_SIZE;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "specify a filename for dumpfile"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_dump();
-            case 'f':
-                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "filename too long");
-                    errors = true;
-                    break;
-                }
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    CLIParserFree(ctx);
 
-    if (errors) {
-        usage_lto_dump();
-        return PM3_EINVARG;
-    }
+    uint32_t dump_len = CM_MEM_MAX_SIZE;
 
     uint8_t *dump = calloc(dump_len, sizeof(uint8_t));
     if (!dump) {
@@ -596,32 +493,23 @@ int restoreLTO(uint8_t *dump, bool verbose) {
 }
 
 static int CmdHfLTRestore(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf lto restore",
+                  "Restore data from dumpfile to LTO tag",
+                  "hf lto restore -f hf-lto-92C7842CFF.bin|.eml");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "specify a filename for dumpfile"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lto_restore();
-            case 'f':
-                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (strlen(filename) < 5)
-                    errors = true;
-
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    if (errors || strlen(Cmd) == 0) {
-        return usage_lto_restore();
-    }
+    CLIParserFree(ctx);
 
     size_t dump_len = 0;
     char *lowstr = str_dup(filename);

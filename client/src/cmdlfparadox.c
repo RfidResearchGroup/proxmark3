@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+// Marshmellow
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -8,13 +9,11 @@
 // FSK2a, rf/50, 96 bits (completely known)
 //-----------------------------------------------------------------------------
 #include "cmdlfparadox.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-#include "commonutil.h"     // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
@@ -25,39 +24,10 @@
 #include "protocols.h"  // t55xx defines
 #include "cmdlft55xx.h" // clone..
 #include "crc.h"        // maxim
+#include "cmdlfem4x05.h"   //
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_paradox_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Paradox tag to a T55x7 tag.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf paradox clone [h] [b <raw hex>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf paradox clone b 0f55555695596a6a9999a59a"));
-    return PM3_SUCCESS;
-}
-
-/*
-static int usage_lf_paradox_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf paradox sim [h] <Facility-Code> <Card-Number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
-    PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf paradox sim 123 11223"));
-    return PM3_SUCCESS;
-}
-*/
 
 const uint8_t paradox_lut[] = {
     0xDB, 0xFC, 0x3F, 0xC5, 0x50, 0x14, 0x05, 0x47,
@@ -71,9 +41,9 @@ const uint8_t paradox_lut[] = {
 
 #define PARADOX_PREAMBLE_LEN 8
 
-//by marshmellow
-//Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
-//print full Paradox Prox ID and some bit format details if found
+// by marshmellow
+// Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
+// print full Paradox Prox ID and some bit format details if found
 
 int demodParadox(bool verbose) {
     (void) verbose; // unused so far
@@ -200,95 +170,160 @@ int demodParadox(bool verbose) {
 }
 
 static int CmdParadoxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf paradox demod",
+                  "Try to find Paradox preamble, if found decode / descramble data",
+                  "lf paradox demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodParadox(true);
 }
 
-//by marshmellow
-//see ASKDemod for what args are accepted
-static int CmdParadoxRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 10000);
-    return demodParadox(true);
+static int CmdParadoxReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf paradox reader",
+                  "read a Paradox tag",
+                  "lf Paradox reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        lf_read(false, 10000);
+        demodParadox(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdParadoxClone(const char *Cmd) {
 
-    uint32_t blocks[4];
-    bool errors = false;
-    uint8_t cmdp = 0;
-    int datalen = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf paradox clone",
+                  "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf paradox clone --raw 0f55555695596a6a9999a59a\n"
+                  "lf paradox clone -r 0f55555695596a6a9999a59a --q5      -> encode for Q5/T5555 tag\n"
+                  "lf paradox clone -r 0f55555695596a6a9999a59a --em      -> encode for EM4305/4469"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_paradox_clone();
-            case 'b': {
-                // skip first block,  3*4 =12 bytes left
-                uint8_t rawhex[12] = {0};
-                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if (res != 0)
-                    errors = true;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
-                }
-                cmdp += 2;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp == 0) return usage_lf_paradox_clone();
+    if (raw_len != 12) {
+        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+        return PM3_EINVARG;
+    }
 
-    //Securakey - compat mode, ASK/Man, data rate 40, 3 data blocks
+    uint32_t blocks[4];
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    }
+
+    // Paradox - FSK2a, data rate 50, 3 data blocks
     blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_INVERT_OUTPUT | T5555_MODULATION_FSK2 | T5555_SET_BITRATE(50) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
 
-    PrintAndLogEx(INFO, "Preparing to clone Paradox to T55x7 with raw hex");
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_PARADOX_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+    PrintAndLogEx(INFO, "Preparing to clone Paradox to " _YELLOW_("%s") " with raw hex", cardtype);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf paradox read`") " to verify");
     return res;
 }
 
 static int CmdParadoxSim(const char *Cmd) {
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
-    return PM3_SUCCESS;
-}
-/*
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_paradox_sim();
 
-    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf paradox sim",
+                  "Enables simulation of paradox card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf paradox sim --raw 0f55555695596a6a9999a59a"
+                 );
 
-    uint8_t bs[96];
-    memset(bs, 0x00, sizeof(bs));
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParserFree(ctx);
+
+    if (raw_len != 12) {
+        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "Simulating Paradox -  raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
+
+    uint8_t bs[sizeof(raw) * 8];
+    bytes_to_bytebits(raw, sizeof(raw), bs);
 
     // Paradox uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 1  FSK2a
-    uint8_t clk = 50, invert = 1, high = 10, low = 8;
-
-    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_paradox_sim();
-
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
-
-    // if ( GetParadoxBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-    // PrintAndLogEx(ERR, "Error with tag bitstream generation.");
-    // return 1;
-    // }
-
-    PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
+    uint8_t clk = 50, high = 10, low = 8;
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
     payload->fchigh = high;
     payload->fclow =  low;
-    payload->separator = invert;
+    payload->separator = 0;
     payload->clock = clk;
     memcpy(payload->data, bs, sizeof(bs));
 
@@ -302,15 +337,30 @@ static int CmdParadoxSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
+
     return PM3_SUCCESS;
 }
+/*
+
+    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_paradox_sim();
+
+    facilitycode = (fc & 0x000000FF);
+    cardnumber = (cn & 0x0000FFFF);
+
+    // if ( GetParadoxBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
+    // PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+    // return 1;
+    // }
+
+    PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
+
 */
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
-    {"demod", CmdParadoxDemod,  AlwaysAvailable, "Demodulate a Paradox FSK tag from the GraphBuffer"},
-    {"read",  CmdParadoxRead,   IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
-    {"clone", CmdParadoxClone,  IfPm3Lf,         "clone paradox tag to T55x7"},
-    {"sim",   CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
+    {"help",   CmdHelp,          AlwaysAvailable, "This help"},
+    {"demod",  CmdParadoxDemod,  AlwaysAvailable, "Demodulate a Paradox FSK tag from the GraphBuffer"},
+    {"reader", CmdParadoxReader, IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
+    {"clone",  CmdParadoxClone,  IfPm3Lf,         "clone paradox tag"},
+    {"sim",    CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
     {NULL, NULL, NULL, NULL}
 };
 

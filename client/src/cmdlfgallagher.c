@@ -10,35 +10,24 @@
 // sample Q5 ,  ASK RF/32, STT,  96 bits  (3blocks)   ( 0x9000F006)
 //-----------------------------------------------------------------------------
 #include "cmdlfgallagher.h"
-
-#include <ctype.h>          //tolower
+#include <string.h>        // memcpy
+#include <ctype.h>         // tolower
 #include <stdio.h>
-#include "commonutil.h"     // ARRAYLEN
+#include "commonutil.h"    // ARRAYLEN
 #include "common.h"
-#include "cmdparser.h"    // command_t
+#include "cmdparser.h"     // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
-#include "protocols.h"  // t55xx defines
-#include "cmdlft55xx.h" // clone..
-#include "crc.h" // CRC8/Cardx
+#include "lfdemod.h"       // preamble test
+#include "protocols.h"     // t55xx defines
+#include "cmdlft55xx.h"    // clone..
+#include "crc.h"           // CRC8/Cardx
+#include "cmdlfem4x05.h"   //
+#include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_gallagher_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a GALLAGHER tag to a T55x7 tag.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf gallagher clone [h] [b <raw hex>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf gallagher clone b 0FFD5461A9DA1346B2D1AC32"));
-    return PM3_SUCCESS;
-}
 
 static void descramble(uint8_t *arr, uint8_t len) {
 
@@ -134,73 +123,169 @@ int demodGallagher(bool verbose) {
 }
 
 static int CmdGallagherDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gallagher demod",
+                  "Try to find GALLAGHER preamble, if found decode / descramble data",
+                  "lf gallagher demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodGallagher(true);
 }
 
-static int CmdGallagherRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 4096 * 2 + 20);
-    return demodGallagher(true);
+static int CmdGallagherReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gallagher reader",
+                  "read a GALLAGHER tag",
+                  "lf gallagher reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        lf_read(false, 4096 * 2 + 20);
+        demodGallagher(!cm);
+    } while (cm && !kbd_enter_pressed());
+    return PM3_SUCCESS;
 }
 
 static int CmdGallagherClone(const char *Cmd) {
 
-    uint32_t blocks[4];
-    bool errors = false;
-    uint8_t cmdp = 0;
-    int datalen = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gallagher clone",
+                  "clone a GALLAGHER tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32\n"
+                  "lf gallagher clone --q5 --raw 0FFD5461A9DA1346B2D1AC32 -> encode for Q5/T5555 tag\n"
+                  "lf gallagher clone --em --raw 0FFD5461A9DA1346B2D1AC32 -> encode for EM4305/4469"
+                 );
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_lf_gallagher_clone();
-            case 'b': {
-                // skip first block,  3*4 = 12 bytes left
-                uint8_t rawhex[12] = {0};
-                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if (res != 0)
-                    errors = true;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
-                }
-                cmdp += 2;
-                break;
-            }
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
     }
 
-    if (errors || cmdp == 0) return usage_lf_gallagher_clone();
+    uint32_t blocks[4];
+    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    }
 
     //Pac - compat mode, NRZ, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        blocks[0] = T5555_FIXED | T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
 
-    PrintAndLogEx(INFO, "Preparing to clone Gallagher to T55x7 with raw hex");
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_GALLAGHER_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+    PrintAndLogEx(INFO, "Preparing to clone Gallagher to " _YELLOW_("%s") " with raw hex", cardtype);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gallagher read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gallagher reader`") " to verify");
     return res;
 }
 
 static int CmdGallagherSim(const char *Cmd) {
+
+   CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gallagher sim",
+                  "Enables simulation of GALLAGHER card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.\n",
+                  "lf gallagher sim --raw 0FFD5461A9DA1346B2D1AC32"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int raw_len = 0;
+    // skip first block,  3*4 = 12 bytes left
+    uint8_t raw[12] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParserFree(ctx);
+
     // ASK/MAN sim.
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    PrintAndLogEx(SUCCESS, "Simulating Gallagher - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
+
+    uint8_t bs[sizeof(raw) * 8];
+    bytes_to_bytebits(raw, sizeof(raw), bs);
+
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding = 1;
+    payload->invert = 0;
+    payload->separator = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
+
+    PrintAndLogEx(INFO, "Done");
+    if (resp.status != PM3_EOPABORTED)
+        return resp.status;
+
+    return PM3_SUCCESS;
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,            AlwaysAvailable, "This help"},
-    {"demod", CmdGallagherDemod,  AlwaysAvailable, "Demodulate an GALLAGHER tag from the GraphBuffer"},
-    {"read",  CmdGallagherRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdGallagherClone,  IfPm3Lf,         "clone GALLAGHER tag to T55x7"},
-    {"sim",   CmdGallagherSim,    IfPm3Lf,         "simulate GALLAGHER tag"},
+    {"help",   CmdHelp,            AlwaysAvailable, "This help"},
+    {"demod",  CmdGallagherDemod,  AlwaysAvailable, "Demodulate an GALLAGHER tag from the GraphBuffer"},
+    {"reader", CmdGallagherReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone",  CmdGallagherClone,  IfPm3Lf,         "clone GALLAGHER tag to T55x7"},
+    {"sim",    CmdGallagherSim,    IfPm3Lf,         "simulate GALLAGHER tag"},
     {NULL, NULL, NULL, NULL}
 };
 

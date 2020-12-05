@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-
 #include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
@@ -27,42 +26,10 @@
 #include "lfdemod.h"    // parityTest
 #include "crc.h"
 #include "cmdlft55xx.h" // verifywrite
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM Defines
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_pyramid_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Farpointe/Pyramid tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
-    PrintAndLogEx(NORMAL, "Currently only works on 26bit");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf pyramid clone [h] <Facility-Code> <Card-Number> [Q5]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
-    PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
-    PrintAndLogEx(NORMAL, "  Q5              : optional - specify writing to Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf pyramid clone 123 11223"));
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_pyramid_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of Farpointe/Pyramid card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
-    PrintAndLogEx(NORMAL, "Currently work only on 26bit");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf pyramid sim [h] <Facility-Code> <Card-Number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  h               : this help");
-    PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
-    PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf pyramid sim 123 11223"));
-    return PM3_SUCCESS;
-}
 
 //Pyramid Prox demod - FSK RF/50 with preamble of 0000000000000001  (always a 128 bit data stream)
 //print full Farpointe Data/Pyramid Prox ID and some bit format details if found
@@ -211,30 +178,90 @@ int demodPyramid(bool verbose) {
 }
 
 static int CmdPyramidDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pyramid demod",
+                  "Try to find Farpoint/Pyramid preamble, if found decode / descramble data",
+                  "lf pyramid demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodPyramid(true);
 }
 
-static int CmdPyramidRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 15000);
-    return demodPyramid(true);
+static int CmdPyramidReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pyramid reader",
+                  "read a Farpointe/Pyramid tag",
+                  "lf pyramid reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        lf_read(false, 15000);
+        demodPyramid(true);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdPyramidClone(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pyramid_clone();
-    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
-    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_clone();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pyramid clone",
+                  "clone a Farpointe/Pyramid tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
+                  "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
+                  "Currently only works on 26bit",
+                  "lf pyramid clone --fc 123 --cn 11223\n"
+                  "lf pyramid clone --fc 123 --cn 11223 --q5  -> encode for Q5/T5555 tag\n"
+                  "lf pyramid clone --fc 123 --cn 11223 --em  -> encode for EM4305/4469"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint32_t fc = arg_get_u32_def(ctx, 1, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 2, 0);
+    bool q5 = arg_get_lit(ctx, 3);
+    bool em = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
     uint32_t blocks[5];
     uint8_t *bs = calloc(128, sizeof(uint8_t));
     if (bs == NULL) {
         return PM3_EMALLOC;
     }
 
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
+    uint32_t facilitycode = (fc & 0x000000FF);
+    uint32_t cardnumber = (cn & 0x0000FFFF);
 
     if (getPyramidBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
@@ -243,11 +270,18 @@ static int CmdPyramidClone(const char *Cmd) {
 
     //Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
     blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 4 << T55x7_MAXBLOCK_SHIFT;
+    char cardtype[16] = {"T55x7"};
 
     // Q5
-    bool q5 = tolower(param_getchar(Cmd, 2)) == 'q';
-    if (q5)
+    if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 4 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_PYRAMID_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
 
     blocks[1] = bytebits_to_byte(bs, 32);
     blocks[2] = bytebits_to_byte(bs + 32, 32);
@@ -256,36 +290,53 @@ static int CmdPyramidClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to " _YELLOW_("%s") "  with Facility Code: %u, Card Number: %u", (q5) ? "Q5/T5555" : "T55x7", facilitycode, cardnumber);
+    PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to " _YELLOW_("%s") "  with Facility Code: %u, Card Number: %u", cardtype, facilitycode, cardnumber);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pyramid read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pyramid reader`") " to verify");
     return res;
 }
 
 static int CmdPyramidSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf pyramid sim",
+                  "Enables simulation of Farpointe/Pyramid card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
+                  "Currently work only on 26bit",
+                  "lf pyramid sim --fc 123 --cn 1337"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pyramid_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t fc = arg_get_u32_def(ctx, 1, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 2, 0);
+    CLIParserFree(ctx);
 
-    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
+    uint32_t facilitycode = (fc & 0x000000FF);
+    uint32_t cardnumber = (cn & 0x0000FFFF);
+
 
     uint8_t bs[128];
     memset(bs, 0x00, sizeof(bs));
-
-    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_sim();
-
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
-
     if (getPyramidBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
+    PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: " _YELLOW_("%u") ", CardNumber: " _YELLOW_("%u"), facilitycode, cardnumber);
 
     // Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
@@ -309,11 +360,11 @@ static int CmdPyramidSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,         AlwaysAvailable, "this help"},
-    {"demod",   CmdPyramidDemod, AlwaysAvailable, "demodulate a Pyramid FSK tag from the GraphBuffer"},
-    {"read",    CmdPyramidRead,  IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdPyramidClone, IfPm3Lf,         "clone pyramid tag to T55x7 or Q5/T5555"},
-    {"sim",     CmdPyramidSim,   IfPm3Lf,         "simulate pyramid tag"},
+    {"help",    CmdHelp,          AlwaysAvailable, "this help"},
+    {"demod",   CmdPyramidDemod,  AlwaysAvailable, "demodulate a Pyramid FSK tag from the GraphBuffer"},
+    {"reader",  CmdPyramidReader, IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",   CmdPyramidClone,  IfPm3Lf,         "clone pyramid tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdPyramidSim,    IfPm3Lf,         "simulate pyramid tag"},
     {NULL, NULL, NULL, NULL}
 };
 

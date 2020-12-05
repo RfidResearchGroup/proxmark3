@@ -874,7 +874,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_HID_CLONE: {
             lf_hidsim_t *payload = (lf_hidsim_t *)packet->data.asBytes;
-            CopyHIDtoT55x7(payload->hi2, payload->hi, payload->lo, payload->longFMT);
+            CopyHIDtoT55x7(payload->hi2, payload->hi, payload->lo, payload->longFMT, payload->Q5, payload->EM);
             break;
         }
         case CMD_LF_IO_WATCH: {
@@ -907,7 +907,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_TI_WRITE: {
-            WriteTItag(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            struct p {
+                uint32_t high;
+                uint32_t low;
+                uint16_t crc;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            WriteTItag(payload->high, payload->low, packet->crc);
             break;
         }
         case CMD_LF_SIMULATE: {
@@ -1037,10 +1043,11 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_VIKING_CLONE: {
             struct p {
                 bool Q5;
+                bool EM;
                 uint8_t blocks[8];
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            CopyVikingtoT55xx(payload->blocks, payload->Q5);
+            CopyVikingtoT55xx(payload->blocks, payload->Q5, payload->EM);
             break;
         }
         case CMD_LF_COTAG_READ: {
@@ -1267,9 +1274,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t tagtype;
                 uint8_t flags;
                 uint8_t uid[10];
+                uint8_t exitAfter;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            SimulateIso14443aTag(payload->tagtype, payload->flags, payload->uid);  // ## Simulate iso14443a tag - pass tag type & UID
+            SimulateIso14443aTag(payload->tagtype, payload->flags, payload->uid, payload->exitAfter);  // ## Simulate iso14443a tag - pass tag type & UID
             break;
         }
         case CMD_HF_ISO14443A_ANTIFUZZ: {

@@ -5,15 +5,15 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency EM4x commands
+// Low frequency EM 410x commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDLFEM4X_H__
-#define CMDLFEM4X_H__
+#ifndef CMDLFEM410X_H__
+#define CMDLFEM410X_H__
 
 #include "common.h"
 
-int CmdLFEM4X(const char *Cmd);
+int CmdLFEM410X(const char *Cmd);
 
 int demodEM410x(bool verbose);
 void printEM410x(uint32_t hi, uint64_t id);

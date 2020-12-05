@@ -21,7 +21,7 @@
 |[Donations](#Donations)|[Maintainers](/doc/md/Development/Maintainers.md)|[Command Cheat sheet](/doc/cheatsheet.md)|
 ||[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 ||**[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)**|[Complete client command set](/doc/commands.md)|
-||**[JTAG](/doc/jtag_notes.md)**||
+||**[JTAG](/doc/jtag_notes.md)**|[T55xx Guide](/doc/T5577_Guide.md)|
 
 
 ## Notes / helpful documents

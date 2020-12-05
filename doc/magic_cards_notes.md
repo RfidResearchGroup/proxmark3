@@ -238,6 +238,8 @@ hf 14a info
 
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
 
+(also referred as MCT compatible by some sellers)
+
 ### Identify
 
 ```

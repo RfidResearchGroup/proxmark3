@@ -489,7 +489,8 @@ SRCS =  aiddesfire.c \
 		cmdlfawid.c \
 		cmdlfcotag.c \
 		cmdlfdestron.c \
-		cmdlfem4x.c \
+		cmdlfem.c \
+		cmdlfem410x.c \
 		cmdlfem4x05.c \
 		cmdlfem4x50.c \
 		cmdlffdxb.c \

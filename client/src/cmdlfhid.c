@@ -19,13 +19,10 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfhid.h"
-
 #include <stdio.h>
 #include <string.h>
-
 #include <ctype.h>
 #include <inttypes.h>
-
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "commonutil.h"  // ARRAYLEN
@@ -38,6 +35,7 @@
 #include "lfdemod.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 #ifndef BITS
 # define BITS 96
@@ -47,8 +45,7 @@ static int CmdHelp(const char *Cmd);
 
 // sending three times.  Didn't seem to break the previous sim?
 static int sendPing(void) {
-    SendCommandNG(CMD_PING, NULL, 0);
-    SendCommandNG(CMD_PING, NULL, 0);
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
     SendCommandNG(CMD_PING, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -63,16 +60,23 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
 
     if (HIDPack(format_idx, card, &packed) == false) {
         PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-        return PM3_ESOFT;
+        return PM3_ESOFT;        
     }
 
-    if (verbose)
-        PrintAndLogEx(INFO, "Trying FC: %u; CN: %"PRIu64";  Issue level: %u; OEM: %u", card->FacilityCode, card->CardNumber, card->IssueLevel, card->OEM);
+    if (verbose) {
+        PrintAndLogEx(INFO, "Trying FC: " _YELLOW_("%u") " CN: " _YELLOW_("%"PRIu64) " Issue level: " _YELLOW_("%u") " OEM: " _YELLOW_("%u")
+                , card->FacilityCode
+                , card->CardNumber
+                , card->IssueLevel
+                , card->OEM
+                );
+    }
 
     lf_hidsim_t payload;
     payload.hi2 = packed.Top;
     payload.hi = packed.Mid;
     payload.lo = packed.Bot;
+    payload.longFMT = (packed.Mid > 0xFFF);
 
     clearCommandBuffer();
 
@@ -153,15 +157,48 @@ int demodHID(bool verbose) {
 }
 
 static int CmdHIDDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hid demod",
+                  "Try to find HID Prox preamble, if found decode / descramble data",
+                  "lf hid demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodHID(true);
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-static int CmdHIDRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 16000);
-    return demodHID(true);
+static int CmdHIDReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hid reader",
+                  "read a HID Prox tag",
+                  "lf hid reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        lf_read(false, 16000);
+        demodHID(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 // this read loops on device side.
@@ -196,7 +233,8 @@ static int CmdHIDSim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid sim",
-                  "Enables simulation of HID card with card number.",
+                  "Enables simulation of HID card with card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf hid sim -r 2006ec0c86                -> HID 10301 26 bit\n"
                   "lf hid sim -r 2e0ec00c87                -> HID Corporate 35 bit\n"
                   "lf hid sim -r 01f0760643c3              -> HID P10001 40 bit\n"
@@ -209,10 +247,9 @@ static int CmdHIDSim(const char *Cmd) {
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_u64_0(NULL, "fc",      "<dec>", "facility code"),
         arg_u64_0(NULL, "cn",      "<dec>", "card number"),
-        arg_int0("i",    NULL,     "<dec>", "issue level"),
-        arg_int0("o",   "oem",     "<dec>", "OEM code"),
+        arg_u64_0("i",    NULL,     "<dec>", "issue level"),
+        arg_u64_0("o",   "oem",     "<dec>", "OEM code"),
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
-//        arg_lit0("q",   "Q5",               "optional - specify writing to Q5/T5555 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -231,8 +268,6 @@ static int CmdHIDSim(const char *Cmd) {
     int raw_len = 0;
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
-
-    //bool q5 = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     wiegand_message_t packed;
@@ -288,14 +323,16 @@ static int CmdHIDClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid clone",
-                  "Clone HID to T55x7. Tag must be on antenna!",
-                  "lf hid clone -r 2006ec0c86                -> HID 10301 26 bit\n"
-                  "lf hid clone -r 2e0ec00c87                -> HID Corporate 35 bit\n"
-                  "lf hid clone -r 01f0760643c3              -> HID P10001 40 bit\n"
-                  "lf hid clone -r 01400076000c86            -> HID Corporate 48 bit\n"
-                  "lf hid clone -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit\n"
+                  "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
+                  "Tag must be on the antenna when issuing this command.",
+                  "lf hid clone -r 2006ec0c86                      -> write raw value (HID 10301 26 bit)\n"
+                  "lf hid clone -r 2e0ec00c87                      -> write raw value (HID Corporate 35 bit)\n"
+                  "lf hid clone -r 01f0760643c3                    -> write raw value (HID P10001 40 bit)\n"
+                  "lf hid clone -r 01400076000c86                  -> write raw value (HID Corporate 48 bit)\n"
+                  "lf hid clone -w H10301 --fc 118 --cn 1603       -> write raw value (HID 10301 26 bit)\n"
+                  "lf hid clone -w H10301 --fc 118 --cn 1603 --q5  -> HID 10301 26 bit, encode for Q5/T5555 tag\n"
+                  "lf hid clone -w H10301 --fc 118 --cn 1603 --em  -> HID 10301 26 bit, encode for EM4305/4469"
                  );
-
 
     void *argtable[] = {
         arg_param_begin,
@@ -305,7 +342,8 @@ static int CmdHIDClone(const char *Cmd) {
         arg_int0("i",    NULL,     "<dec>", "issue level"),
         arg_int0("o",   "oem",     "<dec>", "OEM code"),
         arg_strx0("r",  "raw",     "<hex>", "raw bytes"),
-//        arg_lit0("q",   "Q5",               "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -325,8 +363,14 @@ static int CmdHIDClone(const char *Cmd) {
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
 
-    //bool q5 = arg_get_lit(ctx, 7);
+    bool q5 = arg_get_lit(ctx, 7);
+    bool em = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
@@ -351,6 +395,17 @@ static int CmdHIDClone(const char *Cmd) {
         }
     }
 
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
     if (raw_len == 0) {
         PrintAndLogEx(INFO, "Preparing to clone HID tag");
         HIDTryUnpack(&packed, false);
@@ -363,11 +418,22 @@ static int CmdHIDClone(const char *Cmd) {
     payload.hi = packed.Mid;
     payload.lo = packed.Bot;
     payload.longFMT = (packed.Mid > 0xFFF);
+    payload.Q5 = q5;
+    payload.EM = em;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_CLONE, (uint8_t *)&payload, sizeof(payload));
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid read`") " to verify");
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_HID_CLONE, &resp);
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Done");
+    } else {
+        PrintAndLogEx(FAILED, "Failed cloning");
+        return resp.status;
+    }
+
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid reader`") " to verify");
     return PM3_SUCCESS;
 }
 
@@ -405,17 +471,18 @@ static int CmdHIDBrute(const char *Cmd) {
                   "lf hid brute -w H10301 --fc 224\n"
                   "lf hid brute -w H10301 --fc 21 -d 2000\n"
                   "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000\n"
+                  "lf hid brute -v -w H10301 --fc 21 --cn 200 -d 2000 --up\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose logging, show all tries"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-        arg_int0(NULL, "fn",     "<dec>",    "facility code"),
-        arg_int0(NULL, "cn",     "<dec>",    "card number to start with"),
-        arg_int0("i",  "issue",  "<dec>",    "issue level"),
-        arg_int0("o", "oem",     "<dec>",    "OEM code"),
-        arg_int0("d", "delay",   "<dec>",    "delay betweens attempts in ms. Default 1000ms"),
+        arg_u64_0(NULL, "fc",     "<dec>",    "facility code"),
+        arg_u64_0(NULL, "cn",     "<dec>",    "card number to start with"),
+        arg_u64_0("i",  "issue",  "<dec>",    "issue level"),
+        arg_u64_0("o", "oem",     "<dec>",    "OEM code"),
+        arg_u64_0("d", "delay",   "<dec>",    "delay betweens attempts in ms. Default 1000ms"),
         arg_lit0(NULL, "up",                 "direction to increment card number. (default is both directions)"),
         arg_lit0(NULL, "down",               "direction to decrement card number. (default is both directions)"),
         arg_param_end
@@ -433,11 +500,11 @@ static int CmdHIDBrute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    cn_hi.FacilityCode = arg_get_int_def(ctx, 3, 0);
-    cn_hi.CardNumber = arg_get_int_def(ctx, 4, 0);
-    cn_hi.IssueLevel = arg_get_int_def(ctx, 5, 0);
-    cn_hi.OEM = arg_get_int_def(ctx, 6, 0);
-    delay = arg_get_int_def(ctx, 7, 1000);
+    cn_hi.FacilityCode = arg_get_u32_def(ctx, 3, 0);
+    cn_hi.CardNumber = arg_get_u32_def(ctx, 4, 0);
+    cn_hi.IssueLevel = arg_get_u32_def(ctx, 5, 0);
+    cn_hi.OEM = arg_get_u32_def(ctx, 6, 0);
+    delay = arg_get_u32_def(ctx, 7, 1000);
 
     if (arg_get_lit(ctx, 8) && arg_get_lit(ctx, 9)) {
         direction = 0;
@@ -457,20 +524,20 @@ static int CmdHIDBrute(const char *Cmd) {
         PrintAndLogEx(INFO, "Card#............ %" PRIu64, cn_hi.CardNumber);
         switch (direction) {
             case 0:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH"));
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH") " delay " _YELLOW_("%d"), delay);
                 break;
             case 1:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("UP"));
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("UP") " delay " _YELLOW_("%d"), delay);
                 break;
             case 2:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN"));
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN") " delay " _YELLOW_("%d"), delay);
                 break;
             default:
                 break;
         }
     }
-    PrintAndLogEx(INFO, "Brute-forcing HID reader");
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation or press `enter` to exit");
+    PrintAndLogEx(INFO, "Started brute-forcing HID Prox reader");
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation or press " _GREEN_("`<enter>`") " to exit");
 
     // copy values to low.
     cn_low = cn_hi;
@@ -496,7 +563,9 @@ static int CmdHIDBrute(const char *Cmd) {
         if (direction != 2) {
             if (cn_hi.CardNumber < 0xFFFF) {
                 cn_hi.CardNumber++;
-                if (sendTry(format_idx, &cn_hi, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+                if (sendTry(format_idx, &cn_hi, delay, verbose) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
             } else {
                 fin_hi = true;
             }
@@ -506,7 +575,9 @@ static int CmdHIDBrute(const char *Cmd) {
         if (direction != 1) {
             if (cn_low.CardNumber > 0) {
                 cn_low.CardNumber--;
-                if (sendTry(format_idx, &cn_low, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+                if (sendTry(format_idx, &cn_low, delay, verbose) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
             } else {
                 fin_low = true;
             }
@@ -537,7 +608,7 @@ static int CmdHIDBrute(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdHIDDemod,    AlwaysAvailable, "demodulate HID Prox tag from the GraphBuffer"},
-    {"read",    CmdHIDRead,     IfPm3Lf,         "attempt to read and extract tag data"},
+    {"reader",  CmdHIDReader,   IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID tag to T55x7"},
     {"sim",     CmdHIDSim,      IfPm3Lf,         "simulate HID tag"},
     {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce card number against reader"},

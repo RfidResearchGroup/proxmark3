@@ -238,6 +238,8 @@ typedef struct {
     uint32_t hi;
     uint32_t lo;
     uint8_t longFMT;
+    bool Q5;
+    bool EM;
 } PACKED lf_hidsim_t;
 
 // For CMD_LF_FSK_SIMULATE (FSK)

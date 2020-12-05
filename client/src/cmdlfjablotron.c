@@ -9,54 +9,25 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfjablotron.h"
-
 #include <string.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <ctype.h>
-
 #include "cmdparser.h"    // command_t
 #include "comms.h"
-#include "commonutil.h" // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "cmdlft55xx.h" // verifywrite
+#include "protocols.h"    // for T55xx config register definitions
+#include "lfdemod.h"      // parityTest
+#include "cmdlft55xx.h"   // verifywrite
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 #define JABLOTRON_ARR_LEN 64
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_jablotron_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Jablotron tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "Usage: lf jablotron clone [h] <card ID> <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          : This help");
-    PrintAndLogEx(NORMAL, "      <card ID>  : jablotron card ID");
-    PrintAndLogEx(NORMAL, "      <Q5>       : specify writing to Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron clone 112233"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_jablotron_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of jablotron card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf jablotron sim [h] <card ID>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          : This help");
-    PrintAndLogEx(NORMAL, "      <card ID>  : jablotron card ID");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf jablotron sim 112233"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 static uint8_t jablontron_chksum(uint8_t *bits) {
     uint8_t chksum = 0;
@@ -134,30 +105,97 @@ int demodJablotron(bool verbose) {
 
 //see ASKDemod for what args are accepted
 static int CmdJablotronDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf jablotron demod",
+                  "Try to find Jablotron preamble, if found decode / descramble data",
+                  "lf jablotron demod\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodJablotron(true);
 }
 
-static int CmdJablotronRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 16000);
-    return demodJablotron(true);
+static int CmdJablotronReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf jablotron reader",
+                  "read a jablotron tag",
+                  "lf jablotron reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        lf_read(false, 16000);
+        demodJablotron(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdJablotronClone(const char *Cmd) {
 
-    uint64_t fullcode = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf jablotron clone",
+                  "clone a Jablotron tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf jablotron clone --cn 01b669\n"
+                  "lf jablotron clone --q5 --cn 01b669 -> encode for Q5/T5555 tag\n"
+                  "lf jablotron clone --em --cn 01b669 -> encode for EM4305/4469"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "cn", "<hex>", "Jablotron card ID - 5 bytes max"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int raw_len = 0;
+    uint8_t raw[5] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    bool q5 = arg_get_lit(ctx, 2);
+    bool em = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
     uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
-
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_clone();
-
-    fullcode = param_get64ex(Cmd, 0, 0, 16);
-
-    //Q5
-    bool q5 = tolower(param_getchar(Cmd, 1)) == 'q';
-    if (q5)
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_JABLOTRON_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
+
+
+    uint64_t fullcode = bytes_to_num(raw, raw_len);
 
     // clearing the topbit needed for the preambl detection.
     if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
@@ -181,19 +219,43 @@ static int CmdJablotronClone(const char *Cmd) {
 
     free(bits);
 
-    PrintAndLogEx(INFO, "Preparing to clone Jablotron to " _YELLOW_("%s") " with FullCode: %"PRIx64, (q5) ? "Q5/T5555" : "T55x7", fullcode);
-    print_blocks(blocks,  ARRAYLEN(blocks));
+   uint64_t id = getJablontronCardId(fullcode);
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(INFO, "Preparing to clone Jablotron to " _YELLOW_("%s") " with FullCode: " _GREEN_("%"PRIx64)"  id: " _GREEN_("%"PRIx64), cardtype, fullcode, id);
+    print_blocks(blocks,  ARRAYLEN(blocks));
+    
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf jablotron reader`") " to verify");
+    return res;
 }
 
 static int CmdJablotronSim(const char *Cmd) {
-    uint64_t fullcode = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf jablotron sim",
+                  "Enables simulation of jablotron card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf jablotron sim --cn 01b669"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "cn", "<hex>", "Jablotron card ID - 5 bytes max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    fullcode = param_get64ex(Cmd, 0, 0, 16);
+    int raw_len = 0;
+    uint8_t raw[5] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+    CLIParserFree(ctx);
+
+    uint64_t fullcode = bytes_to_num(raw, raw_len);
 
     // clearing the topbit needed for the preambl detection.
     if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
@@ -201,7 +263,7 @@ static int CmdJablotronSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Jablotron - FullCode: %"PRIx64, fullcode);
+    PrintAndLogEx(SUCCESS, "Simulating Jablotron - FullCode: " _YELLOW_("%"PRIx64), fullcode);
 
     uint8_t *bs = calloc(JABLOTRON_ARR_LEN, sizeof(uint8_t));
     if (bs == NULL) {
@@ -236,7 +298,7 @@ static int CmdJablotronSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"demod",   CmdJablotronDemod,  AlwaysAvailable, "Demodulate an Jablotron tag from the GraphBuffer"},
-    {"read",    CmdJablotronRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"reader",  CmdJablotronReader, IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
     {"clone",   CmdJablotronClone,  IfPm3Lf,         "clone jablotron tag to T55x7 or Q5/T5555"},
     {"sim",     CmdJablotronSim,    IfPm3Lf,         "simulate jablotron tag"},
     {NULL, NULL, NULL, NULL}

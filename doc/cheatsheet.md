@@ -62,57 +62,75 @@ Dump iCLASS card contents
 ```
 Options
 ---
-k <key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
+-f, --file <filename>          filename to save dump to
+-k, --key <hex>                debit key as 16 hex symbols OR NR/MAC for replay
+    --ki <dec>                 debit key index to select key from memory 'hf iclass managekeys'
+    --credit <hex>             credit key as 16 hex symbols
+    --ci <dec>                 credit key index to select key from memory 'hf iclass managekeys'
+    --elite                    elite computations applied to key
+    --raw                      raw, the key is interpreted as raw block 3/4
+    --nr                       replay of NR/MAC
 
-m3 --> hf iclass dump k 0
+pm3 --> hf iclass dump --ki 0
 ```
 
 Read iCLASS Block
 ```
 Options
 ---
-b <block>  : The block number as 2 hex symbols
-k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+-k, --key <hex>                Access key as 16 hex symbols
+-b, --block <dec>              The block number to read as an integer
+    --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
+    --credit                   key is assumed to be the credit key
+    --elite                    elite computations applied to key
+    --raw                      no computations applied to key (raw)
+    --nr                       replay of NR/MAC
 
-pm3 --> hf iclass rdbl b 7 k 0
+pm3 --> hf iclass rdbl -b 7 --ki 0
 ```
 
 Write to iCLASS Block
 ```
 Options
 ---
-b <block>  : The block number as 2 hex symbols
-d <data>   : Set the Data to write as 16 hex symbols
-k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+-k, --key <hex>                Access key as 16 hex symbols
+-b, --block <dec>              The block number to read as an integer
+-d, --data <hex>               data to write as 16 hex symbols
+    --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
+    --credit                   key is assumed to be the credit key
+    --elite                    elite computations applied to key
+    --raw                      no computations applied to key (raw)
+    --nr                       replay of NR/MAC
 
-pm3 --> hf iclass wrbl b 07 d 6ce099fe7e614fd0 k 0
+pm3 --> hf iclass wrbl -b 7 -d 6ce099fe7e614fd0 --ki 0
 ```
 
 Print keystore
 ```
 Options
 ---
-p           : print keys loaded into memory
+-p, --print                    Print keys loaded into memory
 
-pm3 --> hf iclass managekeys p
+
+pm3 --> hf iclass managekeys -p
 ```
 
 Add key to keystore [0-7]
 ```
 Options
 ---
-n <keynbr>    : specify the keyNbr to set in memory
-k <key>       : set a key in memory
+-f, --file <filename>          Specify a filename to use with load or save operations
+    --ki <dec>                 Specify key index to set key in memory
 
-pm3 --> hf iclass managekeys n 3 k AFA785A7DAB33378
+pm3 --> hf iclass managekeys --ki 3 -k AFA785A7DAB33378
 ```
 
 Encrypt iCLASS Block
 ```
 Options
 ---
--d, --data <block data>        data to encrypt
--k, --key <transport key>      3DES transport key
+-d, --data <hex>               data to encrypt
+-k, --key <hex>                3DES transport key
 -v, --verbose                  verbose output
 
 pm3 --> hf iclass encrypt -d 0000000f2aa3dba8
@@ -123,8 +141,8 @@ Decrypt iCLASS Block / file
 Options
 ---
 -f, --file <filename>          filename of dumpfile
--d, --data <encrypted blk>     3DES encrypted data
--k, --key <transport key>      3DES transport key
+-d, --data <hex>               3DES encrypted data
+-k, --key <hex>                3DES transport key
 -v, --verbose                  verbose output
 
 pm3 --> hf iclass decrypt -d 2AD4C8211F996871
@@ -142,28 +160,31 @@ pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 
 Clone iCLASS Legacy Sequence
 ```
-pm3 --> hf iclass rdbl b 7 k 0
-pm3 --> hf iclass wrbl b 7 d 6ce099fe7e614fd0 k 0
+pm3 --> hf iclass rdbl -b 7 --ki 0
+pm3 --> hf iclass wrbl -b 7 -d 6ce099fe7e614fd0 --ki 0
 ```
 
 Simulate iCLASS
 ```
 Options
 ---
-0 <CSN>     simulate the given CSN
+-t, --type <int>               Simulation type to use
+    --csn <hex>                Specify CSN as 8 bytes (16 hex symbols) to use with sim type 0
+Types:
+0           simulate the given CSN
 1           simulate default CSN
 2           Runs online part of LOCLASS attack
 3           Full simulation using emulator memory (see 'hf iclass eload')
 4           Runs online part of LOCLASS attack against reader in keyroll mode
 
-pm3 --> hf iclass sim 3
+pm3 --> hf iclass sim -t 3
 ```
 
 Simulate iCLASS Sequence
 ```
-pm3 --> hf iclass dump k 0
+pm3 --> hf iclass dump --ki 0
 pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
-pm3 --> hf iclass sim 3
+pm3 --> hf iclass sim -t 3
 ```
 
 Extract custom iCLASS key (loclass attack)
@@ -172,25 +193,26 @@ Options
 ---
 f <filename>   : specify a filename to clone from
 k <key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
-e              : If 'e' is specified, elite computations applied to key
+--elite        : Elite computations applied to key
 
-pm3 --> hf iclass sim 2
+pm3 --> hf iclass sim -t 2
 pm3 --> hf iclass loclass -f iclass_mac_attack.bin
-pm3 --> hf iclass managekeys n 7 k <Kcus>
-pm3 --> hf iclass dump k 7 e
+pm3 --> hf iclass managekeys --ki 7 -k <Kcus>
+pm3 --> hf iclass dump --ki 7 --elite
 ```
 
 Verify custom iCLASS key
 ```
 Options
 ---
-f <filename> : Dictionary file with default iCLASS keys
-u            : CSN
-p            : EPURSE
-m            : macs
-e            : elite
+-f, --file <filename>          Dictionary file with default iclass keys
+    --csn <hex>                Specify CSN as 8 bytes (16 hex symbols)
+    --epurse <hex>             Specify ePurse as 8 bytes (16 hex symbols)
+    --macs <hex>               MACs
+    --raw                      no computations applied to key (raw)
+    --elite                    Elite computations applied to key
 
-pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f iclass_default_keys e
+pm3 --> hf iclass lookup --csn 010a0ffff7ff12e0 --epurse feffffffffffffff --macs 66348979153c41b9 -f iclass_default_keys --elite
 ```
 
 ## MIFARE

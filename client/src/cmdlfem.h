@@ -1,17 +1,17 @@
 //-----------------------------------------------------------------------------
-//
+// Copyright (C) 2020 iceman <iceman at icesql.net>
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency Presco tag commands
+// Low frequency EM commands
 //-----------------------------------------------------------------------------
-#ifndef CMDLFPRESCO_H__
-#define CMDLFPRESCO_H__
+
+#ifndef CMDLFEM4X_H__
+#define CMDLFEM4X_H__
 
 #include "common.h"
 
-int CmdLFPresco(const char *Cmd);
-int demodPresco(bool verbose);
-#endif
+int CmdLFEM(const char *Cmd);
 
+#endif

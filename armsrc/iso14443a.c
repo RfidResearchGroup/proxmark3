@@ -20,6 +20,7 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "util.h"
+#include "util.h"
 #include "parity.h"
 #include "mifareutil.h"
 #include "commonutil.h"
@@ -1251,7 +1252,7 @@ bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_i
 // response to send, and send it.
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
+void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data, uint8_t exitAfterNReads) {
 
 #define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
 
@@ -1327,6 +1328,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     int happened = 0;
     int happened2 = 0;
     int cmdsRecvd = 0;
+    uint32_t numReads = 0; //Counts numer of times reader reads a block
 
     // compatible write block number
     uint8_t wrblock = 0;
@@ -1338,7 +1340,10 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     LED_A_ON();
 
     // main loop
-    for (;;) {
+    //for (;;) {
+    bool finished = false;
+    bool button_pushed = BUTTON_PRESS();
+    while (!button_pushed && !finished) {
         WDT_HIT();
 
         tag_response_info_t *p_response = NULL;
@@ -1467,6 +1472,12 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                     emlGetMemBt(emdata, start, 16);
                     AddCrc14A(emdata, 16);
                     EmSendCmd(emdata, sizeof(emdata));
+                    numReads++;  // Increment number of times reader requested a block
+
+                    if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
+                        Dbprintf("[MFUEMUL_WORK] %d reads done, exiting", numReads);
+                        finished = true;
+                    }
                 }
                 // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
                 p_response = NULL;
@@ -1979,9 +1990,11 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     for (;;) {
         WDT_HIT();
 
-        if (check == 2000) {
-            if (BUTTON_PRESS())
+        if (check == 1000) {
+            if (BUTTON_PRESS() || data_available()) {
+                Dbprintf("----------- " _GREEN_("BREAKING") " ----------");
                 return 1;
+            }
             check = 0;
         }
         ++check;

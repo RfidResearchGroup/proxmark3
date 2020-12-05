@@ -70,7 +70,7 @@ From "Dismantling iclass":
 
 #include "fileutils.h"
 #include "cipherutils.h"
-#include "des.h"
+#include "mbedtls/des.h"
 
 uint8_t pi[35] = {
     0x0F, 0x17, 0x1B, 0x1D, 0x1E, 0x27, 0x2B, 0x2D,
@@ -79,9 +79,6 @@ uint8_t pi[35] = {
     0x5C, 0x63, 0x65, 0x66, 0x69, 0x6A, 0x6C, 0x71,
     0x72, 0x74, 0x78
 };
-
-static mbedtls_des_context ctx_enc;
-static mbedtls_des_context ctx_dec;
 
 /**
  * @brief The key diversification algorithm uses 6-bit bytes.
@@ -94,16 +91,19 @@ static mbedtls_des_context ctx_dec;
  * @param n bitnumber
  * @return
  */
-static uint8_t getSixBitByte(uint64_t c, int n) {
+#define getSixBitByte(c, n)  ((uint8_t)(((c) >> (42 - 6 * (n))) & 0x3F))
+/*
+static inline uint8_t getSixBitByte(uint64_t c, int n) {
     return (c >> (42 - 6 * n)) & 0x3F;
 }
-
+*/
 /**
  * @brief Puts back a six-bit 'byte' into a uint64_t.
  * @param c buffer
  * @param z the value to place there
  * @param n bitnumber.
  */
+
 static void pushbackSixBitByte(uint64_t *c, uint8_t z, int n) {
     //0x XXXX YYYY ZZZZ ZZZZ ZZZZ
     //             ^z0         ^z7
@@ -210,14 +210,14 @@ static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *o
         return;
 
     bool pn = tailBit(p_in);
-    if (pn) { // pn = 1
+    if (pn) {
+        // pn = 1
         uint8_t zl = getSixBitByte(z, l);
-
         push6bits(out, zl + 1);
         permute(p_in, z, l + 1, r, out);
-    } else { // otherwise
+    } else {
+        // otherwise
         uint8_t zr = getSixBitByte(z, r);
-
         push6bits(out, zr);
         permute(p_in, z, l, r + 1, out);
     }
@@ -226,6 +226,7 @@ static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *o
 static void printState(const char *desc, uint64_t c) {
     if (g_debugMode == 0)
         return;
+
     char s[60] = {0};
     snprintf(s, sizeof(s), "%s : ", desc);
 
@@ -254,8 +255,10 @@ static void printState(const char *desc, uint64_t c) {
 void hash0(uint64_t c, uint8_t k[8]) {
     c = swapZvalues(c);
 
-    PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
-    printState("origin", c);
+    if (g_debugMode > 0) {
+        PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+        printState("origin", c);
+    }
     //These 64 bits are divided as c = x, y, z [0] , . . . , z [7]
     // x = 8 bits
     // y = 8 bits
@@ -266,9 +269,7 @@ void hash0(uint64_t c, uint8_t k[8]) {
 
     for (int n = 0;  n < 4 ; n++) {
         uint8_t zn = getSixBitByte(c, n);
-
         uint8_t zn4 = getSixBitByte(c, n + 4);
-
         uint8_t _zn = (zn % (63 - n)) + n;
         uint8_t _zn4 = (zn4 % (64 - n)) + n;
 
@@ -276,17 +277,18 @@ void hash0(uint64_t c, uint8_t k[8]) {
         pushbackSixBitByte(&zP, _zn4, n + 4);
     }
 
-    printState("0|0|z'", zP);
+    if (g_debugMode > 0) printState("0|0|z'", zP);
 
     uint64_t zCaret = check(zP);
-    printState("0|0|z^", zP);
+
+    if (g_debugMode > 0) printState("0|0|z^", zP);
 
     uint8_t p = pi[x % 35];
 
     if (x & 1) //Check if x7 is 1
         p = ~p;
 
-    PrintAndLogEx(DEBUG, "p: %02x", p);
+    if (g_debugMode > 0) PrintAndLogEx(DEBUG, "     p : %02x", p);
 
     BitstreamIn p_in = { &p, 8, 0 };
     uint8_t outbuffer[] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -301,9 +303,8 @@ void hash0(uint64_t c, uint8_t k[8]) {
 
     zTilde >>= 16;
 
-    printState("0|0|z~", zTilde);
+    if (g_debugMode > 0) printState("0|0|z~", zTilde);
 
-//    int zerocounter = 0 ;
     for (int i = 0; i < 8; i++) {
         // the key on index i is first a bit from y
         // then six bits from z,
@@ -316,8 +317,6 @@ void hash0(uint64_t c, uint8_t k[8]) {
 
         // First, place y(7-i) leftmost in k
         k[i] |= (y  << (7 - i)) & 0x80 ;
-
-
 
         uint8_t zTilde_i = getSixBitByte(zTilde, i);
         // zTildeI is now on the form 00XXXXXX
@@ -342,9 +341,6 @@ void hash0(uint64_t c, uint8_t k[8]) {
             k[i] |= zTilde_i & 0x7E;
             k[i] |= (~p_i) & 1;
         }
-//        if ((k[i] & 1) == 0) {
-//            zerocounter++;
-//        }
     }
 }
 /**
@@ -354,18 +350,17 @@ void hash0(uint64_t c, uint8_t k[8]) {
  * @param div_key
  */
 void diversifyKey(uint8_t *csn, uint8_t *key, uint8_t *div_key) {
-    // Prepare the DES key
-    mbedtls_des_setkey_enc(&ctx_enc, key);
 
     uint8_t crypted_csn[8] = {0};
 
     // Calculate DES(CSN, KEY)
+    mbedtls_des_context ctx_enc;
+    mbedtls_des_setkey_enc(&ctx_enc, key);
     mbedtls_des_crypt_ecb(&ctx_enc, csn, crypted_csn);
+    mbedtls_des_free(&ctx_enc);
 
     //Calculate HASH0(DES))
     uint64_t c_csn = x_bytes_to_num(crypted_csn, sizeof(crypted_csn));
-    //uint64_t crypted_csn_swapped = swapZvalues(crypt_csn);
-
     hash0(c_csn, div_key);
 }
 /*
@@ -420,28 +415,38 @@ typedef struct {
     uint8_t uid[8];
     uint8_t t_key[8];
     uint8_t div_key[8];
-} Testcase;
+} testcase_t;
 
-static int testDES(Testcase testcase) {
+static int testDES(uint8_t *key, testcase_t testcase) {
     uint8_t des_encrypted_csn[8] = {0};
     uint8_t decrypted[8] = {0};
     uint8_t div_key[8] = {0};
+
+    mbedtls_des_context ctx_enc;
+    mbedtls_des_context ctx_dec;
+
+    mbedtls_des_setkey_enc(&ctx_enc, key);
+    mbedtls_des_setkey_dec(&ctx_dec, key);
+
     int retval = mbedtls_des_crypt_ecb(&ctx_enc, testcase.uid, des_encrypted_csn);
     retval |= mbedtls_des_crypt_ecb(&ctx_dec, des_encrypted_csn, decrypted);
+
+    mbedtls_des_free(&ctx_enc);
+    mbedtls_des_free(&ctx_dec);
 
     if (memcmp(testcase.uid, decrypted, 8) != 0) {
         //Decryption fail
         PrintAndLogEx(FAILED, "Encryption <-> Decryption FAIL");
-        printarr("Input", testcase.uid, 8);
-        printarr("Decrypted", decrypted, 8);
+        printarr("    input", testcase.uid, 8);
+        printarr("    decrypted", decrypted, 8);
         retval = 1;
     }
 
     if (memcmp(des_encrypted_csn, testcase.t_key, 8) != 0) {
         //Encryption fail
         PrintAndLogEx(FAILED, "Encryption != Expected result");
-        printarr("Output", des_encrypted_csn, 8);
-        printarr("Expected", testcase.t_key, 8);
+        printarr("    output", des_encrypted_csn, 8);
+        printarr("    expected", testcase.t_key, 8);
         retval = 1;
     }
     uint64_t crypted_csn = x_bytes_to_num(des_encrypted_csn, 8);
@@ -453,7 +458,7 @@ static int testDES(Testcase testcase) {
         printarr("  csn   ", testcase.uid, 8);
         printarr("{csn}   ", des_encrypted_csn, 8);
         printarr("hash0   ", div_key, 8);
-        printarr("Expected", testcase.div_key, 8);
+        printarr("    expected", testcase.div_key, 8);
         retval = 1;
     }
     return retval;
@@ -461,9 +466,12 @@ static int testDES(Testcase testcase) {
 static bool des_getParityBitFromKey(uint8_t key) {
     // The top 7 bits is used
     bool parity = ((key & 0x80) >> 7)
-                  ^ ((key & 0x40) >> 6) ^ ((key & 0x20) >> 5)
-                  ^ ((key & 0x10) >> 4) ^ ((key & 0x08) >> 3)
-                  ^ ((key & 0x04) >> 2) ^ ((key & 0x02) >> 1);
+                  ^ ((key & 0x40) >> 6)
+                  ^ ((key & 0x20) >> 5)
+                  ^ ((key & 0x10) >> 4)
+                  ^ ((key & 0x08) >> 3)
+                  ^ ((key & 0x04) >> 2)
+                  ^ ((key & 0x02) >> 1);
     return !parity;
 }
 
@@ -480,11 +488,11 @@ static void des_checkParity(uint8_t *key) {
     if (fails) {
         PrintAndLogEx(FAILED, "parity fails: %d", fails);
     } else {
-        PrintAndLogEx(SUCCESS, "Key syntax is with parity bits inside each byte");
+        PrintAndLogEx(SUCCESS, "    Key syntax is with parity bits inside each byte (%s)", _GREEN_("ok"));
     }
 }
 
-Testcase testcases[] = {
+testcase_t testcases[] = {
 
     {{0x8B, 0xAC, 0x60, 0x1F, 0x53, 0xB8, 0xED, 0x11}, {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x02, 0x04, 0x06, 0x08, 0x01, 0x03, 0x05, 0x07}},
     {{0xAE, 0x51, 0xE5, 0x62, 0xE7, 0x9A, 0x99, 0x39}, {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, {0x04, 0x02, 0x06, 0x08, 0x01, 0x03, 0x05, 0x07}},
@@ -555,14 +563,14 @@ Testcase testcases[] = {
     {{0}, {0}, {0}}
 };
 
-static int testKeyDiversificationWithMasterkeyTestcases(void) {
+static int testKeyDiversificationWithMasterkeyTestcases(uint8_t *key) {
     int i, error = 0;
     uint8_t empty[8] = {0};
 
     PrintAndLogEx(INFO, "Testing encryption/decryption");
 
     for (i = 0; memcmp(testcases + i, empty, 8); i++)
-        error += testDES(testcases[i]);
+        error += testDES(key, testcases[i]);
 
     if (error)
         PrintAndLogEx(FAILED, "%d errors occurred (%d testcases)", error, i);
@@ -581,7 +589,7 @@ static int testCryptedCSN(uint64_t crypted_csn, uint64_t expected) {
     PrintAndLogEx(DEBUG, "");
     PrintAndLogEx(DEBUG, "    {csn}      %"PRIx64, crypted_csn);
     PrintAndLogEx(DEBUG, "    {csn-revz} %"PRIx64, crypted_csn_swapped);
-    PrintAndLogEx(DEBUG, "    hash0      %"PRIx64 "   (%s)", resultbyte, (resultbyte == expected) ?  _GREEN_("OK") : _RED_("FAIL"));
+    PrintAndLogEx(DEBUG, "    hash0      %"PRIx64 "   (%s)", resultbyte, (resultbyte == expected) ? _GREEN_("ok") : _RED_("fail"));
 
     if (resultbyte != expected) {
         PrintAndLogEx(DEBUG, "    expected       " _YELLOW_("%"PRIx64),  expected);
@@ -590,19 +598,22 @@ static int testCryptedCSN(uint64_t crypted_csn, uint64_t expected) {
     return PM3_SUCCESS;
 }
 
-static int testDES2(uint64_t csn, uint64_t expected) {
+static int testDES2(uint8_t *key, uint64_t csn, uint64_t expected) {
     uint8_t result[8] = {0};
     uint8_t input[8] = {0};
 
     PrintAndLogEx(DEBUG, "   csn      %"PRIx64, csn);
     x_num_to_bytes(csn, 8, input);
 
+    mbedtls_des_context ctx_enc;
+    mbedtls_des_setkey_enc(&ctx_enc, key);
     mbedtls_des_crypt_ecb(&ctx_enc, input, result);
+    mbedtls_des_free(&ctx_enc);
 
     uint64_t crypt_csn = x_bytes_to_num(result, 8);
 
     PrintAndLogEx(DEBUG, "   {csn}    %"PRIx64, crypt_csn);
-    PrintAndLogEx(DEBUG, "   expected %"PRIx64 "    (%s)", expected, (expected == crypt_csn) ? _GREEN_("OK") : _RED_("FAIL"));
+    PrintAndLogEx(DEBUG, "   expected %"PRIx64 "    (%s)", expected, (expected == crypt_csn) ? _GREEN_("ok") : _RED_("fail"));
 
     if (expected != crypt_csn)
         return PM3_ESOFT;
@@ -619,8 +630,7 @@ static int doTestsWithKnownInputs(void) {
     PrintAndLogEx(INFO, "Testing DES encryption");
     uint8_t key[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
 
-    mbedtls_des_setkey_enc(&ctx_enc, key);
-    testDES2(0xbbbbaaaabbbbeeee, 0xd6ad3ca619659e6b);
+    testDES2(key, 0xbbbbaaaabbbbeeee, 0xd6ad3ca619659e6b);
 
     PrintAndLogEx(INFO, "Testing hashing algorithm");
 
@@ -681,11 +691,10 @@ int doKeyTests(void) {
             PrintAndLogEx(SUCCESS, "Key present");
             PrintAndLogEx(SUCCESS, "Checking key parity...");
             des_checkParity(key);
-            mbedtls_des_setkey_enc(&ctx_enc, key);
-            mbedtls_des_setkey_dec(&ctx_dec, key);
+
             // Test hashing functions
             PrintAndLogEx(SUCCESS, "The following tests require the correct 8-byte master key");
-            testKeyDiversificationWithMasterkeyTestcases();
+            testKeyDiversificationWithMasterkeyTestcases(key);
         }
     }
     PrintAndLogEx(INFO, "Testing key diversification with non-sensitive keys...");

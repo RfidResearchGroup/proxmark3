@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+// marshmellow
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -9,78 +10,41 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfio.h"
-
-#include <stdio.h>      // sscanf
+#include <stdio.h>        // sscanf
 #include <stdlib.h>
 #include <string.h>
-
 #include <ctype.h>
-
-#include "commonutil.h"     //ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "graph.h"
 #include "cmdlf.h"
-#include "ui.h"         // PrintAndLog
-#include "lfdemod.h"    // parityTest, bitbytes_to_byte
-#include "protocols.h"  // for T55xx config register definitions
+#include "ui.h"           // PrintAndLog
+#include "lfdemod.h"      // parityTest, bitbytes_to_byte
+#include "protocols.h"    // for T55xx config register definitions
 #include "cmddata.h"
-#include "cmdlft55xx.h" // verifywrite
+#include "cmdlft55xx.h"   // verifywrite
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_lf_io_watch(void) {
-    PrintAndLogEx(NORMAL, "Enables IOProx compatible reader mode printing details of scanned tags.");
-    PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf io watch");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        lf io watch"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_io_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of IOProx card with specified facility-code and card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf io sim [h] <version> <facility-code> <card-number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version (" _YELLOW_("decimal") ")");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (" _YELLOW_("hex") ")");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (" _YELLOW_("decimal") ")");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf io sim 01 101 1337"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_io_clone(void) {
-    PrintAndLogEx(NORMAL, "Enables cloning of IOProx card with specified facility-code and card number onto T55x7 or Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "The T55x7 must be on the antenna when issuing this command.  T55x7 blocks are calculated and printed in the process.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf io clone [h] <version> <facility-code> <card-number> <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version (" _YELLOW_("decimal") ")");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (" _YELLOW_("hex") ")");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (" _YELLOW_("decimal") ")");
-    PrintAndLogEx(NORMAL, "             <Q5> :  optional - specify writing to Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf io clone 01 101 1337"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdIOProxWatch(const char *Cmd) {
-    uint8_t c = tolower(param_getchar(Cmd, 0));
-    if (c == 'h') return usage_lf_io_watch();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf io watch",
+                  "Enables ioProx compatible reader mode printing details.\n"
+                  "By default, values are printed and logged until the button is pressed or another USB command is issued.",
+                  "lf io watch"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for IO Prox cards - place tag on antenna");
     PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
@@ -92,9 +56,8 @@ static int CmdIOProxWatch(const char *Cmd) {
     return resp.status;
 }
 
-//by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
-//print ioprox ID and some format details
+//print ioProx ID and some format details
 int demodIOProx(bool verbose) {
     (void) verbose; // unused so far
     int idx = 0, retval = PM3_SUCCESS;
@@ -192,43 +155,85 @@ int demodIOProx(bool verbose) {
 }
 
 static int CmdIOProxDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf io demod",
+                  "Try to find ioProx preamble, if found decode / descramble data",
+                  "lf io demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodIOProx(true);
 }
 // this read is the "normal" read,  which download lf signal and tries to demod here.
-static int CmdIOProxRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 12000);
-    return demodIOProx(true);
+static int CmdIOProxReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf io reader",
+                  "read a ioProx tag",
+                  "lf io reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    do {
+        lf_read(false, 12000);
+        demodIOProx(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
+
 static int CmdIOProxSim(const char *Cmd) {
-    uint16_t cn = 0;
-    uint8_t version = 0, fc = 0;
-    uint8_t bs[64];
-    memset(bs, 0x00, sizeof(bs));
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_sim();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf io sim",
+                  "Enables simulation of ioProx card with specified facility-code and card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf io sim --vn 1 --fc 101 --cn 1337"
+                 );
 
-    version = param_get8(Cmd, 0);
-    fc = param_get8ex(Cmd, 1, 0, 16);
-    cn = param_get32ex(Cmd, 2, 0, 10);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "vn", "<dec>", "8bit version"),
+        arg_u64_1(NULL, "fc", "<dec>", "8bit facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16bit card number"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (!version || !fc || !cn) return usage_lf_io_sim();
+    uint8_t version = arg_get_u32_def(ctx, 1, 0);
+    uint8_t fc = arg_get_u32_def(ctx, 2, 0);
+    uint16_t cn = arg_get_u32_def(ctx, 3, 0);
+
+    CLIParserFree(ctx);
 
     if ((cn & 0xFFFF) != cn) {
         cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn);
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
+    PrintAndLogEx(SUCCESS, "Simulating ioProx version: " _YELLOW_("%u") " FC: " _YELLOW_("%u (0x%02x)") " CN: " _YELLOW_("%u"), version, fc, fc, cn);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+
+    uint8_t bs[64];
+    memset(bs, 0x00, sizeof(bs));
 
     if (getIOProxBits(version, fc, cn, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
-    // IOProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
+    // ioProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Invert and clk setting
     // size --- 64 bits == 8 bytes
@@ -242,10 +247,8 @@ static int CmdIOProxSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
     free(payload);
-
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
-
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
@@ -254,23 +257,42 @@ static int CmdIOProxSim(const char *Cmd) {
 
 static int CmdIOProxClone(const char *Cmd) {
 
-    uint16_t cn = 0;
-    uint8_t version = 0, fc = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf io clone",
+                  "Enables simulation of ioProx card with specified facility-code and card number.\n"
+                  "Tag must be on the antenna when issuing this command.",
+                  "lf io clone --vn 1 --fc 101 --cn 1337"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "vn", "<dec>", "8bit version"),
+        arg_u64_1(NULL, "fc", "<dec>", "8bit facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16bit card number"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t version = arg_get_u32_def(ctx, 1, 0);
+    uint8_t fc = arg_get_u32_def(ctx, 2, 0);
+    uint16_t cn = arg_get_u32_def(ctx, 3, 0);
+    bool q5 = arg_get_lit(ctx, 4);
+    bool em = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
     uint8_t bits[64];
     memset(bits, 0, sizeof(bits));
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_clone();
-
-    version = param_get8(Cmd, 0);
-    fc = param_get8ex(Cmd, 1, 0, 16);
-    cn = param_get32ex(Cmd, 2, 0, 10);
-
-    if (!version || !fc || !cn) return usage_lf_io_clone();
-
     if ((cn & 0xFFFF) != cn) {
         cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
+        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn);
     }
 
     if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
@@ -279,30 +301,49 @@ static int CmdIOProxClone(const char *Cmd) {
     }
 
     uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
-
-    bool q5 = tolower(param_getchar(Cmd, 3) == 'q');
-    if (q5)
+    char cardtype[16] = {"T55x7"};
+    // Q5
+    if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_IOPROX_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
 
     blocks[1] = bytebits_to_byte(bits, 32);
     blocks[2] = bytebits_to_byte(bits + 32, 32);
 
-    PrintAndLogEx(INFO, "Preparing to clone IOProx to " _YELLOW_("%s") " with Version: %u FC: %u, CN: %u", (q5) ? "Q5/T5555" : "T55x7", version, fc, cn);
+    PrintAndLogEx(INFO, "Preparing to clone ioProx to " _YELLOW_("%s") " with Version: " _GREEN_("%u") " FC: " _GREEN_("%u (0x%02x)") " CN: " _GREEN_("%u")
+            , cardtype
+            , version
+            , fc
+            , fc
+            , cn
+            );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf io read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf io reader`") " to verify");
     return res;
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        AlwaysAvailable, "this help"},
-    {"demod",   CmdIOProxDemod, AlwaysAvailable, "demodulate an IOProx tag from the GraphBuffer"},
-    {"read",    CmdIOProxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdIOProxClone, IfPm3Lf,         "clone IOProx tag to T55x7 or Q5/T5555"},
-    {"sim",     CmdIOProxSim,   IfPm3Lf,         "simulate IOProx tag"},
-    {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards. Reader mode"},
+    {"help",    CmdHelp,         AlwaysAvailable, "this help"},
+    {"demod",   CmdIOProxDemod,  AlwaysAvailable, "demodulate an ioProx tag from the GraphBuffer"},
+    {"reader",  CmdIOProxReader, IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",   CmdIOProxClone,  IfPm3Lf,         "clone ioProx tag to T55x7 or Q5/T5555"},
+    {"sim",     CmdIOProxSim,    IfPm3Lf,         "simulate ioProx tag"},
+    {"watch",   CmdIOProxWatch,  IfPm3Lf,         "continuously watch for cards. Reader mode"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -1,4 +1,5 @@
 //-----------------------------------------------------------------------------
+// Marshmellow
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -8,63 +9,28 @@
 // Biphase, rf/ , 96 bits  (unknown key calc + some bits)
 //-----------------------------------------------------------------------------
 #include "cmdlfguard.h"
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-#include "commonutil.h"     // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "cmdlft55xx.h" // verifywrite
+#include "protocols.h"    // for T55xx config register definitions
+#include "lfdemod.h"      // parityTest
+#include "cmdlft55xx.h"   // verifywrite
+#include "cliparser.h"
+#include "cmdlfem4x05.h"  // EM defines
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_lf_guard_clone(void) {
-    PrintAndLogEx(NORMAL, "clone a Guardall tag to a T55x7 or Q5/T5555 tag.");
-    PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated. ");
-    PrintAndLogEx(NORMAL, "Currently work only on 26bit");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: lf gprox clone [h] <format> <Facility-Code> <Card-Number> <Q5>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           <format>    : format length 26|32|36|40");
-    PrintAndLogEx(NORMAL, "    <Facility-Code>    : 8-bit value facility code");
-    PrintAndLogEx(NORMAL, "      <Card Number>    : 16-bit value card number");
-    PrintAndLogEx(NORMAL, "               <Q5>    : Specify writing to Q5/T5555 tag");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf gprox clone 26 123 11223"));
-    return PM3_SUCCESS;
-}
-
-static int usage_lf_guard_sim(void) {
-    PrintAndLogEx(NORMAL, "Enables simulation of Guardall card with specified card number.");
-    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.");
-    PrintAndLogEx(NORMAL, "Currently work only on 26bit");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf gprox sim [h] <format> <Facility-Code> <Card-Number>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "         <format> :  format length 26|32|36|40");
-    PrintAndLogEx(NORMAL, "  <Facility-Code> :  8-bit value facility code");
-    PrintAndLogEx(NORMAL, "  <Card Number>   : 16-bit value card number");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       lf gprox sim 26 123 11223"));
-    return PM3_SUCCESS;
-}
-
-//by marshmellow
-//attempts to demodulate and identify a G_Prox_II verex/chubb card
-//WARNING: if it fails during some points it will destroy the DemodBuffer data
+// attempts to demodulate and identify a G_Prox_II verex/chubb card
+// WARNING: if it fails during some points it will destroy the DemodBuffer data
 // but will leave the GraphBuffer intact.
-//if successful it will push askraw data back to demod buffer ready for emulation
+// if successful it will push askraw data back to demod buffer ready for emulation
 int demodGuard(bool verbose) {
     (void) verbose; // unused so far
     //Differential Biphase
@@ -150,43 +116,108 @@ int demodGuard(bool verbose) {
 }
 
 static int CmdGuardDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gproxii demod",
+                  "Try to find Guardall Prox-II preamble, if found decode / descramble data",
+                  "lf gproxii demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return demodGuard(true);
 }
 
-static int CmdGuardRead(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    lf_read(false, 10000);
-    return demodGuard(true);
+static int CmdGuardReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gproxii reader",
+                  "read a Guardall tag",
+                  "lf gproxii reader -@   -> continuous reader mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        lf_read(false, 10000);
+        demodGuard(!cm);
+    } while (cm && !kbd_enter_pressed());
+
+    return PM3_SUCCESS;
 }
 
 static int CmdGuardClone(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gproxii clone",
+                  "clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
+                  "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
+                  "Currently work only on 26bit",
+                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337\n"
+                  "lf gproxii clone --q5 --fmt 26 --fc 123 --cn 1337   -> encode for Q5/T5555 tag\n"
+                  "lf gproxii clone --em --fmt 26 --fc 123 --cn 1337   -> encode for EM4305/4469"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_guard_clone();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "fmt", "<dec>", "format length 26|32|36|40"),
+        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
+    uint32_t fmtlen = arg_get_u32_def(ctx, 1, 0);
+    uint32_t fc = arg_get_u32_def(ctx, 2, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 3, 0);
+    bool q5 = arg_get_lit(ctx, 4);
+    bool em = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
 
-    if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_clone();
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     fmtlen &= 0x7f;
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
+    uint32_t facilitycode = (fc & 0x000000FF);
+    uint32_t cardnumber = (cn & 0x0000FFFF);
 
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
-    uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
     uint8_t *bs = calloc(96, sizeof(uint8_t));
-
     if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
         return PM3_ESOFT;
     }
 
+    uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
+    char cardtype[16] = {"T55x7"};
     // Q5
-    bool q5 = tolower(param_getchar(Cmd, 3)) == 'q';
-    if (q5)
+    if (q5) {
         blocks[0] = T5555_FIXED | T5555_MODULATION_BIPHASE  | T5555_SET_BITRATE(64) | 3 << T5555_MAXBLOCK_SHIFT;
+        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
+    }
+
+    // EM4305
+    if (em) {
+        blocks[0] = EM4305_GUARDPROXII_CONFIG_BLOCK;
+        snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
+    }
 
     blocks[1] = bytebits_to_byte(bs, 32);
     blocks[2] = bytebits_to_byte(bs + 32, 32);
@@ -194,37 +225,65 @@ static int CmdGuardClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: %u, Card Number: %u", (q5) ? "Q5/T5555" : "T55x7", facilitycode, cardnumber);
+    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: " _GREEN_("%u") " Card Number: " _GREEN_("%u")
+            , cardtype
+            , facilitycode
+            , cardnumber
+            );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res;
+    if (em) {
+        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+    } else {
+        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gprox read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gproxii reader`") " to verify");
     return res;
 }
 
 static int CmdGuardSim(const char *Cmd) {
 
-    uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf gproxii sim",
+                  "Enables simulation of Guardall card with specified card number.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
+                  "Currently work only on 26bit",
+                  "lf gproxii sim --fmt 26 --fc 123 --cn 1337\n"
+                 );
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_guard_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1(NULL, "fmt", "<dec>", "format length 26|32|36|40"),
+        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_sim();
+    uint32_t fmtlen = arg_get_u32_def(ctx, 1, 0);
+    uint32_t fc = arg_get_u32_def(ctx, 2, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 3, 0);
+    CLIParserFree(ctx);
+
+    fmtlen &= 0x7F;
+    uint32_t facilitycode = (fc & 0x000000FF);
+    uint32_t cardnumber = (cn & 0x0000FFFF);
 
     uint8_t bs[96];
     memset(bs, 0x00, sizeof(bs));
-
-    fmtlen &= 0x7F;
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
 
     if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
+    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
+            , facilitycode
+            , cardnumber
+            );
 
     // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
@@ -250,7 +309,7 @@ static int CmdGuardSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdGuardDemod,  AlwaysAvailable, "demodulate a G Prox II tag from the GraphBuffer"},
-    {"read",    CmdGuardRead,   IfPm3Lf,         "attempt to read and extract tag data from the antenna"},
+    {"reader",  CmdGuardReader, IfPm3Lf,         "attempt to read and extract tag data from the antenna"},
     {"clone",   CmdGuardClone,  IfPm3Lf,         "clone Guardall tag to T55x7 or Q5/T5555"},
     {"sim",     CmdGuardSim,    IfPm3Lf,         "simulate Guardall tag"},
     {NULL, NULL, NULL, NULL}
@@ -267,7 +326,6 @@ int CmdLFGuard(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-// by marshmellow
 // demod gProxIIDemod
 // error returns as -x
 // success returns start position in bitstream
