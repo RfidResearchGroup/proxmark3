@@ -31,6 +31,7 @@
 #include "hitag2.h"
 #include "hitagS.h"
 #include "em4x50.h"
+#include "em4x70.h"
 #include "iclass.h"
 #include "legicrfsim.h"
 //#include "cryptorfsim.h"
@@ -479,6 +480,12 @@ static void SendCapabilities(void) {
 #else
     capabilities.compiled_with_em4x50 = false;
 #endif
+#ifdef WITH_EM4x70
+    capabilities.compiled_with_em4x70 = true;
+#else
+    capabilities.compiled_with_em4x70 = false;
+#endif
+
 #ifdef WITH_HFSNIFF
     capabilities.compiled_with_hfsniff = true;
 #else
@@ -1116,6 +1123,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_EM4X50_WIPE: {
             em4x50_wipe((em4x50_data_t *)packet->data.asBytes);
+            break;
+        }
+#endif
+
+#ifdef WITH_EM4x70
+        case CMD_LF_EM4X70_INFO: {
+            em4x70_info((em4x70_data_t *)packet->data.asBytes);
             break;
         }
 #endif

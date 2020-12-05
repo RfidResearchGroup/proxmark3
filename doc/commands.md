@@ -580,6 +580,7 @@ Check column "offline" for their availability.
 |`lf em 410x             `|Y       |`EM 410x commands...`
 |`lf em 4x05             `|Y       |`EM 4x05 commands...`
 |`lf em 4x50             `|Y       |`EM 4x50 commands...`
+|`lf em 4x70             `|Y       |`EM 4x70 commands...`
 
 
 ### lf fdxb

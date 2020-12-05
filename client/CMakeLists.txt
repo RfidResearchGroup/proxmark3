@@ -252,6 +252,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfem410x.c
         ${PM3_ROOT}/client/src/cmdlfem4x05.c
         ${PM3_ROOT}/client/src/cmdlfem4x50.c
+        ${PM3_ROOT}/client/src/cmdlfem4x70.c
         ${PM3_ROOT}/client/src/cmdlffdxb.c
         ${PM3_ROOT}/client/src/cmdlfgallagher.c
         ${PM3_ROOT}/client/src/cmdlfguard.c

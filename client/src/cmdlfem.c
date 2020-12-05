@@ -12,6 +12,7 @@
 #include "cmdlfem410x.h"
 #include "cmdlfem4x05.h"
 #include "cmdlfem4x50.h"
+#include "cmdlfem4x70.h"
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -26,6 +27,7 @@ static command_t CommandTable[] = {
     {"410x",  CmdLFEM410X,  AlwaysAvailable, "EM 410x commands..."},
     {"4x05",  CmdLFEM4X05,  AlwaysAvailable, "EM 4x05 commands..."},
     {"4x50",  CmdLFEM4X50,  AlwaysAvailable, "EM 4x50 commands..."},
+    {"4x70",  CmdLFEM4X70,  AlwaysAvailable, "EM 4x70 commands..."},
     {NULL, NULL, NULL, NULL}
 };
 
