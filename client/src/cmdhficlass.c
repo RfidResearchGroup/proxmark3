@@ -354,7 +354,7 @@ static int CmdHFiClassSniff(const char *Cmd) {
     WaitForResponse(CMD_HF_ICLASS_SNIFF, &resp);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -f hf_iclass_mytrace") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
@@ -371,8 +371,8 @@ static int CmdHFiClassSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", NULL, "Simulation type to use"),
-        arg_str0(NULL, "csn", "<hex>", "Specify CSN as 8 bytes (16 hex symbols) to use with sim type 0"),
+        arg_int1("t", "type", "<0-4> ", "Simulation type to use"),
+        arg_str0(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes to use with sim type 0"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -807,7 +807,7 @@ static int CmdHFiClassESave(const char *Cmd) {
     saveFileJSON(filename, jsfIclass, dump, bytes, NULL);
     free(dump);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass readtagfile ") "` to view dump file");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view") "` to view dump file");
     return PM3_SUCCESS;
 }
 
@@ -917,7 +917,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     if (enc_data_len > 0) {
         if (enc_data_len != 8) {
-            PrintAndLogEx(ERR, "Data must be 8 bytes (16 HEX characters)");
+            PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 HEX symbols)");
             CLIParserFree(clictx);
             return PM3_EINVARG;
         }
@@ -933,7 +933,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     if (key_len > 0) {
         if (key_len != 16) {
-            PrintAndLogEx(ERR, "Transport key must be 16 bytes (32 HEX characters)");
+            PrintAndLogEx(ERR, "Transport key must be 16 hex bytes (32 HEX characters)");
             CLIParserFree(clictx);
             return PM3_EINVARG;
         }
@@ -1116,7 +1116,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     CLIParserInit(&clictx, "hf iclass encrypt",
                   "3DES encrypt data\n"
                   "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
-                  "in the resources directory. The file should be 16 bytes binary data",
+                  "in the resources directory. The file should be 16 hex bytes of binary data",
                   "hf iclass encrypt -d 0102030405060708\n"
                   "hf iclass encrypt -d 0102030405060708 -k 00112233445566778899AABBCCDDEEFF");
 
@@ -1135,7 +1135,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     CLIGetHexWithReturn(clictx, 1, blk_data, &blk_data_len);
 
     if (blk_data_len != 8) {
-        PrintAndLogEx(ERR, "Block data must be 8 bytes (16 HEX characters)");
+        PrintAndLogEx(ERR, "Block data must be 8 hex bytes (16 HEX symbols)");
         CLIParserFree(clictx);
         return PM3_EINVARG;
     }
@@ -1149,7 +1149,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     if (key_len > 0) {
         if (key_len != 16) {
-            PrintAndLogEx(ERR, "Transport key must be 16 bytes (32 HEX characters)");
+            PrintAndLogEx(ERR, "Transport key must be 16 hex ytes (32 HEX characters)");
             CLIParserFree(clictx);
             return PM3_EINVARG;
         }
@@ -1231,9 +1231,9 @@ static int CmdHFiClassDump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "filename to save dump to"),
-        arg_str0("k", "key", "<hex>", "debit key as 16 hex symbols OR NR/MAC for replay"),
+        arg_str0("k", "key", "<hex>", "debit key or NR/MAC for replay as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "debit key index to select key from memory 'hf iclass managekeys'"),
-        arg_str0(NULL, "credit", "<hex>", "credit key as 16 hex symbols"),
+        arg_str0(NULL, "credit", "<hex>", "credit key as 8 hex bytes"),
         arg_int0(NULL, "ci", "<dec>", "credit key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "raw, the key is interpreted as raw block 3/4"),
@@ -1598,18 +1598,18 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass wrbl",
                   "Write data to an iCLASS tag",
                   "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B\n"
-                  "hf iclass wrbl -b 27 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit\n"
-                  "hf iclass wrbl -b 11 -d AAAAAAAAAAAAAAAA --ki 0");
+                  "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit\n"
+                  "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA --ki 0");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1("b", "block", "<dec>", "The block number to read as an integer"),
-        arg_str1("d", "data", "<hex>", "data to write as 16 hex symbols"),
+        arg_int1("b", "block", "<dec>", "The block number to read"),
+        arg_str1("d", "data", "<hex>", "data to write as 8 hex bytes"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
-        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -1657,7 +1657,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 4, data, &data_len);
 
     if (data_len != 8) {
-        PrintAndLogEx(ERR, "Data must be 8 bytes (16 hex characters)");
+        PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 hex symbols)");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -1695,20 +1695,21 @@ static int CmdHFiClassRestore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass restore",
                   "Restore data from dumpfile onto a iCLASS tag",
-                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 06 --last 1A -k 1122334455667788 --elite\n"
-                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 05 --last 19 --ki 0\n"
-                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 06 --last 19 --ki 0 --elite");
+                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0\n"
+                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0 --elite"
+                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 -k 1122334455667788 --elite\n"
+                );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>", "specify a filename to restore"),
-        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1(NULL, "first", "<dec>", "The first block number to restore as an integer"),
-        arg_int1(NULL, "last", "<dec>", "The last block number to restore as an integer"),
+        arg_int1(NULL, "first", "<dec>", "The first block number to restore"),
+        arg_int1(NULL, "last", "<dec>", "The last block number to restore"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
-        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -1916,12 +1917,12 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1("b", "block", "<dec>", "The block number to read as an integer"),
+        arg_int1("b", "block", "<dec>", "The block number to read"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
-        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -2232,12 +2233,12 @@ static int CmdHFiClassView(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass view",
                   "Print a iCLASS tag dump file",
                   "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
-                  "hf iclass view --first 1 --file hf-iclass-AA162D30F8FF12F1-dump.bin\n");
+                  "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>",  "filename of dump"),
-        arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default block6)"),
+        arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default block 6)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -2325,9 +2326,9 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "old", "<hex>", "Specify key as 8 bytes (16 hex symbols)"),
+        arg_str0(NULL, "old", "<hex>", "Specify key as 8 hex bytes"),
         arg_int0(NULL, "oki", "<dec>", "Old key index to select key from memory 'hf iclass managekeys'"),
-        arg_str0(NULL, "new", "<hex>", "Specify key as 8 bytes (16 hex symbols)"),
+        arg_str0(NULL, "new", "<hex>", "Specify key as 8 hex bytes"),
         arg_int0(NULL, "nki", "<dec>", "New key index to select key from memory 'hf iclass managekeys'"),
         arg_str0(NULL, "csn", "<hex>", "Specify a Card Serial Number (CSN) to diversify the key (if omitted will attempt to read a CSN)"),
         arg_lit0(NULL, "elite", "Elite computations applied to new key"),
@@ -2500,7 +2501,7 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass managekeys",
                   "Manage iCLASS Keys in client memory",
-                  "hf iclass managekeys --ki 0 -k 1122334455667788 -> set key\n"
+                  "hf iclass managekeys --ki 0 -k 1122334455667788 -> set key 1122334455667788 at index 0\n"
                   "hf iclass managekeys -f mykeys.bin --save       -> save key file\n"
                   "hf iclass managekeys -f mykeys.bin --load       -> load key file\n"
                   "hf iclass managekeys -p                         -> print keys");
@@ -2508,7 +2509,7 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<filename>", "Specify a filename to use with load or save operations"),
-        arg_str0("k", "key", "<hex>", "Access key as 16 hex symbols"),
+        arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
         arg_lit0(NULL, "save", "Save keys in memory to file specified by filename"),
         arg_lit0(NULL, "load", "Load keys to memory from file specified by filename"),
@@ -2908,10 +2909,10 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<filename>", "Dictionary file with default iclass keys"),
-        arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 bytes (16 hex symbols)"),
-        arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 bytes (16 hex symbols)"),
+        arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
+        arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
         arg_str1(NULL, "macs", "<hex>", "MACs"),
-        arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "elite", "Elite computations applied to key"),
         arg_param_end
     };
@@ -3288,16 +3289,13 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("r",  "reverse",        "reverse permuted key"),
-        arg_str1(NULL, "key", "<hex>", "input key"),
+        arg_lit0("r", "reverse", "reverse permuted key"),
+        arg_str1(NULL, "key", "<hex>", "input key, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
     bool isReverse = arg_get_lit(ctx, 1);
-
     CLIGetHexWithReturn(ctx, 2, data, &len);
-
     CLIParserFree(ctx);
 
     memcpy(key, data, 8);
@@ -3349,7 +3347,7 @@ static command_t CommandTable[] = {
     {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iclass history"},
     {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read Picopass / iCLASS block"},
     {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an Picopass / iCLASS reader"},
-    {"restore",     CmdHFiClassRestore,        IfPm3Iclass,     "[options..] Restore a dump file onto a Picopass / iCLASS tag"},
+    {"restore",     CmdHFiClassRestore,        IfPm3Iclass,      "[options..] Restore a dump file onto a Picopass / iCLASS tag"},
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop Picopass / iCLASS communication"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write Picopass / iCLASS block"},
 
@@ -3371,7 +3369,6 @@ static command_t CommandTable[] = {
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iclass commands"},
     {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
     {"view",        CmdHFiClassView,            AlwaysAvailable, "[options..] Display content from tag dump file"},
-
     {NULL, NULL, NULL, NULL}
 };
 
