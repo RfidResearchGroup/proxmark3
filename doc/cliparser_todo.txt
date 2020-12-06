@@ -174,30 +174,11 @@ lf simfsk
 lf simpsk
 lf simbidir
 lf sniff
-lf tune
-lf em 410x_demod
-lf em 410x_read
-lf em 410x_sim
-lf em 410x_brute
-lf em 410x_watch
-lf em 410x_spoof
-lf em 410x_clone
-lf em 4x05_demod
-lf em 4x05_dump
-lf em 4x05_wipe
-lf em 4x05_info
-lf em 4x05_read
-lf em 4x05_write
-lf em 4x50_dump
-lf em 4x50_info
-lf em 4x50_write
-lf em 4x50_write_password
-lf em 4x50_read
-lf em 4x50_wipe
-lf hitag info
+lf em 410x
+lf em 4x05
+lf em 4x50
 lf hitag reader
 lf hitag sim
-lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc

@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2020 tharexde
 //
+// modified iceman, 2020
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -10,17 +12,20 @@
 
 #include "cliparser.h"
 #include "cmdlfem4x50.h"
+#include <ctype.h>
+#include "cmdparser.h"    // command_t
 #include "fileutils.h"
 #include "commonutil.h"
 #include "pmflash.h"
 #include "cmdflashmemspiffs.h"
-#include "cmdparser.h"
 
 #define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
 
 //==============================================================================
 // output functions
 //==============================================================================
+
+static int CmdHelp(const char *Cmd);
 
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
@@ -1209,4 +1214,26 @@ int CmdEM4x50Sim(const char *Cmd) {
         PrintAndLogEx(FAILED, "No valid em4x50 data in memory.");
 
     return resp.status;
+}
+
+static command_t CommandTable[] = {
+    {"help",   CmdHelp,         AlwaysAvailable, "This help"},
+    {"dump",   CmdEM4x50Dump,   IfPm3EM4x50,     "dump EM4x50 tag"},
+    {"info",   CmdEM4x50Info,   IfPm3EM4x50,     "tag information EM4x50"},
+    {"write",  CmdEM4x50Write,  IfPm3EM4x50,     "write word data to EM4x50"},
+    {"write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change password of EM4x50 tag"},
+    {"read",   CmdEM4x50Read,   IfPm3EM4x50,     "read word data from EM4x50"},
+    {"wipe",   CmdEM4x50Wipe,   IfPm3EM4x50,     "wipe data from EM4x50"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdLFEM4X50(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
 }

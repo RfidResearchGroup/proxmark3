@@ -84,7 +84,7 @@ static void encodeHeden2L(uint8_t *dest, uint32_t cardnumber) {
         dest[i / 8] = bytebits_to_byte(template + i, 8);
     }
 
-    PrintAndLogEx(INFO, "Heden-2L card number " _GREEN_("%u"), cardnumber);
+    PrintAndLogEx(INFO, "Heden-2L card number %u", cardnumber);
 }
 
 static void decodeHeden2L(uint8_t *bits) {
@@ -109,7 +109,7 @@ static void decodeHeden2L(uint8_t *bits) {
     if (bits[offset +  7]) cardnumber += 16384;
     if (bits[offset + 23]) cardnumber += 32768;
 
-    PrintAndLogEx(SUCCESS, "\tHeden-2L    | " _GREEN_("%u"), cardnumber);
+    PrintAndLogEx(SUCCESS, "    Heden-2L    | %u", cardnumber);
 }
 
 // Indala 26 bit decode
@@ -151,7 +151,7 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
     uint64_t foo = uid2 & 0x7FFFFFFF;
 
     if (DemodBufferLen == 64) {
-        PrintAndLogEx(SUCCESS, "Indala - len " _GREEN_("%zu") " Raw: %x%08x", DemodBufferLen, uid1, uid2);
+        PrintAndLogEx(SUCCESS, "Indala (len %zu)  Raw: " _GREEN_("%x%08x"), DemodBufferLen, uid1, uid2);
 
         uint16_t p1  = 0;
         p1 |= DemodBuffer[32 + 3] << 8;
@@ -206,8 +206,8 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
                      );
 
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
-        PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
-        PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64, foo);
+        PrintAndLogEx(SUCCESS, "    Printed     | __%04d__ [0x%X]", p1, p1);
+        PrintAndLogEx(SUCCESS, "    Internal ID | %" PRIu64, foo);
         decodeHeden2L(DemodBuffer);
 
     } else {
@@ -218,7 +218,7 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
         uint32_t uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
         PrintAndLogEx(
             SUCCESS
-            , "Indala - len " _GREEN_("%zu") " Raw: %x%08x%08x%08x%08x%08x%08x"
+            , "Indala (len %zu)  Raw: " _GREEN_("%x%08x%08x%08x%08x%08x%08x")
             , DemodBufferLen
             , uid1
             , uid2
@@ -245,7 +245,7 @@ static int CmdIndalaDemod(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala demod",
-                  "Tries to psk demodulate the graphbuffer as Indala Prox",
+                  "Tries to psk demodulate the graphbuffer as Indala",
                   "lf indala demod\n"
                   "lf indala demod --clock 32      -> demod a Indala tag from GraphBuffer using a clock of RF/32\n"
                   "lf indala demod --clock 32 -i    -> demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data\n"
@@ -276,7 +276,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala altdemod",
-                  "Tries to psk demodulate the graphbuffer as Indala Prox\n"
+                  "Tries to psk demodulate the graphbuffer as Indala\n"
                   "This is uses a alternative way to demodulate and was used from the beginning in the Pm3 client.\n"
                   "It's now considered obsolete but remains because it has sometimes its advantages.",
                   "lf indala altdemod\n"
@@ -493,7 +493,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 static int CmdIndalaReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala reader",
-                  "read a Indala Prox tag",
+                  "read a Indala tag",
                   "lf indala reader -@   -> continuous reader mode"
                  );
 
@@ -527,7 +527,7 @@ static int CmdIndalaSim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala sim",
-                  "Enables simulation of IOProx card with specified facility-code and card number.\n"
+                  "Enables simulation of Indala card with specified facility-code and card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf indala sim --heden 888\n"
                   "lf indala sim --raw a0000000a0002021\n"
@@ -616,7 +616,8 @@ static int CmdIndalaClone(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala clone",
-                  "clone INDALA UID to T55x7 or Q5/T5555 tag",
+                  "clone Indala UID to T55x7 or Q5/T5555 tag\n"
+                  _RED_("\nWarning, encoding with FC/CN doesn't always work"),
                   "lf indala clone --heden 888\n"
                   "lf indala clone --fc 123 --cn 1337\n"
                   "lf indala clone -r a0000000a0002021\n"
@@ -626,8 +627,8 @@ static int CmdIndalaClone(const char *Cmd) {
         arg_param_begin,
         arg_strx0("r", "raw", "<hex>", "raw bytes"),
         arg_int0(NULL, "heden", "<decimal>", "Cardnumber for Heden 2L format"),
-        arg_int0(NULL, "fc", "<decimal>", "Facility Code (26 bit format)"),
-        arg_int0(NULL, "cn", "<decimal>", "Cardnumber (26 bit format)"),
+        arg_int0(NULL, "fc", "<decimal>", "Facility Code (26 bit H10301 format)"),
+        arg_int0(NULL, "cn", "<decimal>", "Cardnumber (26 bit H10301 format)"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -768,9 +769,9 @@ static int CmdIndalaClone(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,            AlwaysAvailable, "this help"},
-    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an indala tag (PSK1) from GraphBuffer"},
-    {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-    {"reader",   CmdIndalaReader,    IfPm3Lf,         "read an Indala Prox tag from the antenna"},
+    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an Indala tag (PSK1) from GraphBuffer"},
+    {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+    {"reader",   CmdIndalaReader,    IfPm3Lf,         "read an Indala tag from the antenna"},
     {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala tag to T55x7 or Q5/T5555"},
     {"sim",      CmdIndalaSim,       IfPm3Lf,         "simulate Indala tag"},
     {NULL, NULL, NULL, NULL}

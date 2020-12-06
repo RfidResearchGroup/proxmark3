@@ -38,59 +38,7 @@
 
 #define EM_PREAMBLE_LEN 8
 
-static int usage_lf_em4x05_wipe(void) {
-    PrintAndLogEx(NORMAL, "Wipe EM4x05/EM4x69.  Tag must be on antenna. ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_wipe [h] <pwd>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h     - this help");
-    PrintAndLogEx(NORMAL, "       c     - chip type : 0 em4205");
-    PrintAndLogEx(NORMAL, "                           1 em4305 (default)");
-    PrintAndLogEx(NORMAL, "       pwd   - password (hex) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_wipe");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_wipe 11223344");
-    return PM3_SUCCESS;
-}
-static int usage_lf_em4x05_read(void) {
-    PrintAndLogEx(NORMAL, "Read EM4x05/EM4x69.  Tag must be on antenna. ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_read [h] <address> <pwd>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       address   - memory address to read. (0-15)");
-    PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_read 1");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_read 1 11223344");
-    return PM3_SUCCESS;
-}
-static int usage_lf_em4x05_write(void) {
-    PrintAndLogEx(NORMAL, "Write EM4x05/4x69.  Tag must be on antenna. ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_write [h] <address> <data> <pwd>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       address   - memory address to write to. (0-13, 99 for Protection Words)");
-    PrintAndLogEx(NORMAL, "       data      - data to write (hex)");
-    PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_write 1 deadc0de");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_write 1 deadc0de 11223344");
-    return PM3_SUCCESS;
-}
-static int usage_lf_em4x05_info(void) {
-    PrintAndLogEx(NORMAL, "Tag information EM4205/4305/4469//4569 tags.  Tag must be on antenna.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_info [h] <pwd>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_info");
-    PrintAndLogEx(NORMAL, "      lf em 4x05_info deadc0de");
-    return PM3_SUCCESS;
-}
+static int CmdHelp(const char *Cmd);
 
 // 1 = EM4x69
 // 2 = EM4x05
@@ -139,7 +87,6 @@ static bool em4x05_col_parity_test(uint8_t *bs, size_t size, uint8_t rows, uint8
     }
     return true;
 }
-
 
 // download samples from device and copy to Graphbuffer
 static bool em4x05_download_samples(void) {
@@ -387,6 +334,7 @@ static bool em4x05_verify_write(uint8_t addr, uint32_t pwd, bool use_pwd, uint32
     uint32_t r = 0;
     int res = em4x05_read_word_ext(addr, pwd, use_pwd, &r);
     if (res == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "%08x == %08x", r, data);
         return (r == data);
     }
     return false;
@@ -506,7 +454,40 @@ int em4x05_write_word_ext(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t dat
     return PM3_SUCCESS;
 }
 
+static int em4x05_protect(uint32_t pwd, bool use_pwd, uint32_t data) {
+    struct {
+        uint32_t password;
+        uint32_t data;
+        uint8_t usepwd;
+    } PACKED payload;
+
+    payload.password = pwd;
+    payload.data = data;
+    payload.usepwd = use_pwd;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X_PROTECTWORD, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X_PROTECTWORD, &resp, 2000)) {
+        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
 int CmdEM4x05Demod(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05 demod",
+                  "Try to find EM 4x05 preamble, if found decode / descramble data",
+                  "lf em 4x05 demod"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     uint32_t dummy = 0;
     return em4x05_demod_resp(&dummy, false);
 }
@@ -514,11 +495,11 @@ int CmdEM4x05Demod(const char *Cmd) {
 int CmdEM4x05Dump(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em dump",
+    CLIParserInit(&ctx, "lf em 4x05 dump",
                   "Dump EM4x05/EM4x69.  Tag must be on antenna.",
-                  "lf em dump\n"
-                  "lf em dump -p 11223344\n"
-                  "lf em dump -f myfile -p 11223344"
+                  "lf em 4x05 dump\n"
+                  "lf em 4x05 dump -p 11223344\n"
+                  "lf em 4x05 dump -f myfile -p 11223344"
                  );
 
     void *argtable[] = {
@@ -734,29 +715,43 @@ int CmdEM4x05Dump(const char *Cmd) {
 }
 
 int CmdEM4x05Read(const char *Cmd) {
-    uint8_t addr;
-    uint32_t pwd;
-    bool usePwd = false;
 
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_read();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05 read",
+                  "Read EM4x05/EM4x69. Tag must be on antenna.",
+                  "lf em 4x05 read -a 1\n"
+                  "lf em 4x05 read --addr 1 --pwd 11223344"
+                 );
 
-    addr = param_get8ex(Cmd, 0, 50, 10);
-    pwd =  param_get32ex(Cmd, 1, 0xFFFFFFFF, 16);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("a", "addr", "<dec>", "memory address to read. (0-15)"),
+        arg_str0("p", "pwd", "<hex>", "optional - password, 4 bytes hex"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t addr = (uint8_t)arg_get_int_def(ctx, 1, 50);
+    uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 2, 0xFFFFFFFFFFFFFFFF);
+    CLIParserFree(ctx);
+
+    uint32_t pwd = 0;
+    bool use_pwd = false;
 
     if (addr > 15) {
-        PrintAndLogEx(WARNING, "Address must be between 0 and 15");
-        return PM3_ESOFT;
+        PrintAndLogEx(ERR, "Address must be between 0 and 15");
+        return PM3_EINVARG;
     }
-    if (pwd == 0xFFFFFFFF) {
+
+    if (inputpwd == 0xFFFFFFFFFFFFFFFF) {
         PrintAndLogEx(INFO, "Reading address %02u", addr);
     } else {
-        usePwd = true;
+        pwd = (inputpwd & 0xFFFFFFFF);
+        use_pwd = true;
         PrintAndLogEx(INFO, "Reading address %02u using password %08X", addr, pwd);
     }
 
     uint32_t word = 0;
-    int status = em4x05_read_word_ext(addr, pwd, usePwd, &word);
+    int status = em4x05_read_word_ext(addr, pwd, use_pwd, &word);
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
     else if (status == PM3_EFAILED)
@@ -767,55 +762,61 @@ int CmdEM4x05Read(const char *Cmd) {
 }
 
 int CmdEM4x05Write(const char *Cmd) {
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_write();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05 write",
+                  "Write EM4x05/EM4x69. Tag must be on antenna.",
+                  "lf em 4x05 write -a 1 -d deadc0de\n"
+                  "lf em 4x05 write --addr 1 --pwd 11223344 --data deadc0de\n"
+                  "lf em 4x05 write --po --pwd 11223344 --data deadc0de\n"
+                 );
 
-    bool usePwd = false;
-    uint8_t addr;
-    uint32_t data, pwd;
-
-    addr = param_get8ex(Cmd, 0, 50, 10);
-    data = param_get32ex(Cmd, 1, 0, 16);
-    pwd =  param_get32ex(Cmd, 2, 0xFFFFFFFF, 16);
-    bool protectOperation = addr == 99; // will do better with cliparser...
-
-    if ((addr > 13) && (!protectOperation)) {
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("a", "addr", "<dec>", "memory address to write to. (0-13)"),
+        arg_str1("d", "data", "<hex>", "data to write, 4 bytes hex"),        
+        arg_str0("p", "pwd", "<hex>", "optional - password, 4 bytes hex"),
+        arg_lit0(NULL, "po", "protect operation"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t addr = (uint8_t)arg_get_int_def(ctx, 1, 50);
+    uint32_t data = arg_get_u32(ctx, 2);
+    uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 3, 0xFFFFFFFFFFFFFFFF);
+    bool protect_operation = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+ 
+    if ((addr > 13) && (protect_operation == false)) {
         PrintAndLogEx(WARNING, "Address must be between 0 and 13");
         return PM3_EINVARG;
     }
+
+    bool use_pwd = false;   
+    uint32_t pwd = ( inputpwd != 0xFFFFFFFFFFFFFFFF) ? (inputpwd & 0xFFFFFFFF) : 0;
     if (pwd == 0xFFFFFFFF) {
-        if (protectOperation)
+        if (protect_operation)
             PrintAndLogEx(INFO, "Writing protection words data %08X", data);
         else
             PrintAndLogEx(INFO, "Writing address %d data %08X", addr, data);
     } else {
-        usePwd = true;
-        if (protectOperation)
+        use_pwd = true;
+        if (protect_operation)
             PrintAndLogEx(INFO, "Writing protection words data %08X using password %08X", data, pwd);
         else
             PrintAndLogEx(INFO, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-    if (protectOperation) { // set Protect Words
-        struct {
-            uint32_t password;
-            uint32_t data;
-            uint8_t usepwd;
-        } PACKED payload;
-
-        payload.password = pwd;
-        payload.data = data;
-        payload.usepwd = usePwd;
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_LF_EM4X_PROTECTWORD, (uint8_t *)&payload, sizeof(payload));
-        PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_LF_EM4X_PROTECTWORD, &resp, 2000)) {
-            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
+    int res = PM3_SUCCESS;
+    // set Protect Words
+    if (protect_operation) { 
+        res = em4x05_protect(pwd, use_pwd, data);
+        if ( res != PM3_SUCCESS) {
+            return res;
         }
     } else {
-        em4x05_write_word_ext(addr, pwd, usePwd, data);
+        res = em4x05_write_word_ext(addr, pwd, use_pwd, data);
+        if ( res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     if (em4x05_download_samples() == false)
@@ -826,86 +827,111 @@ int CmdEM4x05Write(const char *Cmd) {
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Data written and verified");
     else if (status == PM3_EFAILED)
-        PrintAndLogEx(ERR, "Tag denied %s operation", protectOperation ? "Protect" : "Write");
+        PrintAndLogEx(ERR, "Tag denied %s operation", protect_operation ? "Protect" : "Write");
     else
         PrintAndLogEx(DEBUG, "No answer from tag");
 
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05_read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05 read`") " to verify");
     return status;
 }
 
 int CmdEM4x05Wipe(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05 wipe",
+                  "Wipe EM4x05/EM4x69. Tag must be on antenna.",
+                  "lf em 4x05 wipe --4305 -p 11223344  -> wipe EM 4305 w pwd\n"
+                  "lf em 4x05 wipe --4205              -> wipe EM 4205\n"
+                  "lf em 4x05 wipe --4369              -> wipe EM 4369"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "4205", "target chip type EM 4205"),
+        arg_lit0(NULL, "4305", "target chip type EM 4305 (default)"),
+        arg_lit0(NULL, "4369", "target chip type EM 4369"),
+        arg_lit0(NULL, "4369", "target chip type EM 4469"),
+        arg_str0("p", "pwd", "<hex>", "optional - password, 4 bytes hex"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool target_4205 = arg_get_lit(ctx, 1);
+    bool target_4305 = arg_get_lit(ctx, 2);
+    bool target_4369 = arg_get_lit(ctx, 3);
+    bool target_4469 = arg_get_lit(ctx, 4);
+    uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 5, 0xFFFFFFFFFFFFFFFF);
+    CLIParserFree(ctx);
+
+    uint8_t foo = target_4205 + target_4305 + target_4369 + target_4469;
+
+    if (foo > 1) {
+        PrintAndLogEx(ERR, "Can't target multiple chip types at the same time");
+        return PM3_EINVARG;
+    }
+
     uint8_t addr = 0;
+    uint32_t chip_info  = 0x00040072; // Chip info/User Block normal 4305 Chip Type
+    uint32_t chip_UID   = 0x614739AE; // UID normally readonly, but just in case
+    uint32_t block_data = 0x00000000; // UserBlock/Password (set to 0x00000000 for a wiped card1
+    uint32_t config     = 0x0001805F; // Default config (no password)
+
+    if (target_4205) {
+        chip_info  = 0x00040070;
+    }
+    if (target_4369) {
+        chip_info  = 0x00020078;  // found on HID Prox
+    }
+    if (target_4469) {
+//        chip_info  = 0x00020078;  // need to get a normal 4469 chip info block
+    }
+
+    bool use_pwd = false;
     uint32_t pwd = 0;
-    uint8_t cmdp = 0;
-    uint8_t  chipType  = 1; // em4305
-    uint32_t chipInfo  = 0x00040072; // Chip info/User Block normal 4305 Chip Type
-    uint32_t chipUID   = 0x614739AE; // UID normally readonly, but just in case
-    uint32_t blockData = 0x00000000; // UserBlock/Password (set to 0x00000000 for a wiped card1
-    uint32_t config    = 0x0001805F; // Default config (no password)
-    int success = PM3_SUCCESS;
-    char cmdStr [100];
-    char optchk[10];
-
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        // check if cmd is a 1 byte option
-        param_getstr(Cmd, cmdp, optchk, sizeof(optchk));
-        if (strlen(optchk) == 1) { // Have a single character so option not part of password
-            switch (tolower(param_getchar(Cmd, cmdp))) {
-                case 'c':   // chip type
-                    if (param_getchar(Cmd, cmdp) != 0x00)
-                        chipType = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                    cmdp += 2;
-                    break;
-                case 'h':   // return usage_lf_em4x05_wipe();
-                default :   // Unknown or 'h' send help
-                    return usage_lf_em4x05_wipe();
-                    break;
-            };
-        } else { // Not a single character so assume password
-            pwd = param_get32ex(Cmd, cmdp, 1, 16);
-            cmdp++;
-        }
+    if ( inputpwd != 0xFFFFFFFFFFFFFFFF) {
+        pwd = (inputpwd & 0xFFFFFFFF);
+        use_pwd = true;
     }
-
-    switch (chipType) {
-        case 0  : // em4205
-            chipInfo  = 0x00040070;
-            config    = 0x0001805F;
-            break;
-        case 1  : // em4305
-            chipInfo  = 0x00040072;
-            config    = 0x0001805F;
-            break;
-        default : // Type 0/Default : EM4305
-            chipInfo  = 0x00040072;
-            config    = 0x0001805F;
-    }
-
     // block 0 : User Data or Chip Info
-    sprintf(cmdStr, "%d %08X %08X", 0, chipInfo, pwd);
-    CmdEM4x05Write(cmdStr);
+    int res = em4x05_write_word_ext(0, pwd, use_pwd, chip_info);
+    if ( res != PM3_SUCCESS) {
+        return res;
+    }
+
     // block 1 : UID - this should be read only for EM4205 and EM4305 not sure about others
-    sprintf(cmdStr, "%d %08X %08X", 1, chipUID, pwd);
-    CmdEM4x05Write(cmdStr);
+    res = em4x05_write_word_ext(1, pwd, use_pwd, chip_UID);
+    if ( res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "UID block write failed");
+    }
+
     // block 2 : password
-    sprintf(cmdStr, "%d %08X %08X", 2, blockData, pwd);
-    CmdEM4x05Write(cmdStr);
-    pwd = blockData; // Password should now have changed, so use new password
+    res = em4x05_write_word_ext(2, pwd, use_pwd, block_data);
+    if ( res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // Password should now have changed, so use new password
+    pwd = block_data;
     // block 3 : user data
-    sprintf(cmdStr, "%d %08X %08X", 3, blockData, pwd);
-    CmdEM4x05Write(cmdStr);
+    res = em4x05_write_word_ext(3, pwd, use_pwd, block_data);
+    if ( res != PM3_SUCCESS) {
+        return res;
+    }
+
     // block 4 : config
-    sprintf(cmdStr, "%d %08X %08X", 4, config, pwd);
-    CmdEM4x05Write(cmdStr);
+    res = em4x05_write_word_ext(4, pwd, use_pwd, config);
+    if ( res != PM3_SUCCESS) {
+        return res;
+    }
 
     // Remainder of user/data blocks
     for (addr = 5; addr < 14; addr++) {// Clear user data blocks
-        sprintf(cmdStr, "%d %08X %08X", addr, blockData, pwd);
-        CmdEM4x05Write(cmdStr);
+        res = em4x05_write_word_ext(addr, pwd, use_pwd, block_data);
+        if ( res != PM3_SUCCESS) {
+            return res;
+        }
     }
-
-    return success;
+    return PM3_SUCCESS;
 }
 
 static const char *printEM4x05_known(uint32_t word) {
@@ -1174,24 +1200,37 @@ static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
     }
 }
 
-
 //quick test for EM4x05/EM4x69 tag
 bool em4x05_isblock0(uint32_t *word) {
     return (em4x05_read_word_ext(0, 0, false, word) == PM3_SUCCESS);
 }
 
 int CmdEM4x05Info(const char *Cmd) {
-    uint32_t pwd;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x05 info",
+                  "Tag information EM4205/4305/4469//4569 tags. Tag must be on antenna.",
+                  "lf em 4x05 info\n"
+                  "lf em 4x05 info -p 11223344"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("p", "pwd", "<hex>", "optional - password, 4 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 1, 0xFFFFFFFFFFFFFFFF);
+    CLIParserFree(ctx);
+
+    bool use_pwd = false;
+    uint32_t pwd = 0;
+    if (inputpwd != 0xFFFFFFFFFFFFFFFF) {
+        pwd = inputpwd & 0xFFFFFFFF;
+        use_pwd = true;
+    }
+
     uint32_t word = 0, block0 = 0, serial = 0;
-    bool usePwd = false;
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_em4x05_info();
-
-    // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
-    pwd = param_get32ex(Cmd, 0, 0xFFFFFFFF, 16);
-
-    if (pwd != 0xFFFFFFFF)
-        usePwd = true;
 
     // read word 0 (chip info)
     // block 0 can be read even without a password.
@@ -1209,7 +1248,7 @@ int CmdEM4x05Info(const char *Cmd) {
 
     // read word 4 (config block)
     // needs password if one is set
-    if (em4x05_read_word_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+    if (em4x05_read_word_ext(EM_CONFIG_BLOCK, pwd, use_pwd, &word) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "(CmdEM4x05Info) failed to read CONFIG BLOCK");
         return PM3_ESOFT;
     }
@@ -1221,7 +1260,7 @@ int CmdEM4x05Info(const char *Cmd) {
     if (card_type == EM_4205 || card_type == EM_4305) {
 
         // read word 14 and 15 to see which is being used for the protection bits
-        if (em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+        if (em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, use_pwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
         }
 
@@ -1229,7 +1268,7 @@ int CmdEM4x05Info(const char *Cmd) {
             printEM4x05ProtectionBits(word, EM4305_PROT1_BLOCK);
             return PM3_SUCCESS;
         } else { // if status bit says this is not the used protection word
-            if (em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+            if (em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, use_pwd, &word) != PM3_SUCCESS)
                 return PM3_ESOFT;
             if (word & 0x8000) {
                 printEM4x05ProtectionBits(word, EM4305_PROT2_BLOCK);
@@ -1238,7 +1277,7 @@ int CmdEM4x05Info(const char *Cmd) {
         }
     } else if (card_type == EM_4369 || card_type == EM_4469) {
         // read word 3 to see which is being used for the protection bits
-        if (em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+        if (em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, use_pwd, &word) != PM3_SUCCESS) {
             return PM3_ESOFT;
         }
         printEM4x05ProtectionBits(word, EM4469_PROT_BLOCK);
@@ -1259,11 +1298,11 @@ static bool is_cancelled(void) {
 int CmdEM4x05Chk(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x05_chk",
+    CLIParserInit(&ctx, "lf em 4x05 chk",
                   "This command uses a dictionary attack against EM4205/4305/4469/4569",
-                  "lf em 4x05_chk\n"
-                  "lf em 4x05_chk -e 000022B8            -> remember to use 0x for hex\n"
-                  "lf em 4x05_chk -f t55xx_default_pwds  -> use T55xx default dictionary"
+                  "lf em 4x05 chk\n"
+                  "lf em 4x05 chk -e 000022B8            -> remember to use 0x for hex\n"
+                  "lf em 4x05 chk -f t55xx_default_pwds  -> use T55xx default dictionary"
                  );
 
     void *argtable[] = {
@@ -1360,12 +1399,12 @@ int CmdEM4x05Chk(const char *Cmd) {
 
 int CmdEM4x05Brute(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x05_brute",
+    CLIParserInit(&ctx, "lf em 4x05 brute",
                   "This command tries to bruteforce the password of a EM4205/4305/4469/4569\n",
                   "Note: if you get many false positives, change position on the antenna"
-                  "lf em 4x05_brute\n"
-                  "lf em 4x05_brute -n 1                   -> stop after first candidate found\n"
-                  "lf em 4x05_brute -s 000022B8            -> remember to use 0x for hex"
+                  "lf em 4x05 brute\n"
+                  "lf em 4x05 brute -n 1                   -> stop after first candidate found\n"
+                  "lf em 4x05 brute -s 000022B8            -> remember to use 0x for hex"
                  );
 
     void *argtable[] = {
@@ -1464,11 +1503,11 @@ static void unlock_add_item(em4x05_unlock_item_t *array, uint8_t len, uint32_t v
 int CmdEM4x05Unlock(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x05_unlock",
+    CLIParserInit(&ctx, "lf em 4x05 unlock",
                   "execute tear off against EM4205/4305/4469/4569",
-                  "lf em 4x05_unlock\n"
-                  "lf em 4x05_unlock -s 4100 -e 4100       -> lock on and autotune at 4100us\n"
-                  "lf em 4x05_unlock -n 10 -s 3000 -e 4400 -> scan delays 3000us -> 4400us"
+                  "lf em 4x05 unlock\n"
+                  "lf em 4x05 unlock -s 4100 -e 4100       -> lock on and autotune at 4100us\n"
+                  "lf em 4x05 unlock -n 10 -s 3000 -e 4400 -> scan delays 3000us -> 4400us"
                  );
 
     void *argtable[] = {
@@ -2081,4 +2120,30 @@ int CmdEM4x05Sniff(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "---------------------------------------------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
+}
+
+static command_t CommandTable[] = {
+    {"help",   CmdHelp,              AlwaysAvailable, "This help"},
+    {"brute",  CmdEM4x05Brute,       IfPm3Lf,         "Bruteforce password"},
+    {"chk",    CmdEM4x05Chk,         IfPm3Lf,         "Check passwords from dictionary"},
+    {"demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
+    {"dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
+    {"info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
+    {"read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
+    {"sniff",  CmdEM4x05Sniff,       AlwaysAvailable, "Attempt to recover em4x05 commands from sample buffer"},
+    {"unlock", CmdEM4x05Unlock,      IfPm3Lf,         "execute tear off against EM4x05/EM4x69"},
+    {"wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},
+    {"write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdLFEM4X05(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
 }

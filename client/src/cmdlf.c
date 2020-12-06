@@ -12,24 +12,23 @@
 // Low frequency commands
 //-----------------------------------------------------------------------------
 #include "cmdlf.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-
-#include "cmdparser.h"    // command_t
+#include "cmdparser.h"      // command_t
 #include "comms.h"
-#include "commonutil.h"  // ARRAYLEN
-
+#include "commonutil.h"     // ARRAYLEN
 #include "lfdemod.h"        // device/client demods of LF signals
 #include "ui.h"             // for show graph controls
 #include "proxgui.h"
+#include "cliparser.h"      // args parsing
 #include "graph.h"          // for graph data
 #include "cmddata.h"        // for `lf search`
 #include "cmdlfawid.h"      // for awid menu
-#include "cmdlfem4x.h"      // for em4x menu
+#include "cmdlfem.h"        // for em menu
+#include "cmdlfem410x.h"      // for em4x menu
 #include "cmdlfem4x05.h"    // for em4x05 / 4x69
 #include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfhid.h"       // for hid menu
@@ -1530,7 +1529,7 @@ static command_t CommandTable[] = {
     {"awid",        CmdLFAWID,          AlwaysAvailable, "{ AWID RFIDs...              }"},
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
     {"destron",     CmdLFDestron,       AlwaysAvailable, "{ FDX-A Destron RFIDs...     }"},
-    {"em",          CmdLFEM4X,          AlwaysAvailable, "{ EM4X CHIPs & RFIDs...      }"},
+    {"em",          CmdLFEM,            AlwaysAvailable, "{ EM CHIPs & RFIDs...        }"},
     {"fdxb",        CmdLFFdxB,          AlwaysAvailable, "{ FDX-B RFIDs...             }"},
     {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
