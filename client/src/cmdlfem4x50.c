@@ -1042,6 +1042,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
 int CmdEM4x50Restore(const char *Cmd) {
 
     int uidLen = 0, fnLen = 0, pwdLen = 0, status = 0;
+    int startblock = EM4X50_CONTROL + 1;
     uint8_t pwd[4] = {0x0}, uid[4] = {0x0};
     uint8_t data[DUMP_FILESIZE] = {0x0};
     size_t bytes_read = 0;
@@ -1095,6 +1096,8 @@ int CmdEM4x50Restore(const char *Cmd) {
         } else {
             etd.password1 = BYTES2UINT32(pwd);
             etd.pwd_given = true;
+            // if password is available protection and control word can be restored
+            startblock = EM4X50_PROTECTION;
         }
     }
 
@@ -1106,7 +1109,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     if (em4x50_load_file(filename, data, DUMP_FILESIZE, &bytes_read) != PM3_SUCCESS)
         return PM3_EFILE;
 
-    for (int i = 1; i < EM4X50_DEVICE_SERIAL; i++) {
+    for (int i = startblock; i < EM4X50_DEVICE_SERIAL; i++) {
 
         PrintAndLogEx(INPLACE, "Restoring block %i", i);
 
