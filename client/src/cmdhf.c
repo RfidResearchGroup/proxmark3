@@ -23,6 +23,7 @@
 #include "cmdhf14b.h"       // ISO14443-B
 #include "cmdhf15.h"        // ISO15693
 #include "cmdhfepa.h"
+#include "cmdhfemrtd.h"     // eMRTD
 #include "cmdhflegic.h"     // LEGIC
 #include "cmdhficlass.h"    // ICLASS
 #include "cmdhfmf.h"        // CLASSIC
@@ -357,24 +358,25 @@ int CmdHFPlot(const char *Cmd) {
 static command_t CommandTable[] = {
 
     {"--------",    CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("High Frequency") " -----------------------"},
-    {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...               }"},
-    {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...               }"},
-    {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                }"},
-//    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                }"},
-    {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...    }"},
-    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...       }"},
-    {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
-    {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                  }"},
-    {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                   }"},
-    {"lto",         CmdHFLTO,         AlwaysAvailable, "{ LTO Cartridge Memory RFIDs...    }"},
-    {"mf",          CmdHFMF,          AlwaysAvailable, "{ MIFARE RFIDs...                  }"},
-    {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...             }"},
-    {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...       }"},
-    {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...          }"},
-    {"st",          CmdHF_ST,         AlwaysAvailable, "{ ST Rothult RFIDs...              }"},
-    {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
-    {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
-    {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...          }"},
+    {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...                  }"},
+    {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...                  }"},
+    {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                   }"},
+//    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                   }"},
+    {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...       }"},
+    {"emrtd",       CmdHFeMRTD,       AlwaysAvailable, "{ Machine Readable Travel Document... }"},
+    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...          }"},
+    {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
+    {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
+    {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                      }"},
+    {"lto",         CmdHFLTO,         AlwaysAvailable, "{ LTO Cartridge Memory RFIDs...       }"},
+    {"mf",          CmdHFMF,          AlwaysAvailable, "{ MIFARE RFIDs...                     }"},
+    {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...                }"},
+    {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...          }"},
+    {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...             }"},
+    {"st",          CmdHF_ST,         AlwaysAvailable, "{ ST Rothult RFIDs...                 }"},
+    {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
+    {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
+    {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
     {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},

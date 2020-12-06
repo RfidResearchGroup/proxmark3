@@ -469,6 +469,7 @@ SRCS =  aiddesfire.c \
 		cmdhf15.c \
 		cmdhfcryptorf.c \
 		cmdhfepa.c \
+		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
 		cmdhficlass.c \
