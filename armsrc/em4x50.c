@@ -1327,8 +1327,6 @@ void em4x50_sim(uint8_t *filename) {
 
         if (changed)
             rdv40_spiffs_lazy_unmount();
-        
-        Dbprintf("bin tatsächlich durchs #define gelaufen.");
     }
 
 #endif
