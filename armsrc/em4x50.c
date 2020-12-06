@@ -15,7 +15,7 @@
 #include "lfdemod.h"
 #include "commonutil.h"
 #include "em4x50.h"
-#include "flashmem.h"
+//#include "flashmem.h"
 #include "BigBuf.h"
 #include "spiffs.h"
 #include "appmain.h" // tear
