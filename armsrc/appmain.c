@@ -1123,7 +1123,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_EM4X50_SIM: {
-            em4x50_sim();
+            //-----------------------------------------------------------------------------
+            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
+            // involved in dealing with emulator memory. But if it is called later, it might
+            // destroy the Emulator Memory.
+            //-----------------------------------------------------------------------------
+            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            em4x50_sim((uint8_t *)packet->data.asBytes);
             break;
         }
         case CMD_LF_EM4X50_READER: {
