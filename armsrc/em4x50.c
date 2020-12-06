@@ -922,7 +922,6 @@ void em4x50_chk(uint8_t *filename) {
     // check passwords from dictionary content in flash memory
 
     int status = PM3_EFAILED;
-    uint16_t pwd_count = 0;
     uint32_t pwd = 0x0;
 
 #ifdef WITH_FLASH
@@ -930,6 +929,7 @@ void em4x50_chk(uint8_t *filename) {
     BigBuf_free();
 
     int changed = rdv40_spiffs_lazy_mount();
+    uint16_t pwd_count = 0;
     uint32_t size = size_in_spiffs((char *)filename);
     pwd_count = size / 4;
     uint8_t *pwds = BigBuf_malloc(size);
@@ -1304,29 +1304,41 @@ void em4x50_writepwd(em4x50_data_t *etd) {
 // simulate functions
 //==============================================================================
 
-void em4x50_sim(void) {
+void em4x50_sim(uint8_t *filename) {
 
-    // simulate uploaded data in flash memory
-    // (currently only a one-way communication is possible)
+    // simulate uploaded data in emulator memory
+    // (currently simulation allows only a one-way communication)
 
     int status = PM3_SUCCESS;
-    uint8_t em4x50_mem[DUMP_FILESIZE] = {0x0};
+    uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
+    
+#ifdef WITH_FLASH
 
-    //-----------------------------------------------------------------------------
-    // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
-    // involved in dealing with emulator memory. But if it is called later, it will
-    // destroy the Emulator Memory.
-    //-----------------------------------------------------------------------------
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    if (strlen((char *)filename) != 0) {
+    
+        BigBuf_free();
 
-    // read data from flash memory
-    Flash_ReadData(0, em4x50_mem, 4 * EM4X50_NO_WORDS);
+        int changed = rdv40_spiffs_lazy_mount();
+        uint32_t size = size_in_spiffs((char *)filename);
+        em4x50_mem = BigBuf_malloc(size);
+
+        rdv40_spiffs_read_as_filetype((char *)filename, em4x50_mem, size, RDV40_SPIFFS_SAFETY_SAFE);
+
+        if (changed)
+            rdv40_spiffs_lazy_unmount();
+        
+        Dbprintf("bin tatsächlich durchs #define gelaufen.");
+    }
+
+#endif
+
     for (int i = 0; i < EM4X50_NO_WORDS; i++)
         words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
 
-    em4x50_setup_sim();
-
+    for (int i = 0; i < EM4X50_NO_WORDS; i++)
+        Dbprintf("%i %08x", i, words[i]);
+    
     // only if valid em4x50 data (e.g. uid == serial)
     if (words[EM4X50_DEVICE_SERIAL] != words[EM4X50_DEVICE_ID]) {
 
@@ -1336,6 +1348,8 @@ void em4x50_sim(void) {
         // extract protection data
         int fwrp = words[EM4X50_PROTECTION] & 0xFF;         // first word read protected
         int lwrp = (words[EM4X50_PROTECTION] >> 8) & 0xFF;  // last word read protected
+
+        em4x50_setup_sim();
 
         while (!BUTTON_PRESS()) {
             

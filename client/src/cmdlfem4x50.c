@@ -171,74 +171,6 @@ static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
     }
 }
 
-
-static int em4x50_wipe_flash(int page) {
-    
-    int isok = 0;
-    
-    clearCommandBuffer();
-    SendCommandMIX(CMD_FLASHMEM_WIPE, page, false, 0, NULL, 0);
-    PacketResponseNG resp;
-    
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 8000)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
-    }
-    
-    isok = resp.oldarg[0] & 0xFF;
-    if (!isok) {
-        PrintAndLogEx(WARNING, "Flash error");
-        return PM3_EFLASH;
-    }
-    
-    return PM3_SUCCESS;
-}
-
-
-static int em4x50_write_flash(uint8_t *data, int offset, size_t datalen) {
-    
-    int isok = 0;
-    uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining = datalen;
-    uint32_t bytes_in_packet = 0;
-    PacketResponseNG resp;
-
-    // wipe
-    em4x50_wipe_flash(0);
-    em4x50_wipe_flash(1);
-    em4x50_wipe_flash(2);
-
-    // fast push mode
-    conn.block_after_ACK = true;
-
-    while (bytes_remaining > 0) {
-        bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
-
-        clearCommandBuffer();
-        SendCommandOLD(CMD_FLASHMEM_WRITE, offset + bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
-
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            conn.block_after_ACK = false;
-            return PM3_ETIMEOUT;
-        }
-
-        isok = resp.oldarg[0] & 0xFF;
-        if (!isok) {
-            conn.block_after_ACK = false;
-            PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
-            return PM3_EFLASH;
-        }
-    }
-
-    conn.block_after_ACK = false;
-    
-    return PM3_SUCCESS;
-}
-
 int CmdEM4x50ELoad(const char *Cmd) {
 
     int slen = 0;
@@ -1210,16 +1142,18 @@ int CmdEM4x50Restore(const char *Cmd) {
 
 int CmdEM4x50Sim(const char *Cmd) {
 
-    int slen = 0, res = 0;
+    int slen = 0, status = 0;
     size_t bytes_read = 0;
     uint8_t data[DUMP_FILESIZE] = {0x0};
+    uint8_t destfn[32] = {0};
+
     char filename[FILE_PATH_SIZE] = {0};
     PacketResponseNG resp;
      
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50_sim",
                   "Simulates a EM4x50 tag",
-                  "lf em 4x50_sim -> simulates EM4x50 data in flash memory.\n"
+                  "lf em 4x50_sim -> simulates EM4x50 data in memory (upload via em4x50_eload).\n"
                   "lf em 4x50_sim -f mydump.eml -> simulates content of file ./mydump\n"
                  );
 
@@ -1242,36 +1176,34 @@ int CmdEM4x50Sim(const char *Cmd) {
             return PM3_EFILE;
         }
 
-        if (bytes_read * 8 > FLASH_MEM_MAX_SIZE) {
-            PrintAndLogEx(FAILED, "Filesize is larger than available memory");
-            return PM3_EOVFLOW;
-        }
-
-        PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to flash memory", filename);
-
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Error wiping flash.");
-            return res;
-        }
+        PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to davice", filename);
 
         // upload to device
-        res = em4x50_write_flash(data, 0, bytes_read);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Error uploading to flash.");
-            return res;
+        if (IfPm3Flash()) {
+            sprintf((char *)destfn, "em4x50_sim.bin");
+            status = flashmem_spiffs_load(destfn, data, DUMP_FILESIZE);
+            if (status != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "SPIFFS upload failed");
+                return status;
+            }
+        } else {
+            em4x50_seteml(data, 0, DUMP_FILESIZE);
         }
+
+        PrintAndLogEx(INFO, "Simulating data from " _YELLOW_("%s"), filename);
+    } else {
+        PrintAndLogEx(INFO, "Simulating data from emulator memory");
     }
 
-    PrintAndLogEx(INFO, "Simulating data in " _YELLOW_("%s"), filename);
-
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X50_SIM, 0, 0);
+    SendCommandNG(CMD_LF_EM4X50_SIM, destfn, sizeof(destfn));
     WaitForResponse(CMD_LF_EM4X50_SIM, &resp);
     
-    if (resp.status == PM3_SUCCESS)
+    status = resp.status;
+    if (status == PM3_SUCCESS)
         PrintAndLogEx(INFO, "Done");
     else
-        PrintAndLogEx(FAILED, "No valid em4x50 data in flash memory.");
+        PrintAndLogEx(FAILED, "No valid em4x50 data in memory.");
 
     return resp.status;
 }
