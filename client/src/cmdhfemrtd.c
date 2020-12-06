@@ -48,7 +48,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static int select_aid(const char *select_by, const char *file_id) {
+static int select_file(const char *select_by, const char *file_id) {
     bool activate_field = true;
     bool keep_field_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE];
@@ -60,10 +60,10 @@ static int select_aid(const char *select_by, const char *file_id) {
     sprintf(cmd, "00%s%s0C%02lu%s", SELECT, select_by, file_id_len, file_id);
     PrintAndLogEx(INFO, "Sending: %s", cmd);
 
-    uint8_t aSELECT_AID[80];
-    int aSELECT_AID_n = 0;
-    param_gethex_to_eol(cmd, 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
-    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    uint8_t aSELECT_FILE[80];
+    int aSELECT_FILE_n = 0;
+    param_gethex_to_eol(cmd, 0, aSELECT_FILE, sizeof(aSELECT_FILE), &aSELECT_FILE_n);
+    int res = ExchangeAPDU14a(aSELECT_FILE, aSELECT_FILE_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res) {
         DropField();
         return false;
@@ -77,7 +77,7 @@ static int select_aid(const char *select_by, const char *file_id) {
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
-        PrintAndLogEx(ERR, "Selecting Card Access aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        PrintAndLogEx(ERR, "Selecting file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return false;
     }
@@ -203,7 +203,7 @@ static int read_file(uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 
 int infoHF_EMRTD(void) {
     // const uint8_t *data
-    if (select_aid(P1_SELECT_BY_EF, EF_CARDACCESS)) {
+    if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS)) {
         uint8_t response[PM3_CMD_DATA_SIZE];
         int resplen = 0;
 
