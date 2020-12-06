@@ -15,7 +15,6 @@
 #include "lfdemod.h"
 #include "commonutil.h"
 #include "em4x50.h"
-//#include "flashmem.h"
 #include "BigBuf.h"
 #include "spiffs.h"
 #include "appmain.h" // tear
@@ -55,10 +54,6 @@
 
 int gHigh = 190;
 int gLow = 60;
-
-//==============================================================================
-// auxiliary functions
-//==============================================================================
 
 static void wait_timer(uint32_t period) {
 
@@ -176,10 +171,6 @@ static void em4x50_setup_sim(void) {
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 }
-
-//==============================================================================
-// functions for "reader" use case
-//==============================================================================
 
 static bool get_signalproperties(void) {
 
@@ -653,10 +644,6 @@ static int get_word_from_bitstream(uint32_t *data) {
     return PM3_EOPABORTED;
 }
 
-//==============================================================================
-// functions for "simulating" use case
-//==============================================================================
-
 static bool em4x50_sim_send_bit(uint8_t bit) {
 
     uint16_t check = 0;
@@ -802,10 +789,6 @@ bool em4x50_sim_send_listen_window(void) {
 
     return true;
 }
-
-//==============================================================================
-// login functions
-//==============================================================================
 
 static bool login(uint32_t password) {
 
@@ -971,10 +954,6 @@ void em4x50_chk(uint8_t *filename) {
     reply_ng(CMD_LF_EM4X50_CHK, status, (uint8_t *)&pwd, 32);
 }
 
-//==============================================================================
-// reset functions
-//==============================================================================
-
 static int reset(void) {
 
     // resets EM4x50 tag (used by write function)
@@ -994,10 +973,6 @@ static int reset(void) {
 
     return PM3_EFAILED;
 }
-
-//==============================================================================
-// read functions
-//==============================================================================
 
 static int standard_read(int *now, uint32_t *words) {
 
@@ -1128,10 +1103,6 @@ void em4x50_reader(void) {
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
 }
-
-//==============================================================================
-// write functions
-//==============================================================================
 
 static int write(uint32_t word, uint32_t addresses) {
 
@@ -1299,10 +1270,6 @@ void em4x50_writepwd(em4x50_data_t *etd) {
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_WRITEPWD, status, 0, 0);
 }
-
-//==============================================================================
-// simulate functions
-//==============================================================================
 
 void em4x50_sim(uint8_t *filename) {
 

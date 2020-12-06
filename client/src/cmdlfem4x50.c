@@ -21,10 +21,6 @@
 
 #define BYTES2UINT32(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
 
-//==============================================================================
-// output functions
-//==============================================================================
-
 static int CmdHelp(const char *Cmd);
 
 static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
@@ -127,10 +123,6 @@ static void print_info_result(uint8_t *data) {
     PrintAndLogEx(INFO, "zero values may indicate read protection");
     PrintAndLogEx(NORMAL, "");
 }
-
-//==============================================================================
-// file/memory functions
-//==============================================================================
 
 static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
 
@@ -270,10 +262,6 @@ int CmdEM4x50ESave(const char *Cmd) {
     saveFileJSON(filename, jsfEM4x50, data, DUMP_FILESIZE, NULL);
     return PM3_SUCCESS;
 }
-
-//==============================================================================
-// login functions
-//==============================================================================
 
 int CmdEM4x50Login(const char *Cmd) {
 
@@ -478,10 +466,6 @@ int CmdEM4x50Chk(const char *Cmd) {
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
-
-//==============================================================================
-// read functions
-//==============================================================================
 
 //quick test for EM4x50 tag
 bool detect_4x50_block(void) {
@@ -802,10 +786,6 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
-//==============================================================================
-// write functions
-//==============================================================================
 
 int CmdEM4x50Write(const char *Cmd) {
 
@@ -1144,10 +1124,6 @@ int CmdEM4x50Restore(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//==============================================================================
-// simulate functions
-//==============================================================================
-
 int CmdEM4x50Sim(const char *Cmd) {
 
     int slen = 0, status = 0;
@@ -1217,7 +1193,7 @@ int CmdEM4x50Sim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,              AlwaysAvailable, "This help"},
+    {"help",   CmdHelp,              AlwaysAvailable, "This help"},
     {"dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
     {"info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},
     {"write",  CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
