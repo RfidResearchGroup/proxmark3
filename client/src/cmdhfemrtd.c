@@ -49,20 +49,16 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static int select_file(const char *select_by, const char *file_id, bool activate_field, bool keep_field_on) {
+static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen, bool activate_field, bool keep_field_on) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    size_t file_id_len = strlen(file_id) / 2;
-
-    char cmd[50];
-    sprintf(cmd, "00%s%s0C%02lu%s", SELECT, select_by, file_id_len, file_id);
     PrintAndLogEx(INFO, "Sending: %s", cmd);
 
-    uint8_t aSELECT_FILE[80];
-    int aSELECT_FILE_n = 0;
-    param_gethex_to_eol(cmd, 0, aSELECT_FILE, sizeof(aSELECT_FILE), &aSELECT_FILE_n);
-    int res = ExchangeAPDU14a(aSELECT_FILE, aSELECT_FILE_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    uint8_t aCMD[80];
+    int aCMD_n = 0;
+    param_gethex_to_eol(cmd, 0, aCMD, sizeof(aCMD), &aCMD_n);
+    int res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res) {
         DropField();
         return false;
@@ -73,9 +69,13 @@ static int select_file(const char *select_by, const char *file_id, bool activate
     }
     PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
 
+    // drop sw
+    memcpy(dataout, &response, resplen - 2);
+    *dataoutlen = (resplen - 2);
+
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
-        PrintAndLogEx(ERR, "Selecting file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        PrintAndLogEx(ERR, "Command %s failed (%04x - %s).", cmd, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return false;
     }
     return true;
@@ -151,68 +151,31 @@ static int asn1fieldlength(uint8_t *datain, int datainlen) {
     return false;
 }
 
-static int get_challenge(int length, uint8_t *dataout, int *dataoutlen) {
-    bool activate_field = false;
-    bool keep_field_on = true;
+static int select_file(const char *select_by, const char *file_id, bool activate_field, bool keep_field_on) {
+    size_t file_id_len = strlen(file_id) / 2;
+
+    // Get data even tho we'll not use it
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
     char cmd[50];
+    sprintf(cmd, "00%s%s0C%02lu%s", SELECT, select_by, file_id_len, file_id);
+
+    return exchange_commands(cmd, response, &resplen, activate_field, keep_field_on);
+}
+
+static int get_challenge(int length, uint8_t *dataout, int *dataoutlen) {
+    char cmd[50];
     sprintf(cmd, "00%s0000%02X", GET_CHALLENGE, length);
-    PrintAndLogEx(INFO, "Sending: %s", cmd);
 
-    uint8_t aGET_CHALLENGE[80];
-    int aGET_CHALLENGE_n = 0;
-    param_gethex_to_eol(cmd, 0, aGET_CHALLENGE, sizeof(aGET_CHALLENGE), &aGET_CHALLENGE_n);
-    int res = ExchangeAPDU14a(aGET_CHALLENGE, aGET_CHALLENGE_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
-        DropField();
-        return false;
-    }
-    PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
-
-    // drop sw
-    memcpy(dataout, &response, resplen - 2);
-    *dataoutlen = (resplen - 2);
-
-    uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
-        PrintAndLogEx(ERR, "Getting challenge failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return false;
-    }
-    return true;
+    return exchange_commands(cmd, dataout, dataoutlen, false, true);
 }
 
 static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
-    bool activate_field = false;
-    bool keep_field_on = true;
-    uint8_t response[PM3_CMD_DATA_SIZE];
-    int resplen = 0;
-
     char cmd[50];
     sprintf(cmd, "00%s%04i%02i", READ_BINARY, offset, bytes_to_read);
-    PrintAndLogEx(INFO, "Sending: %s", cmd);
 
-    uint8_t aREAD_BINARY[80];
-    int aREAD_BINARY_n = 0;
-    param_gethex_to_eol(cmd, 0, aREAD_BINARY, sizeof(aREAD_BINARY), &aREAD_BINARY_n);
-    int res = ExchangeAPDU14a(aREAD_BINARY, aREAD_BINARY_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-    if (res) {
-        DropField();
-        return false;
-    }
-    PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
-
-    // drop sw
-    memcpy(dataout, &response, resplen - 2);
-    *dataoutlen = (resplen - 2);
-
-    uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
-        PrintAndLogEx(ERR, "Reading binary failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        return false;
-    }
-    return true;
+    return exchange_commands(cmd, dataout, dataoutlen, false, true);
 }
 
 static int read_file(uint8_t *dataout, int *dataoutlen) {
