@@ -151,7 +151,39 @@ static int asn1fieldlength(uint8_t *datain, int datainlen) {
     return false;
 }
 
-static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+static int get_challenge(int length, uint8_t *dataout, int *dataoutlen) {
+    bool activate_field = false;
+    bool keep_field_on = true;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    char cmd[50];
+    sprintf(cmd, "00%s0000%02X", GET_CHALLENGE, length);
+    PrintAndLogEx(INFO, "Sending: %s", cmd);
+
+    uint8_t aGET_CHALLENGE[80];
+    int aGET_CHALLENGE_n = 0;
+    param_gethex_to_eol(cmd, 0, aGET_CHALLENGE, sizeof(aGET_CHALLENGE), &aGET_CHALLENGE_n);
+    int res = ExchangeAPDU14a(aGET_CHALLENGE, aGET_CHALLENGE_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res) {
+        DropField();
+        return false;
+    }
+    PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
+
+    // drop sw
+    memcpy(dataout, &response, resplen - 2);
+    *dataoutlen = (resplen - 2);
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        PrintAndLogEx(ERR, "Getting challenge failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return false;
+    }
+    return true;
+}
+
+static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
     bool activate_field = false;
     bool keep_field_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE];
@@ -183,13 +215,13 @@ static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int max
     return true;
 }
 
-static int read_file(uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+static int read_file(uint8_t *dataout, int *dataoutlen) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
     uint8_t tempresponse[PM3_CMD_DATA_SIZE];
     int tempresplen = 0;
 
-    if (!_read_binary(0, 4, response, sizeof(response), &resplen)) {
+    if (!_read_binary(0, 4, response, &resplen)) {
         return false;
     }
 
@@ -204,7 +236,7 @@ static int read_file(uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
             toread = 118;
         }
 
-        if (!_read_binary(offset, toread, tempresponse, sizeof(tempresponse), &tempresplen)) {
+        if (!_read_binary(offset, toread, tempresponse, &tempresplen)) {
             return false;
         }
 
@@ -221,12 +253,13 @@ static int read_file(uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[PM3_CMD_DATA_SIZE];
+    uint8_t challenge[8];
     int resplen = 0;
     // bool BAC = true;
 
     // Select and read EF_CardAccess
     if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, true, true)) {
-        read_file(response, sizeof(response), &resplen);
+        read_file(response, &resplen);
         PrintAndLogEx(INFO, "EF_CardAccess: %s", sprint_hex(response, resplen));
     } else {
         PrintAndLogEx(INFO, "PACE unsupported. Will not read EF_CardAccess.");
@@ -235,6 +268,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     // Select MRTD applet
     if (select_file(P1_SELECT_BY_NAME, AID_MRTD, false, true) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -247,7 +281,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         // Select EF_DG1
         select_file(P1_SELECT_BY_EF, EF_DG1, false, true);
 
-        if (read_file(response, sizeof(response), &resplen) == false) {
+        if (read_file(response, &resplen) == false) {
             // BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt auth.");
         } else {
@@ -270,6 +304,14 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     unsigned char kseed[20] = {0x00};
     mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
     PrintAndLogEx(INFO, "kseed: %s", sprint_hex_inrow(kseed, 16));
+
+    // Get Challenge
+    if (get_challenge(8, challenge, &resplen) == false) {
+        PrintAndLogEx(ERR, "Couldn't get challenge.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "challenge: %s", sprint_hex_inrow(challenge, 8));
 
     DropField();
     return PM3_SUCCESS;
@@ -294,9 +336,9 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     uint8_t docnum[10];
     uint8_t dob[7];
     uint8_t expiry[7];
-    int docnumlen = sizeof(docnum);
-    int doblen = sizeof(dob);
-    int expirylen = sizeof(expiry);
+    int docnumlen = 9;
+    int doblen = 6;
+    int expirylen = 6;
     CLIGetStrWithReturn(ctx, 1, docnum, &docnumlen);
     CLIGetStrWithReturn(ctx, 2, dob, &doblen);
     CLIGetStrWithReturn(ctx, 3, expiry, &expirylen);
