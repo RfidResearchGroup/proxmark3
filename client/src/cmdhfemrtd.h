@@ -15,5 +15,5 @@
 
 int CmdHFeMRTD(const char *Cmd);
 
-int infoHF_EMRTD(void);
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry);
 #endif

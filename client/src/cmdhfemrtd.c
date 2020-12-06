@@ -80,6 +80,28 @@ static int select_file(const char *select_by, const char *file_id, bool activate
     return true;
 }
 
+static char calculate_check_digit(char *data) {
+    int mrz_weight[] = {7, 3, 1};
+    int cd = 0;
+    int value = 0;
+    char d;
+
+    for (int i = 0; i < strlen(data); i++) {
+        d = data[i];
+        if ('A' <= d && d <= 'Z') {
+            value = d - 55;
+        } else if ('a' <= d && d <= 'z') {
+            value = d - 87;
+        } else if (d == '<') {
+            value = 0;
+        } else {  // Numbers
+            value = d - 48;
+        }
+        cd += value * mrz_weight[i % 3];
+    }
+    return cd % 10;
+}
+
 static int asn1datalength(uint8_t *datain, int datainlen) {
     char* dataintext = sprint_hex_inrow(datain, datainlen);
 
@@ -196,7 +218,7 @@ static int read_file(uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     return true;
 }
 
-int infoHF_EMRTD(void) {
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
     // bool BAC = true;
@@ -233,6 +255,14 @@ int infoHF_EMRTD(void) {
         }
     }
 
+    char documentnumbercd = calculate_check_digit(documentnumber);
+    char dobcd = calculate_check_digit(dob);
+    char expirycd = calculate_check_digit(expiry);
+
+    char kmrz[25];
+    sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
+    PrintAndLogEx(INFO, "kmrz: %s", kmrz);
+
     DropField();
     return PM3_SUCCESS;
 }
@@ -246,11 +276,25 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str1("n", "documentnumber", "<number>", "9 character document number"),
+        arg_str1("d", "dateofbirth", "<number>", "date of birth in YYMMDD format"),
+        arg_str1("e", "expiry", "<number>", "expiry in YYMMDD format"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t docnum[9];
+    uint8_t dob[6];
+    uint8_t expiry[6];
+    int docnumlen = sizeof(docnum);
+    int doblen = sizeof(dob);
+    int expirylen = sizeof(expiry);
+    CLIGetStrWithReturn(ctx, 1, docnum, &docnumlen);
+    CLIGetStrWithReturn(ctx, 2, dob, &doblen);
+    CLIGetStrWithReturn(ctx, 3, expiry, &expirylen);
+
     CLIParserFree(ctx);
-    return infoHF_EMRTD();
+    return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry);
 }
 
 static int cmd_hf_emrtd_list(const char *Cmd) {
