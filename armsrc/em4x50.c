@@ -1335,9 +1335,6 @@ void em4x50_sim(uint8_t *filename) {
 
     for (int i = 0; i < EM4X50_NO_WORDS; i++)
         words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
-
-    for (int i = 0; i < EM4X50_NO_WORDS; i++)
-        Dbprintf("%i %08x", i, words[i]);
     
     // only if valid em4x50 data (e.g. uid == serial)
     if (words[EM4X50_DEVICE_SERIAL] != words[EM4X50_DEVICE_ID]) {
