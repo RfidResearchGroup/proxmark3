@@ -19,6 +19,7 @@
 #include "cmdhf14a.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol
 #include "emv/apduinfo.h"  // GetAPDUCodeDescription
+#include "sha1.h"          // KSeed calculation
 
 #define TIMEOUT 2000
 
@@ -254,6 +255,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
             PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
+    PrintAndLogEx(INFO, "doc: %s", documentnumber);
+    PrintAndLogEx(INFO, "dob: %s", dob);
+    PrintAndLogEx(INFO, "exp: %s", expiry);
 
     char documentnumbercd = calculate_check_digit(documentnumber);
     char dobcd = calculate_check_digit(dob);
@@ -262,6 +266,10 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     char kmrz[25];
     sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
     PrintAndLogEx(INFO, "kmrz: %s", kmrz);
+
+    unsigned char kseed[20] = {0x00};
+    mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
+    PrintAndLogEx(INFO, "kseed: %s", sprint_hex_inrow(kseed, 16));
 
     DropField();
     return PM3_SUCCESS;
@@ -283,9 +291,9 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t docnum[9];
-    uint8_t dob[6];
-    uint8_t expiry[6];
+    uint8_t docnum[10];
+    uint8_t dob[7];
+    uint8_t expiry[7];
     int docnumlen = sizeof(docnum);
     int doblen = sizeof(dob);
     int expirylen = sizeof(expiry);
