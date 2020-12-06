@@ -48,9 +48,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static int select_file(const char *select_by, const char *file_id) {
-    bool activate_field = true;
-    bool keep_field_on = true;
+static int select_file(const char *select_by, const char *file_id, bool activate_field, bool keep_field_on) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -70,7 +68,6 @@ static int select_file(const char *select_by, const char *file_id) {
     }
 
     if (resplen < 2) {
-        DropField();
         return false;
     }
     PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
@@ -78,7 +75,6 @@ static int select_file(const char *select_by, const char *file_id) {
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Selecting file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        DropField();
         return false;
     }
     return true;
@@ -159,7 +155,6 @@ static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int max
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
         PrintAndLogEx(ERR, "Reading binary failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        DropField();
         return false;
     }
     return true;
@@ -202,16 +197,40 @@ static int read_file(uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 }
 
 int infoHF_EMRTD(void) {
-    // const uint8_t *data
-    if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS)) {
-        uint8_t response[PM3_CMD_DATA_SIZE];
-        int resplen = 0;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+    // bool BAC = true;
 
+    // Select and read EF_CardAccess
+    if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, true, true)) {
         read_file(response, sizeof(response), &resplen);
-
         PrintAndLogEx(INFO, "EF_CardAccess: %s", sprint_hex(response, resplen));
     } else {
         PrintAndLogEx(INFO, "PACE unsupported. Will not read EF_CardAccess.");
+    }
+
+    // Select MRTD applet
+    if (select_file(P1_SELECT_BY_NAME, AID_MRTD, false, true) == false) {
+        PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
+        return PM3_ESOFT;
+    }
+
+    // Select EF_COM
+    if (select_file(P1_SELECT_BY_EF, EF_COM, false, true) == false) {
+        // BAC = true;
+        PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt auth.");
+    } else {
+        // BAC = false;
+        // Select EF_DG1
+        select_file(P1_SELECT_BY_EF, EF_DG1, false, true);
+
+        if (read_file(response, sizeof(response), &resplen) == false) {
+            // BAC = true;
+            PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt auth.");
+        } else {
+            // BAC = false;
+            PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
+        }
     }
 
     DropField();
