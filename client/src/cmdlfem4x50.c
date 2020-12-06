@@ -176,11 +176,11 @@ int CmdEM4x50ELoad(const char *Cmd) {
     uint8_t data[DUMP_FILESIZE] = {0x0};
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_eload",
+    CLIParserInit(&ctx, "lf em 4x50 eload",
                   "Loads EM4x50 tag dump into emulator memory on device.",
-                  "lf em 4x50_eload -f mydump.bin -> uploads bin file ./mydump.bin\n"
-                  "lf em 4x50_eload -f mydump.eml -> uploads eml file ./mydump.eml\n"
-                  "lf em 4x50_eload -f mydump.json -> uploads json file ./mydump.json\n"
+                  "lf em 4x50 eload -f mydump.bin -> uploads bin file ./mydump.bin\n"
+                  "lf em 4x50 eload -f mydump.eml -> uploads eml file ./mydump.eml\n"
+                  "lf em 4x50 eload -f mydump.json -> uploads json file ./mydump.json\n"
                  );
 
     void *argtable[] = {
@@ -216,12 +216,12 @@ int CmdEM4x50ESave(const char *Cmd) {
     uint8_t data[DUMP_FILESIZE] = {0x0};
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_esave",
+    CLIParserInit(&ctx, "lf em 4x50 esave",
                   "Saves bin/eml/json dump file of emulator memory.",
-                  "lf em 4x50_esave -> use UID as filename\n"
-                  "lf em 4x50_esave -f mydump.bin -> saves to bin file ./mydump.bin\n"
-                  "lf em 4x50_esave -f mydump.eml -> saves to eml file ./mydump.eml\n"
-                  "lf em 4x50_esave -f mydump.json -> saves to json file ./mydump.json\n"
+                  "lf em 4x50 esave -> use UID as filename\n"
+                  "lf em 4x50 esave -f mydump.bin -> saves to bin file ./mydump.bin\n"
+                  "lf em 4x50 esave -f mydump.eml -> saves to eml file ./mydump.eml\n"
+                  "lf em 4x50 esave -f mydump.json -> saves to json file ./mydump.json\n"
                  );
 
     void *argtable[] = {
@@ -271,9 +271,9 @@ int CmdEM4x50Login(const char *Cmd) {
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_login",
+    CLIParserInit(&ctx, "lf em 4x50 login",
                   "Login into EM4x50 tag.",
-                  "lf em 4x50_login -p 12345678 -< login with password 12345678\n"
+                  "lf em 4x50 login -p 12345678 -< login with password 12345678\n"
                  );
 
     void *argtable[] = {
@@ -319,9 +319,9 @@ int CmdEM4x50Brute(const char *Cmd) {
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_brute",
+    CLIParserInit(&ctx, "lf em 4x50 brute",
                   "Tries to bruteforce the password of a EM4x50. Function can be stopped by pressing pm3 button.",
-                  "lf em 4x50_brute -f 12330000 -l 12340000 -> tries passwords from 0x12330000 to 0x1234000000\n"
+                  "lf em 4x50 brute -f 12330000 -l 12340000 -> tries passwords from 0x12330000 to 0x1234000000\n"
                  );
 
     void *argtable[] = {
@@ -391,10 +391,10 @@ int CmdEM4x50Chk(const char *Cmd) {
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_chk",
+    CLIParserInit(&ctx, "lf em 4x50 chk",
                   "Dictionary attack against EM4x50.",
-                  "lf em 4x50_chk -> uses T55xx default dictionary\n"
-                  "lf em 4x50_chk -f my.dic -> uses dictionary ./my.dic\n"
+                  "lf em 4x50 chk -> uses T55xx default dictionary\n"
+                  "lf em 4x50 chk -f my.dic -> uses dictionary ./my.dic\n"
                  );
 
     void *argtable[] = {
@@ -540,10 +540,10 @@ int CmdEM4x50Read(const char *Cmd) {
     etd.pwd_given = false;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_read",
+    CLIParserInit(&ctx, "lf em 4x50 read",
                   "Reads single EM4x50 block/word.",
-                  "lf em 4x50_read -b 3 -> reads block 3\n"
-                  "lf em 4x50_read -b 32 -p 12345678 -> reads block 32 with password 0x12345678\n"
+                  "lf em 4x50 read -b 3 -> reads block 3\n"
+                  "lf em 4x50 read -b 32 -p 12345678 -> reads block 32 with password 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -591,10 +591,10 @@ int CmdEM4x50Info(const char *Cmd) {
     em4x50_data_t etd = {.pwd_given = false};
     
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_info",
+    CLIParserInit(&ctx, "lf em 4x50 info",
                   "Tag information EM4x50.",
-                  "lf em 4x50_info\n"
-                  "lf em 4x50_info -p 12345678 -> uses password 0x12345678\n"
+                  "lf em 4x50 info\n"
+                  "lf em 4x50 info -p 12345678 -> uses password 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -644,10 +644,10 @@ int CmdEM4x50Reader(const char *Cmd) {
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_reader",
+    CLIParserInit(&ctx, "lf em 4x50 reader",
                   "Shows standard read data of EM4x50 tag.",
-                  "lf em 4x50_reader\n"
-                  "lf em 4x50_reader -@   -> continuous reader mode"
+                  "lf em 4x50 reader\n"
+                  "lf em 4x50 reader -@   -> continuous reader mode"
                  );
 
     void *argtable[] = {
@@ -708,12 +708,12 @@ int CmdEM4x50Dump(const char *Cmd) {
     uint8_t data[DUMP_FILESIZE] = {0};
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_dump",
+    CLIParserInit(&ctx, "lf em 4x50 dump",
                   "Reads all blocks/words from EM4x50 tag and saves dump in bin/eml/json format.",
-                  "lf em 4x50_dump -> saves dump in lf-4x50-<UID>-dump.bin/eml/json\n"
-                  "lf em 4x50_dump -f mydump.eml -> saves dump in mydump.eml\n"
-                  "lf em 4x50_dump -p 12345678\n"
-                  "lf em 4x50_dump -f mydump.eml -p 12345678\n"
+                  "lf em 4x50 dump -> saves dump in lf-4x50-<UID>-dump.bin/eml/json\n"
+                  "lf em 4x50 dump -f mydump.eml -> saves dump in mydump.eml\n"
+                  "lf em 4x50 dump -p 12345678\n"
+                  "lf em 4x50 dump -f mydump.eml -p 12345678\n"
                  );
 
     void *argtable[] = {
@@ -798,10 +798,10 @@ int CmdEM4x50Write(const char *Cmd) {
     em4x50_data_t etd = {.pwd_given = false};
     
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_write",
+    CLIParserInit(&ctx, "lf em 4x50 write",
                   "Writes single block/word to EM4x50 tag.",
-                  "lf em 4x50_write -b 3 -d 4f22e7ff -> writes 0x4f22e7ff to block 3\n"
-                  "lf em 4x50_write -b 3 -d 4f22e7ff -p 12345678\n"
+                  "lf em 4x50 write -b 3 -d 4f22e7ff -> writes 0x4f22e7ff to block 3\n"
+                  "lf em 4x50 write -b 3 -d 4f22e7ff -p 12345678\n"
                  );
 
     void *argtable[] = {
@@ -883,9 +883,9 @@ int CmdEM4x50WritePwd(const char *Cmd) {
     em4x50_data_t etd;
     
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_writepwd",
+    CLIParserInit(&ctx, "lf em 4x50 writepwd",
                   "Writes EM4x50 password.",
-                  "lf em 4x50_writepwd -p 4f22e7ff -n 12345678 -> replaces password 0x4f22e7ff with 0x12345678\n"
+                  "lf em 4x50 writepwd -p 4f22e7ff -n 12345678 -> replaces password 0x4f22e7ff with 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -950,9 +950,9 @@ int CmdEM4x50Wipe(const char *Cmd) {
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_wipe",
+    CLIParserInit(&ctx, "lf em 4x50 wipe",
                   "Wipes EM4x50 tag.",
-                  "lf em 4x50_wipe -p 12345678 -> wipes tag with password 0x12345678\n"
+                  "lf em 4x50 wipe -p 12345678 -> wipes tag with password 0x12345678\n"
                  );
 
     void *argtable[] = {
@@ -1037,12 +1037,12 @@ int CmdEM4x50Restore(const char *Cmd) {
     PacketResponseNG resp;
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_restore",
+    CLIParserInit(&ctx, "lf em 4x50 restore",
                   "Restores data from dumpfile onto a Em4x50 tag.",
-                  "lf em 4x50_restore -u 1b5aff5c -> uses lf-4x50-1B5AFF5C-dump.bin\n"
-                  "lf em 4x50_restore -f mydump.eml -> uses mydump.eml\n"
-                  "lf em 4x50_restore -u 1b5aff5c -p 12345678\n"
-                  "lf em 4x50_restore -f mydump.eml -p 12345678\n"
+                  "lf em 4x50 restore -u 1b5aff5c -> uses lf-4x50-1B5AFF5C-dump.bin\n"
+                  "lf em 4x50 restore -f mydump.eml -> uses mydump.eml\n"
+                  "lf em 4x50 restore -u 1b5aff5c -p 12345678\n"
+                  "lf em 4x50 restore -f mydump.eml -p 12345678\n"
                  );
 
     void *argtable[] = {
@@ -1135,10 +1135,10 @@ int CmdEM4x50Sim(const char *Cmd) {
     PacketResponseNG resp;
      
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x50_sim",
+    CLIParserInit(&ctx, "lf em 4x50 sim",
                   "Simulates a EM4x50 tag",
-                  "lf em 4x50_sim -> simulates EM4x50 data in memory (upload via em4x50_eload).\n"
-                  "lf em 4x50_sim -f mydump.eml -> simulates content of file ./mydump\n"
+                  "lf em 4x50 sim -> simulates EM4x50 data in memory (upload via em4x50_eload).\n"
+                  "lf em 4x50 sim -f mydump.eml -> simulates content of file ./mydump\n"
                  );
 
     void *argtable[] = {
