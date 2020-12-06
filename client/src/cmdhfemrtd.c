@@ -22,6 +22,22 @@
 
 #define TIMEOUT 2000
 
+// ISO7816 commands
+#define SELECT "A4"
+#define GET_CHALLENGE "84"
+#define READ_BINARY "B0"
+#define P1_SELECT_BY_EF "02"
+#define P1_SELECT_BY_NAME "04"
+#define P2_PROPRIETARY "0C"
+
+// File IDs
+#define EF_CARDACCESS "011C"
+#define EF_COM "011E"
+#define EF_DG1 "0101"
+
+// App IDs
+#define AID_MRTD "A0000002471001"
+
 static int CmdHelp(const char *Cmd);
 
 static uint16_t get_sw(uint8_t *d, uint8_t n) {
@@ -41,7 +57,7 @@ static int select_aid(const char *select_by, const char *file_id) {
     size_t file_id_len = strlen(file_id) / 2;
 
     char cmd[50];
-    sprintf(cmd, "00A4%s0C%02lu%s", select_by, file_id_len, file_id);
+    sprintf(cmd, "00%s%s0C%02lu%s", SELECT, select_by, file_id_len, file_id);
     PrintAndLogEx(INFO, "Sending: %s", cmd);
 
     uint8_t aSELECT_AID[80];
@@ -57,7 +73,7 @@ static int select_aid(const char *select_by, const char *file_id) {
         DropField();
         return false;
     }
-    PrintAndLogEx(INFO, "Resp: %s", sprint_hex(response, resplen));
+    PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
@@ -123,7 +139,7 @@ static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int max
     int resplen = 0;
 
     char cmd[50];
-    sprintf(cmd, "00B0%04i%02i", offset, bytes_to_read);
+    sprintf(cmd, "00%s%04i%02i", READ_BINARY, offset, bytes_to_read);
     PrintAndLogEx(INFO, "Sending: %s", cmd);
 
     uint8_t aREAD_BINARY[80];
@@ -134,7 +150,7 @@ static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int max
         DropField();
         return false;
     }
-    PrintAndLogEx(INFO, "Resp: %s", sprint_hex(response, resplen));
+    PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
 
     // drop sw
     memcpy(dataout, &response, resplen - 2);
@@ -187,7 +203,7 @@ static int read_file(uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 
 int infoHF_EMRTD(void) {
     // const uint8_t *data
-    if (select_aid("02", "011c")) {
+    if (select_aid(P1_SELECT_BY_EF, EF_CARDACCESS)) {
         uint8_t response[PM3_CMD_DATA_SIZE];
         int resplen = 0;
 
