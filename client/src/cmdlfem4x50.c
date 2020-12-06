@@ -1217,15 +1217,24 @@ int CmdEM4x50Sim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",   CmdHelp,         AlwaysAvailable, "This help"},
-    {"dump",   CmdEM4x50Dump,   IfPm3EM4x50,     "dump EM4x50 tag"},
-    {"info",   CmdEM4x50Info,   IfPm3EM4x50,     "tag information EM4x50"},
-    {"write",  CmdEM4x50Write,  IfPm3EM4x50,     "write word data to EM4x50"},
-    {"write_password", CmdEM4x50WritePassword, IfPm3EM4x50, "change password of EM4x50 tag"},
-    {"read",   CmdEM4x50Read,   IfPm3EM4x50,     "read word data from EM4x50"},
-    {"wipe",   CmdEM4x50Wipe,   IfPm3EM4x50,     "wipe data from EM4x50"},
+    {"help",        CmdHelp,              AlwaysAvailable, "This help"},
+    {"dump",   CmdEM4x50Dump,        IfPm3EM4x50,     "dump EM4x50 tag"},
+    {"info",   CmdEM4x50Info,        IfPm3EM4x50,     "tag information EM4x50"},
+    {"write",  CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
+    {"writepwd",CmdEM4x50WritePwd,   IfPm3EM4x50,     "change password of EM4x50"},
+    {"read",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
+    {"wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe EM4x50 tag"},
+    {"brute",  CmdEM4x50Brute,       IfPm3EM4x50,     "guess password of EM4x50"},
+    {"login",  CmdEM4x50Login,       IfPm3EM4x50,     "login into EM4x50"},
+    {"restore",CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
+    {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate EM4x50 tag"},
+    {"reader", CmdEM4x50Reader,      IfPm3EM4x50,     "show standard read mode data of EM4x50"},
+    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to flash memory"},
+    {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save flash memory to file"},
+    {"chk",    CmdEM4x50Chk,         IfPm3EM4x50,     "check passwords from dictionary"},
     {NULL, NULL, NULL, NULL}
 };
+
 
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
