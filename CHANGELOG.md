@@ -4,7 +4,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Fix issue #844 - `lf t55xx config` => recompute block0 (@cyberpunk-re)
- - Add script hf_mf_unbrick_baduid.lua to revive mifare cards with bad BCC (@cyberpunk-re)
  - Fix `hf 15 sim` - Added basic response to GET_SYSTEM_INFO and READBLOCK requests in order to fix iso15693 tag sim (@cyberpunk-re)
  - Added `mf mfu sim t 7 n <numreads>` - MFU emulation now supports automatic exit after <num> blocks read. (@cyberpunk-re)
  - Added T55xx Guide to assist in learning how to use the T55xx chip (@mwalker33)
