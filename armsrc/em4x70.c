@@ -488,12 +488,10 @@ static bool find_EM4X70_Tag(void) {
 
 static int em4x70_receive(uint8_t *bits) {
 
-    bool bbitchange = false;
     uint32_t pl;
     int bit_pos = 0;
+    uint8_t edge = 0;
 
-    // Set first bit to a 1 for starting off corectly
-    bits[0] = 1;
     
     bool foundheader = false;
 
@@ -529,48 +527,44 @@ static int em4x70_receive(uint8_t *bits) {
     // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
     while (true) {
 
-        bit_pos++;
-        pl = get_pulse_length();
+        if(edge)
+            pl = get_pulse_length();
+        else
+            pl = get_pulse_invert_length();
 
         if (check_pulse_length(pl, EM4X70_T_TAG_FULL_PERIOD, EM4X70_T_TAG_QUARTER_PERIOD)) {
 
-            // pulse length = 1 -> keep former bit value
-            bits[bit_pos] = bits[bit_pos - 1];
+            // pulse length = 1
+            bits[bit_pos++] = edge;
 
         } else if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD, EM4X70_T_TAG_QUARTER_PERIOD)) {
 
-            // pulse length = 1.5 -> decision on bit change
-
-            if (bbitchange) {
-
-                // if number of pulse lengths with 1.5 periods is even -> add bit
-                bits[bit_pos] = (bits[bit_pos - 1] == 1) ? 1 : 0;
-
-                // pulse length of 1.5 changes bit value
-                bits[bit_pos + 1] = (bits[bit_pos] == 1) ? 0 : 1;
-                bit_pos++;
-
-                // next time add only one bit
-                bbitchange = false;
-
+            // pulse length = 1.5 -> flip edge detection
+            if(edge) {
+                bits[bit_pos++] = 0;
+                bits[bit_pos++] = 0;
+                edge = 0;
             } else {
-
-                bits[bit_pos] = (bits[bit_pos - 1] == 1) ? 0 : 1;
-
-                // next time two bits have to be added
-                bbitchange = true;
+                bits[bit_pos++] = 1;
+                bits[bit_pos++] = 1;
+                edge = 1;
             }
 
         } else if (check_pulse_length(pl, 2 * EM4X70_T_TAG_FULL_PERIOD, EM4X70_T_TAG_QUARTER_PERIOD)) {
 
-            // pulse length of 2 means: adding 2 bits "01"
-            bits[bit_pos] = 0;
-            bits[bit_pos + 1] = 1;
-            bit_pos++;
+            // pulse length of 2
+            if(edge) {
+                bits[bit_pos++] = 0;
+                bits[bit_pos++] = 1;
+            } else {
+                bits[bit_pos++] = 1;
+                bits[bit_pos++] = 0;
+            }
 
-        } else if (check_pulse_length(pl, 3 * EM4X70_T_TAG_FULL_PERIOD, EM4X70_T_TAG_QUARTER_PERIOD)) {
-            // pulse length of 3 indicates listen window -> clear last
-            // bit (= 0) and return
+        } else if ( (edge && check_pulse_length(pl, 3 * EM4X70_T_TAG_FULL_PERIOD, EM4X70_T_TAG_QUARTER_PERIOD)) ||
+                    (!edge && check_pulse_length(pl, 80, EM4X70_T_TAG_QUARTER_PERIOD))) {
+
+            // LIW detected (either invert or normal)
             return --bit_pos;
         }
     }
