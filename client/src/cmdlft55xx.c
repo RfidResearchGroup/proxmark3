@@ -739,6 +739,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
                     for (; i < 9; i++) {
                         if (rates[i] == bitRate) {
                             config.bitrate = i;
+                            config.block0 = ((config.block0 & ~(0x1c0000)) | (i << 18));
                             break;
                         }
                     }
@@ -789,6 +790,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
                     PrintAndLogEx(WARNING, "Unknown modulation '%s'", modulation);
                     errors = true;
                 }
+                config.block0 = ((config.block0 & ~(0x1f0000)) | (config.modulation << 12));
                 break;
             case 'i':
                 if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
@@ -822,6 +824,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
                     config.ST = true;
                     cmdp += 1;
                 }
+                config.block0 = ((config.block0 & ~(0x8)) | (config.ST << 3));
                 break;
             case 'r':
                 errors = param_getdec(Cmd, cmdp + 1, &downlink_mode);
@@ -843,8 +846,6 @@ static int CmdT55xxSetConfig(const char *Cmd) {
 
     if (gotconf) {
         SetConfigWithBlock0Ex(block0, config.offset, config.Q5);
-    } else {
-        config.block0 = 0;
     }
 
     return printConfiguration(config);
