@@ -183,7 +183,7 @@ static bool get_signalproperties(void) {
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
     uint32_t sample_max_sum = 0;
-    memcpy(sample_max, 0x00, sizeof(sample_max));
+    memset(sample_max, 0x00, sizeof(sample_max));
 
     LED_A_ON();
 
