@@ -790,7 +790,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
                     PrintAndLogEx(WARNING, "Unknown modulation '%s'", modulation);
                     errors = true;
                 }
-                config.block0 = ((config.block0 & ~(0x1f0000)) | (config.modulation << 12));
+                config.block0 = ((config.block0 & ~(0x1f000)) | (config.modulation << 12));
                 break;
             case 'i':
                 if ((param_getchar(Cmd, cmdp + 1) == '0') || (param_getchar(Cmd, cmdp + 1) == '1')) {
