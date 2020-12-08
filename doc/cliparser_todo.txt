@@ -141,8 +141,6 @@ hf mfu otptear
 hf mfdes enum
 hf mfdes getuid
 hf mfdes info
-hf thinfilm info
-hf thinfilm sim
 hw connect
 hw dbg
 hw detectreader
