@@ -2807,7 +2807,7 @@ char *GetModelStrFromCID(uint32_t cid) {
 
 char *GetConfigBlock0Source(uint8_t id) {
    
-    static char buf[20];
+    static char buf[40];
     char *retStr = buf;
 
     switch (id) {
