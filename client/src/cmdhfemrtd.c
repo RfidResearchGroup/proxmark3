@@ -11,15 +11,17 @@
 #include "cmdhfemrtd.h"
 #include <ctype.h>
 #include "fileutils.h"
-#include "cmdparser.h"     // command_t
-#include "comms.h"         // clearCommandBuffer
+#include "cmdparser.h"              // command_t
+#include "comms.h"                  // clearCommandBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "crc16.h"
 #include "cmdhf14a.h"
-#include "protocols.h"     // definitions of ISO14A/7816 protocol
-#include "emv/apduinfo.h"  // GetAPDUCodeDescription
-#include "sha1.h"          // KSeed calculation
+#include "protocols.h"              // definitions of ISO14A/7816 protocol
+#include "emv/apduinfo.h"           // GetAPDUCodeDescription
+#include "sha1.h"                   // KSeed calculation etc
+#include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
+#include "des.h"                    // mbedtls_des_key_set_parity
 
 #define TIMEOUT 2000
 
@@ -151,6 +153,29 @@ static int asn1fieldlength(uint8_t *datain, int datainlen) {
     return false;
 }
 
+
+static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
+    PrintAndLogEx(INFO, "seed: %s", sprint_hex_inrow(seed, 16));
+
+    // combine seed and type
+    uint8_t data[50];
+    memcpy(data, seed, 16);
+    memcpy(data + 16, type, 4);
+    PrintAndLogEx(INFO, "data: %s", sprint_hex_inrow(data, 20));
+
+    // SHA1 the key
+    unsigned char key[20];
+    mbedtls_sha1(data, 20, key);
+    PrintAndLogEx(INFO, "key: %s", sprint_hex_inrow(key, 20));
+
+    // Set parity bits
+    mbedtls_des_key_set_parity(key);
+    mbedtls_des_key_set_parity(key + 8);
+    PrintAndLogEx(INFO, "post-parity key: %s", sprint_hex_inrow(key, 20));
+
+    memcpy(dataout, &key, length);
+}
+
 static int select_file(const char *select_by, const char *file_id, bool activate_field, bool keep_field_on) {
     size_t file_id_len = strlen(file_id) / 2;
 
@@ -217,6 +242,11 @@ static int read_file(uint8_t *dataout, int *dataoutlen) {
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     uint8_t challenge[8];
+    // TODO: get these _types into a better spot
+    uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
+    uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
+    uint8_t kenc[50];
+    uint8_t kmac[50];
     int resplen = 0;
     // bool BAC = true;
 
@@ -267,6 +297,11 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     unsigned char kseed[20] = {0x00};
     mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
     PrintAndLogEx(INFO, "kseed: %s", sprint_hex_inrow(kseed, 16));
+
+    deskey(kseed, KENC_type, 16, kenc);
+    deskey(kseed, KMAC_type, 16, kmac);
+    PrintAndLogEx(INFO, "kenc: %s", sprint_hex_inrow(kenc, 16));
+    PrintAndLogEx(INFO, "kmac: %s", sprint_hex_inrow(kmac, 16));
 
     // Get Challenge
     if (get_challenge(8, challenge, &resplen) == false) {
