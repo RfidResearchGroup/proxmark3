@@ -141,11 +141,6 @@ hf mfu otptear
 hf mfdes enum
 hf mfdes getuid
 hf mfdes info
-hf topaz info
-hf topaz reader
-hf topaz sim
-hf topaz sniff
-hf topaz raw
 hw connect
 hw dbg
 hw detectreader
