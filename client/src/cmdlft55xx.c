@@ -51,6 +51,7 @@ t55xx_conf_block_t config = {
     .inverted = false,
     .offset = 0x00,
     .block0 = 0x00,
+    .block0Status = notSet,
     .Q5 = false,
     .usepwd = false,
     .downlink_mode = refFixedBit
@@ -844,6 +845,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     //Validations
     if (errors) return usage_t55xx_config();
 
+    config.block0Status = userSet;
     if (gotconf) {
         SetConfigWithBlock0Ex(block0, config.offset, config.Q5);
     }
@@ -1336,6 +1338,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             config.pwd = pwd & 0xffffffff;
         }
 
+        config.block0Status = autoDetect;
         if (print_config)
             printConfiguration(config);
 
@@ -1371,6 +1374,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 PrintAndLogEx(NORMAL, "--[%d]---------------", i + 1);
             }
 
+            config.block0Status = autoDetect;
             if (print_config)
                 printConfiguration(tests[i]);
         }
@@ -1641,7 +1645,7 @@ int printConfiguration(t55xx_conf_block_t b) {
     PrintAndLogEx(INFO, "     Inverted       : %s", (b.inverted) ? _GREEN_("Yes") : "No");
     PrintAndLogEx(INFO, "     Offset         : %d", b.offset);
     PrintAndLogEx(INFO, "     Seq. Term.     : %s", (b.ST) ? _GREEN_("Yes") : "No");
-    PrintAndLogEx(INFO, "     Block0         : 0x%08X", b.block0);
+    PrintAndLogEx(INFO, "     Block0         : 0x%08X %s", b.block0, GetConfigBlock0Source(b.block0Status));
     PrintAndLogEx(INFO, "     Downlink Mode  : %s", GetDownlinkModeStr(b.downlink_mode));
     PrintAndLogEx(INFO, "     Password Set   : %s", (b.usepwd) ? _RED_("Yes") : _GREEN_("No"));
     if (b.usepwd) {
@@ -2798,6 +2802,28 @@ char *GetModelStrFromCID(uint32_t cid) {
     if (cid == 1) snprintf(retStr, sizeof(buf), "ATA5577M1");
     if (cid == 2) snprintf(retStr, sizeof(buf), "ATA5577M2");
     if (cid == 3) snprintf(retStr, sizeof(buf), "ATA5577M3");
+    return buf;
+}
+
+char *GetConfigBlock0Source(uint8_t id) {
+   
+    static char buf[20];
+    char *retStr = buf;
+
+    switch (id) {
+        case autoDetect:
+            snprintf(retStr, sizeof(buf), _YELLOW_("(Auto detect)"));
+            break;
+        case userSet:
+            snprintf(retStr, sizeof(buf), _YELLOW_("(User set)"));
+            break;
+        case tagRead:
+            snprintf(retStr, sizeof(buf), _GREEN_("(Tag read)"));
+            break;
+        default:
+            snprintf(retStr, sizeof(buf), _RED_("(Unknown)"));
+            break;
+    }
     return buf;
 }
 

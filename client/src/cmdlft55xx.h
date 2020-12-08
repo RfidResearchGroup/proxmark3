@@ -126,6 +126,12 @@ typedef struct {
     uint8_t offset;
     uint32_t block0;
     enum {
+        notSet     = 0x00,
+        autoDetect = 0x01,
+        userSet    = 0x02,
+        tagRead    = 0x03, 
+    } block0Status;
+    enum {
         RF_8 = 0x00,
         RF_16 = 0x01,
         RF_32 = 0x02,
@@ -166,6 +172,7 @@ char *GetSaferStr(uint32_t id);
 char *GetQ5ModulationStr(uint32_t id);
 char *GetModulationStr(uint32_t id, bool xmode);
 char *GetModelStrFromCID(uint32_t cid);
+char *GetConfigBlock0Source(uint8_t id);
 char *GetSelectedModulationStr(uint8_t id);
 char *GetDownlinkModeStr(uint8_t downlink_mode);
 void printT5xxHeader(uint8_t page);
