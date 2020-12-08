@@ -1696,7 +1696,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass restore",
                   "Restore data from dumpfile onto a iCLASS tag",
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0\n"
-                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0 --elite"
+                  "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0 --elite\n"
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 -k 1122334455667788 --elite\n"
                 );
 
