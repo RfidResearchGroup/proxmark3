@@ -10,7 +10,6 @@
 
 #include "cmdlfem410x.h"
 #include "cmdlfem4x50.h"
-#include "cmdlfem4x70.h"
 
 #include <stdio.h>
 #include <string.h>
