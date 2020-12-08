@@ -238,7 +238,6 @@ int CmdEM4x50ESave(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reading emulator memory...");
     if (!GetFromDevice(BIG_BUF_EML, data, DUMP_FILESIZE, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
-        free(data);
         return PM3_ETIMEOUT;
     }
     
