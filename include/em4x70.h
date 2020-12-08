@@ -13,6 +13,6 @@
 
 typedef struct {
     bool parity;
-} PACKED em4x70_data_t;
+} em4x70_data_t;
 
 #endif /* EM4X70_H__ */
