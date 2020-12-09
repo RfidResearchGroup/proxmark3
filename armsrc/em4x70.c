@@ -278,12 +278,18 @@ static void em4x70_send_bit(int bit) {
 
 
 /**
- * em4x70_send_command without parity
+ * em4x70_send_command
  */
 static void em4170_send_command(uint8_t command) {
     int parity = 0;
+    int msb_bit = 0;
+
+    // Non automotive EM4x70 based tags are 3 bits + 1 parity.
+    // So drop the MSB and send a parity bit instead after the command
+    if(command_parity)
+        msb_bit = 1;
     
-    for (int i = 0; i < 4; i++) {
+    for (int i = msb_bit; i < 4; i++) {
         int bit = (command >> (3 - i)) & 1;
         em4x70_send_bit(bit);
         parity ^= bit;
