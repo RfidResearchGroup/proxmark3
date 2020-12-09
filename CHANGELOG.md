@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix issue #844 - `lf t55xx config` => recompute block0 (@cyberpunk-re)
  - EM4x50: changed cli parameter from w (word) to d (data) (@tharexde)
  - EM4x50: new function 4x50 login: authenticate against tag (@tharexde)
  - EM4x50: new function 4x50 brute: guess password within a given password range (@tharexde)
@@ -21,7 +22,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - EM4x50: switched to cliparser for all functions (@tharexde)
  - EM4x50: stabilized and accelerated tag detection (@tharexde)
  - EM4x50: removed global tag structure on device side (@tharexde)
- - Fix `hf 15 sim` - Added basic response to GET_SYSTEM_INFO and READBLOCK requests in order to fix iso15693 tag sim
+ - Fix `hf 15 sim` - Added basic response to GET_SYSTEM_INFO and READBLOCK requests in order to fix iso15693 tag sim (@cyberpunk-re)
  - Added `mf mfu sim t 7 n <numreads>` - MFU emulation now supports automatic exit after <num> blocks read. (@cyberpunk-re)
  - Added T55xx Guide to assist in learning how to use the T55xx chip (@mwalker33)
  - Fix 'hf iclass wrbl' - dealing with tags in unsecured vs secured pagemode now is correct (@iceman1001)
