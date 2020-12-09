@@ -4067,6 +4067,13 @@
         "system_integrator": "PAYCULT"
     },
     {
+        "application": "Access Control (SIO)",
+        "company": "HID Global",
+        "mad": "0x3D01",
+        "service_provider": "HID Corporation",
+        "system_integrator": "HID Corporation"
+    },
+    {
         "application": "City transport bus, ferry, administration",
         "company": "VFJ Technology Pty Ltd",
         "mad": "0x4001",

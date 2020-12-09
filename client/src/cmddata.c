@@ -709,7 +709,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
         if (Em410xDecode(bits, &size, &idx, &hi, &id) == 1) {
             //need to adjust to set bitstream back to manchester encoded data
             //setDemodBuff(bits, size, idx);
-            printEM410x(hi, id);
+            printEM410x(hi, id, false);
         }
     }
     return PM3_SUCCESS;

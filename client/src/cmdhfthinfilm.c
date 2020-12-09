@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-
+#include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "cmdtrace.h"
@@ -21,28 +21,6 @@
 #include "cmdhf14a.h" // manufacture
 
 static int CmdHelp(const char *Cmd);
-
-static int usage_thinfilm_info(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf thinfilm info [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h    this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf thinfilm info");
-    return PM3_SUCCESS;
-}
-
-static int usage_thinfilm_sim(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf thinfilm sim [h] [d <data>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          this help");
-    PrintAndLogEx(NORMAL, "           d <bytes>  bytes to send, in hex");
-    PrintAndLogEx(NORMAL, "           r          raw, provided bytes should include CRC");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf thinfilm sim d B70470726f786d61726b2e636f6d");
-    return PM3_SUCCESS;
-}
 
 // Printing function based upon the code in libnfc
 // ref
@@ -119,26 +97,17 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
 }
 
 static int CmdHfThinFilmInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf thinfilm info",
+                  "Get info from Thinfilm tags",
+                  "hf thinfilm info");
 
-    uint8_t cmdp = 0;
-    bool errors = false;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_thinfilm_info();
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors) {
-        usage_thinfilm_info();
-        return PM3_EINVARG;
-    }
-
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     return infoThinFilm(true);
 }
 
@@ -168,45 +137,40 @@ int infoThinFilm(bool verbose) {
 }
 
 static int CmdHfThinFilmSim(const char *Cmd) {
-    uint8_t cmdp = 0;
-    uint8_t data[512];
-    int datalen = 0;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf thinfilm sim",
+                  "Simulate Thinfilm tag",
+                  "hf thinfilm sim -d B70470726f786d61726b2e636f6d");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to send"),
+        arg_lit0(NULL, "raw", "raw, provided bytes should include CRC"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int data_len = 0;
+    uint8_t data[512] = {0};
+    CLIGetHexWithReturn(ctx, 1, data, &data_len);
 
     bool addcrc = true;
-    bool errors = false;
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_thinfilm_sim();
-            case 'd':
-                // Retrieve the data
-                param_gethex_ex(Cmd, cmdp + 1, data, &datalen);
-                datalen >>= 1;
-                cmdp += 2;
-                break;
-            case 'r':
-                addcrc = false;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    if (arg_get_lit(ctx, 2)) {
+        addcrc = false;
     }
 
-    //Validations
-    if (errors || cmdp == 0 || datalen == 0 || datalen > 512) return usage_thinfilm_sim();
-    if (addcrc && datalen <= 510) {
+    CLIParserFree(ctx);
+
+    if (addcrc && data_len <= 510) {
         uint8_t b1, b2;
-        compute_crc(CRC_14443_A, data, datalen, &b1, &b2);
-        data[datalen++] = b2;
-        data[datalen++] = b1;
+        compute_crc(CRC_14443_A, data, data_len, &b1, &b2);
+        data[data_len++] = b2;
+        data[data_len++] = b1;
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_THINFILM_SIMULATE, (uint8_t *)&data, datalen);
+    SendCommandNG(CMD_HF_THINFILM_SIMULATE, (uint8_t *)&data, data_len);
     PacketResponseNG resp;
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 

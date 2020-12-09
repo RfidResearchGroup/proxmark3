@@ -34,32 +34,20 @@
 #define LAST_WORD_WRITE_INHIBITED   3       // fourth byte
 
 // misc
-#define STATUS_NO_WORDS             0xfc
-#define STATUS_SUCCESS              0x2
-#define STATUS_LOGIN                0x1
-#define NO_CHARS_MAX                400
 #define TIMEOUT                     2000
+#define DUMP_FILESIZE               136
 
 typedef struct {
     bool addr_given;
     bool pwd_given;
-    bool newpwd_given;
-    uint8_t password[4];
-    uint8_t new_password[4];
-    uint8_t addresses[4];
-    uint8_t address;
-    uint8_t word[4];
+    uint32_t password1;
+    uint32_t password2;
+    uint32_t word;
+    uint32_t addresses;
 } PACKED em4x50_data_t;
 
 typedef struct {
     uint8_t byte[4];
-    uint8_t row_parity[4];
-    uint8_t col_parity;
-    uint8_t stopbit;
-    bool rparity[4];
-    bool cparity[8];
-    bool stopparity;
-    bool parity;
 } PACKED em4x50_word_t;
 
 #endif /* EM4X50_H__ */

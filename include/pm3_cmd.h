@@ -508,11 +508,15 @@ typedef struct {
 #define CMD_LF_EM410X_WATCH                                               0x021C
 #define CMD_LF_EM4X50_INFO                                                0x0240
 #define CMD_LF_EM4X50_WRITE                                               0x0241
-#define CMD_LF_EM4X50_WRITE_PASSWORD                                      0x0242
+#define CMD_LF_EM4X50_WRITEPWD                                            0x0242
 #define CMD_LF_EM4X50_READ                                                0x0243
-#define CMD_LF_EM4X50_WIPE                                                0x0244
-#define CMD_LF_EM4X70_INFO                                                0x0250
-
+#define CMD_LF_EM4X50_BRUTE                                               0x0245
+#define CMD_LF_EM4X50_LOGIN                                               0x0246
+#define CMD_LF_EM4X50_SIM                                                 0x0250
+#define CMD_LF_EM4X50_READER                                              0x0251
+#define CMD_LF_EM4X50_ESET                                                0x0252
+#define CMD_LF_EM4X50_CHK                                                 0x0253
+#define CMD_LF_EM4X70_INFO                                                0x0260
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
