@@ -391,7 +391,7 @@ while true; do
                                                                      "Fmt 26 FC: 123 Card: 1337 checksum: 10"; then break; fi
       if ! CheckExecute slow "lf T55 indala_224 test"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf search 1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala_224 test2"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf indala demod'" \
-                                                                     "Indala - len 224 Raw: 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"; then break; fi
+                                                                     "Indala (len 224)  Raw: 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"; then break; fi
       if ! CheckExecute slow "lf T55 io test"                    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf search 1'" "IO Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 io test2"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf io demod'" \
                                                                      "IO Prox - XSF(01)01:01337, Raw: 007840603059cf3f (ok)"; then break; fi
