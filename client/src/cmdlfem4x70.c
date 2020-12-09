@@ -11,28 +11,13 @@
 #include "cmdlfem4x70.h"
 #include <ctype.h>
 #include "cmdparser.h"    // command_t
+#include "cliparser.h"
 #include "fileutils.h"
-#include "comms.h"
 #include "commonutil.h"
 #include "em4x70.h"
 
 
 static int CmdHelp(const char *Cmd);
-
-
-static int usage_lf_em4x70_info(void) {
-    PrintAndLogEx(NORMAL, "Read all information of EM4x70. Tag must be on antenna.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x70_info [h] [v] [p <pwd>]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       p         - use even parity for commands");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x70_info"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      lf em 4x70_info p"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 static void print_info_result(uint8_t *data) {
 
@@ -88,32 +73,28 @@ int CmdEM4x70Info(const char *Cmd) {
     // envoke reading of a EM4x70 tag which has to be on the antenna because
     // decoding is done by the device (not on client side)
 
-    bool errors = false;
-    uint8_t cmdp = 0;
-
     em4x70_data_t etd = {0};
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
+    CLIParserContext *ctx;
 
-            case 'h':
-                return usage_lf_em4x70_info();
-            
-            case 'p':
-                etd.parity = true;
-                cmdp +=1;
-                break;
+    CLIParserInit(&ctx, "lf em 4x10 info",
+                  "Tag Information EM4x70\n"
+                  "  Tag variants include ID48 automotive transponder.\n"
+                  "  ID48 does not use command parity (default).\n"
+                  "  V4070 and EM4170 do require parity bit.",
+                  "lf em 4x70 info\n"
+                  "lf em 4x70 -p -> adds parity bit to commands\n"
+                );
 
-            default:
-                PrintAndLogEx(WARNING, "  Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("p", "parity", "Add parity bit when sending commands"),
+        arg_param_end
+    };
 
-    // validation
-    if (errors)
-        return usage_lf_em4x70_info();
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    etd.parity = arg_get_lit(ctx, 0);
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_INFO, (uint8_t *)&etd, sizeof(etd));
