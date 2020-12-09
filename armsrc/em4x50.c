@@ -55,18 +55,16 @@
 int gHigh = 190;
 int gLow = 60;
 
+// do nothing for <period> using timer0
 static void wait_timer(uint32_t period) {
-
-    // do nothing for <period> using timer0
-
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     while (AT91C_BASE_TC0->TC_CV < period);
 }
 
+
+// extract and check parities
+// return result of parity check and extracted plain data
 static bool extract_parities(uint64_t word, uint32_t *data) {
-    
-    // extract and check parities
-    // return result of parity check and extracted plain data
     
     uint8_t row_parities = 0x0, col_parities = 0x0;
     uint8_t row_parities_calculated = 0x0, col_parities_calculated = 0x0;
@@ -172,10 +170,9 @@ static void em4x50_setup_sim(void) {
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 }
 
+// calculate signal properties (mean amplitudes) from measured data:
+// 32 amplitudes (maximum values) -> mean amplitude value -> gHigh -> gLow
 static bool get_signalproperties(void) {
-
-    // calculate signal properties (mean amplitudes) from measured data:
-    // 32 amplitudes (maximum values) -> mean amplitude value -> gHigh -> gLow
 
     bool signal_found = false;
     int no_periods = 32, pct = 75, noise = 140;
@@ -236,12 +233,11 @@ static bool get_signalproperties(void) {
     return true;
 }
 
+// returns true if bit is undefined by evaluating a single sample within
+// a bit period (given there is no LIW, ACK or NAK)
+// This function is used for identifying a listen window in functions
+// "find_double_listen_window" and "check_ack"
 static bool invalid_bit(void) {
-
-    // returns true if bit is undefined by evaluating a single sample within
-    // a bit period (given there is no LIW, ACK or NAK)
-    // This function is used for identifying a listen window in functions
-    // "find_double_listen_window" and "check_ack"
 
     // get sample at 3/4 of bit period
     wait_timer(T0 * EM4X50_T_TAG_THREE_QUARTER_PERIOD);
@@ -292,17 +288,13 @@ static uint32_t get_pulse_length(void) {
 
 }
 
+// check if pulse length <pl> corresponds to given length <length>
 static bool check_pulse_length(uint32_t pl, int length) {
-    
-    // check if pulse length <pl> corresponds to given length <length>
-    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
-    
+    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));   
 }
 
+// send single bit according to EM4x50 application note and datasheet
 static void em4x50_reader_send_bit(int bit) {
-
-    // send single bit according to EM4x50 application note and datasheet
-
     // reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
@@ -330,19 +322,15 @@ static void em4x50_reader_send_bit(int bit) {
     }
 }
 
+// send byte (without parity)
 static void em4x50_reader_send_byte(uint8_t byte) {
-
-    // send byte (without parity)
-
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 8; i++) {
         em4x50_reader_send_bit((byte >> (7 - i)) & 1);
-
+    }
 }
 
+// send byte followed by its (equal) parity bit
 static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
-
-    // send byte followed by its (equal) parity bit
-
     int parity = 0, bit = 0;
 
     for (int i = 0; i < 8; i++) {
@@ -354,11 +342,9 @@ static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
     em4x50_reader_send_bit(parity);
 }
 
+// send 32 bit word with parity bits according to EM4x50 datasheet
+// word hast be sent in msb notation
 static void em4x50_reader_send_word(const uint32_t word) {
-
-    // send 32 bit word with parity bits according to EM4x50 datasheet
-    // word hast be sent in msb notation
-
     uint8_t bytes[4] = {0x0, 0x0, 0x0, 0x0};
     
     for (int i = 0; i < 4; i++) {
@@ -373,10 +359,8 @@ static void em4x50_reader_send_word(const uint32_t word) {
     em4x50_reader_send_bit(0);
 }
 
+// find single listen window
 static bool find_single_listen_window(void) {
-
-    // find single listen window
-
     int cnt_pulses = 0;
     
     LED_B_ON();
@@ -398,18 +382,15 @@ static bool find_single_listen_window(void) {
     }
 
     LED_B_OFF();
-    
     return false;
 }
 
+// find two successive listen windows that indicate the beginning of
+// data transmission
+// double listen window to be detected within 1600 pulses -> worst case
+// reason: first detectable double listen window after 34 words
+// -> 34 words + 34 single listen windows -> about 1600 pulses
 static int find_double_listen_window(bool bcommand) {
-
-    // find two successive listen windows that indicate the beginning of
-    // data transmission
-    // double listen window to be detected within 1600 pulses -> worst case
-    // reason: first detectable double listen window after 34 words
-    // -> 34 words + 34 single listen windows -> about 1600 pulses
-
     int cnt_pulses = 0;
     
     LED_B_ON();
@@ -471,34 +452,29 @@ static int find_double_listen_window(bool bcommand) {
         cnt_pulses++;
     }
 
-    LED_B_OFF();
-    
+    LED_B_OFF();    
     return PM3_EFAILED;
 }
 
+// function is used to check wether a tag on the proxmark is an
+// EM4x50 tag or not -> speed up "lf search" process
 static bool find_em4x50_tag(void) {
-
-    // function is used to check wether a tag on the proxmark is an
-    // EM4x50 tag or not -> speed up "lf search" process
     return find_single_listen_window();
 }
 
+// To issue a command we have to find a listen window first.
+// Because identification and synchronization at the same time is not
+// possible when using pulse lengths a double listen window is used.
 static int request_receive_mode(void) {
-
-    // To issue a command we have to find a listen window first.
-    // Because identification and synchronization at the same time is not
-    // possible when using pulse lengths a double listen window is used.
     return find_double_listen_window(true);
 }
 
+// returns true if signal structue corresponds to ACK, anything else is
+// counted as NAK (-> false)
+// Only relevant for pasword writing function:
+// If <bliw> is true then within the single listen window right after the
+// ack signal a RM request has to be sent.
 static bool check_ack(bool bliw) {
-
-    // returns true if signal structue corresponds to ACK, anything else is
-    // counted as NAK (-> false)
-    // Only relevant for pasword writing function:
-    // If <bliw> is true then within the single listen window right after the
-    // ack signal a RM request has to be sent.
-
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     while (AT91C_BASE_TC0->TC_CV < T0 * 4 * EM4X50_T_TAG_FULL_PERIOD) {
 
@@ -547,12 +523,10 @@ static bool check_ack(bool bliw) {
     return false;
 }
 
+// decodes one word by evaluating pulse lengths and previous bit;
+// word must have 45 bits in total:
+// 32 data bits + 4 row parity bits + 8 column parity bits + 1 stop bit
 static int get_word_from_bitstream(uint32_t *data) {
-
-    // decodes one word by evaluating pulse lengths and previous bit;
-    // word must have 45 bits in total:
-    // 32 data bits + 4 row parity bits + 8 column parity bits + 1 stop bit
-
     bool bitchange = false;
     int cnt = 0;
     uint32_t pl = 0;
@@ -707,10 +681,10 @@ static bool em4x50_sim_send_byte_with_parity(uint8_t byte) {
     for (int i = 0; i < 8; i++)
         parity ^= (byte >> i) & 1;
 
-    if (!em4x50_sim_send_byte(byte))
+    if (em4x50_sim_send_byte(byte) == false)
         return false;;
 
-    if (!em4x50_sim_send_bit(parity))
+    if (em4x50_sim_send_bit(parity) == false)
         return false;
 
     return true;
@@ -724,9 +698,11 @@ bool em4x50_sim_send_word(uint32_t word) {
     word = reflect32(word);
     
     // 4 bytes each with even row parity bit
-    for (int i = 0; i < 4; i++)
-        if (!em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF))
+    for (int i = 0; i < 4; i++) {
+        if (em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF) == false) {
             return false;
+        }
+    }
 
     // column parity
     for (int i = 0; i < 8; i++) {
@@ -735,11 +711,11 @@ bool em4x50_sim_send_word(uint32_t word) {
             cparity ^= (((word >> ((3 - j) * 8)) & 0xFF) >> (7 - i)) & 1;
         }
     }
-    if (!em4x50_sim_send_byte(cparity))
+    if (em4x50_sim_send_byte(cparity) == false)
         return false;
 
     // stop bit
-    if (!em4x50_sim_send_bit(0))
+    if (em4x50_sim_send_bit(0) == false)
         return false;
 
     return true;
@@ -790,11 +766,9 @@ bool em4x50_sim_send_listen_window(void) {
     return true;
 }
 
+// simple login to EM4x50,
+// used in operations that require authentication
 static bool login(uint32_t password) {
-
-    // simple login to EM4x50,
-    // used in operations that require authentication
-
     if (request_receive_mode() == PM3_SUCCESS) {
 
         // send login command
@@ -817,10 +791,8 @@ static bool login(uint32_t password) {
     return PM3_EFAILED;
 }
 
+// searching for password in given range
 static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
-
-    // searching for password in given range
-
     bool pwd_found = false;
     int cnt = 0;
 
@@ -868,42 +840,33 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
     return pwd_found;
 }
 
+// login into EM4x50
 void em4x50_login(uint32_t *password) {
-
-    // login into EM4x50
-
-    uint8_t status = PM3_EFAILED;
-
     em4x50_setup_read();
 
-    // set gHigh and gLow
+    uint8_t status = PM3_EFAILED;
     if (get_signalproperties() && find_em4x50_tag())
         status = login(*password);
 
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_LOGIN, status, 0, 0);
+    reply_ng(CMD_LF_EM4X50_LOGIN, status, NULL, 0);
 }
 
+// envoke password search  
 void em4x50_brute(em4x50_data_t *etd) {
-
-    // envoke password search
+    em4x50_setup_read();
 
     bool bsuccess = false;
     uint32_t pwd = 0x0;
-    
-    em4x50_setup_read();
-
     if (get_signalproperties() && find_em4x50_tag())
         bsuccess = brute(etd->password1, etd->password2, &pwd);
 
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_BRUTE, bsuccess, (uint8_t *)(&pwd), 32);
+    reply_ng(CMD_LF_EM4X50_BRUTE, bsuccess ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)(&pwd), sizeof(pwd));
 }
 
+// check passwords from dictionary content in flash memory
 void em4x50_chk(uint8_t *filename) {
-
-    // check passwords from dictionary content in flash memory
-
     int status = PM3_EFAILED;
     uint32_t pwd = 0x0;
 
@@ -951,13 +914,11 @@ void em4x50_chk(uint8_t *filename) {
 #endif
 
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_CHK, status, (uint8_t *)&pwd, 32);
+    reply_ng(CMD_LF_EM4X50_CHK, status, (uint8_t *)&pwd, sizeof(pwd));
 }
 
+// resets EM4x50 tag (used by write function)
 static int reset(void) {
-
-    // resets EM4x50 tag (used by write function)
-
     if (request_receive_mode() == PM3_SUCCESS) {
 
         // send reset command
@@ -974,10 +935,9 @@ static int reset(void) {
     return PM3_EFAILED;
 }
 
+// reads data that tag transmits when exposed to reader field
+// (standard read mode); number of read words is saved in <now>
 static int standard_read(int *now, uint32_t *words) {
-
-    // reads data that tag transmits when exposed to reader field
-    // (standard read mode); number of read words is saved in <now>
 
     int fwr = *now, res = PM3_EFAILED;
 
@@ -999,10 +959,9 @@ static int standard_read(int *now, uint32_t *words) {
     return res;
 }
 
+// reads from "first word read" (fwr) to "last word read" (lwr)
+// result is verified by "standard read mode"
 static int selective_read(uint32_t addresses, uint32_t *words) {
-
-    // reads from "first word read" (fwr) to "last word read" (lwr)
-    // result is verified by "standard read mode"
 
     int status = PM3_EFAILED;
     uint8_t fwr = addresses & 0xFF;         // first word read (first byte)
@@ -1033,10 +992,8 @@ static int selective_read(uint32_t addresses, uint32_t *words) {
     return status;
 }
 
+// reads by using "selective read mode" -> bidirectional communication
 void em4x50_read(em4x50_data_t *etd) {
-
-    // reads by using "selective read mode" -> bidirectional communication
-
     bool blogin = true;
     int status = PM3_EFAILED;
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
@@ -1057,12 +1014,13 @@ void em4x50_read(em4x50_data_t *etd) {
 
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
+
+    // iceman:  this hardcoded 136 value....
     reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, 136);
 }
 
+// collects as much information as possible via selective read mode
 void em4x50_info(em4x50_data_t *etd) {
-
-    // collects as much information as possible via selective read mode
 
     bool blogin = true;
     int status = PM3_EFAILED;
@@ -1071,7 +1029,6 @@ void em4x50_info(em4x50_data_t *etd) {
 
     em4x50_setup_read();
 
-    // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
 
         // login with given password
@@ -1083,19 +1040,19 @@ void em4x50_info(em4x50_data_t *etd) {
     }
 
     lf_finalize();
+
+    // iceman:  this hardcoded 136 value....
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, 136);
 }
 
+// reads data that tag transmits "voluntarily" -> standard read mode
 void em4x50_reader(void) {
-
-    // reads data that tag transmits "voluntarily" -> standard read mode
 
     int now = 0;
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
 
-    // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag())
         standard_read(&now, words);
 
@@ -1104,9 +1061,8 @@ void em4x50_reader(void) {
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
 }
 
+// writes <word> to specified <addresses>
 static int write(uint32_t word, uint32_t addresses) {
-
-    // writes <word> to specified <addresses>
     
     if (request_receive_mode() == PM3_SUCCESS) {
 
@@ -1144,10 +1100,8 @@ static int write(uint32_t word, uint32_t addresses) {
     return PM3_EFAILED;
 }
 
+// changes password from <password> to <new_password>
 static int write_password(uint32_t password, uint32_t new_password) {
-
-    // changes password from <password> to <new_password>
-
     if (request_receive_mode() == PM3_SUCCESS) {
 
         // send write password command
@@ -1187,18 +1141,15 @@ static int write_password(uint32_t password, uint32_t new_password) {
     return PM3_EFAILED;
 }
 
+// write operation process for EM4x50 tag,
+// single word is written to given address, verified by selective read operation
+// wrong password -> return with PM3_EFAILED
 void em4x50_write(em4x50_data_t *etd) {
-
-    // write operation process for EM4x50 tag,
-    // single word is written to given address, verified by selective read operation
-    // wrong password -> return with PM3_EFAILED
-
     int status = PM3_EFAILED;
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
 
-    // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
 
         // if password is given try to login first
@@ -1245,15 +1196,12 @@ void em4x50_write(em4x50_data_t *etd) {
     reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, 136);
 }
 
+// simple change of password
 void em4x50_writepwd(em4x50_data_t *etd) {
-
-    // simple change of password
-    
     int status = PM3_EFAILED;
 
     em4x50_setup_read();
 
-    // set gHigh and gLow
     if (get_signalproperties() && find_em4x50_tag()) {
 
         // login and change password
@@ -1268,14 +1216,12 @@ void em4x50_writepwd(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_WRITEPWD, status, 0, 0);
+    reply_ng(CMD_LF_EM4X50_WRITEPWD, status, NULL, 0);
 }
 
+// simulate uploaded data in emulator memory
+// (currently simulation allows only a one-way communication)
 void em4x50_sim(uint8_t *filename) {
-
-    // simulate uploaded data in emulator memory
-    // (currently simulation allows only a one-way communication)
-
     int status = PM3_SUCCESS;
     uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
@@ -1313,7 +1259,8 @@ void em4x50_sim(uint8_t *filename) {
 
         em4x50_setup_sim();
 
-        while (!BUTTON_PRESS()) {
+        // iceman,  will need a usb cmd check to break as well
+        while (BUTTON_PRESS() == false) {
             
             WDT_HIT();
             em4x50_sim_send_listen_window();
@@ -1333,5 +1280,5 @@ void em4x50_sim(uint8_t *filename) {
     
     BigBuf_free();
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_SIM, status, 0, 0);
+    reply_ng(CMD_LF_EM4X50_SIM, status, NULL, 0);
 }

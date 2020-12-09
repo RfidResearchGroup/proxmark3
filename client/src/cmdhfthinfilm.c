@@ -107,7 +107,7 @@ static int CmdHfThinFilmInfo(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-
+    CLIParserFree(ctx);
     return infoThinFilm(true);
 }
 

@@ -123,7 +123,7 @@ int CmdWiegandDecode(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("p", "parity", "ignore invalid parity"),
-        arg_strx1(NULL, "raw", "<hex>", "raw hex to be decoded"),
+        arg_strx1("r", "raw", "<hex>", "raw hex to be decoded"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
