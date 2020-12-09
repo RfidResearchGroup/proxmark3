@@ -8,6 +8,8 @@
 // High frequency Electronic Machine Readable Travel Document commands
 //-----------------------------------------------------------------------------
 
+// This code is heavily based on mrpkey.py of RFIDIOt
+
 #include "cmdhfemrtd.h"
 #include <ctype.h>
 #include "fileutils.h"
@@ -27,6 +29,7 @@
 
 // ISO7816 commands
 #define SELECT "A4"
+#define EXTERNAL_AUTHENTICATE "82"
 #define GET_CHALLENGE "84"
 #define READ_BINARY "B0"
 #define P1_SELECT_BY_EF "02"
@@ -241,14 +244,18 @@ static int read_file(uint8_t *dataout, int *dataoutlen) {
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[PM3_CMD_DATA_SIZE];
-    uint8_t challenge[8];
-    // TODO: get these _types into a better spot
-    uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
-    uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
+    uint8_t rnd_ic[8];
     uint8_t kenc[50];
     uint8_t kmac[50];
     int resplen = 0;
     // bool BAC = true;
+    uint8_t S[32];
+    // TODO: Code sponsored jointly by duracell and sony
+    uint8_t rnd_ifd[8] = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA};
+    uint8_t k_ifd[16] = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA};
+    // TODO: get these _types into a better spot
+    uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
+    uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 
     // Select and read EF_CardAccess
     if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, true, true)) {
@@ -304,12 +311,36 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     PrintAndLogEx(INFO, "kmac: %s", sprint_hex_inrow(kmac, 16));
 
     // Get Challenge
-    if (get_challenge(8, challenge, &resplen) == false) {
+    if (get_challenge(8, rnd_ic, &resplen) == false) {
         PrintAndLogEx(ERR, "Couldn't get challenge.");
         DropField();
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "challenge: %s", sprint_hex_inrow(challenge, 8));
+    PrintAndLogEx(INFO, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
+
+    memcpy(S, rnd_ifd, 8);
+    memcpy(S + 8, rnd_ic, 8);
+    memcpy(S + 16, k_ifd, 16);
+
+    mbedtls_des3_context ctx;
+    mbedtls_des3_set2key_enc(&ctx, kenc);
+
+    uint8_t iv[8] = { 0x00 };
+    uint8_t e_ifd[8] = { 0x00 };
+
+    mbedtls_des3_crypt_cbc(&ctx  // des3_context
+                           , MBEDTLS_DES_ENCRYPT    // int mode
+                           , sizeof(S)              // length
+                           , iv                     // iv[8]
+                           , S                      // input
+                           , e_ifd                  // output
+                          );
+
+    // TODO: get m_ifd by ISO 9797-1 Algo 3(e_ifd, m_mac)
+    // TODO: get cmd_data by e_ifd + m_ifd
+    // TODO: iso_7816_external_authenticate(passport.ToHex(cmd_data),Kmac)
+
+    PrintAndLogEx(INFO, "S: %s", sprint_hex_inrow(S, 32));
 
     DropField();
     return PM3_SUCCESS;
