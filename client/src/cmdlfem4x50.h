@@ -11,20 +11,27 @@
 #ifndef CMDLFEM4X50_H__
 #define CMDLFEM4X50_H__
 
-#include"common.h"
 #include "em4x50.h"
 
 int CmdLFEM4X50(const char *Cmd);
 
 int read_em4x50_uid(void);
 bool detect_4x50_block(void);
-int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out, bool verbose);
+int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out);
 
 int CmdEM4x50Info(const char *Cmd);
 int CmdEM4x50Write(const char *Cmd);
-int CmdEM4x50WritePassword(const char *Cmd);
+int CmdEM4x50WritePwd(const char *Cmd);
 int CmdEM4x50Read(const char *Cmd);
 int CmdEM4x50Dump(const char *Cmd);
 int CmdEM4x50Wipe(const char *Cmd);
+int CmdEM4x50Brute(const char *Cmd);
+int CmdEM4x50Login(const char *Cmd);
+int CmdEM4x50Restore(const char *Cmd);
+int CmdEM4x50Sim(const char *Cmd);
+int CmdEM4x50Reader(const char *Cmd);
+int CmdEM4x50ELoad(const char *Cmd);
+int CmdEM4x50ESave(const char *Cmd);
+int CmdEM4x50Chk(const char *Cmd);
 
 #endif

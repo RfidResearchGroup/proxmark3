@@ -1106,16 +1106,54 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_write((em4x50_data_t *)packet->data.asBytes);
             break;
         }
-        case CMD_LF_EM4X50_WRITE_PASSWORD: {
-            em4x50_write_password((em4x50_data_t *)packet->data.asBytes);
+        case CMD_LF_EM4X50_WRITEPWD: {
+            em4x50_writepwd((em4x50_data_t *)packet->data.asBytes);
             break;
         }
         case CMD_LF_EM4X50_READ: {
             em4x50_read((em4x50_data_t *)packet->data.asBytes);
             break;
         }
-        case CMD_LF_EM4X50_WIPE: {
-            em4x50_wipe((em4x50_data_t *)packet->data.asBytes);
+        case CMD_LF_EM4X50_BRUTE: {
+            em4x50_brute((em4x50_data_t *)packet->data.asBytes);
+            break;
+        }
+        case CMD_LF_EM4X50_LOGIN: {
+            em4x50_login((uint32_t *)packet->data.asBytes);
+            break;
+        }
+        case CMD_LF_EM4X50_SIM: {
+            //-----------------------------------------------------------------------------
+            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
+            // involved in dealing with emulator memory. But if it is called later, it might
+            // destroy the Emulator Memory.
+            //-----------------------------------------------------------------------------
+            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            em4x50_sim((uint8_t *)packet->data.asBytes);
+            break;
+        }
+        case CMD_LF_EM4X50_READER: {
+            em4x50_reader();
+            break;
+        }
+        case CMD_LF_EM4X50_ESET: {
+            //-----------------------------------------------------------------------------
+            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
+            // involved in dealing with emulator memory. But if it is called later, it might
+            // destroy the Emulator Memory.
+            //-----------------------------------------------------------------------------
+            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            emlSet(packet->data.asBytes, packet->oldarg[0], packet->oldarg[1]);
+            break;
+        }
+        case CMD_LF_EM4X50_CHK: {
+            //-----------------------------------------------------------------------------
+            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
+            // involved in dealing with emulator memory. But if it is called later, it might
+            // destroy the Emulator Memory.
+            //-----------------------------------------------------------------------------
+            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            em4x50_chk((uint8_t *)packet->data.asBytes);
             break;
         }
 #endif

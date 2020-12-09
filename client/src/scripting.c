@@ -1146,8 +1146,7 @@ static int l_em4x50_read(lua_State *L) {
     em4x50_data_t etd;
     memset(&etd, 0x00, sizeof(em4x50_data_t));
     etd.addr_given = true;
-    etd.address = addr & 0xFF;
-    etd.newpwd_given = false;
+    etd.addresses = addr & 0xFF;
 
     // get password
     const char *p_pwd = luaL_checkstring(L, 2);
@@ -1162,31 +1161,29 @@ static int l_em4x50_read(lua_State *L) {
 
         PrintAndLogEx(DEBUG, " Pwd %08X", pwd);
 
-        etd.password[0] = pwd & 0xFF;
-        etd.password[1] = (pwd >> 8) & 0xFF;
-        etd.password[2] = (pwd >> 16) & 0xFF;
-        etd.password[3] = (pwd >> 24) & 0xFF;
+        etd.password1 = pwd;
         etd.pwd_given = true;
     }
 
-    PrintAndLogEx(DEBUG, "Addr %u", etd.address);
+    PrintAndLogEx(DEBUG, "Addr %u", etd.addresses & 0xFF);
     if (etd.pwd_given)
-        PrintAndLogEx(DEBUG, " Pwd %s", sprint_hex(etd.password, sizeof(etd.password)));
+        PrintAndLogEx(DEBUG, " Pwd %08x", etd.password1);
 
     em4x50_word_t words[EM4X50_NO_WORDS];
 
-    int res = em4x50_read(&etd, words, false);
+    int res = em4x50_read(&etd, words);
     if (res != PM3_SUCCESS) {
         return returnToLuaWithError(L, "Failed to read EM4x50 data");
     }
 
     uint32_t word = (
-                        words[etd.address].byte[0] << 24 |
-                        words[etd.address].byte[1] << 16 |
-                        words[etd.address].byte[2] << 8 |
-                        words[etd.address].byte[3]
+                        words[etd.addresses & 0xFF].byte[0] << 24 |
+                        words[etd.addresses & 0xFF].byte[1] << 16 |
+                        words[etd.addresses & 0xFF].byte[2] << 8 |
+                        words[etd.addresses & 0xFF].byte[3]
                     );
     lua_pushinteger(L, word);
+
     return 1;
 }
 
