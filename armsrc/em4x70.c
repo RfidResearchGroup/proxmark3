@@ -162,43 +162,6 @@ static bool get_signalproperties(void) {
     return true;
 }
 
-
-
-/**
- * record_liw
- * 
- * prints the timing from 1->0->1... for LIW_TEST_LENGTH
- * 
- */ 
-/*#define LIW_TEST_LENGTH 64
-static void record_liw(void) {
-
-    uint32_t intervals[LIW_TEST_LENGTH];
-
-    uint8_t sample;
-
-    // Count duration low, then duration high.
-    for(int count = 0; count < LIW_TEST_LENGTH-1; count+=2) {
-
-        uint32_t start_ticks = GetTicks();
-        do {
-            sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-        }while (IS_LOW(sample));
-        intervals[count] = GetTicks() - start_ticks;
-
-        start_ticks = GetTicks();
-        do {
-            sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-        }while (IS_HIGH(sample));
-        intervals[count+1] = GetTicks() - start_ticks;
-    }
-
-    for(int count = 0; count < LIW_TEST_LENGTH-1; count+=2){
-        Dbprintf("%d 0", intervals[count]/TICKS_PER_FC);
-        Dbprintf("%d 1", intervals[count+1]/TICKS_PER_FC);
-    }
-}*/
-
 /**
  *  get_pulse_length
  * 
