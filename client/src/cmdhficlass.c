@@ -3446,6 +3446,16 @@ static int CmdHFiClassEncode(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Write block 7/0x07 ( " _RED_("fail") " )");
             break;
     }
+    uint8_t block6[] = {0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0xE0, 0x17};
+    isok = iclass_write_block(6, block6, key, use_credit_key, elite, rawkey, false, false, auth);
+    switch (isok) {
+        case PM3_SUCCESS:
+            PrintAndLogEx(SUCCESS, "Write block 6/0x06 ( " _GREEN_("ok") " )");
+            break;
+        default:
+            PrintAndLogEx(SUCCESS, "Write block 6/0x06 ( " _RED_("fail") " )");
+            break;
+    }
     return isok;
 }
 
