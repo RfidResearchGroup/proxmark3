@@ -11,12 +11,10 @@
 // High frequency ISO14443A commands
 //-----------------------------------------------------------------------------
 #include "cmdhf14a.h"
-
 #include <ctype.h>
 #include <string.h>
-
 #include "cmdparser.h"    // command_t
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
@@ -29,6 +27,9 @@
 #include "aidsearch.h"
 #include "cmdhf.h"       // handle HF plot
 #include "protocols.h"   // MAGIC_GEN_1A
+#include "cliparser.h"
+#include "protocols.h"     // definitions of ISO14A/7816 protocol
+#include "emv/apduinfo.h"  // GetAPDUCodeDescription
 
 bool APDUInFramingEnable = true;
 
@@ -2119,6 +2120,139 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     return select_status;
 }
 
+static uint16_t get_sw(uint8_t *d, uint8_t n) {
+    if (n < 2)
+        return 0;
+
+    n -= 2;
+    return d[n] * 0x0100 + d[n + 1];
+}
+static int CmdHf14AFuzzapdu(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a apdufuzz",
+                  "Fuzz APDU's of ISO7816 protocol to find valid CLS/INS/P1P2/LE commands.\n"
+                  "It loops all 256 possible values for each byte.\n"
+                  "Tag must be on antenna before running.",
+                  "hf 14a apdufuzz\n"
+                  "hf 14a apdufuzz --cla 80\n"
+                  );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "cla", "<hex>", "start CLASS value (1 hex byte)"),
+        arg_str0(NULL, "ins", "<hex>", "start INSTRUCTION value (1 hex byte)"),
+        arg_str0(NULL, "p1", "<hex>", "start P1 value (1 hex byte)"),
+        arg_str0(NULL, "p2", "<hex>", "start P2 value (1 hex byte)"),
+        arg_str0(NULL, "le", "<hex>", "start LENGTH value (1 hex byte)"),        
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int cla_len = 0;
+    uint8_t cla[1] = {0};
+    CLIGetHexWithReturn(ctx, 1, cla, &cla_len);
+    
+    int ins_len = 0;
+    uint8_t ins[1] = {0};
+    CLIGetHexWithReturn(ctx, 2, ins, &ins_len);
+
+    int p1_len = 0;
+    uint8_t p1[1] = {0};
+    CLIGetHexWithReturn(ctx, 3, p1, &p1_len);
+
+    int p2_len = 0;
+    uint8_t p2[1] = {0};
+    CLIGetHexWithReturn(ctx, 4, p2, &p2_len);
+
+    int le_len = 0;
+    uint8_t le[1] = {0};
+    CLIGetHexWithReturn(ctx, 5, le, &le_len);
+
+    bool verbose = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    bool activate_field = true;
+    bool keep_field_on = true;
+
+    uint8_t a = cla[0];
+    uint8_t b = ins[0]; 
+    uint8_t c = p1[0];
+    uint8_t d = p2[0];
+    uint8_t e = le[0];    
+
+    PrintAndLogEx(SUCCESS, "Starting the apdu fuzzer [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " LE " _GREEN_("%02x")" ]", a,b,c,d,e);
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    uint8_t aSELECT_AID[80];
+    int aSELECT_AID_n = 0;
+    param_gethex_to_eol("00a404000aa000000440000101000100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res) {
+        DropField();
+        return res;
+    }
+
+    if (activate_field)
+        activate_field = false;
+
+    uint64_t t1 = msclock();
+    do {
+        do {
+            do {
+                do {
+                    do {
+                        if (kbd_enter_pressed()) {
+                            goto out;
+                        }
+
+                        uint8_t foo[5] = {a, b, c, d, e};
+                        int foo_n = sizeof(foo);                    
+
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "%s", sprint_hex(foo, sizeof(foo)));
+                        }
+                        res = ExchangeAPDU14a(foo, foo_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+                        if (res) {
+                            e++;
+                            continue;                                            
+                        }
+
+                        uint16_t sw = get_sw(response, resplen);
+                        if (sw != 0x6a86 &&
+                            sw != 0x6986 &&
+                            sw != 0x6d00
+                            ) {
+                            PrintAndLogEx(INFO, "%02X %02X %02X %02X %02X (%04x - %s)", a,b,c,d,e, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                        }
+                        e++;
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+                        }
+
+                    } while (e);
+                    d++;
+                    PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+                } while (d);
+                c++;
+                PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+            } while (c);
+            b++;
+            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+        } while (b);
+        a++;
+        PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+    } while(a);
+
+out:
+    PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
     {"list",        CmdHF14AList,         AlwaysAvailable,  "List ISO 14443-a history"},
@@ -2132,6 +2266,7 @@ static command_t CommandTable[] = {
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
+    {"apdufuzz",    CmdHf14AFuzzapdu,     IfPm3Iso14443a,  "Fuzz APDU - CLA/INS/P1P2"},
     {NULL, NULL, NULL, NULL}
 };
 
