@@ -415,7 +415,7 @@ while true; do
                                                                      "NEDAP (64b) - ID: 12345 subtype: 1 customer code: 291 / 0x123 Raw: FF82246508209953"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf search 1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf nexwatch demod'" \
-                                                                     "Raw : 56000000213C9F8F150C00"; then break; fi
+                                                                     "Raw : 5600000000213C9F8F150C00"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_nexkey test"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf search 1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_nexkey test2"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf nexwatch demod'" \
                                                                      "88bit id : 521512301 (0x1f15a56d)"; then break; fi
