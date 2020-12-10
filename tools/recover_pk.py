@@ -210,13 +210,23 @@ CURVES = {
             0xBD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34
         )
     ),
-
-    ## openssl uses the name: prime256v1 
+    "secp256k1": (
+        714,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,
+        0x0000000000000000000000000000000000000000000000000000000000000000,
+        0x0000000000000000000000000000000000000000000000000000000000000007,
+        (
+            0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+            0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
+        )
+    ),
+    ## openssl uses the name: prime256v1.
     "secp256r1": (
         415,
         0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF,
         0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551,
-        -3,
+        0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC,
         0x5AC635D8AA3A93E7B3EbBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B,
         (
             0x6B17D1F2E12c4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296,
@@ -313,30 +323,21 @@ class EllipticCurve:
 
 #######################################################################
 
-def recover(data, signature, alghash=None):
-    recovered = set()
-    if len(signature) == 32:
-        curve = get_curve("secp128r1")
-        recoverable = False
-    elif len(signature) == 33:
-        curve = get_curve("secp128r1")
-        recoverable = True
-    elif len(signature) == 56:
-        curve = get_curve("secp224r1")
-        recoverable = False
-    elif len(signature) == 57:
-        curve = get_curve("secp224r1")
-        recoverable = True 
-    elif len(signature) == 64:
-         curve = get_curve("secp256r1")
-         recoverable = False
-    elif len(signature) == 65:
-         curve = get_curve("secp256r1")
-         recoverable = True 
+def guess_curvename(signature):
+    if (len(signature) // 2) & 0xfe == 32 :
+        curves = [ "secp128r1" ]
+    elif (len(signature) // 2) & 0xfe == 56:
+        curves = [ "secp224r1" ]
+    elif (len(signature) // 2) & 0xfe == 64:
+        curves = [ "secp256k1", "secp256r1" ]
     else:
-        print("Unsupported signature size %i" % len(signature))
-        exit(1)
+        raise ValueError("Unsupported signature size %i" % len(signature))
+    return curves
 
+def recover(data, signature, curvename, alghash=None):
+    recovered = set()
+    curve = get_curve(curvename)
+    recoverable = len(signature) % 1 == 1
     if (recoverable):
         try:
             pk = curve.recover(signature, data, hash=alghash)
@@ -358,7 +359,7 @@ def recover(data, signature, alghash=None):
                 pass
     return recovered
 
-def recover_multiple(uids, sigs, alghash=None):
+def recover_multiple(uids, sigs, curvename, alghash=None):
     recovered = set()
     assert len(uids) == len(sigs)
     for i in range(len(uids)):
@@ -368,7 +369,7 @@ def recover_multiple(uids, sigs, alghash=None):
         signature = binascii.unhexlify(sigs[i])
         if debug:
             print("Signature (%2i): " % len(signature), binascii.hexlify(signature))
-        recovered_tmp = recover(data, signature, alghash)
+        recovered_tmp = recover(data, signature, curvename, alghash)
         if i == 0:
             if recovered_tmp == set():
                 break
@@ -427,7 +428,7 @@ def selftests():
         {'name': "ICODE DNA, ICODE SLIX2",
          'samples': ["EE5F9B00180104E0", "32D9E7579CD77E6F1FA11419231E874826984C5F189FDE1421684563A9663377"],
          'pk': "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0" },
-#  ! uses secp256r1 , SHA-256, 
+#  uses secp256r1?, SHA-256,
 #        {'name': "Minecraft Earth",
 #         'samples': ["aa", "DF0E506DFF8FCFC4B7B979D917644445F1230D2C7CDC342AFA842CA240C210BE7275F62073A9670F2DCEFC602CBEE771C2B4CD4A04F3D1EA11F49ABDF7E8B721"],
 #         'pk': "" },
@@ -435,8 +436,11 @@ def selftests():
     succeeded = True
     for t in tests:
         print("Testing %-25s" % (t['name']+":"), end="")
-        recovered = recover_multiple(t['samples'][::2], t['samples'][1::2])
-        recovered |= recover_multiple(t['samples'][::2], t['samples'][1::2], alghash="sha256")
+        curvenames = guess_curvename(t['samples'][1])
+        recovered = set()
+        for c in curvenames:
+            for h in [None, "sha1", "sha256", "sha512"]:
+                recovered |= recover_multiple(t['samples'][::2], t['samples'][1::2], c, alghash=h)
         if (len(recovered) == 1):
             pk = recovered.pop()
             pk = binascii.hexlify(pk).decode('utf8')
@@ -465,14 +469,15 @@ if __name__ == "__main__":
         print("Usage:   \n%s UID SIGN [UID SIGN] [...]" % sys.argv[0])
         print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b" % sys.argv[0])
         exit(1)
-
-    print("Assuming no hash was used in the signature generation:")
-    recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2])
-    print("Possible uncompressed Pk(s):")
-    for pk in list(recovered):
-        print(binascii.hexlify(pk).decode('utf8'))
-    print("Assuming SHA-256 was used in the signature generation:")
-    recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2], alghash="sha256")
-    print("Possible uncompressed Pk(s):")
-    for pk in list(recovered):
-        print(binascii.hexlify(pk).decode('utf8'))
+    uids, sigs = sys.argv[1:][::2], sys.argv[1:][1::2]
+    curvenames = guess_curvename(sigs[0])
+    for c in curvenames:
+        print("\nAssuming curve=%s" % c)
+        print("========================")
+        for h in [None, "sha1", "sha256", "sha512"]:
+            print("Assuming hash=%s" % h)
+            recovered = recover_multiple(uids, sigs, c, alghash=h)
+            if recovered:
+                print("Possible uncompressed Pk(s):")
+                for pk in list(recovered):
+                    print(binascii.hexlify(pk).decode('utf8'))
