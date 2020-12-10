@@ -364,7 +364,7 @@ while true; do
                                                                      "AWID - len: 50 FC: 2001 Card: 13371337 - Wiegand: 20fa201980f92, Raw: 0128b12eb1811d7117e22111"; then break; fi
       if ! CheckExecute slow "lf T55 em410x test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf search 1'" "EM410x ID found"; then break; fi
       if ! CheckExecute slow "lf T55 em410x test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf em 410x demod'" \
-                                                                     "EM TAG ID      : 0F0368568B"; then break; fi
+                                                                     "EM 410x ID 0F0368568B"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search 1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test2"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf fdxb demod'" \
                                                                      "Animal ID          999-000000112233"; then break; fi
