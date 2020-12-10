@@ -210,6 +210,19 @@ CURVES = {
             0xBD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34
         )
     ),
+
+    ## openssl uses the name: prime256v1 
+    "secp256r1": (
+        415,
+        0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF,
+        0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551,
+        -3,
+        0x5AC635D8AA3A93E7B3EbBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B,
+        (
+            0x6B17D1F2E12c4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296,
+            0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
+        )
+    ),
 }
 
 def get_curve(name):
@@ -313,7 +326,13 @@ def recover(data, signature, alghash=None):
         recoverable = False
     elif len(signature) == 57:
         curve = get_curve("secp224r1")
-        recoverable = True
+        recoverable = True 
+    elif len(signature) == 64:
+         curve = get_curve("secp256r1")
+         recoverable = False
+    elif len(signature) == 65:
+         curve = get_curve("secp256r1")
+         recoverable = True 
     else:
         print("Unsupported signature size %i" % len(signature))
         exit(1)
@@ -408,6 +427,10 @@ def selftests():
         {'name': "ICODE DNA, ICODE SLIX2",
          'samples': ["EE5F9B00180104E0", "32D9E7579CD77E6F1FA11419231E874826984C5F189FDE1421684563A9663377"],
          'pk': "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0" },
+#  ! uses secp256r1 , SHA-256, 
+#        {'name': "Minecraft Earth",
+#         'samples': ["aa", "DF0E506DFF8FCFC4B7B979D917644445F1230D2C7CDC342AFA842CA240C210BE7275F62073A9670F2DCEFC602CBEE771C2B4CD4A04F3D1EA11F49ABDF7E8B721"],
+#         'pk': "" },
     ]
     succeeded = True
     for t in tests:
