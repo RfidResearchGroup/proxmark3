@@ -493,6 +493,7 @@ SRCS =  aiddesfire.c \
 		cmdlfem410x.c \
 		cmdlfem4x05.c \
 		cmdlfem4x50.c \
+		cmdlfem4x70.c \
 		cmdlffdxb.c \
 		cmdlfguard.c \
 		cmdlfgallagher.c \

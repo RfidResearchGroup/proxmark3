@@ -101,6 +101,13 @@ bool IfPm3EM4x50(void) {
     return pm3_capabilities.compiled_with_em4x50;
 }
 
+bool IfPm3EM4x70(void) {
+
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_em4x70;
+}
+
 bool IfPm3Hfsniff(void) {
     if (!IfPm3Present())
         return false;
