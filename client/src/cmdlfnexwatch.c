@@ -196,12 +196,12 @@ int demodNexWatch(bool verbose) {
     }
 
     // output
-    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32), rawid);
+    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%08"PRIx32), rawid);
 
     if (m_idx < ARRAYLEN(items)) {
         PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);
     }
-    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%"PRIx32)")", cn, cn);
+    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", cn, cn);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);
 
     if (parity == calc_parity) {
