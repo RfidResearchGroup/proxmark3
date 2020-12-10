@@ -156,6 +156,18 @@ static int asn1fieldlength(uint8_t *datain, int datainlen) {
     return false;
 }
 
+static void des3_encrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output) {
+    mbedtls_des3_context ctx;
+    mbedtls_des3_set2key_enc(&ctx, key);
+
+    mbedtls_des3_crypt_cbc(&ctx  // des3_context
+                           , MBEDTLS_DES_ENCRYPT    // int mode
+                           , sizeof(input)          // length
+                           , iv                     // iv[8]
+                           , input                  // input
+                           , output                 // output
+                          );
+}
 
 static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
     PrintAndLogEx(INFO, "seed: %s", sprint_hex_inrow(seed, 16));
@@ -198,6 +210,13 @@ static int get_challenge(int length, uint8_t *dataout, int *dataoutlen) {
 
     return exchange_commands(cmd, dataout, dataoutlen, false, true);
 }
+
+// static int external_authenticate(const char *response, int length, uint8_t *dataout, int *dataoutlen) {
+//     char cmd[50];
+//     sprintf(cmd, "00%s00%02i%02X%02i", EXTERNAL_AUTHENTICATE, length, sprint_hex_inrow(response, length), length);
+
+//     return exchange_commands(cmd, dataout, dataoutlen, false, true);
+// }
 
 static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
     char cmd[50];
@@ -322,25 +341,17 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     memcpy(S + 8, rnd_ic, 8);
     memcpy(S + 16, k_ifd, 16);
 
-    mbedtls_des3_context ctx;
-    mbedtls_des3_set2key_enc(&ctx, kenc);
+    PrintAndLogEx(INFO, "S: %s", sprint_hex_inrow(S, 32));
 
     uint8_t iv[8] = { 0x00 };
     uint8_t e_ifd[8] = { 0x00 };
 
-    mbedtls_des3_crypt_cbc(&ctx  // des3_context
-                           , MBEDTLS_DES_ENCRYPT    // int mode
-                           , sizeof(S)              // length
-                           , iv                     // iv[8]
-                           , S                      // input
-                           , e_ifd                  // output
-                          );
+    des3_encrypt(iv, kenc, S, e_ifd);
+    PrintAndLogEx(INFO, "e_ifd: %s", sprint_hex_inrow(e_ifd, 8));
 
     // TODO: get m_ifd by ISO 9797-1 Algo 3(e_ifd, m_mac)
     // TODO: get cmd_data by e_ifd + m_ifd
     // TODO: iso_7816_external_authenticate(passport.ToHex(cmd_data),Kmac)
-
-    PrintAndLogEx(INFO, "S: %s", sprint_hex_inrow(S, 32));
 
     DropField();
     return PM3_SUCCESS;
