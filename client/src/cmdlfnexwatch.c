@@ -196,12 +196,12 @@ int demodNexWatch(bool verbose) {
     }
 
     // output
-    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%"PRIx32), rawid);
+    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%08"PRIx32), rawid);
 
     if (m_idx < ARRAYLEN(items)) {
         PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);
     }
-    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%"PRIx32)")", cn, cn);
+    PrintAndLogEx(SUCCESS, "        88bit id : " _YELLOW_("%"PRIu32) " ("  _YELLOW_("0x%08"PRIx32)")", cn, cn);
     PrintAndLogEx(SUCCESS, "            mode : %x", mode);
 
     if (parity == calc_parity) {
@@ -212,7 +212,7 @@ int demodNexWatch(bool verbose) {
 
     PrintAndLogEx(DEBUG, "        checksum : %s (0x%02X)", (m_idx < ARRAYLEN(items)) ? _GREEN_("ok") : _RED_("fail"), chk);
 
-    PrintAndLogEx(INFO, " Raw : " _YELLOW_("%"PRIX32"%"PRIX32"%"PRIX32), raw1, raw2, raw3);
+    PrintAndLogEx(INFO, " Raw : " _YELLOW_("%08"PRIX32"%08"PRIX32"%08"PRIX32), raw1, raw2, raw3);
     return PM3_SUCCESS;
 }
 

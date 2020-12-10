@@ -199,6 +199,39 @@ CURVES = {
             0xCF5AC8395BAFEB13C02DA292DDED7A83
         )
     ),
+    "secp192k1": (
+        711,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFEE37,
+        0xFFFFFFFFFFFFFFFFFFFFFFFE26F2FC170F69466A74DEFD8D,
+        0x000000000000000000000000000000000000000000000000,
+        0x000000000000000000000000000000000000000000000003,
+        (
+            0xDB4FF10EC057E9AE26B07D0280B7F4341DA5D1B1EAE06C7D,
+            0x9B2F2F6D9C5628A7844163D015BE86344082AA88D95E2F9D
+        )
+    ),
+    "secp192r1": (
+        409,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF,
+        0xFFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC,
+        0x64210519E59C80E70FA7E9AB72243049FEB8DEECC146B9B1,
+        (
+            0x188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012,
+            0x07192B95FFC8DA78631011ED6B24CDD573F977A11E794811
+        )
+    ),
+    "secp224k1": (
+        712,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFE56D,
+        0x10000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7,
+        0x00000000000000000000000000000000000000000000000000000000,
+        0x00000000000000000000000000000000000000000000000000000005,
+        (
+            0xA1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C,
+            0x7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5
+        )
+    ),
     "secp224r1": (
         713,
         0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001,
@@ -210,6 +243,51 @@ CURVES = {
             0xBD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34
         )
     ),
+    "secp256k1": (
+        714,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,
+        0x0000000000000000000000000000000000000000000000000000000000000000,
+        0x0000000000000000000000000000000000000000000000000000000000000007,
+        (
+            0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+            0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
+        )
+    ),
+    ## openssl uses the name: prime256v1.
+    "secp256r1": (
+        415,
+        0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF,
+        0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551,
+        0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC,
+        0x5AC635D8AA3A93E7B3EbBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B,
+        (
+            0x6B17D1F2E12c4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296,
+            0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
+        )
+    ),
+    "secp384r1": (
+        715,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973,
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFC,
+        0xB3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF,
+        (
+            0xAA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB7,
+            0x3617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F
+        )
+    ),
+    "secp521r1": (
+        716,
+        0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
+        0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409,
+        0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC,
+        0x0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00,
+        (
+            0x00C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66,
+            0x011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650
+        )
+    )
 }
 
 def get_curve(name):
@@ -300,24 +378,28 @@ class EllipticCurve:
 
 #######################################################################
 
-def recover(data, signature, alghash=None):
-    recovered = set()
-    if len(signature) == 32:
-        curve = get_curve("secp128r1")
-        recoverable = False
-    elif len(signature) == 33:
-        curve = get_curve("secp128r1")
-        recoverable = True
-    elif len(signature) == 56:
-        curve = get_curve("secp224r1")
-        recoverable = False
-    elif len(signature) == 57:
-        curve = get_curve("secp224r1")
-        recoverable = True
+def guess_curvename(signature):
+    l = (len(signature) // 2) & 0xfe
+    if   l == 32 :
+        curves = [ "secp128r1" ]
+    elif l == 48:
+        curves = [ "secp192k1", "secp192r1" ]
+    elif l == 56:
+        curves = [ "secp224k1", "secp224r1" ]
+    elif l == 64:
+        curves = [ "secp256k1", "secp256r1" ]
+    elif l == 96:
+        curves = [ "secp384r1" ]
+    elif l == 132:
+        curves = [ "secp521r1" ]
     else:
-        print("Unsupported signature size %i" % len(signature))
-        exit(1)
+        raise ValueError("Unsupported signature size %i" % len(signature))
+    return curves
 
+def recover(data, signature, curvename, alghash=None):
+    recovered = set()
+    curve = get_curve(curvename)
+    recoverable = len(signature) % 1 == 1
     if (recoverable):
         try:
             pk = curve.recover(signature, data, hash=alghash)
@@ -339,7 +421,7 @@ def recover(data, signature, alghash=None):
                 pass
     return recovered
 
-def recover_multiple(uids, sigs, alghash=None):
+def recover_multiple(uids, sigs, curvename, alghash=None):
     recovered = set()
     assert len(uids) == len(sigs)
     for i in range(len(uids)):
@@ -349,7 +431,7 @@ def recover_multiple(uids, sigs, alghash=None):
         signature = binascii.unhexlify(sigs[i])
         if debug:
             print("Signature (%2i): " % len(signature), binascii.hexlify(signature))
-        recovered_tmp = recover(data, signature, alghash)
+        recovered_tmp = recover(data, signature, curvename, alghash)
         if i == 0:
             if recovered_tmp == set():
                 break
@@ -408,12 +490,19 @@ def selftests():
         {'name': "ICODE DNA, ICODE SLIX2",
          'samples': ["EE5F9B00180104E0", "32D9E7579CD77E6F1FA11419231E874826984C5F189FDE1421684563A9663377"],
          'pk': "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0" },
+#  uses secp256r1?, SHA-256,
+#        {'name': "Minecraft Earth",
+#         'samples': ["aa", "DF0E506DFF8FCFC4B7B979D917644445F1230D2C7CDC342AFA842CA240C210BE7275F62073A9670F2DCEFC602CBEE771C2B4CD4A04F3D1EA11F49ABDF7E8B721"],
+#         'pk': "" },
     ]
     succeeded = True
     for t in tests:
         print("Testing %-25s" % (t['name']+":"), end="")
-        recovered = recover_multiple(t['samples'][::2], t['samples'][1::2])
-        recovered |= recover_multiple(t['samples'][::2], t['samples'][1::2], alghash="sha256")
+        curvenames = guess_curvename(t['samples'][1])
+        recovered = set()
+        for c in curvenames:
+            for h in [None, "sha1", "sha256", "sha512"]:
+                recovered |= recover_multiple(t['samples'][::2], t['samples'][1::2], c, alghash=h)
         if (len(recovered) == 1):
             pk = recovered.pop()
             pk = binascii.hexlify(pk).decode('utf8')
@@ -442,14 +531,15 @@ if __name__ == "__main__":
         print("Usage:   \n%s UID SIGN [UID SIGN] [...]" % sys.argv[0])
         print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b" % sys.argv[0])
         exit(1)
-
-    print("Assuming no hash was used in the signature generation:")
-    recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2])
-    print("Possible uncompressed Pk(s):")
-    for pk in list(recovered):
-        print(binascii.hexlify(pk).decode('utf8'))
-    print("Assuming SHA-256 was used in the signature generation:")
-    recovered = recover_multiple(sys.argv[1:][::2], sys.argv[1:][1::2], alghash="sha256")
-    print("Possible uncompressed Pk(s):")
-    for pk in list(recovered):
-        print(binascii.hexlify(pk).decode('utf8'))
+    uids, sigs = sys.argv[1:][::2], sys.argv[1:][1::2]
+    curvenames = guess_curvename(sigs[0])
+    for c in curvenames:
+        print("\nAssuming curve=%s" % c)
+        print("========================")
+        for h in [None, "sha1", "sha256", "sha512"]:
+            print("Assuming hash=%s" % h)
+            recovered = recover_multiple(uids, sigs, c, alghash=h)
+            if recovered:
+                print("Possible uncompressed Pk(s):")
+                for pk in list(recovered):
+                    print(binascii.hexlify(pk).decode('utf8'))

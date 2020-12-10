@@ -31,6 +31,7 @@
 #include "cmdlfem410x.h"      // for em4x menu
 #include "cmdlfem4x05.h"    // for em4x05 / 4x69
 #include "cmdlfem4x50.h"    // for em4x50
+#include "cmdlfem4x70.h"    // for em4x70
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfidteck.h"    // for idteck menu
@@ -1366,6 +1367,14 @@ static bool CheckChipType(bool getDeviceData) {
     if (detect_4x50_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50`") " commands");
+        retval = true;
+        goto out;
+    }
+
+    // check for em4x70 chips
+    if (detect_4x70_block()) {
+        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x70"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x70`") " commands");
         retval = true;
         goto out;
     }

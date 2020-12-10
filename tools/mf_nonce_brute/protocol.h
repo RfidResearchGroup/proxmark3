@@ -6,8 +6,8 @@
 
 #define MIFARE_AUTH_KEYA        0x60
 #define MIFARE_AUTH_KEYB        0x61
-#define MIFARE_CMD_INC          0xC0
-#define MIFARE_CMD_DEC          0xC1
+#define MIFARE_CMD_DEC          0xC0
+#define MIFARE_CMD_INC          0xC1
 #define MIFARE_CMD_RESTORE      0xC2
 #define MIFARE_CMD_TRANSFER     0xB0
 

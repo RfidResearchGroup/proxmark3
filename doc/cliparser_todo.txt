@@ -141,13 +141,6 @@ hf mfu otptear
 hf mfdes enum
 hf mfdes getuid
 hf mfdes info
-hf thinfilm info
-hf thinfilm sim
-hf topaz info
-hf topaz reader
-hf topaz sim
-hf topaz sniff
-hf topaz raw
 hw connect
 hw dbg
 hw detectreader
@@ -174,11 +167,14 @@ lf simfsk
 lf simpsk
 lf simbidir
 lf sniff
+lf tune
 lf em 410x
 lf em 4x05
 lf em 4x50
+lf hitag info
 lf hitag reader
 lf hitag sim
+lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc

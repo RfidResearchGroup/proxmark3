@@ -105,6 +105,9 @@ endif
 ifneq ($(SKIP_EM4x50),1)
     PLATFORM_DEFS += -DWITH_EM4x50
 endif
+ifneq ($(SKIP_EM4x70),1)
+    PLATFORM_DEFS += -DWITH_EM4x70
+endif
 
 # common HF support
 ifneq ($(SKIP_ISO15693),1)

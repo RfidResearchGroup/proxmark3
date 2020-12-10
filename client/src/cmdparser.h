@@ -35,6 +35,7 @@ bool IfPm3FpcUsartFromUsb(void);
 bool IfPm3Lf(void);
 bool IfPm3Hitag(void);
 bool IfPm3EM4x50(void);
+bool IfPm3EM4x70(void);
 bool IfPm3Hfsniff(void);
 bool IfPm3Hfplot(void);
 bool IfPm3Iso14443a(void);

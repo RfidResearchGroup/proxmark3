@@ -364,7 +364,7 @@ while true; do
                                                                      "AWID - len: 50 FC: 2001 Card: 13371337 - Wiegand: 20fa201980f92, Raw: 0128b12eb1811d7117e22111"; then break; fi
       if ! CheckExecute slow "lf T55 em410x test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf search 1'" "EM410x ID found"; then break; fi
       if ! CheckExecute slow "lf T55 em410x test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf em 410x demod'" \
-                                                                     "EM TAG ID      : 0F0368568B"; then break; fi
+                                                                     "EM 410x ID 0F0368568B"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search 1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test2"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf fdxb demod'" \
                                                                      "Animal ID          999-000000112233"; then break; fi
@@ -391,7 +391,7 @@ while true; do
                                                                      "Fmt 26 FC: 123 Card: 1337 checksum: 10"; then break; fi
       if ! CheckExecute slow "lf T55 indala_224 test"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf search 1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala_224 test2"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf indala demod'" \
-                                                                     "Indala - len 224 Raw: 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"; then break; fi
+                                                                     "Indala (len 224)  Raw: 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"; then break; fi
       if ! CheckExecute slow "lf T55 io test"                    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf search 1'" "IO Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 io test2"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf io demod'" \
                                                                      "IO Prox - XSF(01)01:01337, Raw: 007840603059cf3f (ok)"; then break; fi
@@ -415,7 +415,7 @@ while true; do
                                                                      "NEDAP (64b) - ID: 12345 subtype: 1 customer code: 291 / 0x123 Raw: FF82246508209953"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf search 1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf nexwatch demod'" \
-                                                                     "Raw : 56000000213C9F8F150C00"; then break; fi
+                                                                     "Raw : 5600000000213C9F8F150C00"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_nexkey test"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf search 1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_nexkey test2"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf nexwatch demod'" \
                                                                      "88bit id : 521512301 (0x1f15a56d)"; then break; fi
