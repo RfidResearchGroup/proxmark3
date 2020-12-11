@@ -184,6 +184,20 @@ static void des3_encrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inpu
     mbedtls_des3_free(&ctx);
 }
 
+static void des3_decrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
+    mbedtls_des3_context ctx;
+    mbedtls_des3_set2key_dec(&ctx, key);
+
+    mbedtls_des3_crypt_cbc(&ctx  // des3_context
+                           , MBEDTLS_DES_DECRYPT    // int mode
+                           , inputlen               // length
+                           , iv                     // iv[8]
+                           , input                  // input
+                           , output                 // output
+                          );
+    mbedtls_des3_free(&ctx);
+}
+
 static void retail_mac(uint8_t *key, uint8_t *input, uint8_t *output) {
     // This code assumes blocklength (n) = 8, and input len of 32 chars
     // This code takes inspirations from https://github.com/devinvenable/iso9797algorithm3
@@ -423,6 +437,15 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "External authentication successful.");
+
+    uint8_t dec_output[32] = { 0x00 };
+    des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
+
+    if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
+        PrintAndLogEx(ERR, "Challenge failed, rnd_ifd does not match.");
+        DropField();
+        return PM3_ESOFT;
+    }
 
     DropField();
     return PM3_SUCCESS;
