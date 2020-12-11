@@ -1367,7 +1367,6 @@ int CmdPSK1rawDemod(const char *Cmd) {
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p1();
     int clk = 0, invert = 0, max_err = 100;
     sscanf(Cmd, "%i %i %i", &clk, &invert, &max_err);
-
     if (clk == 1) {
         invert = 1;
         clk = 0;
