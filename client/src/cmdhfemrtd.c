@@ -198,28 +198,39 @@ static void des3_decrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inpu
     mbedtls_des3_free(&ctx);
 }
 
-static void retail_mac(uint8_t *key, uint8_t *input, uint8_t *output) {
-    // This code assumes blocklength (n) = 8, and input len of 32 chars
+static int pad_block(uint8_t *input, int inputlen, uint8_t *output) {
+    uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    memcpy(output, input, inputlen);
+
+    int to_pad = (8 - (inputlen % 8));
+
+    for (int i = 0; i < to_pad; i++) {
+        output[inputlen + i] = padding[i];
+    }
+
+    return inputlen + to_pad;
+}
+
+static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
+    // This code assumes blocklength (n) = 8, and input len of up to 56 chars
     // This code takes inspirations from https://github.com/devinvenable/iso9797algorithm3
     uint8_t k0[8];
     uint8_t k1[8];
     uint8_t intermediate[8] = {0x00};
     uint8_t intermediate_des[32];
     uint8_t block[8];
-    uint8_t message[40];
-    uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t message[64];
 
     // Populate keys
     memcpy(k0, key, 8);
     memcpy(k1, key + 8, 8);
 
     // Prepare message
-    memcpy(message, input, 32);
-    // Normally this isn't how it works, but it's what mrpkey does...
-    memcpy(message + 32, padding, 8);
+    int blocksize = pad_block(input, inputlen, message);
 
     // Do chaining and encryption
-    for (int i = 0; i < (sizeof(message) / 8); i++) {
+    for (int i = 0; i < (blocksize / 8); i++) {
         memcpy(block, message + (i * 8), 8);
 
         // XOR
@@ -333,6 +344,69 @@ static int read_file(uint8_t *dataout, int *dataoutlen) {
     return true;
 }
 
+static int secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *file) {
+    // Get data even tho we'll not use it
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    // TODO: fix sizes
+    uint8_t iv[8] = { 0x00 };
+    char command[200];
+    uint8_t cmd[200];
+    uint8_t data[100];
+    uint8_t temp[100] = {0x0c, 0xa4, 0x02, 0x0c};
+    uint8_t temp_2[100];
+
+    PrintAndLogEx(DEBUG, "keyenc: %s", sprint_hex_inrow(kenc, 16));
+    PrintAndLogEx(DEBUG, "keymac: %s", sprint_hex_inrow(kmac, 16));
+
+    int cmdlen = pad_block(temp, 4, cmd);
+    int datalen = pad_block(file, 2, data);
+    PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
+    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, datalen));
+
+    des3_encrypt_cbc(iv, kenc, data, datalen, temp_2);
+    PrintAndLogEx(DEBUG, "temp_2: %s", sprint_hex_inrow(temp_2, datalen));
+    uint8_t do87[103] = {0x87, 0x09, 0x01};
+    memcpy(do87 + 3, temp_2, datalen);
+    PrintAndLogEx(DEBUG, "do87: %s", sprint_hex_inrow(do87, datalen + 3));
+
+    uint8_t m[153];
+    memcpy(m, cmd, cmdlen);
+    memcpy(m + cmdlen, do87, (datalen + 3));
+    PrintAndLogEx(DEBUG, "m: %s", sprint_hex_inrow(m, datalen + cmdlen + 3));
+
+    // this is hacky
+    PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
+    (*(ssc + 7)) += 1;
+    PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
+
+    uint8_t n[161];
+    memcpy(n, ssc, 8);
+    memcpy(n + 8, m, (cmdlen + datalen + 3));
+    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, (cmdlen + datalen + 11)));
+
+    uint8_t cc[8];
+    retail_mac(kmac, n, (cmdlen + datalen + 11), cc);
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
+
+    uint8_t do8e[10] = {0x8E, 0x08};
+    memcpy(do8e + 2, cc, 8);
+    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, 10));
+
+    int lc = datalen + 3 + 10;
+    PrintAndLogEx(DEBUG, "lc: %i", lc);
+
+    memcpy(data, do87, datalen + 3);
+    memcpy(data + (datalen + 3), do8e, 10);
+    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
+
+    sprintf(command, "0C%s020C%02X%s00", SELECT, lc, sprint_hex_inrow(data, lc));
+    PrintAndLogEx(DEBUG, "command: %s", command);
+
+    return exchange_commands(command, response, &resplen, false, true);
+}
+
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     uint8_t rnd_ic[8];
@@ -423,7 +497,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     uint8_t m_ifd[8] = { 0x00 };
 
-    retail_mac(kmac, e_ifd, m_ifd);
+    retail_mac(kmac, e_ifd, 32, m_ifd);
     PrintAndLogEx(DEBUG, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
 
     uint8_t cmd_data[40];
@@ -472,7 +546,10 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
 
-    // TODO: Secure select
+    // Select EF_COM
+    uint8_t file_id[2] = {0x01, 0x1E};
+    secure_select_file(ks_enc, ks_mac, ssc, file_id);
+
     // TODO: Secure read
 
     DropField();
