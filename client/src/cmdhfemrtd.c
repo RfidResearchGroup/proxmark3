@@ -60,7 +60,7 @@ static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen,
 
     PrintAndLogEx(INFO, "Sending: %s", cmd);
 
-    uint8_t aCMD[80];
+    uint8_t aCMD[100];
     int aCMD_n = 0;
     param_gethex_to_eol(cmd, 0, aCMD, sizeof(aCMD), &aCMD_n);
     int res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
@@ -156,18 +156,75 @@ static int asn1fieldlength(uint8_t *datain, int datainlen) {
     return false;
 }
 
-static void des3_encrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output) {
+static void des_encrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
+    mbedtls_des_context ctx_enc;
+    mbedtls_des_setkey_enc(&ctx_enc, key);
+    mbedtls_des_crypt_ecb(&ctx_enc, input, output);
+    mbedtls_des_free(&ctx_enc);
+}
+
+static void des_decrypt_ecb(uint8_t *key, uint8_t *input, uint8_t *output) {
+    mbedtls_des_context ctx_dec;
+    mbedtls_des_setkey_dec(&ctx_dec, key);
+    mbedtls_des_crypt_ecb(&ctx_dec, input, output);
+    mbedtls_des_free(&ctx_dec);
+}
+
+static void des3_encrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_enc(&ctx, key);
 
     mbedtls_des3_crypt_cbc(&ctx  // des3_context
                            , MBEDTLS_DES_ENCRYPT    // int mode
-                           , sizeof(input)          // length
+                           , inputlen               // length
                            , iv                     // iv[8]
                            , input                  // input
                            , output                 // output
                           );
+    mbedtls_des3_free(&ctx);
 }
+
+static void retail_mac(uint8_t *key, uint8_t *input, uint8_t *output) {
+    // This code assumes blocklength (n) = 8, and input len of 32 chars
+    // This code takes inspirations from https://github.com/devinvenable/iso9797algorithm3
+    uint8_t k0[8];
+    uint8_t k1[8];
+    uint8_t intermediate[8] = {0x00};
+    uint8_t intermediate_des[32];
+    uint8_t block[8];
+    uint8_t message[40];
+    uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    // Populate keys
+    memcpy(k0, key, 8);
+    memcpy(k1, key + 8, 8);
+
+    // Prepare message
+    memcpy(message, input, 32);
+    // Normally this isn't how it works, but it's what mrpkey does...
+    memcpy(message + 32, padding, 8);
+
+    // Do chaining and encryption
+    for (int i = 0; i < (sizeof(message) / 8); i++) {
+        memcpy(block, message + (i * 8), 8);
+
+        // XOR
+        for (int x = 0; x < 8; x++) {
+            intermediate[x] = intermediate[x] ^ block[x];
+        }
+
+        des_encrypt_ecb(k0, intermediate, intermediate_des);
+        memcpy(intermediate, intermediate_des, 8);
+    }
+
+
+    des_decrypt_ecb(k1, intermediate, intermediate_des);
+    memcpy(intermediate, intermediate_des, 8);
+
+    des_encrypt_ecb(k0, intermediate, intermediate_des);
+    memcpy(output, intermediate_des, 8);
+}
+
 
 static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
     PrintAndLogEx(INFO, "seed: %s", sprint_hex_inrow(seed, 16));
@@ -211,12 +268,13 @@ static int get_challenge(int length, uint8_t *dataout, int *dataoutlen) {
     return exchange_commands(cmd, dataout, dataoutlen, false, true);
 }
 
-// static int external_authenticate(const char *response, int length, uint8_t *dataout, int *dataoutlen) {
-//     char cmd[50];
-//     sprintf(cmd, "00%s00%02i%02X%02i", EXTERNAL_AUTHENTICATE, length, sprint_hex_inrow(response, length), length);
+static int external_authenticate(uint8_t *data, int length, uint8_t *dataout, int *dataoutlen) {
+    char cmd[100];
 
-//     return exchange_commands(cmd, dataout, dataoutlen, false, true);
-// }
+    sprintf(cmd, "00%s0000%02X%s%02X", EXTERNAL_AUTHENTICATE, length, sprint_hex_inrow(data, length), length);
+
+    return exchange_commands(cmd, dataout, dataoutlen, false, true);
+}
 
 static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
     char cmd[50];
@@ -344,14 +402,26 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     PrintAndLogEx(INFO, "S: %s", sprint_hex_inrow(S, 32));
 
     uint8_t iv[8] = { 0x00 };
-    uint8_t e_ifd[8] = { 0x00 };
+    uint8_t e_ifd[32] = { 0x00 };
 
-    des3_encrypt(iv, kenc, S, e_ifd);
-    PrintAndLogEx(INFO, "e_ifd: %s", sprint_hex_inrow(e_ifd, 8));
+    des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
+    PrintAndLogEx(INFO, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
 
-    // TODO: get m_ifd by ISO 9797-1 Algo 3(e_ifd, m_mac)
-    // TODO: get cmd_data by e_ifd + m_ifd
-    // TODO: iso_7816_external_authenticate(passport.ToHex(cmd_data),Kmac)
+    uint8_t m_ifd[8] = { 0x00 };
+
+    retail_mac(kmac, e_ifd, m_ifd);
+    PrintAndLogEx(INFO, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
+
+    uint8_t cmd_data[40];
+    memcpy(cmd_data, e_ifd, 32);
+    memcpy(cmd_data + 32, m_ifd, 8);
+
+    // Do external authentication
+    if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
+        DropField();
+        return PM3_ESOFT;
+    }
 
     DropField();
     return PM3_SUCCESS;
