@@ -3365,6 +3365,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     uint8_t enc_key[16] = {0};
     uint8_t *enckeyptr = NULL;
     bool have_enc_key = false;
+    bool use_sc = false;
     CLIGetHexWithReturn(ctx, 6, enc_key, &enc_key_len);
 
     CLIParserFree(ctx);
@@ -3387,27 +3388,33 @@ static int CmdHFiClassEncode(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool use_sc = IsCryptoHelperPresent(false);
-
-    if (have_enc_key == false && use_sc == false) {
-        size_t keylen = 0;
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to find the transport key");
-            return PM3_EINVARG;
+    if (have_enc_key == false) {
+        use_sc = IsCryptoHelperPresent(false);
+        if (use_sc == false) {
+            size_t keylen = 0;
+            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to find the transport key");
+                return PM3_EINVARG;
+            }
+            if (keylen != 16) {
+                PrintAndLogEx(ERR, "Failed to load transport key from file");
+                return PM3_EINVARG;
+            }
+            memcpy(enc_key, enckeyptr, sizeof(enc_key));
+            free(enckeyptr);
         }
-        if (keylen != 16) {
-            PrintAndLogEx(ERR, "Failed to load transport key from file");
-            return PM3_EINVARG;
-        }
-
-        memcpy(enc_key, enckeyptr, sizeof(enc_key));
-        free(enckeyptr);
     }
+
+    uint8_t credential[] = {
+        0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0xE0, 0x17,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
 
     uint8_t data[8];
     memset(data, 0, sizeof(data));
-
     BitstreamOut bout = {data, 0, 0 };
 
     for (int i = 0; i < 64 - bin_len - 1; i++) {
@@ -3427,34 +3434,31 @@ static int CmdHFiClassEncode(const char *Cmd) {
             PrintAndLogEx(WARNING, "Ignoring '%c'", c);
         }
     }
+    memcpy(credential + 8, data, sizeof(data));
 
     // encrypt with transport key
     if (use_sc) {
-        Encrypt(data, data);
+        Encrypt(credential + 8, credential + 8);
+        Encrypt(credential + 16, credential + 16);
+        Encrypt(credential + 24, credential + 24);
     } else {
-        iclass_encrypt_block_data(data, enc_key);
+        iclass_encrypt_block_data(credential + 8, enc_key);
+        iclass_encrypt_block_data(credential + 16, enc_key);
+        iclass_encrypt_block_data(credential + 24, enc_key);
     }
-    PrintAndLogEx(SUCCESS, "encrypted block: " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
 
-    // write block 7
-    int isok = iclass_write_block(7, data, key, use_credit_key, elite, rawkey, false, false, auth);
-    switch (isok) {
-        case PM3_SUCCESS:
-            PrintAndLogEx(SUCCESS, "Write block 7/0x07 ( " _GREEN_("ok") " )");
-            break;
-        default:
-            PrintAndLogEx(SUCCESS, "Write block 7/0x07 ( " _RED_("fail") " )");
-            break;
-    }
-    uint8_t block6[] = {0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0xE0, 0x17};
-    isok = iclass_write_block(6, block6, key, use_credit_key, elite, rawkey, false, false, auth);
-    switch (isok) {
-        case PM3_SUCCESS:
-            PrintAndLogEx(SUCCESS, "Write block 6/0x06 ( " _GREEN_("ok") " )");
-            break;
-        default:
-            PrintAndLogEx(SUCCESS, "Write block 6/0x06 ( " _RED_("fail") " )");
-            break;
+    int isok = PM3_SUCCESS;
+    // write
+    for (uint8_t i=0; i<4; i++) {
+        isok = iclass_write_block(6 + i, credential + (i*8), key, use_credit_key, elite, rawkey, false, false, auth);
+        switch (isok) {
+            case PM3_SUCCESS:
+                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i*8), 8));
+                break;
+            default:
+                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
+                break;
+        }
     }
     return isok;
 }
