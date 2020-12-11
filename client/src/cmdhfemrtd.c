@@ -58,7 +58,7 @@ static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen,
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    PrintAndLogEx(INFO, "Sending: %s", cmd);
+    PrintAndLogEx(DEBUG, "Sending: %s", cmd);
 
     uint8_t aCMD[100];
     int aCMD_n = 0;
@@ -72,7 +72,7 @@ static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen,
     if (resplen < 2) {
         return false;
     }
-    PrintAndLogEx(INFO, "Response: %s", sprint_hex(response, resplen));
+    PrintAndLogEx(DEBUG, "Response: %s", sprint_hex(response, resplen));
 
     // drop sw
     memcpy(dataout, &response, resplen - 2);
@@ -80,7 +80,7 @@ static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen,
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != 0x9000) {
-        PrintAndLogEx(ERR, "Command %s failed (%04x - %s).", cmd, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        PrintAndLogEx(DEBUG, "Command %s failed (%04x - %s).", cmd, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return false;
     }
     return true;
@@ -227,23 +227,23 @@ static void retail_mac(uint8_t *key, uint8_t *input, uint8_t *output) {
 
 
 static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
-    PrintAndLogEx(INFO, "seed: %s", sprint_hex_inrow(seed, 16));
+    PrintAndLogEx(DEBUG, "seed: %s", sprint_hex_inrow(seed, 16));
 
     // combine seed and type
     uint8_t data[50];
     memcpy(data, seed, 16);
     memcpy(data + 16, type, 4);
-    PrintAndLogEx(INFO, "data: %s", sprint_hex_inrow(data, 20));
+    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, 20));
 
     // SHA1 the key
     unsigned char key[20];
     mbedtls_sha1(data, 20, key);
-    PrintAndLogEx(INFO, "key: %s", sprint_hex_inrow(key, 20));
+    PrintAndLogEx(DEBUG, "key: %s", sprint_hex_inrow(key, 20));
 
     // Set parity bits
     mbedtls_des_key_set_parity(key);
     mbedtls_des_key_set_parity(key + 8);
-    PrintAndLogEx(INFO, "post-parity key: %s", sprint_hex_inrow(key, 20));
+    PrintAndLogEx(DEBUG, "post-parity key: %s", sprint_hex_inrow(key, 20));
 
     memcpy(dataout, &key, length);
 }
@@ -352,7 +352,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     // Select EF_COM
     if (select_file(P1_SELECT_BY_EF, EF_COM, false, true) == false) {
         // BAC = true;
-        PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt auth.");
+        PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
         // BAC = false;
         // Select EF_DG1
@@ -360,15 +360,15 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
         if (read_file(response, &resplen) == false) {
             // BAC = true;
-            PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt auth.");
+            PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
             // BAC = false;
             PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
-    PrintAndLogEx(INFO, "doc: %s", documentnumber);
-    PrintAndLogEx(INFO, "dob: %s", dob);
-    PrintAndLogEx(INFO, "exp: %s", expiry);
+    PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
+    PrintAndLogEx(DEBUG, "dob: %s", dob);
+    PrintAndLogEx(DEBUG, "exp: %s", expiry);
 
     char documentnumbercd = calculate_check_digit(documentnumber);
     char dobcd = calculate_check_digit(dob);
@@ -376,16 +376,16 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     char kmrz[25];
     sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
-    PrintAndLogEx(INFO, "kmrz: %s", kmrz);
+    PrintAndLogEx(DEBUG, "kmrz: %s", kmrz);
 
     unsigned char kseed[20] = {0x00};
     mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
-    PrintAndLogEx(INFO, "kseed: %s", sprint_hex_inrow(kseed, 16));
+    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
 
     deskey(kseed, KENC_type, 16, kenc);
     deskey(kseed, KMAC_type, 16, kmac);
-    PrintAndLogEx(INFO, "kenc: %s", sprint_hex_inrow(kenc, 16));
-    PrintAndLogEx(INFO, "kmac: %s", sprint_hex_inrow(kmac, 16));
+    PrintAndLogEx(DEBUG, "kenc: %s", sprint_hex_inrow(kenc, 16));
+    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
 
     // Get Challenge
     if (get_challenge(8, rnd_ic, &resplen) == false) {
@@ -393,24 +393,24 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         DropField();
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
+    PrintAndLogEx(DEBUG, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
 
     memcpy(S, rnd_ifd, 8);
     memcpy(S + 8, rnd_ic, 8);
     memcpy(S + 16, k_ifd, 16);
 
-    PrintAndLogEx(INFO, "S: %s", sprint_hex_inrow(S, 32));
+    PrintAndLogEx(DEBUG, "S: %s", sprint_hex_inrow(S, 32));
 
     uint8_t iv[8] = { 0x00 };
     uint8_t e_ifd[32] = { 0x00 };
 
     des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
-    PrintAndLogEx(INFO, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
+    PrintAndLogEx(DEBUG, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
 
     uint8_t m_ifd[8] = { 0x00 };
 
     retail_mac(kmac, e_ifd, m_ifd);
-    PrintAndLogEx(INFO, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
+    PrintAndLogEx(DEBUG, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
 
     uint8_t cmd_data[40];
     memcpy(cmd_data, e_ifd, 32);
@@ -422,6 +422,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         DropField();
         return PM3_ESOFT;
     }
+    PrintAndLogEx(INFO, "External authentication successful.");
 
     DropField();
     return PM3_SUCCESS;
