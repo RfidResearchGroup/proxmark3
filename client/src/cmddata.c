@@ -1428,7 +1428,7 @@ static int CmdRawDemod(const char *Cmd) {
     else if (str_startswith(Cmd, "am")) ans = Cmdaskmandemod(Cmd + 2);
     else if (str_startswith(Cmd, "ar")) ans = Cmdaskrawdemod(Cmd + 2);
     else if (str_startswith(Cmd, "nr") || Cmd[0] == 'n') ans = CmdNRZrawDemod(Cmd + 2);
-    else if (str_startswith(Cmd, "p1") || Cmd[0] == 'p') ans = CmdPSK1rawDemod(Cmd + 2);
+    else if (str_startswith(Cmd, "p1")) ans = CmdPSK1rawDemod(Cmd + 2);
     else if (str_startswith(Cmd, "p2")) ans = CmdPSK2rawDemod(Cmd + 2);
     else PrintAndLogEx(WARNING, "Unknown modulation entered - see help ('h') for parameter structure");
 
