@@ -256,18 +256,19 @@ static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
 
     // combine seed and type
     uint8_t data[50];
-    memcpy(data, seed, 16);
-    memcpy(data + 16, type, 4);
-    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, 20));
+    memcpy(data, seed, length);
+    memcpy(data + length, type, 4);
+    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, length + 4));
 
     // SHA1 the key
-    unsigned char key[20];
-    mbedtls_sha1(data, 20, key);
-    PrintAndLogEx(DEBUG, "key: %s", sprint_hex_inrow(key, 20));
+    unsigned char key[64];
+    mbedtls_sha1(data, length + 4, key);
+    PrintAndLogEx(DEBUG, "key: %s", sprint_hex_inrow(key, length + 4));
 
     // Set parity bits
-    mbedtls_des_key_set_parity(key);
-    mbedtls_des_key_set_parity(key + 8);
+    for (int i = 0; i < ((length + 4) / 8); i++) {
+        mbedtls_des_key_set_parity(key + (i * 8));
+    }
     PrintAndLogEx(DEBUG, "post-parity key: %s", sprint_hex_inrow(key, 20));
 
     memcpy(dataout, &key, length);
@@ -355,9 +356,6 @@ static int secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_
     uint8_t data[21];
     uint8_t temp[8] = {0x0c, 0xa4, 0x02, 0x0c};
 
-    PrintAndLogEx(DEBUG, "keyenc: %s", sprint_hex_inrow(kenc, 16));
-    PrintAndLogEx(DEBUG, "keymac: %s", sprint_hex_inrow(kmac, 16));
-
     int cmdlen = pad_block(temp, 4, cmd);
     int datalen = pad_block(file, 2, data);
     PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
@@ -402,7 +400,69 @@ static int secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_
     sprintf(command, "0C%s020C%02X%s00", SELECT, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
+    // TODO: Impl CC check, which will handle incrementing itself
+    (*(ssc + 7)) += 1;
+
     return exchange_commands(command, response, &resplen, false, true);
+}
+
+static int secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
+    char command[54];
+    uint8_t cmd[8];
+    uint8_t data[21];
+    uint8_t temp[8] = {0x0c, 0xb0};
+
+    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 20));
+
+    // TODO: hacky
+    char offsethex[5];
+    sprintf(offsethex, "%04X", offset);
+    char offsetbuffer[8];
+    memcpy(offsetbuffer, offsethex, 2);
+    int p1 = (int)strtol(offsetbuffer, NULL, 16);
+    memcpy(offsetbuffer, offsethex + 2, 2);
+    int p2 = (int)strtol(offsetbuffer, NULL, 16);
+    temp[2] = p1;
+    temp[3] = p2;
+
+    int cmdlen = pad_block(temp, 4, cmd);
+    PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
+
+    uint8_t do97[3] = {0x97, 0x01, bytes_to_read};
+
+    uint8_t m[11];
+    memcpy(m, cmd, 8);
+    memcpy(m + 8, do97, 3);
+
+    // TODO: this is hacky
+    PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
+    (*(ssc + 7)) += 1;
+    PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
+
+    uint8_t n[19];
+    memcpy(n, ssc, 8);
+    memcpy(n + 8, m, 11);
+    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, 19));
+
+    uint8_t cc[8];
+    retail_mac(kmac, n, 19, cc);
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
+
+    uint8_t do8e[10] = {0x8E, 0x08};
+    memcpy(do8e + 2, cc, 8);
+    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, 10));
+
+    int lc = 13;
+    PrintAndLogEx(DEBUG, "lc: %i", lc);
+
+    memcpy(data, do97, 3);
+    memcpy(data + 3, do8e, 10);
+    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
+
+    sprintf(command, "0C%s%02X%02X%02X%s00", READ_BINARY, p1, p2, lc, sprint_hex_inrow(data, lc));
+    PrintAndLogEx(DEBUG, "command: %s", command);
+
+    return exchange_commands(command, dataout, dataoutlen, false, true);
 }
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
@@ -548,7 +608,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t file_id[2] = {0x01, 0x1E};
     secure_select_file(ks_enc, ks_mac, ssc, file_id);
 
-    // TODO: Secure read
+    secure_read_binary(ks_mac, ssc, 0, 4, response, &resplen);
+    // TODO: impl secure read file
 
     DropField();
     return PM3_SUCCESS;
