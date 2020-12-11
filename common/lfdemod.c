@@ -1081,6 +1081,11 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     *firstPhaseShift = firstFullWave;
     if (g_debugMode == 2) prnt("DEBUG PSK: firstFullWave: %zu, waveLen: %d", firstFullWave, fullWaveLen);
 
+    // Avoid autodetect if user selected a clock
+    for(uint8_t validClk = 1; validClk < 8; validClk++) {
+        if(clock == clk[validClk]) return(clock);
+    }
+
     //test each valid clock from greatest to smallest to see which lines up
     for (clkCnt = 7; clkCnt >= 1 ; clkCnt--) {
         uint8_t tol = *fc / 2;

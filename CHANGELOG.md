@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix `data rawdemod` parsing for psk2 and user defined clock (@cyberpunk-re)
  - Fix issue #844 - `lf t55xx config` => recompute block0 (@cyberpunk-re)
  - EM4x50: changed cli parameter from w (word) to d (data) (@tharexde)
  - EM4x50: new function 4x50 login: authenticate against tag (@tharexde)

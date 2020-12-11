@@ -1367,6 +1367,7 @@ int CmdPSK1rawDemod(const char *Cmd) {
     if (strlen(Cmd) > 16 || cmdp == 'h') return usage_data_rawdemod_p1();
     int clk = 0, invert = 0, max_err = 100;
     sscanf(Cmd, "%i %i %i", &clk, &invert, &max_err);
+
     if (clk == 1) {
         invert = 1;
         clk = 0;
@@ -1428,7 +1429,7 @@ static int CmdRawDemod(const char *Cmd) {
     else if (str_startswith(Cmd, "am")) ans = Cmdaskmandemod(Cmd + 2);
     else if (str_startswith(Cmd, "ar")) ans = Cmdaskrawdemod(Cmd + 2);
     else if (str_startswith(Cmd, "nr") || Cmd[0] == 'n') ans = CmdNRZrawDemod(Cmd + 2);
-    else if (str_startswith(Cmd, "p1") || Cmd[0] == 'p') ans = CmdPSK1rawDemod(Cmd + 2);
+    else if (str_startswith(Cmd, "p1")) ans = CmdPSK1rawDemod(Cmd + 2);
     else if (str_startswith(Cmd, "p2")) ans = CmdPSK2rawDemod(Cmd + 2);
     else PrintAndLogEx(WARNING, "Unknown modulation entered - see help ('h') for parameter structure");
 
