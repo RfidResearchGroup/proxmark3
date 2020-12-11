@@ -109,7 +109,7 @@ static char calculate_check_digit(char *data) {
 }
 
 static int asn1datalength(uint8_t *datain, int datainlen) {
-    char* dataintext = sprint_hex_inrow(datain, datainlen);
+    char *dataintext = sprint_hex_inrow(datain, datainlen);
 
     // lazy - https://stackoverflow.com/a/4214350/3286892
     char subbuff[8];
@@ -136,7 +136,7 @@ static int asn1datalength(uint8_t *datain, int datainlen) {
 }
 
 static int asn1fieldlength(uint8_t *datain, int datainlen) {
-    char* dataintext = sprint_hex_inrow(datain, datainlen);
+    char *dataintext = sprint_hex_inrow(datain, datainlen);
 
     // lazy - https://stackoverflow.com/a/4214350/3286892
     char subbuff[8];
