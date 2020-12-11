@@ -349,13 +349,11 @@ static int secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // TODO: fix sizes
     uint8_t iv[8] = { 0x00 };
-    char command[200];
-    uint8_t cmd[200];
-    uint8_t data[100];
-    uint8_t temp[100] = {0x0c, 0xa4, 0x02, 0x0c};
-    uint8_t temp_2[100];
+    char command[54];
+    uint8_t cmd[8];
+    uint8_t data[21];
+    uint8_t temp[8] = {0x0c, 0xa4, 0x02, 0x0c};
 
     PrintAndLogEx(DEBUG, "keyenc: %s", sprint_hex_inrow(kenc, 16));
     PrintAndLogEx(DEBUG, "keymac: %s", sprint_hex_inrow(kmac, 16));
@@ -365,23 +363,23 @@ static int secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_
     PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, datalen));
 
-    des3_encrypt_cbc(iv, kenc, data, datalen, temp_2);
-    PrintAndLogEx(DEBUG, "temp_2: %s", sprint_hex_inrow(temp_2, datalen));
-    uint8_t do87[103] = {0x87, 0x09, 0x01};
-    memcpy(do87 + 3, temp_2, datalen);
+    des3_encrypt_cbc(iv, kenc, data, datalen, temp);
+    PrintAndLogEx(DEBUG, "temp: %s", sprint_hex_inrow(temp, datalen));
+    uint8_t do87[11] = {0x87, 0x09, 0x01};
+    memcpy(do87 + 3, temp, datalen);
     PrintAndLogEx(DEBUG, "do87: %s", sprint_hex_inrow(do87, datalen + 3));
 
-    uint8_t m[153];
+    uint8_t m[19];
     memcpy(m, cmd, cmdlen);
     memcpy(m + cmdlen, do87, (datalen + 3));
     PrintAndLogEx(DEBUG, "m: %s", sprint_hex_inrow(m, datalen + cmdlen + 3));
 
-    // this is hacky
+    // TODO: this is hacky
     PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
     (*(ssc + 7)) += 1;
     PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
 
-    uint8_t n[161];
+    uint8_t n[27];
     memcpy(n, ssc, 8);
     memcpy(n + 8, m, (cmdlen + datalen + 3));
     PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, (cmdlen + datalen + 11)));
