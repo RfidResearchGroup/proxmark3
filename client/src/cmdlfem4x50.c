@@ -259,6 +259,48 @@ int CmdEM4x50ESave(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdEM4x50EView(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x50 eview",
+                  "Displays em4x50 content of emulator memory.",
+                  "lf em 4x50 eview\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    // download emulator memory
+    PrintAndLogEx(SUCCESS, "Reading emulator memory...");
+    uint8_t data[DUMP_FILESIZE] = {0x0};
+    if (GetFromDevice(BIG_BUF_EML, data, DUMP_FILESIZE, 0, NULL, 0, NULL, 2500, false) == false) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        return PM3_ETIMEOUT;
+    }
+    
+    // valid em4x50 data?
+    uint32_t serial = bytes_to_num(data + 4 * EM4X50_DEVICE_SERIAL, 4);
+    uint32_t device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);
+    if (serial == device_id) {
+        PrintAndLogEx(WARNING, "No valid em4x50 data in emulator memory.");
+        return PM3_ENODATA;
+    }
+
+    em4x50_word_t words[EM4X50_NO_WORDS];
+    for (int i = 0; i < EM4X50_NO_WORDS; i++) {
+        memcpy(words[i].byte, data + i * 4, 4);
+    }
+    print_result(words, 0, EM4X50_NO_WORDS - 1);
+    PrintAndLogEx(NORMAL, "");
+
+    return PM3_SUCCESS;
+}
+
 int CmdEM4x50Login(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 login",
@@ -1123,8 +1165,9 @@ static command_t CommandTable[] = {
     {"reader", CmdEM4x50Reader,      IfPm3EM4x50,     "show standard read mode data of EM4x50"},
     {"restore",CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
     {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate EM4x50 tag"},
-    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to flash memory"},
-    {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save flash memory to file"},
+    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to emulator memory"},
+    {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save emulator memory to file"},
+    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "view EM4x50 content in emulator memory"},
     {NULL, NULL, NULL, NULL}
 };
 
