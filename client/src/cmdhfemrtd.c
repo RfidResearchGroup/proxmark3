@@ -392,7 +392,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
     PrintAndLogEx(DEBUG, "kmrz: %s", kmrz);
 
-    unsigned char kseed[20] = {0x00};
+    uint8_t kseed[16] = {0x00};
     mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
     PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
 
@@ -440,12 +440,40 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     uint8_t dec_output[32] = { 0x00 };
     des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
+    PrintAndLogEx(DEBUG, "dec_output: %s", sprint_hex_inrow(dec_output, 32));
 
     if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
         PrintAndLogEx(ERR, "Challenge failed, rnd_ifd does not match.");
         DropField();
         return PM3_ESOFT;
     }
+
+    uint8_t ssc[8] = { 0x00 };
+    uint8_t ks_enc[16] = { 0x00 };
+    uint8_t ks_mac[16] = { 0x00 };
+    uint8_t k_icc[16] = { 0x00 };
+    memcpy(k_icc, dec_output + 16, 16);
+
+    // Calculate session keys
+    for (int x = 0; x < 16; x++) {
+        kseed[x] = k_ifd[x] ^ k_icc[x];
+    }
+
+    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
+
+    deskey(kseed, KENC_type, 16, ks_enc);
+    deskey(kseed, KMAC_type, 16, ks_mac);
+
+    PrintAndLogEx(DEBUG, "ks_enc: %s", sprint_hex_inrow(ks_enc, 16));
+    PrintAndLogEx(DEBUG, "ks_mac: %s", sprint_hex_inrow(ks_mac, 16));
+
+    memcpy(ssc, rnd_ic + 4, 4);
+    memcpy(ssc + 4, rnd_ifd + 4, 4);
+
+    PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
+
+    // TODO: Secure select
+    // TODO: Secure read
 
     DropField();
     return PM3_SUCCESS;
