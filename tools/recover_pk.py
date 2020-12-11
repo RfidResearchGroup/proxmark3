@@ -199,6 +199,18 @@ CURVES = {
             0xCF5AC8395BAFEB13C02DA292DDED7A83
         )
     ),
+    # ! h=4, how to handle that?
+    "secp128r2": (
+        707,
+        0xFFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF,
+        0x3FFFFFFF7FFFFFFFBE0024720613B5A3,
+        0xD6031998D1B3BBFEBF59CC9BBFF9AEE1,
+        0x5EEEFCA380D02919DC2C6558BB6D8A5D,
+        (
+            0x7B6AA5D85E572983E6FB32A7CDEBC140,
+            0x27B6916A894D3AEE7106FE805FC34B44
+        )
+    ),
     "secp192k1": (
         711,
         0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFEE37,
@@ -210,6 +222,7 @@ CURVES = {
             0x9B2F2F6D9C5628A7844163D015BE86344082AA88D95E2F9D
         )
     ),
+    # p192
     "secp192r1": (
         409,
         0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF,
@@ -232,6 +245,7 @@ CURVES = {
             0x7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5
         )
     ),
+    # p224
     "secp224r1": (
         713,
         0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001,
@@ -254,7 +268,7 @@ CURVES = {
             0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
         )
     ),
-    ## openssl uses the name: prime256v1.
+    # p256, openssl uses the name: prime256v1.
     "secp256r1": (
         415,
         0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF,
@@ -266,6 +280,7 @@ CURVES = {
             0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
         )
     ),
+    # p384
     "secp384r1": (
         715,
         0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF,
@@ -367,6 +382,8 @@ class EllipticCurve:
             return data
         elif callable(hash):
             return hash(data)
+        elif hash == "md5":
+            return hashlib.md5(data).digest()
         elif hash == "sha1":
             return hashlib.sha1(data).digest()
         elif hash == "sha256":
@@ -381,7 +398,7 @@ class EllipticCurve:
 def guess_curvename(signature):
     l = (len(signature) // 2) & 0xfe
     if   l == 32 :
-        curves = [ "secp128r1" ]
+        curves = [ "secp128r1", "secp128r2" ]
     elif l == 48:
         curves = [ "secp192k1", "secp192r1" ]
     elif l == 56:
@@ -501,7 +518,7 @@ def selftests():
         curvenames = guess_curvename(t['samples'][1])
         recovered = set()
         for c in curvenames:
-            for h in [None, "sha1", "sha256", "sha512"]:
+            for h in [None, "md5", "sha1", "sha256", "sha512"]:
                 recovered |= recover_multiple(t['samples'][::2], t['samples'][1::2], c, alghash=h)
         if (len(recovered) == 1):
             pk = recovered.pop()
@@ -536,7 +553,7 @@ if __name__ == "__main__":
     for c in curvenames:
         print("\nAssuming curve=%s" % c)
         print("========================")
-        for h in [None, "sha1", "sha256", "sha512"]:
+        for h in [None, "md5", "sha1", "sha256", "sha512"]:
             print("Assuming hash=%s" % h)
             recovered = recover_multiple(uids, sigs, c, alghash=h)
             if recovered:
