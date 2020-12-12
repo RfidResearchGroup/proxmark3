@@ -252,14 +252,14 @@ int CmdEM4x70Auth(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x70 auth",
                   "Authenticate against an EM4x70 by sending random number (RN) and F(RN)\n"
                   "  If F(RN) is incorrect based on the tag crypt key, the tag will not respond",
-                  "lf em 4x70 auth -r 11223344556677 -f 11223344\n"
+                  "lf em 4x70 auth --rnd 11223344556677 --frn 11223344\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("x", "par", "Add parity bit when sending commands"),
-        arg_str1("r", "rnd", "<hex>", "Random 56-bit"),
-        arg_str1("f", "frn", "<hex>", "F(RN) 28-bit as 4 hex bytes"),
+        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_str1(NULL, "rnd", "<hex>", "Random 56-bit"),
+        arg_str1(NULL, "frn", "<hex>", "F(RN) 28-bit as 4 hex bytes"),
         arg_param_end
     };
 
