@@ -60,7 +60,7 @@ static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen,
 
     PrintAndLogEx(DEBUG, "Sending: %s", cmd);
 
-    uint8_t aCMD[100];
+    uint8_t aCMD[500];
     int aCMD_n = 0;
     param_gethex_to_eol(cmd, 0, aCMD, sizeof(aCMD), &aCMD_n);
     int res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
@@ -113,10 +113,8 @@ static int asn1datalength(uint8_t *datain, int datainlen) {
 
     // lazy - https://stackoverflow.com/a/4214350/3286892
     char subbuff[8];
-    memcpy(subbuff, &dataintext[2], 2);
-    subbuff[2] = '\0';
 
-    int thing = (int)strtol(subbuff, NULL, 16);
+    int thing = *(datain + 1);
     if (thing <= 0x7f) {
         return thing;
     } else if (thing == 0x81) {
@@ -136,14 +134,7 @@ static int asn1datalength(uint8_t *datain, int datainlen) {
 }
 
 static int asn1fieldlength(uint8_t *datain, int datainlen) {
-    char *dataintext = sprint_hex_inrow(datain, datainlen);
-
-    // lazy - https://stackoverflow.com/a/4214350/3286892
-    char subbuff[8];
-    memcpy(subbuff, &dataintext[2], 2);
-    subbuff[2] = '\0';
-
-    int thing = (int)strtol(subbuff, NULL, 16);
+    int thing = *(datain + 1);
     if (thing <= 0x7f) {
         return 2;
     } else if (thing == 0x81) {
@@ -213,14 +204,14 @@ static int pad_block(uint8_t *input, int inputlen, uint8_t *output) {
 }
 
 static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
-    // This code assumes blocklength (n) = 8, and input len of up to 56 chars
+    // This code assumes blocklength (n) = 8, and input len of up to 240 or so chars
     // This code takes inspirations from https://github.com/devinvenable/iso9797algorithm3
     uint8_t k0[8];
     uint8_t k1[8];
     uint8_t intermediate[8] = {0x00};
-    uint8_t intermediate_des[32];
+    uint8_t intermediate_des[256];
     uint8_t block[8];
-    uint8_t message[64];
+    uint8_t message[256];
 
     // Populate keys
     memcpy(k0, key, 8);
@@ -439,7 +430,7 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8
     return check_cc(ssc, kmac, response, resplen);
 }
 
-static bool secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
+static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
     char command[54];
     uint8_t cmd[8];
     uint8_t data[21];
@@ -500,8 +491,69 @@ static bool secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byte
     return check_cc(ssc, kmac, dataout, *dataoutlen);
 }
 
+static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
+    uint8_t response[500];
+    uint8_t temp[500];
+    int resplen, cutat = 0;
+    uint8_t iv[8] = { 0x00 };
+
+    if (_secure_read_binary(kmac, ssc, offset, bytes_to_read, response, &resplen) == false) {
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "0offset %i on %i: ? (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
+
+    cutat = ((int) response[1]) - 1;
+
+    PrintAndLogEx(DEBUG, "1offset %i on %i: ? (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
+    des3_decrypt_cbc(iv, kenc, response + 3, cutat, temp);
+    PrintAndLogEx(DEBUG, "2eoffset %i on %i: ? (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(DEBUG, "2aoffset %i on %i: %s", offset, bytes_to_read, sprint_hex_inrow(temp, cutat));
+    PrintAndLogEx(DEBUG, "2boffset %i on %i: c %s", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
+    memcpy(dataout, temp, bytes_to_read);
+    PrintAndLogEx(DEBUG, "3offset %i on %i: %s (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(temp, cutat), sprint_hex_inrow(response, resplen));
+    *dataoutlen = bytes_to_read;
+    return true;
+}
+
+static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *dataout, int *dataoutlen) {
+    uint8_t response[500];
+    int resplen = 0;
+    uint8_t tempresponse[500];
+    int tempresplen = 0;
+
+    if (!_secure_read_binary_decrypt(kenc, kmac, ssc, 0, 4, response, &resplen)) {
+        return false;
+    }
+
+    int datalen = asn1datalength(response, resplen);
+    int readlen = datalen - (3 - asn1fieldlength(response, resplen) / 2);
+    int offset = 4;
+    int toread;
+
+    while (readlen > 0) {
+        toread = readlen;
+        if (readlen > 118) {
+            toread = 118;
+        }
+
+        if (!_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen)) {
+            return false;
+        }
+
+        memcpy(response + resplen, tempresponse, tempresplen);
+        offset += toread;
+        readlen -= toread;
+        resplen += tempresplen;
+    }
+
+    memcpy(dataout, &response, resplen);
+    *dataoutlen = resplen;
+    return true;
+}
+
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
-    uint8_t response[PM3_CMD_DATA_SIZE];
+    uint8_t response[500];
     uint8_t rnd_ic[8];
     uint8_t kenc[50];
     uint8_t kmac[50];
@@ -647,12 +699,27 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         return PM3_ESOFT;
     }
 
-    if (secure_read_binary(ks_mac, ssc, 0, 4, response, &resplen) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_COM, crypto checksum check failed.");
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
-    // TODO: impl secure read file
+    PrintAndLogEx(INFO, "EF_COM: %s", sprint_hex_inrow(response, resplen));
+
+    // Select EF_DG1
+    file_id[1] = 0x01;
+    if (secure_select_file(ks_enc, ks_mac, ssc, file_id) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select EF_DG1, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG1.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex_inrow(response, resplen));
 
     DropField();
     return PM3_SUCCESS;
