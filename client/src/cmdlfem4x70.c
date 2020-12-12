@@ -240,11 +240,76 @@ int CmdEM4x70Unlock(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+int CmdEM4x70Auth(const char *Cmd) {
+
+    // Authenticate transponder
+    // Send 56-bit random number + pre-computed f(rnd, k) to transponder.
+    // Transponder will respond with a response
+    em4x70_data_t etd = {0};
+
+    CLIParserContext *ctx;
+
+    CLIParserInit(&ctx, "lf em 4x70 auth",
+                  "Authenticate against an EM4x70 by sending random number (RN) and F(RN)\n"
+                  "  If F(RN) is incorrect based on the tag crypt key, the tag will not respond",
+                  "lf em 4x70 auth -r 11223344556677 -f 11223344\n"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("x", "par", "Add parity bit when sending commands"),
+        arg_str1("r", "rnd", "<hex>", "Random 56-bit"),
+        arg_str1("f", "frn", "<hex>", "F(RN) 28-bit as 4 hex bytes"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    etd.parity = arg_get_lit(ctx, 1);
+    
+    int rnd_len = 7;
+    CLIGetHexWithReturn(ctx, 2, etd.rnd, &rnd_len);
+
+    int frnd_len = 4;
+    CLIGetHexWithReturn(ctx, 3, etd.frnd, &frnd_len);
+
+    CLIParserFree(ctx);
+
+    if (rnd_len != 7) {
+        PrintAndLogEx(FAILED, "Random number length must be 7 bytes instead of %d", rnd_len);
+        return PM3_EINVARG;
+    }
+
+    if (frnd_len != 4) {
+        PrintAndLogEx(FAILED, "F(RN) length must be 4 bytes instead of %d", frnd_len);
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_AUTH, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_AUTH, &resp, TIMEOUT)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status) {
+        // Response is 20-bit from tag
+        PrintAndLogEx(INFO, "Tag Auth Response: %02X %02X %02X", resp.data.asBytes[2], resp.data.asBytes[1], resp.data.asBytes[0]);
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "TAG Authentication " _RED_("Failed"));
+    return PM3_ESOFT;
+}
+
 static command_t CommandTable[] = {
     {"help",   CmdHelp,         AlwaysAvailable, "This help"},
     {"info",   CmdEM4x70Info,   IfPm3EM4x70,     "Tag information EM4x70"},
     {"write",  CmdEM4x70Write,  IfPm3EM4x70,     "Write EM4x70"},
     {"unlock", CmdEM4x70Unlock, IfPm3EM4x70,     "Unlock EM4x70 for writing"},
+    {"auth",   CmdEM4x70Auth,   IfPm3EM4x70,     "Authenticate EM4x70"},
     {NULL, NULL, NULL, NULL}
 };
 
