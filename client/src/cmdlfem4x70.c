@@ -16,6 +16,9 @@
 #include "commonutil.h"
 #include "em4x70.h"
 
+#define BYTES2UINT16(x) ((x[1] << 8) | (x[0]))
+#define BYTES2UINT32(x) ((x[3] << 24) | (x[2] << 16) | (x[1] << 8) | (x[0]))
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -33,7 +36,7 @@ static void print_info_result(uint8_t *data) {
         PrintAndLogEx(NORMAL, "%02X %02X", data[32-i], data[32-i-1]);
     }
     PrintAndLogEx(NORMAL, "Tag ID: %02X %02X %02X %02X", data[7], data[6], data[5], data[4]);
-    PrintAndLogEx(NORMAL, "Lockbit 0: %d", (data[3] & 0x40) ? 1:0);
+    PrintAndLogEx(NORMAL, "Lockbit 0: %d %s", (data[3] & 0x40) ? 1:0, (data[3] & 0x40) ? "LOCKED":"UNLOCKED");
     PrintAndLogEx(NORMAL, "Lockbit 1: %d", (data[3] & 0x80) ? 1:0);
     PrintAndLogEx(NORMAL, "");
 
@@ -83,7 +86,7 @@ int CmdEM4x70Info(const char *Cmd) {
                   "  ID48 does not use command parity (default).\n"
                   "  V4070 and EM4170 do require parity bit.",
                   "lf em 4x70 info\n"
-                  "lf em 4x70 -p -> adds parity bit to commands\n"
+                  "lf em 4x70 info -p -> adds parity bit to command\n"
                 );
 
     void *argtable[] = {
@@ -114,9 +117,74 @@ int CmdEM4x70Info(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+int CmdEM4x70Write(const char *Cmd) {
+
+    // write one block/word (16 bits) to the tag at given block address (0-15)
+    em4x70_data_t etd = {0};
+
+    CLIParserContext *ctx;
+
+    CLIParserInit(&ctx, "lf em 4x10 write",
+                  "Write EM4x70\n",
+                  "lf em 4x70 write -b 15 d c0de -> write 'c0de' to block 15\n"
+                  "lf em 4x70 write -p -b 15 -d c0de -> adds parity bit to commands\n"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("p", "parity", "Add parity bit when sending commands"),
+        arg_int1("b", "block",  "<dec>", "block/word address, dec"),
+        arg_str1("d", "data",   "<hex>", "data, 2 bytes"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    etd.parity = arg_get_lit(ctx, 1);
+    
+    int addr = arg_get_int(ctx, 2);
+    
+    int word_len = 0;
+    uint8_t word[2] = {0x0};
+    CLIGetHexWithReturn(ctx, 3, word, &word_len);
+
+    CLIParserFree(ctx);
+
+    if (addr < 0 || addr >= EM4X70_NUM_BLOCKS) {
+        PrintAndLogEx(FAILED, "block has to be within range [0, 15]");
+        return PM3_EINVARG;
+    } 
+    
+    if (word_len != 2) {
+        PrintAndLogEx(FAILED, "word/data length must be 2 bytes instead of %d", word_len);
+        return PM3_EINVARG;
+    }
+
+    etd.address = (uint8_t) addr;
+    etd.word = BYTES2UINT16(word);;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_WRITE, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITE, &resp, TIMEOUT)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status) {
+        print_info_result(resp.data.asBytes);
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "Writing " _RED_("Failed"));
+    return PM3_ESOFT;
+}
+
 static command_t CommandTable[] = {
     {"help",   CmdHelp,         AlwaysAvailable, "This help"},
-    {"info",   CmdEM4x70Info,   IfPm3EM4x70,     "tag information EM4x70"},
+    {"info",   CmdEM4x70Info,   IfPm3EM4x70,     "Tag information EM4x70"},
+    {"write",  CmdEM4x70Write,  IfPm3EM4x70,     "Write EM4x70"},
     {NULL, NULL, NULL, NULL}
 };
 
