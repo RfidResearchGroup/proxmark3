@@ -515,7 +515,7 @@ void doCotagAcquisition(void) {
 
         if (BUTTON_PRESS())
             break;
-        
+
         if (checker == 4000) {
             if (data_available())
                 break;

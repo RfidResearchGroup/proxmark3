@@ -264,7 +264,7 @@ static int CmdMotorolaSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    
+
     // PSK sim.
     PrintAndLogEx(INFO, " PSK1 at 66 kHz... Interesting.");
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");

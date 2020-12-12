@@ -2135,7 +2135,7 @@ static int CmdHf14AFuzzapdu(const char *Cmd) {
                   "Tag must be on antenna before running.",
                   "hf 14a apdufuzz\n"
                   "hf 14a apdufuzz --cla 80\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2143,7 +2143,7 @@ static int CmdHf14AFuzzapdu(const char *Cmd) {
         arg_str0(NULL, "ins", "<hex>", "start INSTRUCTION value (1 hex byte)"),
         arg_str0(NULL, "p1", "<hex>", "start P1 value (1 hex byte)"),
         arg_str0(NULL, "p2", "<hex>", "start P2 value (1 hex byte)"),
-        arg_str0(NULL, "le", "<hex>", "start LENGTH value (1 hex byte)"),        
+        arg_str0(NULL, "le", "<hex>", "start LENGTH value (1 hex byte)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -2152,7 +2152,7 @@ static int CmdHf14AFuzzapdu(const char *Cmd) {
     int cla_len = 0;
     uint8_t cla[1] = {0};
     CLIGetHexWithReturn(ctx, 1, cla, &cla_len);
-    
+
     int ins_len = 0;
     uint8_t ins[1] = {0};
     CLIGetHexWithReturn(ctx, 2, ins, &ins_len);
@@ -2176,12 +2176,12 @@ static int CmdHf14AFuzzapdu(const char *Cmd) {
     bool keep_field_on = true;
 
     uint8_t a = cla[0];
-    uint8_t b = ins[0]; 
+    uint8_t b = ins[0];
     uint8_t c = p1[0];
     uint8_t d = p2[0];
-    uint8_t e = le[0];    
+    uint8_t e = le[0];
 
-    PrintAndLogEx(SUCCESS, "Starting the apdu fuzzer [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " LE " _GREEN_("%02x")" ]", a,b,c,d,e);
+    PrintAndLogEx(SUCCESS, "Starting the apdu fuzzer [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " LE " _GREEN_("%02x")" ]", a, b, c, d, e);
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     uint8_t response[PM3_CMD_DATA_SIZE];
@@ -2210,7 +2210,7 @@ static int CmdHf14AFuzzapdu(const char *Cmd) {
                         }
 
                         uint8_t foo[5] = {a, b, c, d, e};
-                        int foo_n = sizeof(foo);                    
+                        int foo_n = sizeof(foo);
 
                         if (verbose) {
                             PrintAndLogEx(INFO, "%s", sprint_hex(foo, sizeof(foo)));
@@ -2218,34 +2218,34 @@ static int CmdHf14AFuzzapdu(const char *Cmd) {
                         res = ExchangeAPDU14a(foo, foo_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
                         if (res) {
                             e++;
-                            continue;                                            
+                            continue;
                         }
 
                         uint16_t sw = get_sw(response, resplen);
                         if (sw != 0x6a86 &&
-                            sw != 0x6986 &&
-                            sw != 0x6d00
-                            ) {
-                            PrintAndLogEx(INFO, "%02X %02X %02X %02X %02X (%04x - %s)", a,b,c,d,e, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                                sw != 0x6986 &&
+                                sw != 0x6d00
+                           ) {
+                            PrintAndLogEx(INFO, "%02X %02X %02X %02X %02X (%04x - %s)", a, b, c, d, e, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                         }
                         e++;
                         if (verbose) {
-                            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+                            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a, b, c, d, e);
                         }
 
                     } while (e);
                     d++;
-                    PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+                    PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a, b, c, d, e);
                 } while (d);
                 c++;
-                PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+                PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a, b, c, d, e);
             } while (c);
             b++;
-            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
+            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a, b, c, d, e);
         } while (b);
         a++;
-        PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
-    } while(a);
+        PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a, b, c, d, e);
+    } while (a);
 
 out:
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);

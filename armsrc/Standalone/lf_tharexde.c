@@ -88,7 +88,7 @@ static int get_input_data_from_file(uint32_t *words, char *inputfile) {
 
         uint32_t size = size_in_spiffs(inputfile);
         uint8_t *mem = BigBuf_malloc(size);
-        
+
         Dbprintf(_YELLOW_("found input file %s"), inputfile);
 
         rdv40_spiffs_read_as_filetype(inputfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
@@ -153,7 +153,7 @@ void RunMod(void) {
         if (button_pressed == BUTTON_SINGLE_CLICK) {
 
             SpinUp(100);
-            
+
             switch (state) {
 
                 case STATE_SIM:
@@ -168,7 +168,7 @@ void RunMod(void) {
                 default:
                     break;
             }
-            
+
             state_change = true;
 
         } else if (button_pressed == BUTTON_HOLD) {
@@ -261,9 +261,9 @@ void RunMod(void) {
 
                 log_exists = exists_in_spiffs(LF_EM4X50BRUTE_LOGFILE);
                 now = get_input_data_from_file(passwords, LF_EM4X50BRUTE_INPUTFILE);
-                
+
                 if (now == 2) {
-                    
+
                     // print some information
                     int no_iter = passwords[1] - passwords[0] + 1;
                     int dur_s = no_iter / EM4X50_PWD_SPEED;
@@ -277,7 +277,7 @@ void RunMod(void) {
                              no_iter, passwords[0], passwords[1]);
                     Dbprintf(_YELLOW_("estimated duration: %ih%im%is"),
                              dur_h, dur_m, dur_s);
-                   
+
                 } else {
                     Dbprintf(_RED_("error in input data"));
                     break;
@@ -287,7 +287,7 @@ void RunMod(void) {
             }
 
             pwd_found = em4x50_standalone_brute(passwords[0], passwords[1], &pwd);
-            
+
             if (pwd_found == PM3_ETIMEOUT) {
 
                 // timeout -> no EM4x50 tag on reader?
@@ -313,15 +313,15 @@ void RunMod(void) {
                     strcat((char *)entry, "\n");
                     append(LF_EM4X50BRUTE_LOGFILE, entry, strlen((char *)entry));
 
-                    
+
                 } else {
-                    
+
                     // stopped -> write to logfile
                     sprintf((char *)entry, "stopped search - last password: 0x%08"PRIx32, pwd);
                     Dbprintf(_YELLOW_("%s"), entry);
                     strcat((char *)entry, "\n");
                     append(LF_EM4X50BRUTE_LOGFILE, entry, strlen((char *)entry));
-                    
+
                     // replace start password by last tested password in
                     // inputfile (spiffs) so that brute forcing process will
                     // be continued when envoking brute force mode again

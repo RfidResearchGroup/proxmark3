@@ -773,7 +773,7 @@ int CmdEM4x05Write(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("a", "addr", "<dec>", "memory address to write to. (0-13)"),
-        arg_str1("d", "data", "<hex>", "data to write, 4 bytes hex"),        
+        arg_str1("d", "data", "<hex>", "data to write, 4 bytes hex"),
         arg_str0("p", "pwd", "<hex>", "optional - password, 4 bytes hex"),
         arg_lit0(NULL, "po", "protect operation"),
         arg_param_end
@@ -784,14 +784,14 @@ int CmdEM4x05Write(const char *Cmd) {
     uint64_t inputpwd = arg_get_u64_hexstr_def(ctx, 3, 0xFFFFFFFFFFFFFFFF);
     bool protect_operation = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
- 
+
     if ((addr > 13) && (protect_operation == false)) {
         PrintAndLogEx(WARNING, "Address must be between 0 and 13");
         return PM3_EINVARG;
     }
 
-    bool use_pwd = false;   
-    uint32_t pwd = ( inputpwd != 0xFFFFFFFFFFFFFFFF) ? (inputpwd & 0xFFFFFFFF) : 0;
+    bool use_pwd = false;
+    uint32_t pwd = (inputpwd != 0xFFFFFFFFFFFFFFFF) ? (inputpwd & 0xFFFFFFFF) : 0;
     if (pwd == 0xFFFFFFFF) {
         if (protect_operation)
             PrintAndLogEx(INFO, "Writing protection words data %08X", data);
@@ -807,14 +807,14 @@ int CmdEM4x05Write(const char *Cmd) {
 
     int res = PM3_SUCCESS;
     // set Protect Words
-    if (protect_operation) { 
+    if (protect_operation) {
         res = em4x05_protect(pwd, use_pwd, data);
-        if ( res != PM3_SUCCESS) {
+        if (res != PM3_SUCCESS) {
             return res;
         }
     } else {
         res = em4x05_write_word_ext(addr, pwd, use_pwd, data);
-        if ( res != PM3_SUCCESS) {
+        if (res != PM3_SUCCESS) {
             return res;
         }
     }
@@ -888,25 +888,25 @@ int CmdEM4x05Wipe(const char *Cmd) {
 
     bool use_pwd = false;
     uint32_t pwd = 0;
-    if ( inputpwd != 0xFFFFFFFFFFFFFFFF) {
+    if (inputpwd != 0xFFFFFFFFFFFFFFFF) {
         pwd = (inputpwd & 0xFFFFFFFF);
         use_pwd = true;
     }
     // block 0 : User Data or Chip Info
     int res = em4x05_write_word_ext(0, pwd, use_pwd, chip_info);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         return res;
     }
 
     // block 1 : UID - this should be read only for EM4205 and EM4305 not sure about others
     res = em4x05_write_word_ext(1, pwd, use_pwd, chip_UID);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(INFO, "UID block write failed");
     }
 
     // block 2 : password
     res = em4x05_write_word_ext(2, pwd, use_pwd, block_data);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         return res;
     }
 
@@ -914,20 +914,20 @@ int CmdEM4x05Wipe(const char *Cmd) {
     pwd = block_data;
     // block 3 : user data
     res = em4x05_write_word_ext(3, pwd, use_pwd, block_data);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         return res;
     }
 
     // block 4 : config
     res = em4x05_write_word_ext(4, pwd, use_pwd, config);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         return res;
     }
 
     // Remainder of user/data blocks
     for (addr = 5; addr < 14; addr++) {// Clear user data blocks
         res = em4x05_write_word_ext(addr, pwd, use_pwd, block_data);
-        if ( res != PM3_SUCCESS) {
+        if (res != PM3_SUCCESS) {
             return res;
         }
     }
