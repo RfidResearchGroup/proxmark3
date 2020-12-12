@@ -233,7 +233,7 @@ static int CmdGallagherClone(const char *Cmd) {
 
 static int CmdGallagherSim(const char *Cmd) {
 
-   CLIParserContext *ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gallagher sim",
                   "Enables simulation of GALLAGHER card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.\n",

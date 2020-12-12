@@ -219,11 +219,11 @@ static int CmdJablotronClone(const char *Cmd) {
 
     free(bits);
 
-   uint64_t id = getJablontronCardId(fullcode);
+    uint64_t id = getJablontronCardId(fullcode);
 
     PrintAndLogEx(INFO, "Preparing to clone Jablotron to " _YELLOW_("%s") " with FullCode: " _GREEN_("%"PRIx64)"  id: " _GREEN_("%"PRIx64), cardtype, fullcode, id);
     print_blocks(blocks,  ARRAYLEN(blocks));
-    
+
     int res;
     if (em) {
         res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);

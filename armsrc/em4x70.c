@@ -70,7 +70,7 @@ static int em4x70_receive(uint8_t *bits);
 static bool find_listen_window(bool command);
 
 static void init_tag(void) {
-    memset(tag.data, 0x00, sizeof(tag.data)/sizeof(tag.data[0]));
+    memset(tag.data, 0x00, sizeof(tag.data) / sizeof(tag.data[0]));
 }
 
 static void EM4170_setup_read(void) {
@@ -114,7 +114,7 @@ static bool get_signalproperties(void) {
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
     uint32_t sample_max_sum = 0;
-    
+
     memset(sample_max, 0x00, sizeof(sample_max));
 
     // wait until signal/noise > 1 (max. 32 periods)
@@ -158,7 +158,7 @@ static bool get_signalproperties(void) {
     gLow  = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
 
     // Basic sanity check
-    if(gHigh - gLow < EM4X70_MIN_AMPLITUDE) {
+    if (gHigh - gLow < EM4X70_MIN_AMPLITUDE) {
         return false;
     }
 
@@ -168,9 +168,9 @@ static bool get_signalproperties(void) {
 
 /**
  *  get_pulse_length
- * 
+ *
  *      Times falling edge pulses
- */ 
+ */
 static uint32_t get_pulse_length(void) {
 
     uint8_t sample;
@@ -178,7 +178,7 @@ static uint32_t get_pulse_length(void) {
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    }while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
+    } while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -188,7 +188,7 @@ static uint32_t get_pulse_length(void) {
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    }while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
+    } while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -196,7 +196,7 @@ static uint32_t get_pulse_length(void) {
     timeout = (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD) + GetTicks();
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    }while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
+    } while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -206,10 +206,10 @@ static uint32_t get_pulse_length(void) {
 
 /**
  *  get_pulse_invert_length
- * 
+ *
  *      Times rising edge pules
  *  TODO: convert to single function with get_pulse_length()
- */ 
+ */
 static uint32_t get_pulse_invert_length(void) {
 
     uint8_t sample;
@@ -217,7 +217,7 @@ static uint32_t get_pulse_invert_length(void) {
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    }while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
+    } while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -227,7 +227,7 @@ static uint32_t get_pulse_invert_length(void) {
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    }while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
+    } while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -235,7 +235,7 @@ static uint32_t get_pulse_invert_length(void) {
     timeout = GetTicks() + (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    }while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
+    } while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -279,9 +279,9 @@ static void em4x70_send_bit(bool bit) {
 
 /**
  * em4x70_send_nibble
- * 
+ *
  *  sends 4 bits of data + 1 bit of parity (with_parity)
- * 
+ *
  */
 static void em4x70_send_nibble(uint8_t nibble, bool with_parity) {
     int parity = 0;
@@ -289,17 +289,23 @@ static void em4x70_send_nibble(uint8_t nibble, bool with_parity) {
 
     // Non automotive EM4x70 based tags are 3 bits + 1 parity.
     // So drop the MSB and send a parity bit instead after the command
-    if(command_parity)
+    if (command_parity)
         msb_bit = 1;
-    
+
     for (int i = msb_bit; i < 4; i++) {
         int bit = (nibble >> (3 - i)) & 1;
         em4x70_send_bit(bit);
         parity ^= bit;
     }
 
-    if(with_parity)
+    if (with_parity)
         em4x70_send_bit(parity);
+}
+
+static void em4x70_send_byte(uint8_t byte) {
+    // Send byte msb first
+    for (int i = 0; i < 8; i++)
+        em4x70_send_bit((byte >> (7 - i)) & 1);
 }
 
 static void em4x70_send_word(const uint16_t word) {
@@ -307,8 +313,8 @@ static void em4x70_send_word(const uint16_t word) {
     // Split into nibbles
     uint8_t nibbles[4];
     uint8_t j = 0;
-    for(int i = 0; i < 2; i++) {
-        uint8_t byte = (word >> (8*i)) & 0xff;
+    for (int i = 0; i < 2; i++) {
+        uint8_t byte = (word >> (8 * i)) & 0xff;
         nibbles[j++] = (byte >> 4) & 0xf;
         nibbles[j++] = byte & 0xf;
     }
@@ -354,6 +360,87 @@ static bool check_ack(void) {
     return false;
 }
 
+static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *response) {
+
+    if (find_listen_window(true)) {
+
+        em4x70_send_nibble(EM4X70_COMMAND_AUTH, true);
+
+        // Send 56-bit Random number
+        for (int i = 0; i < 7; i++) {
+            em4x70_send_byte(rnd[i]);
+        }
+
+        // Send 7 x 0's (Diversity bits)
+        for (int i = 0; i < 7; i++) {
+            em4x70_send_bit(0);
+        }
+
+        // Send 28-bit f(RN)
+
+        // Send first 24 bits
+        for (int i = 0; i < 3; i++) {
+            em4x70_send_byte(frnd[i]);
+        }
+
+        // Send last 4 bits (no parity)
+        em4x70_send_nibble((frnd[3] >> 4) & 0xf, false);
+
+        // Receive header, 20-bit g(RN), LIW
+        uint8_t grnd[EM4X70_MAX_RECEIVE_LENGTH] = {0};
+        int num = em4x70_receive(grnd);
+        if (num < 10) {
+            Dbprintf("Auth failed");
+            return PM3_ESOFT;
+        }
+        bits2bytes(grnd, 24, response);
+        return PM3_SUCCESS;
+    }
+
+    return PM3_ESOFT;
+}
+
+static int send_pin(const uint32_t pin) {
+
+    // sends pin code for unlocking
+    if (find_listen_window(true)) {
+
+        // send PIN command
+        em4x70_send_nibble(EM4X70_COMMAND_PIN, true);
+
+        // --> Send TAG ID (bytes 4-7)
+        for (int i = 0; i < 4; i++) {
+            em4x70_send_byte(tag.data[7 - i]);
+        }
+
+        // --> Send PIN
+        for (int i = 0; i < 4 ; i++) {
+            em4x70_send_byte((pin >> (i * 8)) & 0xff);
+        }
+
+        // Wait TWALB (write access lock bits)
+        WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_TWALB);
+
+        // <-- Receive ACK
+        if (check_ack()) {
+
+            // <w> Writes Lock Bits
+            WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_WEE);
+            // <-- Receive header + ID
+            uint8_t tag_id[EM4X70_MAX_RECEIVE_LENGTH];
+            int num  = em4x70_receive(tag_id);
+            if (num < 32) {
+                Dbprintf("Invalid ID Received");
+                return PM3_ESOFT;
+            }
+            bits2bytes(tag_id, num, &tag.data[4]);
+            return PM3_SUCCESS;
+        }
+    }
+
+    return PM3_ESOFT;
+}
+
 static int write(const uint16_t word, const uint8_t address) {
 
     // writes <word> to specified <address>
@@ -368,7 +455,7 @@ static int write(const uint16_t word, const uint8_t address) {
         // send data word
         em4x70_send_word(word);
 
-        // Wait TWA 
+        // Wait TWA
         WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_TWA);
 
         // look for ACK sequence
@@ -388,9 +475,9 @@ static int write(const uint16_t word, const uint8_t address) {
 
 
 static bool find_listen_window(bool command) {
-    
+
     int cnt = 0;
-    while(cnt < EM4X70_T_WAITING_FOR_SNGLLIW) {
+    while (cnt < EM4X70_T_WAITING_FOR_SNGLLIW) {
         /*
         80 ( 64 + 16 )
         80 ( 64 + 16 )
@@ -398,26 +485,25 @@ static bool find_listen_window(bool command) {
         96 ( 64 + 32 )
         64 ( 32 + 16 +16 )*/
 
-        if ( check_pulse_length(get_pulse_invert_length(), 80) &&
-             check_pulse_length(get_pulse_invert_length(), 80) &&
-             check_pulse_length(get_pulse_length(), 96) &&
-             check_pulse_length(get_pulse_length(), 64) )
-            {
+        if (check_pulse_length(get_pulse_invert_length(), 80) &&
+                check_pulse_length(get_pulse_invert_length(), 80) &&
+                check_pulse_length(get_pulse_length(), 96) &&
+                check_pulse_length(get_pulse_length(), 64)) {
 
-                if(command) {
-                    /* Here we are after the 64 duration edge.
-                        *   em4170 says we need to wait about 48 RF clock cycles.
-                        *   depends on the delay between tag and us
-                        * 
-                        *   I've found between 4-5 quarter periods (32-40) works best
-                        */
-                    WaitTicks(TICKS_PER_FC * 4 * EM4X70_T_TAG_QUARTER_PERIOD);
-                    // Send RM Command
-                    em4x70_send_bit(0);
-                    em4x70_send_bit(0);
-                }
-                return true;
+            if (command) {
+                /* Here we are after the 64 duration edge.
+                    *   em4170 says we need to wait about 48 RF clock cycles.
+                    *   depends on the delay between tag and us
+                    *
+                    *   I've found between 4-5 quarter periods (32-40) works best
+                    */
+                WaitTicks(TICKS_PER_FC * 4 * EM4X70_T_TAG_QUARTER_PERIOD);
+                // Send RM Command
+                em4x70_send_bit(0);
+                em4x70_send_bit(0);
             }
+            return true;
+        }
         cnt++;
     }
 
@@ -425,17 +511,17 @@ static bool find_listen_window(bool command) {
 }
 
 static void bits2bytes(const uint8_t *bits, int length, uint8_t *out) {
-    
-    if(length%8 != 0) {
+
+    if (length % 8 != 0) {
         Dbprintf("Should have a multiple of 8 bits, was sent %d", length);
     }
-    
+
     int num_bytes = length / 8; // We should have a multiple of 8 here
 
-    for(int i=1; i <= num_bytes; i++) {
-        out[num_bytes-i] = bits2byte(bits, 8);
+    for (int i = 1; i <= num_bytes; i++) {
+        out[num_bytes - i] = bits2byte(bits, 8);
         bits += 8;
-    } 
+    }
 }
 
 static uint8_t bits2byte(const uint8_t *bits, int length) {
@@ -454,16 +540,16 @@ static uint8_t bits2byte(const uint8_t *bits, int length) {
 }
 
 static bool send_command_and_read(uint8_t command, uint8_t resp_len_bits, uint8_t *out_bytes) {
-    
+
     int retries = EM4X70_COMMAND_RETRIES;
-    while(retries) {
+    while (retries) {
         retries--;
 
-        if(find_listen_window(true)) {
+        if (find_listen_window(true)) {
             uint8_t bits[EM4X70_MAX_RECEIVE_LENGTH] = {0};
             em4x70_send_nibble(command, command_parity);
             int len = em4x70_receive(bits);
-            if(len < resp_len_bits) {
+            if (len < resp_len_bits) {
                 Dbprintf("Invalid data received length: %d", len);
                 return false;
             }
@@ -478,9 +564,9 @@ static bool send_command_and_read(uint8_t command, uint8_t resp_len_bits, uint8_
 
 /**
  * em4x70_read_id
- * 
+ *
  *  read pre-programmed ID (4 bytes)
- */ 
+ */
 static bool em4x70_read_id(void) {
 
     return send_command_and_read(EM4X70_COMMAND_ID, 32, &tag.data[4]);
@@ -489,7 +575,7 @@ static bool em4x70_read_id(void) {
 
 /**
  *  em4x70_read_um1
- * 
+ *
  *  read user memory 1 (4 bytes including lock bits)
  */
 static bool em4x70_read_um1(void) {
@@ -501,7 +587,7 @@ static bool em4x70_read_um1(void) {
 
 /**
  *  em4x70_read_um2
- * 
+ *
  *  read user memory 2 (8 bytes)
  */
 static bool em4x70_read_um2(void) {
@@ -526,28 +612,28 @@ static int em4x70_receive(uint8_t *bits) {
     // Read out the header
     //   12 Manchester 1's (may miss some during settle period)
     //    4 Manchester 0's
-    
+
     // Skip a few leading 1's as it could be noisy
     WaitTicks(TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
 
     // wait until we get the transition from 1's to 0's which is 1.5 full windows
     int pulse_count = 0;
-    while(pulse_count < 12){
+    while (pulse_count < 12) {
         pl = get_pulse_invert_length();
         pulse_count++;
-        if(check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
+        if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
             foundheader = true;
             break;
         }
     }
 
-    if(!foundheader) {
+    if (!foundheader) {
         Dbprintf("Failed to find read header");
         return 0;
     }
 
     // Skip next 3 0's, header check consumes the first 0
-    for(int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
         get_pulse_invert_length();
     }
 
@@ -555,7 +641,7 @@ static int em4x70_receive(uint8_t *bits) {
     // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
     while (bit_pos < EM4X70_MAX_RECEIVE_LENGTH) {
 
-        if(edge)
+        if (edge)
             pl = get_pulse_length();
         else
             pl = get_pulse_invert_length();
@@ -568,7 +654,7 @@ static int em4x70_receive(uint8_t *bits) {
         } else if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
 
             // pulse length = 1.5 -> flip edge detection
-            if(edge) {
+            if (edge) {
                 bits[bit_pos++] = 0;
                 bits[bit_pos++] = 0;
                 edge = 0;
@@ -581,7 +667,7 @@ static int em4x70_receive(uint8_t *bits) {
         } else if (check_pulse_length(pl, 2 * EM4X70_T_TAG_FULL_PERIOD)) {
 
             // pulse length of 2
-            if(edge) {
+            if (edge) {
                 bits[bit_pos++] = 0;
                 bits[bit_pos++] = 1;
             } else {
@@ -589,8 +675,8 @@ static int em4x70_receive(uint8_t *bits) {
                 bits[bit_pos++] = 0;
             }
 
-        } else if ( (edge && check_pulse_length(pl, 3 * EM4X70_T_TAG_FULL_PERIOD)) ||
-                    (!edge && check_pulse_length(pl, 80))) {
+        } else if ((edge && check_pulse_length(pl, 3 * EM4X70_T_TAG_FULL_PERIOD)) ||
+                   (!edge && check_pulse_length(pl, 80))) {
 
             // LIW detected (either invert or normal)
             return --bit_pos;
@@ -604,7 +690,7 @@ static int em4x70_receive(uint8_t *bits) {
 void em4x70_info(em4x70_data_t *etd) {
 
     uint8_t status = 0;
-    
+
     // Support tags with and without command parity bits
     command_parity = etd->parity;
 
@@ -633,11 +719,11 @@ void em4x70_write(em4x70_data_t *etd) {
 
     // Find the Tag
     if (get_signalproperties() && find_EM4X70_Tag()) {
-        
+
         // Write
         status = write(etd->word, etd->address) == PM3_SUCCESS;
 
-        if(status) {
+        if (status) {
             // Read Tag after writing
             em4x70_read_id();
             em4x70_read_um1();
@@ -651,4 +737,58 @@ void em4x70_write(em4x70_data_t *etd) {
     reply_ng(CMD_LF_EM4X70_WRITE, status, tag.data, sizeof(tag.data));
 }
 
+void em4x70_unlock(em4x70_data_t *etd) {
+
+    uint8_t status = 0;
+
+    command_parity = etd->parity;
+
+    init_tag();
+    EM4170_setup_read();
+
+    // Find the Tag
+    if (get_signalproperties() && find_EM4X70_Tag()) {
+
+        // Read ID (required for send_pin command)
+        if (em4x70_read_id()) {
+
+            // Send PIN
+            status = send_pin(etd->pin) == PM3_SUCCESS;
+
+            // If the write succeeded, read the rest of the tag
+            if (status) {
+                // Read Tag
+                // ID doesn't change
+                em4x70_read_um1();
+                em4x70_read_um2();
+            }
+        }
+    }
+
+    StopTicks();
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
+}
+
+void em4x70_auth(em4x70_data_t *etd) {
+
+    uint8_t status = 0;
+    uint8_t response[3] = {0};
+
+    command_parity = etd->parity;
+
+    init_tag();
+    EM4170_setup_read();
+
+    // Find the Tag
+    if (get_signalproperties() && find_EM4X70_Tag()) {
+
+        // Authenticate and get tag response
+        status = authenticate(etd->rnd, etd->frnd, response) == PM3_SUCCESS;
+    }
+
+    StopTicks();
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
+}
 

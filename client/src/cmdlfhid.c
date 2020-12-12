@@ -60,16 +60,16 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
 
     if (HIDPack(format_idx, card, &packed) == false) {
         PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-        return PM3_ESOFT;        
+        return PM3_ESOFT;
     }
 
     if (verbose) {
         PrintAndLogEx(INFO, "Trying FC: " _YELLOW_("%u") " CN: " _YELLOW_("%"PRIu64) " Issue level: " _YELLOW_("%u") " OEM: " _YELLOW_("%u")
-                , card->FacilityCode
-                , card->CardNumber
-                , card->IssueLevel
-                , card->OEM
-                );
+                      , card->FacilityCode
+                      , card->CardNumber
+                      , card->IssueLevel
+                      , card->OEM
+                     );
     }
 
     lf_hidsim_t payload;
