@@ -276,7 +276,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");

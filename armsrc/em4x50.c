@@ -37,11 +37,11 @@
 #define EM4X50_T_TAG_WAITING_FOR_SIGNAL     75
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 #define EM4X50_T_WAITING_FOR_SNGLLIW        140     // this value seems to be
-                                                    // critical;
-                                                    // if it's too low
-                                                    // (e.g. < 120) some cards
-                                                    // are no longer readable
-                                                    // although they're ok
+// critical;
+// if it's too low
+// (e.g. < 120) some cards
+// are no longer readable
+// although they're ok
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
@@ -65,18 +65,18 @@ static void wait_timer(uint32_t period) {
 // extract and check parities
 // return result of parity check and extracted plain data
 static bool extract_parities(uint64_t word, uint32_t *data) {
-    
+
     uint8_t row_parities = 0x0, col_parities = 0x0;
     uint8_t row_parities_calculated = 0x0, col_parities_calculated = 0x0;
-    
+
     *data = 0x0;
-    
+
     // extract plain data (32 bits) from raw word (45 bits)
     for (int i = 0; i < 4; i++) {
         *data <<= 8;
         *data |= (word >> ((4 - i) * 9 + 1)) & 0xFF;
     }
-    
+
     // extract row parities (4 bits + stop bit) from raw word (45 bits)
     for (int i = 0; i < 5; i++) {
         row_parities <<= 1;
@@ -106,7 +106,7 @@ static bool extract_parities(uint64_t word, uint32_t *data) {
             col_parities_calculated ^= (*data >> ((3 - j) * 8 + (7 - i))) & 0x1;
         }
     }
-    
+
     if ((row_parities == row_parities_calculated) && (col_parities == col_parities_calculated))
         return true;
 
@@ -191,7 +191,7 @@ static bool get_signalproperties(void) {
 
         // about 2 samples per bit period
         wait_timer(T0 * EM4X50_T_TAG_HALF_PERIOD);
-      
+
         // ignore first samples
         if ((i > SIGNAL_IGNORE_FIRST_SAMPLES) && (AT91C_BASE_SSC->SSC_RHR > noise)) {
             signal_found = true;
@@ -229,7 +229,7 @@ static bool get_signalproperties(void) {
     gLow = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
 
     LED_A_OFF();
-    
+
     return true;
 }
 
@@ -290,7 +290,7 @@ static uint32_t get_pulse_length(void) {
 
 // check if pulse length <pl> corresponds to given length <length>
 static bool check_pulse_length(uint32_t pl, int length) {
-    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));   
+    return ((pl >= T0 * (length - EM4X50_TAG_TOLERANCE)) && (pl <= T0 * (length + EM4X50_TAG_TOLERANCE)));
 }
 
 // send single bit according to EM4x50 application note and datasheet
@@ -346,12 +346,12 @@ static void em4x50_reader_send_byte_with_parity(uint8_t byte) {
 // word hast be sent in msb notation
 static void em4x50_reader_send_word(const uint32_t word) {
     uint8_t bytes[4] = {0x0, 0x0, 0x0, 0x0};
-    
+
     for (int i = 0; i < 4; i++) {
         bytes[i] = (word >> (24 - (8 * i))) & 0xFF;
         em4x50_reader_send_byte_with_parity(bytes[i]);
     }
-    
+
     // send column parities
     em4x50_reader_send_byte(bytes[0] ^ bytes[1] ^ bytes[2] ^ bytes[3]);
 
@@ -362,7 +362,7 @@ static void em4x50_reader_send_word(const uint32_t word) {
 // find single listen window
 static bool find_single_listen_window(void) {
     int cnt_pulses = 0;
-    
+
     LED_B_ON();
 
     while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW) {
@@ -392,7 +392,7 @@ static bool find_single_listen_window(void) {
 // -> 34 words + 34 single listen windows -> about 1600 pulses
 static int find_double_listen_window(bool bcommand) {
     int cnt_pulses = 0;
-    
+
     LED_B_ON();
 
     while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
@@ -452,7 +452,7 @@ static int find_double_listen_window(bool bcommand) {
         cnt_pulses++;
     }
 
-    LED_B_OFF();    
+    LED_B_OFF();
     return PM3_EFAILED;
 }
 
@@ -480,7 +480,7 @@ static bool check_ack(bool bliw) {
 
         if (BUTTON_PRESS())
             return false;
-        
+
         if (check_pulse_length(get_pulse_length(), 2 * EM4X50_T_TAG_FULL_PERIOD)) {
 
             // The received signal is either ACK or NAK.
@@ -531,9 +531,9 @@ static int get_word_from_bitstream(uint32_t *data) {
     int cnt = 0;
     uint32_t pl = 0;
     uint64_t word = 0x0;
-    
+
     LED_C_ON();
-    
+
     *data = 0x0;
 
     // initial bit value depends on last pulse length of listen window
@@ -561,7 +561,7 @@ static int get_word_from_bitstream(uint32_t *data) {
 
         cnt++;
         word <<= 1;
-        
+
         pl = get_pulse_length();
 
         if (check_pulse_length(pl, EM4X50_T_TAG_FULL_PERIOD)) {
@@ -612,9 +612,9 @@ static int get_word_from_bitstream(uint32_t *data) {
             return (extract_parities(word, data)) ? --cnt : 0;
         }
     }
-    
+
     LED_C_OFF();
-    
+
     return PM3_EOPABORTED;
 }
 
@@ -696,7 +696,7 @@ bool em4x50_sim_send_word(uint32_t word) {
 
     // word has tobe sent in msb, not lsb
     word = reflect32(word);
-    
+
     // 4 bytes each with even row parity bit
     for (int i = 0; i < 4; i++) {
         if (em4x50_sim_send_byte_with_parity((word >> ((3 - i) * 8)) & 0xFF) == false) {
@@ -776,7 +776,7 @@ static bool login(uint32_t password) {
 
         // send password
         em4x50_reader_send_word(password);
-        
+
         wait_timer(T0 * EM4X50_T_TAG_TPP);
 
         // check if ACK is returned
@@ -799,7 +799,7 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
     for (*pwd = start; *pwd <= stop; (*pwd)++) {
 
         if (login(*pwd) == PM3_SUCCESS) {
-            
+
             pwd_found = true;
 
             // to be safe login 5 more times
@@ -809,11 +809,11 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
                     break;
                 }
             }
-            
+
             if (pwd_found)
                 break;
         }
-        
+
         // print password every 500 iterations
         if ((++cnt % 500) == 0) {
 
@@ -827,10 +827,10 @@ static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
             // print data
             Dbprintf("|%8i | 0x%08x | 0x%08x |", cnt, reflect32(*pwd), *pwd);
         }
-        
+
         if (BUTTON_PRESS())
             break;
- 
+
     }
 
     // print footer
@@ -852,7 +852,7 @@ void em4x50_login(uint32_t *password) {
     reply_ng(CMD_LF_EM4X50_LOGIN, status, NULL, 0);
 }
 
-// envoke password search  
+// envoke password search
 void em4x50_brute(em4x50_data_t *etd) {
     em4x50_setup_read();
 
@@ -903,7 +903,7 @@ void em4x50_chk(uint8_t *filename) {
             pwd = 0x0;
             for (int j = 0; j < 4; j++)
                 pwd |= (*(pwds + 4 * i + j)) << ((3 - j) * 8);
-                        
+
             if ((status = login(pwd)) == PM3_SUCCESS)
                 break;
         }
@@ -1063,7 +1063,7 @@ void em4x50_reader(void) {
 
 // writes <word> to specified <addresses>
 static int write(uint32_t word, uint32_t addresses) {
-    
+
     if (request_receive_mode() == PM3_SUCCESS) {
 
         // send write command
@@ -1079,7 +1079,7 @@ static int write(uint32_t word, uint32_t addresses) {
             reply_ng(CMD_LF_EM4X50_WRITE, PM3_ETEAROFF, NULL, 0);
             return PM3_ETEAROFF;
         } else {
-        
+
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
             wait_timer(T0 * EM4X50_T_TAG_TWA);
 
@@ -1175,7 +1175,7 @@ void em4x50_write(em4x50_data_t *etd) {
                     // if password is given renew login after reset
                     if (etd->pwd_given)
                         status = login(etd->password1);
-                            
+
                     if (status == PM3_SUCCESS) {
 
                         // call a selective read
@@ -1225,11 +1225,11 @@ void em4x50_sim(uint8_t *filename) {
     int status = PM3_SUCCESS;
     uint8_t *em4x50_mem = BigBuf_get_EM_addr();
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
-    
+
 #ifdef WITH_FLASH
 
     if (strlen((char *)filename) != 0) {
-    
+
         BigBuf_free();
 
         int changed = rdv40_spiffs_lazy_mount();
@@ -1246,7 +1246,7 @@ void em4x50_sim(uint8_t *filename) {
 
     for (int i = 0; i < EM4X50_NO_WORDS; i++)
         words[i] = reflect32(bytes_to_num(em4x50_mem + (i * 4), 4));
-    
+
     // only if valid em4x50 data (e.g. uid == serial)
     if (words[EM4X50_DEVICE_SERIAL] != words[EM4X50_DEVICE_ID]) {
 
@@ -1261,7 +1261,7 @@ void em4x50_sim(uint8_t *filename) {
 
         // iceman,  will need a usb cmd check to break as well
         while (BUTTON_PRESS() == false) {
-            
+
             WDT_HIT();
             em4x50_sim_send_listen_window();
             for (int i = fwr; i <= lwr; i++) {
@@ -1277,7 +1277,7 @@ void em4x50_sim(uint8_t *filename) {
     } else {
         status = PM3_ENODATA;
     }
-    
+
     BigBuf_free();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_SIM, status, NULL, 0);

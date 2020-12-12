@@ -129,7 +129,7 @@ typedef struct {
         notSet     = 0x00,
         autoDetect = 0x01,
         userSet    = 0x02,
-        tagRead    = 0x03, 
+        tagRead    = 0x03,
     } block0Status;
     enum {
         RF_8 = 0x00,

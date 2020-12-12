@@ -330,7 +330,7 @@ static int CmdTIWrite(const char *Cmd) {
         arg_param_begin,
         arg_str1("r", "raw", "<hex>", "raw hex data. 8 bytes max"),
         arg_str0(NULL, "crc", "<hex>", "optional - crc"),
-        arg_param_end        
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
@@ -354,7 +354,7 @@ static int CmdTIWrite(const char *Cmd) {
     payload.crc = bytes_to_num(crc, crc_len);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_TI_WRITE, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_LF_TI_WRITE, (uint8_t *)&payload, sizeof(payload));
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf ti reader`") " to verify");
     return PM3_SUCCESS;

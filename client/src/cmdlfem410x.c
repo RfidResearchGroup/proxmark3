@@ -118,7 +118,7 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose) {
         if (hi) {
             PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%06X%016" PRIX64), hi, id);
         } else {
-            PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64), id);    
+            PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64), id);
         }
         return;
     }
@@ -395,7 +395,7 @@ static int CmdEM410xReader(const char *Cmd) {
 
 // emulate an EM410X tag
 static int CmdEM410xSim(const char *Cmd) {
-    
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x sim",
                   "Enables simulation of EM 410x card.\n"
@@ -433,7 +433,7 @@ static int CmdEM410xSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdEM410xBrute(const char *Cmd) {   
+static int CmdEM410xBrute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x brute",
                   "bruteforcing by emulating EM 410x tag",
@@ -452,10 +452,10 @@ static int CmdEM410xBrute(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    // clock default 64 in EM410x 
+    // clock default 64 in EM410x
     uint32_t clk = arg_get_u32_def(ctx, 1, 64);
 
-    // default pause time: 1 second 
+    // default pause time: 1 second
     uint32_t delay = arg_get_u32_def(ctx, 2, 1000);
 
     int fnlen = 0;
@@ -467,7 +467,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         PrintAndLogEx(ERR, "Error: Please specify a filename");
         return PM3_EINVARG;
     }
-   
+
     uint32_t uidcnt = 0;
     uint8_t stUidBlock = 20;
     uint8_t *p = NULL;
@@ -543,10 +543,10 @@ static int CmdEM410xBrute(const char *Cmd) {
 
         memcpy(testuid, uidblock + 5 * c, 5);
         PrintAndLogEx(INFO, "Bruteforce %d / %d: simulating UID " _YELLOW_("%s")
-                , c + 1
-                , uidcnt
-                , sprint_hex_inrow(testuid, sizeof(testuid))
-                );
+                      , c + 1
+                      , uidcnt
+                      , sprint_hex_inrow(testuid, sizeof(testuid))
+                     );
 
         em410x_construct_emul_graph(testuid, clk);
 
@@ -585,7 +585,7 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
                   "Writes EM410x ID to a T55x7 or Q5/T5555 tag",
-                  "lf em 410x clone --id 0F0368568B        -> write id to T55x7 tag\n" 
+                  "lf em 410x clone --id 0F0368568B        -> write id to T55x7 tag\n"
                   "lf em 410x clone --id 0F0368568B --q5   -> write id to Q5/T5555 tag"
                  );
 
@@ -598,7 +598,7 @@ static int CmdEM410xClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    // clock default 64 in EM410x 
+    // clock default 64 in EM410x
     uint32_t clk = arg_get_u32_def(ctx, 1, 64);
     int uid_len = 0;
     uint8_t uid[5] = {0};

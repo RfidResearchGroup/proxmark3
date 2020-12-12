@@ -1727,7 +1727,7 @@ void SimTagIso15693(uint8_t *uid) {
         if ((cmd_len >= 5) && (cmd[0] & ISO15_REQ_INVENTORY) && (cmd[1] == ISO15_CMD_INVENTORY)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-            
+
             // Build INVENTORY command
             uint8_t resp_inv[CMD_INV_RESP] = {0};
 
@@ -1743,30 +1743,30 @@ void SimTagIso15693(uint8_t *uid) {
             resp_inv[7] = uid[2];
             resp_inv[8] = uid[1];
             resp_inv[9] = uid[0];
-            
+
             // CRC
             AddCrc15(resp_inv, 10);
             CodeIso15693AsTag(resp_inv, CMD_INV_RESP);
-    
+
             tosend_t *ts = get_tosend();
-    
+
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
             LogTrace_ISO15693(resp_inv, CMD_INV_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
 
             chip_state = SELECTED;
         }
-        
+
         // GET_SYSTEM_INFO
         if ((cmd[1] == ISO15_CMD_SYSINFO)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-            
+
             // Build GET_SYSTEM_INFO command
             uint8_t resp_sysinfo[CMD_SYSINFO_RESP] = {0};
-    
+
             resp_sysinfo[0] = 0;    // Response flags.
             resp_sysinfo[1] = 0x0F; // Information flags (0x0F - DSFID, AFI, Mem size, IC)
-    
+
             // 64-bit UID
             resp_sysinfo[2] = uid[7];
             resp_sysinfo[3] = uid[6];
@@ -1776,42 +1776,42 @@ void SimTagIso15693(uint8_t *uid) {
             resp_sysinfo[7] = uid[2];
             resp_sysinfo[8] = uid[1];
             resp_sysinfo[9] = uid[0];
-    
+
             resp_sysinfo[10] = 0;    // DSFID
             resp_sysinfo[11] = 0;    // AFI
 
             resp_sysinfo[12] = 0x1B; // Memory size.
             resp_sysinfo[13] = 0x03; // Memory size.
             resp_sysinfo[14] = 0x01; // IC reference.
-    
+
             // CRC
             AddCrc15(resp_sysinfo, 15);
             CodeIso15693AsTag(resp_sysinfo, CMD_SYSINFO_RESP);
-    
+
             tosend_t *ts = get_tosend();
-            
+
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
             LogTrace_ISO15693(resp_sysinfo, CMD_SYSINFO_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
-        
+
         // READ_BLOCK
         if ((cmd[1] == ISO15_CMD_READ)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-            
+
             // Build GET_SYSTEM_INFO command
             uint8_t resp_readblock[CMD_READBLOCK_RESP] = {0};
-    
+
             resp_readblock[0] = 0;    // Response flags.
             resp_readblock[1] = 0;    // Block data.
             resp_readblock[2] = 0;    // Block data.
             resp_readblock[3] = 0;    // Block data.
             resp_readblock[4] = 0;    // Block data.
-    
+
             // CRC
             AddCrc15(resp_readblock, 5);
             CodeIso15693AsTag(resp_readblock, CMD_READBLOCK_RESP);
-    
+
             tosend_t *ts = get_tosend();
 
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);

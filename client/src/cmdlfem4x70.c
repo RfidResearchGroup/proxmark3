@@ -31,26 +31,26 @@ static void print_info_result(uint8_t *data) {
     // data section
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("EM4x70 data:"));
-    
-    for(int i=1; i <= 32; i+=2) {
-        PrintAndLogEx(NORMAL, "%02X %02X", data[32-i], data[32-i-1]);
+
+    for (int i = 1; i <= 32; i += 2) {
+        PrintAndLogEx(NORMAL, "%02X %02X", data[32 - i], data[32 - i - 1]);
     }
     PrintAndLogEx(NORMAL, "Tag ID: %02X %02X %02X %02X", data[7], data[6], data[5], data[4]);
-    PrintAndLogEx(NORMAL, "Lockbit 0: %d %s", (data[3] & 0x40) ? 1:0, (data[3] & 0x40) ? "LOCKED":"UNLOCKED");
-    PrintAndLogEx(NORMAL, "Lockbit 1: %d", (data[3] & 0x80) ? 1:0);
+    PrintAndLogEx(NORMAL, "Lockbit 0: %d %s", (data[3] & 0x40) ? 1 : 0, (data[3] & 0x40) ? "LOCKED" : "UNLOCKED");
+    PrintAndLogEx(NORMAL, "Lockbit 1: %d", (data[3] & 0x80) ? 1 : 0);
     PrintAndLogEx(NORMAL, "");
 
 }
 
 int em4x70_info(void) {
-    
+
     em4x70_data_t edata = {
         .parity = false // TODO: try both? or default to true
     };
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_INFO, (uint8_t *)&edata, sizeof(edata));
-    
+
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X70_INFO, &resp, TIMEOUT)) {
         PrintAndLogEx(WARNING, "(em4x70) timeout while waiting for reply.");
@@ -87,7 +87,7 @@ int CmdEM4x70Info(const char *Cmd) {
                   "  V4070 and EM4170 do require parity bit.",
                   "lf em 4x70 info\n"
                   "lf em 4x70 info --par -> adds parity bit to command\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -128,7 +128,7 @@ int CmdEM4x70Write(const char *Cmd) {
                   "Write EM4x70\n",
                   "lf em 4x70 write -b 15 -d c0de -> write 'c0de' to block 15\n"
                   "lf em 4x70 write -b 15 -d c0de --par -> adds parity bit to commands\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -139,11 +139,11 @@ int CmdEM4x70Write(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     etd.parity = arg_get_lit(ctx, 1);
-    
+
     int addr = arg_get_int(ctx, 2);
-    
+
     int word_len = 0;
     uint8_t word[2] = {0x0};
     CLIGetHexWithReturn(ctx, 3, word, &word_len);
@@ -153,8 +153,8 @@ int CmdEM4x70Write(const char *Cmd) {
     if (addr < 0 || addr >= EM4X70_NUM_BLOCKS) {
         PrintAndLogEx(FAILED, "block has to be within range [0, 15]");
         return PM3_EINVARG;
-    } 
-    
+    }
+
     if (word_len != 2) {
         PrintAndLogEx(FAILED, "word/data length must be 2 bytes instead of %d", word_len);
         return PM3_EINVARG;
@@ -195,7 +195,7 @@ int CmdEM4x70Unlock(const char *Cmd) {
                   " 00000000\n",
                   "lf em 4x70 unlock -p 11223344 -> Unlock with PIN\n"
                   "lf em 4x70 unlock -p 11223344 --par -> Unlock with PIN using parity commands\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -205,12 +205,12 @@ int CmdEM4x70Unlock(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     etd.parity = arg_get_lit(ctx, 1);
-    
+
     int pin_len = 0;
     uint8_t pin[4] = {0x0};
-    
+
     CLIGetHexWithReturn(ctx, 2, pin, &pin_len);
 
     CLIParserFree(ctx);

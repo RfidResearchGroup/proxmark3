@@ -624,7 +624,7 @@ static int CmdHFiClassReader(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass reader",
                   "Act as a iCLASS reader. Look for iCLASS tags until Enter or the pm3 button is pressed",
                   "hf iclass reader -@   -> continuous reader mode"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1700,7 +1700,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0\n"
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0 --elite\n"
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 -k 1122334455667788 --elite\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -3318,12 +3318,12 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
 static int CmdHFiClassEncode(const char *Cmd) {
 
-  CLIParserContext *ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass encode",
                   "Encode binary wiegand to block 7",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337,  writing w elite key"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -3422,7 +3422,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
     // add binary sentinel bit.
     pushBit(&bout, 1);
-   
+
     // convert binary string to hex bytes
     for (int i = 0; i < bin_len; i++) {
         char c = bin[i];
@@ -3449,11 +3449,11 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     int isok = PM3_SUCCESS;
     // write
-    for (uint8_t i=0; i<4; i++) {
-        isok = iclass_write_block(6 + i, credential + (i*8), key, use_credit_key, elite, rawkey, false, false, auth);
+    for (uint8_t i = 0; i < 4; i++) {
+        isok = iclass_write_block(6 + i, credential + (i * 8), key, use_credit_key, elite, rawkey, false, false, auth);
         switch (isok) {
             case PM3_SUCCESS:
-                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i*8), 8));
+                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
                 break;
             default:
                 PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
