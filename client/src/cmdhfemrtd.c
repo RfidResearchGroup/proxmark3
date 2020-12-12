@@ -40,6 +40,22 @@
 #define EF_CARDACCESS "011C"
 #define EF_COM "011E"
 #define EF_DG1 "0101"
+#define EF_DG2 "0102"
+#define EF_DG3 "0103"
+#define EF_DG4 "0104"
+#define EF_DG5 "0105"
+#define EF_DG6 "0106"
+#define EF_DG7 "0107"
+#define EF_DG8 "0108"
+#define EF_DG9 "0109"
+#define EF_DG10 "010A"
+#define EF_DG11 "010B"
+#define EF_DG12 "010C"
+#define EF_DG13 "010D"
+#define EF_DG14 "010E"
+#define EF_DG15 "010F"
+#define EF_DG16 "0110"
+#define EF_SOD "011D"
 
 // App IDs
 #define AID_MRTD "A0000002471001"
@@ -333,12 +349,26 @@ static int read_file(uint8_t *dataout, int *dataoutlen) {
     return true;
 }
 
+static void bump_ssc(uint8_t *ssc) {
+    PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
+    for (int i = 7; i > 0; i--) {
+        if ((*(ssc + i)) == 0xFF) {
+            // Set anything already FF to 0, we'll do + 1 on num to left anyways
+            (*(ssc + i)) = 0;
+            continue;
+        }
+        (*(ssc + i)) += 1;
+        PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
+        return;
+    }
+}
+
 static bool check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength) {
     // https://elixi.re/i/clarkson.png
-    uint8_t k[100];
-    uint8_t cc[100];
+    uint8_t k[500];
+    uint8_t cc[500];
 
-    (*(ssc + 7)) += 1;
+    bump_ssc(ssc);
 
     memcpy(k, ssc, 8);
     int length = 0;
@@ -405,10 +435,7 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     memcpy(m + cmdlen, do87, (datalen + 3));
     PrintAndLogEx(DEBUG, "m: %s", sprint_hex_inrow(m, datalen + cmdlen + 3));
 
-    // TODO: this is hacky
-    PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
-    (*(ssc + 7)) += 1;
-    PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
+    bump_ssc(ssc);
 
     uint8_t n[27];
     memcpy(n, ssc, 8);
@@ -466,10 +493,7 @@ static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byt
     memcpy(m, cmd, 8);
     memcpy(m + 8, do97, 3);
 
-    // TODO: this is hacky
-    PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
-    (*(ssc + 7)) += 1;
-    PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
+    bump_ssc(ssc);
 
     uint8_t n[19];
     memcpy(n, ssc, 8);
@@ -523,7 +547,7 @@ static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *s
 
 static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *dataout, int *dataoutlen) {
     // TODO: join this with regular read file
-    uint8_t response[500];
+    uint8_t response[25000];
     int resplen = 0;
     uint8_t tempresponse[500];
     int tempresplen = 0;
@@ -559,7 +583,7 @@ static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t 
 }
 
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
-    uint8_t response[500];
+    uint8_t response[25000];
     uint8_t rnd_ic[8];
     uint8_t kenc[50];
     uint8_t kmac[50];
@@ -724,6 +748,20 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex_inrow(response, resplen));
+
+    // Select EF_DG2
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG2) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select EF_DG2, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG2.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "EF_DG2 (len: %i): %s", resplen, sprint_hex_inrow(response, resplen));
 
     DropField();
     return PM3_SUCCESS;
