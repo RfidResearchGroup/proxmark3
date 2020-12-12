@@ -12,7 +12,7 @@
 
 #include "cmdhfemrtd.h"
 #include <ctype.h>
-#include "fileutils.h"
+#include "fileutils.h"              // saveFile
 #include "cmdparser.h"              // command_t
 #include "comms.h"                  // clearCommandBuffer
 #include "cmdtrace.h"
@@ -600,7 +600,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     // Select and read EF_CardAccess
     if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, true, true)) {
         read_file(response, &resplen);
-        PrintAndLogEx(INFO, "EF_CardAccess: %s", sprint_hex(response, resplen));
+        PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
+        PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     } else {
         PrintAndLogEx(INFO, "PACE unsupported. Will not read EF_CardAccess.");
     }
@@ -733,8 +734,11 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         DropField();
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "EF_COM: %s", sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_COM", ".BIN", response, resplen);
 
+    // TODO: Don't read a hardcoded list of files, reduce code repetition
     // Select EF_DG1
     if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG1) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_DG1, crypto checksum check failed.");
@@ -747,7 +751,9 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         DropField();
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(INFO, "Read EF_DG1, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_DG1", ".BIN", response, resplen);
 
     // Select EF_DG2
     if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG2) == false) {
@@ -761,7 +767,73 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         DropField();
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "EF_DG2 (len: %i): %s", resplen, sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(INFO, "Read EF_DG2, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_DG2", ".BIN", response, resplen);
+
+    // Select EF_SOD
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_SOD) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select EF_SOD, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_SOD.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Read EF_SOD, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_SOD", ".BIN", response, resplen);
+
+    // Select EF_DG11
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG11) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select EF_DG11, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG11.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Read EF_DG11, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_DG11", ".BIN", response, resplen);
+
+    // Select EF_DG12
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG12) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select EF_DG12, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG12.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Read EF_DG12, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_DG12", ".BIN", response, resplen);
+
+    // Select EF_DG14
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG14) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select EF_DG14, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG14.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Read EF_DG14, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_DG14", ".BIN", response, resplen);
 
     DropField();
     return PM3_SUCCESS;
