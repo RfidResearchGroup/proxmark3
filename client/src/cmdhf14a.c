@@ -2137,7 +2137,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                   "Tag must be on antenna before running.",
                   "hf 14a apdufind\n"
                   "hf 14a apdufind --cla 80\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2189,7 +2189,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
         PrintAndLogEx(FAILED, "Tag did not responde to a test APDU (select file command). Aborting");
         return res;
     }
-    PrintAndLogEx(SUCCESS, "Got response. Starting the APDU finder [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla,ins,p1,p2);
+    PrintAndLogEx(SUCCESS, "Got response. Starting the APDU finder [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     activate_field = false;
@@ -2207,7 +2207,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                     }
 
                     if (verbose) {
-                        PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla,ins,p1,p2);
+                        PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
                     }
 
                     // Send APDU.
@@ -2224,8 +2224,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                     uint16_t sw = get_sw(response, response_n);
                     bool command_with_le = false;
                     if (sw == 0x6700) {
-                        PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04x - %s)", cla,ins,p1,p2,
-                                    sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                        PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04x - %s)", cla, ins, p1, p2,
+                                      sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                         PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
                         uint8_t command2[7] = {cla, ins, p1, p2, 0x00};
                         int command2_n = sizeof(command2);
@@ -2240,31 +2240,31 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                     // TODO: What response values should be considerd "valid" or "instersting"?
                     sw = get_sw(response, response_n);
                     if (sw != 0x6a86 &&
-                        sw != 0x6986 &&
-                        sw != 0x6d00
-                        ) {
+                            sw != 0x6986 &&
+                            sw != 0x6d00
+                       ) {
                         if (command_with_le) {
-                            PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X00 (%04x - %s)", cla,ins,p1,p2,
-                                    sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                            PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X00 (%04x - %s)", cla, ins, p1, p2,
+                                          sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                         } else {
-                            PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04x - %s)", cla,ins,p1,p2,
-                                    sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                            PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04x - %s)", cla, ins, p1, p2,
+                                          sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                         }
                         // Show response data.
                         if (response_n > 2) {
-                            PrintAndLogEx(INFO, "Response data is: %s | %s", sprint_hex_inrow(response, response_n-2),
-                                    sprint_ascii(response, response_n-2));
+                            PrintAndLogEx(INFO, "Response data is: %s | %s", sprint_hex_inrow(response, response_n - 2),
+                                          sprint_ascii(response, response_n - 2));
                         }
                     }
                 } while (++ins != ins_arg[0]);
                 p1++;
-                PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla,ins,p1,p2);
+                PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
             } while (p1 != p1_arg[0]);
             p2++;
-            PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla,ins,p1,p2);
+            PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
         } while (p2 != p2_arg[0]);
         cla++;
-        PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla,ins,p1,p2);
+        PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
     } while (cla != cla_arg[0]);
 
 out:
