@@ -108,41 +108,34 @@ static char calculate_check_digit(char *data) {
     return cd % 10;
 }
 
-static int asn1datalength(uint8_t *datain, int datainlen) {
-    char *dataintext = sprint_hex_inrow(datain, datainlen);
-
-    // lazy - https://stackoverflow.com/a/4214350/3286892
-    char subbuff[8];
-
-    int thing = *(datain + 1);
-    if (thing <= 0x7f) {
-        return thing;
-    } else if (thing == 0x81) {
-        memcpy(subbuff, &dataintext[2], 3);
-        subbuff[3] = '\0';
-        return (int)strtol(subbuff, NULL, 16);
-    } else if (thing == 0x82) {
-        memcpy(subbuff, &dataintext[2], 5);
-        subbuff[5] = '\0';
-        return (int)strtol(subbuff, NULL, 16);
-    } else if (thing == 0x83) {
-        memcpy(subbuff, &dataintext[2], 7);
-        subbuff[7] = '\0';
-        return (int)strtol(subbuff, NULL, 16);
+static int asn1datalength(uint8_t *datain, int datainlen, int offset) {
+    PrintAndLogEx(DEBUG, "asn1datalength, datain: %s", sprint_hex_inrow(datain, datainlen));
+    int lenfield = (int) *(datain + offset);
+    PrintAndLogEx(DEBUG, "asn1datalength, lenfield: %i", lenfield);
+    if (lenfield <= 0x7f) {
+        return lenfield;
+    } else if (lenfield == 0x81) {
+        return ((int) *(datain + offset + 1));
+    } else if (lenfield == 0x82) {
+        return ((int) *(datain + offset + 1) << 8) | ((int) *(datain + offset + 2));
+    } else if (lenfield == 0x83) {
+        return (((int) *(datain + offset + 1) << 16) | ((int) *(datain + offset + 2)) << 8) | ((int) *(datain + offset + 3));
     }
     return false;
 }
 
-static int asn1fieldlength(uint8_t *datain, int datainlen) {
-    int thing = *(datain + 1);
-    if (thing <= 0x7f) {
+static int asn1fieldlength(uint8_t *datain, int datainlen, int offset) {
+    PrintAndLogEx(DEBUG, "asn1fieldlength, datain: %s", sprint_hex_inrow(datain, datainlen));
+    int lenfield = (int) *(datain + offset);
+    PrintAndLogEx(DEBUG, "asn1fieldlength, thing: %i", lenfield);
+    if (lenfield <= 0x7f) {
+        return 1;
+    } else if (lenfield == 0x81) {
         return 2;
-    } else if (thing == 0x81) {
+    } else if (lenfield == 0x82) {
+        return 3;
+    } else if (lenfield == 0x83) {
         return 4;
-    } else if (thing == 0x82) {
-        return 6;
-    } else if (thing == 0x83) {
-        return 8;
     }
     return false;
 }
@@ -310,8 +303,8 @@ static int read_file(uint8_t *dataout, int *dataoutlen) {
         return false;
     }
 
-    int datalen = asn1datalength(response, resplen);
-    int readlen = datalen - (3 - asn1fieldlength(response, resplen) / 2);
+    int datalen = asn1datalength(response, resplen, 1);
+    int readlen = datalen - (3 - asn1fieldlength(response, resplen, 1));
     int offset = 4;
     int toread;
 
@@ -501,22 +494,20 @@ static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *s
         return false;
     }
 
-    PrintAndLogEx(DEBUG, "0offset %i on %i: ? (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(DEBUG, "secreadbindec, offset %i on read %i: encrypted: %s", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
 
     cutat = ((int) response[1]) - 1;
 
-    PrintAndLogEx(DEBUG, "1offset %i on %i: ? (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
     des3_decrypt_cbc(iv, kenc, response + 3, cutat, temp);
-    PrintAndLogEx(DEBUG, "2eoffset %i on %i: ? (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
-    PrintAndLogEx(DEBUG, "2aoffset %i on %i: %s", offset, bytes_to_read, sprint_hex_inrow(temp, cutat));
-    PrintAndLogEx(DEBUG, "2boffset %i on %i: c %s", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
     memcpy(dataout, temp, bytes_to_read);
-    PrintAndLogEx(DEBUG, "3offset %i on %i: %s (crypt: %s)", offset, bytes_to_read, sprint_hex_inrow(temp, cutat), sprint_hex_inrow(response, resplen));
+    PrintAndLogEx(DEBUG, "secreadbindec, offset %i on read %i: decrypted: %s", offset, bytes_to_read, sprint_hex_inrow(temp, cutat));
+    PrintAndLogEx(DEBUG, "secreadbindec, offset %i on read %i: decrypted and cut: %s", offset, bytes_to_read, sprint_hex_inrow(dataout, bytes_to_read));
     *dataoutlen = bytes_to_read;
     return true;
 }
 
 static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *dataout, int *dataoutlen) {
+    // TODO: join this with regular read file
     uint8_t response[500];
     int resplen = 0;
     uint8_t tempresponse[500];
@@ -526,8 +517,8 @@ static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t 
         return false;
     }
 
-    int datalen = asn1datalength(response, resplen);
-    int readlen = datalen - (3 - asn1fieldlength(response, resplen) / 2);
+    int datalen = asn1datalength(response, resplen, 1);
+    int readlen = datalen - (3 - asn1fieldlength(response, resplen, 1));
     int offset = 4;
     int toread;
 
