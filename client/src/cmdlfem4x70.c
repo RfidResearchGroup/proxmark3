@@ -80,18 +80,18 @@ int CmdEM4x70Info(const char *Cmd) {
 
     CLIParserContext *ctx;
 
-    CLIParserInit(&ctx, "lf em 4x10 info",
+    CLIParserInit(&ctx, "lf em 4x70 info",
                   "Tag Information EM4x70\n"
                   "  Tag variants include ID48 automotive transponder.\n"
                   "  ID48 does not use command parity (default).\n"
                   "  V4070 and EM4170 do require parity bit.",
                   "lf em 4x70 info\n"
-                  "lf em 4x70 info -x -> adds parity bit to command\n"
+                  "lf em 4x70 info --par -> adds parity bit to command\n"
                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("x", "parity", "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
         arg_param_end
     };
 
@@ -124,17 +124,17 @@ int CmdEM4x70Write(const char *Cmd) {
 
     CLIParserContext *ctx;
 
-    CLIParserInit(&ctx, "lf em 4x10 write",
+    CLIParserInit(&ctx, "lf em 4x70 write",
                   "Write EM4x70\n",
-                  "lf em 4x70 write -b 15 d c0de -> write 'c0de' to block 15\n"
-                  "lf em 4x70 write -x -b 15 -d c0de -> adds parity bit to commands\n"
+                  "lf em 4x70 write -b 15 -d c0de -> write 'c0de' to block 15\n"
+                  "lf em 4x70 write -b 15 -d c0de --par -> adds parity bit to commands\n"
                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("x", "parity", "Add parity bit when sending commands"),
-        arg_int1("b", "block",  "<dec>", "block/word address, dec"),
-        arg_str1("d", "data",   "<hex>", "data, 2 bytes"),
+        arg_lit0(NULL, "par",    "Add parity bit when sending commands"),
+        arg_int1("b",  "block",  "<dec>", "block/word address, dec"),
+        arg_str1("d",  "data",   "<hex>", "data, 2 bytes"),
         arg_param_end
     };
 
@@ -188,19 +188,19 @@ int CmdEM4x70Unlock(const char *Cmd) {
 
     CLIParserContext *ctx;
 
-    CLIParserInit(&ctx, "lf em 4x10 unlock",
+    CLIParserInit(&ctx, "lf em 4x70 unlock",
                   "Unlock EM4x70 by sending PIN\n"
                   "Default pin may be:\n"
                   " AAAAAAAA\n"
                   " 00000000\n",
                   "lf em 4x70 unlock -p 11223344 -> Unlock with PIN\n"
-                  "lf em 4x70 unlock -x -p 11223344 -> Unlock with PIN using parity commands\n"
+                  "lf em 4x70 unlock -p 11223344 --par -> Unlock with PIN using parity commands\n"
                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("x", "parity", "Add parity bit when sending commands"),
-        arg_str1("p", "pin", "<hex>", "pin, 4 bytes"),
+        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_str1("p",  "pin", "<hex>", "pin, 4 bytes"),
         arg_param_end
     };
 
