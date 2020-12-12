@@ -253,7 +253,7 @@ int CmdEM4x70Auth(const char *Cmd) {
                   "Authenticate against an EM4x70 by sending random number (RN) and F(RN)\n"
                   "  If F(RN) is incorrect based on the tag crypt key, the tag will not respond",
                   "lf em 4x70 auth -r 11223344556677 -f 11223344\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -264,9 +264,9 @@ int CmdEM4x70Auth(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     etd.parity = arg_get_lit(ctx, 1);
-    
+
     int rnd_len = 7;
     CLIGetHexWithReturn(ctx, 2, etd.rnd, &rnd_len);
 

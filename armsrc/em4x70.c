@@ -365,31 +365,31 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
     if (find_listen_window(true)) {
 
         em4x70_send_nibble(EM4X70_COMMAND_AUTH, true);
-        
+
         // Send 56-bit Random number
-        for(int i=0;i<7;i++) {
+        for (int i = 0; i < 7; i++) {
             em4x70_send_byte(rnd[i]);
         }
-        
+
         // Send 7 x 0's (Diversity bits)
-        for(int i=0; i<7; i++) {
+        for (int i = 0; i < 7; i++) {
             em4x70_send_bit(0);
         }
-        
+
         // Send 28-bit f(RN)
 
         // Send first 24 bits
-        for(int i=0; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             em4x70_send_byte(frnd[i]);
         }
-        
+
         // Send last 4 bits (no parity)
         em4x70_send_nibble((frnd[3] >> 4) & 0xf, false);
 
         // Receive header, 20-bit g(RN), LIW
         uint8_t grnd[EM4X70_MAX_RECEIVE_LENGTH] = {0};
         int num = em4x70_receive(grnd);
-        if(num < 10) {
+        if (num < 10) {
             Dbprintf("Auth failed");
             return PM3_ESOFT;
         }
