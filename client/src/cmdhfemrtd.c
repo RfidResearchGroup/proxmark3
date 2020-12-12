@@ -345,7 +345,41 @@ static int read_file(uint8_t *dataout, int *dataoutlen) {
     return true;
 }
 
-static int secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *file) {
+static bool check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength) {
+    // https://elixi.re/i/clarkson.png
+    uint8_t k[100];
+    uint8_t cc[100];
+
+    (*(ssc + 7)) += 1;
+
+    memcpy(k, ssc, 8);
+    int length = 0;
+    int length2 = 0;
+
+    if (*(rapdu) == 0x87) {
+        length += 2 + (*(rapdu + 1));
+        memcpy(k + 8, rapdu, length);
+        PrintAndLogEx(DEBUG, "len1: %i", length);
+    }
+
+    if ((*(rapdu + length)) == 0x99) {
+        length2 += 2 + (*(rapdu + (length + 1)));
+        memcpy(k + length + 8, rapdu + length, length2);
+        PrintAndLogEx(DEBUG, "len2: %i", length2);
+    }
+
+    int klength = length + length2 + 8;
+
+    retail_mac(key, k, klength, cc);
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
+    PrintAndLogEx(DEBUG, "rapdu: %s", sprint_hex_inrow(rapdu, rapdulength));
+    PrintAndLogEx(DEBUG, "rapdu cut: %s", sprint_hex_inrow(rapdu + (rapdulength - 8), 8));
+    PrintAndLogEx(DEBUG, "k: %s", sprint_hex_inrow(k, klength));
+
+    return memcmp(cc, rapdu + (rapdulength - 8), 8) == 0;
+}
+
+static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *file) {
     // Get data even tho we'll not use it
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
@@ -400,13 +434,12 @@ static int secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_
     sprintf(command, "0C%s020C%02X%s00", SELECT, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    // TODO: Impl CC check, which will handle incrementing itself
-    (*(ssc + 7)) += 1;
+    exchange_commands(command, response, &resplen, false, true);
 
-    return exchange_commands(command, response, &resplen, false, true);
+    return check_cc(ssc, kmac, response, resplen);
 }
 
-static int secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
+static bool secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
     char command[54];
     uint8_t cmd[8];
     uint8_t data[21];
@@ -462,7 +495,9 @@ static int secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes
     sprintf(command, "0C%s%02X%02X%02X%s00", READ_BINARY, p1, p2, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    return exchange_commands(command, dataout, dataoutlen, false, true);
+    exchange_commands(command, dataout, dataoutlen, false, true);
+
+    return check_cc(ssc, kmac, dataout, *dataoutlen);
 }
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
@@ -606,9 +641,17 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     // Select EF_COM
     uint8_t file_id[2] = {0x01, 0x1E};
-    secure_select_file(ks_enc, ks_mac, ssc, file_id);
+    if (secure_select_file(ks_enc, ks_mac, ssc, file_id) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select EF_COM, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
 
-    secure_read_binary(ks_mac, ssc, 0, 4, response, &resplen);
+    if (secure_read_binary(ks_mac, ssc, 0, 4, response, &resplen) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM, crypto checksum check failed.");
+        DropField();
+        return PM3_ESOFT;
+    }
     // TODO: impl secure read file
 
     DropField();
