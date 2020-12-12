@@ -24,6 +24,8 @@
 #include "sha1.h"                   // KSeed calculation etc
 #include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
 #include "des.h"                    // mbedtls_des_key_set_parity
+#include "cmdhf14b.h"               // exchange_14b_apdu
+#include "iso14b.h"                 // ISO14B_CONNECT etc
 
 #define TIMEOUT 2000
 
@@ -70,8 +72,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen, bool activate_field, bool keep_field_on) {
-    // TODO: Account for 14b too
+static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen, bool activate_field, bool keep_field_on, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -80,7 +81,12 @@ static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen
     uint8_t aCMD[500];
     int aCMD_n = 0;
     param_gethex_to_eol(cmd, 0, aCMD, sizeof(aCMD), &aCMD_n);
-    int res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    int res;
+    if (use_14b) {
+        res = exchange_14b_apdu(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    } else {
+        res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    }
     if (res) {
         DropField();
         return false;
@@ -103,11 +109,11 @@ static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen
     return true;
 }
 
-static int exchange_commands_noout(const char *cmd, bool activate_field, bool keep_field_on) {
+static int exchange_commands_noout(const char *cmd, bool activate_field, bool keep_field_on, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    return exchange_commands(cmd, response, &resplen, activate_field, keep_field_on);
+    return exchange_commands(cmd, response, &resplen, activate_field, keep_field_on, use_14b);
 }
 
 static char calculate_check_digit(char *data) {
@@ -282,44 +288,44 @@ static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
     memcpy(dataout, &key, length);
 }
 
-static int select_file(const char *select_by, const char *file_id, bool activate_field, bool keep_field_on) {
+static int select_file(const char *select_by, const char *file_id, bool use_14b) {
     size_t file_id_len = strlen(file_id) / 2;
 
     char cmd[50];
     sprintf(cmd, "00%s%s0C%02lu%s", SELECT, select_by, file_id_len, file_id);
 
-    return exchange_commands_noout(cmd, activate_field, keep_field_on);
+    return exchange_commands_noout(cmd, false, true, use_14b);
 }
 
-static int get_challenge(int length, uint8_t *dataout, int *dataoutlen) {
+static int get_challenge(int length, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[50];
     sprintf(cmd, "00%s0000%02X", GET_CHALLENGE, length);
 
-    return exchange_commands(cmd, dataout, dataoutlen, false, true);
+    return exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
 
-static int external_authenticate(uint8_t *data, int length, uint8_t *dataout, int *dataoutlen) {
+static int external_authenticate(uint8_t *data, int length, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[100];
 
     sprintf(cmd, "00%s0000%02X%s%02X", EXTERNAL_AUTHENTICATE, length, sprint_hex_inrow(data, length), length);
 
-    return exchange_commands(cmd, dataout, dataoutlen, false, true);
+    return exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
 
-static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
+static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[50];
     sprintf(cmd, "00%s%04i%02i", READ_BINARY, offset, bytes_to_read);
 
-    return exchange_commands(cmd, dataout, dataoutlen, false, true);
+    return exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
 
-static int read_file(uint8_t *dataout, int *dataoutlen) {
+static int read_file(uint8_t *dataout, int *dataoutlen, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
     uint8_t tempresponse[PM3_CMD_DATA_SIZE];
     int tempresplen = 0;
 
-    if (!_read_binary(0, 4, response, &resplen)) {
+    if (!_read_binary(0, 4, response, &resplen, use_14b)) {
         return false;
     }
 
@@ -334,7 +340,7 @@ static int read_file(uint8_t *dataout, int *dataoutlen) {
             toread = 118;
         }
 
-        if (!_read_binary(offset, toread, tempresponse, &tempresplen)) {
+        if (!_read_binary(offset, toread, tempresponse, &tempresplen, use_14b)) {
             return false;
         }
 
@@ -405,7 +411,7 @@ static void _convert_filename(const char *file, uint8_t *dataout) {
     dataout[1] = (int)strtol(temp, NULL, 16);
 }
 
-static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *file) {
+static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *file, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -460,12 +466,12 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     sprintf(command, "0C%s020C%02X%s00", SELECT, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    exchange_commands(command, response, &resplen, false, true);
+    exchange_commands(command, response, &resplen, false, true, use_14b);
 
     return check_cc(ssc, kmac, response, resplen);
 }
 
-static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
+static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char command[54];
     uint8_t cmd[8];
     uint8_t data[21];
@@ -518,18 +524,18 @@ static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byt
     sprintf(command, "0C%s%02X%02X%02X%s00", READ_BINARY, p1, p2, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    exchange_commands(command, dataout, dataoutlen, false, true);
+    exchange_commands(command, dataout, dataoutlen, false, true, use_14b);
 
     return check_cc(ssc, kmac, dataout, *dataoutlen);
 }
 
-static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen) {
+static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     uint8_t response[500];
     uint8_t temp[500];
     int resplen, cutat = 0;
     uint8_t iv[8] = { 0x00 };
 
-    if (_secure_read_binary(kmac, ssc, offset, bytes_to_read, response, &resplen) == false) {
+    if (_secure_read_binary(kmac, ssc, offset, bytes_to_read, response, &resplen, use_14b) == false) {
         return false;
     }
 
@@ -545,14 +551,14 @@ static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *s
     return true;
 }
 
-static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *dataout, int *dataoutlen) {
+static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     // TODO: join this with regular read file
     uint8_t response[25000];
     int resplen = 0;
     uint8_t tempresponse[500];
     int tempresplen = 0;
 
-    if (!_secure_read_binary_decrypt(kenc, kmac, ssc, 0, 4, response, &resplen)) {
+    if (!_secure_read_binary_decrypt(kenc, kmac, ssc, 0, 4, response, &resplen, use_14b)) {
         return false;
     }
 
@@ -567,7 +573,7 @@ static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t 
             toread = 118;
         }
 
-        if (!_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen)) {
+        if (!_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b)) {
             return false;
         }
 
@@ -597,9 +603,38 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
     uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 
+    bool use_14b = false;
+
+    // Try to 14a
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    bool failed_14a = false;
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+        DropField();
+        failed_14a = true;
+    }
+
+    if (failed_14a || resp.oldarg[0] == 0) {
+        PrintAndLogEx(INFO, "No eMRTD spotted with 14a, trying 14b.");
+        // If not 14a, try to 14b
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD, 0, 0, NULL, 0);
+        if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2500)) {
+            DropField();
+            PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
+            return PM3_ESOFT;
+        }
+
+        if (resp.oldarg[0] != 0) {
+            DropField();
+            PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
+            return PM3_ESOFT;
+        }
+        use_14b = true;
+    }
+
     // Select and read EF_CardAccess
-    if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, true, true)) {
-        read_file(response, &resplen);
+    if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, use_14b)) {
+        read_file(response, &resplen, use_14b);
         PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
         PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     } else {
@@ -607,22 +642,22 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     }
 
     // Select MRTD applet
-    if (select_file(P1_SELECT_BY_NAME, AID_MRTD, false, true) == false) {
+    if (select_file(P1_SELECT_BY_NAME, AID_MRTD, use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
         DropField();
         return PM3_ESOFT;
     }
 
     // Select EF_COM
-    if (select_file(P1_SELECT_BY_EF, EF_COM, false, true) == false) {
+    if (select_file(P1_SELECT_BY_EF, EF_COM, use_14b) == false) {
         // BAC = true;
         PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
         // BAC = false;
         // Select EF_DG1
-        select_file(P1_SELECT_BY_EF, EF_DG1, false, true);
+        select_file(P1_SELECT_BY_EF, EF_DG1, use_14b);
 
-        if (read_file(response, &resplen) == false) {
+        if (read_file(response, &resplen, use_14b) == false) {
             // BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
@@ -652,7 +687,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
 
     // Get Challenge
-    if (get_challenge(8, rnd_ic, &resplen) == false) {
+    if (get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't get challenge.");
         DropField();
         return PM3_ESOFT;
@@ -681,7 +716,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     memcpy(cmd_data + 32, m_ifd, 8);
 
     // Do external authentication
-    if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen) == false) {
+    if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
         DropField();
         return PM3_ESOFT;
@@ -723,13 +758,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
 
     // Select EF_COM
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_COM) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_COM, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_COM, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -740,13 +775,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     // TODO: Don't read a hardcoded list of files, reduce code repetition
     // Select EF_DG1
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG1) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG1, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_DG1, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_DG1.");
         DropField();
         return PM3_ESOFT;
@@ -756,13 +791,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     saveFile("EF_DG1", ".BIN", response, resplen);
 
     // Select EF_DG2
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG2) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG2, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_DG2, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_DG2.");
         DropField();
         return PM3_ESOFT;
@@ -772,13 +807,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     saveFile("EF_DG2", ".BIN", response, resplen);
 
     // Select EF_SOD
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_SOD) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_SOD, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_SOD, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_SOD.");
         DropField();
         return PM3_ESOFT;
@@ -788,13 +823,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     saveFile("EF_SOD", ".BIN", response, resplen);
 
     // Select EF_DG11
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG11) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG11, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_DG11, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_DG11.");
         DropField();
         return PM3_ESOFT;
@@ -804,13 +839,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     saveFile("EF_DG11", ".BIN", response, resplen);
 
     // Select EF_DG12
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG12) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG12, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_DG12, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_DG12.");
         DropField();
         return PM3_ESOFT;
@@ -820,13 +855,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     saveFile("EF_DG12", ".BIN", response, resplen);
 
     // Select EF_DG14
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG14) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG14, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_DG14, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen) == false) {
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_DG14.");
         DropField();
         return PM3_ESOFT;

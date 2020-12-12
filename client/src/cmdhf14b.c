@@ -1488,7 +1488,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
     return PM3_SUCCESS;
 }
 
-static int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     *dataoutlen = 0;
     bool chaining = false;
     int res;
