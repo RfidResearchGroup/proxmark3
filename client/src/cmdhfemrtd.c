@@ -54,7 +54,8 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen, bool activate_field, bool keep_field_on) {
+static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen, bool activate_field, bool keep_field_on) {
+    // TODO: Account for 14b too
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -84,6 +85,13 @@ static int exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen,
         return false;
     }
     return true;
+}
+
+static int exchange_commands_noout(const char *cmd, bool activate_field, bool keep_field_on) {
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    return exchange_commands(cmd, response, &resplen, activate_field, keep_field_on);
 }
 
 static char calculate_check_digit(char *data) {
@@ -261,14 +269,10 @@ static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
 static int select_file(const char *select_by, const char *file_id, bool activate_field, bool keep_field_on) {
     size_t file_id_len = strlen(file_id) / 2;
 
-    // Get data even tho we'll not use it
-    uint8_t response[PM3_CMD_DATA_SIZE];
-    int resplen = 0;
-
     char cmd[50];
     sprintf(cmd, "00%s%s0C%02lu%s", SELECT, select_by, file_id_len, file_id);
 
-    return exchange_commands(cmd, response, &resplen, activate_field, keep_field_on);
+    return exchange_commands_noout(cmd, activate_field, keep_field_on);
 }
 
 static int get_challenge(int length, uint8_t *dataout, int *dataoutlen) {
@@ -372,8 +376,6 @@ static void _convert_filename(const char *file, uint8_t *dataout) {
 }
 
 static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *file) {
-    // Get data even tho we'll not use it
-    // TODO: make a func to send without receive
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -556,7 +558,7 @@ static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t 
     return true;
 }
 
-int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
+int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[500];
     uint8_t rnd_ic[8];
     uint8_t kenc[50];
@@ -727,11 +729,11 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     return PM3_SUCCESS;
 }
 
-static int cmd_hf_emrtd_info(const char *Cmd) {
+static int cmd_hf_emrtd_dump(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf emrtd info",
-                  "Get info about an eMRTD",
-                  "hf emrtd info"
+    CLIParserInit(&ctx, "hf emrtd dump",
+                  "Dump all files on an eMRTD",
+                  "hf emrtd dump"
                  );
 
     void *argtable[] = {
@@ -754,7 +756,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     CLIGetStrWithReturn(ctx, 3, expiry, &expirylen);
 
     CLIParserFree(ctx);
-    return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry);
+    return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry);
 }
 
 static int cmd_hf_emrtd_list(const char *Cmd) {
@@ -769,7 +771,7 @@ static int cmd_hf_emrtd_list(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
-    {"info",    cmd_hf_emrtd_info, IfPm3Iso14443a,  "Tag information"},
+    {"dump",    cmd_hf_emrtd_dump, IfPm3Iso14443,   "Dump eMRTD files to binary files"},
     {"list",    cmd_hf_emrtd_list, AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };
