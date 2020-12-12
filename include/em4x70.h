@@ -23,6 +23,10 @@ typedef struct {
     // PIN to unlock
     uint32_t pin;
 
+    // Used for authentication
+    uint8_t rnd[7];
+    uint8_t frnd[4];
+
 } em4x70_data_t;
 
 #endif /* EM4X70_H__ */

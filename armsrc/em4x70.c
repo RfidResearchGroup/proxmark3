@@ -360,6 +360,46 @@ static bool check_ack(void) {
     return false;
 }
 
+static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *response) {
+
+    if (find_listen_window(true)) {
+
+        em4x70_send_nibble(EM4X70_COMMAND_AUTH, true);
+
+        // Send 56-bit Random number
+        for (int i = 0; i < 7; i++) {
+            em4x70_send_byte(rnd[i]);
+        }
+
+        // Send 7 x 0's (Diversity bits)
+        for (int i = 0; i < 7; i++) {
+            em4x70_send_bit(0);
+        }
+
+        // Send 28-bit f(RN)
+
+        // Send first 24 bits
+        for (int i = 0; i < 3; i++) {
+            em4x70_send_byte(frnd[i]);
+        }
+
+        // Send last 4 bits (no parity)
+        em4x70_send_nibble((frnd[3] >> 4) & 0xf, false);
+
+        // Receive header, 20-bit g(RN), LIW
+        uint8_t grnd[EM4X70_MAX_RECEIVE_LENGTH] = {0};
+        int num = em4x70_receive(grnd);
+        if (num < 10) {
+            Dbprintf("Auth failed");
+            return PM3_ESOFT;
+        }
+        bits2bytes(grnd, 24, response);
+        return PM3_SUCCESS;
+    }
+
+    return PM3_ESOFT;
+}
+
 static int send_pin(const uint32_t pin) {
 
     // sends pin code for unlocking
@@ -387,7 +427,7 @@ static int send_pin(const uint32_t pin) {
             // <w> Writes Lock Bits
             WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_WEE);
             // <-- Receive header + ID
-            uint8_t tag_id[64];
+            uint8_t tag_id[EM4X70_MAX_RECEIVE_LENGTH];
             int num  = em4x70_receive(tag_id);
             if (num < 32) {
                 Dbprintf("Invalid ID Received");
@@ -730,4 +770,25 @@ void em4x70_unlock(em4x70_data_t *etd) {
     reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
 }
 
+void em4x70_auth(em4x70_data_t *etd) {
+
+    uint8_t status = 0;
+    uint8_t response[3] = {0};
+
+    command_parity = etd->parity;
+
+    init_tag();
+    EM4170_setup_read();
+
+    // Find the Tag
+    if (get_signalproperties() && find_EM4X70_Tag()) {
+
+        // Authenticate and get tag response
+        status = authenticate(etd->rnd, etd->frnd, response) == PM3_SUCCESS;
+    }
+
+    StopTicks();
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
+}
 
