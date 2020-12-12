@@ -363,10 +363,23 @@ static bool check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength
     return memcmp(cc, rapdu + (rapdulength - 8), 8) == 0;
 }
 
-static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *file) {
+static void _convert_filename(const char *file, uint8_t *dataout) {
+    char temp[3];
+    memcpy(temp, file, 2);
+    dataout[0] = (int)strtol(temp, NULL, 16);
+    memcpy(temp, file + 2, 2);
+    dataout[1] = (int)strtol(temp, NULL, 16);
+}
+
+static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *file) {
     // Get data even tho we'll not use it
+    // TODO: make a func to send without receive
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
+
+    // convert filename of string to bytes
+    uint8_t file_id[2];
+    _convert_filename(file, file_id);
 
     uint8_t iv[8] = { 0x00 };
     char command[54];
@@ -375,7 +388,7 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8
     uint8_t temp[8] = {0x0c, 0xa4, 0x02, 0x0c};
 
     int cmdlen = pad_block(temp, 4, cmd);
-    int datalen = pad_block(file, 2, data);
+    int datalen = pad_block(file_id, 2, data);
     PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, datalen));
 
@@ -683,8 +696,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
 
     // Select EF_COM
-    uint8_t file_id[2] = {0x01, 0x1E};
-    if (secure_select_file(ks_enc, ks_mac, ssc, file_id) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_COM) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_COM, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
@@ -698,8 +710,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     PrintAndLogEx(INFO, "EF_COM: %s", sprint_hex_inrow(response, resplen));
 
     // Select EF_DG1
-    file_id[1] = 0x01;
-    if (secure_select_file(ks_enc, ks_mac, ssc, file_id) == false) {
+    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG1) == false) {
         PrintAndLogEx(ERR, "Failed to secure select EF_DG1, crypto checksum check failed.");
         DropField();
         return PM3_ESOFT;
