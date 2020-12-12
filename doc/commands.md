@@ -142,7 +142,7 @@ Check column "offline" for their availability.
 |`hf 14a raw             `|N       |`Send raw hex data to tag`
 |`hf 14a antifuzz        `|N       |`Fuzzing the anticollision phase.  Warning! Readers may react strange`
 |`hf 14a config          `|N       |`Configure 14a settings (use with caution)`
-|`hf 14a apdufuzz        `|N       |`Fuzz APDU - CLA/INS/P1P2`
+|`hf 14a apdufind        `|N       |`Enuerate APDUs - CLA/INS/P1P2`
 
 
 ### hf 14b
