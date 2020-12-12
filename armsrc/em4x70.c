@@ -302,6 +302,12 @@ static void em4x70_send_nibble(uint8_t nibble, bool with_parity) {
         em4x70_send_bit(parity);
 }
 
+static void em4x70_send_byte(uint8_t byte) {
+    // Send byte msb first
+    for (int i = 0; i < 8; i++)
+        em4x70_send_bit((byte >> (7 - i)) & 1);
+}
+
 static void em4x70_send_word(const uint16_t word) {
 
     // Split into nibbles
@@ -352,6 +358,47 @@ static bool check_ack(void) {
         }
     }
     return false;
+}
+
+static int send_pin(const uint32_t pin) {
+
+    // sends pin code for unlocking
+    if (find_listen_window(true)) {
+
+        // send PIN command
+        em4x70_send_nibble(EM4X70_COMMAND_PIN, true);
+
+        // --> Send TAG ID (bytes 4-7)
+        for(int i=0; i < 4; i++) {
+            em4x70_send_byte(tag.data[7-i]);
+        }
+
+        // --> Send PIN
+        for(int i=0; i < 4 ; i++) {
+            em4x70_send_byte((pin>>(i*8)) & 0xff);
+        }
+
+        // Wait TWALB (write access lock bits)
+        WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_TWALB);
+
+        // <-- Receive ACK
+        if (check_ack()) {
+
+            // <w> Writes Lock Bits
+            WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_WEE);
+            // <-- Receive header + ID
+            uint8_t tag_id[64];
+            int num  = em4x70_receive(tag_id);
+            if(num < 32) {
+                Dbprintf("Invalid ID Received");
+                return PM3_ESOFT;
+            }
+            bits2bytes(tag_id, num, &tag.data[4]);
+            return PM3_SUCCESS;
+        }
+    }
+
+    return PM3_ESOFT;
 }
 
 static int write(const uint16_t word, const uint8_t address) {
@@ -649,6 +696,39 @@ void em4x70_write(em4x70_data_t *etd) {
     StopTicks();
     lf_finalize();
     reply_ng(CMD_LF_EM4X70_WRITE, status, tag.data, sizeof(tag.data));
+}
+
+void em4x70_unlock(em4x70_data_t *etd) {
+
+    uint8_t status = 0;
+
+    command_parity = etd->parity;
+
+    init_tag();
+    EM4170_setup_read();
+
+    // Find the Tag
+    if (get_signalproperties() && find_EM4X70_Tag()) {
+        
+        // Read ID (required for send_pin command)
+        if(em4x70_read_id()) {
+            
+            // Send PIN
+            status = send_pin(etd->pin) == PM3_SUCCESS;
+
+            // If the write succeeded, read the rest of the tag
+            if(status) {
+                // Read Tag
+                // ID doesn't change
+                em4x70_read_um1();
+                em4x70_read_um2();
+            }
+        }
+    }
+
+    StopTicks();
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
 }
 
 

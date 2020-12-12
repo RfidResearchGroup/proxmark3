@@ -1174,6 +1174,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_write((em4x70_data_t *)packet->data.asBytes);
             break;
         }
+        case CMD_LF_EM4X70_UNLOCK: {
+            em4x70_unlock((em4x70_data_t *)packet->data.asBytes);
+            break;
+        }
 #endif
 
 #ifdef WITH_ISO15693

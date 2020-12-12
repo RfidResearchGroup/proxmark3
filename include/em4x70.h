@@ -19,6 +19,10 @@ typedef struct {
     // Used for writing address
     uint8_t address;
     uint16_t word;
+
+    // PIN to unlock
+    uint32_t pin;
+
 } em4x70_data_t;
 
 #endif /* EM4X70_H__ */

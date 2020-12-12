@@ -86,12 +86,12 @@ int CmdEM4x70Info(const char *Cmd) {
                   "  ID48 does not use command parity (default).\n"
                   "  V4070 and EM4170 do require parity bit.",
                   "lf em 4x70 info\n"
-                  "lf em 4x70 info -p -> adds parity bit to command\n"
+                  "lf em 4x70 info -x -> adds parity bit to command\n"
                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("p", "parity", "Add parity bit when sending commands"),
+        arg_lit0("x", "parity", "Add parity bit when sending commands"),
         arg_param_end
     };
 
@@ -104,7 +104,7 @@ int CmdEM4x70Info(const char *Cmd) {
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X70_INFO, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
@@ -113,7 +113,7 @@ int CmdEM4x70Info(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "reading tag " _RED_("failed"));
+    PrintAndLogEx(FAILED, "Reading " _RED_("Failed"));
     return PM3_ESOFT;
 }
 
@@ -127,12 +127,12 @@ int CmdEM4x70Write(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x10 write",
                   "Write EM4x70\n",
                   "lf em 4x70 write -b 15 d c0de -> write 'c0de' to block 15\n"
-                  "lf em 4x70 write -p -b 15 -d c0de -> adds parity bit to commands\n"
+                  "lf em 4x70 write -x -b 15 -d c0de -> adds parity bit to commands\n"
                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("p", "parity", "Add parity bit when sending commands"),
+        arg_lit0("x", "parity", "Add parity bit when sending commands"),
         arg_int1("b", "block",  "<dec>", "block/word address, dec"),
         arg_str1("d", "data",   "<hex>", "data, 2 bytes"),
         arg_param_end
@@ -181,10 +181,70 @@ int CmdEM4x70Write(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+int CmdEM4x70Unlock(const char *Cmd) {
+
+    // send pin code to device, unlocking it for writing
+    em4x70_data_t etd = {0};
+
+    CLIParserContext *ctx;
+
+    CLIParserInit(&ctx, "lf em 4x10 unlock",
+                  "Unlock EM4x70 by sending PIN\n"
+                  "Default pin may be:\n"
+                  " AAAAAAAA\n"
+                  " 00000000\n",
+                  "lf em 4x70 unlock -p 11223344 -> Unlock with PIN\n"
+                  "lf em 4x70 unlock -x -p 11223344 -> Unlock with PIN using parity commands\n"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("x", "parity", "Add parity bit when sending commands"),
+        arg_str1("p", "pin", "<hex>", "pin, 4 bytes"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    etd.parity = arg_get_lit(ctx, 1);
+    
+    int pin_len = 0;
+    uint8_t pin[4] = {0x0};
+    
+    CLIGetHexWithReturn(ctx, 2, pin, &pin_len);
+
+    CLIParserFree(ctx);
+
+    if (pin_len != 4) {
+        PrintAndLogEx(FAILED, "PIN length must be 4 bytes instead of %d", pin_len);
+        return PM3_EINVARG;
+    }
+
+    etd.pin = BYTES2UINT32(pin);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_UNLOCK, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_UNLOCK, &resp, TIMEOUT)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status) {
+        print_info_result(resp.data.asBytes);
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "Unlocking tag " _RED_("failed"));
+    return PM3_ESOFT;
+}
+
 static command_t CommandTable[] = {
     {"help",   CmdHelp,         AlwaysAvailable, "This help"},
     {"info",   CmdEM4x70Info,   IfPm3EM4x70,     "Tag information EM4x70"},
     {"write",  CmdEM4x70Write,  IfPm3EM4x70,     "Write EM4x70"},
+    {"unlock", CmdEM4x70Unlock, IfPm3EM4x70,     "Unlock EM4x70 for writing"},
     {NULL, NULL, NULL, NULL}
 };
 
