@@ -804,6 +804,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
             PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
+    // TODO: account for the case of no BAC
     PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
     PrintAndLogEx(DEBUG, "dob: %s", dob);
     PrintAndLogEx(DEBUG, "exp: %s", expiry);
@@ -933,6 +934,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         PrintAndLogEx(DEBUG, "Current file: %s", file_name);
         dump_file(ks_enc, ks_mac, ssc, file_id, file_name, use_14b);
     }
+
+    dump_file(ks_enc, ks_mac, ssc, EF_SOD, "EF_SOD", use_14b);
 
     DropField();
     return PM3_SUCCESS;
