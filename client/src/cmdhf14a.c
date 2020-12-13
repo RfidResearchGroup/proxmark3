@@ -2133,7 +2133,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a apdufind",
                   "Enumerate APDU's of ISO7816 protocol to find valid CLS/INS/P1P2 commands.\n"
                   "It loops all 256 possible values for each byte.\n"
-                  "The loop oder is INS->P1->P2->CLA\n"
+                  "The loop oder is INS -> P1/P2 (alternating) -> CLA\n"
                   "Tag must be on antenna before running.",
                   "hf 14a apdufind\n"
                   "hf 14a apdufind --cla 80\n"
@@ -2193,76 +2193,79 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     activate_field = false;
+    bool inc_p1 = true;
     uint64_t t1 = msclock();
 
     // Enumerate APDUs.
     do {
         do {
             do {
-                do {
-                    // Exit (was the Enter key pressed)?
-                    if (kbd_enter_pressed()) {
-                        PrintAndLogEx(INFO, "User interrupted detected. Aborting");
-                        goto out;
-                    }
+                // Exit (was the Enter key pressed)?
+                if (kbd_enter_pressed()) {
+                    PrintAndLogEx(INFO, "User interrupted detected. Aborting");
+                    goto out;
+                }
 
-                    if (verbose) {
-                        PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
-                    }
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+                }
 
-                    // Send APDU.
-                    uint8_t command[4] = {cla, ins, p1, p2};
-                    int command_n = sizeof(command);
-                    res = ExchangeAPDU14a(command, command_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
+                // Send APDU.
+                uint8_t command[4] = {cla, ins, p1, p2};
+                int command_n = sizeof(command);
+                res = ExchangeAPDU14a(command, command_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
+                if (res) {
+                    continue;
+                }
+
+                // Was there and length error? If so, try with Le length (case 2 instad of case 1,
+                // https://stackoverflow.com/a/30679558). Le = 0x00 will get interpreted as extended length APDU
+                // with Le being 0x0100.
+                uint16_t sw = get_sw(response, response_n);
+                bool command_with_le = false;
+                if (sw == 0x6700) {
+                    PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04X - %s)", cla, ins, p1, p2,
+                                  sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
+                    uint8_t command2[7] = {cla, ins, p1, p2, 0x00};
+                    int command2_n = sizeof(command2);
+                    res = ExchangeAPDU14a(command2, command2_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
                     if (res) {
                         continue;
                     }
+                    command_with_le = true;
+                }
 
-                    // Was there and length error? If so, try with Le length (case 2 instad of case 1,
-                    // https://stackoverflow.com/a/30679558). Le = 0x00 will get interpreted as extended length APDU
-                    // with Le being 0x0100.
-                    uint16_t sw = get_sw(response, response_n);
-                    bool command_with_le = false;
-                    if (sw == 0x6700) {
-                        PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04x - %s)", cla, ins, p1, p2,
+                // Check response.
+                // TODO: What response values should be considerd "valid" or "instersting"?
+                sw = get_sw(response, response_n);
+                if (sw != 0x6a86 &&
+                        sw != 0x6986 &&
+                        sw != 0x6d00
+                   ) {
+                    if (command_with_le) {
+                        PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X00 (%04X - %s)", cla, ins, p1, p2,
                                       sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                        PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
-                        uint8_t command2[7] = {cla, ins, p1, p2, 0x00};
-                        int command2_n = sizeof(command2);
-                        res = ExchangeAPDU14a(command2, command2_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
-                        if (res) {
-                            continue;
-                        }
-                        command_with_le = true;
+                    } else {
+                        PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04X - %s)", cla, ins, p1, p2,
+                                      sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                     }
-
-                    // Check response.
-                    // TODO: What response values should be considerd "valid" or "instersting"?
-                    sw = get_sw(response, response_n);
-                    if (sw != 0x6a86 &&
-                            sw != 0x6986 &&
-                            sw != 0x6d00
-                       ) {
-                        if (command_with_le) {
-                            PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X00 (%04x - %s)", cla, ins, p1, p2,
-                                          sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                        } else {
-                            PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04x - %s)", cla, ins, p1, p2,
-                                          sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                        }
-                        // Show response data.
-                        if (response_n > 2) {
-                            PrintAndLogEx(INFO, "Response data is: %s | %s", sprint_hex_inrow(response, response_n - 2),
-                                          sprint_ascii(response, response_n - 2));
-                        }
+                    // Show response data.
+                    if (response_n > 2) {
+                        PrintAndLogEx(SUCCESS, "Response data is: %s | %s", sprint_hex_inrow(response, response_n - 2),
+                                      sprint_ascii(response, response_n - 2));
                     }
-                } while (++ins != ins_arg[0]);
+                }
+            } while (++ins != ins_arg[0]);
+            // Increment P1/P2 in an alternating fashion.
+            if (inc_p1) {
                 p1++;
-                PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
-            } while (p1 != p1_arg[0]);
-            p2++;
+            } else {
+                p2++;
+            }
+            inc_p1 = !inc_p1;
             PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
-        } while (p2 != p2_arg[0]);
+        } while (p1 != p1_arg[0] || p2 != p2_arg[0]);
         cla++;
         PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
     } while (cla != cla_arg[0]);
