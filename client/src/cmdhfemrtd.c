@@ -466,7 +466,9 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     sprintf(command, "0C%s020C%02X%s00", SELECT, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    exchange_commands(command, response, &resplen, false, true, use_14b);
+    if (exchange_commands(command, response, &resplen, false, true, use_14b) == false) {
+        return false;
+    }
 
     return check_cc(ssc, kmac, response, resplen);
 }
@@ -524,7 +526,9 @@ static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byt
     sprintf(command, "0C%s%02X%02X%02X%s00", READ_BINARY, p1, p2, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    exchange_commands(command, dataout, dataoutlen, false, true, use_14b);
+    if (exchange_commands(command, dataout, dataoutlen, false, true, use_14b) == false) {
+        return false;
+    }
 
     return check_cc(ssc, kmac, dataout, *dataoutlen);
 }
