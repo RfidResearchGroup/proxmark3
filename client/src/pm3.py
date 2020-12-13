@@ -61,6 +61,8 @@ class _SwigNonDynamicMeta(type):
     __setattr__ = _swig_setattr_nondynamic_class_variable(type.__setattr__)
 
 
+import weakref
+
 class pm3(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -71,10 +73,35 @@ class pm3(object):
 
     def console(self, cmd):
         return _pm3.pm3_console(self, cmd)
+
+    def console_async_wrapper(self, cmd, handler):
+        return _pm3.pm3_console_async_wrapper(self, cmd, handler)
     name = property(_pm3.pm3_name_get)
 
 # Register pm3 in _pm3:
 _pm3.pm3_swigregister(pm3)
+
+class ConsoleHandler(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def handle_output(self, string):
+        return _pm3.ConsoleHandler_handle_output(self, string)
+    __swig_destroy__ = _pm3.delete_ConsoleHandler
+
+    def __init__(self):
+        if self.__class__ == ConsoleHandler:
+            _self = None
+        else:
+            _self = self
+        _pm3.ConsoleHandler_swiginit(self, _pm3.new_ConsoleHandler(_self, ))
+    def __disown__(self):
+        self.this.disown()
+        _pm3.disown_ConsoleHandler(self)
+        return weakref.proxy(self)
+
+# Register ConsoleHandler in _pm3:
+_pm3.ConsoleHandler_swigregister(ConsoleHandler)
 
 
 

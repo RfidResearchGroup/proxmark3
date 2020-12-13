@@ -1,7 +1,7 @@
-%module pm3
+%module(directors="1") pm3
 %{
 /* Include the header in the wrapper code */
-#include "pm3.h"
+#include "pm3.hpp"
 #include "comms.h"
 %}
 
@@ -31,9 +31,15 @@ typedef struct {
             }
         }
         int console(char *cmd);
+        //int console_async(char *cmd, int (*callback)(char*));
+        int console_async_wrapper(char *cmd, ConsoleHandler *handler);
         char const * const name;
     }
 } pm3;
 //%nodefaultctor device;
 //%nodefaultdtor device;
 /* Parse the header file to generate wrappers */
+
+%feature("director") ConsoleHandler;
+
+%include "../include/pm3_helper.hpp"
