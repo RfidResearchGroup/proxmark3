@@ -165,19 +165,35 @@ int CmdRem(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "rem",
                   "Add a text line in log file",
-                  "rem"
+                  "rem my message    -> adds a timestamp with `my message`"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_strx1(NULL, NULL, NULL, "message line you want inserted"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    struct arg_str* foo = arg_get_str(ctx, 1);
+    size_t count = 0;
+    size_t len = 0;
+    do {
+        count += strlen(foo->sval[len]);
+    } while (len++ < (foo->count - 1));
+
+    char s[count + foo->count];
+    memset(s, 0, sizeof(s));
+
+    len = 0;
+    do {
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "%s ", foo->sval[len]);
+    } while (len++ < (foo->count - 1));
+
+    CLIParserFree(ctx);
     char buf[22] = {0};
     AppendDate(buf, sizeof(buf), NULL);
-    PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
+    PrintAndLogEx(SUCCESS, "%s remark: %s", buf, s);
     return PM3_SUCCESS;
 }
 
