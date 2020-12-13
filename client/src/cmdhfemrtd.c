@@ -620,6 +620,113 @@ static bool ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *datao
     return false;
 }
 
+static bool file_tag_to_file_id(uint8_t *datain, char *filenameout, char *dataout) {
+    // imagine bothering with a hashmap or writing good code
+    // couldn't be me
+    switch (*datain) {
+        case 0x60:
+            memcpy(dataout, EF_COM, 4);
+            memcpy(filenameout, "EF_COM", 6);
+            break;
+        case 0x61:
+            memcpy(dataout, EF_DG1, 4);
+            memcpy(filenameout, "EF_DG1", 6);
+            break;
+        case 0x75:
+            memcpy(dataout, EF_DG2, 4);
+            memcpy(filenameout, "EF_DG2", 6);
+            break;
+        // These cases are commented out as they require PACE
+        // Trying to read a PACE file without doing PACE auth kills the session
+        // case 0x63:
+        //     memcpy(dataout, EF_DG3, 4);
+        //     memcpy(filenameout, "EF_DG3", 6);
+        //     break;
+        // case 0x76:
+        //     memcpy(dataout, EF_DG4, 4);
+        //     memcpy(filenameout, "EF_DG4", 6);
+        //     break;
+        case 0x65:
+            memcpy(dataout, EF_DG5, 4);
+            memcpy(filenameout, "EF_DG5", 6);
+            break;
+        case 0x66:
+            memcpy(dataout, EF_DG6, 4);
+            memcpy(filenameout, "EF_DG6", 6);
+            break;
+        case 0x67:
+            memcpy(dataout, EF_DG7, 4);
+            memcpy(filenameout, "EF_DG7", 6);
+            break;
+        case 0x68:
+            memcpy(dataout, EF_DG8, 4);
+            memcpy(filenameout, "EF_DG8", 6);
+            break;
+        case 0x69:
+            memcpy(dataout, EF_DG9, 4);
+            memcpy(filenameout, "EF_DG9", 6);
+            break;
+        case 0x6a:
+            memcpy(dataout, EF_DG10, 4);
+            memcpy(filenameout, "EF_DG10", 7);
+            break;
+        case 0x6b:
+            memcpy(dataout, EF_DG11, 4);
+            memcpy(filenameout, "EF_DG11", 7);
+            break;
+        case 0x6c:
+            memcpy(dataout, EF_DG12, 4);
+            memcpy(filenameout, "EF_DG12", 7);
+            break;
+        case 0x6d:
+            memcpy(dataout, EF_DG13, 4);
+            memcpy(filenameout, "EF_DG13", 7);
+            break;
+        case 0x6e:
+            memcpy(dataout, EF_DG14, 4);
+            memcpy(filenameout, "EF_DG14", 7);
+            break;
+        case 0x6f:
+            memcpy(dataout, EF_DG15, 4);
+            memcpy(filenameout, "EF_DG15", 7);
+            break;
+        case 0x70:
+            memcpy(dataout, EF_DG16, 4);
+            memcpy(filenameout, "EF_DG16", 7);
+            break;
+        case 0x77:
+            memcpy(dataout, EF_SOD, 4);
+            memcpy(filenameout, "EF_SOD", 6);
+            break;
+        default:
+            return false;
+    }
+    return true;
+}
+
+static bool dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_14b) {
+    uint8_t response[35000];
+    int resplen = 0;
+
+    if (secure_select_file(ks_enc, ks_mac, ssc, file, use_14b) == false) {
+        PrintAndLogEx(ERR, "Failed to secure select %s, crypto checksum check failed.", name);
+        DropField();
+        return false;
+    }
+
+    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
+        PrintAndLogEx(ERR, "Failed to read %s.", name);
+        DropField();
+        return false;
+    }
+
+    PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile(name, ".BIN", response, resplen);
+
+    return true;
+}
+
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[25000];
     uint8_t rnd_ic[8];
@@ -803,7 +910,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     }
     PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    // saveFile("EF_COM", ".BIN", response, resplen);
+    saveFile("EF_COM", ".BIN", response, resplen);
 
     uint8_t filelist[50];
     int filelistlen = 0;
@@ -815,6 +922,17 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     }
 
     PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
+
+    for (int i = 0; i < filelistlen; i++) {
+        char file_id[5] = {0x00};
+        char file_name[8] = {0x00};
+        if (file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+            continue;
+        }
+        PrintAndLogEx(DEBUG, "Current file: %s", file_name);
+        dump_file(ks_enc, ks_mac, ssc, file_id, file_name, use_14b);
+    }
 
     DropField();
     return PM3_SUCCESS;
