@@ -116,6 +116,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change, use system Whereami library if available (@doegox)
  - Change, use system Zlib library if available (@doegox)
  - Fix release version information (@doegox)
+ - Add `hf 14a apdufind` to find hidden APDUs (@iceman1001 & @ikarus23)
 
 ## [ice coffee.4.9237][2020-05-21]
  - Updated documentation (@doegox, @iceman1001)
