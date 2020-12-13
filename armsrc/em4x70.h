@@ -17,6 +17,11 @@ typedef struct {
     uint8_t data[32];
 } em4x70_tag_t;
 
+typedef enum {
+    RISING_EDGE,
+    FALLING_EDGE
+}edge_detection_t;
+
 void em4x70_info(em4x70_data_t *etd);
 void em4x70_write(em4x70_data_t *etd);
 void em4x70_unlock(em4x70_data_t *etd);

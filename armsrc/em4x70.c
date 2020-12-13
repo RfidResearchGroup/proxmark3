@@ -130,36 +130,27 @@ static bool get_signalproperties(void) {
 }
 
 /**
- *  get_pulse_length
+ *  get_falling_pulse_length
  *
- *      Times falling edge pulses
+ *      Returns time between falling edge pulse in ticks
  */
-static uint32_t get_pulse_length(void) {
+static uint32_t get_falling_pulse_length(void) {
 
-    uint8_t sample;
     uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
-    do {
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    } while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
+    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
     uint32_t start_ticks = GetTicks();
-    timeout = start_ticks + EM4X70_T_TAG_TIMEOUT;
 
-    do {
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    } while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
+    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
-    do {
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    } while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
+    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -168,43 +159,43 @@ static uint32_t get_pulse_length(void) {
 }
 
 /**
- *  get_pulse_invert_length
+ *  get_rising_pulse_length
  *
- *      Times rising edge pules
- *  TODO: convert to single function with get_pulse_length()
+ *      Returns time between rising edge pulse in ticks
  */
-static uint32_t get_pulse_invert_length(void) {
+static uint32_t get_rising_pulse_length(void) {
 
-    uint8_t sample;
     uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
-    do {
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    } while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
+    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
     uint32_t start_ticks = GetTicks();
-    timeout = start_ticks + EM4X70_T_TAG_TIMEOUT;
 
-    do {
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    } while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
+    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
-    do {
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-    } while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
+    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
     return TICKS_ELAPSED(start_ticks);
 
+}
+
+static uint32_t get_pulse_length(edge_detection_t edge) {
+
+    if(edge == RISING_EDGE)
+        return get_rising_pulse_length();
+    else if(edge == FALLING_EDGE)
+        return get_falling_pulse_length();
+
+    return 0;
 }
 
 static bool check_pulse_length(uint32_t pl, uint32_t length) {
@@ -309,10 +300,10 @@ static bool check_ack(void) {
               64 (48+16)
               48 (32+16)
         */
-        if (check_pulse_length(get_pulse_length(), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+        if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
 
             // The received signal is either ACK or NAK.
-            if (check_pulse_length(get_pulse_length(), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+            if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
                 return true;
             } else {
                 // It's NAK -> stop searching
@@ -448,10 +439,10 @@ static bool find_listen_window(bool command) {
         96 ( 64 + 32 )
         64 ( 32 + 16 +16 )*/
 
-        if (check_pulse_length(get_pulse_invert_length(),     (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-                check_pulse_length(get_pulse_invert_length(), (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-                check_pulse_length(get_pulse_length(),        (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
-                check_pulse_length(get_pulse_length(),         EM4X70_T_TAG_FULL_PERIOD + (2*EM4X70_T_TAG_HALF_PERIOD))) {
+        if (check_pulse_length(get_pulse_length(RISING_EDGE),     (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_length(RISING_EDGE), (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_length(FALLING_EDGE),        (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
+                check_pulse_length(get_pulse_length(FALLING_EDGE),         EM4X70_T_TAG_FULL_PERIOD + (2*EM4X70_T_TAG_HALF_PERIOD))) {
 
             if (command) {
                 /* Here we are after the 64 duration edge.
@@ -569,7 +560,7 @@ static int em4x70_receive(uint8_t *bits) {
 
     uint32_t pl;
     int bit_pos = 0;
-    uint8_t edge = 0;
+    edge_detection_t edge = RISING_EDGE;
     bool foundheader = false;
 
     // Read out the header
@@ -582,7 +573,7 @@ static int em4x70_receive(uint8_t *bits) {
     // wait until we get the transition from 1's to 0's which is 1.5 full windows
     int pulse_count = 0;
     while (pulse_count < 12) {
-        pl = get_pulse_invert_length();
+        pl = get_pulse_length(edge);
         pulse_count++;
         if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
             foundheader = true;
@@ -597,40 +588,37 @@ static int em4x70_receive(uint8_t *bits) {
 
     // Skip next 3 0's, header check consumes the first 0
     for (int i = 0; i < 3; i++) {
-        get_pulse_invert_length();
+        get_pulse_length(edge);
     }
 
     // identify remaining bits based on pulse lengths
     // between listen windows only pulse lengths of 1, 1.5 and 2 are possible
     while (bit_pos < EM4X70_MAX_RECEIVE_LENGTH) {
 
-        if (edge)
-            pl = get_pulse_length();
-        else
-            pl = get_pulse_invert_length();
+        pl = get_pulse_length(edge);
 
         if (check_pulse_length(pl, EM4X70_T_TAG_FULL_PERIOD)) {
 
             // pulse length = 1
-            bits[bit_pos++] = edge;
+            bits[bit_pos++] = edge == FALLING_EDGE ? 1 : 0;
 
         } else if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
 
             // pulse length = 1.5 -> flip edge detection
-            if (edge) {
+            if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
                 bits[bit_pos++] = 0;
-                edge = 0;
+                edge = RISING_EDGE;
             } else {
                 bits[bit_pos++] = 1;
                 bits[bit_pos++] = 1;
-                edge = 1;
+                edge = FALLING_EDGE;
             }
 
         } else if (check_pulse_length(pl, 2 * EM4X70_T_TAG_FULL_PERIOD)) {
 
             // pulse length of 2
-            if (edge) {
+            if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
                 bits[bit_pos++] = 1;
             } else {
@@ -638,8 +626,8 @@ static int em4x70_receive(uint8_t *bits) {
                 bits[bit_pos++] = 0;
             }
 
-        } else if ((edge && check_pulse_length(pl, (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD)) ||
-                   (!edge && check_pulse_length(pl, (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD))) {
+        } else if (((edge == FALLING_EDGE) && check_pulse_length(pl, (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD)) ||
+                   ((edge == RISING_EDGE) && check_pulse_length(pl, (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD))) {
 
             // LIW detected (either invert or normal)
             return --bit_pos;
