@@ -78,7 +78,7 @@ static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen
 
     PrintAndLogEx(DEBUG, "Sending: %s", cmd);
 
-    uint8_t aCMD[500];
+    uint8_t aCMD[PM3_CMD_DATA_SIZE];
     int aCMD_n = 0;
     param_gethex_to_eol(cmd, 0, aCMD, sizeof(aCMD), &aCMD_n);
     int res;
@@ -404,7 +404,7 @@ static bool check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength
 }
 
 static void _convert_filename(const char *file, uint8_t *dataout) {
-    char temp[3];
+    char temp[3] = {0x00};
     memcpy(temp, file, 2);
     dataout[0] = (int)strtol(temp, NULL, 16);
     memcpy(temp, file + 2, 2);
@@ -592,6 +592,34 @@ static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t 
     return true;
 }
 
+static bool ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen) {
+    int offset = 2;
+    int elementidlen = 0;
+    int elementlen = 0;
+    while (offset < *datainlen) {
+        PrintAndLogEx(DEBUG, "ef_com_get_file_list, offset: %i, data: %X", offset, *(datain + offset));
+        // Determine element ID length to set as offset on asn1datalength
+        if (*(datain + offset) == 0x5f) {
+            elementidlen = 2;
+        } else {
+            elementidlen = 1;
+        }
+
+        // Get the length of the element
+        elementlen = asn1datalength(datain + offset, *datainlen - offset, elementidlen);
+
+        // If the element is what we're looking for, get the data and return true
+        if (*(datain + offset) == 0x5c) {
+            *dataoutlen = elementlen;
+            memcpy(dataout, datain + offset + elementidlen + 1, elementlen);
+            return true;
+        }
+        offset += elementidlen + elementlen + 1;
+    }
+    // Return false if we can't find the relevant element
+    return false;
+}
+
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[25000];
     uint8_t rnd_ic[8];
@@ -763,7 +791,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     // Select EF_COM
     if (secure_select_file(ks_enc, ks_mac, ssc, EF_COM, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_COM, crypto checksum check failed.");
+        PrintAndLogEx(ERR, "Failed to secure select EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
@@ -775,104 +803,18 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     }
     PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_COM", ".BIN", response, resplen);
+    // saveFile("EF_COM", ".BIN", response, resplen);
 
-    // TODO: Don't read a hardcoded list of files, reduce code repetition
-    // Select EF_DG1
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG1, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_DG1, crypto checksum check failed.");
+    uint8_t filelist[50];
+    int filelistlen = 0;
+
+    if (ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG1.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "Read EF_DG1, len: %i.", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_DG1", ".BIN", response, resplen);
-
-    // Select EF_DG2
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG2, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_DG2, crypto checksum check failed.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG2.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "Read EF_DG2, len: %i.", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_DG2", ".BIN", response, resplen);
-
-    // Select EF_SOD
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_SOD, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_SOD, crypto checksum check failed.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_SOD.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "Read EF_SOD, len: %i.", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_SOD", ".BIN", response, resplen);
-
-    // Select EF_DG11
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG11, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_DG11, crypto checksum check failed.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG11.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "Read EF_DG11, len: %i.", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_DG11", ".BIN", response, resplen);
-
-    // Select EF_DG12
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG12, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_DG12, crypto checksum check failed.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG12.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "Read EF_DG12, len: %i.", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_DG12", ".BIN", response, resplen);
-
-    // Select EF_DG14
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_DG14, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_DG14, crypto checksum check failed.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG14.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "Read EF_DG14, len: %i.", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_DG14", ".BIN", response, resplen);
+    PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
 
     DropField();
     return PM3_SUCCESS;
