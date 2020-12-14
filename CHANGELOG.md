@@ -7,6 +7,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf iclass encode` - encode a wiegand binary to a encrypted credential (@iceman1001)
  - Changed `recoverpk.py` - now tests more ECDSA curves (@doegox)
  - Added `hf 14a apdufuzz`- a naive apdu cla/ins/p1p2/len fuzzer (@iceman1001)
+ - Improved `hf 14a apdufuzz/apdufind` to find hidden APDUs (@ikarus23)
  - Fix mixed up INC/DEC in MIFARE protocol defs (@vortixdev)
  - Added `lf em 4x70 info` - new support for ID48 transponders (@cmolson)
  - Fix multiple coverity scan issues (@iceman1001)
@@ -116,7 +117,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change, use system Whereami library if available (@doegox)
  - Change, use system Zlib library if available (@doegox)
  - Fix release version information (@doegox)
- - Add `hf 14a apdufind` to find hidden APDUs (@iceman1001 & @ikarus23)
 
 ## [ice coffee.4.9237][2020-05-21]
  - Updated documentation (@doegox, @iceman1001)
