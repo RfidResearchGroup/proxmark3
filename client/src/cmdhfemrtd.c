@@ -720,7 +720,7 @@ static void rng(int length, uint8_t *dataout) {
     }
 }
 
-int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
+int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[35000] = { 0x00 };
     uint8_t ssc[8] = { 0x00 };
     uint8_t ks_enc[16] = { 0x00 };
@@ -788,6 +788,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
             BAC = false;
             PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
+    }
+
+    if (BAC == true && BAC_available == false) {
+        PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supplied MRZ data. Cannot proceed.");
+        PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
+        DropField();
+        return PM3_ESOFT;
     }
 
     if (BAC) {
@@ -939,25 +946,29 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("n", "documentnumber", "<number>", "9 character document number"),
-        arg_str1("d", "dateofbirth", "<number>", "date of birth in YYMMDD format"),
-        arg_str1("e", "expiry", "<number>", "expiry in YYMMDD format"),
+        arg_str0("n", "documentnumber", "<alphanum>", "9 character document number"),
+        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t docnum[10];
-    uint8_t dob[7];
-    uint8_t expiry[7];
-    int docnumlen = 9;
-    int doblen = 6;
-    int expirylen = 6;
-    CLIGetStrWithReturn(ctx, 1, docnum, &docnumlen);
-    CLIGetStrWithReturn(ctx, 2, dob, &doblen);
-    CLIGetStrWithReturn(ctx, 3, expiry, &expirylen);
+    uint8_t docnum[10] = { 0x00 };
+    uint8_t dob[7] = { 0x00 };
+    uint8_t expiry[7] = { 0x00 };
+    bool BAC = true;
+    int slen = 0;  // unused
+    // Go through all args, if even one isn't supplied, mark BAC as unavailable
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
+        BAC = false;
+    } else if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+        BAC = false;
+    } else if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+        BAC = false;
+    }
 
     CLIParserFree(ctx);
-    return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry);
+    return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
 }
 
 static int cmd_hf_emrtd_list(const char *Cmd) {
