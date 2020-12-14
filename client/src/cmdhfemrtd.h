@@ -1,22 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Copyright (C) 2020 A. Ozkal
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// High frequency ISO14443B commands
+// High frequency Electronic Machine Readable Travel Document commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDHF14B_H__
-#define CMDHF14B_H__
+#ifndef CMDHFEMRTD_H__
+#define CMDHFEMRTD_H__
 
 #include "common.h"
 
-int CmdHF14B(const char *Cmd);
+int CmdHFeMRTD(const char *Cmd);
 
-int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
-
-int infoHF14B(bool verbose);
-int readHF14B(bool verbose);
+int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
 #endif
