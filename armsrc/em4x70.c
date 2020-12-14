@@ -287,30 +287,17 @@ static void em4x70_send_word(const uint16_t word) {
 }
 
 static bool check_ack(void) {
-
     // returns true if signal structue corresponds to ACK, anything else is
     // counted as NAK (-> false)
-    uint32_t start_ticks = GetTicks();
-    while (TICKS_ELAPSED(start_ticks) < (4 * EM4X70_T_TAG_FULL_PERIOD)) {
-        /*
-            ACK
-              64 (48+16)
-              64 (48+16)
-            NACK
-              64 (48+16)
-              48 (32+16)
-        */
-        if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
-
-            // The received signal is either ACK or NAK.
-            if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
-                return true;
-            } else {
-                // It's NAK -> stop searching
-                break;
-            }
-        }
-    }
+    // ACK  64 + 64
+    // NACK 64 + 48
+    if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
+        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+        // ACK
+        return true;
+    } 
+    
+    // Othewise it was a NACK or Listen Window
     return false;
 }
 
@@ -415,7 +402,7 @@ static int write(const uint16_t word, const uint8_t address) {
         // look for ACK sequence
         if (check_ack()) {
 
-            // now EM4x70 needs T0 * EM4X70_T_TAG_TWEE (EEPROM write time)
+            // now EM4x70 needs EM4X70_T_TAG_TWEE (EEPROM write time)
             // for saving data and should return with ACK
             WaitTicks(EM4X70_T_TAG_WEE);
             if (check_ack()) {
