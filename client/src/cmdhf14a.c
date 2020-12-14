@@ -2198,7 +2198,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
 
     bool inc_p1 = true;
     uint64_t t_start = msclock();
-    uint64_t t_last_select = msclock();
+    uint64_t t_last_reset = msclock();
 
     // Enumerate APDUs.
     do {
@@ -2259,6 +2259,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                                       sprint_ascii(response, response_n - 2));
                     }
                 }
+                activate_field = false; // Do not reativate the filed until the next reset.
             } while (++ins != ins_arg[0]);
             // Increment P1/P2 in an alternating fashion.
             if (inc_p1) {
@@ -2268,10 +2269,12 @@ static int CmdHf14AFindapdu(const char *Cmd) {
             }
             inc_p1 = !inc_p1;
             // Check if re-selecting the card is needed.
-            if (((msclock() - t_last_select) / 1000) >  reset_time) {
+            uint64_t t_since_last_reset = ((msclock() - t_last_reset) / 1000);
+            if (t_since_last_reset > reset_time) {
                 DropField();
-                t_last_select = msclock();
-                PrintAndLogEx(INFO, "Reseting the tag to prevent timeout issues");
+                activate_field = true;
+                t_last_reset = msclock();
+                PrintAndLogEx(INFO, "Last reset was %" PRIu64 " seconds ago. Reseting the tag to prevent timeout issues", t_since_last_reset);
             }
             PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
         } while (p1 != p1_arg[0] || p2 != p2_arg[0]);
