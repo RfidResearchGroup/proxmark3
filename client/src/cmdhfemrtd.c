@@ -392,7 +392,7 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     _convert_filename(file, file_id);
 
     uint8_t iv[8] = { 0x00 };
-    char command[54];
+    char command[PM3_CMD_DATA_SIZE];
     uint8_t cmd[8];
     uint8_t data[21];
     uint8_t temp[8] = {0x0c, 0xa4, strtol(select_by, NULL, 16), 0x0c};
