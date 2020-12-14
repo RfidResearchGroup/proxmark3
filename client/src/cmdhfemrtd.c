@@ -145,23 +145,23 @@ static char calculate_check_digit(char *data) {
 
 static int asn1datalength(uint8_t *datain, int datainlen, int offset) {
     PrintAndLogEx(DEBUG, "asn1datalength, datain: %s", sprint_hex_inrow(datain, datainlen));
-    int lenfield = (int) *(datain + offset);
+    int lenfield = (int) * (datain + offset);
     PrintAndLogEx(DEBUG, "asn1datalength, lenfield: %i", lenfield);
     if (lenfield <= 0x7f) {
         return lenfield;
     } else if (lenfield == 0x81) {
-        return ((int) *(datain + offset + 1));
+        return ((int) * (datain + offset + 1));
     } else if (lenfield == 0x82) {
-        return ((int) *(datain + offset + 1) << 8) | ((int) *(datain + offset + 2));
+        return ((int) * (datain + offset + 1) << 8) | ((int) * (datain + offset + 2));
     } else if (lenfield == 0x83) {
-        return (((int) *(datain + offset + 1) << 16) | ((int) *(datain + offset + 2)) << 8) | ((int) *(datain + offset + 3));
+        return (((int) * (datain + offset + 1) << 16) | ((int) * (datain + offset + 2)) << 8) | ((int) * (datain + offset + 3));
     }
     return false;
 }
 
 static int asn1fieldlength(uint8_t *datain, int datainlen, int offset) {
     PrintAndLogEx(DEBUG, "asn1fieldlength, datain: %s", sprint_hex_inrow(datain, datainlen));
-    int lenfield = (int) *(datain + offset);
+    int lenfield = (int) * (datain + offset);
     PrintAndLogEx(DEBUG, "asn1fieldlength, thing: %i", lenfield);
     if (lenfield <= 0x7f) {
         return 1;
