@@ -14,11 +14,9 @@
 #include <ctype.h>
 #include "fileutils.h"              // saveFile
 #include "cmdparser.h"              // command_t
-#include "comms.h"                  // clearCommandBuffer
-#include "cmdtrace.h"
-#include "cliparser.h"
-#include "crc16.h"
-#include "cmdhf14a.h"
+#include "cmdtrace.h"               // CmdTraceList
+#include "cliparser.h"              // CLIParserContext etc
+#include "cmdhf14a.h"               // ExchangeAPDU14a
 #include "protocols.h"              // definitions of ISO14A/7816 protocol
 #include "emv/apduinfo.h"           // GetAPDUCodeDescription
 #include "sha1.h"                   // KSeed calculation etc
