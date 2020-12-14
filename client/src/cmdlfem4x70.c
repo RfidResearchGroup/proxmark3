@@ -16,28 +16,62 @@
 #include "commonutil.h"
 #include "em4x70.h"
 
+#define LOCKBIT_0 BITMASK(6)
+#define LOCKBIT_1 BITMASK(7)
+
 #define BYTES2UINT16(x) ((x[1] << 8) | (x[0]))
 #define BYTES2UINT32(x) ((x[3] << 24) | (x[2] << 16) | (x[1] << 8) | (x[0]))
 
+#define INDEX_TO_BLOCK(x) (((32-x)/2)-1)
 
 static int CmdHelp(const char *Cmd);
 
-static void print_info_result(uint8_t *data) {
+static void print_info_result(const uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "-----------------------------------------------");
 
-    // data section
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, _YELLOW_("EM4x70 data:"));
+    PrintAndLogEx(INFO, "Block |   data   | info");
+    PrintAndLogEx(INFO, "------+----------+-----------------------------");
 
-    for (int i = 1; i <= 32; i += 2) {
-        PrintAndLogEx(NORMAL, "%02X %02X", data[32 - i], data[32 - i - 1]);
+    // Print out each section as memory map in datasheet
+
+    // Start with UM2
+    for (int i = 0; i < 8; i += 2) {
+        PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  UM2", INDEX_TO_BLOCK(i), data[31 - i], data[31 - i - 1]);
     }
-    PrintAndLogEx(NORMAL, "Tag ID: %02X %02X %02X %02X", data[7], data[6], data[5], data[4]);
-    PrintAndLogEx(NORMAL, "Lockbit 0: %d %s", (data[3] & 0x40) ? 1 : 0, (data[3] & 0x40) ? "LOCKED" : "UNLOCKED");
-    PrintAndLogEx(NORMAL, "Lockbit 1: %d", (data[3] & 0x80) ? 1 : 0);
+    PrintAndLogEx(INFO, "------+----------+-----------------------------");
+
+    // Print PIN  (will never have data)
+    for (int i = 8; i < 12; i += 2) {
+        PrintAndLogEx(INFO, " %2d   |   -- --  |  PIN write only", INDEX_TO_BLOCK(i));
+    }
+    PrintAndLogEx(INFO, "------+----------+-----------------------------");
+
+    // Print Crypt Key (will never have data)
+    for (int i = 12; i < 24; i += 2) {
+        PrintAndLogEx(INFO, " %2d   |   -- --  |  KEY write-only", INDEX_TO_BLOCK(i));
+    }
+    PrintAndLogEx(INFO, "------+----------+-----------------------------");
+
+    // Print ID
+    for (int i = 24; i < 28; i += 2) {
+        PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  ID", INDEX_TO_BLOCK(i), data[31 - i], data[31 - i - 1]);
+    }
+    PrintAndLogEx(INFO, "------+----------+-----------------------------");
+
+    // Print UM1
+    for (int i = 28; i < 32; i += 2) {
+        PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  UM1", INDEX_TO_BLOCK(i), data[31 - i], data[31 - i - 1]);
+    }
+    PrintAndLogEx(INFO, "------+----------+-----------------------------");
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "Tag ID:    %02X %02X %02X %02X", data[7], data[6], data[5], data[4]);
+    PrintAndLogEx(INFO, "Lockbit 0: %d", (data[3] & LOCKBIT_0) ? 1 : 0);
+    PrintAndLogEx(INFO, "Lockbit 1: %d", (data[3] & LOCKBIT_1) ? 1 : 0);
+    PrintAndLogEx(INFO, "Tag is %s.", (data[3] & LOCKBIT_0) ? _RED_("LOCKED") : _GREEN_("UNLOCKED"));
     PrintAndLogEx(NORMAL, "");
 
 }
@@ -53,7 +87,7 @@ int em4x70_info(void) {
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X70_INFO, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "(em4x70) timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "(em4x70) Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
