@@ -293,10 +293,10 @@ static void deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *data
 }
 
 static int select_file(const char *select_by, const char *file_id, bool use_14b) {
-    size_t file_id_len = strlen(file_id) / 2;
+    int file_id_len = strlen(file_id) / 2;
 
     char cmd[50];
-    sprintf(cmd, "00%s%s0C%02lu%s", SELECT, select_by, file_id_len, file_id);
+    sprintf(cmd, "00%s%s0C%02X%s", SELECT, select_by, file_id_len, file_id);
 
     return exchange_commands_noout(cmd, false, true, use_14b);
 }
