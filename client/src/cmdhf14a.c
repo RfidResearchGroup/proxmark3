@@ -2129,6 +2129,12 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
 }
 
 static int CmdHf14AFindapdu(const char *Cmd) {
+    // TODO: What response values should be considerd "valid" or "instersting" (worth dispalying)?
+    // TODO: Option to select AID/File (and skip INS 0xA4).
+    // TODO: Validate the decoding of the APDU (not specific to this command, check
+    //       https://cardwerk.com/smartcards/smartcard_standard_ISO7816-4_5_basic_organizations.aspx#chap5_3_2).
+    // TODO: Check all cases (APDUs) with no data bytes (no/short/extended length).
+    // TODO: Option to blacklist instructions (or whole APDUs).
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a apdufind",
                   "Enumerate APDU's of ISO7816 protocol to find valid CLS/INS/P1P2 commands.\n"
@@ -2141,11 +2147,12 @@ static int CmdHf14AFindapdu(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("c", "cla", "<hex>", "start CLASS value (1 hex byte)"),
-        arg_str0("i", "ins", "<hex>", "start INSTRUCTION value (1 hex byte)"),
-        arg_str0(NULL, "p1", "<hex>", "start P1 value (1 hex byte)"),
-        arg_str0(NULL, "p2", "<hex>", "start P2 value (1 hex byte)"),
-        arg_lit0("v", "verbose", "verbose output"),
+        arg_str0("c",  "cla",    "<hex>",    "Start value of CLASS (1 hex byte)"),
+        arg_str0("i",  "ins",    "<hex>",    "Start value of INSTRUCTION (1 hex byte)"),
+        arg_str0(NULL, "p1",     "<hex>",    "Start value of P1 (1 hex byte)"),
+        arg_str0(NULL, "p2",     "<hex>",    "Start value of P2 (1 hex byte)"),
+        arg_u64_0("r", "reset",  "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
+        arg_lit0("v",  "verbose",            "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2153,20 +2160,18 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     int cla_len = 0;
     uint8_t cla_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 1, cla_arg, &cla_len);
-
     int ins_len = 0;
     uint8_t ins_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 2, ins_arg, &ins_len);
-
     int p1_len = 0;
     uint8_t p1_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 3, p1_arg, &p1_len);
-
     int p2_len = 0;
     uint8_t p2_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 4, p2_arg, &p2_len);
+    uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60); // Reset every 5 minutes.
+    bool verbose = arg_get_lit(ctx, 6);
 
-    bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2180,21 +2185,20 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
 
-    // Check if the tag reponde to APDUs.
+    // Check if the tag reponds to APDUs.
     PrintAndLogEx(INFO, "Sending a test APDU (select file command) to check if the tag is responding to APDU");
     param_gethex_to_eol("00a404000aa000000440000101000100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
-    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, true, false, response, sizeof(response), &response_n);
     if (res) {
-        DropField();
         PrintAndLogEx(FAILED, "Tag did not responde to a test APDU (select file command). Aborting");
         return res;
     }
     PrintAndLogEx(SUCCESS, "Got response. Starting the APDU finder [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
-    activate_field = false;
     bool inc_p1 = true;
-    uint64_t t1 = msclock();
+    uint64_t t_start = msclock();
+    uint64_t t_last_reset = msclock();
 
     // Enumerate APDUs.
     do {
@@ -2224,7 +2228,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                 uint16_t sw = get_sw(response, response_n);
                 bool command_with_le = false;
                 if (sw == 0x6700) {
-                    PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04X - %s)", cla, ins, p1, p2,
+                    PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
                                   sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                     PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
                     uint8_t command2[7] = {cla, ins, p1, p2, 0x00};
@@ -2237,17 +2241,16 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                 }
 
                 // Check response.
-                // TODO: What response values should be considerd "valid" or "instersting"?
                 sw = get_sw(response, response_n);
                 if (sw != 0x6a86 &&
                         sw != 0x6986 &&
                         sw != 0x6d00
                    ) {
                     if (command_with_le) {
-                        PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X00 (%04X - %s)", cla, ins, p1, p2,
+                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X00\": %04X (%s)", cla, ins, p1, p2,
                                       sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                     } else {
-                        PrintAndLogEx(INFO, "Got response for APDU: %02X%02X%02X%02X (%04X - %s)", cla, ins, p1, p2,
+                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
                                       sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                     }
                     // Show response data.
@@ -2256,6 +2259,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                                       sprint_ascii(response, response_n - 2));
                     }
                 }
+                activate_field = false; // Do not reativate the filed until the next reset.
             } while (++ins != ins_arg[0]);
             // Increment P1/P2 in an alternating fashion.
             if (inc_p1) {
@@ -2264,6 +2268,14 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                 p2++;
             }
             inc_p1 = !inc_p1;
+            // Check if re-selecting the card is needed.
+            uint64_t t_since_last_reset = ((msclock() - t_last_reset) / 1000);
+            if (t_since_last_reset > reset_time) {
+                DropField();
+                activate_field = true;
+                t_last_reset = msclock();
+                PrintAndLogEx(INFO, "Last reset was %" PRIu64 " seconds ago. Reseting the tag to prevent timeout issues", t_since_last_reset);
+            }
             PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
         } while (p1 != p1_arg[0] || p2 != p2_arg[0]);
         cla++;
@@ -2271,7 +2283,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     } while (cla != cla_arg[0]);
 
 out:
-    PrintAndLogEx(SUCCESS, "Runtime: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+    PrintAndLogEx(SUCCESS, "Runtime: %" PRIu64 " seconds\n", (msclock() - t_start) / 1000);
     DropField();
     return PM3_SUCCESS;
 }
