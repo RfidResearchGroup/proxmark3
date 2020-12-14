@@ -26,6 +26,9 @@
 #include "des.h"                    // mbedtls_des_key_set_parity
 #include "cmdhf14b.h"               // exchange_14b_apdu
 #include "iso14b.h"                 // ISO14B_CONNECT etc
+#include "crapto1/crapto1.h"        // prng_successor
+#include "commonutil.h"             // num_to_bytes
+#include "util_posix.h"             // msclock
 
 #define TIMEOUT 2000
 
@@ -61,6 +64,9 @@
 
 // App IDs
 #define AID_MRTD "A0000002471001"
+
+uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
+uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 
 static int CmdHelp(const char *Cmd);
 
@@ -481,16 +487,9 @@ static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byt
 
     PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 20));
 
-    // TODO: hacky
-    char offsethex[5];
-    sprintf(offsethex, "%04X", offset);
-    char offsetbuffer[8];
-    memcpy(offsetbuffer, offsethex, 2);
-    int p1 = (int)strtol(offsetbuffer, NULL, 16);
-    memcpy(offsetbuffer, offsethex + 2, 2);
-    int p2 = (int)strtol(offsetbuffer, NULL, 16);
-    temp[2] = p1;
-    temp[3] = p2;
+    // Set p1 and p2
+    temp[2] = (uint8_t)(offset >> 8);
+    temp[3] = (uint8_t)(offset >> 0);
 
     int cmdlen = pad_block(temp, 4, cmd);
     PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
@@ -523,7 +522,7 @@ static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byt
     memcpy(data + 3, do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    sprintf(command, "0C%s%02X%02X%02X%s00", READ_BINARY, p1, p2, lc, sprint_hex_inrow(data, lc));
+    sprintf(command, "0C%s%04X%02X%s00", READ_BINARY, offset, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
     if (exchange_commands(command, dataout, dataoutlen, false, true, use_14b) == false) {
@@ -727,6 +726,13 @@ static bool dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char
     return true;
 }
 
+static void rng(int length, uint8_t *dataout) {
+    // Do very very secure prng operations
+    for (int i = 0; i < (length / 4); i++) {
+        num_to_bytes(prng_successor(msclock() + i, 32), 4, &dataout[i * 4]);
+    }
+}
+
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t response[25000];
     uint8_t rnd_ic[8];
@@ -735,12 +741,9 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     int resplen = 0;
     // bool BAC = true;
     uint8_t S[32];
-    // TODO: Code sponsored jointly by duracell and sony
-    uint8_t rnd_ifd[8] = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA};
-    uint8_t k_ifd[16] = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA};
-    // TODO: get these _types into a better spot
-    uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
-    uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
+    uint8_t rnd_ifd[8], k_ifd[16];
+    rng(8, rnd_ifd);
+    rng(16, k_ifd);
 
     bool use_14b = false;
 
