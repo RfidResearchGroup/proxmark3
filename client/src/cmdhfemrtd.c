@@ -65,8 +65,9 @@
 // App IDs
 #define AID_MRTD "A0000002471001"
 
-uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
-uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
+// DESKey Types
+const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
+const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 
 static int CmdHelp(const char *Cmd);
 
@@ -271,7 +272,7 @@ static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *outp
 }
 
 
-static void deskey(uint8_t *seed, uint8_t *type, int length, uint8_t *dataout) {
+static void deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *dataout) {
     PrintAndLogEx(DEBUG, "seed: %s", sprint_hex_inrow(seed, 16));
 
     // combine seed and type
