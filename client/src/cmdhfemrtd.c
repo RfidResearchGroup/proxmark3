@@ -379,7 +379,7 @@ static void _convert_filename(const char *file, uint8_t *dataout) {
     dataout[1] = (int)strtol(temp, NULL, 16);
 }
 
-static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *file, bool use_14b) {
+static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *select_by, const char *file, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -391,7 +391,7 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     char command[54];
     uint8_t cmd[8];
     uint8_t data[21];
-    uint8_t temp[8] = {0x0c, 0xa4, 0x02, 0x0c};
+    uint8_t temp[8] = {0x0c, 0xa4, strtol(select_by, NULL, 16), 0x0c};
 
     int cmdlen = pad_block(temp, 4, cmd);
     int datalen = pad_block(file_id, 2, data);
@@ -431,7 +431,7 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     memcpy(data + (datalen + 3), do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    sprintf(command, "0C%s020C%02X%s00", SELECT, lc, sprint_hex_inrow(data, lc));
+    sprintf(command, "0C%s%s0C%02X%s00", SELECT, select_by, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
     if (exchange_commands(command, response, &resplen, false, true, use_14b) == false) {
@@ -517,7 +517,7 @@ static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *s
 }
 
 
-static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_14b) {
+static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure, bool use_14b) {
     uint8_t response[35000];
     int resplen = 0;
     uint8_t tempresponse[500];
@@ -525,12 +525,12 @@ static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *
     int toread = 4;
     int offset = 0;
 
-    if (kenc == NULL) {
-        if (_read_binary(offset, toread, response, &resplen, use_14b) == false) {
+    if (use_secure == true) {
+        if (_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen, use_14b) == false) {
             return false;
         }
     } else {
-        if (_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen, use_14b) == false) {
+        if (_read_binary(offset, toread, response, &resplen, use_14b) == false) {
             return false;
         }
     }
@@ -678,19 +678,31 @@ static bool file_tag_to_file_id(uint8_t *datain, char *filenameout, char *dataou
     return true;
 }
 
-static bool dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_14b) {
+static bool select_and_read(uint8_t *dataout, int *dataoutlen, const char *file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure, bool use_14b) {
+    if (use_secure == true) {
+        if (secure_select_file(ks_enc, ks_mac, ssc, P1_SELECT_BY_EF, file, use_14b) == false) {
+            PrintAndLogEx(ERR, "Failed to secure select %s.", file);
+            return false;
+        }
+    } else {
+        if (select_file(P1_SELECT_BY_EF, file, use_14b) == false) {
+            PrintAndLogEx(ERR, "Failed to select %s.", file);
+            return false;
+        }
+    }
+
+    if (read_file(dataout, dataoutlen, ks_enc, ks_mac, ssc, use_secure, use_14b) == false) {
+        PrintAndLogEx(ERR, "Failed to read %s.", file);
+        return false;
+    }
+    return true;
+}
+
+static bool dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
     uint8_t response[35000];
     int resplen = 0;
 
-    if (secure_select_file(ks_enc, ks_mac, ssc, file, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select %s, crypto checksum check failed.", name);
-        DropField();
-        return false;
-    }
-
-    if (read_file(response, &resplen, ks_enc, ks_mac, ssc, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read %s.", name);
-        DropField();
+    if (select_and_read(response, &resplen, file, ks_enc, ks_mac, ssc, use_secure, use_14b) == false) {
         return false;
     }
 
@@ -709,17 +721,12 @@ static void rng(int length, uint8_t *dataout) {
 }
 
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
-    uint8_t response[25000];
-    uint8_t rnd_ic[8];
-    uint8_t kenc[50];
-    uint8_t kmac[50];
+    uint8_t response[35000] = { 0x00 };
+    uint8_t ssc[8] = { 0x00 };
+    uint8_t ks_enc[16] = { 0x00 };
+    uint8_t ks_mac[16] = { 0x00 };
     int resplen = 0;
     bool BAC = false;
-    uint8_t S[32];
-    uint8_t rnd_ifd[8], k_ifd[16];
-    rng(8, rnd_ifd);
-    rng(16, k_ifd);
-
     bool use_14b = false;
 
     // Try to 14a
@@ -751,7 +758,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     // Select and read EF_CardAccess
     if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, use_14b)) {
-        read_file(response, &resplen, NULL, NULL, NULL, use_14b);
+        read_file(response, &resplen, NULL, NULL, NULL, false, use_14b);
         PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
         PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     } else {
@@ -774,7 +781,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         // Select EF_DG1
         select_file(P1_SELECT_BY_EF, EF_DG1, use_14b);
 
-        if (read_file(response, &resplen, NULL, NULL, NULL, use_14b) == false) {
+        if (read_file(response, &resplen, NULL, NULL, NULL, false, use_14b) == false) {
             BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
@@ -784,7 +791,16 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     }
 
     if (BAC) {
-        // TODO: account for the case of no BAC
+        uint8_t rnd_ic[8] = { 0x00 };
+        uint8_t kenc[50] = { 0x00 };
+        uint8_t kmac[50] = { 0x00 };
+        uint8_t k_icc[16] = { 0x00 };
+        uint8_t S[32] = { 0x00 };
+
+        uint8_t rnd_ifd[8], k_ifd[16];
+        rng(8, rnd_ifd);
+        rng(16, k_ifd);
+
         PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
         PrintAndLogEx(DEBUG, "dob: %s", dob);
         PrintAndLogEx(DEBUG, "exp: %s", expiry);
@@ -853,10 +869,6 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
             return PM3_ESOFT;
         }
 
-        uint8_t ssc[8] = { 0x00 };
-        uint8_t ks_enc[16] = { 0x00 };
-        uint8_t ks_mac[16] = { 0x00 };
-        uint8_t k_icc[16] = { 0x00 };
         memcpy(k_icc, dec_output + 16, 16);
 
         // Calculate session keys
@@ -876,47 +888,43 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
         memcpy(ssc + 4, rnd_ifd + 4, 4);
 
         PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
-
-        // Select EF_COM
-        if (secure_select_file(ks_enc, ks_mac, ssc, EF_COM, use_14b) == false) {
-            PrintAndLogEx(ERR, "Failed to secure select EF_COM.");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        if (read_file(response, &resplen, ks_enc, ks_mac, ssc, use_14b) == false) {
-            PrintAndLogEx(ERR, "Failed to read EF_COM.");
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
-        PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-        saveFile("EF_COM", ".BIN", response, resplen);
-
-        uint8_t filelist[50];
-        int filelistlen = 0;
-
-        if (ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
-            PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
-
-        for (int i = 0; i < filelistlen; i++) {
-            char file_id[5] = {0x00};
-            char file_name[8] = {0x00};
-            if (file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
-                PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
-                continue;
-            }
-            PrintAndLogEx(DEBUG, "Current file: %s", file_name);
-            dump_file(ks_enc, ks_mac, ssc, file_id, file_name, use_14b);
-        }
-
-        dump_file(ks_enc, ks_mac, ssc, EF_SOD, "EF_SOD", use_14b);
     }
+
+    // Select EF_COM
+    if (select_and_read(response, &resplen, EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM.");
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+    saveFile("EF_COM", ".BIN", response, resplen);
+
+    uint8_t filelist[50];
+    int filelistlen = 0;
+
+    if (ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
+
+    // Dump all files in the file list
+    for (int i = 0; i < filelistlen; i++) {
+        char file_id[5] = { 0x00 };
+        char file_name[8] = { 0x00 };
+        if (file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+            continue;
+        }
+        PrintAndLogEx(DEBUG, "Current file: %s", file_name);
+        dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
+    }
+
+    // Dump EF_SOD
+    dump_file(ks_enc, ks_mac, ssc, EF_SOD, "EF_SOD", BAC, use_14b);
 
     DropField();
     return PM3_SUCCESS;
