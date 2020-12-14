@@ -28,7 +28,11 @@
 #include "commonutil.h"             // num_to_bytes
 #include "util_posix.h"             // msclock
 
-#define TIMEOUT 2000
+// Max file size in bytes. Used in several places.
+// Average EF_DG2 seems to be around 20-25kB or so, but ICAO doesn't set an upper limit
+// Iris data seems to be suggested to be around 35kB per eye (Presumably bumping up the file size to around 70kB)
+// but as we cannot read that until we implement PACE, 35k seems to be a safe point.
+#define MAX_FILE_SIZE 35000
 
 // ISO7816 commands
 #define SELECT "A4"
@@ -518,7 +522,7 @@ static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *s
 
 
 static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure, bool use_14b) {
-    uint8_t response[35000];
+    uint8_t response[MAX_FILE_SIZE];
     int resplen = 0;
     uint8_t tempresponse[500];
     int tempresplen = 0;
@@ -699,7 +703,7 @@ static bool select_and_read(uint8_t *dataout, int *dataoutlen, const char *file,
 }
 
 static bool dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
-    uint8_t response[35000];
+    uint8_t response[MAX_FILE_SIZE];
     int resplen = 0;
 
     if (select_and_read(response, &resplen, file, ks_enc, ks_mac, ssc, use_secure, use_14b) == false) {
@@ -720,12 +724,114 @@ static void rng(int length, uint8_t *dataout) {
     }
 }
 
+static bool do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool use_14b) {
+    uint8_t response[MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
+
+    uint8_t rnd_ic[8] = { 0x00 };
+    uint8_t kenc[50] = { 0x00 };
+    uint8_t kmac[50] = { 0x00 };
+    uint8_t k_icc[16] = { 0x00 };
+    uint8_t S[32] = { 0x00 };
+
+    uint8_t rnd_ifd[8], k_ifd[16];
+    rng(8, rnd_ifd);
+    rng(16, k_ifd);
+
+    PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
+    PrintAndLogEx(DEBUG, "dob: %s", dob);
+    PrintAndLogEx(DEBUG, "exp: %s", expiry);
+
+    char documentnumbercd = calculate_check_digit(documentnumber);
+    char dobcd = calculate_check_digit(dob);
+    char expirycd = calculate_check_digit(expiry);
+
+    char kmrz[25];
+    sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
+    PrintAndLogEx(DEBUG, "kmrz: %s", kmrz);
+
+    uint8_t kseed[16] = { 0x00 };
+    mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
+    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
+
+    deskey(kseed, KENC_type, 16, kenc);
+    deskey(kseed, KMAC_type, 16, kmac);
+    PrintAndLogEx(DEBUG, "kenc: %s", sprint_hex_inrow(kenc, 16));
+    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
+
+    // Get Challenge
+    if (get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
+        PrintAndLogEx(ERR, "Couldn't get challenge.");
+        return false;
+    }
+    PrintAndLogEx(DEBUG, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
+
+    memcpy(S, rnd_ifd, 8);
+    memcpy(S + 8, rnd_ic, 8);
+    memcpy(S + 16, k_ifd, 16);
+
+    PrintAndLogEx(DEBUG, "S: %s", sprint_hex_inrow(S, 32));
+
+    uint8_t iv[8] = { 0x00 };
+    uint8_t e_ifd[32] = { 0x00 };
+
+    des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
+    PrintAndLogEx(DEBUG, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
+
+    uint8_t m_ifd[8] = { 0x00 };
+
+    retail_mac(kmac, e_ifd, 32, m_ifd);
+    PrintAndLogEx(DEBUG, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
+
+    uint8_t cmd_data[40];
+    memcpy(cmd_data, e_ifd, 32);
+    memcpy(cmd_data + 32, m_ifd, 8);
+
+    // Do external authentication
+    if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen, use_14b) == false) {
+        PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
+        return false;
+    }
+    PrintAndLogEx(INFO, "External authentication successful.");
+
+    uint8_t dec_output[32] = { 0x00 };
+    des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
+    PrintAndLogEx(DEBUG, "dec_output: %s", sprint_hex_inrow(dec_output, 32));
+
+    if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
+        PrintAndLogEx(ERR, "Challenge failed, rnd_ifd does not match.");
+        return false;
+    }
+
+    memcpy(k_icc, dec_output + 16, 16);
+
+    // Calculate session keys
+    for (int x = 0; x < 16; x++) {
+        kseed[x] = k_ifd[x] ^ k_icc[x];
+    }
+
+    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
+
+    deskey(kseed, KENC_type, 16, ks_enc);
+    deskey(kseed, KMAC_type, 16, ks_mac);
+
+    PrintAndLogEx(DEBUG, "ks_enc: %s", sprint_hex_inrow(ks_enc, 16));
+    PrintAndLogEx(DEBUG, "ks_mac: %s", sprint_hex_inrow(ks_mac, 16));
+
+    memcpy(ssc, rnd_ic + 4, 4);
+    memcpy(ssc + 4, rnd_ifd + 4, 4);
+
+    PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
+
+    return true;
+}
+
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
-    uint8_t response[35000] = { 0x00 };
+    uint8_t response[MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
     uint8_t ssc[8] = { 0x00 };
     uint8_t ks_enc[16] = { 0x00 };
     uint8_t ks_mac[16] = { 0x00 };
-    int resplen = 0;
     bool BAC = false;
     bool use_14b = false;
 
@@ -790,111 +896,20 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         }
     }
 
-    if (BAC == true && BAC_available == false) {
-        PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supplied MRZ data. Cannot proceed.");
-        PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
+    // Do Basic Access Aontrol
     if (BAC) {
-        uint8_t rnd_ic[8] = { 0x00 };
-        uint8_t kenc[50] = { 0x00 };
-        uint8_t kmac[50] = { 0x00 };
-        uint8_t k_icc[16] = { 0x00 };
-        uint8_t S[32] = { 0x00 };
-
-        uint8_t rnd_ifd[8], k_ifd[16];
-        rng(8, rnd_ifd);
-        rng(16, k_ifd);
-
-        PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
-        PrintAndLogEx(DEBUG, "dob: %s", dob);
-        PrintAndLogEx(DEBUG, "exp: %s", expiry);
-
-        char documentnumbercd = calculate_check_digit(documentnumber);
-        char dobcd = calculate_check_digit(dob);
-        char expirycd = calculate_check_digit(expiry);
-
-        char kmrz[25];
-        sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
-        PrintAndLogEx(DEBUG, "kmrz: %s", kmrz);
-
-        uint8_t kseed[16] = { 0x00 };
-        mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
-        PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
-
-        deskey(kseed, KENC_type, 16, kenc);
-        deskey(kseed, KMAC_type, 16, kmac);
-        PrintAndLogEx(DEBUG, "kenc: %s", sprint_hex_inrow(kenc, 16));
-        PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
-
-        // Get Challenge
-        if (get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
-            PrintAndLogEx(ERR, "Couldn't get challenge.");
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(DEBUG, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
-
-        memcpy(S, rnd_ifd, 8);
-        memcpy(S + 8, rnd_ic, 8);
-        memcpy(S + 16, k_ifd, 16);
-
-        PrintAndLogEx(DEBUG, "S: %s", sprint_hex_inrow(S, 32));
-
-        uint8_t iv[8] = { 0x00 };
-        uint8_t e_ifd[32] = { 0x00 };
-
-        des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
-        PrintAndLogEx(DEBUG, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
-
-        uint8_t m_ifd[8] = { 0x00 };
-
-        retail_mac(kmac, e_ifd, 32, m_ifd);
-        PrintAndLogEx(DEBUG, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
-
-        uint8_t cmd_data[40];
-        memcpy(cmd_data, e_ifd, 32);
-        memcpy(cmd_data + 32, m_ifd, 8);
-
-        // Do external authentication
-        if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen, use_14b) == false) {
-            PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "External authentication successful.");
-
-        uint8_t dec_output[32] = { 0x00 };
-        des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
-        PrintAndLogEx(DEBUG, "dec_output: %s", sprint_hex_inrow(dec_output, 32));
-
-        if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
-            PrintAndLogEx(ERR, "Challenge failed, rnd_ifd does not match.");
+        // If BAC isn't available, exit out and warn user.
+        if (!BAC_available) {
+            PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supplied MRZ data. Cannot proceed.");
+            PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
             DropField();
             return PM3_ESOFT;
         }
 
-        memcpy(k_icc, dec_output + 16, 16);
-
-        // Calculate session keys
-        for (int x = 0; x < 16; x++) {
-            kseed[x] = k_ifd[x] ^ k_icc[x];
+        if (do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac, use_14b) == false) {
+            DropField();
+            return PM3_ESOFT;
         }
-
-        PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
-
-        deskey(kseed, KENC_type, 16, ks_enc);
-        deskey(kseed, KMAC_type, 16, ks_mac);
-
-        PrintAndLogEx(DEBUG, "ks_enc: %s", sprint_hex_inrow(ks_enc, 16));
-        PrintAndLogEx(DEBUG, "ks_mac: %s", sprint_hex_inrow(ks_mac, 16));
-
-        memcpy(ssc, rnd_ic + 4, 4);
-        memcpy(ssc + 4, rnd_ifd + 4, 4);
-
-        PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
     }
 
     // Select EF_COM
