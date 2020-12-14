@@ -269,7 +269,6 @@ static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *outp
     memcpy(output, intermediate_des, 8);
 }
 
-
 static void deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *dataout) {
     PrintAndLogEx(DEBUG, "seed: %s", sprint_hex_inrow(seed, 16));
 
@@ -322,42 +321,6 @@ static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *da
     sprintf(cmd, "00%s%04i%02i", READ_BINARY, offset, bytes_to_read);
 
     return exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
-}
-
-static int read_file(uint8_t *dataout, int *dataoutlen, bool use_14b) {
-    uint8_t response[PM3_CMD_DATA_SIZE];
-    int resplen = 0;
-    uint8_t tempresponse[PM3_CMD_DATA_SIZE];
-    int tempresplen = 0;
-
-    if (!_read_binary(0, 4, response, &resplen, use_14b)) {
-        return false;
-    }
-
-    int datalen = asn1datalength(response, resplen, 1);
-    int readlen = datalen - (3 - asn1fieldlength(response, resplen, 1));
-    int offset = 4;
-    int toread;
-
-    while (readlen > 0) {
-        toread = readlen;
-        if (readlen > 118) {
-            toread = 118;
-        }
-
-        if (!_read_binary(offset, toread, tempresponse, &tempresplen, use_14b)) {
-            return false;
-        }
-
-        memcpy(&response[resplen], &tempresponse, tempresplen);
-        offset += toread;
-        readlen -= toread;
-        resplen += tempresplen;
-    }
-
-    memcpy(dataout, &response, resplen);
-    *dataoutlen = resplen;
-    return true;
 }
 
 static void bump_ssc(uint8_t *ssc) {
@@ -553,21 +516,28 @@ static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *s
     return true;
 }
 
-static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t *dataout, int *dataoutlen, bool use_14b) {
-    // TODO: join this with regular read file
-    uint8_t response[25000];
+
+static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_14b) {
+    uint8_t response[35000];
     int resplen = 0;
     uint8_t tempresponse[500];
     int tempresplen = 0;
+    int toread = 4;
+    int offset = 0;
 
-    if (!_secure_read_binary_decrypt(kenc, kmac, ssc, 0, 4, response, &resplen, use_14b)) {
-        return false;
+    if (kenc == NULL) {
+        if (_read_binary(offset, toread, response, &resplen, use_14b) == false) {
+            return false;
+        }
+    } else {
+        if (_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen, use_14b) == false) {
+            return false;
+        }
     }
 
     int datalen = asn1datalength(response, resplen, 1);
     int readlen = datalen - (3 - asn1fieldlength(response, resplen, 1));
-    int offset = 4;
-    int toread;
+    offset = 4;
 
     while (readlen > 0) {
         toread = readlen;
@@ -575,8 +545,14 @@ static int secure_read_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint8_t 
             toread = 118;
         }
 
-        if (!_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b)) {
-            return false;
+        if (kenc == NULL) {
+            if (_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+                return false;
+            }
+        } else {
+            if (_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+                return false;
+            }
         }
 
         memcpy(response + resplen, tempresponse, tempresplen);
@@ -712,7 +688,7 @@ static bool dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char
         return false;
     }
 
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
+    if (read_file(response, &resplen, ks_enc, ks_mac, ssc, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read %s.", name);
         DropField();
         return false;
@@ -738,7 +714,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
     uint8_t kenc[50];
     uint8_t kmac[50];
     int resplen = 0;
-    // bool BAC = true;
+    bool BAC = false;
     uint8_t S[32];
     uint8_t rnd_ifd[8], k_ifd[16];
     rng(8, rnd_ifd);
@@ -775,7 +751,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     // Select and read EF_CardAccess
     if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, use_14b)) {
-        read_file(response, &resplen, use_14b);
+        read_file(response, &resplen, NULL, NULL, NULL, use_14b);
         PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
         PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     } else {
@@ -791,153 +767,156 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry) {
 
     // Select EF_COM
     if (select_file(P1_SELECT_BY_EF, EF_COM, use_14b) == false) {
-        // BAC = true;
+        BAC = true;
         PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
-        // BAC = false;
+        BAC = false;
         // Select EF_DG1
         select_file(P1_SELECT_BY_EF, EF_DG1, use_14b);
 
-        if (read_file(response, &resplen, use_14b) == false) {
-            // BAC = true;
+        if (read_file(response, &resplen, NULL, NULL, NULL, use_14b) == false) {
+            BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
-            // BAC = false;
+            BAC = false;
             PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
-    // TODO: account for the case of no BAC
-    PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
-    PrintAndLogEx(DEBUG, "dob: %s", dob);
-    PrintAndLogEx(DEBUG, "exp: %s", expiry);
 
-    char documentnumbercd = calculate_check_digit(documentnumber);
-    char dobcd = calculate_check_digit(dob);
-    char expirycd = calculate_check_digit(expiry);
+    if (BAC) {
+        // TODO: account for the case of no BAC
+        PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
+        PrintAndLogEx(DEBUG, "dob: %s", dob);
+        PrintAndLogEx(DEBUG, "exp: %s", expiry);
 
-    char kmrz[25];
-    sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
-    PrintAndLogEx(DEBUG, "kmrz: %s", kmrz);
+        char documentnumbercd = calculate_check_digit(documentnumber);
+        char dobcd = calculate_check_digit(dob);
+        char expirycd = calculate_check_digit(expiry);
 
-    uint8_t kseed[16] = {0x00};
-    mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
-    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
+        char kmrz[25];
+        sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
+        PrintAndLogEx(DEBUG, "kmrz: %s", kmrz);
 
-    deskey(kseed, KENC_type, 16, kenc);
-    deskey(kseed, KMAC_type, 16, kmac);
-    PrintAndLogEx(DEBUG, "kenc: %s", sprint_hex_inrow(kenc, 16));
-    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
+        uint8_t kseed[16] = { 0x00 };
+        mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
+        PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
 
-    // Get Challenge
-    if (get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Couldn't get challenge.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(DEBUG, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
+        deskey(kseed, KENC_type, 16, kenc);
+        deskey(kseed, KMAC_type, 16, kmac);
+        PrintAndLogEx(DEBUG, "kenc: %s", sprint_hex_inrow(kenc, 16));
+        PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
 
-    memcpy(S, rnd_ifd, 8);
-    memcpy(S + 8, rnd_ic, 8);
-    memcpy(S + 16, k_ifd, 16);
-
-    PrintAndLogEx(DEBUG, "S: %s", sprint_hex_inrow(S, 32));
-
-    uint8_t iv[8] = { 0x00 };
-    uint8_t e_ifd[32] = { 0x00 };
-
-    des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
-    PrintAndLogEx(DEBUG, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
-
-    uint8_t m_ifd[8] = { 0x00 };
-
-    retail_mac(kmac, e_ifd, 32, m_ifd);
-    PrintAndLogEx(DEBUG, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
-
-    uint8_t cmd_data[40];
-    memcpy(cmd_data, e_ifd, 32);
-    memcpy(cmd_data + 32, m_ifd, 8);
-
-    // Do external authentication
-    if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "External authentication successful.");
-
-    uint8_t dec_output[32] = { 0x00 };
-    des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
-    PrintAndLogEx(DEBUG, "dec_output: %s", sprint_hex_inrow(dec_output, 32));
-
-    if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
-        PrintAndLogEx(ERR, "Challenge failed, rnd_ifd does not match.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
-    uint8_t k_icc[16] = { 0x00 };
-    memcpy(k_icc, dec_output + 16, 16);
-
-    // Calculate session keys
-    for (int x = 0; x < 16; x++) {
-        kseed[x] = k_ifd[x] ^ k_icc[x];
-    }
-
-    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
-
-    deskey(kseed, KENC_type, 16, ks_enc);
-    deskey(kseed, KMAC_type, 16, ks_mac);
-
-    PrintAndLogEx(DEBUG, "ks_enc: %s", sprint_hex_inrow(ks_enc, 16));
-    PrintAndLogEx(DEBUG, "ks_mac: %s", sprint_hex_inrow(ks_mac, 16));
-
-    memcpy(ssc, rnd_ic + 4, 4);
-    memcpy(ssc + 4, rnd_ifd + 4, 4);
-
-    PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
-
-    // Select EF_COM
-    if (secure_select_file(ks_enc, ks_mac, ssc, EF_COM, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to secure select EF_COM.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (secure_read_file(ks_enc, ks_mac, ssc, response, &resplen, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_COM.");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_COM", ".BIN", response, resplen);
-
-    uint8_t filelist[50];
-    int filelistlen = 0;
-
-    if (ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
-        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
-
-    for (int i = 0; i < filelistlen; i++) {
-        char file_id[5] = {0x00};
-        char file_name[8] = {0x00};
-        if (file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
-            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
-            continue;
+        // Get Challenge
+        if (get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
+            PrintAndLogEx(ERR, "Couldn't get challenge.");
+            DropField();
+            return PM3_ESOFT;
         }
-        PrintAndLogEx(DEBUG, "Current file: %s", file_name);
-        dump_file(ks_enc, ks_mac, ssc, file_id, file_name, use_14b);
-    }
+        PrintAndLogEx(DEBUG, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
 
-    dump_file(ks_enc, ks_mac, ssc, EF_SOD, "EF_SOD", use_14b);
+        memcpy(S, rnd_ifd, 8);
+        memcpy(S + 8, rnd_ic, 8);
+        memcpy(S + 16, k_ifd, 16);
+
+        PrintAndLogEx(DEBUG, "S: %s", sprint_hex_inrow(S, 32));
+
+        uint8_t iv[8] = { 0x00 };
+        uint8_t e_ifd[32] = { 0x00 };
+
+        des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
+        PrintAndLogEx(DEBUG, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
+
+        uint8_t m_ifd[8] = { 0x00 };
+
+        retail_mac(kmac, e_ifd, 32, m_ifd);
+        PrintAndLogEx(DEBUG, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
+
+        uint8_t cmd_data[40];
+        memcpy(cmd_data, e_ifd, 32);
+        memcpy(cmd_data + 32, m_ifd, 8);
+
+        // Do external authentication
+        if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen, use_14b) == false) {
+            PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "External authentication successful.");
+
+        uint8_t dec_output[32] = { 0x00 };
+        des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
+        PrintAndLogEx(DEBUG, "dec_output: %s", sprint_hex_inrow(dec_output, 32));
+
+        if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
+            PrintAndLogEx(ERR, "Challenge failed, rnd_ifd does not match.");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        uint8_t ssc[8] = { 0x00 };
+        uint8_t ks_enc[16] = { 0x00 };
+        uint8_t ks_mac[16] = { 0x00 };
+        uint8_t k_icc[16] = { 0x00 };
+        memcpy(k_icc, dec_output + 16, 16);
+
+        // Calculate session keys
+        for (int x = 0; x < 16; x++) {
+            kseed[x] = k_ifd[x] ^ k_icc[x];
+        }
+
+        PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
+
+        deskey(kseed, KENC_type, 16, ks_enc);
+        deskey(kseed, KMAC_type, 16, ks_mac);
+
+        PrintAndLogEx(DEBUG, "ks_enc: %s", sprint_hex_inrow(ks_enc, 16));
+        PrintAndLogEx(DEBUG, "ks_mac: %s", sprint_hex_inrow(ks_mac, 16));
+
+        memcpy(ssc, rnd_ic + 4, 4);
+        memcpy(ssc + 4, rnd_ifd + 4, 4);
+
+        PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
+
+        // Select EF_COM
+        if (secure_select_file(ks_enc, ks_mac, ssc, EF_COM, use_14b) == false) {
+            PrintAndLogEx(ERR, "Failed to secure select EF_COM.");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (read_file(response, &resplen, ks_enc, ks_mac, ssc, use_14b) == false) {
+            PrintAndLogEx(ERR, "Failed to read EF_COM.");
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
+        PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
+        saveFile("EF_COM", ".BIN", response, resplen);
+
+        uint8_t filelist[50];
+        int filelistlen = 0;
+
+        if (ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
+            PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
+
+        for (int i = 0; i < filelistlen; i++) {
+            char file_id[5] = {0x00};
+            char file_name[8] = {0x00};
+            if (file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+                PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+                continue;
+            }
+            PrintAndLogEx(DEBUG, "Current file: %s", file_name);
+            dump_file(ks_enc, ks_mac, ssc, file_id, file_name, use_14b);
+        }
+
+        dump_file(ks_enc, ks_mac, ssc, EF_SOD, "EF_SOD", use_14b);
+    }
 
     DropField();
     return PM3_SUCCESS;
