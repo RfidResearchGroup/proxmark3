@@ -55,14 +55,17 @@ static bool command_parity = true;
 #define EM4X70_COMMAND_WRITE                0x05
 #define EM4X70_COMMAND_UM2                  0x07
 
-static uint8_t gHigh = 0;
-static uint8_t gLow  = 0;
+// Constants used to determing high/low state of signal
+#define EM4X70_NOISE_THRESHOLD  13  // May depend on noise in environment
+#define HIGH_SIGNAL_THRESHOLD  (127 + EM4X70_NOISE_THRESHOLD)
+#define LOW_SIGNAL_THRESHOLD   (127 - EM4X70_NOISE_THRESHOLD)
 
-#define IS_HIGH(sample) (sample>gLow ? true : false)
-#define IS_LOW(sample) (sample<gHigh ? true : false)
+#define IS_HIGH(sample) (sample > LOW_SIGNAL_THRESHOLD ? true : false)
+#define IS_LOW(sample) (sample < HIGH_SIGNAL_THRESHOLD ? true : false)
+
+// Timing related macros
 #define IS_TIMEOUT(timeout_ticks) (GetTicks() > timeout_ticks)
 #define TICKS_ELAPSED(start_ticks) (GetTicks() - start_ticks)
-
 
 static uint8_t bits2byte(const uint8_t *bits, int length);
 static void bits2bytes(const uint8_t *bits, int length, uint8_t *out);
@@ -106,64 +109,20 @@ static void EM4170_setup_read(void) {
 
 static bool get_signalproperties(void) {
 
-    // calculate signal properties (mean amplitudes) from measured data:
-    // 32 amplitudes (maximum values) -> mean amplitude value -> gHigh -> gLow
-    bool signal_found = false;
-    int no_periods = 32, pct = 50, noise = 140; // pct originally 75, found 50 was working better for me
-    uint8_t sample_ref = 127;
-    uint8_t sample_max_mean = 0;
-    uint8_t sample_max[no_periods];
-    uint32_t sample_max_sum = 0;
-
-    memset(sample_max, 0x00, sizeof(sample_max));
+    // Simple check to ensure we see a signal above the noise threshold
+    uint32_t no_periods = 32;
 
     // wait until signal/noise > 1 (max. 32 periods)
-    for (int i = 0; i < TICKS_PER_FC * EM4X70_T_TAG_FULL_PERIOD * no_periods; i++) {
+    for (int i = 0; i < EM4X70_T_TAG_FULL_PERIOD * no_periods; i++) {
 
         // about 2 samples per bit period
-        WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_HALF_PERIOD);
+        WaitTicks(EM4X70_T_TAG_HALF_PERIOD);
 
-        if (AT91C_BASE_SSC->SSC_RHR > noise) {
-            signal_found = true;
-            break;
+        if (AT91C_BASE_SSC->SSC_RHR > HIGH_SIGNAL_THRESHOLD) {
+            return true;
         }
-
     }
-
-    if (signal_found == false)
-        return false;
-
-    // calculate mean maximum value of 32 periods, each period has a length of
-    // 3 single "full periods" to eliminate the influence of a listen window
-    for (int i = 0; i < no_periods; i++) {
-
-        uint32_t start_ticks = GetTicks();
-        //AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-        while (TICKS_ELAPSED(start_ticks) < TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD) {
-
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-
-            if (sample > sample_max[i])
-                sample_max[i] = sample;
-
-        }
-
-        sample_max_sum += sample_max[i];
-    }
-
-    sample_max_mean = sample_max_sum / no_periods;
-
-    // set global envelope variables
-    gHigh = sample_ref + pct * (sample_max_mean - sample_ref) / 100;
-    gLow  = sample_ref - pct * (sample_max_mean - sample_ref) / 100;
-
-    // Basic sanity check
-    if (gHigh - gLow < EM4X70_MIN_AMPLITUDE) {
-        return false;
-    }
-
-    Dbprintf("%s: gHigh %d gLow: %d", __func__, gHigh, gLow);
-    return true;
+    return false;
 }
 
 /**
