@@ -520,6 +520,7 @@ typedef struct {
 #define CMD_LF_EM4X70_WRITE                                               0x0261
 #define CMD_LF_EM4X70_UNLOCK                                              0x0262
 #define CMD_LF_EM4X70_AUTH                                                0x0263
+#define CMD_LF_EM4X70_WRITEPIN                                            0x0264
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E

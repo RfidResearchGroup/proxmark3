@@ -13,6 +13,10 @@
 
 #define EM4X70_NUM_BLOCKS 16
 
+// Common word/block addresses
+#define EM4X70_PIN_WORD_LOWER 10
+#define EM4X70_PIN_WORD_UPPER 11
+
 typedef struct {
     bool parity;
 

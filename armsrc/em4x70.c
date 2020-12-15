@@ -538,7 +538,7 @@ static bool em4x70_read_um2(void) {
 
 }
 
-static bool find_em4x70_Tag(void) {
+static bool find_em4x70_tag(void) {
     // function is used to check wether a tag on the proxmark is an
     // EM4170 tag or not -> speed up "lf search" process
     return find_listen_window(false);
@@ -635,7 +635,7 @@ void em4x70_info(em4x70_data_t *etd) {
     em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_em4x70_Tag()) {
+    if (get_signalproperties() && find_em4x70_tag()) {
         // Read ID, UM1 and UM2
         status = em4x70_read_id() && em4x70_read_um1() && em4x70_read_um2();
     }
@@ -655,7 +655,7 @@ void em4x70_write(em4x70_data_t *etd) {
     em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_em4x70_Tag()) {
+    if (get_signalproperties() && find_em4x70_tag()) {
 
         // Write
         status = write(etd->word, etd->address) == PM3_SUCCESS;
@@ -684,7 +684,7 @@ void em4x70_unlock(em4x70_data_t *etd) {
     em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_em4x70_Tag()) {
+    if (get_signalproperties() && find_em4x70_tag()) {
 
         // Read ID (required for send_pin command)
         if (em4x70_read_id()) {
@@ -718,7 +718,7 @@ void em4x70_auth(em4x70_data_t *etd) {
     em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_em4x70_Tag()) {
+    if (get_signalproperties() && find_em4x70_tag()) {
 
         // Authenticate and get tag response
         status = authenticate(etd->rnd, etd->frnd, response) == PM3_SUCCESS;
@@ -729,3 +729,42 @@ void em4x70_auth(em4x70_data_t *etd) {
     reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
 }
 
+void em4x70_write_pin(em4x70_data_t *etd) {
+
+    uint8_t status = 0;
+
+    command_parity = etd->parity;
+
+    init_tag();
+    em4x70_setup_read();
+
+    // Find the Tag
+    if (get_signalproperties() && find_em4x70_tag()) {
+
+        // Read ID (required for send_pin command)
+        if (em4x70_read_id()) {
+
+            // Write new PIN
+            if( (write( etd->pin & 0xFFFF,        EM4X70_PIN_WORD_UPPER) == PM3_SUCCESS) &&
+                (write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER) == PM3_SUCCESS)) {
+
+                // Now Try to authenticate using the new PIN
+
+                // Send PIN
+                status = send_pin(etd->pin) == PM3_SUCCESS;
+
+                // If the write succeeded, read the rest of the tag
+                if (status) {
+                    // Read Tag
+                    // ID doesn't change
+                    em4x70_read_um1();
+                    em4x70_read_um2();
+                }
+            }
+        }
+    }
+
+    StopTicks();
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X70_WRITEPIN, status, tag.data, sizeof(tag.data));
+}
