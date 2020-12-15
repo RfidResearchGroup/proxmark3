@@ -32,40 +32,40 @@
 // Average EF_DG2 seems to be around 20-25kB or so, but ICAO doesn't set an upper limit
 // Iris data seems to be suggested to be around 35kB per eye (Presumably bumping up the file size to around 70kB)
 // but as we cannot read that until we implement PACE, 35k seems to be a safe point.
-#define MAX_FILE_SIZE 35000
+#define EMRTD_MAX_FILE_SIZE 35000
 
 // ISO7816 commands
-#define SELECT "A4"
-#define EXTERNAL_AUTHENTICATE "82"
-#define GET_CHALLENGE "84"
-#define READ_BINARY "B0"
-#define P1_SELECT_BY_EF "02"
-#define P1_SELECT_BY_NAME "04"
-#define P2_PROPRIETARY "0C"
+#define EMRTD_SELECT "A4"
+#define EMRTD_EXTERNAL_AUTHENTICATE "82"
+#define EMRTD_GET_CHALLENGE "84"
+#define EMRTD_READ_BINARY "B0"
+#define EMRTD_P1_SELECT_BY_EF "02"
+#define EMRTD_P1_SELECT_BY_NAME "04"
+#define EMRTD_P2_PROPRIETARY "0C"
 
 // File IDs
-#define EF_CARDACCESS "011C"
-#define EF_COM "011E"
-#define EF_DG1 "0101"
-#define EF_DG2 "0102"
-#define EF_DG3 "0103"
-#define EF_DG4 "0104"
-#define EF_DG5 "0105"
-#define EF_DG6 "0106"
-#define EF_DG7 "0107"
-#define EF_DG8 "0108"
-#define EF_DG9 "0109"
-#define EF_DG10 "010A"
-#define EF_DG11 "010B"
-#define EF_DG12 "010C"
-#define EF_DG13 "010D"
-#define EF_DG14 "010E"
-#define EF_DG15 "010F"
-#define EF_DG16 "0110"
-#define EF_SOD "011D"
+#define EMRTD_EF_CARDACCESS "011C"
+#define EMRTD_EF_COM "011E"
+#define EMRTD_EF_DG1 "0101"
+#define EMRTD_EF_DG2 "0102"
+#define EMRTD_EF_DG3 "0103"
+#define EMRTD_EF_DG4 "0104"
+#define EMRTD_EF_DG5 "0105"
+#define EMRTD_EF_DG6 "0106"
+#define EMRTD_EF_DG7 "0107"
+#define EMRTD_EF_DG8 "0108"
+#define EMRTD_EF_DG9 "0109"
+#define EMRTD_EF_DG10 "010A"
+#define EMRTD_EF_DG11 "010B"
+#define EMRTD_EF_DG12 "010C"
+#define EMRTD_EF_DG13 "010D"
+#define EMRTD_EF_DG14 "010E"
+#define EMRTD_EF_DG15 "010F"
+#define EMRTD_EF_DG16 "0110"
+#define EMRTD_EF_SOD "011D"
 
 // App IDs
-#define AID_MRTD "A0000002471001"
+#define EMRTD_AID_MRTD "A0000002471001"
 
 // DESKey Types
 const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
@@ -81,7 +81,7 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     return d[n] * 0x0100 + d[n + 1];
 }
 
-static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen, bool activate_field, bool keep_field_on, bool use_14b) {
+static bool emrtd_exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen, bool activate_field, bool keep_field_on, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -118,14 +118,14 @@ static bool exchange_commands(const char *cmd, uint8_t *dataout, int *dataoutlen
     return true;
 }
 
-static int exchange_commands_noout(const char *cmd, bool activate_field, bool keep_field_on, bool use_14b) {
+static int emrtd_exchange_commands_noout(const char *cmd, bool activate_field, bool keep_field_on, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    return exchange_commands(cmd, response, &resplen, activate_field, keep_field_on, use_14b);
+    return emrtd_exchange_commands(cmd, response, &resplen, activate_field, keep_field_on, use_14b);
 }
 
-static char calculate_check_digit(char *data) {
+static char emrtd_calculate_check_digit(char *data) {
     int mrz_weight[] = {7, 3, 1};
     int cd = 0;
     int value = 0;
@@ -147,7 +147,7 @@ static char calculate_check_digit(char *data) {
     return cd % 10;
 }
 
-static int asn1datalength(uint8_t *datain, int datainlen, int offset) {
+static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset) {
     PrintAndLogEx(DEBUG, "asn1datalength, datain: %s", sprint_hex_inrow(datain, datainlen));
     int lenfield = (int) * (datain + offset);
     PrintAndLogEx(DEBUG, "asn1datalength, lenfield: %i", lenfield);
@@ -163,7 +163,7 @@ static int asn1datalength(uint8_t *datain, int datainlen, int offset) {
     return false;
 }
 
-static int asn1fieldlength(uint8_t *datain, int datainlen, int offset) {
+static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offset) {
     PrintAndLogEx(DEBUG, "asn1fieldlength, datain: %s", sprint_hex_inrow(datain, datainlen));
     int lenfield = (int) * (datain + offset);
     PrintAndLogEx(DEBUG, "asn1fieldlength, thing: %i", lenfield);
@@ -273,7 +273,7 @@ static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *outp
     memcpy(output, intermediate_des, 8);
 }
 
-static void deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *dataout) {
+static void emrtd_deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *dataout) {
     PrintAndLogEx(DEBUG, "seed: %s", sprint_hex_inrow(seed, 16));
 
     // combine seed and type
@@ -296,38 +296,38 @@ static void deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *data
     memcpy(dataout, &key, length);
 }
 
-static int select_file(const char *select_by, const char *file_id, bool use_14b) {
+static int emrtd_select_file(const char *select_by, const char *file_id, bool use_14b) {
     int file_id_len = strlen(file_id) / 2;
 
     char cmd[50];
-    sprintf(cmd, "00%s%s0C%02X%s", SELECT, select_by, file_id_len, file_id);
+    sprintf(cmd, "00%s%s0C%02X%s", EMRTD_SELECT, select_by, file_id_len, file_id);
 
-    return exchange_commands_noout(cmd, false, true, use_14b);
+    return emrtd_exchange_commands_noout(cmd, false, true, use_14b);
 }
 
-static int get_challenge(int length, uint8_t *dataout, int *dataoutlen, bool use_14b) {
+static int emrtd_get_challenge(int length, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[50];
-    sprintf(cmd, "00%s0000%02X", GET_CHALLENGE, length);
+    sprintf(cmd, "00%s0000%02X", EMRTD_GET_CHALLENGE, length);
 
-    return exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
+    return emrtd_exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
 
-static int external_authenticate(uint8_t *data, int length, uint8_t *dataout, int *dataoutlen, bool use_14b) {
+static int emrtd_external_authenticate(uint8_t *data, int length, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[100];
 
-    sprintf(cmd, "00%s0000%02X%s%02X", EXTERNAL_AUTHENTICATE, length, sprint_hex_inrow(data, length), length);
+    sprintf(cmd, "00%s0000%02X%s%02X", EMRTD_EXTERNAL_AUTHENTICATE, length, sprint_hex_inrow(data, length), length);
 
-    return exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
+    return emrtd_exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
 
-static int _read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
+static int _emrtd_read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[50];
-    sprintf(cmd, "00%s%04i%02i", READ_BINARY, offset, bytes_to_read);
+    sprintf(cmd, "00%s%04i%02i", EMRTD_READ_BINARY, offset, bytes_to_read);
 
-    return exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
+    return emrtd_exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
 
-static void bump_ssc(uint8_t *ssc) {
+static void emrtd_bump_ssc(uint8_t *ssc) {
     PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
     for (int i = 7; i > 0; i--) {
         if ((*(ssc + i)) == 0xFF) {
@@ -341,12 +341,12 @@ static void bump_ssc(uint8_t *ssc) {
     }
 }
 
-static bool check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength) {
+static bool emrtd_check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength) {
     // https://elixi.re/i/clarkson.png
     uint8_t k[500];
     uint8_t cc[500];
 
-    bump_ssc(ssc);
+    emrtd_bump_ssc(ssc);
 
     memcpy(k, ssc, 8);
     int length = 0;
@@ -375,7 +375,7 @@ static bool check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength
     return memcmp(cc, rapdu + (rapdulength - 8), 8) == 0;
 }
 
-static void _convert_filename(const char *file, uint8_t *dataout) {
+static void _emrtd_convert_filename(const char *file, uint8_t *dataout) {
     char temp[3] = {0x00};
     memcpy(temp, file, 2);
     dataout[0] = (int)strtol(temp, NULL, 16);
@@ -383,16 +383,16 @@ static void _convert_filename(const char *file, uint8_t *dataout) {
     dataout[1] = (int)strtol(temp, NULL, 16);
 }
 
-static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *select_by, const char *file, bool use_14b) {
+static bool emrtd_secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const char *select_by, const char *file, bool use_14b) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
     // convert filename of string to bytes
     uint8_t file_id[2];
-    _convert_filename(file, file_id);
+    _emrtd_convert_filename(file, file_id);
 
     uint8_t iv[8] = { 0x00 };
-    char command[54];
+    char command[PM3_CMD_DATA_SIZE];
     uint8_t cmd[8];
     uint8_t data[21];
     uint8_t temp[8] = {0x0c, 0xa4, strtol(select_by, NULL, 16), 0x0c};
@@ -413,7 +413,7 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     memcpy(m + cmdlen, do87, (datalen + 3));
     PrintAndLogEx(DEBUG, "m: %s", sprint_hex_inrow(m, datalen + cmdlen + 3));
 
-    bump_ssc(ssc);
+    emrtd_bump_ssc(ssc);
 
     uint8_t n[27];
     memcpy(n, ssc, 8);
@@ -435,17 +435,17 @@ static bool secure_select_file(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, const
     memcpy(data + (datalen + 3), do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    sprintf(command, "0C%s%s0C%02X%s00", SELECT, select_by, lc, sprint_hex_inrow(data, lc));
+    sprintf(command, "0C%s%s0C%02X%s00", EMRTD_SELECT, select_by, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    if (exchange_commands(command, response, &resplen, false, true, use_14b) == false) {
+    if (emrtd_exchange_commands(command, response, &resplen, false, true, use_14b) == false) {
         return false;
     }
 
-    return check_cc(ssc, kmac, response, resplen);
+    return emrtd_check_cc(ssc, kmac, response, resplen);
 }
 
-static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
+static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char command[54];
     uint8_t cmd[8];
     uint8_t data[21];
@@ -466,7 +466,7 @@ static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byt
     memcpy(m, cmd, 8);
     memcpy(m + 8, do97, 3);
 
-    bump_ssc(ssc);
+    emrtd_bump_ssc(ssc);
 
     uint8_t n[19];
     memcpy(n, ssc, 8);
@@ -488,23 +488,23 @@ static bool _secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int byt
     memcpy(data + 3, do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    sprintf(command, "0C%s%04X%02X%s00", READ_BINARY, offset, lc, sprint_hex_inrow(data, lc));
+    sprintf(command, "0C%s%04X%02X%s00", EMRTD_READ_BINARY, offset, lc, sprint_hex_inrow(data, lc));
     PrintAndLogEx(DEBUG, "command: %s", command);
 
-    if (exchange_commands(command, dataout, dataoutlen, false, true, use_14b) == false) {
+    if (emrtd_exchange_commands(command, dataout, dataoutlen, false, true, use_14b) == false) {
         return false;
     }
 
-    return check_cc(ssc, kmac, dataout, *dataoutlen);
+    return emrtd_check_cc(ssc, kmac, dataout, *dataoutlen);
 }
 
-static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
+static bool _emrtd_secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     uint8_t response[500];
     uint8_t temp[500];
     int resplen, cutat = 0;
     uint8_t iv[8] = { 0x00 };
 
-    if (_secure_read_binary(kmac, ssc, offset, bytes_to_read, response, &resplen, use_14b) == false) {
+    if (_emrtd_secure_read_binary(kmac, ssc, offset, bytes_to_read, response, &resplen, use_14b) == false) {
         return false;
     }
 
@@ -521,8 +521,8 @@ static bool _secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *s
 }
 
 
-static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure, bool use_14b) {
-    uint8_t response[MAX_FILE_SIZE];
+static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure, bool use_14b) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE];
     int resplen = 0;
     uint8_t tempresponse[500];
     int tempresplen = 0;
@@ -530,17 +530,17 @@ static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *
     int offset = 0;
 
     if (use_secure == true) {
-        if (_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen, use_14b) == false) {
+        if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen, use_14b) == false) {
             return false;
         }
     } else {
-        if (_read_binary(offset, toread, response, &resplen, use_14b) == false) {
+        if (_emrtd_read_binary(offset, toread, response, &resplen, use_14b) == false) {
             return false;
         }
     }
 
-    int datalen = asn1datalength(response, resplen, 1);
-    int readlen = datalen - (3 - asn1fieldlength(response, resplen, 1));
+    int datalen = emrtd_get_asn1_data_length(response, resplen, 1);
+    int readlen = datalen - (3 - emrtd_get_asn1_field_length(response, resplen, 1));
     offset = 4;
 
     while (readlen > 0) {
@@ -550,11 +550,11 @@ static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *
         }
 
         if (kenc == NULL) {
-            if (_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+            if (_emrtd_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
                 return false;
             }
         } else {
-            if (_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+            if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
                 return false;
             }
         }
@@ -570,7 +570,7 @@ static int read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *
     return true;
 }
 
-static bool ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen) {
+static bool emrtd_ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen) {
     int offset = 2;
     int elementidlen = 0;
     int elementlen = 0;
@@ -584,7 +584,7 @@ static bool ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *datao
         }
 
         // Get the length of the element
-        elementlen = asn1datalength(datain + offset, *datainlen - offset, elementidlen);
+        elementlen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, elementidlen);
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == 0x5c) {
@@ -598,82 +598,81 @@ static bool ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *datao
     return false;
 }
 
-static bool file_tag_to_file_id(uint8_t *datain, char *filenameout, char *dataout) {
+static bool emrtd_file_tag_to_file_id(uint8_t *datain, char *filenameout, char *dataout) {
     // imagine bothering with a hashmap or writing good code
     // couldn't be me
     switch (*datain) {
         case 0x60:
-            memcpy(dataout, EF_COM, 4);
+            memcpy(dataout, EMRTD_EF_COM, 4);
             memcpy(filenameout, "EF_COM", 6);
             break;
         case 0x61:
-            memcpy(dataout, EF_DG1, 4);
+            memcpy(dataout, EMRTD_EF_DG1, 4);
             memcpy(filenameout, "EF_DG1", 6);
             break;
         case 0x75:
-            memcpy(dataout, EF_DG2, 4);
+            memcpy(dataout, EMRTD_EF_DG2, 4);
             memcpy(filenameout, "EF_DG2", 6);
             break;
         // These cases are commented out as they require PACE
-        // Trying to read a PACE file without doing PACE auth kills the session
         // case 0x63:
-        //     memcpy(dataout, EF_DG3, 4);
+        //     memcpy(dataout, EMRTD_EF_DG3, 4);
         //     memcpy(filenameout, "EF_DG3", 6);
         //     break;
         // case 0x76:
-        //     memcpy(dataout, EF_DG4, 4);
+        //     memcpy(dataout, EMRTD_EF_DG4, 4);
         //     memcpy(filenameout, "EF_DG4", 6);
         //     break;
         case 0x65:
-            memcpy(dataout, EF_DG5, 4);
+            memcpy(dataout, EMRTD_EF_DG5, 4);
             memcpy(filenameout, "EF_DG5", 6);
             break;
         case 0x66:
-            memcpy(dataout, EF_DG6, 4);
+            memcpy(dataout, EMRTD_EF_DG6, 4);
             memcpy(filenameout, "EF_DG6", 6);
             break;
         case 0x67:
-            memcpy(dataout, EF_DG7, 4);
+            memcpy(dataout, EMRTD_EF_DG7, 4);
             memcpy(filenameout, "EF_DG7", 6);
             break;
         case 0x68:
-            memcpy(dataout, EF_DG8, 4);
+            memcpy(dataout, EMRTD_EF_DG8, 4);
             memcpy(filenameout, "EF_DG8", 6);
             break;
         case 0x69:
-            memcpy(dataout, EF_DG9, 4);
+            memcpy(dataout, EMRTD_EF_DG9, 4);
             memcpy(filenameout, "EF_DG9", 6);
             break;
         case 0x6a:
-            memcpy(dataout, EF_DG10, 4);
+            memcpy(dataout, EMRTD_EF_DG10, 4);
             memcpy(filenameout, "EF_DG10", 7);
             break;
         case 0x6b:
-            memcpy(dataout, EF_DG11, 4);
+            memcpy(dataout, EMRTD_EF_DG11, 4);
             memcpy(filenameout, "EF_DG11", 7);
             break;
         case 0x6c:
-            memcpy(dataout, EF_DG12, 4);
+            memcpy(dataout, EMRTD_EF_DG12, 4);
             memcpy(filenameout, "EF_DG12", 7);
             break;
         case 0x6d:
-            memcpy(dataout, EF_DG13, 4);
+            memcpy(dataout, EMRTD_EF_DG13, 4);
             memcpy(filenameout, "EF_DG13", 7);
             break;
         case 0x6e:
-            memcpy(dataout, EF_DG14, 4);
+            memcpy(dataout, EMRTD_EF_DG14, 4);
             memcpy(filenameout, "EF_DG14", 7);
             break;
         case 0x6f:
-            memcpy(dataout, EF_DG15, 4);
+            memcpy(dataout, EMRTD_EF_DG15, 4);
             memcpy(filenameout, "EF_DG15", 7);
             break;
         case 0x70:
-            memcpy(dataout, EF_DG16, 4);
+            memcpy(dataout, EMRTD_EF_DG16, 4);
             memcpy(filenameout, "EF_DG16", 7);
             break;
         case 0x77:
-            memcpy(dataout, EF_SOD, 4);
+            memcpy(dataout, EMRTD_EF_SOD, 4);
             memcpy(filenameout, "EF_SOD", 6);
             break;
         default:
@@ -682,31 +681,31 @@ static bool file_tag_to_file_id(uint8_t *datain, char *filenameout, char *dataou
     return true;
 }
 
-static bool select_and_read(uint8_t *dataout, int *dataoutlen, const char *file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure, bool use_14b) {
+static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char *file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure, bool use_14b) {
     if (use_secure == true) {
-        if (secure_select_file(ks_enc, ks_mac, ssc, P1_SELECT_BY_EF, file, use_14b) == false) {
+        if (emrtd_secure_select_file(ks_enc, ks_mac, ssc, EMRTD_P1_SELECT_BY_EF, file, use_14b) == false) {
             PrintAndLogEx(ERR, "Failed to secure select %s.", file);
             return false;
         }
     } else {
-        if (select_file(P1_SELECT_BY_EF, file, use_14b) == false) {
+        if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, file, use_14b) == false) {
             PrintAndLogEx(ERR, "Failed to select %s.", file);
             return false;
         }
     }
 
-    if (read_file(dataout, dataoutlen, ks_enc, ks_mac, ssc, use_secure, use_14b) == false) {
+    if (emrtd_read_file(dataout, dataoutlen, ks_enc, ks_mac, ssc, use_secure, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read %s.", file);
         return false;
     }
     return true;
 }
 
-static bool dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
-    uint8_t response[MAX_FILE_SIZE];
+static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE];
     int resplen = 0;
 
-    if (select_and_read(response, &resplen, file, ks_enc, ks_mac, ssc, use_secure, use_14b) == false) {
+    if (emrtd_select_and_read(response, &resplen, file, ks_enc, ks_mac, ssc, use_secure, use_14b) == false) {
         return false;
     }
 
@@ -724,8 +723,8 @@ static void rng(int length, uint8_t *dataout) {
     }
 }
 
-static bool do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool use_14b) {
-    uint8_t response[MAX_FILE_SIZE] = { 0x00 };
+static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool use_14b) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
 
     uint8_t rnd_ic[8] = { 0x00 };
@@ -742,9 +741,9 @@ static bool do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, 
     PrintAndLogEx(DEBUG, "dob: %s", dob);
     PrintAndLogEx(DEBUG, "exp: %s", expiry);
 
-    char documentnumbercd = calculate_check_digit(documentnumber);
-    char dobcd = calculate_check_digit(dob);
-    char expirycd = calculate_check_digit(expiry);
+    char documentnumbercd = emrtd_calculate_check_digit(documentnumber);
+    char dobcd = emrtd_calculate_check_digit(dob);
+    char expirycd = emrtd_calculate_check_digit(expiry);
 
     char kmrz[25];
     sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
@@ -754,13 +753,13 @@ static bool do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, 
     mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
     PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
 
-    deskey(kseed, KENC_type, 16, kenc);
-    deskey(kseed, KMAC_type, 16, kmac);
+    emrtd_deskey(kseed, KENC_type, 16, kenc);
+    emrtd_deskey(kseed, KMAC_type, 16, kmac);
     PrintAndLogEx(DEBUG, "kenc: %s", sprint_hex_inrow(kenc, 16));
     PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
 
     // Get Challenge
-    if (get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
+    if (emrtd_get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't get challenge.");
         return false;
     }
@@ -788,7 +787,7 @@ static bool do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, 
     memcpy(cmd_data + 32, m_ifd, 8);
 
     // Do external authentication
-    if (external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen, use_14b) == false) {
+    if (emrtd_external_authenticate(cmd_data, sizeof(cmd_data), response, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
         return false;
     }
@@ -812,8 +811,8 @@ static bool do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, 
 
     PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
 
-    deskey(kseed, KENC_type, 16, ks_enc);
-    deskey(kseed, KMAC_type, 16, ks_mac);
+    emrtd_deskey(kseed, KENC_type, 16, ks_enc);
+    emrtd_deskey(kseed, KMAC_type, 16, ks_mac);
 
     PrintAndLogEx(DEBUG, "ks_enc: %s", sprint_hex_inrow(ks_enc, 16));
     PrintAndLogEx(DEBUG, "ks_mac: %s", sprint_hex_inrow(ks_mac, 16));
@@ -827,7 +826,7 @@ static bool do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, 
 }
 
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
-    uint8_t response[MAX_FILE_SIZE] = { 0x00 };
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
     uint8_t ssc[8] = { 0x00 };
     uint8_t ks_enc[16] = { 0x00 };
@@ -863,8 +862,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Select and read EF_CardAccess
-    if (select_file(P1_SELECT_BY_EF, EF_CARDACCESS, use_14b)) {
-        read_file(response, &resplen, NULL, NULL, NULL, false, use_14b);
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, use_14b)) {
+        emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, use_14b);
         PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
         PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     } else {
@@ -872,22 +871,22 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Select MRTD applet
-    if (select_file(P1_SELECT_BY_NAME, AID_MRTD, use_14b) == false) {
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_NAME, EMRTD_AID_MRTD, use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
         DropField();
         return PM3_ESOFT;
     }
 
     // Select EF_COM
-    if (select_file(P1_SELECT_BY_EF, EF_COM, use_14b) == false) {
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_COM, use_14b) == false) {
         BAC = true;
         PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
         BAC = false;
         // Select EF_DG1
-        select_file(P1_SELECT_BY_EF, EF_DG1, use_14b);
+        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_DG1, use_14b);
 
-        if (read_file(response, &resplen, NULL, NULL, NULL, false, use_14b) == false) {
+        if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, use_14b) == false) {
             BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
@@ -906,14 +905,14 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             return PM3_ESOFT;
         }
 
-        if (do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac, use_14b) == false) {
+        if (emrtd_do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac, use_14b) == false) {
             DropField();
             return PM3_ESOFT;
         }
     }
 
     // Select EF_COM
-    if (select_and_read(response, &resplen, EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
+    if (emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -925,7 +924,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
+    if (emrtd_ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -937,16 +936,16 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     for (int i = 0; i < filelistlen; i++) {
         char file_id[5] = { 0x00 };
         char file_name[8] = { 0x00 };
-        if (file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
         PrintAndLogEx(DEBUG, "Current file: %s", file_name);
-        dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
+        emrtd_dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
     }
 
     // Dump EF_SOD
-    dump_file(ks_enc, ks_mac, ssc, EF_SOD, "EF_SOD", BAC, use_14b);
+    emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_SOD, "EF_SOD", BAC, use_14b);
 
     DropField();
     return PM3_SUCCESS;
