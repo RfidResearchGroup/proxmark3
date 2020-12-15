@@ -1186,6 +1186,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_write_pin((em4x70_data_t *)packet->data.asBytes);
             break;
         }
+        case CMD_LF_EM4X70_WRITEKEY: {
+            em4x70_write_key((em4x70_data_t *)packet->data.asBytes);
+            break;
+        }
 #endif
 
 #ifdef WITH_ISO15693

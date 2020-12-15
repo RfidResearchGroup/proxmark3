@@ -286,7 +286,7 @@ int CmdEM4x70Auth(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x70 auth",
                   "Authenticate against an EM4x70 by sending random number (RN) and F(RN)\n"
                   "  If F(RN) is incorrect based on the tag crypt key, the tag will not respond",
-                  "lf em 4x70 auth --rnd 11223344556677 --frn 11223344\n"
+                  "lf em 4x70 auth --rnd 45F54ADA252AAC --frn 4866BB70 --> Test authentication, tag will respond if successful\n"
                  );
 
     void *argtable[] = {
@@ -340,7 +340,6 @@ int CmdEM4x70Auth(const char *Cmd) {
 
 int CmdEM4x70WritePIN(const char *Cmd) {
 
-    // send pin code to device, unlocking it for writing
     em4x70_data_t etd = {0};
 
     CLIParserContext *ctx;
@@ -395,6 +394,57 @@ int CmdEM4x70WritePIN(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+int CmdEM4x70WriteKey(const char *Cmd) {
+
+    // Write new crypt key to tag
+    em4x70_data_t etd = {0};
+
+    CLIParserContext *ctx;
+
+    CLIParserInit(&ctx, "lf em 4x70 writekey",
+                  "Write new 96-bit key to tag\n",
+                  "lf em 4x70 writekey -k F32AA98CF5BE4ADFA6D3480B\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_str1("k",  "key", "<hex>", "Crypt Key as 12 hex bytes"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    etd.parity = arg_get_lit(ctx, 1);
+
+    int key_len = 12;
+    CLIGetHexWithReturn(ctx, 2, etd.crypt_key, &key_len);
+
+    CLIParserFree(ctx);
+
+    if (key_len != 12) {
+        PrintAndLogEx(FAILED, "Crypt key length must be 12 bytes instead of %d", key_len);
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_WRITEKEY, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITEKEY, &resp, TIMEOUT)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status) {
+        PrintAndLogEx(INFO, "Writing new crypt key: " _GREEN_("SUCCESS"));
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "Writing new crypt key: " _RED_("FAILED"));
+    return PM3_ESOFT;
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,           AlwaysAvailable, "This help"},
     {"info",     CmdEM4x70Info,     IfPm3EM4x70,     "Tag information EM4x70"},
@@ -402,6 +452,7 @@ static command_t CommandTable[] = {
     {"unlock",   CmdEM4x70Unlock,   IfPm3EM4x70,     "Unlock EM4x70 for writing"},
     {"auth",     CmdEM4x70Auth,     IfPm3EM4x70,     "Authenticate EM4x70"},
     {"writepin", CmdEM4x70WritePIN, IfPm3EM4x70,     "Write PIN"},
+    {"writekey", CmdEM4x70WriteKey, IfPm3EM4x70,     "Write Crypt Key"},
     {NULL, NULL, NULL, NULL}
 };
 
