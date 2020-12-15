@@ -338,12 +338,70 @@ int CmdEM4x70Auth(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+int CmdEM4x70WritePIN(const char *Cmd) {
+
+    // send pin code to device, unlocking it for writing
+    em4x70_data_t etd = {0};
+
+    CLIParserContext *ctx;
+
+    CLIParserInit(&ctx, "lf em 4x70 writepin",
+                  "Write PIN\n",
+                  "lf em 4x70 writepin -p 11223344 -> Write PIN\n"
+                  "lf em 4x70 writepin -p 11223344 --par -> Write PIN using parity commands\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_str1("p",  "pin", "<hex>", "pin, 4 bytes"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    etd.parity = arg_get_lit(ctx, 1);
+
+    int pin_len = 0;
+    uint8_t pin[4] = {0x0};
+
+    CLIGetHexWithReturn(ctx, 2, pin, &pin_len);
+
+    CLIParserFree(ctx);
+
+    if (pin_len != 4) {
+        PrintAndLogEx(FAILED, "PIN length must be 4 bytes instead of %d", pin_len);
+        return PM3_EINVARG;
+    }
+
+    etd.pin = BYTES2UINT32(pin);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_WRITEPIN, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITEPIN, &resp, TIMEOUT)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status) {
+        print_info_result(resp.data.asBytes);
+        PrintAndLogEx(INFO, "Writing new PIN: " _GREEN_("SUCCESS"));
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "Writing new PIN: " _RED_("FAILED"));
+    return PM3_ESOFT;
+}
+
 static command_t CommandTable[] = {
-    {"help",   CmdHelp,         AlwaysAvailable, "This help"},
-    {"info",   CmdEM4x70Info,   IfPm3EM4x70,     "Tag information EM4x70"},
-    {"write",  CmdEM4x70Write,  IfPm3EM4x70,     "Write EM4x70"},
-    {"unlock", CmdEM4x70Unlock, IfPm3EM4x70,     "Unlock EM4x70 for writing"},
-    {"auth",   CmdEM4x70Auth,   IfPm3EM4x70,     "Authenticate EM4x70"},
+    {"help",     CmdHelp,           AlwaysAvailable, "This help"},
+    {"info",     CmdEM4x70Info,     IfPm3EM4x70,     "Tag information EM4x70"},
+    {"write",    CmdEM4x70Write,    IfPm3EM4x70,     "Write EM4x70"},
+    {"unlock",   CmdEM4x70Unlock,   IfPm3EM4x70,     "Unlock EM4x70 for writing"},
+    {"auth",     CmdEM4x70Auth,     IfPm3EM4x70,     "Authenticate EM4x70"},
+    {"writepin", CmdEM4x70WritePIN, IfPm3EM4x70,     "Write PIN"},
     {NULL, NULL, NULL, NULL}
 };
 
