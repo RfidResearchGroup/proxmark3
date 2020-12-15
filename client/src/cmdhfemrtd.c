@@ -221,6 +221,12 @@ static void des3_decrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inpu
     mbedtls_des3_free(&ctx);
 }
 
+static void emrtd_pad_docnum(char *input) {
+    for (int i = strlen(input); i < 9; i++) {
+        input[i] = '<';
+    }
+}
+
 static int pad_block(uint8_t *input, int inputlen, uint8_t *output) {
     uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -834,6 +840,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     bool BAC = false;
     bool use_14b = false;
 
+    emrtd_pad_docnum(documentnumber);
+
     // Try to 14a
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -960,7 +968,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "9 character document number"),
+        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_param_end
