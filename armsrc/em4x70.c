@@ -21,27 +21,31 @@ static em4x70_tag_t tag = { 0 };
 // EM4170 requires a parity bit on commands, other variants do not.
 static bool command_parity = true;
 
-#define EM4X70_T_TAG_QUARTER_PERIOD         8
-#define EM4X70_T_TAG_HALF_PERIOD            16
-#define EM4X70_T_TAG_THREE_QUARTER_PERIOD   24
-#define EM4X70_T_TAG_FULL_PERIOD            32
-#define EM4X70_T_TAG_TWA                   128 // Write Access Time
-#define EM4X70_T_TAG_DIV                   224 // Divergency Time
-#define EM4X70_T_TAG_AUTH                 4224 // Authentication Time
-#define EM4X70_T_TAG_WEE                  3072 // EEPROM write Time
-#define EM4X70_T_TAG_TWALB                 672 // Write Access Time of Lock Bits
+// Conversion from Ticks to RF periods
+// 1 us = 1.5 ticks
+// 1RF Period = 8us = 12 Ticks
+#define TICKS_PER_FC                        12
 
-#define EM4X70_T_WAITING_FOR_SNGLLIW       160   // Unsure
+// Chip timing from datasheet
+// Converted into Ticks for timing functions
+#define EM4X70_T_TAG_QUARTER_PERIOD          (8 * TICKS_PER_FC)
+#define EM4X70_T_TAG_HALF_PERIOD            (16 * TICKS_PER_FC)
+#define EM4X70_T_TAG_THREE_QUARTER_PERIOD   (24 * TICKS_PER_FC)
+#define EM4X70_T_TAG_FULL_PERIOD            (32 * TICKS_PER_FC) // 1 Bit Period
+#define EM4X70_T_TAG_TWA                   (128 * TICKS_PER_FC) // Write Access Time
+#define EM4X70_T_TAG_DIV                   (224 * TICKS_PER_FC) // Divergency Time
+#define EM4X70_T_TAG_AUTH                 (4224 * TICKS_PER_FC) // Authentication Time
+#define EM4X70_T_TAG_WEE                  (3072 * TICKS_PER_FC) // EEPROM write Time
+#define EM4X70_T_TAG_TWALB                 (672 * TICKS_PER_FC) // Write Access Time of Lock Bits
+#define EM4X70_T_TAG_BITMOD                  (4 * TICKS_PER_FC) // Initial time to stop modulation when sending 0
+#define EM4X70_T_TAG_TOLERANCE               (8 * TICKS_PER_FC) // Tolerance in RF periods for receive/LIW
 
-#define TICKS_PER_FC                        12 // 1 fc = 8us, 1.5us per tick = 12 ticks
-#define EM4X70_MIN_AMPLITUDE                10 // Minimum difference between a high and low signal
+#define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
+#define EM4X70_T_WAITING_FOR_LIW             50 // Pulses to wait for listen window
 
-#define EM4X70_TAG_TOLERANCE                 8
-#define EM4X70_TAG_WORD                     48
 
 #define EM4X70_COMMAND_RETRIES               5 // Attempts to send/read command
 #define EM4X70_MAX_RECEIVE_LENGTH           96 // Maximum bits to expect from any command
-
 
 /**
  * These IDs are from the EM4170 datasheet
@@ -133,7 +137,7 @@ static bool get_signalproperties(void) {
 static uint32_t get_pulse_length(void) {
 
     uint8_t sample;
-    uint32_t timeout = GetTicks() + (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
+    uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -143,7 +147,7 @@ static uint32_t get_pulse_length(void) {
         return 0;
 
     uint32_t start_ticks = GetTicks();
-    timeout = start_ticks + (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
+    timeout = start_ticks + EM4X70_T_TAG_TIMEOUT;
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -152,7 +156,7 @@ static uint32_t get_pulse_length(void) {
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    timeout = (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD) + GetTicks();
+    timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     } while (IS_HIGH(sample) && !IS_TIMEOUT(timeout));
@@ -172,7 +176,7 @@ static uint32_t get_pulse_length(void) {
 static uint32_t get_pulse_invert_length(void) {
 
     uint8_t sample;
-    uint32_t timeout = GetTicks() + (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
+    uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -182,7 +186,7 @@ static uint32_t get_pulse_invert_length(void) {
         return 0;
 
     uint32_t start_ticks = GetTicks();
-    timeout = start_ticks + (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
+    timeout = start_ticks + EM4X70_T_TAG_TIMEOUT;
 
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -191,7 +195,7 @@ static uint32_t get_pulse_invert_length(void) {
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    timeout = GetTicks() + (TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
+    timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
     do {
         sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     } while (IS_LOW(sample) && !IS_TIMEOUT(timeout));
@@ -203,9 +207,9 @@ static uint32_t get_pulse_invert_length(void) {
 
 }
 
-static bool check_pulse_length(uint32_t pl, int length) {
+static bool check_pulse_length(uint32_t pl, uint32_t length) {
     // check if pulse length <pl> corresponds to given length <length>
-    return ((pl >= TICKS_PER_FC * (length - EM4X70_TAG_TOLERANCE)) & (pl <= TICKS_PER_FC * (length + EM4X70_TAG_TOLERANCE)));
+    return ((pl >= (length - EM4X70_T_TAG_TOLERANCE)) & (pl <= (length + EM4X70_T_TAG_TOLERANCE)));
 }
 
 static void em4x70_send_bit(bool bit) {
@@ -215,24 +219,24 @@ static void em4x70_send_bit(bool bit) {
 
     if (bit == 0) {
 
-        // disable modulation (drop the field) for 4 cycles of carrier
+        // disable modulation (drop the field) n cycles of carrier
         LOW(GPIO_SSC_DOUT);
-        while (TICKS_ELAPSED(start_ticks) <= TICKS_PER_FC * 4);
+        while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_BITMOD);
 
         // enable modulation (activates the field) for remaining first
         // half of bit period
         HIGH(GPIO_SSC_DOUT);
-        while (TICKS_ELAPSED(start_ticks) <= TICKS_PER_FC * EM4X70_T_TAG_HALF_PERIOD);
+        while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_HALF_PERIOD);
 
         // disable modulation for second half of bit period
         LOW(GPIO_SSC_DOUT);
-        while (TICKS_ELAPSED(start_ticks) <= TICKS_PER_FC * EM4X70_T_TAG_FULL_PERIOD);
+        while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_FULL_PERIOD);
 
     } else {
 
         // bit = "1" means disable modulation for full bit period
         LOW(GPIO_SSC_DOUT);
-        while (TICKS_ELAPSED(start_ticks) <= TICKS_PER_FC * EM4X70_T_TAG_FULL_PERIOD);
+        while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_FULL_PERIOD);
     }
 }
 
@@ -296,7 +300,7 @@ static bool check_ack(void) {
     // returns true if signal structue corresponds to ACK, anything else is
     // counted as NAK (-> false)
     uint32_t start_ticks = GetTicks();
-    while (TICKS_ELAPSED(start_ticks) < TICKS_PER_FC * 4 * EM4X70_T_TAG_FULL_PERIOD) {
+    while (TICKS_ELAPSED(start_ticks) < (4 * EM4X70_T_TAG_FULL_PERIOD)) {
         /*
             ACK
               64 (48+16)
@@ -378,13 +382,13 @@ static int send_pin(const uint32_t pin) {
         }
 
         // Wait TWALB (write access lock bits)
-        WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_TWALB);
+        WaitTicks(EM4X70_T_TAG_TWALB);
 
         // <-- Receive ACK
         if (check_ack()) {
 
             // <w> Writes Lock Bits
-            WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_WEE);
+            WaitTicks(EM4X70_T_TAG_WEE);
             // <-- Receive header + ID
             uint8_t tag_id[EM4X70_MAX_RECEIVE_LENGTH];
             int num  = em4x70_receive(tag_id);
@@ -415,14 +419,14 @@ static int write(const uint16_t word, const uint8_t address) {
         em4x70_send_word(word);
 
         // Wait TWA
-        WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_TWA);
+        WaitTicks(EM4X70_T_TAG_TWA);
 
         // look for ACK sequence
         if (check_ack()) {
 
             // now EM4x70 needs T0 * EM4X70_T_TAG_TWEE (EEPROM write time)
             // for saving data and should return with ACK
-            WaitTicks(TICKS_PER_FC * EM4X70_T_TAG_WEE);
+            WaitTicks(EM4X70_T_TAG_WEE);
             if (check_ack()) {
 
                 return PM3_SUCCESS;
@@ -436,7 +440,7 @@ static int write(const uint16_t word, const uint8_t address) {
 static bool find_listen_window(bool command) {
 
     int cnt = 0;
-    while (cnt < EM4X70_T_WAITING_FOR_SNGLLIW) {
+    while (cnt < EM4X70_T_WAITING_FOR_LIW) {
         /*
         80 ( 64 + 16 )
         80 ( 64 + 16 )
@@ -444,10 +448,10 @@ static bool find_listen_window(bool command) {
         96 ( 64 + 32 )
         64 ( 32 + 16 +16 )*/
 
-        if (check_pulse_length(get_pulse_invert_length(), 80) &&
-                check_pulse_length(get_pulse_invert_length(), 80) &&
-                check_pulse_length(get_pulse_length(), 96) &&
-                check_pulse_length(get_pulse_length(), 64)) {
+        if (check_pulse_length(get_pulse_invert_length(),     (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_invert_length(), (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_length(),        (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
+                check_pulse_length(get_pulse_length(),         EM4X70_T_TAG_FULL_PERIOD + (2*EM4X70_T_TAG_HALF_PERIOD))) {
 
             if (command) {
                 /* Here we are after the 64 duration edge.
@@ -456,7 +460,7 @@ static bool find_listen_window(bool command) {
                     *
                     *   I've found between 4-5 quarter periods (32-40) works best
                     */
-                WaitTicks(TICKS_PER_FC * 4 * EM4X70_T_TAG_QUARTER_PERIOD);
+                WaitTicks( 4 * EM4X70_T_TAG_QUARTER_PERIOD );
                 // Send RM Command
                 em4x70_send_bit(0);
                 em4x70_send_bit(0);
@@ -573,7 +577,7 @@ static int em4x70_receive(uint8_t *bits) {
     //    4 Manchester 0's
 
     // Skip a few leading 1's as it could be noisy
-    WaitTicks(TICKS_PER_FC * 3 * EM4X70_T_TAG_FULL_PERIOD);
+    WaitTicks(6 * EM4X70_T_TAG_FULL_PERIOD);
 
     // wait until we get the transition from 1's to 0's which is 1.5 full windows
     int pulse_count = 0;
@@ -597,7 +601,7 @@ static int em4x70_receive(uint8_t *bits) {
     }
 
     // identify remaining bits based on pulse lengths
-    // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
+    // between listen windows only pulse lengths of 1, 1.5 and 2 are possible
     while (bit_pos < EM4X70_MAX_RECEIVE_LENGTH) {
 
         if (edge)
@@ -634,8 +638,8 @@ static int em4x70_receive(uint8_t *bits) {
                 bits[bit_pos++] = 0;
             }
 
-        } else if ((edge && check_pulse_length(pl, 3 * EM4X70_T_TAG_FULL_PERIOD)) ||
-                   (!edge && check_pulse_length(pl, 80))) {
+        } else if ((edge && check_pulse_length(pl, (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD)) ||
+                   (!edge && check_pulse_length(pl, (2*EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD))) {
 
             // LIW detected (either invert or normal)
             return --bit_pos;
