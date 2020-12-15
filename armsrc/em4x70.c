@@ -80,7 +80,7 @@ static void init_tag(void) {
     memset(tag.data, 0x00, sizeof(tag.data) / sizeof(tag.data[0]));
 }
 
-static void EM4170_setup_read(void) {
+static void em4x70_setup_read(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
@@ -287,30 +287,17 @@ static void em4x70_send_word(const uint16_t word) {
 }
 
 static bool check_ack(void) {
-
     // returns true if signal structue corresponds to ACK, anything else is
     // counted as NAK (-> false)
-    uint32_t start_ticks = GetTicks();
-    while (TICKS_ELAPSED(start_ticks) < (4 * EM4X70_T_TAG_FULL_PERIOD)) {
-        /*
-            ACK
-              64 (48+16)
-              64 (48+16)
-            NACK
-              64 (48+16)
-              48 (32+16)
-        */
-        if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
-
-            // The received signal is either ACK or NAK.
-            if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
-                return true;
-            } else {
-                // It's NAK -> stop searching
-                break;
-            }
-        }
-    }
+    // ACK  64 + 64
+    // NACK 64 + 48
+    if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
+        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+        // ACK
+        return true;
+    } 
+    
+    // Othewise it was a NACK or Listen Window
     return false;
 }
 
@@ -415,7 +402,7 @@ static int write(const uint16_t word, const uint8_t address) {
         // look for ACK sequence
         if (check_ack()) {
 
-            // now EM4x70 needs T0 * EM4X70_T_TAG_TWEE (EEPROM write time)
+            // now EM4x70 needs EM4X70_T_TAG_TWEE (EEPROM write time)
             // for saving data and should return with ACK
             WaitTicks(EM4X70_T_TAG_WEE);
             if (check_ack()) {
@@ -550,7 +537,7 @@ static bool em4x70_read_um2(void) {
 
 }
 
-static bool find_EM4X70_Tag(void) {
+static bool find_em4x70_Tag(void) {
     // function is used to check wether a tag on the proxmark is an
     // EM4170 tag or not -> speed up "lf search" process
     return find_listen_window(false);
@@ -646,10 +633,10 @@ void em4x70_info(em4x70_data_t *etd) {
     command_parity = etd->parity;
 
     init_tag();
-    EM4170_setup_read();
+    em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_EM4X70_Tag()) {
+    if (get_signalproperties() && find_em4x70_Tag()) {
         // Read ID, UM1 and UM2
         status = em4x70_read_id() && em4x70_read_um1() && em4x70_read_um2();
     }
@@ -666,10 +653,10 @@ void em4x70_write(em4x70_data_t *etd) {
     command_parity = etd->parity;
 
     init_tag();
-    EM4170_setup_read();
+    em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_EM4X70_Tag()) {
+    if (get_signalproperties() && find_em4x70_Tag()) {
 
         // Write
         status = write(etd->word, etd->address) == PM3_SUCCESS;
@@ -695,10 +682,10 @@ void em4x70_unlock(em4x70_data_t *etd) {
     command_parity = etd->parity;
 
     init_tag();
-    EM4170_setup_read();
+    em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_EM4X70_Tag()) {
+    if (get_signalproperties() && find_em4x70_Tag()) {
 
         // Read ID (required for send_pin command)
         if (em4x70_read_id()) {
@@ -729,10 +716,10 @@ void em4x70_auth(em4x70_data_t *etd) {
     command_parity = etd->parity;
 
     init_tag();
-    EM4170_setup_read();
+    em4x70_setup_read();
 
     // Find the Tag
-    if (get_signalproperties() && find_EM4X70_Tag()) {
+    if (get_signalproperties() && find_em4x70_Tag()) {
 
         // Authenticate and get tag response
         status = authenticate(etd->rnd, etd->frnd, response) == PM3_SUCCESS;
