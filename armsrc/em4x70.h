@@ -27,5 +27,6 @@ void em4x70_write(em4x70_data_t *etd);
 void em4x70_unlock(em4x70_data_t *etd);
 void em4x70_auth(em4x70_data_t *etd);
 void em4x70_write_pin(em4x70_data_t *etd);
+void em4x70_write_key(em4x70_data_t *etd);
 
 #endif /* EM4x70_H */

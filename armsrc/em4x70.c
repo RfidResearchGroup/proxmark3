@@ -768,3 +768,41 @@ void em4x70_write_pin(em4x70_data_t *etd) {
     lf_finalize();
     reply_ng(CMD_LF_EM4X70_WRITEPIN, status, tag.data, sizeof(tag.data));
 }
+
+void em4x70_write_key(em4x70_data_t *etd) {
+
+    uint8_t status = 0;
+
+    command_parity = etd->parity;
+
+    init_tag();
+    em4x70_setup_read();
+
+    // Find the Tag
+    if (get_signalproperties() && find_em4x70_tag()) {
+
+        // Read ID to ensure we can write to card
+        if (em4x70_read_id()) {
+            status = 1;
+            
+            // Write each crypto block
+            for(int i = 0; i < 6; i++) {
+
+                uint16_t key_word = (etd->crypt_key[(i*2)+1] << 8) + etd->crypt_key[i*2];
+                // Write each word, abort if any failure occurs
+                if (write(key_word, 9-i) != PM3_SUCCESS) {
+                    status = 0;
+                    break;
+                }
+            }
+            // TODO: Ideally here we would perform a test authentication
+            //       to ensure the new key was written correctly. This is
+            //       what the datasheet suggests. We can't do that until
+            //       we have the crypto algorithm implemented.
+        }
+    }
+
+    StopTicks();
+    lf_finalize();
+    reply_ng(CMD_LF_EM4X70_WRITEKEY, status, tag.data, sizeof(tag.data));
+}
