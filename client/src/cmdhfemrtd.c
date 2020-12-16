@@ -274,24 +274,24 @@ static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *outp
 }
 
 static void emrtd_deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *dataout) {
-    PrintAndLogEx(DEBUG, "seed: %s", sprint_hex_inrow(seed, 16));
+    PrintAndLogEx(DEBUG, "seed.............. %s", sprint_hex_inrow(seed, 16));
 
     // combine seed and type
     uint8_t data[50];
     memcpy(data, seed, length);
     memcpy(data + length, type, 4);
-    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, length + 4));
+    PrintAndLogEx(DEBUG, "data.............. %s", sprint_hex_inrow(data, length + 4));
 
     // SHA1 the key
     unsigned char key[64];
     mbedtls_sha1(data, length + 4, key);
-    PrintAndLogEx(DEBUG, "key: %s", sprint_hex_inrow(key, length + 4));
+    PrintAndLogEx(DEBUG, "key............... %s", sprint_hex_inrow(key, length + 4));
 
     // Set parity bits
     for (int i = 0; i < ((length + 4) / 8); i++) {
         mbedtls_des_key_set_parity(key + (i * 8));
     }
-    PrintAndLogEx(DEBUG, "post-parity key: %s", sprint_hex_inrow(key, 20));
+    PrintAndLogEx(DEBUG, "post-parity key... %s", sprint_hex_inrow(key, 20));
 
     memcpy(dataout, &key, length);
 }
@@ -314,9 +314,7 @@ static int emrtd_get_challenge(int length, uint8_t *dataout, int *dataoutlen, bo
 
 static int emrtd_external_authenticate(uint8_t *data, int length, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[100];
-
     sprintf(cmd, "00%s0000%02X%s%02X", EMRTD_EXTERNAL_AUTHENTICATE, length, sprint_hex_inrow(data, length), length);
-
     return emrtd_exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
 
@@ -718,9 +716,10 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
 
 static void rng(int length, uint8_t *dataout) {
     // Do very very secure prng operations
-    for (int i = 0; i < (length / 4); i++) {
-        num_to_bytes(prng_successor(msclock() + i, 32), 4, &dataout[i * 4]);
-    }
+    //for (int i = 0; i < (length / 4); i++) {
+    //    num_to_bytes(prng_successor(msclock() + i, 32), 4, &dataout[i * 4]);
+    //}
+    memset(dataout, 0x00, length);   
 }
 
 static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool use_14b) {
@@ -737,9 +736,9 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     rng(8, rnd_ifd);
     rng(16, k_ifd);
 
-    PrintAndLogEx(DEBUG, "doc: %s", documentnumber);
-    PrintAndLogEx(DEBUG, "dob: %s", dob);
-    PrintAndLogEx(DEBUG, "exp: %s", expiry);
+    PrintAndLogEx(DEBUG, "doc............... " _GREEN_("%s"), documentnumber);
+    PrintAndLogEx(DEBUG, "dob............... " _GREEN_("%s"), dob);
+    PrintAndLogEx(DEBUG, "exp............... " _GREEN_("%s"), expiry);
 
     char documentnumbercd = emrtd_calculate_check_digit(documentnumber);
     char dobcd = emrtd_calculate_check_digit(dob);
@@ -747,40 +746,40 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
 
     char kmrz[25];
     sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
-    PrintAndLogEx(DEBUG, "kmrz: %s", kmrz);
+    PrintAndLogEx(DEBUG, "kmrz.............. " _GREEN_("%s"), kmrz);
 
     uint8_t kseed[16] = { 0x00 };
     mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
-    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
+    PrintAndLogEx(DEBUG, "kseed (sha1)...... %s ", sprint_hex_inrow(kseed, 16));
 
     emrtd_deskey(kseed, KENC_type, 16, kenc);
     emrtd_deskey(kseed, KMAC_type, 16, kmac);
-    PrintAndLogEx(DEBUG, "kenc: %s", sprint_hex_inrow(kenc, 16));
-    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 16));
+    PrintAndLogEx(DEBUG, "kenc.............. %s", sprint_hex_inrow(kenc, 16));
+    PrintAndLogEx(DEBUG, "kmac.............. %s", sprint_hex_inrow(kmac, 16));
 
     // Get Challenge
     if (emrtd_get_challenge(8, rnd_ic, &resplen, use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't get challenge.");
         return false;
     }
-    PrintAndLogEx(DEBUG, "rnd_ic: %s", sprint_hex_inrow(rnd_ic, 8));
+    PrintAndLogEx(DEBUG, "rnd_ic............ %s", sprint_hex_inrow(rnd_ic, 8));
 
     memcpy(S, rnd_ifd, 8);
     memcpy(S + 8, rnd_ic, 8);
     memcpy(S + 16, k_ifd, 16);
 
-    PrintAndLogEx(DEBUG, "S: %s", sprint_hex_inrow(S, 32));
+    PrintAndLogEx(DEBUG, "S................. %s", sprint_hex_inrow(S, 32));
 
     uint8_t iv[8] = { 0x00 };
     uint8_t e_ifd[32] = { 0x00 };
 
     des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
-    PrintAndLogEx(DEBUG, "e_ifd: %s", sprint_hex_inrow(e_ifd, 32));
+    PrintAndLogEx(DEBUG, "e_ifd............. %s", sprint_hex_inrow(e_ifd, 32));
 
     uint8_t m_ifd[8] = { 0x00 };
 
     retail_mac(kmac, e_ifd, 32, m_ifd);
-    PrintAndLogEx(DEBUG, "m_ifd: %s", sprint_hex_inrow(m_ifd, 8));
+    PrintAndLogEx(DEBUG, "m_ifd............. %s", sprint_hex_inrow(m_ifd, 8));
 
     uint8_t cmd_data[40];
     memcpy(cmd_data, e_ifd, 32);
@@ -795,7 +794,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
 
     uint8_t dec_output[32] = { 0x00 };
     des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
-    PrintAndLogEx(DEBUG, "dec_output: %s", sprint_hex_inrow(dec_output, 32));
+    PrintAndLogEx(DEBUG, "dec_output........ %s", sprint_hex_inrow(dec_output, 32));
 
     if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
         PrintAndLogEx(ERR, "Challenge failed, rnd_ifd does not match.");
@@ -809,18 +808,18 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
         kseed[x] = k_ifd[x] ^ k_icc[x];
     }
 
-    PrintAndLogEx(DEBUG, "kseed: %s", sprint_hex_inrow(kseed, 16));
+    PrintAndLogEx(DEBUG, "kseed............ %s", sprint_hex_inrow(kseed, 16));
 
     emrtd_deskey(kseed, KENC_type, 16, ks_enc);
     emrtd_deskey(kseed, KMAC_type, 16, ks_mac);
 
-    PrintAndLogEx(DEBUG, "ks_enc: %s", sprint_hex_inrow(ks_enc, 16));
-    PrintAndLogEx(DEBUG, "ks_mac: %s", sprint_hex_inrow(ks_mac, 16));
+    PrintAndLogEx(DEBUG, "ks_enc........ %s", sprint_hex_inrow(ks_enc, 16));
+    PrintAndLogEx(DEBUG, "ks_mac........ %s", sprint_hex_inrow(ks_mac, 16));
 
     memcpy(ssc, rnd_ic + 4, 4);
     memcpy(ssc + 4, rnd_ifd + 4, 4);
 
-    PrintAndLogEx(DEBUG, "ssc: %s", sprint_hex_inrow(ssc, 8));
+    PrintAndLogEx(DEBUG, "ssc........... %s", sprint_hex_inrow(ssc, 8));
 
     return true;
 }
@@ -975,9 +974,17 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
-    } else if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+    } else {
+        if ( slen != 9) {
+            memset(docnum + slen, 0x3c, 9 - slen);
+        }
+    }
+    
+    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
-    } else if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+    } 
+    
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     }
 
