@@ -899,7 +899,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     if (*BAC) {
         // If BAC isn't available, exit out and warn user.
         if (!BAC_available) {
-            PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supplied MRZ data. Cannot proceed.");
+            PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supply MRZ data. Cannot proceed.");
             PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
             return false;
         }
@@ -967,6 +967,38 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     return PM3_SUCCESS;
 }
 
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+    // TODO: support just loading a dump file
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
+    uint8_t ssc[8] = { 0x00 };
+    uint8_t ks_enc[16] = { 0x00 };
+    uint8_t ks_mac[16] = { 0x00 };
+    bool BAC = false;
+    bool use_14b = false;
+
+    // Select and authenticate with the eMRTD
+    bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
+    PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
+    PrintAndLogEx(SUCCESS, "BAC: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "Authentication result: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
+
+    if (!auth_result) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Select EF_DG1
+    if (emrtd_select_and_read(response, &resplen, EMRTD_EF_DG1, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG1.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int cmd_hf_emrtd_dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
@@ -1001,6 +1033,40 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
 }
 
+static int cmd_hf_emrtd_info(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf emrtd info",
+                  "Display info about an eMRTD",
+                  "hf emrtd info"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t docnum[10] = { 0x00 };
+    uint8_t dob[7] = { 0x00 };
+    uint8_t expiry[7] = { 0x00 };
+    bool BAC = true;
+    int slen = 0;  // unused
+    // Go through all args, if even one isn't supplied, mark BAC as unavailable
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
+        BAC = false;
+    } else if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+        BAC = false;
+    } else if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+        BAC = false;
+    }
+
+    CLIParserFree(ctx);
+    return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+}
+
 static int cmd_hf_emrtd_list(const char *Cmd) {
     char args[128] = {0};
     if (strlen(Cmd) == 0) {
@@ -1014,6 +1080,7 @@ static int cmd_hf_emrtd_list(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
     {"dump",    cmd_hf_emrtd_dump, IfPm3Iso14443,   "Dump eMRTD files to binary files"},
+    {"info",    cmd_hf_emrtd_info, IfPm3Iso14443,   "Display info about an eMRTD"},
     {"list",    cmd_hf_emrtd_list, AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };

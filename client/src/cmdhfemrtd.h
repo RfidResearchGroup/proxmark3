@@ -16,4 +16,5 @@
 int CmdHFeMRTD(const char *Cmd);
 
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
 #endif
