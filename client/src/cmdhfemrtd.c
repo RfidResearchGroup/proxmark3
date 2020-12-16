@@ -797,7 +797,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
         PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
         return false;
     }
-    PrintAndLogEx(INFO, "External authentication successful.");
+    PrintAndLogEx(INFO, "External authentication with BAC successful.");
 
     uint8_t dec_output[32] = { 0x00 };
     des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
@@ -831,14 +831,9 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     return true;
 }
 
-int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool *BAC, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool *use_14b) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
-    uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
-    bool BAC = false;
-    bool use_14b = false;
 
     emrtd_pad_docnum(documentnumber);
 
@@ -856,22 +851,20 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         // If not 14a, try to 14b
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD, 0, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2500)) {
-            DropField();
             PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
-            return PM3_ESOFT;
+            return false;
         }
 
         if (resp.oldarg[0] != 0) {
-            DropField();
             PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
-            return PM3_ESOFT;
+            return false;
         }
-        use_14b = true;
+        *use_14b = true;
     }
 
     // Select and read EF_CardAccess
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, use_14b)) {
-        emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, use_14b);
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, *use_14b)) {
+        emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b);
         PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
         PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     } else {
@@ -879,44 +872,59 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Select MRTD applet
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_NAME, EMRTD_AID_MRTD, use_14b) == false) {
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_NAME, EMRTD_AID_MRTD, *use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
-        DropField();
-        return PM3_ESOFT;
+        return false;
     }
 
     // Select EF_COM
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_COM, use_14b) == false) {
-        BAC = true;
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_COM, *use_14b) == false) {
+        *BAC = true;
         PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
-        BAC = false;
+        *BAC = false;
         // Select EF_DG1
-        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_DG1, use_14b);
+        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_DG1, *use_14b);
 
-        if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, use_14b) == false) {
-            BAC = true;
+        if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b) == false) {
+            *BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
-            BAC = false;
+            *BAC = false;
             PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
 
     // Do Basic Access Aontrol
-    if (BAC) {
+    if (*BAC) {
         // If BAC isn't available, exit out and warn user.
         if (!BAC_available) {
             PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supplied MRZ data. Cannot proceed.");
             PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
-            DropField();
-            return PM3_ESOFT;
+            return false;
         }
 
-        if (emrtd_do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac, use_14b) == false) {
-            DropField();
-            return PM3_ESOFT;
+        if (emrtd_do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac, *use_14b) == false) {
+            return false;
         }
+    }
+
+    return true;
+}
+
+int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
+    uint8_t ssc[8] = { 0x00 };
+    uint8_t ks_enc[16] = { 0x00 };
+    uint8_t ks_mac[16] = { 0x00 };
+    bool BAC = false;
+    bool use_14b = false;
+
+    // Select and authenticate with the eMRTD
+    if (emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b) == false) {
+        DropField();
+        return PM3_ESOFT;
     }
 
     // Select EF_COM
