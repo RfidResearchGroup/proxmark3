@@ -691,7 +691,7 @@ static bool em4x50_sim_send_byte_with_parity(uint8_t byte) {
     return true;
 }
 
-bool em4x50_sim_send_word(uint32_t word) {
+static bool em4x50_sim_send_word(uint32_t word) {
 
     uint8_t cparity = 0x00;
 
@@ -722,7 +722,7 @@ bool em4x50_sim_send_word(uint32_t word) {
     return true;
 }
 
-bool em4x50_sim_send_listen_window(void) {
+static bool em4x50_sim_send_listen_window(void) {
 
     uint16_t check = 0;
 
