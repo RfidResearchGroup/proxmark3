@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added  `lf em 4x50 eview` - show uploaded EM4x50 data in emul memory (@tharexde) 
  - Fix `data rawdemod` parsing for psk2 and user defined clock (@cyberpunk-re)
  - Added `hf iclass encode` - encode a wiegand binary to a encrypted credential (@iceman1001)
  - Changed `recoverpk.py` - now tests more ECDSA curves (@doegox)

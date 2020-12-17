@@ -45,6 +45,7 @@
 
 #define EM4X50_TAG_TOLERANCE                8
 #define EM4X50_TAG_WORD                     45
+#define EM4X50_TAG_MAX_NO_BYTES             136
 
 #define EM4X50_COMMAND_LOGIN                0x01
 #define EM4X50_COMMAND_RESET                0x80
@@ -690,7 +691,7 @@ static bool em4x50_sim_send_byte_with_parity(uint8_t byte) {
     return true;
 }
 
-bool em4x50_sim_send_word(uint32_t word) {
+static bool em4x50_sim_send_word(uint32_t word) {
 
     uint8_t cparity = 0x00;
 
@@ -721,7 +722,7 @@ bool em4x50_sim_send_word(uint32_t word) {
     return true;
 }
 
-bool em4x50_sim_send_listen_window(void) {
+static bool em4x50_sim_send_listen_window(void) {
 
     uint16_t check = 0;
 
@@ -1015,8 +1016,7 @@ void em4x50_read(em4x50_data_t *etd) {
     LOW(GPIO_SSC_DOUT);
     lf_finalize();
 
-    // iceman:  this hardcoded 136 value....
-    reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
 // collects as much information as possible via selective read mode
@@ -1041,8 +1041,7 @@ void em4x50_info(em4x50_data_t *etd) {
 
     lf_finalize();
 
-    // iceman:  this hardcoded 136 value....
-    reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
 // reads data that tag transmits "voluntarily" -> standard read mode
@@ -1193,7 +1192,7 @@ void em4x50_write(em4x50_data_t *etd) {
     }
 
     lf_finalize();
-    reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, 136);
+    reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
 // simple change of password
