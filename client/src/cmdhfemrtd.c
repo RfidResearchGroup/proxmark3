@@ -574,14 +574,14 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     return true;
 }
 
-static bool emrtd_ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen) {
+static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
     int offset = 2;
     int elementidlen = 0;
     int elementlen = 0;
     while (offset < *datainlen) {
-        PrintAndLogEx(DEBUG, "ef_com_get_file_list, offset: %i, data: %X", offset, *(datain + offset));
+        PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
-        if (*(datain + offset) == 0x5f) {
+        if ((*(datain + offset) == 0x5f) || (*(datain + offset) == 0x7f)) {
             elementidlen = 2;
         } else {
             elementidlen = 1;
@@ -591,36 +591,7 @@ static bool emrtd_ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t 
         elementlen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, elementidlen);
 
         // If the element is what we're looking for, get the data and return true
-        if (*(datain + offset) == 0x5c) {
-            *dataoutlen = elementlen;
-            memcpy(dataout, datain + offset + elementidlen + 1, elementlen);
-            return true;
-        }
-        offset += elementidlen + elementlen + 1;
-    }
-    // Return false if we can't find the relevant element
-    return false;
-}
-
-static bool emrtd_ef_dg1_get_mrz(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen) {
-    // TODO: combine with emrtd_ef_com_get_file_list
-    int offset = 2;
-    int elementidlen = 0;
-    int elementlen = 0;
-    while (offset < *datainlen) {
-        PrintAndLogEx(DEBUG, "emrtd_ef_dg1_get_mrz, offset: %i, data: %X", offset, *(datain + offset));
-        // Determine element ID length to set as offset on asn1datalength
-        if (*(datain + offset) == 0x5f) {
-            elementidlen = 2;
-        } else {
-            elementidlen = 1;
-        }
-
-        // Get the length of the element
-        elementlen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, elementidlen);
-
-        // If the element is what we're looking for, get the data and return true
-        if (*(datain + offset) == 0x5f && *(datain + offset + 1) == 0x1f) {
+        if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
             *dataoutlen = elementlen;
             memcpy(dataout, datain + offset + elementidlen + 1, elementlen);
             return true;
@@ -968,7 +939,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (emrtd_ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -1159,7 +1130,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     char mrz[90] = { 0x00 };
     int mrzlen = 0;
 
-    if (emrtd_ef_dg1_get_mrz(response, &resplen, (uint8_t *) mrz, &mrzlen) == false) {
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
         PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
         DropField();
         return PM3_ESOFT;
