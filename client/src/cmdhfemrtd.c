@@ -569,9 +569,11 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
 }
 
 static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
-    int offset = 2;
+    int offset = 1;
+    offset += emrtd_get_asn1_field_length(datain, *datainlen, offset);
     int elementidlen = 0;
     int elementlen = 0;
+    int elementlenlen = 0;
     while (offset < *datainlen) {
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
@@ -584,13 +586,16 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
         // Get the length of the element
         elementlen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, elementidlen);
 
+        // Get the length of the element's length
+        elementlenlen = emrtd_get_asn1_field_length(datain + offset, *datainlen - offset, elementidlen);
+
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
             *dataoutlen = elementlen;
-            memcpy(dataout, datain + offset + elementidlen + 1, elementlen);
+            memcpy(dataout, datain + offset + elementidlen + elementlenlen, elementlen);
             return true;
         }
-        offset += elementidlen + elementlen + 1;
+        offset += elementidlen + elementlen + elementlenlen;
     }
     // Return false if we can't find the relevant element
     return false;
@@ -699,6 +704,58 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
     return true;
 }
 
+static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    int datalen = 0;
+
+    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
+    // based on mrpkey.py
+    // FF D8 FF E0 -> JPEG
+    // 00 00 00 0C 6A 50 -> JPEG 2000
+    for (int i = 0; i < file_length - 6; i++) {
+        if ((file_contents[i] == 0xFF && file_contents[i + 1] == 0xD8 && file_contents[i + 2] == 0xFF && file_contents[i + 3] == 0xE0) ||
+            (file_contents[i] == 0x00 && file_contents[i + 1] == 0x00 && file_contents[i + 2] == 0x00 && file_contents[i + 3] == 0x0C && file_contents[i + 4] == 0x6A && file_contents[i + 5] == 0x50)) {
+            datalen = file_length - i;
+            memcpy(data, file_contents + i, datalen);
+            break;
+        }
+    }
+
+    // If we didn't get any data, return false.
+    if (datalen == 0) {
+        return false;
+    }
+
+    saveFile("EF_DG2", ".jpg", data, datalen);
+    return true;
+}
+
+
+static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    int datalen = 0;
+
+    // If we can't find image in EF_DG5, return false.
+    if (!emrtd_lds_get_data_by_tag(file_contents, &file_length, data, &datalen, 0x5f, 0x40, true)) {
+        return false;
+    }
+
+    saveFile("EF_DG5", ".jpg", data, datalen);
+    return true;
+}
+
+static bool emrtd_dump_ef_sod(uint8_t *file_contents, int file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+
+    int datalenlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
+    int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
+
+    memcpy(data, file_contents + datalenlen + 1, datalen);
+
+    saveFile("EF_SOD", ".p7b", data, datalen);
+    return true;
+}
+
 static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
     uint8_t response[EMRTD_MAX_FILE_SIZE];
     int resplen = 0;
@@ -710,6 +767,14 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
     PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     saveFile(name, ".BIN", response, resplen);
+
+    if (strcmp(file, EMRTD_EF_DG2) == 0) {
+        emrtd_dump_ef_dg2(response, resplen);
+    } else if (strcmp(file, EMRTD_EF_DG5) == 0) {
+        emrtd_dump_ef_dg5(response, resplen);
+    } else if (strcmp(file, EMRTD_EF_SOD) == 0) {
+        emrtd_dump_ef_sod(response, resplen);
+    }
 
     return true;
 }
@@ -894,7 +959,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         // If BAC isn't available, exit out and warn user.
         if (!BAC_available) {
             PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supply MRZ data. Cannot proceed.");
-            PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
+            PrintAndLogEx(HINT, "Check out hf emrtd info/dump --help, supply data with -n -d and -e.");
             return false;
         }
 
