@@ -1182,7 +1182,15 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         emrtd_print_expiry(mrz, 44 + 21);
         emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
 
-        // TODO: verify composite check digit here
+        // Calculate and verify composite check digit
+        char composite_check_data[50] = { 0x00 };
+        memcpy(composite_check_data, mrz, 9);
+        memcpy(composite_check_data + 9, mrz + 13, 7);
+        memcpy(composite_check_data + 7, mrz + 21, 22);
+
+        if (!emrtd_compare_check_digit(composite_check_data, 36, mrz[87])) {
+            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        }
     } else if (td_variant == 1) {
         // ID form factor
         emrtd_print_document_number(mrz, 5);
@@ -1192,7 +1200,12 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         emrtd_print_expiry(mrz, 30 + 8);
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
         emrtd_print_optional_elements(mrz, 30 + 18, 11, false);
-        // TODO: verify composite check digit here
+
+        // Calculate and verify composite check digit
+        if (!emrtd_compare_check_digit(mrz, 59, mrz[59])) {
+            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        }
+
         emrtd_print_name(mrz, 60, 30);
     }
 
