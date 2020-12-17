@@ -705,15 +705,27 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
 }
 
 static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE];
-    int resplen = 0;
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    int datalen = 0;
 
     // If we can't find image in EF_DG5, return false.
-    if (!emrtd_lds_get_data_by_tag(file_contents, &file_length, response, &resplen, 0x5f, 0x40, true)) {
+    if (!emrtd_lds_get_data_by_tag(file_contents, &file_length, data, &datalen, 0x5f, 0x40, true)) {
         return false;
     }
 
-    saveFile("EF_DG5", ".jpg", response, resplen);
+    saveFile("EF_DG5", ".jpg", data, datalen);
+    return true;
+}
+
+static bool emrtd_dump_ef_sod(uint8_t *file_contents, int file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+
+    int datalenlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
+    int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
+
+    memcpy(data, file_contents + datalenlen + 1, datalen);
+
+    saveFile("EF_SOD", ".p7b", data, datalen);
     return true;
 }
 
@@ -731,6 +743,8 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
 
     if (strcmp(file, EMRTD_EF_DG5) == 0) {
         emrtd_dump_ef_dg5(response, resplen);
+    } else if (strcmp(file, EMRTD_EF_SOD) == 0) {
+        emrtd_dump_ef_sod(response, resplen);
     }
 
     return true;
