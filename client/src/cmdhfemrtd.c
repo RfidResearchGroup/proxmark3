@@ -937,15 +937,6 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
 
-    // Select and read EF_CardAccess
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, *use_14b)) {
-        emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b);
-        PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
-        PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    } else {
-        PrintAndLogEx(INFO, "PACE unsupported. Will not read EF_CardAccess.");
-    }
-
     // Select MRTD applet
     if (emrtd_select_file(EMRTD_P1_SELECT_BY_NAME, EMRTD_AID_MRTD, *use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
@@ -1041,8 +1032,12 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         emrtd_dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
     }
 
-    // Dump EF_SOD
+    // Dump EF_SOD and EF_CardAccess (if available)
     emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_SOD, "EF_SOD", BAC, use_14b);
+    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_CARDACCESS, "EF_CardAccess", BAC, use_14b)) {
+        PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
+        PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
+    }
 
     DropField();
     return PM3_SUCCESS;
