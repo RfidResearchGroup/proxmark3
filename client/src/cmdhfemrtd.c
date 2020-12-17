@@ -966,19 +966,27 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     return PM3_SUCCESS;
 }
 
-static bool emrtd_mrz_verify_check_digit(char *mrz, int offset, int datalen) {
+static bool emrtd_compare_check_digit(char *datain, int datalen, char expected_check_digit) {
     char tempdata[90] = { 0x00 };
     char calculated_check_digit[3];
 
-    memcpy(tempdata, mrz + offset, datalen);
+    memcpy(tempdata, datain, datalen);
     int check_digit = emrtd_calculate_check_digit(tempdata);
 
     sprintf(calculated_check_digit, "%i", check_digit);
 
-    PrintAndLogEx(DEBUG, "emrtd_mrz_verify_check_digit, expected: %c", mrz[offset + datalen]);
-    PrintAndLogEx(DEBUG, "emrtd_mrz_verify_check_digit, calculated: %c", calculated_check_digit[0]);
+    PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, expected: %c", expected_check_digit);
+    PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, calculated: %c", calculated_check_digit[0]);
 
-    return calculated_check_digit[0] == mrz[offset + datalen];
+    return calculated_check_digit[0] == expected_check_digit;
+}
+
+static bool emrtd_mrz_verify_check_digit(char *mrz, int offset, int datalen) {
+    char tempdata[90] = { 0x00 };
+
+    memcpy(tempdata, mrz + offset, datalen);
+
+    return emrtd_compare_check_digit(tempdata, datalen, mrz[offset + datalen]);
 }
 
 static void emrtd_print_legal_sex(char *legal_sex) {
@@ -1096,7 +1104,6 @@ static void emrtd_print_expiry(char *mrz, int offset) {
 }
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
-    // TODO: support just loading a dump file
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
     uint8_t ssc[8] = { 0x00 };
