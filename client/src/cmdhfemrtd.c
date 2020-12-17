@@ -518,7 +518,6 @@ static bool _emrtd_secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint
     return true;
 }
 
-
 static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure, bool use_14b) {
     uint8_t response[EMRTD_MAX_FILE_SIZE];
     int resplen = 0;
@@ -592,9 +591,15 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
-            *dataoutlen = e_datalen;
-            memcpy(dataout, datain + offset + e_idlen + e_fieldlen, e_datalen);
-            return true;
+
+            if ( *datainlen > e_datalen) {
+                *dataoutlen = e_datalen;
+                memcpy(dataout, datain + offset + e_idlen + e_fieldlen, e_datalen);
+                return true;
+            } else {
+                PrintAndLogEx(ERR, "error (emrtd_lds_get_data_by_tag) e_datalen out-of-bounds");
+                return false;
+            }
         }
         offset += e_idlen + e_datalen + e_fieldlen;
     }
