@@ -813,7 +813,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
     PrintAndLogEx(DEBUG, "kmrz.............. " _GREEN_("%s"), kmrz);
 
-    uint8_t kseed[16] = { 0x00 };
+    uint8_t kseed[20] = { 0x00 };
     mbedtls_sha1((unsigned char *)kmrz, strlen(kmrz), kseed);
     PrintAndLogEx(DEBUG, "kseed (sha1)...... %s ", sprint_hex_inrow(kseed, 16));
 
