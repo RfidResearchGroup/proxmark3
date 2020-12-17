@@ -1174,9 +1174,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     if (td_variant == 3) {
         // Passport form factor
+        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
         emrtd_print_name(mrz, 5, 38);
         emrtd_print_document_number(mrz, 44);
-        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
         emrtd_print_dob(mrz, 44 + 13);
         emrtd_print_legal_sex(&mrz[44 + 20]);
         emrtd_print_expiry(mrz, 44 + 21);
@@ -1184,29 +1184,28 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
         // Calculate and verify composite check digit
         char composite_check_data[50] = { 0x00 };
-        memcpy(composite_check_data, mrz, 9);
-        memcpy(composite_check_data + 9, mrz + 13, 7);
-        memcpy(composite_check_data + 7, mrz + 21, 22);
+        memcpy(composite_check_data, mrz + 44, 10);
+        memcpy(composite_check_data + 10, mrz + 44 + 13, 7);
+        memcpy(composite_check_data + 17, mrz + 44 + 21, 23);
 
-        if (!emrtd_compare_check_digit(composite_check_data, 36, mrz[87])) {
+        if (!emrtd_compare_check_digit(composite_check_data, 39, mrz[87])) {
             PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
         }
     } else if (td_variant == 1) {
         // ID form factor
+        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
+        emrtd_print_name(mrz, 60, 30);
         emrtd_print_document_number(mrz, 5);
-        emrtd_print_optional_elements(mrz, 15, 15, false);
         emrtd_print_dob(mrz, 30);
         emrtd_print_legal_sex(&mrz[30 + 7]);
         emrtd_print_expiry(mrz, 30 + 8);
-        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
+        emrtd_print_optional_elements(mrz, 15, 15, false);
         emrtd_print_optional_elements(mrz, 30 + 18, 11, false);
 
         // Calculate and verify composite check digit
         if (!emrtd_compare_check_digit(mrz, 59, mrz[59])) {
             PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
         }
-
-        emrtd_print_name(mrz, 60, 30);
     }
 
     DropField();
