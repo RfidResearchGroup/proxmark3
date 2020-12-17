@@ -569,9 +569,11 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
 }
 
 static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
-    int offset = 2;
+    int offset = 1;
+    offset += emrtd_get_asn1_field_length(datain, *datainlen, offset);
     int elementidlen = 0;
     int elementlen = 0;
+    int elementlenlen = 0;
     while (offset < *datainlen) {
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
@@ -584,13 +586,16 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
         // Get the length of the element
         elementlen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, elementidlen);
 
+        // Get the length of the element's length
+        elementlenlen = emrtd_get_asn1_field_length(datain + offset, *datainlen - offset, elementidlen);
+
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
             *dataoutlen = elementlen;
-            memcpy(dataout, datain + offset + elementidlen + 1, elementlen);
+            memcpy(dataout, datain + offset + elementidlen + elementlenlen, elementlen);
             return true;
         }
-        offset += elementidlen + elementlen + 1;
+        offset += elementidlen + elementlen + elementlenlen;
     }
     // Return false if we can't find the relevant element
     return false;
@@ -894,7 +899,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         // If BAC isn't available, exit out and warn user.
         if (!BAC_available) {
             PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supply MRZ data. Cannot proceed.");
-            PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
+            PrintAndLogEx(HINT, "Check out hf emrtd info/dump --help, supply data with -n -d and -e.");
             return false;
         }
 
