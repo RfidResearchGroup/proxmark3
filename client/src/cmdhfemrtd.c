@@ -1046,26 +1046,26 @@ static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) 
     return i - 1;
 }
 
-static void emrtd_print_optional_elements(char *mrz, int offset) {
-    int i = emrtd_mrz_determine_length(mrz, offset, 14);
+static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
+    int i = emrtd_mrz_determine_length(mrz, offset, length);
 
     // Only print optional elements if they're available
     if (i != 0) {
         PrintAndLogEx(SUCCESS, "Optional elements.....: " _YELLOW_("%.*s"), i, mrz + offset);
     }
 
-    if (!emrtd_mrz_verify_check_digit(mrz, offset, 14)) {
+    if (verify_check_digit && !emrtd_mrz_verify_check_digit(mrz, offset, length)) {
         PrintAndLogEx(SUCCESS, _RED_("Optional element check digit is invalid."));
     }
 }
 
-static void emrtd_print_passport_number(char *mrz, int offset) {
+static void emrtd_print_document_number(char *mrz, int offset) {
     int i = emrtd_mrz_determine_length(mrz, offset, 9);
 
-    PrintAndLogEx(SUCCESS, "Passport Number.......: " _YELLOW_("%.*s"), i, mrz + offset);
+    PrintAndLogEx(SUCCESS, "Document Number.......: " _YELLOW_("%.*s"), i, mrz + offset);
 
     if (!emrtd_mrz_verify_check_digit(mrz, offset, 9)) {
-        PrintAndLogEx(SUCCESS, _RED_("Passport number check digit is invalid."));
+        PrintAndLogEx(SUCCESS, _RED_("Document number check digit is invalid."));
     }
 }
 
@@ -1182,28 +1182,40 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
     PrintAndLogEx(SUCCESS, "Document Form Factor..: " _YELLOW_("TD%i"), td_variant);
 
-    // // Print the MRZ
-    // if (td_variant == 1) {
-    //     PrintAndLogEx(SUCCESS, "MRZ Row 1: " _YELLOW_("%.30s"), mrz);
-    //     PrintAndLogEx(SUCCESS, "MRZ Row 2: " _YELLOW_("%.30s"), mrz + 30);
-    //     PrintAndLogEx(SUCCESS, "MRZ Row 3: " _YELLOW_("%.30s"), mrz + 60);
-    // } else if (td_variant == 3) {
-    //     PrintAndLogEx(SUCCESS, "MRZ Row 1: " _YELLOW_("%.44s"), mrz);
-    //     PrintAndLogEx(SUCCESS, "MRZ Row 2: " _YELLOW_("%.44s"), mrz + 44);
-    // }
+    // Print the MRZ
+    if (td_variant == 1) {
+        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.30s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.30s"), mrz + 30);
+        PrintAndLogEx(DEBUG, "MRZ Row 3: " _YELLOW_("%.30s"), mrz + 60);
+    } else if (td_variant == 3) {
+        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.44s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.44s"), mrz + 44);
+    }
 
-    // Passport form factor
+    PrintAndLogEx(SUCCESS, "Issuing state.........: " _YELLOW_("%.3s"), mrz + 2);
+
     if (td_variant == 3) {
-        PrintAndLogEx(SUCCESS, "Issuing state.........: " _YELLOW_("%.3s"), mrz + 2);
+        // Passport form factor
         emrtd_print_name(mrz, 5, 38);
-        emrtd_print_passport_number(mrz, 44);
+        emrtd_print_document_number(mrz, 44);
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
         emrtd_print_dob(mrz, 44 + 13);
         emrtd_print_legal_sex(&mrz[44 + 20]);
         emrtd_print_expiry(mrz, 44 + 21);
-        emrtd_print_optional_elements(mrz, 44 + 28);
+        emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
 
         // TODO: verify composite check digit here
+    } else if (td_variant == 1) {
+        // ID form factor
+        emrtd_print_document_number(mrz, 5);
+        emrtd_print_optional_elements(mrz, 15, 15, false);
+        emrtd_print_dob(mrz, 30);
+        emrtd_print_legal_sex(&mrz[30 + 7]);
+        emrtd_print_expiry(mrz, 30 + 8);
+        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
+        emrtd_print_optional_elements(mrz, 30 + 18, 11, false);
+        // TODO: verify composite check digit here
+        emrtd_print_name(mrz, 60, 30);
     }
 
     DropField();
