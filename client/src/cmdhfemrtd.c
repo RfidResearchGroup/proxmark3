@@ -824,10 +824,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     return true;
 }
 
-static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool *BAC, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool *use_14b) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    int resplen = 0;
-
+static bool emrtd_connect(bool *use_14b) {
     // Try to 14a
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -852,6 +849,12 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         }
         *use_14b = true;
     }
+    return true;
+}
+
+static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool *BAC, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool *use_14b) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
 
     // Select and read EF_CardAccess
     if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, *use_14b)) {
@@ -912,14 +915,20 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     bool BAC = false;
     bool use_14b = false;
 
-    // Select and authenticate with the eMRTD
-    if (emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b) == false) {
+    // Select the eMRTD
+    if (!emrtd_connect(&use_14b)) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Authenticate with the eMRTD
+    if (!emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b)) {
         DropField();
         return PM3_ESOFT;
     }
 
     // Select EF_COM
-    if (emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
+    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -1102,13 +1111,19 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     int td_variant = 0;
 
+    // Select the eMRTD
+    if (!emrtd_connect(&use_14b)) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
     // Select and authenticate with the eMRTD
     bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
     PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
     PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
     PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
 
-    if (BAC && !auth_result) {
+    if (!auth_result) {
         DropField();
         return PM3_ESOFT;
     }
