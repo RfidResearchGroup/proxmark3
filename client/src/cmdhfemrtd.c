@@ -320,7 +320,7 @@ static int emrtd_external_authenticate(uint8_t *data, int length, uint8_t *datao
 
 static int _emrtd_read_binary(int offset, int bytes_to_read, uint8_t *dataout, int *dataoutlen, bool use_14b) {
     char cmd[50];
-    sprintf(cmd, "00%s%04i%02i", EMRTD_READ_BINARY, offset, bytes_to_read);
+    sprintf(cmd, "00%s%04X%02X", EMRTD_READ_BINARY, offset, bytes_to_read);
 
     return emrtd_exchange_commands(cmd, dataout, dataoutlen, false, true, use_14b);
 }
