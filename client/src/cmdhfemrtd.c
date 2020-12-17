@@ -960,24 +960,20 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
 static bool emrtd_compare_check_digit(char *datain, int datalen, char expected_check_digit) {
     char tempdata[90] = { 0x00 };
-    char calculated_check_digit[3];
-
     memcpy(tempdata, datain, datalen);
-    int check_digit = emrtd_calculate_check_digit(tempdata);
 
-    sprintf(calculated_check_digit, "%i", check_digit);
-
-    PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, expected: %c", expected_check_digit);
-    PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, calculated: %c", calculated_check_digit[0]);
-
-    return calculated_check_digit[0] == expected_check_digit;
+    uint8_t check_digit = emrtd_calculate_check_digit(tempdata) + 0x30;
+    bool res =check_digit == expected_check_digit;
+    PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, expected %c == %c calculated ( %s )"
+        , expected_check_digit
+        , check_digit
+        , (res) ? _GREEN_("ok") : _RED_("fail"));
+    return res;
 }
 
 static bool emrtd_mrz_verify_check_digit(char *mrz, int offset, int datalen) {
     char tempdata[90] = { 0x00 };
-
     memcpy(tempdata, mrz + offset, datalen);
-
     return emrtd_compare_check_digit(tempdata, datalen, mrz[offset + datalen]);
 }
 
@@ -1112,7 +1108,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
     PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
 
-    if (!auth_result) {
+    if (BAC && !auth_result) {
         DropField();
         return PM3_ESOFT;
     }
