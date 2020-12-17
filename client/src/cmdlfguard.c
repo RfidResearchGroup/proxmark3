@@ -226,10 +226,10 @@ static int CmdGuardClone(const char *Cmd) {
     free(bs);
 
     PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: " _GREEN_("%u") " Card Number: " _GREEN_("%u")
-            , cardtype
-            , facilitycode
-            , cardnumber
-            );
+                  , cardtype
+                  , facilitycode
+                  , cardnumber
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
@@ -281,9 +281,9 @@ static int CmdGuardSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
-            , facilitycode
-            , cardnumber
-            );
+                  , facilitycode
+                  , cardnumber
+                 );
 
     // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));

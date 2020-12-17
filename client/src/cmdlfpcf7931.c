@@ -125,7 +125,7 @@ static int CmdLFPCF7931Config(const char *Cmd) {
     }
 
     if (pwd_len) {
-       memcpy(configPcf.Pwd, pwd, sizeof(configPcf.Pwd));
+        memcpy(configPcf.Pwd, pwd, sizeof(configPcf.Pwd));
     }
     if (delay != -1) {
         configPcf.InitDelay = (delay & 0xFFFF);
@@ -134,7 +134,7 @@ static int CmdLFPCF7931Config(const char *Cmd) {
         configPcf.OffsetWidth = (ow & 0xFFFF);
     }
     if (op != 0xFFFF) {
-        configPcf.OffsetPosition =(op & 0xFFFF);
+        configPcf.OffsetPosition = (op & 0xFFFF);
     }
 
     pcf7931_printConfig();

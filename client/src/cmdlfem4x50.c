@@ -28,7 +28,7 @@ static void prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t 
     // restructure received result in "em4x50_word_t" structure
     for (int i = fwr; i <= lwr; i++) {
         for (int j = 0; j < 4; j++) {
-            words[i].byte[j] = data[i * 4 + (3 - j)]; 
+            words[i].byte[j] = data[i * 4 + (3 - j)];
         }
     }
 }
@@ -131,7 +131,7 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
 
     int res = 0;
     uint32_t serial = 0x0, device_id = 0x0;
-     
+
     if (str_endswith(filename, ".eml"))
         res = loadFileEML(filename, data, bytes_read) != PM3_SUCCESS;
     else if (str_endswith(filename, ".json"))
@@ -202,7 +202,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
     // upload to emulator memory
     PrintAndLogEx(INFO, "Uploading dump " _YELLOW_("%s") " to emulator memory", filename);
     em4x50_seteml(data, 0, DUMP_FILESIZE);
-    
+
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
@@ -236,7 +236,7 @@ int CmdEM4x50ESave(const char *Cmd) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         return PM3_ETIMEOUT;
     }
-    
+
     // valid em4x50 data?
     uint32_t serial = bytes_to_num(data + 4 * EM4X50_DEVICE_SERIAL, 4);
     uint32_t device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);
@@ -244,7 +244,7 @@ int CmdEM4x50ESave(const char *Cmd) {
         PrintAndLogEx(WARNING, "No valid em4x50 data in flash memory.");
         return PM3_ENODATA;
     }
-    
+
     // user supplied filename?
     if (fnlen == 0) {
         PrintAndLogEx(INFO, "Using UID as filename");
@@ -314,7 +314,7 @@ int CmdEM4x50Login(const char *Cmd) {
         arg_param_end
     };
 
-    CLIExecWithReturn(ctx, Cmd, argtable, true);    
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     int pwd_len = 0;
     uint8_t pwd[4] = {0x0};
     CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
@@ -323,7 +323,7 @@ int CmdEM4x50Login(const char *Cmd) {
     if (pwd_len != 4) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes");
         return PM3_EINVARG;
-    } 
+    }
 
     uint32_t password = BYTES2UINT32(pwd);
 
@@ -357,30 +357,30 @@ int CmdEM4x50Brute(const char *Cmd) {
         arg_param_end
     };
 
-    CLIExecWithReturn(ctx, Cmd, argtable, true);    
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     int first_len = 0;
-    uint8_t first[4] = {0,0,0,0};
+    uint8_t first[4] = {0, 0, 0, 0};
     CLIGetHexWithReturn(ctx, 1, first, &first_len);
     int last_len = 0;
-    uint8_t last[4] = {0,0,0,0};
+    uint8_t last[4] = {0, 0, 0, 0};
     CLIGetHexWithReturn(ctx, 2, last, &last_len);
     CLIParserFree(ctx);
 
     if (first_len != 4) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes");
         return PM3_EINVARG;
-    } 
-     if (last_len != 4) {
-            PrintAndLogEx(FAILED, "password length must be 4 bytes");
-            return PM3_EINVARG;
-    } 
+    }
+    if (last_len != 4) {
+        PrintAndLogEx(FAILED, "password length must be 4 bytes");
+        return PM3_EINVARG;
+    }
 
     em4x50_data_t etd;
     etd.password1 = BYTES2UINT32(first);
     etd.password2 = BYTES2UINT32(last);
 
     // 27 passwords/second (empirical value)
-    const int speed = 27;   
+    const int speed = 27;
 
     // print some information
     int no_iter = etd.password2 - etd.password1 + 1;
@@ -390,10 +390,10 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     dur_s -= dur_h * 3600 + dur_m * 60;
     PrintAndLogEx(INFO, "Trying %i passwords in range [0x%08x, 0x%08x]"
-                , no_iter
-                , etd.password1
-                , etd.password2
-            );
+                  , no_iter
+                  , etd.password1
+                  , etd.password2
+                 );
     PrintAndLogEx(INFO, "Estimated duration: %ih%im%is", dur_h, dur_m, dur_s);
 
     // start
@@ -432,7 +432,7 @@ int CmdEM4x50Chk(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
-        
+
     if (IfPm3Flash() == false) {
         PrintAndLogEx(WARNING, "no flash memory available");
         return PM3_EFLASH;
@@ -452,17 +452,17 @@ int CmdEM4x50Chk(const char *Cmd) {
     int res = loadFileDICTIONARY(filename, data, &datalen, 4, &key_count);
     if (res || !key_count)
         return PM3_EFILE;
-    
+
     PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
 
     int status = PM3_EFAILED;
     int keyblock = 2000;    // block with 2000 bytes -> 500 keys
     uint8_t destfn[32] = "em4x50_chk.bin";
 
-    PacketResponseNG resp; 
+    PacketResponseNG resp;
     int bytes_remaining = datalen;
     while (bytes_remaining > 0) {
-        
+
         PrintAndLogEx(INPLACE, "Remaining keys: %i ", bytes_remaining / 4);
 
         // upload to flash.
@@ -476,7 +476,7 @@ int CmdEM4x50Chk(const char *Cmd) {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_EM4X50_CHK, destfn, sizeof(destfn));
         WaitForResponseTimeoutW(CMD_LF_EM4X50_CHK,  &resp, -1, false);
-        
+
         status = resp.status;
         if ((status == PM3_SUCCESS) || (status == PM3_EOPABORTED))
             break;
@@ -486,7 +486,7 @@ int CmdEM4x50Chk(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-        
+
     // print response
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Key " _GREEN_("found: %02x %02x %02x %02x"),
@@ -494,7 +494,7 @@ int CmdEM4x50Chk(const char *Cmd) {
                       resp.data.asBytes[2],
                       resp.data.asBytes[1],
                       resp.data.asBytes[0]
-                      );
+                     );
     } else {
         PrintAndLogEx(FAILED, "No key found");
     }
@@ -578,7 +578,7 @@ int CmdEM4x50Read(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     int addr = arg_get_int_def(ctx, 1, 0);
     int pwd_len = 0;
     uint8_t pwd[4] = {0x0};
@@ -587,7 +587,7 @@ int CmdEM4x50Read(const char *Cmd) {
 
     if (addr <= 0 || addr >= EM4X50_NO_WORDS) {
         return PM3_EINVARG;
-    } 
+    }
 
     em4x50_data_t etd;
 
@@ -629,11 +629,11 @@ int CmdEM4x50Info(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int pwd_len = 0;
-    uint8_t pwd[4] = {0x0};    
+    uint8_t pwd[4] = {0x0};
     CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
     CLIParserFree(ctx);
 
-    em4x50_data_t etd = {.pwd_given = false};    
+    em4x50_data_t etd = {.pwd_given = false};
     if (pwd_len) {
         if (pwd_len != 4) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwd_len);
@@ -652,7 +652,7 @@ int CmdEM4x50Info(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if ( resp.status == PM3_SUCCESS)
+    if (resp.status == PM3_SUCCESS)
         print_info_result(resp.data.asBytes);
     else
         PrintAndLogEx(FAILED, "Reading tag " _RED_("failed"));
@@ -708,7 +708,7 @@ int CmdEM4x50Reader(const char *Cmd) {
 
                 PrintAndLogEx(INFO, _GREEN_(" %s") "| %s", sprint_hex(words[i].byte, 4), r);
             }
-            
+
             PrintAndLogEx(INFO, "-------------+-------------");
         }
     } while (cm && !kbd_enter_pressed());
@@ -813,11 +813,11 @@ int CmdEM4x50Write(const char *Cmd) {
         arg_str0("p", "pwd", "<hex>", "password, 4 bytes, lsb"),
         arg_param_end
     };
-    
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int addr = arg_get_int_def(ctx, 1, 0);
-    
+
     int word_len = 0;
     uint8_t word[4] = {0x0};
     CLIGetHexWithReturn(ctx, 2, word, &word_len);
@@ -826,18 +826,18 @@ int CmdEM4x50Write(const char *Cmd) {
     uint8_t pwd[4] = {0x0};
     CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
     CLIParserFree(ctx);
-    
+
     if (addr <= 0 || addr >= EM4X50_NO_WORDS) {
         PrintAndLogEx(FAILED, "address has to be within range [0, 31]");
         return PM3_EINVARG;
-    } 
-    
+    }
+
     if (word_len != 4) {
         PrintAndLogEx(FAILED, "word/data length must be 4 bytes instead of %d", word_len);
         return PM3_EINVARG;
     }
 
-    em4x50_data_t etd = {.pwd_given = false};   
+    em4x50_data_t etd = {.pwd_given = false};
     if (pwd_len) {
         if (pwd_len != 4) {
             PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwd_len);
@@ -895,7 +895,7 @@ int CmdEM4x50WritePwd(const char *Cmd) {
         arg_str1("n", "new", "<hex>", "new password, 4 hex bytes, lsb"),
         arg_param_end
     };
-    
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int pwd_len = 0;
     uint8_t pwd[4] = {0x0};
@@ -907,7 +907,7 @@ int CmdEM4x50WritePwd(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    em4x50_data_t etd;    
+    em4x50_data_t etd;
     if (pwd_len != 4) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes instead of %d", pwd_len);
         return PM3_EINVARG;
@@ -940,9 +940,9 @@ int CmdEM4x50WritePwd(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Writing new password %s (%s)"
-            , sprint_hex_inrow(npwd, sizeof(npwd))
-            , _GREEN_("ok")
-         );
+                  , sprint_hex_inrow(npwd, sizeof(npwd))
+                  , _GREEN_("ok")
+                 );
     return PM3_SUCCESS;
 }
 
@@ -961,7 +961,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
         arg_param_end
     };
 
-    CLIExecWithReturn(ctx, Cmd, argtable, true);    
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     int pwd_len = 0;
     uint8_t pwd[4] = {0x0};
     CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
@@ -977,7 +977,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     etd.password1 = BYTES2UINT32(pwd);
     etd.pwd_given = true;
-    
+
     // clear password
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -996,13 +996,13 @@ int CmdEM4x50Wipe(const char *Cmd) {
 
     // from now on new password 0x0
     etd.password1 = 0x0;
-    
+
     // clear data (words 1 to 31)
     for (int i = 1; i < EM4X50_DEVICE_SERIAL; i++) {
 
         // no login necessary for blocks 3 to 31
         etd.pwd_given = (i <= EM4X50_CONTROL);
-        
+
         PrintAndLogEx(INPLACE, "Wiping block %i", i);
 
         etd.addresses = i << 8 | i;
@@ -1013,7 +1013,7 @@ int CmdEM4x50Wipe(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-        if ( resp.status != PM3_SUCCESS) {
+        if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, "Wiping data " _RED_("failed"));
             return PM3_ESOFT;
@@ -1044,7 +1044,7 @@ int CmdEM4x50Restore(const char *Cmd) {
         arg_param_end
     };
 
-    CLIExecWithReturn(ctx, Cmd, argtable, true);    
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int uidLen = 0;
     uint8_t uid[4] = {0x0};
@@ -1099,7 +1099,7 @@ int CmdEM4x50Restore(const char *Cmd) {
 
         etd.addresses = i << 8 | i;
         etd.word = reflect32(BYTES2UINT32((data + 4 * i)));
-        
+
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_LF_EM4X50_WRITE, (uint8_t *)&etd, sizeof(etd));
@@ -1116,7 +1116,7 @@ int CmdEM4x50Restore(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(NORMAL, ""); 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done");
     return PM3_SUCCESS;
 }
@@ -1160,10 +1160,10 @@ static command_t CommandTable[] = {
     {"login",  CmdEM4x50Login,       IfPm3EM4x50,     "login into EM4x50"},
     {"rdbl",   CmdEM4x50Read,        IfPm3EM4x50,     "read word data from EM4x50"},
     {"wrbl",   CmdEM4x50Write,       IfPm3EM4x50,     "write word data to EM4x50"},
-    {"writepwd",CmdEM4x50WritePwd,   IfPm3EM4x50,     "change password of EM4x50"},
+    {"writepwd", CmdEM4x50WritePwd,   IfPm3EM4x50,     "change password of EM4x50"},
     {"wipe",   CmdEM4x50Wipe,        IfPm3EM4x50,     "wipe EM4x50 tag"},
     {"reader", CmdEM4x50Reader,      IfPm3EM4x50,     "show standard read mode data of EM4x50"},
-    {"restore",CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
+    {"restore", CmdEM4x50Restore,     IfPm3EM4x50,     "restore EM4x50 dump to tag"},
     {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "simulate EM4x50 tag"},
     {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to emulator memory"},
     {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save emulator memory to file"},

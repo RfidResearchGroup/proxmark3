@@ -38,7 +38,6 @@ Check column "offline" for their availability.
 |`analyse nuid           `|Y       |`create NUID from 7byte UID`
 |`analyse demodbuff      `|Y       |`Load binary string to demodbuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
-|`analyse foo            `|Y       |`muxer`
 
 
 ### data
@@ -143,6 +142,7 @@ Check column "offline" for their availability.
 |`hf 14a raw             `|N       |`Send raw hex data to tag`
 |`hf 14a antifuzz        `|N       |`Fuzzing the anticollision phase.  Warning! Readers may react strange`
 |`hf 14a config          `|N       |`Configure 14a settings (use with caution)`
+|`hf 14a apdufind        `|N       |`Enuerate APDUs - CLA/INS/P1P2`
 
 
 ### hf 14b
@@ -248,28 +248,29 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`hf iclass help         `|Y       |`This help`
-|`hf iclass dump         `|N       |`[options..] Dump Picopass / iCLASS tag to file`
-|`hf iclass info         `|Y       |`            Tag information`
-|`hf iclass list         `|Y       |`            List iclass history`
-|`hf iclass rdbl         `|N       |`[options..] Read Picopass / iCLASS block`
-|`hf iclass reader       `|N       |`            Act like an Picopass / iCLASS reader`
-|`hf iclass restore      `|N       |`[options..] Restore a dump file onto a Picopass / iCLASS tag`
-|`hf iclass sniff        `|N       |`            Eavesdrop Picopass / iCLASS communication`
-|`hf iclass wrbl         `|N       |`[options..] Write Picopass / iCLASS block`
-|`hf iclass chk          `|N       |`[options..] Check keys`
-|`hf iclass loclass      `|Y       |`[options..] Use loclass to perform bruteforce reader attack`
-|`hf iclass lookup       `|Y       |`[options..] Uses authentication trace to check for key in dictionary file`
-|`hf iclass sim          `|N       |`[options..] Simulate iCLASS tag`
-|`hf iclass eload        `|N       |`[f <fn>   ] Load Picopass / iCLASS dump file into emulator memory`
-|`hf iclass esave        `|N       |`[f <fn>   ] Save emulator memory to file`
-|`hf iclass eview        `|N       |`[options..] View emulator memory`
-|`hf iclass calcnewkey   `|Y       |`[options..] Calc diversified keys (blocks 3 & 4) to write new keys`
-|`hf iclass encrypt      `|Y       |`[options..] Encrypt given block data`
-|`hf iclass decrypt      `|Y       |`[options..] Decrypt given block data or tag dump file`
-|`hf iclass managekeys   `|Y       |`[options..] Manage keys to use with iclass commands`
-|`hf iclass permutekey   `|N       |`            Permute function from 'heart of darkness' paper`
-|`hf iclass view         `|Y       |`[options..] Display content from tag dump file`
+|`hf iclass help         `|Y       |`    This help`
+|`hf iclass dump         `|N       |`[*] Dump Picopass / iCLASS tag to file`
+|`hf iclass info         `|Y       |`    Tag information`
+|`hf iclass list         `|Y       |`    List iclass history`
+|`hf iclass rdbl         `|N       |`[*] Read Picopass / iCLASS block`
+|`hf iclass reader       `|N       |`    Act like an Picopass / iCLASS reader`
+|`hf iclass restore      `|N       |`[*] Restore a dump file onto a Picopass / iCLASS tag`
+|`hf iclass sniff        `|N       |`    Eavesdrop Picopass / iCLASS communication`
+|`hf iclass wrbl         `|N       |`[*] Write Picopass / iCLASS block`
+|`hf iclass chk          `|N       |`[*] Check keys`
+|`hf iclass loclass      `|Y       |`[*] Use loclass to perform bruteforce reader attack`
+|`hf iclass lookup       `|Y       |`[*] Uses authentication trace to check for key in dictionary file`
+|`hf iclass sim          `|N       |`[*] Simulate iCLASS tag`
+|`hf iclass eload        `|N       |`[*] Load Picopass / iCLASS dump file into emulator memory`
+|`hf iclass esave        `|N       |`[*] Save emulator memory to file`
+|`hf iclass eview        `|N       |`[.] View emulator memory`
+|`hf iclass calcnewkey   `|Y       |`[*] Calc diversified keys (blocks 3 & 4) to write new keys`
+|`hf iclass encode       `|Y       |`[*] Encode binary wiegand to block 7`
+|`hf iclass encrypt      `|Y       |`[*] Encrypt given block data`
+|`hf iclass decrypt      `|Y       |`[*] Decrypt given block data or tag dump file`
+|`hf iclass managekeys   `|Y       |`[*] Manage keys to use with iclass commands`
+|`hf iclass permutekey   `|N       |`    Permute function from 'heart of darkness' paper`
+|`hf iclass view         `|Y       |`[*] Display content from tag dump file`
 
 
 ### hf legic
@@ -577,10 +578,10 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em help             `|Y       |`This help`
-|`lf em 410x             `|Y       |`EM 410x commands...`
-|`lf em 4x05             `|Y       |`EM 4x05 commands...`
-|`lf em 4x50             `|Y       |`EM 4x50 commands...`
-|`lf em 4x70             `|Y       |`EM 4x70 commands...`
+|`lf em 410x             `|Y       |`EM 4102 commands...`
+|`lf em 4x05             `|Y       |`EM 4205 / 4305 / 4369 / 4469 commands...`
+|`lf em 4x50             `|Y       |`EM 4350 / 4450 commands...`
+|`lf em 4x70             `|Y       |`EM 4070 / 4170 commands...`
 
 
 ### lf fdxb
@@ -672,9 +673,9 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf indala help         `|Y       |`this help`
-|`lf indala demod        `|Y       |`demodulate an indala tag (PSK1) from GraphBuffer`
-|`lf indala altdemod     `|Y       |`alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
-|`lf indala reader       `|N       |`read an Indala Prox tag from the antenna`
+|`lf indala demod        `|Y       |`demodulate an Indala tag (PSK1) from GraphBuffer`
+|`lf indala altdemod     `|Y       |`alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
+|`lf indala reader       `|N       |`read an Indala tag from the antenna`
 |`lf indala clone        `|N       |`clone Indala tag to T55x7 or Q5/T5555`
 |`lf indala sim          `|N       |`simulate Indala tag`
 
@@ -686,10 +687,10 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf io help             `|Y       |`this help`
-|`lf io demod            `|Y       |`demodulate an IOProx tag from the GraphBuffer`
+|`lf io demod            `|Y       |`demodulate an ioProx tag from the GraphBuffer`
 |`lf io reader           `|N       |`attempt to read and extract tag data`
-|`lf io clone            `|N       |`clone IOProx tag to T55x7 or Q5/T5555`
-|`lf io sim              `|N       |`simulate IOProx tag`
+|`lf io clone            `|N       |`clone ioProx tag to T55x7 or Q5/T5555`
+|`lf io sim              `|N       |`simulate ioProx tag`
 |`lf io watch            `|N       |`continuously watch for cards. Reader mode`
 
 
@@ -1001,7 +1002,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`wiegand help           `|Y       |`This help`
 |`wiegand list           `|Y       |`List available wiegand formats`
-|`wiegand encode         `|Y       |`Encode to wiegand raw hex`
-|`wiegand decode         `|Y       |`Convert raw hex to decoded wiegand format`
+|`wiegand encode         `|Y       |`Encode to wiegand raw hex (currently for HID Prox)`
+|`wiegand decode         `|Y       |`Convert raw hex to decoded wiegand format (currently for HID Prox)`
 
 

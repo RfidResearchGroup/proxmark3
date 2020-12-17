@@ -510,7 +510,7 @@ static int CmdAWIDBrute(const char *Cmd) {
             break;
     }
 
-   
+
     // truncate card number
     if ((cn & 0xFFFF) != cn) {
         cn &= 0xFFFF;
@@ -550,7 +550,7 @@ static int CmdAWIDBrute(const char *Cmd) {
         if (cn > 1) {
             if (down > 1) {
                 if (sendTry(fmtlen, fc, --down, delay, bits, size, verbose) != PM3_SUCCESS) {
-                return PM3_ESOFT;
+                    return PM3_ESOFT;
                 }
             }
         }

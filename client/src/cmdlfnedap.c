@@ -145,13 +145,13 @@ int demodNedap(bool verbose) {
         badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
 
         PrintAndLogEx(SUCCESS, "NEDAP (%s) - ID: " _YELLOW_("%05u") " subtype: " _YELLOW_("%1u")" customer code: " _YELLOW_("%u / 0x%03X") " Raw: " _YELLOW_("%s")
-                , (size == 128) ? "128b" : "64b"
-                , badgeId
-                , subtype
-                , customerCode
-                , customerCode
-                , sprint_hex_inrow(data, size / 8)
-                );
+                      , (size == 128) ? "128b" : "64b"
+                      , badgeId
+                      , subtype
+                      , customerCode
+                      , customerCode
+                      , sprint_hex_inrow(data, size / 8)
+                     );
         PrintAndLogEx(DEBUG, "Checksum (%s) 0x%04X",  _GREEN_("ok"), checksum);
 
     } else {
@@ -373,7 +373,7 @@ static int CmdLFNedapClone(const char *Cmd) {
         arg_u64_0(NULL, "st", "<dec>", "optional - sub type (default 5)"),
         arg_u64_1(NULL, "cc", "<dec>", "customer code (0-4095)"),
         arg_u64_1(NULL, "id", "<dec>", "ID (0-99999)"),
-        arg_lit0("l", "long", "optional - long (128), default to short (64)"),        
+        arg_lit0("l", "long", "optional - long (128), default to short (64)"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -395,17 +395,17 @@ static int CmdLFNedapClone(const char *Cmd) {
     }
     if (sub_type > 0xF) {
         PrintAndLogEx(FAILED, "out-of-range, valid subtype is between 0-15");
-        return PM3_EINVARG;    
+        return PM3_EINVARG;
     }
 
     if (customer_code > 0xFFF) {
         PrintAndLogEx(FAILED, "out-of-range, valid customer code is between 0-4095");
-        return PM3_EINVARG;    
+        return PM3_EINVARG;
     }
 
     if (id > 99999) {
         PrintAndLogEx(FAILED, "out-of-range, id max value is 99999");
-        return PM3_EINVARG;    
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "NEDAP (%s) - ID: " _GREEN_("%05u") " subtype: " _GREEN_("%1u") " customer code: " _GREEN_("%u / 0x%03X")
@@ -454,7 +454,7 @@ static int CmdLFNedapClone(const char *Cmd) {
     NedapGen(sub_type, customer_code, id, is_long, data);
 
     for (uint8_t i = 1; i < max ; i++) {
-        blocks[i] = bytes_to_num (data + ((i - 1) * 4), 4);
+        blocks[i] = bytes_to_num(data + ((i - 1) * 4), 4);
     }
 
     PrintAndLogEx(SUCCESS, "Preparing to clone NEDAP to " _YELLOW_("%s") " tag", cardtype);
@@ -492,7 +492,7 @@ static int CmdLFNedapSim(const char *Cmd) {
         arg_u64_0(NULL, "st", "<dec>", "optional - sub type (default 5)"),
         arg_u64_1(NULL, "cc", "<dec>", "customer code (0-4095)"),
         arg_u64_1(NULL, "id", "<dec>", "ID (0-99999)"),
-        arg_lit0("l", "long", "optional - long (128), default to short (64)"),        
+        arg_lit0("l", "long", "optional - long (128), default to short (64)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -502,20 +502,20 @@ static int CmdLFNedapSim(const char *Cmd) {
     uint32_t id = arg_get_u32_def(ctx, 3, 0);
     bool is_long = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
-    
+
     if (sub_type > 0xF) {
         PrintAndLogEx(FAILED, "out-of-range, valid subtype is between 0-15");
-        return PM3_EINVARG;    
+        return PM3_EINVARG;
     }
 
     if (customer_code > 0xFFF) {
         PrintAndLogEx(FAILED, "out-of-range, valid customer code is between 0-4095");
-        return PM3_EINVARG;    
+        return PM3_EINVARG;
     }
 
     if (id > 99999) {
         PrintAndLogEx(FAILED, "out-of-range, id max value is 99999");
-        return PM3_EINVARG;    
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "NEDAP (%s) - ID: " _GREEN_("%05u") " subtype: " _GREEN_("%1u") " customer code: " _GREEN_("%u / 0x%03X")

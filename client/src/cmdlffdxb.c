@@ -727,7 +727,7 @@ static int CmdFdxBClone(const char *Cmd) {
     }
 
     uint32_t extended = 0;
-    bool has_extended = false; 
+    bool has_extended = false;
     if (extended_len) {
         extended = bytes_to_num(edata, extended_len);
         has_extended = true;
@@ -773,10 +773,10 @@ static int CmdFdxBClone(const char *Cmd) {
     free(bs);
 
     PrintAndLogEx(INFO, "Preparing to clone FDX-B to " _YELLOW_("%s") " with animal ID: " _GREEN_("%04u-%"PRIu64)
-            , cardtype
-            , country_code
-            , national_code
-            );
+                  , cardtype
+                  , country_code
+                  , national_code
+                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
@@ -820,7 +820,7 @@ static int CmdFdxBSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint32_t extended = 0;
-    bool has_extended = false; 
+    bool has_extended = false;
     if (extended_len) {
         extended = bytes_to_num(edata, extended_len);
         has_extended = true;

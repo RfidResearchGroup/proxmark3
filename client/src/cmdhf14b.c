@@ -26,6 +26,7 @@
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
+#define APDU_TIMEOUT 4000
 
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
@@ -1438,7 +1439,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, APDU_TIMEOUT)) {
         uint8_t *recv = resp.data.asBytes;
         int rlen = resp.oldarg[0];
         uint8_t res = resp.oldarg[1];
@@ -1488,7 +1489,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
     return PM3_SUCCESS;
 }
 
-static int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     *dataoutlen = 0;
     bool chaining = false;
     int res;

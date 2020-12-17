@@ -111,7 +111,7 @@ Next place to visit is the [Proxmark Forum](http://www.proxmark.org/forum/index.
    - [Proxmark3 IRC channel](http://webchat.freenode.net/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Twitter](https://twitter.com/proxmark3/)
-   - [Proxmark3 community discord server](https://discord.gg/zjxc8ZB)
+   - [Proxmark3 community discord server](https://discord.gg/QfPvGFRQxH)
  
  _no slack channel_
 

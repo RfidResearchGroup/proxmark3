@@ -426,6 +426,12 @@ Note: it seems some cards only accept the "change UID" command.
 
 It accepts direct read of block0 (and only block0) without prior auth.
 
+Writing to block 0 has some side-effects:
+
+* It changes also the UID. Changing the UID *does not* change block 0.
+* ATQA and SAK bytes are automatically replaced by fixed values.
+* On 4-byte UID cards, BCC byte is automatically corrected.
+
 ### Characteristics
 
 * UID: 4b and 7b versions
@@ -452,6 +458,8 @@ Equivalent:
 ```
 # change just UID:
 hf 14a raw -s -c  -t 2000  90FBCCCC07 11223344556677
+# read block0:
+hf 14a raw -s -c 3000
 # write block0:
 hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 # lock (uid/block0?) forever:

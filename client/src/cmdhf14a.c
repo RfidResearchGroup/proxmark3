@@ -2127,128 +2127,163 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
     n -= 2;
     return d[n] * 0x0100 + d[n + 1];
 }
-static int CmdHf14AFuzzapdu(const char *Cmd) {
+
+static int CmdHf14AFindapdu(const char *Cmd) {
+    // TODO: What response values should be considerd "valid" or "instersting" (worth dispalying)?
+    // TODO: Option to select AID/File (and skip INS 0xA4).
+    // TODO: Validate the decoding of the APDU (not specific to this command, check
+    //       https://cardwerk.com/smartcards/smartcard_standard_ISO7816-4_5_basic_organizations.aspx#chap5_3_2).
+    // TODO: Check all cases (APDUs) with no data bytes (no/short/extended length).
+    // TODO: Option to blacklist instructions (or whole APDUs).
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14a apdufuzz",
-                  "Fuzz APDU's of ISO7816 protocol to find valid CLS/INS/P1P2/LE commands.\n"
+    CLIParserInit(&ctx, "hf 14a apdufind",
+                  "Enumerate APDU's of ISO7816 protocol to find valid CLS/INS/P1P2 commands.\n"
                   "It loops all 256 possible values for each byte.\n"
+                  "The loop oder is INS -> P1/P2 (alternating) -> CLA\n"
                   "Tag must be on antenna before running.",
-                  "hf 14a apdufuzz\n"
-                  "hf 14a apdufuzz --cla 80\n"
-                  );
+                  "hf 14a apdufind\n"
+                  "hf 14a apdufind --cla 80\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "cla", "<hex>", "start CLASS value (1 hex byte)"),
-        arg_str0(NULL, "ins", "<hex>", "start INSTRUCTION value (1 hex byte)"),
-        arg_str0(NULL, "p1", "<hex>", "start P1 value (1 hex byte)"),
-        arg_str0(NULL, "p2", "<hex>", "start P2 value (1 hex byte)"),
-        arg_str0(NULL, "le", "<hex>", "start LENGTH value (1 hex byte)"),        
-        arg_lit0("v", "verbose", "verbose output"),
+        arg_str0("c",  "cla",    "<hex>",    "Start value of CLASS (1 hex byte)"),
+        arg_str0("i",  "ins",    "<hex>",    "Start value of INSTRUCTION (1 hex byte)"),
+        arg_str0(NULL, "p1",     "<hex>",    "Start value of P1 (1 hex byte)"),
+        arg_str0(NULL, "p2",     "<hex>",    "Start value of P2 (1 hex byte)"),
+        arg_u64_0("r", "reset",  "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
+        arg_lit0("v",  "verbose",            "Verbose output"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int cla_len = 0;
-    uint8_t cla[1] = {0};
-    CLIGetHexWithReturn(ctx, 1, cla, &cla_len);
-    
+    uint8_t cla_arg[1] = {0};
+    CLIGetHexWithReturn(ctx, 1, cla_arg, &cla_len);
     int ins_len = 0;
-    uint8_t ins[1] = {0};
-    CLIGetHexWithReturn(ctx, 2, ins, &ins_len);
-
+    uint8_t ins_arg[1] = {0};
+    CLIGetHexWithReturn(ctx, 2, ins_arg, &ins_len);
     int p1_len = 0;
-    uint8_t p1[1] = {0};
-    CLIGetHexWithReturn(ctx, 3, p1, &p1_len);
-
+    uint8_t p1_arg[1] = {0};
+    CLIGetHexWithReturn(ctx, 3, p1_arg, &p1_len);
     int p2_len = 0;
-    uint8_t p2[1] = {0};
-    CLIGetHexWithReturn(ctx, 4, p2, &p2_len);
-
-    int le_len = 0;
-    uint8_t le[1] = {0};
-    CLIGetHexWithReturn(ctx, 5, le, &le_len);
-
+    uint8_t p2_arg[1] = {0};
+    CLIGetHexWithReturn(ctx, 4, p2_arg, &p2_len);
+    uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60); // Reset every 5 minutes.
     bool verbose = arg_get_lit(ctx, 6);
+
     CLIParserFree(ctx);
 
     bool activate_field = true;
     bool keep_field_on = true;
-
-    uint8_t a = cla[0];
-    uint8_t b = ins[0]; 
-    uint8_t c = p1[0];
-    uint8_t d = p2[0];
-    uint8_t e = le[0];    
-
-    PrintAndLogEx(SUCCESS, "Starting the apdu fuzzer [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " LE " _GREEN_("%02x")" ]", a,b,c,d,e);
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
-
+    uint8_t cla = cla_arg[0];
+    uint8_t ins = ins_arg[0];
+    uint8_t p1 = p1_arg[0];
+    uint8_t p2 = p2_arg[0];
     uint8_t response[PM3_CMD_DATA_SIZE];
-    int resplen = 0;
-
+    int response_n = 0;
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
+
+    // Check if the tag reponds to APDUs.
+    PrintAndLogEx(INFO, "Sending a test APDU (select file command) to check if the tag is responding to APDU");
     param_gethex_to_eol("00a404000aa000000440000101000100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
-    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, true, false, response, sizeof(response), &response_n);
     if (res) {
-        DropField();
+        PrintAndLogEx(FAILED, "Tag did not responde to a test APDU (select file command). Aborting");
         return res;
     }
+    PrintAndLogEx(SUCCESS, "Got response. Starting the APDU finder [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
-    if (activate_field)
-        activate_field = false;
+    bool inc_p1 = true;
+    uint64_t t_start = msclock();
+    uint64_t t_last_reset = msclock();
 
-    uint64_t t1 = msclock();
+    // Enumerate APDUs.
     do {
         do {
             do {
-                do {
-                    do {
-                        if (kbd_enter_pressed()) {
-                            goto out;
-                        }
+                // Exit (was the Enter key pressed)?
+                if (kbd_enter_pressed()) {
+                    PrintAndLogEx(INFO, "User interrupted detected. Aborting");
+                    goto out;
+                }
 
-                        uint8_t foo[5] = {a, b, c, d, e};
-                        int foo_n = sizeof(foo);                    
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+                }
 
-                        if (verbose) {
-                            PrintAndLogEx(INFO, "%s", sprint_hex(foo, sizeof(foo)));
-                        }
-                        res = ExchangeAPDU14a(foo, foo_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-                        if (res) {
-                            e++;
-                            continue;                                            
-                        }
+                // Send APDU.
+                uint8_t command[4] = {cla, ins, p1, p2};
+                int command_n = sizeof(command);
+                res = ExchangeAPDU14a(command, command_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
+                if (res) {
+                    continue;
+                }
 
-                        uint16_t sw = get_sw(response, resplen);
-                        if (sw != 0x6a86 &&
-                            sw != 0x6986 &&
-                            sw != 0x6d00
-                            ) {
-                            PrintAndLogEx(INFO, "%02X %02X %02X %02X %02X (%04x - %s)", a,b,c,d,e, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                        }
-                        e++;
-                        if (verbose) {
-                            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
-                        }
+                // Was there and length error? If so, try with Le length (case 2 instad of case 1,
+                // https://stackoverflow.com/a/30679558). Le = 0x00 will get interpreted as extended length APDU
+                // with Le being 0x0100.
+                uint16_t sw = get_sw(response, response_n);
+                bool command_with_le = false;
+                if (sw == 0x6700) {
+                    PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
+                                  sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
+                    uint8_t command2[7] = {cla, ins, p1, p2, 0x00};
+                    int command2_n = sizeof(command2);
+                    res = ExchangeAPDU14a(command2, command2_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
+                    if (res) {
+                        continue;
+                    }
+                    command_with_le = true;
+                }
 
-                    } while (e);
-                    d++;
-                    PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
-                } while (d);
-                c++;
-                PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
-            } while (c);
-            b++;
-            PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
-        } while (b);
-        a++;
-        PrintAndLogEx(INFO, "Status: %02X %02X %02X %02X %02X", a,b,c,d,e);
-    } while(a);
+                // Check response.
+                sw = get_sw(response, response_n);
+                if (sw != 0x6a86 &&
+                        sw != 0x6986 &&
+                        sw != 0x6d00
+                   ) {
+                    if (command_with_le) {
+                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X00\": %04X (%s)", cla, ins, p1, p2,
+                                      sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    } else {
+                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
+                                      sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    }
+                    // Show response data.
+                    if (response_n > 2) {
+                        PrintAndLogEx(SUCCESS, "Response data is: %s | %s", sprint_hex_inrow(response, response_n - 2),
+                                      sprint_ascii(response, response_n - 2));
+                    }
+                }
+                activate_field = false; // Do not reativate the filed until the next reset.
+            } while (++ins != ins_arg[0]);
+            // Increment P1/P2 in an alternating fashion.
+            if (inc_p1) {
+                p1++;
+            } else {
+                p2++;
+            }
+            inc_p1 = !inc_p1;
+            // Check if re-selecting the card is needed.
+            uint64_t t_since_last_reset = ((msclock() - t_last_reset) / 1000);
+            if (t_since_last_reset > reset_time) {
+                DropField();
+                activate_field = true;
+                t_last_reset = msclock();
+                PrintAndLogEx(INFO, "Last reset was %" PRIu64 " seconds ago. Reseting the tag to prevent timeout issues", t_since_last_reset);
+            }
+            PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+        } while (p1 != p1_arg[0] || p2 != p2_arg[0]);
+        cla++;
+        PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+    } while (cla != cla_arg[0]);
 
 out:
-    PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+    PrintAndLogEx(SUCCESS, "Runtime: %" PRIu64 " seconds\n", (msclock() - t_start) / 1000);
     DropField();
     return PM3_SUCCESS;
 }
@@ -2266,7 +2301,7 @@ static command_t CommandTable[] = {
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
-    {"apdufuzz",    CmdHf14AFuzzapdu,     IfPm3Iso14443a,  "Fuzz APDU - CLA/INS/P1P2"},
+    {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enuerate APDUs - CLA/INS/P1P2"},
     {NULL, NULL, NULL, NULL}
 };
 

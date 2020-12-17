@@ -53,7 +53,7 @@ int preferences_load(void) {
     session.overlay.h = 200;
     session.overlay.w = session.plot.w;
     session.overlay_sliders = true;
-    session.show_hints = false;
+    session.show_hints = true;
 
 //    setDefaultPath (spDefault, "");
 //    setDefaultPath (spDump, "");
