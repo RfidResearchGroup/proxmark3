@@ -164,10 +164,10 @@ static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset
 }
 
 static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offset) {
-    PrintAndLogEx(DEBUG, "asn1fieldlength, datain: %s", sprint_hex_inrow(datain, datainlen));
+    PrintAndLogEx(DEBUG, "asn1 fieldlength, datain: %s", sprint_hex_inrow(datain, datainlen));
     int lenfield = (int) * (datain + offset);
-    PrintAndLogEx(DEBUG, "asn1fieldlength, thing: %i", lenfield);
-    if (lenfield <= 0x7f) {
+    PrintAndLogEx(DEBUG, "asn1 fieldlength, thing: %i", lenfield);
+    if (lenfield <= 0x7F) {
         return 1;
     } else if (lenfield == 0x81) {
         return 2;
@@ -571,31 +571,32 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
 static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
     int offset = 1;
     offset += emrtd_get_asn1_field_length(datain, *datainlen, offset);
-    int elementidlen = 0;
-    int elementlen = 0;
-    int elementlenlen = 0;
+
+    int e_idlen = 0;
+    int e_datalen = 0;
+    int e_fieldlen = 0;
     while (offset < *datainlen) {
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
-        if ((*(datain + offset) == 0x5f) || (*(datain + offset) == 0x7f)) {
-            elementidlen = 2;
+        if ((*(datain + offset) == 0x5F) || (*(datain + offset) == 0x7F)) {
+            e_idlen = 2;
         } else {
-            elementidlen = 1;
+            e_idlen = 1;
         }
 
         // Get the length of the element
-        elementlen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, elementidlen);
+        e_datalen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, e_idlen);
 
         // Get the length of the element's length
-        elementlenlen = emrtd_get_asn1_field_length(datain + offset, *datainlen - offset, elementidlen);
+        e_fieldlen = emrtd_get_asn1_field_length(datain + offset, *datainlen - offset, e_idlen);
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
-            *dataoutlen = elementlen;
-            memcpy(dataout, datain + offset + elementidlen + elementlenlen, elementlen);
+            *dataoutlen = e_datalen;
+            memcpy(dataout, datain + offset + e_idlen + e_fieldlen, e_datalen);
             return true;
         }
-        offset += elementidlen + elementlen + elementlenlen;
+        offset += e_idlen + e_datalen + e_fieldlen;
     }
     // Return false if we can't find the relevant element
     return false;
@@ -736,21 +737,31 @@ static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
     int datalen = 0;
 
     // If we can't find image in EF_DG5, return false.
-    if (!emrtd_lds_get_data_by_tag(file_contents, &file_length, data, &datalen, 0x5f, 0x40, true)) {
+    if (emrtd_lds_get_data_by_tag(file_contents, &file_length, data, &datalen, 0x5F, 0x40, true) == false) {
         return false;
     }
 
-    saveFile("EF_DG5", ".jpg", data, datalen);
+    if (datalen < EMRTD_MAX_FILE_SIZE) {
+        saveFile("EF_DG5", ".jpg", data, datalen);
+    } else {
+        PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg5) datalen out-of-bounds");
+        return false;
+    }
     return true;
 }
 
 static bool emrtd_dump_ef_sod(uint8_t *file_contents, int file_length) {
     uint8_t data[EMRTD_MAX_FILE_SIZE];
 
-    int datalenlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
+    int fieldlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
     int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
-
-    memcpy(data, file_contents + datalenlen + 1, datalen);
+    
+    if (fieldlen + 1 < EMRTD_MAX_FILE_SIZE) {
+        memcpy(data, file_contents + fieldlen + 1, datalen);
+    } else {
+        PrintAndLogEx(ERR, "error (emrtd_dump_ef_sod) fieldlen out-of-bounds");
+        return false;
+    }
 
     saveFile("EF_SOD", ".p7b", data, datalen);
     return true;
