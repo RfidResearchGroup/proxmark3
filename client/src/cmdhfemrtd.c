@@ -704,6 +704,19 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
     return true;
 }
 
+static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE];
+    int resplen = 0;
+
+    // If we can't find image in EF_DG5, return false.
+    if (!emrtd_lds_get_data_by_tag(file_contents, &file_length, response, &resplen, 0x5f, 0x40, true)) {
+        return false;
+    }
+
+    saveFile("EF_DG5", ".jpg", response, resplen);
+    return true;
+}
+
 static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
     uint8_t response[EMRTD_MAX_FILE_SIZE];
     int resplen = 0;
@@ -715,6 +728,10 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
     PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     saveFile(name, ".BIN", response, resplen);
+
+    if (strcmp(file, EMRTD_EF_DG5) == 0) {
+        emrtd_dump_ef_dg5(response, resplen);
+    }
 
     return true;
 }
