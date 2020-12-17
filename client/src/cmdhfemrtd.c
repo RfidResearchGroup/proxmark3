@@ -568,14 +568,14 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     return true;
 }
 
-static bool emrtd_ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen) {
+static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
     int offset = 2;
     int elementidlen = 0;
     int elementlen = 0;
     while (offset < *datainlen) {
-        PrintAndLogEx(DEBUG, "ef_com_get_file_list, offset: %i, data: %X", offset, *(datain + offset));
+        PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
-        if (*(datain + offset) == 0x5f) {
+        if ((*(datain + offset) == 0x5f) || (*(datain + offset) == 0x7f)) {
             elementidlen = 2;
         } else {
             elementidlen = 1;
@@ -585,7 +585,7 @@ static bool emrtd_ef_com_get_file_list(uint8_t *datain, int *datainlen, uint8_t 
         elementlen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, elementidlen);
 
         // If the element is what we're looking for, get the data and return true
-        if (*(datain + offset) == 0x5c) {
+        if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
             *dataoutlen = elementlen;
             memcpy(dataout, datain + offset + elementidlen + 1, elementlen);
             return true;
@@ -790,7 +790,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
         PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
         return false;
     }
-    PrintAndLogEx(INFO, "External authentication successful.");
+    PrintAndLogEx(INFO, "External authentication with BAC successful.");
 
     uint8_t dec_output[32] = { 0x00 };
     des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
@@ -824,14 +824,9 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     return true;
 }
 
-int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool *BAC, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool *use_14b) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
-    uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
-    bool BAC = false;
-    bool use_14b = false;
 
     // Try to 14a
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
@@ -847,22 +842,20 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         // If not 14a, try to 14b
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD, 0, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2500)) {
-            DropField();
             PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
-            return PM3_ESOFT;
+            return false;
         }
 
         if (resp.oldarg[0] != 0) {
-            DropField();
             PrintAndLogEx(INFO, "No eMRTD spotted with 14b, exiting.");
-            return PM3_ESOFT;
+            return false;
         }
-        use_14b = true;
+        *use_14b = true;
     }
 
     // Select and read EF_CardAccess
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, use_14b)) {
-        emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, use_14b);
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, *use_14b)) {
+        emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b);
         PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
         PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     } else {
@@ -870,44 +863,59 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Select MRTD applet
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_NAME, EMRTD_AID_MRTD, use_14b) == false) {
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_NAME, EMRTD_AID_MRTD, *use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
-        DropField();
-        return PM3_ESOFT;
+        return false;
     }
 
     // Select EF_COM
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_COM, use_14b) == false) {
-        BAC = true;
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_COM, *use_14b) == false) {
+        *BAC = true;
         PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
-        BAC = false;
+        *BAC = false;
         // Select EF_DG1
-        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_DG1, use_14b);
+        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_DG1, *use_14b);
 
-        if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, use_14b) == false) {
-            BAC = true;
+        if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b) == false) {
+            *BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
-            BAC = false;
+            *BAC = false;
             PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
 
     // Do Basic Access Aontrol
-    if (BAC) {
+    if (*BAC) {
         // If BAC isn't available, exit out and warn user.
         if (!BAC_available) {
-            PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supplied MRZ data. Cannot proceed.");
+            PrintAndLogEx(ERR, "This eMRTD enforces Basic Access Control, but you didn't supply MRZ data. Cannot proceed.");
             PrintAndLogEx(HINT, "Check out hf emrtd dump --help, supply data with -n -d and -e.");
-            DropField();
-            return PM3_ESOFT;
+            return false;
         }
 
-        if (emrtd_do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac, use_14b) == false) {
-            DropField();
-            return PM3_ESOFT;
+        if (emrtd_do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac, *use_14b) == false) {
+            return false;
         }
+    }
+
+    return true;
+}
+
+int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
+    uint8_t ssc[8] = { 0x00 };
+    uint8_t ks_enc[16] = { 0x00 };
+    uint8_t ks_mac[16] = { 0x00 };
+    bool BAC = false;
+    bool use_14b = false;
+
+    // Select and authenticate with the eMRTD
+    if (emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b) == false) {
+        DropField();
+        return PM3_ESOFT;
     }
 
     // Select EF_COM
@@ -923,7 +931,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (emrtd_ef_com_get_file_list(response, &resplen, filelist, &filelistlen) == false) {
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -950,6 +958,252 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     return PM3_SUCCESS;
 }
 
+static bool emrtd_compare_check_digit(char *datain, int datalen, char expected_check_digit) {
+    char tempdata[90] = { 0x00 };
+    char calculated_check_digit[3];
+
+    memcpy(tempdata, datain, datalen);
+    int check_digit = emrtd_calculate_check_digit(tempdata);
+
+    sprintf(calculated_check_digit, "%i", check_digit);
+
+    PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, expected: %c", expected_check_digit);
+    PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, calculated: %c", calculated_check_digit[0]);
+
+    return calculated_check_digit[0] == expected_check_digit;
+}
+
+static bool emrtd_mrz_verify_check_digit(char *mrz, int offset, int datalen) {
+    char tempdata[90] = { 0x00 };
+
+    memcpy(tempdata, mrz + offset, datalen);
+
+    return emrtd_compare_check_digit(tempdata, datalen, mrz[offset + datalen]);
+}
+
+static void emrtd_print_legal_sex(char *legal_sex) {
+    char sex[12] = { 0x00 };
+    switch (*legal_sex) {
+        case 'M':
+            strncpy(sex, "Male", 5);
+            break;
+        case 'F':
+            strncpy(sex, "Female", 7);
+            break;
+        case '<':
+            strncpy(sex, "Unspecified", 12);
+            break;
+    }
+    PrintAndLogEx(SUCCESS, "Legal Sex Marker......: " _YELLOW_("%s"), sex);
+}
+
+static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
+    int i;
+    for (i = max_length; i >= 0; i--) {
+        if (mrz[offset + i - 1] != '<') {
+            break;
+        }
+    }
+    return i;
+}
+
+static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
+    int i;
+    for (i = max_length; i >= 0; i--) {
+        if (mrz[offset + i - 1] == '<' && mrz[offset + i] == '<') {
+            break;
+        }
+    }
+    return i - 1;
+}
+
+static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
+    int i = emrtd_mrz_determine_length(mrz, offset, length);
+
+    // Only print optional elements if they're available
+    if (i != 0) {
+        PrintAndLogEx(SUCCESS, "Optional elements.....: " _YELLOW_("%.*s"), i, mrz + offset);
+    }
+
+    if (verify_check_digit && !emrtd_mrz_verify_check_digit(mrz, offset, length)) {
+        PrintAndLogEx(SUCCESS, _RED_("Optional element check digit is invalid."));
+    }
+}
+
+static void emrtd_print_document_number(char *mrz, int offset) {
+    int i = emrtd_mrz_determine_length(mrz, offset, 9);
+
+    PrintAndLogEx(SUCCESS, "Document Number.......: " _YELLOW_("%.*s"), i, mrz + offset);
+
+    if (!emrtd_mrz_verify_check_digit(mrz, offset, 9)) {
+        PrintAndLogEx(SUCCESS, _RED_("Document number check digit is invalid."));
+    }
+}
+
+static void emrtd_print_name(char *mrz, int offset, int max_length) {
+    char final_name[100] = { 0x00 };
+    int i = emrtd_mrz_determine_length(mrz, offset, max_length);
+    int sep = emrtd_mrz_determine_separator(mrz, offset, i);
+    int namelen = (i - (sep + 2));
+
+    memcpy(final_name, mrz + offset + sep + 2, namelen);
+    final_name[namelen] = ' ';
+    memcpy(final_name + namelen + 1, mrz + offset, sep);
+
+    PrintAndLogEx(SUCCESS, "Legal Name............: " _YELLOW_("%s"), final_name);
+}
+
+static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry) {
+    char temp_year[3] = { 0x00 };
+
+    memcpy(temp_year, mrz + offset, 2);
+    // If it's > 20, assume 19xx.
+    if (strtol(temp_year, NULL, 10) < 20 || is_expiry) {
+        final_date[0] = '2';
+        final_date[1] = '0';
+    } else {
+        final_date[0] = '1';
+        final_date[1] = '9';
+    }
+
+    memcpy(final_date + 2, mrz + offset, 2);
+    final_date[4] = '-';
+    memcpy(final_date + 5, mrz + offset + 2, 2);
+    final_date[7] = '-';
+    memcpy(final_date + 8, mrz + offset + 4, 2);
+}
+
+static void emrtd_print_dob(char *mrz, int offset) {
+    char final_date[12] = { 0x00 };
+    emrtd_mrz_convert_date(mrz, offset, final_date, false);
+
+    PrintAndLogEx(SUCCESS, "Date of birth.........: " _YELLOW_("%s"), final_date);
+
+    if (!emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
+        PrintAndLogEx(SUCCESS, _RED_("Date of Birth check digit is invalid."));
+    }
+}
+
+static void emrtd_print_expiry(char *mrz, int offset) {
+    char final_date[12] = { 0x00 };
+    emrtd_mrz_convert_date(mrz, offset, final_date, true);
+
+    PrintAndLogEx(SUCCESS, "Date of expiry........: " _YELLOW_("%s"), final_date);
+
+    if (!emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
+        PrintAndLogEx(SUCCESS, _RED_("Date of expiry check digit is invalid."));
+    }
+}
+
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
+    uint8_t ssc[8] = { 0x00 };
+    uint8_t ks_enc[16] = { 0x00 };
+    uint8_t ks_mac[16] = { 0x00 };
+    bool BAC = false;
+    bool use_14b = false;
+
+    int td_variant = 0;
+
+    // Select and authenticate with the eMRTD
+    bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
+    PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
+    PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
+
+    if (!auth_result) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Select EF_DG1
+    if (emrtd_select_and_read(response, &resplen, EMRTD_EF_DG1, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG1.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // MRZ on TD1 is 90 characters, 30 on each row.
+    // MRZ on TD3 is 88 characters, 44 on each row.
+    char mrz[90] = { 0x00 };
+    int mrzlen = 0;
+
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
+        PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Determine and print the document type
+    if (mrz[0] == 'I' && mrz[1] == 'P') {
+        td_variant = 1;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport Card"));
+    } else if (mrz[0] == 'I') {
+        td_variant = 1;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("ID Card"));
+    } else if (mrz[0] == 'P') {
+        td_variant = 3;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport"));
+    } else {
+        td_variant = 1;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Unknown"));
+        PrintAndLogEx(INFO, "Assuming ID-style MRZ.");
+    }
+    PrintAndLogEx(SUCCESS, "Document Form Factor..: " _YELLOW_("TD%i"), td_variant);
+
+    // Print the MRZ
+    if (td_variant == 1) {
+        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.30s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.30s"), mrz + 30);
+        PrintAndLogEx(DEBUG, "MRZ Row 3: " _YELLOW_("%.30s"), mrz + 60);
+    } else if (td_variant == 3) {
+        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.44s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.44s"), mrz + 44);
+    }
+
+    PrintAndLogEx(SUCCESS, "Issuing state.........: " _YELLOW_("%.3s"), mrz + 2);
+
+    if (td_variant == 3) {
+        // Passport form factor
+        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
+        emrtd_print_name(mrz, 5, 38);
+        emrtd_print_document_number(mrz, 44);
+        emrtd_print_dob(mrz, 44 + 13);
+        emrtd_print_legal_sex(&mrz[44 + 20]);
+        emrtd_print_expiry(mrz, 44 + 21);
+        emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
+
+        // Calculate and verify composite check digit
+        char composite_check_data[50] = { 0x00 };
+        memcpy(composite_check_data, mrz + 44, 10);
+        memcpy(composite_check_data + 10, mrz + 44 + 13, 7);
+        memcpy(composite_check_data + 17, mrz + 44 + 21, 23);
+
+        if (!emrtd_compare_check_digit(composite_check_data, 39, mrz[87])) {
+            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        }
+    } else if (td_variant == 1) {
+        // ID form factor
+        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
+        emrtd_print_name(mrz, 60, 30);
+        emrtd_print_document_number(mrz, 5);
+        emrtd_print_dob(mrz, 30);
+        emrtd_print_legal_sex(&mrz[30 + 7]);
+        emrtd_print_expiry(mrz, 30 + 8);
+        emrtd_print_optional_elements(mrz, 15, 15, false);
+        emrtd_print_optional_elements(mrz, 30 + 18, 11, false);
+
+        // Calculate and verify composite check digit
+        if (!emrtd_compare_check_digit(mrz, 59, mrz[59])) {
+            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        }
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int cmd_hf_emrtd_dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
@@ -959,7 +1213,50 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "9 character document number"),
+        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t docnum[10] = { 0x00 };
+    uint8_t dob[7] = { 0x00 };
+    uint8_t expiry[7] = { 0x00 };
+    bool BAC = true;
+    int slen = 0;  // unused
+    // Go through all args, if even one isn't supplied, mark BAC as unavailable
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
+        BAC = false;
+    } else {
+        if (slen != 9) {
+            // Pad to 9 with <
+            memset(docnum + slen, 0x3c, 9 - slen);
+        }
+    }
+    
+    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+        BAC = false;
+    } 
+    
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+        BAC = false;
+    }
+
+    CLIParserFree(ctx);
+    return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+}
+
+static int cmd_hf_emrtd_info(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf emrtd info",
+                  "Display info about an eMRTD",
+                  "hf emrtd info"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_param_end
@@ -989,7 +1286,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
-    return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+    return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
 }
 
 static int cmd_hf_emrtd_list(const char *Cmd) {
@@ -1005,6 +1302,7 @@ static int cmd_hf_emrtd_list(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
     {"dump",    cmd_hf_emrtd_dump, IfPm3Iso14443,   "Dump eMRTD files to binary files"},
+    {"info",    cmd_hf_emrtd_info, IfPm3Iso14443,   "Display info about an eMRTD"},
     {"list",    cmd_hf_emrtd_list, AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };
