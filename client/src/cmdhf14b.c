@@ -1415,7 +1415,7 @@ static int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     return PM3_SUCCESS;
 }
 
-static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
+static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout, int user_timeout) {
     *chainingout = false;
 
     if (activateField) {
@@ -1430,13 +1430,24 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
     if (chainingin)
         flags = ISO14B_SEND_CHAINING;
 
+    uint32_t time_wait = 0;
+    if (user_timeout > 0) {
+#define MAX_14B_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
+        flags |= ISO14B_SET_TIMEOUT;
+        if (user_timeout > MAX_14B_TIMEOUT) {
+            user_timeout = MAX_14B_TIMEOUT;
+            PrintAndLogEx(INFO, "set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+        }
+        time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+    }
+
     // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
     // https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
     // here length PM3_CMD_DATA_SIZE=512
     if (datain)
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, (datainlen & 0xFFFF), 0, datain, datainlen & 0xFFFF);
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, (datainlen & 0xFFFF), time_wait, datain, datainlen & 0xFFFF);
     else
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, 0, time_wait, NULL, 0);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, APDU_TIMEOUT)) {
@@ -1489,7 +1500,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
     return PM3_SUCCESS;
 }
 
-int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, int user_timeout) {
     *dataoutlen = 0;
     bool chaining = false;
     int res;
@@ -1506,7 +1517,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool 
             bool chainBlockNotLast = ((clen + vlen) < datainlen);
 
             *dataoutlen = 0;
-            res = handle_14b_apdu(chainBlockNotLast, &datain[clen], vlen, v_activate_field, dataout, maxdataoutlen, dataoutlen, &chaining);
+            res = handle_14b_apdu(chainBlockNotLast, &datain[clen], vlen, v_activate_field, dataout, maxdataoutlen, dataoutlen, &chaining, user_timeout);
             if (res) {
                 if (leave_signal_on == false)
                     switch_off_field_14b();
@@ -1535,7 +1546,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool 
 
     } else {
 
-        res = handle_14b_apdu(false, datain, datainlen, activate_field, dataout, maxdataoutlen, dataoutlen, &chaining);
+        res = handle_14b_apdu(false, datain, datainlen, activate_field, dataout, maxdataoutlen, dataoutlen, &chaining, user_timeout);
         if (res != PM3_SUCCESS) {
             if (leave_signal_on == false) {
                 switch_off_field_14b();
@@ -1546,7 +1557,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool 
 
     while (chaining) {
         // I-block with chaining
-        res = handle_14b_apdu(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining);
+        res = handle_14b_apdu(false, NULL, 0, false, &dataout[*dataoutlen], maxdataoutlen, dataoutlen, &chaining, user_timeout);
         if (res != PM3_SUCCESS) {
             if (leave_signal_on == false) {
                 switch_off_field_14b();
@@ -1594,6 +1605,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
         arg_strx1(NULL, "hex",     "<hex>", "<APDU | data> if `m` parameter included"),
+        arg_int0(NULL, "timeout",   "<dec>", "timeout in ms"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1653,6 +1665,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         // len = data + PCB(1b) + CRC(2b)
         CLIGetHexBLessWithReturn(ctx, 8, data, &datalen, 1 + 2);
     }
+    int user_timeout = arg_get_int_def(ctx, 9, -1);
     CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s",
@@ -1670,7 +1683,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
             PrintAndLogEx(WARNING, "can't decode APDU.");
     }
 
-    int res = exchange_14b_apdu(data, datalen, activate_field, leave_signal_on, data, PM3_CMD_DATA_SIZE, &datalen);
+    int res = exchange_14b_apdu(data, datalen, activate_field, leave_signal_on, data, PM3_CMD_DATA_SIZE, &datalen, user_timeout);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1709,7 +1722,7 @@ static int CmdHF14BNdef(const char *Cmd) {
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
     param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
-    int res = exchange_14b_apdu(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    int res = exchange_14b_apdu(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
         goto out;
     }
@@ -1735,7 +1748,7 @@ static int CmdHF14BNdef(const char *Cmd) {
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
     param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
-    res = exchange_14b_apdu(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    res = exchange_14b_apdu(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res)
         goto out;
 
@@ -1750,7 +1763,7 @@ static int CmdHF14BNdef(const char *Cmd) {
     uint8_t aREAD_NDEF[30];
     int aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
-    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
         goto out;
     }
@@ -1769,7 +1782,7 @@ static int CmdHF14BNdef(const char *Cmd) {
     aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b00002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
     aREAD_NDEF[4] = offset;
-    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
         goto out;
     }
