@@ -92,7 +92,8 @@ static bool emrtd_exchange_commands(const char *cmd, uint8_t *dataout, int *data
     param_gethex_to_eol(cmd, 0, aCMD, sizeof(aCMD), &aCMD_n);
     int res;
     if (use_14b) {
-        res = exchange_14b_apdu(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+        // need to add a long timeout for passports with activated anti-bruteforce measure
+        res = exchange_14b_apdu(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen, 15000);
     } else {
         res = ExchangeAPDU14a(aCMD, aCMD_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     }

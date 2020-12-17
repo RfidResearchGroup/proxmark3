@@ -1400,7 +1400,9 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     CodeAndTransmit14443bAsReader(real_cmd, msg_len + 3, &start_time, &eof_time);
 
     eof_time += DELAY_ISO14443B_VCD_TO_VICC_READER;
-    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
+
+//    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, ISO14443B_READER_TIMEOUT, &eof_time);
+    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     uint8_t *data_bytes = (uint8_t *) rxdata;
