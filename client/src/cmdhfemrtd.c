@@ -704,6 +704,33 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
     return true;
 }
 
+static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    int datalen = 0;
+
+    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
+    // based on mrpkey.py
+    // FF D8 FF E0 -> JPEG
+    // 00 00 00 0C 6A 50 -> JPEG 2000
+    for (int i = 0; i < file_length - 6; i++) {
+        if ((file_contents[i] == 0xFF && file_contents[i + 1] == 0xD8 && file_contents[i + 2] == 0xFF && file_contents[i + 3] == 0xE0) ||
+            (file_contents[i] == 0x00 && file_contents[i + 1] == 0x00 && file_contents[i + 2] == 0x00 && file_contents[i + 3] == 0x0C && file_contents[i + 4] == 0x6A && file_contents[i + 5] == 0x50)) {
+            datalen = file_length - i;
+            memcpy(data, file_contents + i, datalen);
+            break;
+        }
+    }
+
+    // If we didn't get any data, return false.
+    if (datalen == 0) {
+        return false;
+    }
+
+    saveFile("EF_DG2", ".jpg", data, datalen);
+    return true;
+}
+
+
 static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
     uint8_t data[EMRTD_MAX_FILE_SIZE];
     int datalen = 0;
@@ -741,7 +768,9 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     saveFile(name, ".BIN", response, resplen);
 
-    if (strcmp(file, EMRTD_EF_DG5) == 0) {
+    if (strcmp(file, EMRTD_EF_DG2) == 0) {
+        emrtd_dump_ef_dg2(response, resplen);
+    } else if (strcmp(file, EMRTD_EF_DG5) == 0) {
         emrtd_dump_ef_dg5(response, resplen);
     } else if (strcmp(file, EMRTD_EF_SOD) == 0) {
         emrtd_dump_ef_sod(response, resplen);
