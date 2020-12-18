@@ -1291,6 +1291,15 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     return PM3_SUCCESS;
 }
 
+static void text_to_upper(uint8_t *data, int datalen) {
+    // Loop over text to make lowercase text uppercase
+    for (int i = 0; i < datalen; i++) {
+        if ('a' <= data[i] && data[i] <= 'z') {
+            data[i] -= 32;
+        }
+    }
+}
+
 static int cmd_hf_emrtd_dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
@@ -1316,6 +1325,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
+        text_to_upper(docnum, slen);
         if (slen != 9) {
             // Pad to 9 with <
             memset(docnum + slen, 0x3c, 9 - slen);
@@ -1371,6 +1381,8 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
+        text_to_upper(docnum, slen);
+        PrintAndLogEx(HINT, "%.*s.", slen, (char *) docnum);
         if (slen != 9) {
             memset(docnum + slen, 0x3c, 9 - slen);
         }
