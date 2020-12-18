@@ -711,18 +711,17 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
 }
 
 static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
-    int datalen = 0;
+    int offset, datalen = 0;
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
     // based on mrpkey.py
     // FF D8 FF E0 -> JPEG
     // 00 00 00 0C 6A 50 -> JPEG 2000
-    for (int i = 0; i < file_length - 6; i++) {
-        if ((file_contents[i] == 0xFF && file_contents[i + 1] == 0xD8 && file_contents[i + 2] == 0xFF && file_contents[i + 3] == 0xE0) ||
-            (file_contents[i] == 0x00 && file_contents[i + 1] == 0x00 && file_contents[i + 2] == 0x00 && file_contents[i + 3] == 0x0C && file_contents[i + 4] == 0x6A && file_contents[i + 5] == 0x50)) {
-            datalen = file_length - i;
-            memcpy(data, file_contents + i, datalen);
+    // Note: Doing file_length - 6 to account for the longest data we're checking.
+    for (offset = 0; offset < file_length - 6; offset++) {
+        if ((file_contents[offset] == 0xFF && file_contents[offset + 1] == 0xD8 && file_contents[offset + 2] == 0xFF && file_contents[offset + 3] == 0xE0) ||
+            (file_contents[offset] == 0x00 && file_contents[offset + 1] == 0x00 && file_contents[offset + 2] == 0x00 && file_contents[offset + 3] == 0x0C && file_contents[offset + 4] == 0x6A && file_contents[offset + 5] == 0x50)) {
+            datalen = file_length - offset;
             break;
         }
     }
@@ -732,7 +731,7 @@ static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
         return false;
     }
 
-    saveFile("EF_DG2", ".jpg", data, datalen);
+    saveFile("EF_DG2", ".jpg", file_contents + offset, datalen);
     return true;
 }
 
@@ -756,19 +755,15 @@ static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
 }
 
 static bool emrtd_dump_ef_sod(uint8_t *file_contents, int file_length) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
-
     int fieldlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
     int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
     
-    if (fieldlen + 1 < EMRTD_MAX_FILE_SIZE) {
-        memcpy(data, file_contents + fieldlen + 1, datalen);
-    } else {
+    if (fieldlen + 1 > EMRTD_MAX_FILE_SIZE) {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_sod) fieldlen out-of-bounds");
         return false;
     }
 
-    saveFile("EF_SOD", ".p7b", data, datalen);
+    saveFile("EF_SOD", ".p7b", file_contents + fieldlen + 1, datalen);
     return true;
 }
 
