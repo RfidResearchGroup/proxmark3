@@ -1183,6 +1183,22 @@ static void emrtd_print_expiry(char *mrz, int offset) {
     }
 }
 
+static void emrtd_print_issuance(char *data) {
+    char final_date[12] = { 0x00 };
+    emrtd_mrz_convert_date(data, 0, final_date, true, true);
+
+    PrintAndLogEx(SUCCESS, "Date of issue.........: " _YELLOW_("%s"), final_date);
+}
+
+static void emrtd_print_personalization_timestamp(uint8_t *data) {
+    char str_date[0x0F] = { 0x00 };
+    strcpy(str_date, sprint_hex_inrow(data, 0x0E));
+    char final_date[20] = { 0x00 };
+    sprintf(final_date, "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
+
+    PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
+}
+
 static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
     int td_variant = 0;
 
@@ -1339,6 +1355,65 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
     return true;
 }
 
+static bool emrtd_print_ef_dg12_info(uint8_t *response, int resplen) {
+    uint8_t taglist[100] = { 0x00 };
+    int taglistlen = 0;
+    uint8_t tagdata[1000] = { 0x00 };
+    int tagdatalen = 0;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG12") " -------------------");
+
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_DG12.");
+        return false;
+    }
+
+    for (int i = 0; i < taglistlen; i++) {
+        emrtd_lds_get_data_by_tag(response, &resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        // Special behavior for two char tags
+        if (taglist[i] == 0x5f) {
+            // Several things here are longer than the rest but I can't think of a way to shorten them
+            // ...and I doubt many states are using them.
+            switch (taglist[i + 1]) {
+                case 0x19:
+                    PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x26:
+                    emrtd_print_issuance((char *) tagdata);
+                    break;
+                case 0x1b:
+                    PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x1c:
+                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x1d:
+                    saveFile("FrontOfDocument", ".jpg", tagdata, tagdatalen);
+                    break;
+                case 0x1e:
+                    saveFile("BackOfDocument", ".jpg", tagdata, tagdatalen);
+                    break;
+                case 0x55:
+                    emrtd_print_personalization_timestamp(tagdata);
+                    break;
+                case 0x56:
+                    PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                default:
+                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
+                    break;
+            }
+
+            i += 1;
+        } else {
+            // TODO: Account for A0
+            PrintAndLogEx(SUCCESS, "Unknown Field %02X......: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
+        }
+    }
+    return true;
+}
+
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
@@ -1396,6 +1471,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             emrtd_print_ef_dg1_info(response, resplen);
         } else if (strcmp(file_name, "EF_DG11") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG11, ks_enc, ks_mac, ssc, BAC, use_14b)) {
             emrtd_print_ef_dg11_info(response, resplen);
+        } else if (strcmp(file_name, "EF_DG12") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG12, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+            emrtd_print_ef_dg12_info(response, resplen);
         }
     }
 
