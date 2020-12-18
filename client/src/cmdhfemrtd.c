@@ -1298,6 +1298,22 @@ static void text_to_upper(uint8_t *data, int datalen) {
     }
 }
 
+static bool validate_date(uint8_t *data, int datalen) {
+    // Date has to be 6 chars
+    if (datalen != 6) {
+        return false;
+    }
+
+    // Check for valid date and month numbers
+    char temp[4] = { 0x00 };
+    memcpy(temp, data + 2, 2);
+    int month = (int) strtol(temp, NULL, 10);
+    memcpy(temp, data + 4, 2);
+    int day = (int) strtol(temp, NULL, 10);
+
+    return !(day <= 0 || day > 31 || month <= 0 || month > 12);
+}
+
 static int cmd_hf_emrtd_dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
@@ -1333,8 +1349,8 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        if (slen != 6) {
-            PrintAndLogEx(ERR, "Date of Birth length is incorrect, cannot continue.");
+        if (!validate_date(dob, slen)) {
+            PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
             return PM3_ESOFT;
         }
@@ -1343,8 +1359,8 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        if (slen != 6) {
-            PrintAndLogEx(ERR, "Document expiry length is incorrect, cannot continue.");
+        if (!validate_date(expiry, slen)) {
+            PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
             return PM3_ESOFT;
         }
@@ -1388,8 +1404,8 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        if (slen != 6) {
-            PrintAndLogEx(ERR, "Date of Birth length is incorrect, cannot continue.");
+        if (!validate_date(dob, slen)) {
+            PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
             return PM3_ESOFT;
         }
@@ -1398,8 +1414,8 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        if (slen != 6) {
-            PrintAndLogEx(ERR, "Document expiry length is incorrect, cannot continue.");
+        if (!validate_date(expiry, slen)) {
+            PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
             return PM3_ESOFT;
         }
