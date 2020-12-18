@@ -1382,7 +1382,6 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         BAC = false;
     } else {
         text_to_upper(docnum, slen);
-        PrintAndLogEx(HINT, "%.*s.", slen, (char *) docnum);
         if (slen != 9) {
             memset(docnum + slen, 0x3c, 9 - slen);
         }
