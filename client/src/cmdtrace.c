@@ -184,6 +184,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case ISO_14443B:
             case TOPAZ:
+                crcStatus = iso14443B_CRC_check(frame, data_len);
+                break;
             case FELICA:
                 crcStatus = !felica_CRC_check(frame + 2, data_len - 4);
                 break;
@@ -193,8 +195,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443A:
             case MFDES:
             case LTO:
-            case ISO_7816_4:
                 crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
+                break;
+            case ISO_7816_4:
+                crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len) == 1 ? 3 : 0;
+                crcStatus = iso14443B_CRC_check(frame, data_len) == 1 ? 4 : crcStatus;
                 break;
             case THINFILM:
                 frame[data_len - 1] ^= frame[data_len - 2];
@@ -280,7 +285,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     // Draw the CRC column
-    const char *crc = (crcStatus == 0 ? "!crc" : (crcStatus == 1 ? " ok " : "    "));
+    const char *crcstrings[] = { "!crc", " ok ", "    ", "A ok", "B ok" };
+    const char *crc = crcstrings[crcStatus];
 
     // mark short bytes (less than 8 Bit + Parity)
     if (protocol == ISO_14443A ||
