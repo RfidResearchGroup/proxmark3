@@ -26,7 +26,7 @@
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
 
 #define TIMEOUT 2000
-#define APDU_TIMEOUT 4000
+#define APDU_TIMEOUT 2000
 
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
@@ -1450,7 +1450,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen, bool
         SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_APDU | flags, 0, time_wait, NULL, 0);
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, APDU_TIMEOUT)) {
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MAX(APDU_TIMEOUT, user_timeout))) {
         uint8_t *recv = resp.data.asBytes;
         int rlen = resp.oldarg[0];
         uint8_t res = resp.oldarg[1];
