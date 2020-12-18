@@ -332,11 +332,11 @@ static void emrtd_bump_ssc(uint8_t *ssc) {
         if ((*(ssc + i)) == 0xFF) {
             // Set anything already FF to 0, we'll do + 1 on num to left anyways
             (*(ssc + i)) = 0;
-            continue;
+        } else {
+            (*(ssc + i)) += 1;
+            PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
+            return;
         }
-        (*(ssc + i)) += 1;
-        PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
-        return;
     }
 }
 
@@ -527,7 +527,7 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     int toread = 4;
     int offset = 0;
 
-    if (use_secure == true) {
+    if (use_secure) {
         if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen, use_14b) == false) {
             return false;
         }
@@ -547,12 +547,12 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
             toread = 118;
         }
 
-        if (kenc == NULL) {
-            if (_emrtd_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+        if (use_secure) {
+            if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
                 return false;
             }
         } else {
-            if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+            if (_emrtd_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
                 return false;
             }
         }
@@ -592,8 +592,7 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
-
-            if ( *datainlen > e_datalen) {
+            if (*datainlen > e_datalen) {
                 *dataoutlen = e_datalen;
                 memcpy(dataout, datain + offset + e_idlen + e_fieldlen, e_datalen);
                 return true;
@@ -692,7 +691,7 @@ static bool emrtd_file_tag_to_file_id(uint8_t *datain, char *filenameout, char *
 }
 
 static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char *file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure, bool use_14b) {
-    if (use_secure == true) {
+    if (use_secure) {
         if (emrtd_secure_select_file(ks_enc, ks_mac, ssc, EMRTD_P1_SELECT_BY_EF, file, use_14b) == false) {
             PrintAndLogEx(ERR, "Failed to secure select %s.", file);
             return false;
@@ -712,18 +711,17 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
 }
 
 static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
-    int datalen = 0;
+    int offset, datalen = 0;
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
     // based on mrpkey.py
     // FF D8 FF E0 -> JPEG
     // 00 00 00 0C 6A 50 -> JPEG 2000
-    for (int i = 0; i < file_length - 6; i++) {
-        if ((file_contents[i] == 0xFF && file_contents[i + 1] == 0xD8 && file_contents[i + 2] == 0xFF && file_contents[i + 3] == 0xE0) ||
-            (file_contents[i] == 0x00 && file_contents[i + 1] == 0x00 && file_contents[i + 2] == 0x00 && file_contents[i + 3] == 0x0C && file_contents[i + 4] == 0x6A && file_contents[i + 5] == 0x50)) {
-            datalen = file_length - i;
-            memcpy(data, file_contents + i, datalen);
+    // Note: Doing file_length - 6 to account for the longest data we're checking.
+    for (offset = 0; offset < file_length - 6; offset++) {
+        if ((file_contents[offset] == 0xFF && file_contents[offset + 1] == 0xD8 && file_contents[offset + 2] == 0xFF && file_contents[offset + 3] == 0xE0) ||
+            (file_contents[offset] == 0x00 && file_contents[offset + 1] == 0x00 && file_contents[offset + 2] == 0x00 && file_contents[offset + 3] == 0x0C && file_contents[offset + 4] == 0x6A && file_contents[offset + 5] == 0x50)) {
+            datalen = file_length - offset;
             break;
         }
     }
@@ -733,7 +731,7 @@ static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
         return false;
     }
 
-    saveFile("EF_DG2", ".jpg", data, datalen);
+    saveFile("EF_DG2", ".jpg", file_contents + offset, datalen);
     return true;
 }
 
@@ -757,19 +755,15 @@ static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
 }
 
 static bool emrtd_dump_ef_sod(uint8_t *file_contents, int file_length) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
-
     int fieldlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
     int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
     
-    if (fieldlen + 1 < EMRTD_MAX_FILE_SIZE) {
-        memcpy(data, file_contents + fieldlen + 1, datalen);
-    } else {
+    if (fieldlen + 1 > EMRTD_MAX_FILE_SIZE) {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_sod) fieldlen out-of-bounds");
         return false;
     }
 
-    saveFile("EF_SOD", ".p7b", data, datalen);
+    saveFile("EF_SOD", ".p7b", file_contents + fieldlen + 1, datalen);
     return true;
 }
 
@@ -938,15 +932,6 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     int resplen = 0;
 
-    // Select and read EF_CardAccess
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_CARDACCESS, *use_14b)) {
-        emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b);
-        PrintAndLogEx(INFO, "Read EF_CardAccess, len: %i.", resplen);
-        PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    } else {
-        PrintAndLogEx(INFO, "PACE unsupported. Will not read EF_CardAccess.");
-    }
-
     // Select MRTD applet
     if (emrtd_select_file(EMRTD_P1_SELECT_BY_NAME, EMRTD_AID_MRTD, *use_14b) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
@@ -1001,6 +986,12 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     if (!emrtd_connect(&use_14b)) {
         DropField();
         return PM3_ESOFT;
+    }
+
+    // Dump EF_CardAccess (if available)
+    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_CARDACCESS, "EF_CardAccess", BAC, use_14b)) {
+        PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
+        PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
     }
 
     // Authenticate with the eMRTD
@@ -1297,6 +1288,29 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     return PM3_SUCCESS;
 }
 
+static void text_to_upper(uint8_t *data, int datalen) {
+    // Loop over text to make lowercase text uppercase
+    for (int i = 0; i < datalen; i++) {
+        data[i] = toupper(data[i]);
+    }
+}
+
+static bool validate_date(uint8_t *data, int datalen) {
+    // Date has to be 6 chars
+    if (datalen != 6) {
+        return false;
+    }
+
+    // Check for valid date and month numbers
+    char temp[4] = { 0x00 };
+    memcpy(temp, data + 2, 2);
+    int month = (int) strtol(temp, NULL, 10);
+    memcpy(temp, data + 4, 2);
+    int day = (int) strtol(temp, NULL, 10);
+
+    return !(day <= 0 || day > 31 || month <= 0 || month > 12);
+}
+
 static int cmd_hf_emrtd_dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
@@ -1322,6 +1336,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
+        text_to_upper(docnum, slen);
         if (slen != 9) {
             // Pad to 9 with <
             memset(docnum + slen, 0x3c, 9 - slen);
@@ -1330,10 +1345,22 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
-    } 
+    } else {
+        if (!validate_date(dob, slen)) {
+            PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
+    }
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
+    } else {
+        if (!validate_date(expiry, slen)) {
+            PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
     }
 
     CLIParserFree(ctx);
@@ -1365,17 +1392,30 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        if ( slen != 9) {
+        text_to_upper(docnum, slen);
+        if (slen != 9) {
             memset(docnum + slen, 0x3c, 9 - slen);
         }
     }
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
-    } 
+    } else {
+        if (!validate_date(dob, slen)) {
+            PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
+    }
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
+    } else {
+        if (!validate_date(expiry, slen)) {
+            PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
     }
 
     CLIParserFree(ctx);
