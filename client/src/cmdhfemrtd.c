@@ -526,7 +526,7 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     int toread = 4;
     int offset = 0;
 
-    if (use_secure == true) {
+    if (use_secure) {
         if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen, use_14b) == false) {
             return false;
         }
@@ -546,12 +546,12 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
             toread = 118;
         }
 
-        if (kenc == NULL) {
-            if (_emrtd_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+        if (use_secure) {
+            if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
                 return false;
             }
         } else {
-            if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen, use_14b) == false) {
+            if (_emrtd_read_binary(offset, toread, tempresponse, &tempresplen, use_14b) == false) {
                 return false;
             }
         }
@@ -591,8 +591,7 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
-
-            if ( *datainlen > e_datalen) {
+            if (*datainlen > e_datalen) {
                 *dataoutlen = e_datalen;
                 memcpy(dataout, datain + offset + e_idlen + e_fieldlen, e_datalen);
                 return true;
@@ -691,7 +690,7 @@ static bool emrtd_file_tag_to_file_id(uint8_t *datain, char *filenameout, char *
 }
 
 static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char *file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure, bool use_14b) {
-    if (use_secure == true) {
+    if (use_secure) {
         if (emrtd_secure_select_file(ks_enc, ks_mac, ssc, EMRTD_P1_SELECT_BY_EF, file, use_14b) == false) {
             PrintAndLogEx(ERR, "Failed to secure select %s.", file);
             return false;
