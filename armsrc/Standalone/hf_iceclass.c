@@ -37,15 +37,19 @@
 #define ICE_STATE_ATTACK      2
 #define ICE_STATE_READER      3
 #define ICE_STATE_CONFIGCARD  4
+#define ICE_STATE_DUMP_SIM  5
+
+#define HF_ICLASS_NUM_MODES 6
 
 // ====================================================
 // Select which standalone function to be active.
-// 4 possiblities.  Uncomment the one you wanna use.
+// 5 possiblities.  Uncomment the one you wanna use.
 
-#define ICE_USE               ICE_STATE_FULLSIM
+//#define ICE_USE               ICE_STATE_FULLSIM
 //#define ICE_USE               ICE_STATE_ATTACK
 //#define ICE_USE               ICE_STATE_READER
 //#define ICE_USE               ICE_STATE_CONFIGCARD
+#define ICE_USE               ICE_STATE_DUMP_SIM
 
 // ====================================================
 
@@ -53,6 +57,8 @@
 #define NUM_CSNS                    9
 #define MAC_RESPONSES_SIZE          (16 * NUM_CSNS)
 #define HF_ICLASS_FULLSIM_ORIG_BIN  "iceclass-orig.bin"
+#define HF_ICALSSS_READSIM_TEMP_BIN "iceclass-temp.bin"
+#define HF_ICALSSS_READSIM_TEMP_MOD_BIN  "iceclass-temp-mod.bin"
 #define HF_ICLASS_FULLSIM_MOD       "iceclass-modified"
 #define HF_ICLASS_FULLSIM_MOD_BIN   HF_ICLASS_FULLSIM_MOD".bin"
 #define HF_ICLASS_FULLSIM_MOD_EML   HF_ICLASS_FULLSIM_MOD".eml"
@@ -141,6 +147,12 @@ static void download_instructions(uint8_t t) {
             DbpString("2. " _YELLOW_("mem spiffs dump h"));
             break;
         }
+        case ICE_STATE_DUMP_SIM: {
+            DbpString("The found tag will be dumped to " HF_ICALSSS_READSIM_TEMP_BIN);
+            DbpString("1. " _YELLOW_("mem spiffs tree"));
+            DbpString("2. " _YELLOW_("mem spiffs dump h"));
+            break;
+        }
     }
 }
 
@@ -176,6 +188,22 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
                 }
             }
         }
+    }
+
+    rdv40_spiffs_lazy_unmount();
+}
+
+// Write over file if size of flash file is less than new datalen
+static void save_to_temp_bin(uint8_t *data,  uint16_t datalen) {
+
+    rdv40_spiffs_lazy_mount();
+
+    const char * fn = HF_ICALSSS_READSIM_TEMP_BIN;
+
+    int res;
+    res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
+    if (res == SPIFFS_OK) {
+        Dbprintf("saved to " _GREEN_("%s"), fn);
     }
 
     rdv40_spiffs_lazy_unmount();
@@ -407,6 +435,172 @@ static int reader_dump_mode(void) {
     return PM3_SUCCESS;
 }
 
+static int dump_sim_mode(void) {
+
+    DbpString("this mode has no tracelog");
+    if (have_aa2())
+        DbpString("dumping of " _YELLOW_("AA2 enabled"));
+
+    for (;;) {
+
+        BigBuf_free();
+
+        uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
+        memset(card_data, 0xFF, ICLASS_16KS_SIZE);
+
+        if (BUTTON_PRESS()) {
+            DbpString("button pressed");
+            break;
+        }
+
+        // setup authenticate AA1
+        iclass_auth_req_t auth = {
+            .use_raw = false,
+            .use_elite = false,
+            .use_credit_key = false,
+            .do_auth = true,
+            .send_reply = false,
+        };
+        memcpy(auth.key, legacy_aa1_key, sizeof(auth.key));
+
+        Iso15693InitReader();
+        set_tracing(false);
+
+
+        picopass_hdr *hdr = (picopass_hdr *)card_data;
+
+        // select tag.
+        uint32_t eof_time = 0;
+        bool res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
+        if (res == false) {
+            switch_off();
+            continue;
+        }
+
+        // sanity check of CSN.
+        if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
+            switch_off();
+            continue;
+        }
+
+        uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+        // get 3 config bits
+        uint8_t type = (hdr->conf.chip_config & 0x10) >> 2;
+        type |= (hdr->conf.mem_config & 0x80) >> 6;
+        type |= (hdr->conf.mem_config & 0x20) >> 5;
+
+        Dbprintf(_GREEN_("%s") ", dumping...", card_types[type]);
+
+        uint8_t pagemap = get_pagemap(hdr);
+        uint8_t app1_limit, app2_limit, start_block;
+
+        // tags configured for NON SECURE PAGE,  acts different
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+            app1_limit = card_app2_limit[type];
+            app2_limit = 0;
+            start_block = 3;
+        } else {
+
+            app1_limit = hdr->conf.app_limit;
+            app2_limit = card_app2_limit[type];
+            start_block = 5;
+
+            res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
+            if (res == false) {
+                switch_off();
+                Dbprintf(_RED_("failed AA1 auth") ", skipping ");
+                continue;
+            }
+
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        }
+
+        uint16_t dumped = 0;
+
+        // main read loop
+        for (uint16_t i = start_block; i <= app1_limit; i++) {
+            if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
+                dumped++;
+            }
+        }
+
+        if (pagemap != PICOPASS_NON_SECURE_PAGEMODE && have_aa2()) {
+
+            // authenticate AA2
+            auth.use_raw = false;
+            auth.use_credit_key = true;
+            memcpy(auth.key, aa2_key, sizeof(auth.key));
+
+            res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
+            if (res) {
+
+                // sanity check of CSN.
+                if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
+                    switch_off();
+                    continue;
+                }
+
+                res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
+                if (res) {
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+                    for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
+                        if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
+                            dumped++;
+                        }
+                    }
+                } else {
+                    DbpString(_RED_("failed AA2 auth"));
+                }
+            } else {
+                DbpString(_RED_("failed selecting AA2"));
+
+                // sanity check of CSN.
+                if (hdr->csn[7] != 0xE0 && hdr->csn[6] != 0x12) {
+                    switch_off();
+                    continue;
+                }
+            }
+        }
+        switch_off();
+        save_to_temp_bin(card_data, (start_block + dumped) * 8);
+        Dbprintf("%u bytes saved", (start_block + dumped) * 8);
+
+        if (((start_block + dumped) * 8) > 0) {
+            break; //switch to sim mode 
+        }
+    }
+
+    rdv40_spiffs_lazy_mount();
+
+    SpinOff(0);
+    uint8_t *emul = BigBuf_get_EM_addr();
+    uint32_t fsize = size_in_spiffs(HF_ICALSSS_READSIM_TEMP_BIN);
+    int res = rdv40_spiffs_read_as_filetype(HF_ICALSSS_READSIM_TEMP_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
+    rdv40_spiffs_lazy_unmount();
+    if (res == SPIFFS_OK) {
+        Dbprintf("loaded " _GREEN_(HF_ICALSSS_READSIM_TEMP_BIN) " (%u bytes)", fsize);
+    }
+    
+    Dbprintf("simming " _GREEN_(HF_ICALSSS_READSIM_TEMP_BIN));
+    iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, NULL, NULL, NULL);
+
+    LED_B_ON();
+    rdv40_spiffs_lazy_mount();
+    res = rdv40_spiffs_write(HF_ICALSSS_READSIM_TEMP_BIN, emul, fsize, RDV40_SPIFFS_SAFETY_SAFE);
+    rdv40_spiffs_lazy_unmount();
+    LED_B_OFF();
+    if (res == SPIFFS_OK) {
+        Dbprintf("wrote emulator memory to " _GREEN_(HF_ICALSSS_READSIM_TEMP_MOD_BIN));
+    } else {
+        Dbprintf(_RED_("error") " writing "HF_ICALSSS_READSIM_TEMP_MOD_BIN" to flash ( %d )", res);
+    }
+
+    DbpString("-=[ exiting " _CYAN_("`dump & sim`") " mode ]=-");
+    return PM3_SUCCESS;
+}
+
 static int config_sim_mode(void) {
 
     uint8_t *emul = BigBuf_get_EM_addr();
@@ -436,7 +630,7 @@ void RunMod(void) {
 
     uint8_t mode = ICE_USE;
     uint8_t *bb = BigBuf_get_EM_addr();
-    if (bb[0] > 0 && bb[0] < 5) {
+    if (bb[0] > 0 && bb[0] < HF_ICLASS_NUM_MODES) { //increase number for new mode
         mode = bb[0];
     }
 
@@ -511,6 +705,16 @@ void RunMod(void) {
 
                 if (mode == ICE_STATE_CONFIGCARD)
                     config_sim_mode();
+
+                mode = ICE_STATE_NONE;
+                break;
+            }
+            case ICE_STATE_DUMP_SIM: {
+                DbpString("-=[ enter " _CYAN_("`dump & sim`") " mode, read 1 card and sim it ]=-");
+                res = dump_sim_mode();
+                if (res == PM3_SUCCESS) {
+                    download_instructions(mode);
+                }
 
                 mode = ICE_STATE_NONE;
                 break;
