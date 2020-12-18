@@ -1045,7 +1045,7 @@ static bool emrtd_compare_check_digit(char *datain, int datalen, char expected_c
     memcpy(tempdata, datain, datalen);
 
     uint8_t check_digit = emrtd_calculate_check_digit(tempdata) + 0x30;
-    bool res =check_digit == expected_check_digit;
+    bool res = check_digit == expected_check_digit;
     PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, expected %c == %c calculated ( %s )"
         , expected_check_digit
         , check_digit
@@ -1118,7 +1118,7 @@ static void emrtd_print_document_number(char *mrz, int offset) {
     }
 }
 
-static void emrtd_print_name(char *mrz, int offset, int max_length) {
+static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
     char final_name[100] = { 0x00 };
     int i = emrtd_mrz_determine_length(mrz, offset, max_length);
     int sep = emrtd_mrz_determine_separator(mrz, offset, i);
@@ -1128,20 +1128,30 @@ static void emrtd_print_name(char *mrz, int offset, int max_length) {
     final_name[namelen] = ' ';
     memcpy(final_name + namelen + 1, mrz + offset, sep);
 
-    PrintAndLogEx(SUCCESS, "Legal Name............: " _YELLOW_("%s"), final_name);
+    if (localized) {
+        PrintAndLogEx(SUCCESS, "Legal Name (Localized): " _YELLOW_("%s"), final_name);
+    } else {
+        PrintAndLogEx(SUCCESS, "Legal Name............: " _YELLOW_("%s"), final_name);
+    }
 }
 
-static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry) {
-    char temp_year[3] = { 0x00 };
-
-    memcpy(temp_year, mrz + offset, 2);
-    // If it's > 20, assume 19xx.
-    if (strtol(temp_year, NULL, 10) < 20 || is_expiry) {
-        final_date[0] = '2';
-        final_date[1] = '0';
+static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry, bool is_full) {
+    if (is_full) {
+        // If we get the full date, use the first two characters from that for year
+        memcpy(final_date, mrz, 2);
+        // and do + 2 on offset so that rest of code uses the right data
+        offset += 2;
     } else {
-        final_date[0] = '1';
-        final_date[1] = '9';
+        char temp_year[3] = { 0x00 };
+        memcpy(temp_year, mrz + offset, 2);
+        // If it's > 20, assume 19xx.
+        if (strtol(temp_year, NULL, 10) < 20 || is_expiry) {
+            final_date[0] = '2';
+            final_date[1] = '0';
+        } else {
+            final_date[0] = '1';
+            final_date[1] = '9';
+        }
     }
 
     memcpy(final_date + 2, mrz + offset, 2);
@@ -1151,20 +1161,20 @@ static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool
     memcpy(final_date + 8, mrz + offset + 4, 2);
 }
 
-static void emrtd_print_dob(char *mrz, int offset) {
+static void emrtd_print_dob(char *mrz, int offset, bool full) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, false);
+    emrtd_mrz_convert_date(mrz, offset, final_date, false, full);
 
     PrintAndLogEx(SUCCESS, "Date of birth.........: " _YELLOW_("%s"), final_date);
 
-    if (!emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
+    if (!full && !emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
         PrintAndLogEx(SUCCESS, _RED_("Date of Birth check digit is invalid."));
     }
 }
 
 static void emrtd_print_expiry(char *mrz, int offset) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, true);
+    emrtd_mrz_convert_date(mrz, offset, final_date, true, false);
 
     PrintAndLogEx(SUCCESS, "Date of expiry........: " _YELLOW_("%s"), final_date);
 
@@ -1173,40 +1183,11 @@ static void emrtd_print_expiry(char *mrz, int offset) {
     }
 }
 
-int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    int resplen = 0;
-    uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
-    bool BAC = false;
-    bool use_14b = false;
-
+static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
     int td_variant = 0;
 
-    // Select the eMRTD
-    if (!emrtd_connect(&use_14b)) {
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    // Select and authenticate with the eMRTD
-    bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
-    PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
-    PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
-    PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
-
-    if (!auth_result) {
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    // Select EF_DG1
-    if (emrtd_select_and_read(response, &resplen, EMRTD_EF_DG1, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG1.");
-        DropField();
-        return PM3_ESOFT;
-    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG1") " --------------------");
 
     // MRZ on TD1 is 90 characters, 30 on each row.
     // MRZ on TD3 is 88 characters, 44 on each row.
@@ -1215,8 +1196,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     if (!emrtd_lds_get_data_by_tag(response, &resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
         PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
-        DropField();
-        return PM3_ESOFT;
+        return false;
     }
 
     // Determine and print the document type
@@ -1251,9 +1231,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     if (td_variant == 3) {
         // Passport form factor
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
-        emrtd_print_name(mrz, 5, 38);
+        emrtd_print_name(mrz, 5, 38, false);
         emrtd_print_document_number(mrz, 44);
-        emrtd_print_dob(mrz, 44 + 13);
+        emrtd_print_dob(mrz, 44 + 13, false);
         emrtd_print_legal_sex(&mrz[44 + 20]);
         emrtd_print_expiry(mrz, 44 + 21);
         emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
@@ -1270,9 +1250,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     } else if (td_variant == 1) {
         // ID form factor
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
-        emrtd_print_name(mrz, 60, 30);
+        emrtd_print_name(mrz, 60, 30, false);
         emrtd_print_document_number(mrz, 5);
-        emrtd_print_dob(mrz, 30);
+        emrtd_print_dob(mrz, 30, false);
         emrtd_print_legal_sex(&mrz[30 + 7]);
         emrtd_print_expiry(mrz, 30 + 8);
         emrtd_print_optional_elements(mrz, 15, 15, false);
@@ -1281,6 +1261,141 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         // Calculate and verify composite check digit
         if (!emrtd_compare_check_digit(mrz, 59, mrz[59])) {
             PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        }
+    }
+
+    return true;
+}
+
+static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
+    uint8_t taglist[100] = { 0x00 };
+    int taglistlen = 0;
+    uint8_t tagdata[1000] = { 0x00 };
+    int tagdatalen = 0;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG11") " -------------------");
+
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_DG11.");
+        return false;
+    }
+
+    for (int i = 0; i < taglistlen; i++) {
+        emrtd_lds_get_data_by_tag(response, &resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        // Special behavior for two char tags
+        if (taglist[i] == 0x5f) {
+            switch (taglist[i + 1]) {
+                case 0x0e:
+                    emrtd_print_name((char *) tagdata, 0, tagdatalen, true);
+                    break;
+                case 0x10:
+                    PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x11:
+                    // TODO: acc for < separation
+                    PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x42:
+                    // TODO: acc for < separation
+                    PrintAndLogEx(SUCCESS, "Permanent Address.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x12:
+                    PrintAndLogEx(SUCCESS, "Telephone.............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x13:
+                    PrintAndLogEx(SUCCESS, "Profession............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x14:
+                    PrintAndLogEx(SUCCESS, "Title.................: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x15:
+                    PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x16:
+                    saveFile("ProofOfCitizenship", ".jpg", tagdata, tagdatalen);
+                    break;
+                case 0x17:
+                    // TODO: acc for < separation
+                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x18:
+                    PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x2b:
+                    emrtd_print_dob((char *) tagdata, 0, true);
+                    break;
+                default:
+                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
+                    break;
+            }
+
+            i += 1;
+        } else {
+            // TODO: Account for A0
+            PrintAndLogEx(SUCCESS, "Unknown Field %02X......: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
+        }
+    }
+    return true;
+}
+
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
+    uint8_t ssc[8] = { 0x00 };
+    uint8_t ks_enc[16] = { 0x00 };
+    uint8_t ks_mac[16] = { 0x00 };
+    bool BAC = false;
+    bool use_14b = false;
+
+    // Select the eMRTD
+    if (!emrtd_connect(&use_14b)) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Select and authenticate with the eMRTD
+    bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------ " _CYAN_("Basic Info") " ------------------");
+    PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
+    PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
+
+    if (!auth_result) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t filelist[50];
+    int filelistlen = 0;
+
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Dump all files in the file list
+    for (int i = 0; i < filelistlen; i++) {
+        char file_id[5] = { 0x00 };
+        char file_name[8] = { 0x00 };
+        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+            PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
+            continue;
+        }
+
+        if (strcmp(file_name, "EF_DG1") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG1, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+            emrtd_print_ef_dg1_info(response, resplen);
+        } else if (strcmp(file_name, "EF_DG11") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG11, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+            emrtd_print_ef_dg11_info(response, resplen);
         }
     }
 
