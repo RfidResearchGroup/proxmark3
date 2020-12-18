@@ -1324,10 +1324,22 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
-    } 
+    } else {
+        if (slen != 6) {
+            PrintAndLogEx(ERR, "Date of Birth length is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
+    }
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
+    } else {
+        if (slen != 6) {
+            PrintAndLogEx(ERR, "Document expiry length is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
     }
 
     CLIParserFree(ctx);
@@ -1359,17 +1371,29 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        if ( slen != 9) {
+        if (slen != 9) {
             memset(docnum + slen, 0x3c, 9 - slen);
         }
     }
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
-    } 
+    } else {
+        if (slen != 6) {
+            PrintAndLogEx(ERR, "Date of Birth length is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
+    }
     
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
+    } else {
+        if (slen != 6) {
+            PrintAndLogEx(ERR, "Document expiry length is incorrect, cannot continue.");
+            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            return PM3_ESOFT;
+        }
     }
 
     CLIParserFree(ctx);
