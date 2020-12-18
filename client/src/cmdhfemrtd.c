@@ -988,6 +988,12 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
+    // Dump EF_CardAccess (if available)
+    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_CARDACCESS, "EF_CardAccess", BAC, use_14b)) {
+        PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
+        PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
+    }
+
     // Authenticate with the eMRTD
     if (!emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b)) {
         DropField();
@@ -1027,12 +1033,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         emrtd_dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
     }
 
-    // Dump EF_SOD and EF_CardAccess (if available)
+    // Dump EF_SOD
     emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_SOD, "EF_SOD", BAC, use_14b);
-    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_CARDACCESS, "EF_CardAccess", BAC, use_14b)) {
-        PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
-        PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
-    }
 
     DropField();
     return PM3_SUCCESS;
