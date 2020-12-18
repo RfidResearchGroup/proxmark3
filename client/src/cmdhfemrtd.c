@@ -568,14 +568,14 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     return true;
 }
 
-static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
+static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
     int offset = 1;
-    offset += emrtd_get_asn1_field_length(datain, *datainlen, offset);
+    offset += emrtd_get_asn1_field_length(datain, datainlen, offset);
 
     int e_idlen = 0;
     int e_datalen = 0;
     int e_fieldlen = 0;
-    while (offset < *datainlen) {
+    while (offset < datainlen) {
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
         if ((*(datain + offset) == 0x5F) || (*(datain + offset) == 0x7F)) {
@@ -585,14 +585,14 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
         }
 
         // Get the length of the element
-        e_datalen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, e_idlen);
+        e_datalen = emrtd_get_asn1_data_length(datain + offset, datainlen - offset, e_idlen);
 
         // Get the length of the element's length
-        e_fieldlen = emrtd_get_asn1_field_length(datain + offset, *datainlen - offset, e_idlen);
+        e_fieldlen = emrtd_get_asn1_field_length(datain + offset, datainlen - offset, e_idlen);
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
-            if (*datainlen > e_datalen) {
+            if (datainlen > e_datalen) {
                 *dataoutlen = e_datalen;
                 memcpy(dataout, datain + offset + e_idlen + e_fieldlen, e_datalen);
                 return true;
@@ -741,7 +741,7 @@ static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
     int datalen = 0;
 
     // If we can't find image in EF_DG5, return false.
-    if (emrtd_lds_get_data_by_tag(file_contents, &file_length, data, &datalen, 0x5F, 0x40, true) == false) {
+    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x40, true) == false) {
         return false;
     }
 
@@ -1013,7 +1013,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -1210,7 +1210,7 @@ static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
     char mrz[90] = { 0x00 };
     int mrzlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
         PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
         return false;
     }
@@ -1292,13 +1292,13 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG11") " -------------------");
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG11.");
         return false;
     }
 
     for (int i = 0; i < taglistlen; i++) {
-        emrtd_lds_get_data_by_tag(response, &resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        emrtd_lds_get_data_by_tag(response, resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
         // Special behavior for two char tags
         if (taglist[i] == 0x5f) {
             switch (taglist[i + 1]) {
@@ -1364,13 +1364,13 @@ static bool emrtd_print_ef_dg12_info(uint8_t *response, int resplen) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG12") " -------------------");
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG12.");
         return false;
     }
 
     for (int i = 0; i < taglistlen; i++) {
-        emrtd_lds_get_data_by_tag(response, &resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        emrtd_lds_get_data_by_tag(response, resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
         // Special behavior for two char tags
         if (taglist[i] == 0x5f) {
             // Several things here are longer than the rest but I can't think of a way to shorten them
@@ -1452,7 +1452,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -1482,7 +1482,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
 int infoHF_EMRTD_offline(const char *path) {
     uint8_t *data;
-    int datalen = 0;
+    size_t datalen = 0;
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL)
         return PM3_EMALLOC;
@@ -1497,7 +1497,7 @@ int infoHF_EMRTD_offline(const char *path) {
     }
     uint8_t filelist[50];
     int filelistlen = 0;
-    int res = emrtd_lds_get_data_by_tag(data, &datalen, filelist, &filelistlen, 0x5c, 0x00, false);
+    int res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false);
     free(data);
     if (!res) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
@@ -1513,7 +1513,6 @@ int infoHF_EMRTD_offline(const char *path) {
             PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-
         if (strcmp(file_name, "EF_DG1") == 0) {
             strcpy(filepath, path);
             strncat(filepath, PATHSEP, 1);
@@ -1639,7 +1638,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
-        arg_str0("p", "path", "<dirpath>", "display info from offline dump stored in dirpath"),
+        arg_str0(NULL, "path", "<dirpath>", "display info from offline dump stored in dirpath"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
