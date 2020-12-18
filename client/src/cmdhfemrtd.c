@@ -1480,6 +1480,70 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     return PM3_SUCCESS;
 }
 
+int infoHF_EMRTD_offline(const char *path) {
+    uint8_t *data;
+    int datalen = 0;
+    char *filepath = calloc(strlen(path) + 100, sizeof(char));
+    if (filepath == NULL)
+        return PM3_EMALLOC;
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 1);
+    strcat(filepath, "EF_COM");
+
+    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, true) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM.");
+        free(filepath);
+        return PM3_ESOFT;
+    }
+    uint8_t filelist[50];
+    int filelistlen = 0;
+    int res = emrtd_lds_get_data_by_tag(data, &datalen, filelist, &filelistlen, 0x5c, 0x00, false);
+    free(data);
+    if (!res) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+        free(filepath);
+        return PM3_ESOFT;
+    }
+
+    // Read files in the file list
+    for (int i = 0; i < filelistlen; i++) {
+        char file_id[5] = { 0x00 };
+        char file_name[8] = { 0x00 };
+        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+            PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
+            continue;
+        }
+
+        if (strcmp(file_name, "EF_DG1") == 0) {
+            strcpy(filepath, path);
+            strncat(filepath, PATHSEP, 1);
+            strcat(filepath, "EF_DG1");
+            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, true) == PM3_SUCCESS) {
+                emrtd_print_ef_dg1_info(data, datalen);
+                free(data);
+            }
+        } else if (strcmp(file_name, "EF_DG11") == 0) {
+            strcpy(filepath, path);
+            strncat(filepath, PATHSEP, 1);
+            strcat(filepath, "EF_DG11");
+            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, true) == PM3_SUCCESS) {
+                emrtd_print_ef_dg11_info(data, datalen);
+                free(data);
+            }
+        } else if (strcmp(file_name, "EF_DG12") == 0) {
+            strcpy(filepath, path);
+            strncat(filepath, PATHSEP, 1);
+            strcat(filepath, "EF_DG12");
+            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, true) == PM3_SUCCESS) {
+                emrtd_print_ef_dg12_info(data, datalen);
+                free(data);
+            }
+        }
+    }
+    free(filepath);
+    return PM3_SUCCESS;
+}
+
 static void text_to_upper(uint8_t *data, int datalen) {
     // Loop over text to make lowercase text uppercase
     for (int i = 0; i < datalen; i++) {
@@ -1575,6 +1639,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
+        arg_str0("p", "path", "<dirpath>", "display info from offline dump stored in dirpath"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1614,12 +1679,17 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
             error = true;
         }
     }
-
+    uint8_t path[FILENAME_MAX] = { 0x00 };
+    bool offline = CLIParamStrToBuf(arg_get_str(ctx, 4), path, sizeof(path), &slen) == 0 && slen > 0;
     CLIParserFree(ctx);
     if (error) {
         return PM3_ESOFT;
     }
-    return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+    if (offline) {
+        return infoHF_EMRTD_offline((const char *)path);
+    } else {
+        return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+    }
 }
 
 static int cmd_hf_emrtd_list(const char *Cmd) {
@@ -1635,7 +1705,7 @@ static int cmd_hf_emrtd_list(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
     {"dump",    cmd_hf_emrtd_dump, IfPm3Iso14443,   "Dump eMRTD files to binary files"},
-    {"info",    cmd_hf_emrtd_info, IfPm3Iso14443,   "Display info about an eMRTD"},
+    {"info",    cmd_hf_emrtd_info, AlwaysAvailable, "Display info about an eMRTD"},
     {"list",    cmd_hf_emrtd_list, AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };
