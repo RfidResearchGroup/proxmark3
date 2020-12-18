@@ -45,11 +45,11 @@
 // Select which standalone function to be active.
 // 5 possiblities.  Uncomment the one you wanna use.
 
-//#define ICE_USE               ICE_STATE_FULLSIM
+#define ICE_USE               ICE_STATE_FULLSIM
 //#define ICE_USE               ICE_STATE_ATTACK
 //#define ICE_USE               ICE_STATE_READER
 //#define ICE_USE               ICE_STATE_CONFIGCARD
-#define ICE_USE               ICE_STATE_DUMP_SIM
+//#define ICE_USE               ICE_STATE_DUMP_SIM
 
 // ====================================================
 
@@ -158,15 +158,25 @@ static void download_instructions(uint8_t t) {
 
 // Save to flash if file doesn't exist.
 // Write over file if size of flash file is less than new datalen
-static void save_to_flash(uint8_t *data, uint16_t datalen) {
+static void save_to_flash(uint8_t *data, uint16_t datalen, char * filename) {
 
     rdv40_spiffs_lazy_mount();
 
     char fn[SPIFFS_OBJ_NAME_LEN];
-    sprintf(fn, "iclass-%02X%02X%02X%02X%02X%02X%02X%02X.bin",
-            data[0], data[1], data[2], data[3],
-            data[4], data[5], data[6], data[7]
-           );
+
+    if (filename == NULL){
+            sprintf(fn, "iclass-%02X%02X%02X%02X%02X%02X%02X%02X.bin",
+                    data[0], data[1], data[2], data[3],
+                    data[4], data[5], data[6], data[7]
+                );
+    } else {
+        int name_len = SPIFFS_OBJ_NAME_LEN;
+        int filename_len = strlen(filename);
+
+        // if the given name len longer than buffer allows, cut it down to size
+        name_len = (name_len >= SPIFFS_OBJ_NAME_LEN) ? SPIFFS_OBJ_NAME_LEN : filename_len;
+        memcpy(fn, filename, name_len);
+    }    
 
     int res;
     if (exists_in_spiffs(fn) == false) {
@@ -188,22 +198,6 @@ static void save_to_flash(uint8_t *data, uint16_t datalen) {
                 }
             }
         }
-    }
-
-    rdv40_spiffs_lazy_unmount();
-}
-
-// Write over file if size of flash file is less than new datalen
-static void save_to_temp_bin(uint8_t *data,  uint16_t datalen) {
-
-    rdv40_spiffs_lazy_mount();
-
-    const char * fn = HF_ICALSSS_READSIM_TEMP_BIN;
-
-    int res;
-    res = rdv40_spiffs_write(fn, data, datalen, RDV40_SPIFFS_SAFETY_SAFE);
-    if (res == SPIFFS_OK) {
-        Dbprintf("saved to " _GREEN_("%s"), fn);
     }
 
     rdv40_spiffs_lazy_unmount();
@@ -428,7 +422,7 @@ static int reader_dump_mode(void) {
             }
         }
         switch_off();
-        save_to_flash(card_data, (start_block + dumped) * 8);
+        save_to_flash(card_data, (start_block + dumped) * 8, NULL);
         Dbprintf("%u bytes saved", (start_block + dumped) * 8);
     }
     DbpString("-=[ exiting " _CYAN_("`read & dump`") " mode ]=-");
@@ -564,7 +558,8 @@ static int dump_sim_mode(void) {
             }
         }
         switch_off();
-        save_to_temp_bin(card_data, (start_block + dumped) * 8);
+        char * temp_file = HF_ICALSSS_READSIM_TEMP_BIN;
+        save_to_flash(card_data, (start_block + dumped) * 8, temp_file);
         Dbprintf("%u bytes saved", (start_block + dumped) * 8);
 
         if (((start_block + dumped) * 8) > 0) {
@@ -630,7 +625,7 @@ void RunMod(void) {
 
     uint8_t mode = ICE_USE;
     uint8_t *bb = BigBuf_get_EM_addr();
-    if (bb[0] > 0 && bb[0] < HF_ICLASS_NUM_MODES) { //increase number for new mode
+    if (bb[0] > 0 && bb[0] < HF_ICLASS_NUM_MODES) {
         mode = bb[0];
     }
 
