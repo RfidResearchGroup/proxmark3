@@ -1118,7 +1118,7 @@ static void emrtd_print_document_number(char *mrz, int offset) {
     }
 }
 
-static void emrtd_print_name(char *mrz, int offset, int max_length) {
+static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
     char final_name[100] = { 0x00 };
     int i = emrtd_mrz_determine_length(mrz, offset, max_length);
     int sep = emrtd_mrz_determine_separator(mrz, offset, i);
@@ -1128,20 +1128,30 @@ static void emrtd_print_name(char *mrz, int offset, int max_length) {
     final_name[namelen] = ' ';
     memcpy(final_name + namelen + 1, mrz + offset, sep);
 
-    PrintAndLogEx(SUCCESS, "Legal Name............: " _YELLOW_("%s"), final_name);
+    if (localized) {
+        PrintAndLogEx(SUCCESS, "Legal Name (Localized): " _YELLOW_("%s"), final_name);
+    } else {
+        PrintAndLogEx(SUCCESS, "Legal Name............: " _YELLOW_("%s"), final_name);
+    }
 }
 
-static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry) {
-    char temp_year[3] = { 0x00 };
-
-    memcpy(temp_year, mrz + offset, 2);
-    // If it's > 20, assume 19xx.
-    if (strtol(temp_year, NULL, 10) < 20 || is_expiry) {
-        final_date[0] = '2';
-        final_date[1] = '0';
+static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry, bool is_full) {
+    if (is_full) {
+        // If we get the full date, use the first two characters from that for year
+        memcpy(final_date, mrz, 2);
+        // and do + 2 on offset so that rest of code uses the right data
+        offset += 2;
     } else {
-        final_date[0] = '1';
-        final_date[1] = '9';
+        char temp_year[3] = { 0x00 };
+        memcpy(temp_year, mrz + offset, 2);
+        // If it's > 20, assume 19xx.
+        if (strtol(temp_year, NULL, 10) < 20 || is_expiry) {
+            final_date[0] = '2';
+            final_date[1] = '0';
+        } else {
+            final_date[0] = '1';
+            final_date[1] = '9';
+        }
     }
 
     memcpy(final_date + 2, mrz + offset, 2);
@@ -1151,26 +1161,77 @@ static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool
     memcpy(final_date + 8, mrz + offset + 4, 2);
 }
 
-static void emrtd_print_dob(char *mrz, int offset) {
+static void emrtd_print_dob(char *mrz, int offset, bool full) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, false);
+    emrtd_mrz_convert_date(mrz, offset, final_date, false, full);
 
     PrintAndLogEx(SUCCESS, "Date of birth.........: " _YELLOW_("%s"), final_date);
 
-    if (!emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
+    if (!full && !emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
         PrintAndLogEx(SUCCESS, _RED_("Date of Birth check digit is invalid."));
     }
 }
 
 static void emrtd_print_expiry(char *mrz, int offset) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, true);
+    emrtd_mrz_convert_date(mrz, offset, final_date, true, false);
 
     PrintAndLogEx(SUCCESS, "Date of expiry........: " _YELLOW_("%s"), final_date);
 
     if (!emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
         PrintAndLogEx(SUCCESS, _RED_("Date of expiry check digit is invalid."));
     }
+}
+
+static bool emrtd_print_ef_dg11_info(bool *BAC, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool *use_14b) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    int resplen = 0;
+
+    uint8_t taglist[100] = { 0x00 };
+    int taglistlen = 0;
+    uint8_t tagdata[1000] = { 0x00 };
+    int tagdatalen = 0;
+
+    PrintAndLogEx(INFO, "=====EF_DG11=====");
+
+    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_DG11, ks_enc, ks_mac, ssc, *BAC, *use_14b)) {
+        PrintAndLogEx(ERR, "Failed to read EF_DG11.");
+        return false;
+    }
+
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_DG11.");
+        return false;
+    }
+
+    for (int i = 0; i < taglistlen; i++) {
+        emrtd_lds_get_data_by_tag(response, &resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        // Special behavior for two char tags
+        if (taglist[i] == 0x5f) {
+            switch (taglist[i + 1]) {
+                case 0x0e:
+                    emrtd_print_name((char *) tagdata, 0, tagdatalen, true);
+                    break;
+                case 0x10:
+                    PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x11:
+                    PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x2b:
+                    emrtd_print_dob((char *) tagdata, 0, true);
+                    break;
+                default:
+                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
+                    break;
+            }
+
+            i += 1;
+        } else {
+            PrintAndLogEx(INFO, "Reading %02X: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
+        }
+    }
+    return true;
 }
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
@@ -1207,6 +1268,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         DropField();
         return PM3_ESOFT;
     }
+
+    PrintAndLogEx(INFO, "=====EF_DG1=====");
 
     // MRZ on TD1 is 90 characters, 30 on each row.
     // MRZ on TD3 is 88 characters, 44 on each row.
@@ -1251,9 +1314,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     if (td_variant == 3) {
         // Passport form factor
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
-        emrtd_print_name(mrz, 5, 38);
+        emrtd_print_name(mrz, 5, 38, false);
         emrtd_print_document_number(mrz, 44);
-        emrtd_print_dob(mrz, 44 + 13);
+        emrtd_print_dob(mrz, 44 + 13, false);
         emrtd_print_legal_sex(&mrz[44 + 20]);
         emrtd_print_expiry(mrz, 44 + 21);
         emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
@@ -1270,9 +1333,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     } else if (td_variant == 1) {
         // ID form factor
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
-        emrtd_print_name(mrz, 60, 30);
+        emrtd_print_name(mrz, 60, 30, false);
         emrtd_print_document_number(mrz, 5);
-        emrtd_print_dob(mrz, 30);
+        emrtd_print_dob(mrz, 30, false);
         emrtd_print_legal_sex(&mrz[30 + 7]);
         emrtd_print_expiry(mrz, 30 + 8);
         emrtd_print_optional_elements(mrz, 15, 15, false);
@@ -1283,6 +1346,10 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
         }
     }
+
+    // Print EF_DG11 info
+    // TODO: verify existence from file list, also print file list in info.
+    emrtd_print_ef_dg11_info(&BAC, ssc, ks_enc, ks_mac, &use_14b);
 
     DropField();
     return PM3_SUCCESS;
