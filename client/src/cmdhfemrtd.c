@@ -331,11 +331,11 @@ static void emrtd_bump_ssc(uint8_t *ssc) {
         if ((*(ssc + i)) == 0xFF) {
             // Set anything already FF to 0, we'll do + 1 on num to left anyways
             (*(ssc + i)) = 0;
-            continue;
+        } else {
+            (*(ssc + i)) += 1;
+            PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
+            return;
         }
-        (*(ssc + i)) += 1;
-        PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
-        return;
     }
 }
 
