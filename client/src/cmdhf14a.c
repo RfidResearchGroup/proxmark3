@@ -26,9 +26,8 @@
 #include "util_posix.h"  // msclock
 #include "aidsearch.h"
 #include "cmdhf.h"       // handle HF plot
-#include "protocols.h"   // MAGIC_GEN_1A
 #include "cliparser.h"
-#include "protocols.h"     // definitions of ISO14A/7816 protocol
+#include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
 #include "emv/apduinfo.h"  // GetAPDUCodeDescription
 
 bool APDUInFramingEnable = true;
@@ -2001,11 +2000,21 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         if (do_aid_search) {
+
+            
+            PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
+
+            bool found = false;
             int elmindx = 0;
             json_t *root = AIDSearchInit(verbose);
             if (root != NULL) {
                 bool ActivateField = true;
                 for (elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+
+                    if (kbd_enter_pressed()) {
+                        break;
+                    }
+
                     json_t *data = AIDSearchGetElm(root, elmindx);
                     uint8_t vaid[200] = {0};
                     int vaidlen = 0;
@@ -2037,9 +2046,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                     if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
                         if (sw == 0x9000) {
-                            if (verbose) PrintAndLogEx(SUCCESS, "------------- Application OK -----------");
+                            if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
                         } else {
-                            if (verbose) PrintAndLogEx(WARNING, "----------- Application blocked --------");
+                            if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
                         }
 
                         PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
@@ -2059,10 +2068,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         } else {
                             if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
                         }
+
+                        if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
+                        found = true;
                     }
 
                 }
                 DropField();
+                if (verbose == false && found)
+                    PrintAndLogEx(INFO, "----------------------------------------------------");
             }
         }
     } else {
