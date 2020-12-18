@@ -1192,7 +1192,8 @@ static bool emrtd_print_ef_dg11_info(bool *BAC, uint8_t *ssc, uint8_t *ks_enc, u
     uint8_t tagdata[1000] = { 0x00 };
     int tagdatalen = 0;
 
-    PrintAndLogEx(INFO, "=====EF_DG11=====");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG11") " -------------------");
 
     if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_DG11, ks_enc, ks_mac, ssc, *BAC, *use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_DG11.");
@@ -1281,6 +1282,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     // Select and authenticate with the eMRTD
     bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac, &use_14b);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------ " _CYAN_("Basic Info") " ------------------");
     PrintAndLogEx(SUCCESS, "Communication standard: %s", use_14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
     PrintAndLogEx(SUCCESS, "BAC...................: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
     PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
@@ -1297,7 +1301,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "=====EF_DG1=====");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG1") " --------------------");
 
     // MRZ on TD1 is 90 characters, 30 on each row.
     // MRZ on TD3 is 88 characters, 44 on each row.
