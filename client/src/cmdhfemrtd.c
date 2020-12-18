@@ -1216,7 +1216,34 @@ static bool emrtd_print_ef_dg11_info(bool *BAC, uint8_t *ssc, uint8_t *ks_enc, u
                     PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x11:
+                    // TODO: acc for < separation
                     PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x42:
+                    // TODO: acc for < separation
+                    PrintAndLogEx(SUCCESS, "Permanent Address.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x12:
+                    PrintAndLogEx(SUCCESS, "Telephone.............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x13:
+                    PrintAndLogEx(SUCCESS, "Profession............: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x14:
+                    PrintAndLogEx(SUCCESS, "Title.................: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x15:
+                    PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x16:
+                    saveFile("ProofOfCitizenship", ".jpg", tagdata, tagdatalen);
+                    break;
+                case 0x17:
+                    // TODO: acc for < separation
+                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x18:
+                    PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x2b:
                     emrtd_print_dob((char *) tagdata, 0, true);
@@ -1228,7 +1255,8 @@ static bool emrtd_print_ef_dg11_info(bool *BAC, uint8_t *ssc, uint8_t *ks_enc, u
 
             i += 1;
         } else {
-            PrintAndLogEx(INFO, "Reading %02X: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
+            // TODO: Account for A0
+            PrintAndLogEx(SUCCESS, "Unknown Field %02X......: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
         }
     }
     return true;
