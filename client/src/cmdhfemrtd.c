@@ -1294,9 +1294,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 static void text_to_upper(uint8_t *data, int datalen) {
     // Loop over text to make lowercase text uppercase
     for (int i = 0; i < datalen; i++) {
-        if ('a' <= data[i] && data[i] <= 'z') {
-            data[i] -= 32;
-        }
+        data[i] = toupper(data[i]);
     }
 }
 
