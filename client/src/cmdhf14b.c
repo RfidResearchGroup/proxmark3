@@ -24,6 +24,8 @@
 #include "protocols.h"     // definitions of ISO14B/7816 protocol
 #include "emv/apduinfo.h"  // GetAPDUCodeDescription
 #include "mifare/ndef.h"   // NDEFRecordsDecodeAndPrint
+#include "aidsearch.h"
+
 
 #define TIMEOUT 2000
 #define APDU_TIMEOUT 2000
@@ -62,6 +64,103 @@ static uint16_t get_sw(uint8_t *d, uint8_t n) {
 
     n -= 2;
     return d[n] * 0x0100 + d[n + 1];
+}
+
+static void hf14b_aid_search(bool verbose) {
+
+    int elmindx = 0;
+    json_t *root = AIDSearchInit(verbose);
+    if (root == NULL)  {
+        switch_off_field_14b();
+        return;
+    }
+
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
+
+    bool found = false;
+    bool leave_signal_on = true;
+    bool activate_field = true;
+    for (elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+
+       if (kbd_enter_pressed()) {
+           break;
+       }
+
+        json_t *data = AIDSearchGetElm(root, elmindx);
+        uint8_t vaid[200] = {0};
+        int vaidlen = 0;
+        if (!AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) || !vaidlen)
+            continue;
+
+
+        // COMPUTE APDU
+        uint8_t apdu_data[PM3_CMD_DATA_SIZE] = {0};
+        int apdu_len = 0;
+        sAPDU apdu = (sAPDU) {0x00, 0xa4, 0x04, 0x00, vaidlen, vaid};
+
+        if (APDUEncodeS(&apdu, false, 0x00, apdu_data, &apdu_len)) {
+            PrintAndLogEx(ERR, "APDU encoding error.");
+            return;
+        }
+
+        PrintAndLogEx(DEBUG, ">>>> %s", sprint_hex(apdu_data, apdu_len));
+
+        int resultlen = 0;
+        uint8_t result[1024] = {0};
+        int res = exchange_14b_apdu(apdu_data, apdu_len, activate_field, leave_signal_on, result, sizeof(result), &resultlen, -1);
+        activate_field = false;
+        if (res)
+            continue;
+
+        uint16_t sw = get_sw(result, resultlen);
+
+        uint8_t dfname[200] = {0};
+        size_t dfnamelen = 0;
+        if (resultlen > 3) {
+            struct tlvdb *tlv = tlvdb_parse_multi(result, resultlen);
+            if (tlv) {
+                // 0x84 Dedicated File (DF) Name
+                const struct tlv *dfnametlv = tlvdb_get_tlv(tlvdb_find_full(tlv, 0x84));
+                if (dfnametlv) {
+                    dfnamelen = dfnametlv->len;
+                    memcpy(dfname, dfnametlv->value, dfnamelen);
+                }
+                tlvdb_free(tlv);
+            }
+        }
+
+        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+            if (sw == 0x9000) {
+                if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
+            } else {
+                if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
+            }
+
+            PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+
+            if (dfnamelen) {
+                if (dfnamelen == vaidlen) {
+                    if (memcmp(dfname, vaid, vaidlen) == 0) {
+                        if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
+                    } else {
+                        PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                        PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                    }
+                } else {
+                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                    PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                }
+            } else {
+                if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
+            }
+
+            if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
+            found = true;
+        }
+    }
+    switch_off_field_14b();
+    if (verbose == false && found)
+        PrintAndLogEx(INFO, "----------------------------------------------------");
 }
 
 static bool wait_cmd_14b(bool verbose, bool is_select) {
@@ -650,7 +749,7 @@ static void print_ct_general_info(void *vcard) {
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
 
 // 14b get and print Full Info (as much as we know)
-static bool HF14B_Std_Info(bool verbose) {
+static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
 
     bool is_success = false;
 
@@ -671,14 +770,21 @@ static bool HF14B_Std_Info(bool verbose) {
     int status = resp.oldarg[0];
 
     switch (status) {
-        case 0:
+        case 0: {
             PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-------------------- " _CYAN_("Tag information") " --------------------");
             PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
+
+            if (do_aid_search) {
+                hf14b_aid_search(verbose);
+            }
+
             is_success = true;
             break;
+        }
         case -1:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 ATTRIB fail");
             break;
@@ -694,7 +800,7 @@ static bool HF14B_Std_Info(bool verbose) {
 }
 
 // SRx get and print full info (needs more info...)
-static bool HF14B_ST_Info(bool verbose) {
+static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
@@ -712,6 +818,12 @@ static bool HF14B_ST_Info(bool verbose) {
         return false;
 
     print_st_general_info(card.uid, card.uidlen);
+
+   if (do_aid_search) {
+       hf14b_aid_search(verbose);
+   }
+
+
     return true;
 }
 
@@ -725,13 +837,15 @@ static int CmdHF14Binfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("s",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
         arg_lit0("v", "verbose", "verbose"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
+    bool do_aid_search = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
-    return infoHF14B(verbose);
+    return infoHF14B(verbose, do_aid_search);
 }
 
 static bool HF14B_st_reader(bool verbose) {
@@ -1830,14 +1944,14 @@ int CmdHF14B(const char *Cmd) {
 }
 
 // get and print all info known about any known 14b tag
-int infoHF14B(bool verbose) {
+int infoHF14B(bool verbose, bool do_aid_search) {
 
     // try std 14b (atqb)
-    if (HF14B_Std_Info(verbose))
+    if (HF14B_Std_Info(verbose, do_aid_search))
         return 1;
 
     // try ST 14b
-    if (HF14B_ST_Info(verbose))
+    if (HF14B_ST_Info(verbose, do_aid_search))
         return 1;
 
     // try unknown 14b read commands (to be identified later)
