@@ -1523,7 +1523,8 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     uint8_t dob[7] = { 0x00 };
     uint8_t expiry[7] = { 0x00 };
     bool BAC = true;
-    int slen = 0;  // unused
+    bool error = false;
+    int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
@@ -1541,7 +1542,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
     
@@ -1551,11 +1552,14 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
 
     CLIParserFree(ctx);
+    if (error) {
+        return PM3_ESOFT;
+    }
     return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
 }
 
@@ -1579,7 +1583,8 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     uint8_t dob[7] = { 0x00 };
     uint8_t expiry[7] = { 0x00 };
     bool BAC = true;
-    int slen = 0;  // unused
+    bool error = false;
+    int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
@@ -1596,7 +1601,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
     
@@ -1606,11 +1611,14 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
 
     CLIParserFree(ctx);
+    if (error) {
+        return PM3_ESOFT;
+    }
     return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
 }
 
