@@ -1045,7 +1045,7 @@ static bool emrtd_compare_check_digit(char *datain, int datalen, char expected_c
     memcpy(tempdata, datain, datalen);
 
     uint8_t check_digit = emrtd_calculate_check_digit(tempdata) + 0x30;
-    bool res =check_digit == expected_check_digit;
+    bool res = check_digit == expected_check_digit;
     PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, expected %c == %c calculated ( %s )"
         , expected_check_digit
         , check_digit
@@ -1183,10 +1183,91 @@ static void emrtd_print_expiry(char *mrz, int offset) {
     }
 }
 
-static bool emrtd_print_ef_dg11_info(bool *BAC, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool *use_14b) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    int resplen = 0;
+static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
+    int td_variant = 0;
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG1") " --------------------");
+
+    // MRZ on TD1 is 90 characters, 30 on each row.
+    // MRZ on TD3 is 88 characters, 44 on each row.
+    char mrz[90] = { 0x00 };
+    int mrzlen = 0;
+
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
+        PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
+        return false;
+    }
+
+    // Determine and print the document type
+    if (mrz[0] == 'I' && mrz[1] == 'P') {
+        td_variant = 1;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport Card"));
+    } else if (mrz[0] == 'I') {
+        td_variant = 1;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("ID Card"));
+    } else if (mrz[0] == 'P') {
+        td_variant = 3;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport"));
+    } else {
+        td_variant = 1;
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Unknown"));
+        PrintAndLogEx(INFO, "Assuming ID-style MRZ.");
+    }
+    PrintAndLogEx(SUCCESS, "Document Form Factor..: " _YELLOW_("TD%i"), td_variant);
+
+    // Print the MRZ
+    if (td_variant == 1) {
+        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.30s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.30s"), mrz + 30);
+        PrintAndLogEx(DEBUG, "MRZ Row 3: " _YELLOW_("%.30s"), mrz + 60);
+    } else if (td_variant == 3) {
+        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.44s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.44s"), mrz + 44);
+    }
+
+    PrintAndLogEx(SUCCESS, "Issuing state.........: " _YELLOW_("%.3s"), mrz + 2);
+
+    if (td_variant == 3) {
+        // Passport form factor
+        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
+        emrtd_print_name(mrz, 5, 38, false);
+        emrtd_print_document_number(mrz, 44);
+        emrtd_print_dob(mrz, 44 + 13, false);
+        emrtd_print_legal_sex(&mrz[44 + 20]);
+        emrtd_print_expiry(mrz, 44 + 21);
+        emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
+
+        // Calculate and verify composite check digit
+        char composite_check_data[50] = { 0x00 };
+        memcpy(composite_check_data, mrz + 44, 10);
+        memcpy(composite_check_data + 10, mrz + 44 + 13, 7);
+        memcpy(composite_check_data + 17, mrz + 44 + 21, 23);
+
+        if (!emrtd_compare_check_digit(composite_check_data, 39, mrz[87])) {
+            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        }
+    } else if (td_variant == 1) {
+        // ID form factor
+        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
+        emrtd_print_name(mrz, 60, 30, false);
+        emrtd_print_document_number(mrz, 5);
+        emrtd_print_dob(mrz, 30, false);
+        emrtd_print_legal_sex(&mrz[30 + 7]);
+        emrtd_print_expiry(mrz, 30 + 8);
+        emrtd_print_optional_elements(mrz, 15, 15, false);
+        emrtd_print_optional_elements(mrz, 30 + 18, 11, false);
+
+        // Calculate and verify composite check digit
+        if (!emrtd_compare_check_digit(mrz, 59, mrz[59])) {
+            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        }
+    }
+
+    return true;
+}
+
+static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
     uint8_t taglist[100] = { 0x00 };
     int taglistlen = 0;
     uint8_t tagdata[1000] = { 0x00 };
@@ -1194,11 +1275,6 @@ static bool emrtd_print_ef_dg11_info(bool *BAC, uint8_t *ssc, uint8_t *ks_enc, u
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG11") " -------------------");
-
-    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_DG11, ks_enc, ks_mac, ssc, *BAC, *use_14b)) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG11.");
-        return false;
-    }
 
     if (!emrtd_lds_get_data_by_tag(response, &resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG11.");
@@ -1272,8 +1348,6 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     bool BAC = false;
     bool use_14b = false;
 
-    int td_variant = 0;
-
     // Select the eMRTD
     if (!emrtd_connect(&use_14b)) {
         DropField();
@@ -1294,95 +1368,36 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    // Select EF_DG1
-    if (emrtd_select_and_read(response, &resplen, EMRTD_EF_DG1, ks_enc, ks_mac, ssc, BAC, use_14b) == false) {
-        PrintAndLogEx(ERR, "Failed to read EF_DG1.");
+    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG1") " --------------------");
+    uint8_t filelist[50];
+    int filelistlen = 0;
 
-    // MRZ on TD1 is 90 characters, 30 on each row.
-    // MRZ on TD3 is 88 characters, 44 on each row.
-    char mrz[90] = { 0x00 };
-    int mrzlen = 0;
-
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
-        PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
+    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
 
-    // Determine and print the document type
-    if (mrz[0] == 'I' && mrz[1] == 'P') {
-        td_variant = 1;
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport Card"));
-    } else if (mrz[0] == 'I') {
-        td_variant = 1;
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("ID Card"));
-    } else if (mrz[0] == 'P') {
-        td_variant = 3;
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport"));
-    } else {
-        td_variant = 1;
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Unknown"));
-        PrintAndLogEx(INFO, "Assuming ID-style MRZ.");
-    }
-    PrintAndLogEx(SUCCESS, "Document Form Factor..: " _YELLOW_("TD%i"), td_variant);
-
-    // Print the MRZ
-    if (td_variant == 1) {
-        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.30s"), mrz);
-        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.30s"), mrz + 30);
-        PrintAndLogEx(DEBUG, "MRZ Row 3: " _YELLOW_("%.30s"), mrz + 60);
-    } else if (td_variant == 3) {
-        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.44s"), mrz);
-        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.44s"), mrz + 44);
-    }
-
-    PrintAndLogEx(SUCCESS, "Issuing state.........: " _YELLOW_("%.3s"), mrz + 2);
-
-    if (td_variant == 3) {
-        // Passport form factor
-        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
-        emrtd_print_name(mrz, 5, 38, false);
-        emrtd_print_document_number(mrz, 44);
-        emrtd_print_dob(mrz, 44 + 13, false);
-        emrtd_print_legal_sex(&mrz[44 + 20]);
-        emrtd_print_expiry(mrz, 44 + 21);
-        emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
-
-        // Calculate and verify composite check digit
-        char composite_check_data[50] = { 0x00 };
-        memcpy(composite_check_data, mrz + 44, 10);
-        memcpy(composite_check_data + 10, mrz + 44 + 13, 7);
-        memcpy(composite_check_data + 17, mrz + 44 + 21, 23);
-
-        if (!emrtd_compare_check_digit(composite_check_data, 39, mrz[87])) {
-            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+    // Dump all files in the file list
+    for (int i = 0; i < filelistlen; i++) {
+        char file_id[5] = { 0x00 };
+        char file_name[8] = { 0x00 };
+        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+            PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
+            continue;
         }
-    } else if (td_variant == 1) {
-        // ID form factor
-        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
-        emrtd_print_name(mrz, 60, 30, false);
-        emrtd_print_document_number(mrz, 5);
-        emrtd_print_dob(mrz, 30, false);
-        emrtd_print_legal_sex(&mrz[30 + 7]);
-        emrtd_print_expiry(mrz, 30 + 8);
-        emrtd_print_optional_elements(mrz, 15, 15, false);
-        emrtd_print_optional_elements(mrz, 30 + 18, 11, false);
 
-        // Calculate and verify composite check digit
-        if (!emrtd_compare_check_digit(mrz, 59, mrz[59])) {
-            PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
+        if (strcmp(file_name, "EF_DG1") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG1, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+            emrtd_print_ef_dg1_info(response, resplen);
+        } else if (strcmp(file_name, "EF_DG11") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG11, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+            emrtd_print_ef_dg11_info(response, resplen);
         }
     }
-
-    // Print EF_DG11 info
-    // TODO: verify existence from file list, also print file list in info.
-    emrtd_print_ef_dg11_info(&BAC, ssc, ks_enc, ks_mac, &use_14b);
 
     DropField();
     return PM3_SUCCESS;
