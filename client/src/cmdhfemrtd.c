@@ -731,10 +731,9 @@ static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
         return false;
     }
 
-    saveFile("EF_DG2", ".jpg", file_contents + offset, datalen);
+    saveFile("EF_DG2", file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
     return true;
 }
-
 
 static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
     uint8_t data[EMRTD_MAX_FILE_SIZE];
@@ -746,9 +745,27 @@ static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile("EF_DG5", ".jpg", data, datalen);
+        saveFile("EF_DG5", data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg5) datalen out-of-bounds");
+        return false;
+    }
+    return true;
+}
+
+static bool emrtd_dump_ef_dg7(uint8_t *file_contents, int file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    int datalen = 0;
+
+    // If we can't find image in EF_DG7, return false.
+    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x42, true) == false) {
+        return false;
+    }
+
+    if (datalen < EMRTD_MAX_FILE_SIZE) {
+        saveFile("EF_DG7", data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+    } else {
+        PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg7) datalen out-of-bounds");
         return false;
     }
     return true;
@@ -783,6 +800,8 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
         emrtd_dump_ef_dg2(response, resplen);
     } else if (strcmp(file, EMRTD_EF_DG5) == 0) {
         emrtd_dump_ef_dg5(response, resplen);
+    } else if (strcmp(file, EMRTD_EF_DG7) == 0) {
+        emrtd_dump_ef_dg7(response, resplen);
     } else if (strcmp(file, EMRTD_EF_SOD) == 0) {
         emrtd_dump_ef_sod(response, resplen);
     }
@@ -1087,12 +1106,20 @@ static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
 
 static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
     int i;
-    for (i = max_length; i >= 0; i--) {
-        if (mrz[offset + i - 1] == '<' && mrz[offset + i] == '<') {
+    for (i = max_length - 1; i > 0; i--) {
+        if (mrz[offset + i] == '<' && mrz[offset + i + 1] == '<') {
             break;
         }
     }
-    return i - 1;
+    return i;
+}
+
+static void emrtd_mrz_replace_pad(char *data, int datalen, char newchar) {
+    for (int i = 0; i < datalen; i++) {
+        if (data[i] == '<') {
+            data[i] = newchar;
+        }
+    }
 }
 
 static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
@@ -1120,13 +1147,22 @@ static void emrtd_print_document_number(char *mrz, int offset) {
 
 static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
     char final_name[100] = { 0x00 };
-    int i = emrtd_mrz_determine_length(mrz, offset, max_length);
-    int sep = emrtd_mrz_determine_separator(mrz, offset, i);
-    int namelen = (i - (sep + 2));
+    int namelen = emrtd_mrz_determine_length(mrz, offset, max_length);
+    int sep = emrtd_mrz_determine_separator(mrz, offset, namelen);
 
-    memcpy(final_name, mrz + offset + sep + 2, namelen);
-    final_name[namelen] = ' ';
-    memcpy(final_name + namelen + 1, mrz + offset, sep);
+    // Account for mononyms
+    if (sep != 0) {
+        int firstnamelen = (namelen - (sep + 2));
+
+        memcpy(final_name, mrz + offset + sep + 2, firstnamelen);
+        final_name[firstnamelen] = ' ';
+        memcpy(final_name + firstnamelen + 1, mrz + offset, sep);
+    } else {
+        memcpy(final_name, mrz + offset, namelen);
+    }
+
+    // Replace < characters with spaces
+    emrtd_mrz_replace_pad(final_name, namelen, ' ');
 
     if (localized) {
         PrintAndLogEx(SUCCESS, "Legal Name (Localized): " _YELLOW_("%s"), final_name);
@@ -1135,15 +1171,28 @@ static void emrtd_print_name(char *mrz, int offset, int max_length, bool localiz
     }
 }
 
-static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry, bool is_full) {
+static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry, bool is_full, bool is_ascii) {
+    char work_date[9] = { 0x00 };
+    int len = is_full ? 8 : 6;
+
+    // Copy the data to a working array in the right format
+    if (!is_ascii) {
+        memcpy(work_date, sprint_hex_inrow((uint8_t *)mrz + offset, len / 2), len);
+    } else {
+        memcpy(work_date, mrz + offset, len);
+    }
+
+    // Set offset to 0 as we've now copied data.
+    offset = 0;
+
     if (is_full) {
         // If we get the full date, use the first two characters from that for year
-        memcpy(final_date, mrz, 2);
+        memcpy(final_date, work_date, 2);
         // and do + 2 on offset so that rest of code uses the right data
         offset += 2;
     } else {
         char temp_year[3] = { 0x00 };
-        memcpy(temp_year, mrz + offset, 2);
+        memcpy(temp_year, work_date, 2);
         // If it's > 20, assume 19xx.
         if (strtol(temp_year, NULL, 10) < 20 || is_expiry) {
             final_date[0] = '2';
@@ -1154,16 +1203,16 @@ static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool
         }
     }
 
-    memcpy(final_date + 2, mrz + offset, 2);
+    memcpy(final_date + 2, work_date + offset, 2);
     final_date[4] = '-';
-    memcpy(final_date + 5, mrz + offset + 2, 2);
+    memcpy(final_date + 5, work_date + offset + 2, 2);
     final_date[7] = '-';
-    memcpy(final_date + 8, mrz + offset + 4, 2);
+    memcpy(final_date + 8, work_date + offset + 4, 2);
 }
 
-static void emrtd_print_dob(char *mrz, int offset, bool full) {
+static void emrtd_print_dob(char *mrz, int offset, bool full, bool ascii) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, false, full);
+    emrtd_mrz_convert_date(mrz, offset, final_date, false, full, ascii);
 
     PrintAndLogEx(SUCCESS, "Date of birth.........: " _YELLOW_("%s"), final_date);
 
@@ -1174,7 +1223,7 @@ static void emrtd_print_dob(char *mrz, int offset, bool full) {
 
 static void emrtd_print_expiry(char *mrz, int offset) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, true, false);
+    emrtd_mrz_convert_date(mrz, offset, final_date, true, false, true);
 
     PrintAndLogEx(SUCCESS, "Date of expiry........: " _YELLOW_("%s"), final_date);
 
@@ -1183,9 +1232,9 @@ static void emrtd_print_expiry(char *mrz, int offset) {
     }
 }
 
-static void emrtd_print_issuance(char *data) {
+static void emrtd_print_issuance(char *data, bool ascii) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(data, 0, final_date, true, true);
+    emrtd_mrz_convert_date(data, 0, final_date, true, true, ascii);
 
     PrintAndLogEx(SUCCESS, "Date of issue.........: " _YELLOW_("%s"), final_date);
 }
@@ -1249,7 +1298,7 @@ static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
         emrtd_print_name(mrz, 5, 38, false);
         emrtd_print_document_number(mrz, 44);
-        emrtd_print_dob(mrz, 44 + 13, false);
+        emrtd_print_dob(mrz, 44 + 13, false, true);
         emrtd_print_legal_sex(&mrz[44 + 20]);
         emrtd_print_expiry(mrz, 44 + 21);
         emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
@@ -1268,7 +1317,7 @@ static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
         emrtd_print_name(mrz, 60, 30, false);
         emrtd_print_document_number(mrz, 5);
-        emrtd_print_dob(mrz, 30, false);
+        emrtd_print_dob(mrz, 30, false, true);
         emrtd_print_legal_sex(&mrz[30 + 7]);
         emrtd_print_expiry(mrz, 30 + 8);
         emrtd_print_optional_elements(mrz, 15, 15, false);
@@ -1305,6 +1354,9 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
                 case 0x0e:
                     emrtd_print_name((char *) tagdata, 0, tagdatalen, true);
                     break;
+                case 0x0f:
+                    emrtd_print_name((char *) tagdata, 0, tagdatalen, false);
+                    break;
                 case 0x10:
                     PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
@@ -1329,7 +1381,7 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x16:
-                    saveFile("ProofOfCitizenship", ".jpg", tagdata, tagdatalen);
+                    saveFile("ProofOfCitizenship", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x17:
                     // TODO: acc for < separation
@@ -1339,7 +1391,7 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x2b:
-                    emrtd_print_dob((char *) tagdata, 0, true);
+                    emrtd_print_dob((char *) tagdata, 0, true, tagdatalen != 4);
                     break;
                 default:
                     PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
@@ -1380,7 +1432,7 @@ static bool emrtd_print_ef_dg12_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x26:
-                    emrtd_print_issuance((char *) tagdata);
+                    emrtd_print_issuance((char *) tagdata, tagdatalen != 4);
                     break;
                 case 0x1b:
                     PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), tagdatalen, tagdata);
@@ -1389,10 +1441,10 @@ static bool emrtd_print_ef_dg12_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x1d:
-                    saveFile("FrontOfDocument", ".jpg", tagdata, tagdatalen);
+                    saveFile("FrontOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x1e:
-                    saveFile("BackOfDocument", ".jpg", tagdata, tagdatalen);
+                    saveFile("BackOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x55:
                     emrtd_print_personalization_timestamp(tagdata);
