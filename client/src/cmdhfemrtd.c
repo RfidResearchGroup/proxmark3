@@ -43,13 +43,6 @@
 #define EMRTD_P1_SELECT_BY_NAME "04"
 #define EMRTD_P2_PROPRIETARY "0C"
 
-// File IDs
-// TODO -> dg_table
-#define EMRTD_EF_CARDACCESS "011C"
-#define EMRTD_EF_SOD "011D"
-#define EMRTD_EF_COM "011E"
-#define EMRTD_EF_DG1 "0101"
-
 // App IDs
 #define EMRTD_AID_MRTD "A0000002471001"
 
@@ -66,11 +59,33 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen);
+
+typedef enum  { // list must match dg_table
+    EF_COM=0,
+    EF_DG1,
+    EF_DG2,
+    EF_DG3,
+    EF_DG4,
+    EF_DG5,
+    EF_DG6,
+    EF_DG7,
+    EF_DG8,
+    EF_DG9,
+    EF_DG10,
+    EF_DG11,
+    EF_DG12,
+    EF_DG13,
+    EF_DG14,
+    EF_DG15,
+    EF_DG16,
+    EF_SOD,
+    EF_CardAccess,
+    EF_CardSecurity,
+} emrtd_dg_enum;
+
 static emrtd_dg_t dg_table[] = {
 //  tag     fileid  filename           desc                                                 pace   req    fast   parser                    dumper
     {0x60, "011E", "EF_COM",          "Header and Data Group Presence Information",         false, true,  true,  emrtd_print_ef_com_info,  NULL},
-    {0xff, "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  true,  true,  NULL,                     NULL},
-    {0xff, "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, true,  NULL,                     NULL},
     {0x61, "0101", "EF_DG1",          "Details recorded in MRZ",                            false, true,  true,  emrtd_print_ef_dg1_info,  NULL},
     {0x75, "0102", "EF_DG2",          "Encoded Face",                                       false, true,  false, NULL,                     emrtd_dump_ef_dg2},
     {0x63, "0103", "EF_DG3",          "Encoded Finger(s)",                                  true,  false, false, NULL,                     NULL},
@@ -88,6 +103,8 @@ static emrtd_dg_t dg_table[] = {
     {0x6f, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, true,  NULL,                     NULL},
     {0x70, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, true,  NULL,                     NULL},
     {0x77, "011D", "EF_SOD",          "Document Security Object",                           false, false, true,  emrtd_print_ef_sod_info,  emrtd_dump_ef_sod},
+    {0xff, "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  true,  true,  NULL,                     NULL},
+    {0xff, "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, true,  NULL,                     NULL},
     {0x00, NULL, NULL, NULL, false, false, false, NULL, NULL}
 };
 
@@ -905,13 +922,13 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     }
 
     // Select EF_COM
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_COM, *use_14b) == false) {
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, dg_table[EF_COM].fileid, *use_14b) == false) {
         *BAC = true;
         PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
         *BAC = false;
         // Select EF_DG1
-        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_DG1, *use_14b);
+        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, dg_table[EF_DG1].fileid, *use_14b);
 
         if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b) == false) {
             *BAC = true;
@@ -955,7 +972,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Dump EF_CardAccess (if available)
-    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_CARDACCESS, "EF_CardAccess", BAC, use_14b)) {
+    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, use_14b)) {
         PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
         PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
     }
@@ -967,14 +984,14 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Select EF_COM
-    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_COM", ".BIN", response, resplen);
+    saveFile(dg_table[EF_COM].filename, ".BIN", response, resplen);
 
     uint8_t filelist[50];
     int filelistlen = 0;
@@ -986,7 +1003,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
-
+    // Add EF_SOD to the list
+    filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
@@ -999,10 +1017,6 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             emrtd_dump_file(ks_enc, ks_mac, ssc, dg->fileid, dg->filename, BAC, use_14b);
         }
     }
-
-    // Dump EF_SOD
-    emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_SOD, "EF_SOD", BAC, use_14b);
-
     DropField();
     return PM3_SUCCESS;
 }
@@ -1493,7 +1507,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -1513,7 +1527,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         DropField();
         return PM3_ESOFT;
     }
-
+    // Add EF_SOD to the list
+    filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
@@ -1528,11 +1543,6 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             }
         }
     }
-// TODO
-    if (emrtd_select_and_read(response, &resplen, EMRTD_EF_SOD, ks_enc, ks_mac, ssc, BAC, use_14b)) {
-        emrtd_print_ef_sod_info(response, resplen);
-    }
-
     DropField();
     return PM3_SUCCESS;
 }
@@ -1545,7 +1555,7 @@ int infoHF_EMRTD_offline(const char *path) {
         return PM3_EMALLOC;
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 1);
-    strcat(filepath, "EF_COM");
+    strcat(filepath, dg_table[EF_COM].filename);
 
     if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
@@ -1570,6 +1580,8 @@ int infoHF_EMRTD_offline(const char *path) {
         return PM3_ESOFT;
     }
     free(data);
+    // Add EF_SOD to the list
+    filelist[filelistlen++] = 0x77;
     // Read files in the file list
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
@@ -1590,17 +1602,6 @@ int infoHF_EMRTD_offline(const char *path) {
             }
         }
     }
-// TODO
-    strcpy(filepath, path);
-    strncat(filepath, PATHSEP, 1);
-    strcat(filepath, "EF_SOD");
-    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)
-    {
-        // we won't halt on parsing errors
-        emrtd_print_ef_sod_info(data, datalen);
-        free(data);
-    }
-
     free(filepath);
     return PM3_SUCCESS;
 }
