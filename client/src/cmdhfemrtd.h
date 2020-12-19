@@ -13,8 +13,21 @@
 
 #include "common.h"
 
+typedef struct emrtd_dg_s {
+    uint8_t tag;
+    const char *fileid;
+    const char *filename;
+    const char *desc;
+    bool pace;
+    bool required; // some are required only if PACE
+    bool fastdump; // fast to dump
+    int (*parser)(uint8_t *data, size_t datalen);
+    int (*dumper)(uint8_t *data, size_t datalen);
+} emrtd_dg_t;
+
 int CmdHFeMRTD(const char *Cmd);
 
 int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available);
+int infoHF_EMRTD_offline(const char *path);
 #endif

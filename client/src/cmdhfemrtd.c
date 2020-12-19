@@ -43,33 +43,87 @@
 #define EMRTD_P1_SELECT_BY_NAME "04"
 #define EMRTD_P2_PROPRIETARY "0C"
 
-// File IDs
-#define EMRTD_EF_CARDACCESS "011C"
-#define EMRTD_EF_COM "011E"
-#define EMRTD_EF_DG1 "0101"
-#define EMRTD_EF_DG2 "0102"
-#define EMRTD_EF_DG3 "0103"
-#define EMRTD_EF_DG4 "0104"
-#define EMRTD_EF_DG5 "0105"
-#define EMRTD_EF_DG6 "0106"
-#define EMRTD_EF_DG7 "0107"
-#define EMRTD_EF_DG8 "0108"
-#define EMRTD_EF_DG9 "0109"
-#define EMRTD_EF_DG10 "010A"
-#define EMRTD_EF_DG11 "010B"
-#define EMRTD_EF_DG12 "010C"
-#define EMRTD_EF_DG13 "010D"
-#define EMRTD_EF_DG14 "010E"
-#define EMRTD_EF_DG15 "010F"
-#define EMRTD_EF_DG16 "0110"
-#define EMRTD_EF_SOD "011D"
-
 // App IDs
 #define EMRTD_AID_MRTD "A0000002471001"
 
 // DESKey Types
 const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
 const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
+
+static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length);
+static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length);
+static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length);
+static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length);
+static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen);
+
+typedef enum  { // list must match dg_table
+    EF_COM=0,
+    EF_DG1,
+    EF_DG2,
+    EF_DG3,
+    EF_DG4,
+    EF_DG5,
+    EF_DG6,
+    EF_DG7,
+    EF_DG8,
+    EF_DG9,
+    EF_DG10,
+    EF_DG11,
+    EF_DG12,
+    EF_DG13,
+    EF_DG14,
+    EF_DG15,
+    EF_DG16,
+    EF_SOD,
+    EF_CardAccess,
+    EF_CardSecurity,
+} emrtd_dg_enum;
+
+static emrtd_dg_t dg_table[] = {
+//  tag     fileid  filename           desc                                                 pace   req    fast   parser                    dumper
+    {0x60, "011E", "EF_COM",          "Header and Data Group Presence Information",         false, true,  true,  emrtd_print_ef_com_info,  NULL},
+    {0x61, "0101", "EF_DG1",          "Details recorded in MRZ",                            false, true,  true,  emrtd_print_ef_dg1_info,  NULL},
+    {0x75, "0102", "EF_DG2",          "Encoded Face",                                       false, true,  false, NULL,                     emrtd_dump_ef_dg2},
+    {0x63, "0103", "EF_DG3",          "Encoded Finger(s)",                                  true,  false, false, NULL,                     NULL},
+    {0x76, "0104", "EF_DG4",          "Encoded Eye(s)",                                     true,  false, false, NULL,                     NULL},
+    {0x65, "0105", "EF_DG5",          "Displayed Portrait",                                 false, false, false, NULL,                     emrtd_dump_ef_dg5},
+    {0x66, "0106", "EF_DG6",          "Reserved for Future Use",                            false, false, false, NULL,                     NULL},
+    {0x67, "0107", "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, NULL,                     emrtd_dump_ef_dg7},
+    {0x68, "0108", "EF_DG8",          "Data Feature(s)",                                    false, false, true,  NULL,                     NULL},
+    {0x69, "0109", "EF_DG9",          "Structure Feature(s)",                               false, false, true,  NULL,                     NULL},
+    {0x6a, "010A", "EF_DG10",         "Substance Feature(s)",                               false, false, true,  NULL,                     NULL},
+    {0x6b, "010B", "EF_DG11",         "Additional Personal Detail(s)",                      false, false, true,  emrtd_print_ef_dg11_info, NULL},
+    {0x6c, "010C", "EF_DG12",         "Additional Document Detail(s)",                      false, false, true,  emrtd_print_ef_dg12_info, NULL},
+    {0x6d, "010D", "EF_DG13",         "Optional Detail(s)",                                 false, false, true,  NULL,                     NULL},
+    {0x6e, "010E", "EF_DG14",         "Security Options",                                   false, false, true,  NULL,                     NULL},
+    {0x6f, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, true,  NULL,                     NULL},
+    {0x70, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, true,  NULL,                     NULL},
+    {0x77, "011D", "EF_SOD",          "Document Security Object",                           false, false, true,  emrtd_print_ef_sod_info,  emrtd_dump_ef_sod},
+    {0xff, "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  true,  true,  NULL,                     NULL},
+    {0xff, "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, true,  NULL,                     NULL},
+    {0x00, NULL, NULL, NULL, false, false, false, NULL, NULL}
+};
+
+static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
+    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
+        if (dg_table[dgi].tag == tag) {
+            return &dg_table[dgi];
+        }
+    }
+    return NULL;
+}
+static emrtd_dg_t *emrtd_fileid_to_dg(const char *file_id) {
+    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
+        if (strcmp(dg_table[dgi].fileid, file_id) == 0) {
+            return &dg_table[dgi];
+        }
+    }
+    return NULL;
+}
 
 static int CmdHelp(const char *Cmd);
 
@@ -568,14 +622,14 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     return true;
 }
 
-static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
+static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
     int offset = 1;
-    offset += emrtd_get_asn1_field_length(datain, *datainlen, offset);
+    offset += emrtd_get_asn1_field_length(datain, datainlen, offset);
 
     int e_idlen = 0;
     int e_datalen = 0;
     int e_fieldlen = 0;
-    while (offset < *datainlen) {
+    while (offset < datainlen) {
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
         if ((*(datain + offset) == 0x5F) || (*(datain + offset) == 0x7F)) {
@@ -585,14 +639,14 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
         }
 
         // Get the length of the element
-        e_datalen = emrtd_get_asn1_data_length(datain + offset, *datainlen - offset, e_idlen);
+        e_datalen = emrtd_get_asn1_data_length(datain + offset, datainlen - offset, e_idlen);
 
         // Get the length of the element's length
-        e_fieldlen = emrtd_get_asn1_field_length(datain + offset, *datainlen - offset, e_idlen);
+        e_fieldlen = emrtd_get_asn1_field_length(datain + offset, datainlen - offset, e_idlen);
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
-            if (*datainlen > e_datalen) {
+            if (datainlen > e_datalen) {
                 *dataoutlen = e_datalen;
                 memcpy(dataout, datain + offset + e_idlen + e_fieldlen, e_datalen);
                 return true;
@@ -605,89 +659,6 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int *datainlen, uint8_t *
     }
     // Return false if we can't find the relevant element
     return false;
-}
-
-static bool emrtd_file_tag_to_file_id(uint8_t *datain, char *filenameout, char *dataout) {
-    // imagine bothering with a hashmap or writing good code
-    // couldn't be me
-    switch (*datain) {
-        case 0x60:
-            memcpy(dataout, EMRTD_EF_COM, 4);
-            memcpy(filenameout, "EF_COM", 6);
-            break;
-        case 0x61:
-            memcpy(dataout, EMRTD_EF_DG1, 4);
-            memcpy(filenameout, "EF_DG1", 6);
-            break;
-        case 0x75:
-            memcpy(dataout, EMRTD_EF_DG2, 4);
-            memcpy(filenameout, "EF_DG2", 6);
-            break;
-        // These cases are commented out as they require PACE
-        // case 0x63:
-        //     memcpy(dataout, EMRTD_EF_DG3, 4);
-        //     memcpy(filenameout, "EF_DG3", 6);
-        //     break;
-        // case 0x76:
-        //     memcpy(dataout, EMRTD_EF_DG4, 4);
-        //     memcpy(filenameout, "EF_DG4", 6);
-        //     break;
-        case 0x65:
-            memcpy(dataout, EMRTD_EF_DG5, 4);
-            memcpy(filenameout, "EF_DG5", 6);
-            break;
-        case 0x66:
-            memcpy(dataout, EMRTD_EF_DG6, 4);
-            memcpy(filenameout, "EF_DG6", 6);
-            break;
-        case 0x67:
-            memcpy(dataout, EMRTD_EF_DG7, 4);
-            memcpy(filenameout, "EF_DG7", 6);
-            break;
-        case 0x68:
-            memcpy(dataout, EMRTD_EF_DG8, 4);
-            memcpy(filenameout, "EF_DG8", 6);
-            break;
-        case 0x69:
-            memcpy(dataout, EMRTD_EF_DG9, 4);
-            memcpy(filenameout, "EF_DG9", 6);
-            break;
-        case 0x6a:
-            memcpy(dataout, EMRTD_EF_DG10, 4);
-            memcpy(filenameout, "EF_DG10", 7);
-            break;
-        case 0x6b:
-            memcpy(dataout, EMRTD_EF_DG11, 4);
-            memcpy(filenameout, "EF_DG11", 7);
-            break;
-        case 0x6c:
-            memcpy(dataout, EMRTD_EF_DG12, 4);
-            memcpy(filenameout, "EF_DG12", 7);
-            break;
-        case 0x6d:
-            memcpy(dataout, EMRTD_EF_DG13, 4);
-            memcpy(filenameout, "EF_DG13", 7);
-            break;
-        case 0x6e:
-            memcpy(dataout, EMRTD_EF_DG14, 4);
-            memcpy(filenameout, "EF_DG14", 7);
-            break;
-        case 0x6f:
-            memcpy(dataout, EMRTD_EF_DG15, 4);
-            memcpy(filenameout, "EF_DG15", 7);
-            break;
-        case 0x70:
-            memcpy(dataout, EMRTD_EF_DG16, 4);
-            memcpy(filenameout, "EF_DG16", 7);
-            break;
-        case 0x77:
-            memcpy(dataout, EMRTD_EF_SOD, 4);
-            memcpy(filenameout, "EF_SOD", 6);
-            break;
-        default:
-            return false;
-    }
-    return true;
 }
 
 static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char *file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure, bool use_14b) {
@@ -710,7 +681,7 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
     return true;
 }
 
-static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
+static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length) {
     int offset, datalen = 0;
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
@@ -728,43 +699,60 @@ static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
 
     // If we didn't get any data, return false.
     if (datalen == 0) {
-        return false;
+        return PM3_ESOFT;
     }
 
-    saveFile("EF_DG2", ".jpg", file_contents + offset, datalen);
-    return true;
+    saveFile(dg_table[EF_DG2].filename, file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
+    return PM3_SUCCESS;
 }
 
-
-static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
+static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length) {
     uint8_t data[EMRTD_MAX_FILE_SIZE];
     int datalen = 0;
 
     // If we can't find image in EF_DG5, return false.
-    if (emrtd_lds_get_data_by_tag(file_contents, &file_length, data, &datalen, 0x5F, 0x40, true) == false) {
-        return false;
+    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x40, true) == false) {
+        return PM3_ESOFT;
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile("EF_DG5", ".jpg", data, datalen);
+        saveFile(dg_table[EF_DG5].filename, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg5) datalen out-of-bounds");
-        return false;
+        return PM3_ESOFT;
     }
-    return true;
+    return PM3_SUCCESS;
 }
 
-static bool emrtd_dump_ef_sod(uint8_t *file_contents, int file_length) {
+static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    int datalen = 0;
+
+    // If we can't find image in EF_DG7, return false.
+    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x42, true) == false) {
+        return PM3_ESOFT;
+    }
+
+    if (datalen < EMRTD_MAX_FILE_SIZE) {
+        saveFile(dg_table[EF_DG7].filename, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+    } else {
+        PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg7) datalen out-of-bounds");
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
+}
+
+static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length) {
     int fieldlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
     int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
     
     if (fieldlen + 1 > EMRTD_MAX_FILE_SIZE) {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_sod) fieldlen out-of-bounds");
-        return false;
+        return PM3_SUCCESS;
     }
 
-    saveFile("EF_SOD", ".p7b", file_contents + fieldlen + 1, datalen);
-    return true;
+    saveFile(dg_table[EF_SOD].filename, ".p7b", file_contents + fieldlen + 1, datalen);
+    return PM3_ESOFT;
 }
 
 static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, const char *file, const char *name, bool use_secure, bool use_14b) {
@@ -778,15 +766,10 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
     PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     saveFile(name, ".BIN", response, resplen);
-
-    if (strcmp(file, EMRTD_EF_DG2) == 0) {
-        emrtd_dump_ef_dg2(response, resplen);
-    } else if (strcmp(file, EMRTD_EF_DG5) == 0) {
-        emrtd_dump_ef_dg5(response, resplen);
-    } else if (strcmp(file, EMRTD_EF_SOD) == 0) {
-        emrtd_dump_ef_sod(response, resplen);
+    emrtd_dg_t * dg = emrtd_fileid_to_dg(file);
+    if ((dg != NULL) && (dg->dumper != NULL)) {
+        dg->dumper(response, resplen);
     }
-
     return true;
 }
 
@@ -939,20 +922,19 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     }
 
     // Select EF_COM
-    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_COM, *use_14b) == false) {
+    if (emrtd_select_file(EMRTD_P1_SELECT_BY_EF, dg_table[EF_COM].fileid, *use_14b) == false) {
         *BAC = true;
         PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
     } else {
         *BAC = false;
         // Select EF_DG1
-        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, EMRTD_EF_DG1, *use_14b);
+        emrtd_select_file(EMRTD_P1_SELECT_BY_EF, dg_table[EF_DG1].fileid, *use_14b);
 
         if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false, *use_14b) == false) {
             *BAC = true;
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
             *BAC = false;
-            PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
 
@@ -989,7 +971,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Dump EF_CardAccess (if available)
-    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_CARDACCESS, "EF_CardAccess", BAC, use_14b)) {
+    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, use_14b)) {
         PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE.");
         PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about.");
     }
@@ -1001,41 +983,39 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Select EF_COM
-    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "Read EF_COM, len: %i.", resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile("EF_COM", ".BIN", response, resplen);
+    saveFile(dg_table[EF_COM].filename, ".BIN", response, resplen);
 
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
 
     PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
-
+    // Add EF_SOD to the list
+    filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        char file_id[5] = { 0x00 };
-        char file_name[8] = { 0x00 };
-        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        PrintAndLogEx(DEBUG, "Current file: %s", file_name);
-        emrtd_dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
+        PrintAndLogEx(DEBUG, "Current file: %s", dg->filename);
+        if (!dg->pace) {
+            emrtd_dump_file(ks_enc, ks_mac, ssc, dg->fileid, dg->filename, BAC, use_14b);
+        }
     }
-
-    // Dump EF_SOD
-    emrtd_dump_file(ks_enc, ks_mac, ssc, EMRTD_EF_SOD, "EF_SOD", BAC, use_14b);
-
     DropField();
     return PM3_SUCCESS;
 }
@@ -1086,13 +1066,22 @@ static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
 }
 
 static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
+    // Note: this function does not account for len=0
     int i;
-    for (i = max_length; i >= 0; i--) {
-        if (mrz[offset + i - 1] == '<' && mrz[offset + i] == '<') {
+    for (i = max_length - 1; i > 0; i--) {
+        if (mrz[offset + i] == '<' && mrz[offset + i + 1] == '<') {
             break;
         }
     }
-    return i - 1;
+    return i;
+}
+
+static void emrtd_mrz_replace_pad(char *data, int datalen, char newchar) {
+    for (int i = 0; i < datalen; i++) {
+        if (data[i] == '<') {
+            data[i] = newchar;
+        }
+    }
 }
 
 static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
@@ -1120,13 +1109,22 @@ static void emrtd_print_document_number(char *mrz, int offset) {
 
 static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
     char final_name[100] = { 0x00 };
-    int i = emrtd_mrz_determine_length(mrz, offset, max_length);
-    int sep = emrtd_mrz_determine_separator(mrz, offset, i);
-    int namelen = (i - (sep + 2));
+    int namelen = emrtd_mrz_determine_length(mrz, offset, max_length);
+    int sep = emrtd_mrz_determine_separator(mrz, offset, namelen);
 
-    memcpy(final_name, mrz + offset + sep + 2, namelen);
-    final_name[namelen] = ' ';
-    memcpy(final_name + namelen + 1, mrz + offset, sep);
+    // Account for mononyms
+    if (sep != 0) {
+        int firstnamelen = (namelen - (sep + 2));
+
+        memcpy(final_name, mrz + offset + sep + 2, firstnamelen);
+        final_name[firstnamelen] = ' ';
+        memcpy(final_name + firstnamelen + 1, mrz + offset, sep);
+    } else {
+        memcpy(final_name, mrz + offset, namelen);
+    }
+
+    // Replace < characters with spaces
+    emrtd_mrz_replace_pad(final_name, namelen, ' ');
 
     if (localized) {
         PrintAndLogEx(SUCCESS, "Legal Name (Localized): " _YELLOW_("%s"), final_name);
@@ -1135,15 +1133,28 @@ static void emrtd_print_name(char *mrz, int offset, int max_length, bool localiz
     }
 }
 
-static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry, bool is_full) {
+static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool is_expiry, bool is_full, bool is_ascii) {
+    char work_date[9] = { 0x00 };
+    int len = is_full ? 8 : 6;
+
+    // Copy the data to a working array in the right format
+    if (!is_ascii) {
+        memcpy(work_date, sprint_hex_inrow((uint8_t *)mrz + offset, len / 2), len);
+    } else {
+        memcpy(work_date, mrz + offset, len);
+    }
+
+    // Set offset to 0 as we've now copied data.
+    offset = 0;
+
     if (is_full) {
         // If we get the full date, use the first two characters from that for year
-        memcpy(final_date, mrz, 2);
+        memcpy(final_date, work_date, 2);
         // and do + 2 on offset so that rest of code uses the right data
         offset += 2;
     } else {
         char temp_year[3] = { 0x00 };
-        memcpy(temp_year, mrz + offset, 2);
+        memcpy(temp_year, work_date, 2);
         // If it's > 20, assume 19xx.
         if (strtol(temp_year, NULL, 10) < 20 || is_expiry) {
             final_date[0] = '2';
@@ -1154,16 +1165,16 @@ static void emrtd_mrz_convert_date(char *mrz, int offset, char *final_date, bool
         }
     }
 
-    memcpy(final_date + 2, mrz + offset, 2);
+    memcpy(final_date + 2, work_date + offset, 2);
     final_date[4] = '-';
-    memcpy(final_date + 5, mrz + offset + 2, 2);
+    memcpy(final_date + 5, work_date + offset + 2, 2);
     final_date[7] = '-';
-    memcpy(final_date + 8, mrz + offset + 4, 2);
+    memcpy(final_date + 8, work_date + offset + 4, 2);
 }
 
-static void emrtd_print_dob(char *mrz, int offset, bool full) {
+static void emrtd_print_dob(char *mrz, int offset, bool full, bool ascii) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, false, full);
+    emrtd_mrz_convert_date(mrz, offset, final_date, false, full, ascii);
 
     PrintAndLogEx(SUCCESS, "Date of birth.........: " _YELLOW_("%s"), final_date);
 
@@ -1174,7 +1185,7 @@ static void emrtd_print_dob(char *mrz, int offset, bool full) {
 
 static void emrtd_print_expiry(char *mrz, int offset) {
     char final_date[12] = { 0x00 };
-    emrtd_mrz_convert_date(mrz, offset, final_date, true, false);
+    emrtd_mrz_convert_date(mrz, offset, final_date, true, false, true);
 
     PrintAndLogEx(SUCCESS, "Date of expiry........: " _YELLOW_("%s"), final_date);
 
@@ -1183,7 +1194,54 @@ static void emrtd_print_expiry(char *mrz, int offset) {
     }
 }
 
-static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
+static void emrtd_print_issuance(char *data, bool ascii) {
+    char final_date[12] = { 0x00 };
+    emrtd_mrz_convert_date(data, 0, final_date, true, true, ascii);
+
+    PrintAndLogEx(SUCCESS, "Date of issue.........: " _YELLOW_("%s"), final_date);
+}
+
+static void emrtd_print_personalization_timestamp(uint8_t *data) {
+    char str_date[0x0F] = { 0x00 };
+    strcpy(str_date, sprint_hex_inrow(data, 0x0E));
+    char final_date[20] = { 0x00 };
+    sprintf(final_date, "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
+
+    PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
+}
+
+static void emrtd_print_unknown_timestamp_5f85(uint8_t *data) {
+    char final_date[20] = { 0x00 };
+    sprintf(final_date, "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", data, data + 4, data + 6, data + 8, data + 10, data + 12);
+
+    PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
+    PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
+}
+
+static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen) {
+    uint8_t filelist[50];
+    int filelistlen = 0;
+    int res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false);
+    if (!res) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+        return PM3_ESOFT;
+    }
+
+    // List files in the file list
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_COM") " --------------------");
+    for (int i = 0; i < filelistlen; i++) {
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+            continue;
+        }
+        PrintAndLogEx(SUCCESS, "%-7s...............: " _YELLOW_("%s"), dg->filename, dg->desc);
+    }
+    return PM3_SUCCESS;
+}
+
+static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     int td_variant = 0;
 
     PrintAndLogEx(NORMAL, "");
@@ -1194,9 +1252,9 @@ static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
     char mrz[90] = { 0x00 };
     int mrzlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
+    if (!emrtd_lds_get_data_by_tag(data, datalen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
         PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
-        return false;
+        return PM3_ESOFT;
     }
 
     // Determine and print the document type
@@ -1233,7 +1291,7 @@ static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
         emrtd_print_name(mrz, 5, 38, false);
         emrtd_print_document_number(mrz, 44);
-        emrtd_print_dob(mrz, 44 + 13, false);
+        emrtd_print_dob(mrz, 44 + 13, false, true);
         emrtd_print_legal_sex(&mrz[44 + 20]);
         emrtd_print_expiry(mrz, 44 + 21);
         emrtd_print_optional_elements(mrz, 44 + 28, 14, true);
@@ -1252,7 +1310,7 @@ static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
         PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
         emrtd_print_name(mrz, 60, 30, false);
         emrtd_print_document_number(mrz, 5);
-        emrtd_print_dob(mrz, 30, false);
+        emrtd_print_dob(mrz, 30, false, true);
         emrtd_print_legal_sex(&mrz[30 + 7]);
         emrtd_print_expiry(mrz, 30 + 8);
         emrtd_print_optional_elements(mrz, 15, 15, false);
@@ -1264,10 +1322,10 @@ static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
         }
     }
 
-    return true;
+    return PM3_SUCCESS;
 }
 
-static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
+static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
     uint8_t taglist[100] = { 0x00 };
     int taglistlen = 0;
     uint8_t tagdata[1000] = { 0x00 };
@@ -1276,18 +1334,25 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG11") " -------------------");
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG11.");
-        return false;
+        return PM3_ESOFT;
     }
 
     for (int i = 0; i < taglistlen; i++) {
-        emrtd_lds_get_data_by_tag(response, &resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        emrtd_lds_get_data_by_tag(data, datalen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        // Don't bother with empty tags
+        if (tagdatalen == 0) {
+            continue;
+        }
         // Special behavior for two char tags
         if (taglist[i] == 0x5f) {
             switch (taglist[i + 1]) {
                 case 0x0e:
                     emrtd_print_name((char *) tagdata, 0, tagdatalen, true);
+                    break;
+                case 0x0f:
+                    emrtd_print_name((char *) tagdata, 0, tagdatalen, false);
                     break;
                 case 0x10:
                     PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
@@ -1313,7 +1378,7 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x16:
-                    saveFile("ProofOfCitizenship", ".jpg", tagdata, tagdatalen);
+                    saveFile("ProofOfCitizenship", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x17:
                     // TODO: acc for < separation
@@ -1323,7 +1388,7 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x2b:
-                    emrtd_print_dob((char *) tagdata, 0, true);
+                    emrtd_print_dob((char *) tagdata, 0, true, tagdatalen != 4);
                     break;
                 default:
                     PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
@@ -1336,7 +1401,80 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
             PrintAndLogEx(SUCCESS, "Unknown Field %02X......: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
         }
     }
-    return true;
+    return PM3_SUCCESS;
+}
+
+static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
+    uint8_t taglist[100] = { 0x00 };
+    int taglistlen = 0;
+    uint8_t tagdata[1000] = { 0x00 };
+    int tagdatalen = 0;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG12") " -------------------");
+
+    if (!emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_DG12.");
+        return PM3_ESOFT;
+    }
+
+    for (int i = 0; i < taglistlen; i++) {
+        emrtd_lds_get_data_by_tag(data, datalen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        // Don't bother with empty tags
+        if (tagdatalen == 0) {
+            continue;
+        }
+        // Special behavior for two char tags
+        if (taglist[i] == 0x5f) {
+            // Several things here are longer than the rest but I can't think of a way to shorten them
+            // ...and I doubt many states are using them.
+            switch (taglist[i + 1]) {
+                case 0x19:
+                    PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x26:
+                    emrtd_print_issuance((char *) tagdata, tagdatalen != 4);
+                    break;
+                case 0x1b:
+                    PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x1c:
+                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x1d:
+                    saveFile("FrontOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
+                    break;
+                case 0x1e:
+                    saveFile("BackOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
+                    break;
+                case 0x55:
+                    emrtd_print_personalization_timestamp(tagdata);
+                    break;
+                case 0x56:
+                    PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x85:
+                    emrtd_print_unknown_timestamp_5f85(tagdata);
+                    break;
+                default:
+                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
+                    break;
+            }
+
+            i += 1;
+        } else {
+            // TODO: Account for A0
+            PrintAndLogEx(SUCCESS, "Unknown Field %02X......: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
+//    PrintAndLogEx(NORMAL, "");
+//    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+//    PrintAndLogEx(WARNING, "TODO");
+    return PM3_SUCCESS;
 }
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
@@ -1368,38 +1506,102 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    if (!emrtd_select_and_read(response, &resplen, EMRTD_EF_COM, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
         PrintAndLogEx(ERR, "Failed to read EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
 
+    int res = emrtd_print_ef_com_info(response, resplen);
+    if ( res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, &resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
     }
-
+    // Add EF_SOD to the list
+    filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        char file_id[5] = { 0x00 };
-        char file_name[8] = { 0x00 };
-        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
-            PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-
-        if (strcmp(file_name, "EF_DG1") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG1, ks_enc, ks_mac, ssc, BAC, use_14b)) {
-            emrtd_print_ef_dg1_info(response, resplen);
-        } else if (strcmp(file_name, "EF_DG11") == 0 && emrtd_select_and_read(response, &resplen, EMRTD_EF_DG11, ks_enc, ks_mac, ssc, BAC, use_14b)) {
-            emrtd_print_ef_dg11_info(response, resplen);
+        if (dg->fastdump && !dg->pace) {
+            if (emrtd_select_and_read(response, &resplen, dg->fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+                if (dg->parser != NULL)
+                    dg->parser(response, resplen);
+            }
         }
     }
-
     DropField();
+    return PM3_SUCCESS;
+}
+
+int infoHF_EMRTD_offline(const char *path) {
+    uint8_t *data;
+    size_t datalen = 0;
+    char *filepath = calloc(strlen(path) + 100, sizeof(char));
+    if (filepath == NULL)
+        return PM3_EMALLOC;
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 1);
+    strcat(filepath, dg_table[EF_COM].filename);
+
+    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM.");
+        free(filepath);
+        return PM3_ESOFT;
+    }
+
+    int res = emrtd_print_ef_com_info(data, datalen);
+    if ( res != PM3_SUCCESS) {
+        free(data);
+        free(filepath);
+        return res;
+    }
+
+    uint8_t filelist[50];
+    int filelistlen = 0;
+    res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false);
+    if (!res) {
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+        free(data);
+        free(filepath);
+        return PM3_ESOFT;
+    }
+    free(data);
+    // Add EF_SOD to the list
+    filelist[filelistlen++] = 0x77;
+    // Read files in the file list
+    for (int i = 0; i < filelistlen; i++) {
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+            continue;
+        }
+        if (!dg->pace) {
+            strcpy(filepath, path);
+            strncat(filepath, PATHSEP, 1);
+            strcat(filepath, dg->filename);
+            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)
+            {
+                // we won't halt on parsing errors
+                if (dg->parser != NULL)
+                    dg->parser(data, datalen);
+                free(data);
+            }
+        }
+    }
+    free(filepath);
     return PM3_SUCCESS;
 }
 
@@ -1446,7 +1648,8 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
     uint8_t dob[7] = { 0x00 };
     uint8_t expiry[7] = { 0x00 };
     bool BAC = true;
-    int slen = 0;  // unused
+    bool error = false;
+    int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
@@ -1464,7 +1667,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
     
@@ -1474,11 +1677,14 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
 
     CLIParserFree(ctx);
+    if (error) {
+        return PM3_ESOFT;
+    }
     return dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
 }
 
@@ -1494,6 +1700,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
+        arg_str0(NULL, "path", "<dirpath>", "display info from offline dump stored in dirpath"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1502,7 +1709,8 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     uint8_t dob[7] = { 0x00 };
     uint8_t expiry[7] = { 0x00 };
     bool BAC = true;
-    int slen = 0;  // unused
+    bool error = false;
+    int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
@@ -1519,7 +1727,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
     
@@ -1529,12 +1737,20 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
-            return PM3_ESOFT;
+            error = true;
         }
     }
-
+    uint8_t path[FILENAME_MAX] = { 0x00 };
+    bool offline = CLIParamStrToBuf(arg_get_str(ctx, 4), path, sizeof(path), &slen) == 0 && slen > 0;
     CLIParserFree(ctx);
-    return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+    if (error) {
+        return PM3_ESOFT;
+    }
+    if (offline) {
+        return infoHF_EMRTD_offline((const char *)path);
+    } else {
+        return infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+    }
 }
 
 static int cmd_hf_emrtd_list(const char *Cmd) {
@@ -1550,7 +1766,7 @@ static int cmd_hf_emrtd_list(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
     {"dump",    cmd_hf_emrtd_dump, IfPm3Iso14443,   "Dump eMRTD files to binary files"},
-    {"info",    cmd_hf_emrtd_info, IfPm3Iso14443,   "Display info about an eMRTD"},
+    {"info",    cmd_hf_emrtd_info, AlwaysAvailable, "Display info about an eMRTD"},
     {"list",    cmd_hf_emrtd_list, AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };

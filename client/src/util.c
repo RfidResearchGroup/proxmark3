@@ -208,7 +208,9 @@ void print_buffer(const uint8_t *data, const size_t len, int level) {
     char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
     int i;
     for (i = 0; i < len; i += 16) {
-
+        if (len - i < 16) { // incomplete block, will be treated out of the loop
+            break;
+        }
         // (16 * 3) + (16) +  + 1
         memset(buf, 0, sizeof(buf));
         sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
