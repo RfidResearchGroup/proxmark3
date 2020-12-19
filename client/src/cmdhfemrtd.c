@@ -1106,13 +1106,12 @@ static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
 
 static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
     int i;
-    for (i = max_length; i > 0; i--) {
-        if (mrz[offset + i - 1] == '<' && mrz[offset + i] == '<') {
+    for (i = max_length - 1; i > 0; i--) {
+        if (mrz[offset + i] == '<' && mrz[offset + i + 1] == '<') {
             break;
         }
     }
-    // Return i - 1 unless we couldn't find anything (in that case return 0).
-    return i ? i - 1 : 0;
+    return i;
 }
 
 static void emrtd_mrz_replace_pad(char *data, int datalen, char newchar) {
