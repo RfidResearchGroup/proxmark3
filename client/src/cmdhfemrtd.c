@@ -1472,9 +1472,9 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
 }
 
 static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
-    PrintAndLogEx(WARNING, "TODO");
+//    PrintAndLogEx(NORMAL, "");
+//    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+//    PrintAndLogEx(WARNING, "TODO");
     return PM3_SUCCESS;
 }
 
