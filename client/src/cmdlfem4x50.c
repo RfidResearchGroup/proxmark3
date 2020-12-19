@@ -81,7 +81,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
     PrintAndLogEx(INFO, "----+-------------+-------------+--------------------");
 }
 
-static void print_info_result(uint8_t *data) {
+static void print_info_result(uint8_t *data, bool verbose) {
 
     // display all information of info result in structured format
     em4x50_word_t words[EM4X50_NO_WORDS];
@@ -104,7 +104,11 @@ static void print_info_result(uint8_t *data) {
     // data section
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("EM4x50 data:"));
-    print_result(words, 0, EM4X50_NO_WORDS - 1);
+    if (verbose) {
+        print_result(words, 0, EM4X50_NO_WORDS - 1);
+    } else {
+        print_result(words, EM4X50_DEVICE_SERIAL, EM4X50_DEVICE_ID);
+    }
 
     // configuration section
     PrintAndLogEx(NORMAL, "");
@@ -618,12 +622,14 @@ int CmdEM4x50Info(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x50 info",
                   "Tag information EM4x50.",
                   "lf em 4x50 info\n"
+                  "lf em 4x50 info -v -> show data section\n"
                   "lf em 4x50 info -p 12345678   -> uses pwd 0x12345678\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
+        arg_lit0("v", "verbose", "additional output of data section"),
         arg_param_end
     };
 
@@ -631,6 +637,7 @@ int CmdEM4x50Info(const char *Cmd) {
     int pwd_len = 0;
     uint8_t pwd[4] = {0x0};
     CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
+    bool verb = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     em4x50_data_t etd = {.pwd_given = false};
@@ -653,7 +660,7 @@ int CmdEM4x50Info(const char *Cmd) {
     }
 
     if (resp.status == PM3_SUCCESS)
-        print_info_result(resp.data.asBytes);
+        print_info_result(resp.data.asBytes, verb);
     else
         PrintAndLogEx(FAILED, "Reading tag " _RED_("failed"));
 
