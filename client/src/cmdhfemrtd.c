@@ -935,7 +935,6 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
             PrintAndLogEx(INFO, "Basic Access Control is enforced. Will attempt external authentication.");
         } else {
             *BAC = false;
-            PrintAndLogEx(INFO, "EF_DG1: %s", sprint_hex(response, resplen));
         }
     }
 
