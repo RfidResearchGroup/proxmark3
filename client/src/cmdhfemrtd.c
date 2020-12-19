@@ -731,7 +731,7 @@ static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
         return false;
     }
 
-    saveFile("EF_DG2", ".jpg", file_contents + offset, datalen);
+    saveFile("EF_DG2", file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
     return true;
 }
 
@@ -745,7 +745,7 @@ static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile("EF_DG5", ".jpg", data, datalen);
+        saveFile("EF_DG5", data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg5) datalen out-of-bounds");
         return false;
@@ -763,7 +763,7 @@ static bool emrtd_dump_ef_dg7(uint8_t *file_contents, int file_length) {
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile("EF_DG7", ".jpg", data, datalen);
+        saveFile("EF_DG7", data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg7) datalen out-of-bounds");
         return false;
@@ -1348,7 +1348,7 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x16:
-                    saveFile("ProofOfCitizenship", ".jpg", tagdata, tagdatalen);
+                    saveFile("ProofOfCitizenship", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x17:
                     // TODO: acc for < separation
@@ -1408,10 +1408,10 @@ static bool emrtd_print_ef_dg12_info(uint8_t *response, int resplen) {
                     PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), tagdatalen, tagdata);
                     break;
                 case 0x1d:
-                    saveFile("FrontOfDocument", ".jpg", tagdata, tagdatalen);
+                    saveFile("FrontOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x1e:
-                    saveFile("BackOfDocument", ".jpg", tagdata, tagdatalen);
+                    saveFile("BackOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x55:
                     emrtd_print_personalization_timestamp(tagdata);
