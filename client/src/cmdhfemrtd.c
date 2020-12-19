@@ -702,7 +702,7 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length) {
         return PM3_ESOFT;
     }
 
-    saveFile("EF_DG2", file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
+    saveFile(dg_table[EF_DG2].filename, file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
     return PM3_SUCCESS;
 }
 
@@ -716,7 +716,7 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length) {
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile("EF_DG5", data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+        saveFile(dg_table[EF_DG5].filename, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg5) datalen out-of-bounds");
         return PM3_ESOFT;
@@ -734,7 +734,7 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length) {
     }
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
-        saveFile("EF_DG7", data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
+        saveFile(dg_table[EF_DG7].filename, data[0] == 0xFF ? ".jpg" : ".jp2", data, datalen);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg7) datalen out-of-bounds");
         return PM3_ESOFT;
@@ -751,7 +751,7 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length) {
         return PM3_SUCCESS;
     }
 
-    saveFile("EF_SOD", ".p7b", file_contents + fieldlen + 1, datalen);
+    saveFile(dg_table[EF_SOD].filename, ".p7b", file_contents + fieldlen + 1, datalen);
     return PM3_ESOFT;
 }
 
