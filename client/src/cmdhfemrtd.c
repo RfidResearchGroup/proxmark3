@@ -735,7 +735,6 @@ static bool emrtd_dump_ef_dg2(uint8_t *file_contents, int file_length) {
     return true;
 }
 
-
 static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
     uint8_t data[EMRTD_MAX_FILE_SIZE];
     int datalen = 0;
@@ -749,6 +748,24 @@ static bool emrtd_dump_ef_dg5(uint8_t *file_contents, int file_length) {
         saveFile("EF_DG5", ".jpg", data, datalen);
     } else {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg5) datalen out-of-bounds");
+        return false;
+    }
+    return true;
+}
+
+static bool emrtd_dump_ef_dg7(uint8_t *file_contents, int file_length) {
+    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    int datalen = 0;
+
+    // If we can't find image in EF_DG7, return false.
+    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x42, true) == false) {
+        return false;
+    }
+
+    if (datalen < EMRTD_MAX_FILE_SIZE) {
+        saveFile("EF_DG7", ".jpg", data, datalen);
+    } else {
+        PrintAndLogEx(ERR, "error (emrtd_dump_ef_dg7) datalen out-of-bounds");
         return false;
     }
     return true;
@@ -783,6 +800,8 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
         emrtd_dump_ef_dg2(response, resplen);
     } else if (strcmp(file, EMRTD_EF_DG5) == 0) {
         emrtd_dump_ef_dg5(response, resplen);
+    } else if (strcmp(file, EMRTD_EF_DG7) == 0) {
+        emrtd_dump_ef_dg7(response, resplen);
     } else if (strcmp(file, EMRTD_EF_SOD) == 0) {
         emrtd_dump_ef_sod(response, resplen);
     }
