@@ -1640,10 +1640,12 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
+        arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+    uint8_t mrz[45] = { 0x00 };
     uint8_t docnum[10] = { 0x00 };
     uint8_t dob[7] = { 0x00 };
     uint8_t expiry[7] = { 0x00 };
@@ -1657,7 +1659,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
         text_to_upper(docnum, slen);
         if (slen != 9) {
             // Pad to 9 with <
-            memset(docnum + slen, 0x3c, 9 - slen);
+            memset(docnum + slen, '<', 9 - slen);
         }
     }
     
@@ -1678,6 +1680,30 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
             PrintAndLogEx(HINT, "Use the format YYMMDD.");
             error = true;
+        }
+    }
+
+    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, 44, &slen) == 0 && slen != 0) {
+        if (slen != 44) {
+            PrintAndLogEx(ERR, "MRZ length is incorrect, it should be 44, not %i", slen);
+            error = true;
+        } else {
+            BAC = true;
+            text_to_upper(mrz, slen);
+            memcpy(docnum, &mrz[0], 9);
+            memcpy(dob,    &mrz[13], 6);
+            memcpy(expiry, &mrz[21], 6);
+            // TODO check MRZ checksums?
+            if (!validate_date(dob, 6)) {
+                PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
+                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                error = true;
+            }
+            if (!validate_date(expiry, 6)) {
+                PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
+                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                error = true;
+            }
         }
     }
 
@@ -1700,11 +1726,13 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
+        arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
         arg_str0(NULL, "path", "<dirpath>", "display info from offline dump stored in dirpath"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+    uint8_t mrz[45] = { 0x00 };
     uint8_t docnum[10] = { 0x00 };
     uint8_t dob[7] = { 0x00 };
     uint8_t expiry[7] = { 0x00 };
@@ -1717,7 +1745,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
     } else {
         text_to_upper(docnum, slen);
         if (slen != 9) {
-            memset(docnum + slen, 0x3c, 9 - slen);
+            memset(docnum + slen, '<', 9 - slen);
         }
     }
     
@@ -1740,8 +1768,32 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
             error = true;
         }
     }
+
+    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, 44, &slen) == 0 && slen != 0) {
+        if (slen != 44) {
+            PrintAndLogEx(ERR, "MRZ length is incorrect, it should be 44, not %i", slen);
+            error = true;
+        } else {
+            BAC = true;
+            text_to_upper(mrz, slen);
+            memcpy(docnum, &mrz[0], 9);
+            memcpy(dob,    &mrz[13], 6);
+            memcpy(expiry, &mrz[21], 6);
+            // TODO check MRZ checksums?
+            if (!validate_date(dob, 6)) {
+                PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
+                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                error = true;
+            }
+            if (!validate_date(expiry, 6)) {
+                PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
+                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                error = true;
+            }
+        }
+    }
     uint8_t path[FILENAME_MAX] = { 0x00 };
-    bool offline = CLIParamStrToBuf(arg_get_str(ctx, 4), path, sizeof(path), &slen) == 0 && slen > 0;
+    bool offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
     CLIParserFree(ctx);
     if (error) {
         return PM3_ESOFT;
