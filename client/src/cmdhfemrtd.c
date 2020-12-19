@@ -1147,9 +1147,6 @@ static void emrtd_print_document_number(char *mrz, int offset) {
 }
 
 static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
-    if (max_length == 0) {
-        return;
-    }
     char final_name[100] = { 0x00 };
     int namelen = emrtd_mrz_determine_length(mrz, offset, max_length);
     int sep = emrtd_mrz_determine_separator(mrz, offset, namelen);
@@ -1352,6 +1349,10 @@ static bool emrtd_print_ef_dg11_info(uint8_t *response, int resplen) {
 
     for (int i = 0; i < taglistlen; i++) {
         emrtd_lds_get_data_by_tag(response, resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        // Don't bother with empty tags
+        if (tagdatalen == 0) {
+            continue;
+        }
         // Special behavior for two char tags
         if (taglist[i] == 0x5f) {
             switch (taglist[i + 1]) {
@@ -1427,6 +1428,10 @@ static bool emrtd_print_ef_dg12_info(uint8_t *response, int resplen) {
 
     for (int i = 0; i < taglistlen; i++) {
         emrtd_lds_get_data_by_tag(response, resplen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        // Don't bother with empty tags
+        if (tagdatalen == 0) {
+            continue;
+        }
         // Special behavior for two char tags
         if (taglist[i] == 0x5f) {
             // Several things here are longer than the rest but I can't think of a way to shorten them
