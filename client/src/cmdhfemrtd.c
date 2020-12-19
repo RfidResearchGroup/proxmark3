@@ -1105,6 +1105,7 @@ static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
 }
 
 static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
+    // Note: this function does not account for len=0
     int i;
     for (i = max_length - 1; i > 0; i--) {
         if (mrz[offset + i] == '<' && mrz[offset + i + 1] == '<') {
@@ -1146,6 +1147,9 @@ static void emrtd_print_document_number(char *mrz, int offset) {
 }
 
 static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
+    if (max_length == 0) {
+        return;
+    }
     char final_name[100] = { 0x00 };
     int namelen = emrtd_mrz_determine_length(mrz, offset, max_length);
     int sep = emrtd_mrz_determine_separator(mrz, offset, namelen);
