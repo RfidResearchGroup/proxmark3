@@ -67,28 +67,28 @@ static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen);
 static emrtd_dg_t dg_table[] = {
-    {0x60, "011E", "EF_COM",          "Header and Data Group Presence Information",         true,  emrtd_print_ef_com_info, NULL, true},
-    {0xff, "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 false, NULL, NULL, true},
-    {0xff, "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", false, NULL, NULL, true},
-    {0x61, "0101", "EF_DG1",          "Details recorded in MRZ",                            true,  emrtd_print_ef_dg1_info, NULL, true},
-    {0x75, "0102", "EF_DG2",          "Encoded Face",                                       true,  NULL, emrtd_dump_ef_dg2, false},
-    // These cases are commented out as they require PACE
-    //{0x63, "0103", "EF_DG3",          "Encoded Finger(s)",                                  false, NULL, false},
-    //{0x76, "0104", "EF_DG4",          "Encoded Eye(s)",                                     false, NULL, false},
-    {0x65, "0105", "EF_DG5",          "Displayed Portrait",                                 false, NULL, emrtd_dump_ef_dg5, false},
-    {0x66, "0106", "EF_DG6",          "Reserved for Future Use",                            false, NULL, NULL, false},
-    {0x67, "0107", "EF_DG7",          "Displayed Signature or Usual Mark",                  false, NULL, emrtd_dump_ef_dg7, false},
-    {0x68, "0108", "EF_DG8",          "Data Feature(s)",                                    false, NULL, NULL, true},
-    {0x69, "0109", "EF_DG9",          "Structure Feature(s)",                               false, NULL, NULL, true},
-    {0x6a, "010A", "EF_DG10",         "Substance Feature(s)",                               false, NULL, NULL, true},
-    {0x6b, "010B", "EF_DG11",         "Additional Personal Detail(s)",                      false, emrtd_print_ef_dg11_info, NULL, true},
-    {0x6c, "010C", "EF_DG12",         "Additional Document Detail(s)",                      false, emrtd_print_ef_dg12_info, NULL, true},
-    {0x6d, "010D", "EF_DG13",         "Optional Detail(s)",                                 false, NULL, NULL, true},
-    {0x6e, "010E", "EF_DG14",         "Security Options",                                   false, NULL, NULL, true},
-    {0x6f, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, NULL, NULL, true},
-    {0x70, "0110", "EF_DG16",         "Person(s) to Notify",                                false, NULL, NULL, true},
-    {0x77, "011D", "EF_SOD",          "Document Security Object",                           false, emrtd_print_ef_sod_info, emrtd_dump_ef_sod, true},
-    {0x00, NULL, NULL, NULL, false, NULL, NULL, false}
+//  tag     fileid  filename           desc                                                 pace   req    fast   parser                    dumper
+    {0x60, "011E", "EF_COM",          "Header and Data Group Presence Information",         false, true,  true,  emrtd_print_ef_com_info,  NULL},
+    {0xff, "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  true,  true,  NULL,                     NULL},
+    {0xff, "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, true,  NULL,                     NULL},
+    {0x61, "0101", "EF_DG1",          "Details recorded in MRZ",                            false, true,  true,  emrtd_print_ef_dg1_info,  NULL},
+    {0x75, "0102", "EF_DG2",          "Encoded Face",                                       false, true,  false, NULL,                     emrtd_dump_ef_dg2},
+    {0x63, "0103", "EF_DG3",          "Encoded Finger(s)",                                  true,  false, false, NULL,                     NULL},
+    {0x76, "0104", "EF_DG4",          "Encoded Eye(s)",                                     true,  false, false, NULL,                     NULL},
+    {0x65, "0105", "EF_DG5",          "Displayed Portrait",                                 false, false, false, NULL,                     emrtd_dump_ef_dg5},
+    {0x66, "0106", "EF_DG6",          "Reserved for Future Use",                            false, false, false, NULL,                     NULL},
+    {0x67, "0107", "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, NULL,                     emrtd_dump_ef_dg7},
+    {0x68, "0108", "EF_DG8",          "Data Feature(s)",                                    false, false, true,  NULL,                     NULL},
+    {0x69, "0109", "EF_DG9",          "Structure Feature(s)",                               false, false, true,  NULL,                     NULL},
+    {0x6a, "010A", "EF_DG10",         "Substance Feature(s)",                               false, false, true,  NULL,                     NULL},
+    {0x6b, "010B", "EF_DG11",         "Additional Personal Detail(s)",                      false, false, true,  emrtd_print_ef_dg11_info, NULL},
+    {0x6c, "010C", "EF_DG12",         "Additional Document Detail(s)",                      false, false, true,  emrtd_print_ef_dg12_info, NULL},
+    {0x6d, "010D", "EF_DG13",         "Optional Detail(s)",                                 false, false, true,  NULL,                     NULL},
+    {0x6e, "010E", "EF_DG14",         "Security Options",                                   false, false, true,  NULL,                     NULL},
+    {0x6f, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, true,  NULL,                     NULL},
+    {0x70, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, true,  NULL,                     NULL},
+    {0x77, "011D", "EF_SOD",          "Document Security Object",                           false, false, true,  emrtd_print_ef_sod_info,  emrtd_dump_ef_sod},
+    {0x00, NULL, NULL, NULL, false, false, false, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd);
@@ -994,7 +994,13 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             continue;
         }
         PrintAndLogEx(DEBUG, "Current file: %s", file_name);
-        emrtd_dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
+
+        for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
+            if ((strcmp(dg_table[dgi].filename, file_name) == 0) && !dg_table[dgi].pace) {
+                emrtd_dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
+                break;
+            }
+        }
     }
 
     // Dump EF_SOD
@@ -1525,9 +1531,8 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-
         for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-            if ((strcmp(dg_table[dgi].filename, file_name) == 0) && dg_table[dgi].fastdump) {
+            if ((strcmp(dg_table[dgi].filename, file_name) == 0) && dg_table[dgi].fastdump && !dg_table[dgi].pace) {
                 if (emrtd_select_and_read(response, &resplen, dg_table[dgi].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
                     if (dg_table[dgi].parser != NULL)
                         dg_table[dgi].parser(response, resplen);
@@ -1588,7 +1593,7 @@ int infoHF_EMRTD_offline(const char *path) {
         }
 
         for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-            if (strcmp(dg_table[dgi].filename, file_name) == 0) {
+            if ((strcmp(dg_table[dgi].filename, file_name) == 0) && (!dg_table[dgi].pace)) {
                 strcpy(filepath, path);
                 strncat(filepath, PATHSEP, 1);
                 strcat(filepath, dg_table[dgi].filename);

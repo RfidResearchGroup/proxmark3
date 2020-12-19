@@ -18,10 +18,11 @@ typedef struct emrtd_dg_s {
     const char *fileid;
     const char *filename;
     const char *desc;
-    bool required;
+    bool pace;
+    bool required; // some are required only if PACE
+    bool fastdump; // fast to dump
     int (*parser)(uint8_t *data, size_t datalen);
     int (*dumper)(uint8_t *data, size_t datalen);
-    bool fastdump;
 } emrtd_dg_t;
 
 int CmdHFeMRTD(const char *Cmd);
