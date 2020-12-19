@@ -91,6 +91,23 @@ static emrtd_dg_t dg_table[] = {
     {0x00, NULL, NULL, NULL, false, false, false, NULL, NULL}
 };
 
+static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
+    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
+        if (dg_table[dgi].tag == tag) {
+            return &dg_table[dgi];
+        }
+    }
+    return NULL;
+}
+static emrtd_dg_t *emrtd_fileid_to_dg(const char *file_id) {
+    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
+        if (strcmp(dg_table[dgi].fileid, file_id) == 0) {
+            return &dg_table[dgi];
+        }
+    }
+    return NULL;
+}
+
 static int CmdHelp(const char *Cmd);
 
 static uint16_t get_sw(uint8_t *d, uint8_t n) {
@@ -627,17 +644,6 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *d
     return false;
 }
 
-static bool emrtd_file_tag_to_file_id(uint8_t *datain, char *filenameout, char *dataout) {
-    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-        if (dg_table[dgi].tag == *datain) {
-            strcpy(dataout, dg_table[dgi].fileid);
-            strcpy(filenameout, dg_table[dgi].filename);
-            return true;
-        }
-    }
-    return false;
-}
-
 static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char *file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure, bool use_14b) {
     if (use_secure) {
         if (emrtd_secure_select_file(ks_enc, ks_mac, ssc, EMRTD_P1_SELECT_BY_EF, file, use_14b) == false) {
@@ -743,13 +749,9 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
     PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     saveFile(name, ".BIN", response, resplen);
-
-    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-        if (strcmp(dg_table[dgi].fileid, file) == 0) {
-            if (dg_table[dgi].dumper != NULL)
-                dg_table[dgi].dumper(response, resplen);
-            break;
-        }
+    emrtd_dg_t * dg = emrtd_fileid_to_dg(file);
+    if ((dg != NULL) && (dg->dumper != NULL)) {
+        dg->dumper(response, resplen);
     }
     return true;
 }
@@ -987,19 +989,14 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        char file_id[5] = { 0x00 };
-        char file_name[8] = { 0x00 };
-        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        PrintAndLogEx(DEBUG, "Current file: %s", file_name);
-
-        for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-            if ((strcmp(dg_table[dgi].filename, file_name) == 0) && !dg_table[dgi].pace) {
-                emrtd_dump_file(ks_enc, ks_mac, ssc, file_id, file_name, BAC, use_14b);
-                break;
-            }
+        PrintAndLogEx(DEBUG, "Current file: %s", dg->filename);
+        if (!dg->pace) {
+            emrtd_dump_file(ks_enc, ks_mac, ssc, dg->fileid, dg->filename, BAC, use_14b);
         }
     }
 
@@ -1221,18 +1218,12 @@ static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_COM") " --------------------");
     for (int i = 0; i < filelistlen; i++) {
-        char file_id[5] = { 0x00 };
-        char file_name[8] = { 0x00 };
-        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
-            PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-            if (strcmp(dg_table[dgi].filename, file_name) == 0) {
-                PrintAndLogEx(SUCCESS, "%-7s...............: " _YELLOW_("%s"), file_name, dg_table[dgi].desc);
-                break;
-            }
-        }
+        PrintAndLogEx(SUCCESS, "%-7s...............: " _YELLOW_("%s"), dg->filename, dg->desc);
     }
     return PM3_SUCCESS;
 }
@@ -1525,19 +1516,15 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        char file_id[5] = { 0x00 };
-        char file_name[8] = { 0x00 };
-        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
-            PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-            if ((strcmp(dg_table[dgi].filename, file_name) == 0) && dg_table[dgi].fastdump && !dg_table[dgi].pace) {
-                if (emrtd_select_and_read(response, &resplen, dg_table[dgi].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
-                    if (dg_table[dgi].parser != NULL)
-                        dg_table[dgi].parser(response, resplen);
-                }
-                break;
+        if (dg->fastdump && !dg->pace) {
+            if (emrtd_select_and_read(response, &resplen, dg->fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+                if (dg->parser != NULL)
+                    dg->parser(response, resplen);
             }
         }
     }
@@ -1585,26 +1572,21 @@ int infoHF_EMRTD_offline(const char *path) {
     free(data);
     // Read files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        char file_id[5] = { 0x00 };
-        char file_name[8] = { 0x00 };
-        if (emrtd_file_tag_to_file_id(&filelist[i], file_name, file_id) == false) {
-            //PrintAndLogEx(DEBUG, "File tag not found, skipping: %02X", filelist[i]);
+        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        if (dg == NULL) {
+            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-
-        for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
-            if ((strcmp(dg_table[dgi].filename, file_name) == 0) && (!dg_table[dgi].pace)) {
-                strcpy(filepath, path);
-                strncat(filepath, PATHSEP, 1);
-                strcat(filepath, dg_table[dgi].filename);
-                if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)
-                {
-                    // we won't halt on parsing errors
-                    if (dg_table[dgi].parser != NULL)
-                        dg_table[dgi].parser(data, datalen);
-                    free(data);
-                }
-                break;
+        if (!dg->pace) {
+            strcpy(filepath, path);
+            strncat(filepath, PATHSEP, 1);
+            strcat(filepath, dg->filename);
+            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)
+            {
+                // we won't halt on parsing errors
+                if (dg->parser != NULL)
+                    dg->parser(data, datalen);
+                free(data);
             }
         }
     }
