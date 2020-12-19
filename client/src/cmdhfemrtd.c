@@ -1249,6 +1249,14 @@ static void emrtd_print_personalization_timestamp(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
 }
 
+static void emrtd_print_unknown_timestamp_5f85(uint8_t *data) {
+    char final_date[20] = { 0x00 };
+    sprintf(final_date, "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", data, data + 4, data + 6, data + 8, data + 10, data + 12);
+
+    PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
+    PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
+}
+
 static bool emrtd_print_ef_dg1_info(uint8_t *response, int resplen) {
     int td_variant = 0;
 
@@ -1460,6 +1468,9 @@ static bool emrtd_print_ef_dg12_info(uint8_t *response, int resplen) {
                     break;
                 case 0x56:
                     PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), tagdatalen, tagdata);
+                    break;
+                case 0x85:
+                    emrtd_print_unknown_timestamp_5f85(tagdata);
                     break;
                 default:
                     PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
