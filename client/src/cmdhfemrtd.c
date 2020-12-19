@@ -1115,6 +1115,14 @@ static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) 
     return i ? i - 1 : 0;
 }
 
+static void emrtd_mrz_replace_pad(char *data, int datalen, char newchar) {
+    for (int i = 0; i < datalen; i++) {
+        if (data[i] == '<') {
+            data[i] = newchar;
+        }
+    }
+}
+
 static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
     int i = emrtd_mrz_determine_length(mrz, offset, length);
 
@@ -1153,6 +1161,9 @@ static void emrtd_print_name(char *mrz, int offset, int max_length, bool localiz
     } else {
         memcpy(final_name, mrz + offset, namelen);
     }
+
+    // Replace < characters with spaces
+    emrtd_mrz_replace_pad(final_name, namelen, ' ');
 
     if (localized) {
         PrintAndLogEx(SUCCESS, "Legal Name (Localized): " _YELLOW_("%s"), final_name);
