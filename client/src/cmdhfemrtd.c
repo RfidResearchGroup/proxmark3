@@ -1106,12 +1106,13 @@ static int emrtd_mrz_determine_length(char *mrz, int offset, int max_length) {
 
 static int emrtd_mrz_determine_separator(char *mrz, int offset, int max_length) {
     int i;
-    for (i = max_length; i >= 0; i--) {
+    for (i = max_length; i > 0; i--) {
         if (mrz[offset + i - 1] == '<' && mrz[offset + i] == '<') {
             break;
         }
     }
-    return i - 1;
+    // Return i - 1 unless we couldn't find anything (in that case return 0).
+    return i ? i - 1 : 0;
 }
 
 static void emrtd_print_optional_elements(char *mrz, int offset, int length, bool verify_check_digit) {
@@ -1139,13 +1140,19 @@ static void emrtd_print_document_number(char *mrz, int offset) {
 
 static void emrtd_print_name(char *mrz, int offset, int max_length, bool localized) {
     char final_name[100] = { 0x00 };
-    int i = emrtd_mrz_determine_length(mrz, offset, max_length);
-    int sep = emrtd_mrz_determine_separator(mrz, offset, i);
-    int namelen = (i - (sep + 2));
+    int namelen = emrtd_mrz_determine_length(mrz, offset, max_length);
+    int sep = emrtd_mrz_determine_separator(mrz, offset, namelen);
 
-    memcpy(final_name, mrz + offset + sep + 2, namelen);
-    final_name[namelen] = ' ';
-    memcpy(final_name + namelen + 1, mrz + offset, sep);
+    // Account for mononyms
+    if (sep != 0) {
+        int firstnamelen = (namelen - (sep + 2));
+
+        memcpy(final_name, mrz + offset + sep + 2, firstnamelen);
+        final_name[firstnamelen] = ' ';
+        memcpy(final_name + firstnamelen + 1, mrz + offset, sep);
+    } else {
+        memcpy(final_name, mrz + offset, namelen);
+    }
 
     if (localized) {
         PrintAndLogEx(SUCCESS, "Legal Name (Localized): " _YELLOW_("%s"), final_name);
