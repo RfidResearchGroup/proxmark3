@@ -85,7 +85,6 @@ hf legic restore
 hf legic rdbl
 hf legic sim
 hf legic wrbl
-hf legic crc
 hf legic eload
 hf legic esave
 hf legic wipe

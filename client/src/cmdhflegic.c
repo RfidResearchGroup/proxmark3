@@ -16,6 +16,7 @@
 #include <readline/readline.h>
 #endif
 
+#include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
@@ -27,21 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_calccrc(void) {
-    PrintAndLogEx(NORMAL, "Calculates the legic crc8/crc16 on the given data.");
-    PrintAndLogEx(NORMAL, "There must be an even number of hexsymbols as input.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic crc [h] d <data> u <uidcrc> c <8|16>\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      d <data>      : (hex symbols) bytes to calculate crc over");
-    PrintAndLogEx(NORMAL, "      u <uidcrc>    : MCC hexbyte");
-    PrintAndLogEx(NORMAL, "      c <8|16>      : Crc type");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic crc d deadbeef1122"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic crc d deadbeef1122 u 9A c 16"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_rdbl(void) {
     PrintAndLogEx(NORMAL, "Read data from a LEGIC Prime tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf legic rdbl [h] [o <offset>] [l <length>] [iv <IV>]\n");
@@ -779,84 +765,45 @@ static int CmdLegicWrbl(const char *Cmd) {
 }
 
 static int CmdLegicCalcCrc(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic crc",
+                  "Calculates the legic crc8/crc16 on the given data",
+                  "hf legic crc -d deadbeef1122\n"
+                  "hf legic crc -d deadbeef1122 --mcc 9A -t 16  <- CRC Type 16");
 
-    uint8_t *data = NULL;
-    uint8_t cmdp = 0, uidcrc = 0, type = 0;
-    bool errors = false;
-    int len = 0;
-    int bg, en;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calculate crc over"),
+        arg_str0(NULL, "mcc", "<hex>", "MCC hex byte (UID CRC)"),
+        arg_int0("t", "type", "<dec>", "CRC Type (default: 8)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'd':
-                // peek at length of the input string so we can
-                // figure out how many elements to malloc in "data"
-                bg = en = 0;
-                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) {
-                    errors = true;
-                    break;
-                }
-                len = (en - bg + 1);
+    int data_len = 0;
+    uint8_t data[4096] = {0};
 
-                // check that user entered even number of characters
-                // for hex data string
-                if (len & 1) {
-                    errors = true;
-                    break;
-                }
+    CLIGetHexWithReturn(ctx, 1, data, &data_len);
 
-                // it's possible for user to accidentally enter "b" parameter
-                // more than once - we have to clean previous malloc
-                if (data) free(data);
-                data = calloc(len >> 1,  sizeof(uint8_t));
-                if (data == NULL) {
-                    PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
-                    errors = true;
-                    break;
-                }
+    int mcc_len = 0;
+    uint8_t mcc[1] = {0};  // formerly uidcrc
 
-                if (param_gethex(Cmd, cmdp + 1, data, len)) {
-                    errors = true;
-                    break;
-                }
+    CLIGetHexWithReturn(ctx, 2, mcc, &mcc_len);
 
-                len >>= 1;
-                cmdp += 2;
-                break;
-            case 'u':
-                uidcrc = param_get8ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'c':
-                type = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'h':
-                errors = true;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    //Validations
-    if (errors || cmdp == 0) {
-        if (data) free(data);
-        return usage_legic_calccrc();
-    }
+    int type = arg_get_int_def(ctx, 3, 0);
+
+    CLIParserFree(ctx);
 
     switch (type) {
         case 16:
             init_table(CRC_LEGIC);
-            PrintAndLogEx(SUCCESS, "Legic crc16: %X", crc16_legic(data, len, uidcrc));
+            PrintAndLogEx(SUCCESS, "Legic crc16: %X", crc16_legic(data, data_len, mcc[0]));
             break;
         default:
-            PrintAndLogEx(SUCCESS, "Legic crc8: %X",  CRC8Legic(data, len));
+            PrintAndLogEx(SUCCESS, "Legic crc8: %X",  CRC8Legic(data, data_len));
             break;
     }
 
-    if (data) free(data);
     return PM3_SUCCESS;
 }
 
