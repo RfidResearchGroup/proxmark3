@@ -1553,7 +1553,7 @@ int infoHF_EMRTD_offline(const char *path) {
     if (filepath == NULL)
         return PM3_EMALLOC;
     strcpy(filepath, path);
-    strncat(filepath, PATHSEP, 1);
+    strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_COM].filename);
 
     if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) {
@@ -1590,7 +1590,7 @@ int infoHF_EMRTD_offline(const char *path) {
         }
         if (!dg->pace) {
             strcpy(filepath, path);
-            strncat(filepath, PATHSEP, 1);
+            strncat(filepath, PATHSEP, 2);
             strcat(filepath, dg->filename);
             if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)
             {
