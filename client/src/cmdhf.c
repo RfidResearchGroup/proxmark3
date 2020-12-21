@@ -157,11 +157,11 @@ int CmdHFSearch(const char *Cmd) {
 
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
-
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         res = PM3_ESOFT;
     }
 
+    DropField();
     return res;
 }
 
