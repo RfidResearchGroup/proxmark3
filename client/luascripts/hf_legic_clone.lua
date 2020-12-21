@@ -456,7 +456,7 @@ local function writeToTag(plainBytes)
     -- write data to file
     if (writeOutputBytes(bytes, "hf-legic-UID-dump.bin")) then
         -- write pm3-buffer to Tag
-        cmd = ('hf legic restore f hf-legic-UID-dump')
+        cmd = ('hf legic restore -f hf-legic-UID-dump')
         core.console(cmd)
     end
 end

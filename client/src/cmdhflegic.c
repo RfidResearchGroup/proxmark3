@@ -28,19 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_restore(void) {
-    PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
-    PrintAndLogEx(NORMAL, "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]\n");
-    PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] [x] [f <filename w/o .bin>]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to restore bytes on to card from");
-    PrintAndLogEx(NORMAL, "      x             : obfuscate dump data (xor with MCC)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic restore f myfile"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_eload(void) {
     PrintAndLogEx(NORMAL, "It loads a binary dump into emulator memory\n");
     PrintAndLogEx(NORMAL, "Usage:  hf legic eload [h] [card memory] [f <file name w/o `.bin`>]\n");
@@ -891,44 +878,28 @@ static int CmdLegicDump(const char *Cmd) {
 }
 
 static int CmdLegicRestore(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic restore",
+                  "Reads binary file and it autodetects card type and verifies that the file has the same size\n"
+                  "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]",
+                  "hf legic restore -f myfile              <-- use user specified filename\n"
+                  "hf legic restore -f myfile --obfuscate  <-- use UID as filename and deobfuscate data");
 
-    char filename[FILE_PATH_SIZE] = {0x00};
-    bool errors = false, shall_obsfuscate = false, have_filename = false;
-    size_t numofbytes;
-    uint8_t cmdp = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "specify a filename to restore"),
+        arg_lit0(NULL, "obfuscate", "obfuscate dump data (xor with MCC)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h': {
-                errors = true;
-                break;
-            }
-            case 'f': {
-                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "Filename too long");
-                    break;
-                }
-                have_filename = true;
-                cmdp += 2;
-                break;
-            }
-            case 'x': {
-                shall_obsfuscate = true;
-                cmdp++;
-                break;
-            }
-            default: {
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-            }
-        }
-    }
-    if (have_filename == false)
-        errors = true;
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    //Validations
-    if (errors || cmdp == 0) return usage_legic_restore();
+    bool shall_obsfuscate = arg_get_lit(ctx, 2);
+
+    CLIParserFree(ctx);
 
     // tagtype
     legic_card_select_t card;
@@ -946,6 +917,7 @@ static int CmdLegicRestore(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    size_t numofbytes;
     if (loadFile_safe(filename, ".bin", (void **)&data, &numofbytes) != PM3_SUCCESS) {
         free(data);
         PrintAndLogEx(WARNING, "Error, reading file");
