@@ -78,7 +78,6 @@ hf legic dump
 hf legic restore
 hf legic eload
 hf legic esave
-hf legic wipe
 hf mf darkside
 hf mf nested
 hf mf hardnested

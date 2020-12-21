@@ -86,17 +86,6 @@ static int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic esave 2 f myfile"));
     return PM3_SUCCESS;
 }
-static int usage_legic_wipe(void) {
-    PrintAndLogEx(NORMAL, "Fills a LEGIC Prime tags memory with zeros. From byte7 and to the end");
-    PrintAndLogEx(NORMAL, "It autodetects card type\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic wipe [h]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic wipe"));
-    return PM3_SUCCESS;
-}
 
 static bool legic_xor(uint8_t *data, uint16_t cardsize) {
 
@@ -1198,10 +1187,18 @@ static int CmdLegicESave(const char *Cmd) {
 }
 
 static int CmdLegicWipe(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic wipe",
+                  "Fills a LEGIC Prime tags memory with zeros. From byte7 and to the end\n"
+                  "It autodetects card type",
+                  "hf legic wipe");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-
-    if (cmdp == 'h') return usage_legic_wipe();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     // tagtype
     legic_card_select_t card;
