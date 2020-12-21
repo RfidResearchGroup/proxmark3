@@ -626,46 +626,58 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 
 void print_progress(size_t count, uint64_t max, barMode_t style) {
 
-    #define PERCENTAGE(V, T)   (100 - (((T - V) * 100) / T))
+    #define PERCENTAGE(V, T)   ((V * 100) / T)
+    // x/8 fractional part of the percentage
+    #define PERCENTAGEFRAC(V, T)   ((int)(((((float)V * 100) / T) - ((V * 100) / T)) * 8))
 
-/*
-    typedef struct smooth_s {
-        const char *bar;
-    } smooth_t;
-
-    static smooth_t smoothtable[] = {
-        {"\xe2\x96\x8F"},
-        {"\xe2\x96\x8E"},
-        {"\xe2\x96\x8D"},
-        {"\xe2\x96\x8C"},
-        {"\xe2\x96\x8B"},
-        {"\xe2\x96\x8A"},
-        {"\xe2\x96\x89"},
-        {"\xe2\x96\x88"},
+    const char *smoothtable[] = {
+        "\xe2\x80\x80",
+        "\xe2\x96\x8F",
+        "\xe2\x96\x8E",
+        "\xe2\x96\x8D",
+        "\xe2\x96\x8C",
+        "\xe2\x96\x8B",
+        "\xe2\x96\x8A",
+        "\xe2\x96\x89",
+        "\xe2\x96\x88",
     };
-*/
 
+    uint8_t mode = session.emoji_mode == EMOJI;
+    const char *block[] = {"#", "\xe2\x96\x88"};
+    // use a 3-byte space in emoji mode to ease computations
+    const char *space[] = {" ", "\xe2\x80\x80"};
+    uint8_t unit = strlen(block[mode]);
     // +1 for \0
-    char *bar = calloc(100 + 1, sizeof(uint8_t));
+    char *bar = calloc(unit*100 + 1, sizeof(uint8_t));
 
     uint8_t value = PERCENTAGE(count, max);
 
+    int i = 0;
     // prefix is added already.
-    memset(bar + strlen(bar), 0x23, value);
-
+    for (; i < unit*value; i+=unit) {
+        memcpy(bar + i, block[mode], unit);
+    }
+    // add last block
+    if (mode == 1) {
+        memcpy(bar + i, smoothtable[PERCENTAGEFRAC(count, max)], unit);
+    } else {
+        memcpy(bar + i, space[mode], unit);
+    }
+    i += unit;
     // add spaces
-    memset(bar + strlen(bar), 0x2E,  100 - value);
-
+    for (; i < unit*100; i+=unit) {
+        memcpy(bar + i, space[mode], unit);
+    }
     // color buffer
-    uint8_t collen = 100 + 1 + 40;
+    size_t collen = strlen(bar) + 40;
     char *cbar = calloc(collen, sizeof(uint8_t));
 
     // Add colors
-    snprintf(cbar,  collen,  _GREEN_("%.*s"), 60, bar);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), 20,  bar + 60);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), 20, bar + 80);
+    snprintf(cbar,  collen,  _GREEN_("%.*s"), unit*60, bar);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), unit*20,  bar + unit*60);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), unit*20, bar + unit*80);
 
-    uint8_t len = collen + 1 + 1 + 30;
+    size_t len = strlen(cbar) + 32;
     char *buffer = calloc(len, sizeof(uint8_t));
 
     switch(style) {
@@ -685,8 +697,8 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         }
     }
 
-	fflush(stdout);
-	free(buffer);
+    fflush(stdout);
+    free(buffer);
     free(bar);
     free(cbar);
 }
