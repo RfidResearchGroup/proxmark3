@@ -10,7 +10,6 @@ analyse a
 analyse nuid
 analyse demodbuff
 analyse freq
-analyse foo
 data biphaserawdecode
 data detectclock
 data fsktonrz
@@ -42,9 +41,6 @@ data print
 data samples
 data setdebugmode
 data tune
-hf tune
-hf search
-hf sniff
 hf 14a reader
 hf 14a cuids
 hf 14a sim
@@ -167,14 +163,12 @@ lf simfsk
 lf simpsk
 lf simbidir
 lf sniff
-lf tune
 lf em 410x
 lf em 4x05
 lf em 4x50
-lf hitag info
+lf em 4x70
 lf hitag reader
 lf hitag sim
-lf hitag sniff
 lf hitag writer
 lf hitag dump
 lf hitag cc
