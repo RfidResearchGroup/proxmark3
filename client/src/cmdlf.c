@@ -238,7 +238,7 @@ static int CmdLFTune(const char *Cmd) {
                   "Continuously measure LF antenna tuning.\n"
                   "Press button or <Enter> to interrupt.",
                   "lf tune\n"
-                  "lf tune --mixed"
+                  "lf tune --mix"
                  );
 
     char q_str[60];

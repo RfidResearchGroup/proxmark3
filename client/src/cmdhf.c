@@ -172,7 +172,7 @@ int CmdHFTune(const char *Cmd) {
                   "Continuously measure HF antenna tuning.\n"
                   "Press button or <Enter> to interrupt.",
                   "hf tune\n"
-                  "hf tune --mixed"
+                  "hf tune --mix"
                  );
 
     void *argtable[] = {
