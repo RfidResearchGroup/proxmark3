@@ -629,9 +629,13 @@ static int emrtd_lds_determine_tag_length(uint8_t tag) {
     return 1;
 }
 
-static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
-    int offset = emrtd_lds_determine_tag_length(*datain);
-    offset += emrtd_get_asn1_field_length(datain, datainlen, offset);
+static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag, bool skiptoptag) {
+    int offset = 0;
+
+    if (skiptoptag) {
+        offset += emrtd_lds_determine_tag_length(*datain);
+        offset += emrtd_get_asn1_field_length(datain, datainlen, offset);
+    }
 
     int e_idlen = 0;
     int e_datalen = 0;
@@ -714,7 +718,7 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length) {
     int datalen = 0;
 
     // If we can't find image in EF_DG5, return false.
-    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x40, true) == false) {
+    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x40, true, true) == false) {
         return PM3_ESOFT;
     }
 
@@ -732,7 +736,7 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length) {
     int datalen = 0;
 
     // If we can't find image in EF_DG7, return false.
-    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x42, true) == false) {
+    if (emrtd_lds_get_data_by_tag(file_contents, file_length, data, &datalen, 0x5F, 0x42, true, true) == false) {
         return PM3_ESOFT;
     }
 
@@ -998,7 +1002,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false, true)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -1224,7 +1228,7 @@ static void emrtd_print_unknown_timestamp_5f85(uint8_t *data) {
 static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen) {
     uint8_t filelist[50];
     int filelistlen = 0;
-    int res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false);
+    int res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false, true);
     if (!res) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         return PM3_ESOFT;
@@ -1255,7 +1259,7 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     char mrz[90] = { 0x00 };
     int mrzlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(data, datalen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true)) {
+    if (!emrtd_lds_get_data_by_tag(data, datalen, (uint8_t *) mrz, &mrzlen, 0x5f, 0x1f, true, true)) {
         PrintAndLogEx(ERR, "Failed to read MRZ from EF_DG1.");
         return PM3_ESOFT;
     }
@@ -1337,13 +1341,13 @@ static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG11") " -------------------");
 
-    if (!emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false, true)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG11.");
         return PM3_ESOFT;
     }
 
     for (int i = 0; i < taglistlen; i++) {
-        emrtd_lds_get_data_by_tag(data, datalen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        emrtd_lds_get_data_by_tag(data, datalen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f, true);
         // Don't bother with empty tags
         if (tagdatalen == 0) {
             continue;
@@ -1416,13 +1420,13 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG12") " -------------------");
 
-    if (!emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false, true)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG12.");
         return PM3_ESOFT;
     }
 
     for (int i = 0; i < taglistlen; i++) {
-        emrtd_lds_get_data_by_tag(data, datalen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f);
+        emrtd_lds_get_data_by_tag(data, datalen, tagdata, &tagdatalen, taglist[i], taglist[i + 1], taglist[i] == 0x5f, true);
         // Don't bother with empty tags
         if (tagdatalen == 0) {
             continue;
@@ -1524,7 +1528,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t filelist[50];
     int filelistlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false)) {
+    if (!emrtd_lds_get_data_by_tag(response, resplen, filelist, &filelistlen, 0x5c, 0x00, false, true)) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         DropField();
         return PM3_ESOFT;
@@ -1574,7 +1578,7 @@ int infoHF_EMRTD_offline(const char *path) {
 
     uint8_t filelist[50];
     int filelistlen = 0;
-    res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false);
+    res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false, true);
     if (!res) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
         free(data);
