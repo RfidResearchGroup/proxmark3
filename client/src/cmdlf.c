@@ -237,14 +237,15 @@ static int CmdLFTune(const char *Cmd) {
     CLIParserInit(&ctx, "lf tune",
                   "Continuously measure LF antenna tuning.\n"
                   "Press button or <Enter> to interrupt.",
-                  "lf tune"
+                  "lf tune\n"
+                  "lf tune --mixed"
                  );
 
     char q_str[60];
     snprintf(q_str, sizeof(q_str), "Frequency divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0("n", "iteration", "<dec>", "number of iterations (default: 0=infinite)"),
+        arg_u64_0("n", "iter", "<dec>", "number of iterations (default: 0=infinite)"),
         arg_u64_0("q", "divisor", "<dec>", q_str),
         arg_dbl0("f", "freq", "<float>", "Frequency in kHz"),
         arg_lit0(NULL, "bar", "bar style"),
@@ -301,7 +302,7 @@ static int CmdLFTune(const char *Cmd) {
 
     params[0] = 2;
 
-    #define MAX_ADC_LF_VOLTAGE 140800
+//    #define MAX_ADC_LF_VOLTAGE 140800
     uint32_t max = 71000;
     bool first = true;
 
