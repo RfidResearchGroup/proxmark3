@@ -728,12 +728,12 @@ static void print_ct_general_info(void *vcard) {
     memcpy(&card, (iso14b_cts_card_select_t *)vcard, sizeof(iso14b_cts_card_select_t));
 
     uint32_t uid32 = (card.uid[0] | card.uid[1] << 8 | card.uid[2] << 16 | card.uid[3] << 24);
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "ASK C-Ticket");
     PrintAndLogEx(SUCCESS, "           UID: " _GREEN_("%s") " ( " _YELLOW_("%010u") " )", sprint_hex(card.uid, sizeof(card.uid)), uid32);
     PrintAndLogEx(SUCCESS, "  Product Code: %02X", card.pc);
     PrintAndLogEx(SUCCESS, " Facility Code: %02X", card.fc);
     PrintAndLogEx(NORMAL, "");
-
 }
 
 // iceman, calypso?
@@ -819,11 +819,9 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
 
     print_st_general_info(card.uid, card.uidlen);
 
-   if (do_aid_search) {
-       hf14b_aid_search(verbose);
-   }
-
-
+    if (do_aid_search) {
+        hf14b_aid_search(verbose);
+    }
     return true;
 }
 
