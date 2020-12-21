@@ -969,7 +969,7 @@ static int CmdLegicELoad(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     size_t numofbytes = 0;
-    
+
     switch (arg_get_int_def(ctx, 2, 1)) {
         case 0:
             numofbytes = 22;
@@ -1038,7 +1038,7 @@ static int CmdLegicESave(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     size_t numofbytes = 0;
-    
+
     switch (arg_get_int_def(ctx, 2, 1)) {
         case 0:
             numofbytes = 22;
