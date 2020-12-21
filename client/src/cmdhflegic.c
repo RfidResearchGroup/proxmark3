@@ -28,16 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_reader(void) {
-    PrintAndLogEx(NORMAL, "Read UID and type information from a LEGIC Prime tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic reader"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves bin/eml/json dump file");
@@ -146,6 +136,7 @@ static int CmdLegicInfo(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
     int crc = 0, wrp = 0, wrc = 0;
@@ -810,12 +801,26 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
         SendCommandOLD(CMD_HF_LEGIC_ESET, i, len, 0, src + i, len);
     }
 }
-
 static int CmdLegicReader(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_legic_reader();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic reader",
+                  "Read UID and type information from a LEGIC Prime tag",
+                  "hf legic reader");
 
-    return readLegicUid(true);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    return readLegicUid(cm, true);
 }
 
 static int CmdLegicDump(const char *Cmd) {
@@ -1294,24 +1299,38 @@ int CmdHFLegic(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int readLegicUid(bool verbose) {
+int readLegicUid(bool loop, bool verbose) {
 
-    legic_card_select_t card;
-    switch (legic_get_type(&card)) {
-        case PM3_EINVARG:
-            return PM3_EINVARG;
-        case PM3_ETIMEOUT:
-            if (verbose) PrintAndLogEx(WARNING, "command execution time out");
-            return PM3_ETIMEOUT;
-        case PM3_ESOFT:
-            if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
-            return PM3_ESOFT;
-        default:
-            break;
-    }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, " MCD: " _GREEN_("%02X"), card.uid[0]);
-    PrintAndLogEx(SUCCESS, " MSN: " _GREEN_("%s"), sprint_hex(card.uid + 1, sizeof(card.uid) - 1));
-    legic_print_type(card.cardsize, 0);
+    do {
+        legic_card_select_t card;
+
+        int resp = legic_get_type(&card);
+
+        if (loop) {
+            if (resp != PM3_SUCCESS) {
+                continue;
+            }
+        } else {
+            switch (resp) {
+                case PM3_EINVARG:
+                    return PM3_EINVARG;
+                case PM3_ETIMEOUT:
+                    if (verbose) PrintAndLogEx(WARNING, "command execution time out");
+                    return PM3_ETIMEOUT;
+                case PM3_ESOFT:
+                    if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
+                    return PM3_ESOFT;
+                default:
+                    break;
+            }
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, " MCD: " _GREEN_("%02X"), card.uid[0]);
+        PrintAndLogEx(SUCCESS, " MSN: " _GREEN_("%s"), sprint_hex(card.uid + 1, sizeof(card.uid) - 1));
+        legic_print_type(card.cardsize, 0);
+
+    } while (loop && kbd_enter_pressed() == false);
+
     return PM3_SUCCESS;
 }

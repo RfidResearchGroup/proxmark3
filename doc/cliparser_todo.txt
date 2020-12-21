@@ -78,7 +78,6 @@ hf felica resetmode
 hf felica litesim
 hf felica litedump
 hf fido info
-hf legic reader
 hf legic dump
 hf legic restore
 hf legic eload
