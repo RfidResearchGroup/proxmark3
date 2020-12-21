@@ -28,20 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_wrbl(void) {
-    PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] [o <offset>] [d <data (hex symbols)>] [y]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start writing");
-    //PrintAndLogEx(NORMAL, "  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
-    PrintAndLogEx(NORMAL, "      d <data>      : (hex symbols) bytes to write ");
-    PrintAndLogEx(NORMAL, "      y             : Auto-confirm dangerous operations ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic wrbl o 10 d 11223344    - Write 0x11223344 starting from offset 0x10"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_reader(void) {
     PrintAndLogEx(NORMAL, "Read UID and type information from a LEGIC Prime tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]\n");
@@ -588,94 +574,37 @@ static int CmdLegicSim(const char *Cmd) {
 }
 
 static int CmdLegicWrbl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic wrbl",
+                  "Write data to a LEGIC Prime tag. It autodetects tagsize to ensure proper write",
+                  "hf legic wrbl -o 0 -d 11223344  <- Write 0x11223344 starting from offset 0)\n"
+                  "hf legic wrbl -o 10 -d DEADBEEF  <- Write 0xdeadbeef starting from offset 10");
 
-    uint8_t *data = NULL;
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool autoconfirm = false;
-    int len = 0, bg, en;
-    uint32_t offset = 0, IV = 0x55;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("o", "offset", "<dec>", "offset in data array to start writing"),
+        arg_str1("d", "data", "<hex>", "data to write"),
+        arg_lit0(NULL, "danger", "Auto-confirm dangerous operations"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h': {
-                errors = true;
-                break;
-            }
-            case 'd': {
-                // peek at length of the input string so we can
-                // figure out how many elements to malloc in "data"
-                bg = en = 0;
-                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) {
-                    errors = true;
-                    break;
-                }
-                len = (en - bg + 1);
+    int offset = arg_get_int_def(ctx, 1, 0);
 
-                // check that user entered even number of characters
-                // for hex data string
-                if (len & 1) {
-                    errors = true;
-                    break;
-                }
+    int data_len = 0;
+    uint8_t data[MAX_LENGTH] = {0};
 
-                // limit number of bytes to write. This is not a 'restore' command.
-                if ((len >> 1) > 100) {
-                    PrintAndLogEx(WARNING, "Max bound on 100bytes to write a one time.");
-                    PrintAndLogEx(WARNING, "Use the 'hf legic restore' command if you want to write the whole tag at once");
-                    errors = true;
-                }
+    CLIGetHexWithReturn(ctx, 2, data, &data_len);
 
-                // it's possible for user to accidentally enter "b" parameter
-                // more than once - we have to clean previous malloc
-                if (data)
-                    free(data);
+    bool autoconfirm = arg_get_lit(ctx, 3);
 
-                data = calloc(len >> 1, sizeof(uint8_t));
-                if (data == NULL) {
-                    PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
-                    errors = true;
-                    break;
-                }
+    CLIParserFree(ctx);
 
-                if (param_gethex(Cmd, cmdp + 1, data, len)) {
-                    errors = true;
-                    break;
-                }
-
-                len >>= 1;
-                cmdp += 2;
-                break;
-            }
-            case 'o': {
-                offset = param_get32ex(Cmd, cmdp + 1, 4, 16);
-                cmdp += 2;
-                break;
-            }
-            case 'y': {
-                autoconfirm = true;
-                break;
-            }
-            default: {
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-            }
-        }
-    }
-
-    //Validations
-    if (errors || cmdp == 0) {
-        if (data)
-            free(data);
-        return usage_legic_wrbl();
-    }
+    uint32_t IV = 0x55;
 
     // OUT-OF-BOUNDS checks
     // UID 4+1 bytes can't be written to.
     if (offset < 5) {
-        if (data)
-            free(data);
         PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
         return PM3_EOUTOFBOUND;
     }
@@ -689,8 +618,8 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     legic_print_type(card.cardsize, 0);
 
-    if (len + offset > card.cardsize) {
-        PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
+    if (data_len + offset > card.cardsize) {
+        PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, data_len + offset);
         return PM3_EOUTOFBOUND;
     }
 
@@ -725,7 +654,7 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, len, IV, data, len);
+    SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, data_len, IV, data, data_len);
 
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
