@@ -710,7 +710,7 @@ function readFromPM3()
   local tag, bytes, infile
     --infile="legic.temp"
     infile=os.tmpname()
-    core.console("hf legic dump f "..infile)
+    core.console("hf legic dump -f "..infile)
     tag=readFile(infile..".bin")
     os.remove(infile)
     os.remove(infile..".bin")
