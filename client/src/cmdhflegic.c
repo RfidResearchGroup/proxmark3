@@ -28,22 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_dump(void) {
-    PrintAndLogEx(NORMAL, "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024");
-    PrintAndLogEx(NORMAL, "and saves bin/eml/json dump file");
-    PrintAndLogEx(NORMAL, "It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic dump [h] [x] [f <filename w/o .bin>]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to dump bytes");
-    PrintAndLogEx(NORMAL, "      x             : deobfuscate dump data (xor with MCC)");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump                 - uses UID as filename"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump f myfile"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump x"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
     PrintAndLogEx(NORMAL, "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]\n");
@@ -813,38 +797,29 @@ static int CmdLegicReader(const char *Cmd) {
 }
 
 static int CmdLegicDump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic dump",
+                  "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024 and saves bin/eml/json dump file\n"
+                  "It autodetects card type.",
+                  "hf legic dump                <-- use UID as filename\n"
+                  "hf legic dump -f myfile      <-- use user specified filename\n"
+                  "hf legic dump --deobfuscate  <-- use UID as filename and deobfuscate data");
 
-    int fileNameLen = 0;
-    char filename[FILE_PATH_SIZE] = {0x00};
-    char *fptr = filename;
-    bool errors = false, shall_deobsfuscate = false;
-    uint16_t dumplen;
-    uint8_t cmdp = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<filename>", "specify a filename for dump file"),
+        arg_lit0(NULL, "deobfuscate", "deobfuscate dump data (xor with MCC)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_legic_dump();
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (!fileNameLen)
-                    errors = true;
-                if (fileNameLen > FILE_PATH_SIZE - 5)
-                    fileNameLen = FILE_PATH_SIZE - 5;
-                cmdp += 2;
-                break;
-            case 'x':
-                shall_deobsfuscate = true;
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    //Validations
-    if (errors) return usage_legic_dump();
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool shall_deobsfuscate = arg_get_lit(ctx, 2);
+
+    CLIParserFree(ctx);
 
     // tagtype
     legic_card_select_t card;
@@ -852,7 +827,7 @@ static int CmdLegicDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Failed to identify tagtype");
         return PM3_ESOFT;
     }
-    dumplen = card.cardsize;
+    uint16_t dumplen = card.cardsize;
 
     legic_print_type(dumplen, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory %d b...", dumplen);
@@ -896,10 +871,10 @@ static int CmdLegicDump(const char *Cmd) {
     }
 
     // user supplied filename?
-    if (fileNameLen < 1) {
+    if (fnlen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
-        fptr += snprintf(fptr, sizeof(filename), "hf-legic-");
-        FillFileNameByUID(fptr, data, "-dump", 4);
+        strcat(filename, "hf-legic-");
+        FillFileNameByUID(filename, data, "-dump", 4);
     }
 
     if (shall_deobsfuscate) {
