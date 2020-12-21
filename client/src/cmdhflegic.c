@@ -28,20 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("`hf legic eload`") " to upload a dump into emulator memory\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      <tagtype>     : 0 = MIM22");
-    PrintAndLogEx(NORMAL, "                    : 1 = MIM256 (default)");
-    PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic sim 2"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_wrbl(void) {
     PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size\n");
     PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] [o <offset>] [d <data (hex symbols)>] [y]\n");
@@ -551,9 +537,19 @@ static int CmdLegicRdbl(const char *Cmd) {
 }
 
 static int CmdLegicSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic sim",
+                  "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated",
+                  "hf legic sim -t 0  <- Simulate Type MIM22\n"
+                  "hf legic sim -t 1  <- Simulate Type MIM256 (default)\n"
+                  "hf legic sim -t 2  <- Simulate Type MIM1024");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "type", "<dec>", "Tag type to simulate."),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     struct {
         uint8_t tagtype;
@@ -561,9 +557,13 @@ static int CmdLegicSim(const char *Cmd) {
     } PACKED payload;
 
     payload.send_reply = true;
-    payload.tagtype = param_get8ex(Cmd, 0, 1, 10);
+    payload.tagtype = arg_get_int_def(ctx, 1, 1);
+
+    CLIParserFree(ctx);
+
     if (payload.tagtype > 2) {
-        return usage_legic_sim();
+        PrintAndLogEx(ERR, "Invalid tag type selected.");
+        return PM3_EINVARG;
     }
 
     clearCommandBuffer();

@@ -82,7 +82,6 @@ hf legic reader
 hf legic info
 hf legic dump
 hf legic restore
-hf legic sim
 hf legic wrbl
 hf legic eload
 hf legic esave
