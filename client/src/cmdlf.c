@@ -230,59 +230,61 @@ static int usage_lf_find(void) {
     PrintAndLogEx(NORMAL,  _YELLOW_("      lf search 1 u") "  - use data from GraphBuffer & search for known and unknown tags");
     return PM3_SUCCESS;
 }
-static int usage_lf_tune(void) {
-    PrintAndLogEx(NORMAL, "Continuously measure LF antenna tuning.");
-    PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
-    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] [n <iter>] [q <divisor> | f <freq>]");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             - This help");
-    PrintAndLogEx(NORMAL, "       n <iter>      - number of iterations (default: 0=infinite)");
-    PrintAndLogEx(NORMAL, "       q <divisor>   - Frequency divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
-    PrintAndLogEx(NORMAL, "       f <freq>      - Frequency in kHz");
-    return PM3_SUCCESS;
-}
 
 static int CmdLFTune(const char *Cmd) {
-    int iter = 0;
-    uint8_t divisor =  LF_DIVISOR_125;//Frequency divisor
-    bool errors = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-                return usage_lf_tune();
-            case 'q':
-                errors |= param_getdec(Cmd, cmdp + 1, &divisor);
-                cmdp += 2;
-                if (divisor < 19) {
-                    PrintAndLogEx(ERR, "divisor must be between 19 and 255");
-                    return PM3_EINVARG;
-                }
-                break;
-            case 'f': {
-                float freq = param_getfloat(Cmd, cmdp + 1, 125);
-                if ((freq < 47) || (freq > 600)) {
-                    PrintAndLogEx(ERR, "freq must be between 47 and 600");
-                    return PM3_EINVARG;
-                }
-                divisor = LF_FREQ2DIV(freq);
-                cmdp += 2;
-                break;
-            }
-            case 'n':
-                iter = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = 1;
-                break;
-        }
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf tune",
+                  "Continuously measure LF antenna tuning.\n"
+                  "Press button or <Enter> to interrupt.",
+                  "lf tune"
+                 );
+
+    char q_str[60];
+    snprintf(q_str, sizeof(q_str), "Frequency divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("n", "iteration", "<dec>", "number of iterations (default: 0=infinite)"),
+        arg_u64_0("q", "divisor", "<dec>", q_str),
+        arg_dbl0("f", "freq", "<float>", "Frequency in kHz"),
+        arg_lit0(NULL, "bar", "bar style"),
+        arg_lit0(NULL, "mix", "mixed style"),
+        arg_lit0(NULL, "value", "values style"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t iter = arg_get_u32_def(ctx, 1, 0);
+    uint8_t divisor = arg_get_u32_def(ctx, 2, LF_DIVISOR_125);
+    double freq = arg_get_dbl_def(ctx, 3, 125);
+
+    bool is_bar = arg_get_lit(ctx, 4);
+    bool is_mix = arg_get_lit(ctx, 5);
+    bool is_value = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (divisor < 19) {
+        PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+        return PM3_EINVARG;
     }
 
-    //Validations
-    if (errors) return usage_lf_tune();
+    if ((freq < 47) || (freq > 600)) {
+        PrintAndLogEx(ERR, "freq must be between 47 and 600");
+        return PM3_EINVARG;
+    }
+    divisor = LF_FREQ2DIV(freq);
+
+    if ((is_bar + is_mix + is_value) > 1) {
+        PrintAndLogEx(ERR, "Select only one output style");
+        return PM3_EINVARG;
+    }
+
+    barMode_t style = session.bar_mode;
+    if (is_bar)
+        style = STYLE_BAR;
+    if (is_mix)
+        style = STYLE_MIXED;
+    if (is_value)
+        style = STYLE_VALUE;
 
     PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") " kHz, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit", LF_DIV2FREQ(divisor));
 
@@ -298,6 +300,13 @@ static int CmdLFTune(const char *Cmd) {
     }
 
     params[0] = 2;
+
+    #define MAX_ADC_LF_VOLTAGE 140800
+    uint32_t max = 71000;
+    bool first = true;
+
+	print_progress(0, max, style);
+
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
         if (kbd_enter_pressed()) {
@@ -308,15 +317,23 @@ static int CmdLFTune(const char *Cmd) {
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF measure, aborting");
-            return PM3_ETIMEOUT;
+            break;
         }
 
         if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint32_t))) {
+            PrintAndLogEx(NORMAL, "");
             break;
         }
 
         uint32_t volt = resp.data.asDwords[0];
-        PrintAndLogEx(INPLACE, " %u mV / %3u V", volt, (uint32_t)(volt / 1000));
+        if (first) {
+            max =  (volt * 1.03);
+            first = false;
+        }
+        if ( volt > max) {
+            max =  (volt * 1.03);
+        }
+        print_progress(volt, max, style);
     }
 
     params[0] = 3;
@@ -325,7 +342,7 @@ static int CmdLFTune(const char *Cmd) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
     PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
