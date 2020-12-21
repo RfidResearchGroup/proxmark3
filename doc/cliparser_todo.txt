@@ -79,7 +79,6 @@ hf felica litesim
 hf felica litedump
 hf fido info
 hf legic reader
-hf legic info
 hf legic dump
 hf legic restore
 hf legic eload

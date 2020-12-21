@@ -38,16 +38,6 @@ static int usage_legic_reader(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic reader"));
     return PM3_SUCCESS;
 }
-static int usage_legic_info(void) {
-    PrintAndLogEx(NORMAL, "Reads information from a LEGIC Prime tag like systemarea, user areas etc\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic info [h]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic info"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves bin/eml/json dump file");
@@ -146,9 +136,16 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
 static int CmdLegicInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic info",
+                  "Gets information from a LEGIC Prime tag like systemarea, user areas, etc",
+                  "hf legic info");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_legic_info();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
     int crc = 0, wrp = 0, wrc = 0;
