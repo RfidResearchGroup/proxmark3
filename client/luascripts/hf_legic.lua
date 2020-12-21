@@ -582,14 +582,14 @@ function writeToTag(tag)
         -- write pm3-buffer to Tag
         for i=1, WriteBytes do
             if (i > 7) then
-                cmd = ("hf legic wrbl o %02x d %s "):format(i-1, padString(bytes[i]))
+                cmd = ("hf legic wrbl -o %d -d %s "):format(i-1, padString(bytes[i]))
                 print(acgreen..cmd..acoff)
                 core.console(cmd)
                 core.clearCommandBuffer()
             elseif (i == 7) then
                 if (writeDCF) then
                     -- write DCF in reverse order (requires 'mosci-patch')
-                    cmd = ('hf legic wrbl o 05 d %s%s'):format(padString(bytes[i-1]), padString(bytes[i]))
+                    cmd = ('hf legic wrbl -o 5 -d %s%s'):format(padString(bytes[i-1]), padString(bytes[i]))
                     print(acgreen..cmd..acoff)
                     core.console(cmd)
                     core.clearCommandBuffer()

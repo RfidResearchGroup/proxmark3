@@ -17,7 +17,7 @@
 
 int CmdHFLegic(const char *Cmd);
 
-int readLegicUid(bool verbose);
+int readLegicUid(bool loop, bool verbose);
 int legic_print_type(uint32_t tagtype, uint8_t spaces);
 int legic_get_type(legic_card_select_t *card);
 void legic_chk_iv(uint32_t *iv);

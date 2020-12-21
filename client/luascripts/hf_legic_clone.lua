@@ -536,7 +536,7 @@ local function main(args)
                 res = res .."\n\na segmentCRC gets calculated over MCD,MSN0..3, Segment-Header0..3"
                 res = res .."\ne.g. (based on Segment00 of the data from "..infile.."):"
                 res = res .."\n"
-                res = res ..ansicolors.yellow.."hf legic crc d "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26].." u "..newcrc.." c 8"..ansicolors.reset
+                res = res ..ansicolors.yellow.."hf legic crc -d "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26].." --mcc "..newcrc.." -t 8"..ansicolors.reset
                 -- this can not be calculated without knowing the new MCD, MSN0..2
                 print(res)
             end

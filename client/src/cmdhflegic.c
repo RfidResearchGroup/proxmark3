@@ -16,6 +16,7 @@
 #include <readline/readline.h>
 #endif
 
+#include "cliparser.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
@@ -27,84 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_calccrc(void) {
-    PrintAndLogEx(NORMAL, "Calculates the legic crc8/crc16 on the given data.");
-    PrintAndLogEx(NORMAL, "There must be an even number of hexsymbols as input.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic crc [h] d <data> u <uidcrc> c <8|16>\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      d <data>      : (hex symbols) bytes to calculate crc over");
-    PrintAndLogEx(NORMAL, "      u <uidcrc>    : MCC hexbyte");
-    PrintAndLogEx(NORMAL, "      c <8|16>      : Crc type");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic crc d deadbeef1122"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic crc d deadbeef1122 u 9A c 16"));
-    return PM3_SUCCESS;
-}
-static int usage_legic_rdbl(void) {
-    PrintAndLogEx(NORMAL, "Read data from a LEGIC Prime tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic rdbl [h] [o <offset>] [l <length>] [iv <IV>]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start download from");
-    PrintAndLogEx(NORMAL, "      l <length>    : (hex) number of bytes to read");
-    PrintAndLogEx(NORMAL, "      i <IV>        : (hex) (optional) Initialization vector to use. Must be odd and 7bits max");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 16        - reads from byte[0] 0x16 bytes(system header)"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 4 iv 55      - reads from byte[0] 0x4 bytes with IV 0x55"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 100 iv 55    - reads 0x100 bytes with IV 0x55"));
-    return PM3_SUCCESS;
-}
-static int usage_legic_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("`hf legic eload`") " to upload a dump into emulator memory\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      <tagtype>     : 0 = MIM22");
-    PrintAndLogEx(NORMAL, "                    : 1 = MIM256 (default)");
-    PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic sim 2"));
-    return PM3_SUCCESS;
-}
-static int usage_legic_wrbl(void) {
-    PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] [o <offset>] [d <data (hex symbols)>] [y]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start writing");
-    //PrintAndLogEx(NORMAL, "  <IV>          : (optional) Initialization vector to use (ODD and 7bits)");
-    PrintAndLogEx(NORMAL, "      d <data>      : (hex symbols) bytes to write ");
-    PrintAndLogEx(NORMAL, "      y             : Auto-confirm dangerous operations ");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic wrbl o 10 d 11223344    - Write 0x11223344 starting from offset 0x10"));
-    return PM3_SUCCESS;
-}
-static int usage_legic_reader(void) {
-    PrintAndLogEx(NORMAL, "Read UID and type information from a LEGIC Prime tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic reader"));
-    return PM3_SUCCESS;
-}
-static int usage_legic_info(void) {
-    PrintAndLogEx(NORMAL, "Reads information from a LEGIC Prime tag like systemarea, user areas etc\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic info [h]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic info"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves bin/eml/json dump file");
@@ -203,9 +126,17 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
  *  by Henryk Ploetz and Karsten Nohl at 26c3
  */
 static int CmdLegicInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic info",
+                  "Gets information from a LEGIC Prime tag like systemarea, user areas, etc",
+                  "hf legic info");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_legic_info();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
     int crc = 0, wrp = 0, wrc = 0;
@@ -526,34 +457,32 @@ out:
 // offset in data memory
 // number of bytes to read
 static int CmdLegicRdbl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic rdbl",
+                  "Read data from a LEGIC Prime tag",
+                  "hf legic rdbl -o 0 -l 16  <- reads from byte[0] 16 bytes(system header)\n"
+                  "hf legic rdbl -o 0 -l 4 --iv 55  <- reads from byte[0] 4 bytes with IV 0x55\n"
+                  "hf legic rdbl -o 0 -l 256 --iv 55  <- reads from byte[0] 256 bytes with IV 0x55");
 
-    uint32_t offset = 0, len = 0, iv = 1;
-    bool errors = false;
-    uint8_t cmdp = 0;
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h' :
-                return usage_legic_rdbl();
-            case 'o' :
-                offset = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'l' :
-                len = param_get32ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'i' :
-                iv = param_get32ex(Cmd, cmdp + 1, 1, 16);
-                cmdp += 2;
-                break;
-            default :
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    //Validations
-    if (errors || strlen(Cmd) == 0) return usage_legic_rdbl();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("o", "offset", "<dec>", "offset in data array to start download from"),
+        arg_int1("l", "length", "<dec>", "number of bytes to read"),
+        arg_str0(NULL, "iv", "<hex>", "Initialization vector to use. Must be odd and 7bits max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int offset = arg_get_int_def(ctx, 1, 0);
+
+    int len = arg_get_int_def(ctx, 2, 0);
+
+    int iv_len = 0;
+    uint8_t iv[1] = {0x01};  // formerly uidcrc
+
+    CLIGetHexWithReturn(ctx, 3, iv, &iv_len);
+
+    CLIParserFree(ctx);
 
     // sanity checks
     if (len + offset >= MAX_LENGTH) {
@@ -571,9 +500,9 @@ static int CmdLegicRdbl(const char *Cmd) {
     }
 
     uint16_t datalen = 0;
-    int status = legic_read_mem(offset, len, iv, data, &datalen);
+    int status = legic_read_mem(offset, len, iv[0], data, &datalen);
     if (status == PM3_SUCCESS) {
-        PrintAndLogEx(NORMAL, "\n ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
+        PrintAndLogEx(NORMAL, " ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
         PrintAndLogEx(NORMAL, "-----+------------------------------------------------------------------------------------------------");
         print_hex_break(data, datalen, 32);
     }
@@ -582,9 +511,19 @@ static int CmdLegicRdbl(const char *Cmd) {
 }
 
 static int CmdLegicSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic sim",
+                  "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated",
+                  "hf legic sim -t 0  <- Simulate Type MIM22\n"
+                  "hf legic sim -t 1  <- Simulate Type MIM256 (default)\n"
+                  "hf legic sim -t 2  <- Simulate Type MIM1024");
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "type", "<dec>", "Tag type to simulate."),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     struct {
         uint8_t tagtype;
@@ -592,9 +531,13 @@ static int CmdLegicSim(const char *Cmd) {
     } PACKED payload;
 
     payload.send_reply = true;
-    payload.tagtype = param_get8ex(Cmd, 0, 1, 10);
+    payload.tagtype = arg_get_int_def(ctx, 1, 1);
+
+    CLIParserFree(ctx);
+
     if (payload.tagtype > 2) {
-        return usage_legic_sim();
+        PrintAndLogEx(ERR, "Invalid tag type selected.");
+        return PM3_EINVARG;
     }
 
     clearCommandBuffer();
@@ -619,94 +562,37 @@ static int CmdLegicSim(const char *Cmd) {
 }
 
 static int CmdLegicWrbl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic wrbl",
+                  "Write data to a LEGIC Prime tag. It autodetects tagsize to ensure proper write",
+                  "hf legic wrbl -o 0 -d 11223344  <- Write 0x11223344 starting from offset 0)\n"
+                  "hf legic wrbl -o 10 -d DEADBEEF  <- Write 0xdeadbeef starting from offset 10");
 
-    uint8_t *data = NULL;
-    uint8_t cmdp = 0;
-    bool errors = false;
-    bool autoconfirm = false;
-    int len = 0, bg, en;
-    uint32_t offset = 0, IV = 0x55;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("o", "offset", "<dec>", "offset in data array to start writing"),
+        arg_str1("d", "data", "<hex>", "data to write"),
+        arg_lit0(NULL, "danger", "Auto-confirm dangerous operations"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h': {
-                errors = true;
-                break;
-            }
-            case 'd': {
-                // peek at length of the input string so we can
-                // figure out how many elements to malloc in "data"
-                bg = en = 0;
-                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) {
-                    errors = true;
-                    break;
-                }
-                len = (en - bg + 1);
+    int offset = arg_get_int_def(ctx, 1, 0);
 
-                // check that user entered even number of characters
-                // for hex data string
-                if (len & 1) {
-                    errors = true;
-                    break;
-                }
+    int data_len = 0;
+    uint8_t data[MAX_LENGTH] = {0};
 
-                // limit number of bytes to write. This is not a 'restore' command.
-                if ((len >> 1) > 100) {
-                    PrintAndLogEx(WARNING, "Max bound on 100bytes to write a one time.");
-                    PrintAndLogEx(WARNING, "Use the 'hf legic restore' command if you want to write the whole tag at once");
-                    errors = true;
-                }
+    CLIGetHexWithReturn(ctx, 2, data, &data_len);
 
-                // it's possible for user to accidentally enter "b" parameter
-                // more than once - we have to clean previous malloc
-                if (data)
-                    free(data);
+    bool autoconfirm = arg_get_lit(ctx, 3);
 
-                data = calloc(len >> 1, sizeof(uint8_t));
-                if (data == NULL) {
-                    PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
-                    errors = true;
-                    break;
-                }
+    CLIParserFree(ctx);
 
-                if (param_gethex(Cmd, cmdp + 1, data, len)) {
-                    errors = true;
-                    break;
-                }
-
-                len >>= 1;
-                cmdp += 2;
-                break;
-            }
-            case 'o': {
-                offset = param_get32ex(Cmd, cmdp + 1, 4, 16);
-                cmdp += 2;
-                break;
-            }
-            case 'y': {
-                autoconfirm = true;
-                break;
-            }
-            default: {
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-            }
-        }
-    }
-
-    //Validations
-    if (errors || cmdp == 0) {
-        if (data)
-            free(data);
-        return usage_legic_wrbl();
-    }
+    uint32_t IV = 0x55;
 
     // OUT-OF-BOUNDS checks
     // UID 4+1 bytes can't be written to.
     if (offset < 5) {
-        if (data)
-            free(data);
         PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
         return PM3_EOUTOFBOUND;
     }
@@ -720,8 +606,8 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     legic_print_type(card.cardsize, 0);
 
-    if (len + offset > card.cardsize) {
-        PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
+    if (data_len + offset > card.cardsize) {
+        PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, data_len + offset);
         return PM3_EOUTOFBOUND;
     }
 
@@ -756,7 +642,7 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, len, IV, data, len);
+    SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, data_len, IV, data, data_len);
 
     uint8_t timeout = 0;
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -779,84 +665,45 @@ static int CmdLegicWrbl(const char *Cmd) {
 }
 
 static int CmdLegicCalcCrc(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic crc",
+                  "Calculates the legic crc8/crc16 on the given data",
+                  "hf legic crc -d deadbeef1122\n"
+                  "hf legic crc -d deadbeef1122 --mcc 9A -t 16  <- CRC Type 16");
 
-    uint8_t *data = NULL;
-    uint8_t cmdp = 0, uidcrc = 0, type = 0;
-    bool errors = false;
-    int len = 0;
-    int bg, en;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to calculate crc over"),
+        arg_str0(NULL, "mcc", "<hex>", "MCC hex byte (UID CRC)"),
+        arg_int0("t", "type", "<dec>", "CRC Type (default: 8)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'd':
-                // peek at length of the input string so we can
-                // figure out how many elements to malloc in "data"
-                bg = en = 0;
-                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) {
-                    errors = true;
-                    break;
-                }
-                len = (en - bg + 1);
+    int data_len = 0;
+    uint8_t data[4096] = {0};
 
-                // check that user entered even number of characters
-                // for hex data string
-                if (len & 1) {
-                    errors = true;
-                    break;
-                }
+    CLIGetHexWithReturn(ctx, 1, data, &data_len);
 
-                // it's possible for user to accidentally enter "b" parameter
-                // more than once - we have to clean previous malloc
-                if (data) free(data);
-                data = calloc(len >> 1,  sizeof(uint8_t));
-                if (data == NULL) {
-                    PrintAndLogEx(WARNING, "Can't allocate memory. exiting");
-                    errors = true;
-                    break;
-                }
+    int mcc_len = 0;
+    uint8_t mcc[1] = {0};  // formerly uidcrc
 
-                if (param_gethex(Cmd, cmdp + 1, data, len)) {
-                    errors = true;
-                    break;
-                }
+    CLIGetHexWithReturn(ctx, 2, mcc, &mcc_len);
 
-                len >>= 1;
-                cmdp += 2;
-                break;
-            case 'u':
-                uidcrc = param_get8ex(Cmd, cmdp + 1, 0, 16);
-                cmdp += 2;
-                break;
-            case 'c':
-                type = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'h':
-                errors = true;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-    //Validations
-    if (errors || cmdp == 0) {
-        if (data) free(data);
-        return usage_legic_calccrc();
-    }
+    int type = arg_get_int_def(ctx, 3, 0);
+
+    CLIParserFree(ctx);
 
     switch (type) {
         case 16:
             init_table(CRC_LEGIC);
-            PrintAndLogEx(SUCCESS, "Legic crc16: %X", crc16_legic(data, len, uidcrc));
+            PrintAndLogEx(SUCCESS, "Legic crc16: %X", crc16_legic(data, data_len, mcc[0]));
             break;
         default:
-            PrintAndLogEx(SUCCESS, "Legic crc8: %X",  CRC8Legic(data, len));
+            PrintAndLogEx(SUCCESS, "Legic crc8: %X",  CRC8Legic(data, data_len));
             break;
     }
 
-    if (data) free(data);
     return PM3_SUCCESS;
 }
 
@@ -954,12 +801,26 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
         SendCommandOLD(CMD_HF_LEGIC_ESET, i, len, 0, src + i, len);
     }
 }
-
 static int CmdLegicReader(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_legic_reader();
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic reader",
+                  "Read UID and type information from a LEGIC Prime tag",
+                  "hf legic reader");
 
-    return readLegicUid(true);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    return readLegicUid(cm, true);
 }
 
 static int CmdLegicDump(const char *Cmd) {
@@ -1438,24 +1299,38 @@ int CmdHFLegic(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int readLegicUid(bool verbose) {
+int readLegicUid(bool loop, bool verbose) {
 
-    legic_card_select_t card;
-    switch (legic_get_type(&card)) {
-        case PM3_EINVARG:
-            return PM3_EINVARG;
-        case PM3_ETIMEOUT:
-            if (verbose) PrintAndLogEx(WARNING, "command execution time out");
-            return PM3_ETIMEOUT;
-        case PM3_ESOFT:
-            if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
-            return PM3_ESOFT;
-        default:
-            break;
-    }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, " MCD: " _GREEN_("%02X"), card.uid[0]);
-    PrintAndLogEx(SUCCESS, " MSN: " _GREEN_("%s"), sprint_hex(card.uid + 1, sizeof(card.uid) - 1));
-    legic_print_type(card.cardsize, 0);
+    do {
+        legic_card_select_t card;
+
+        int resp = legic_get_type(&card);
+
+        if (loop) {
+            if (resp != PM3_SUCCESS) {
+                continue;
+            }
+        } else {
+            switch (resp) {
+                case PM3_EINVARG:
+                    return PM3_EINVARG;
+                case PM3_ETIMEOUT:
+                    if (verbose) PrintAndLogEx(WARNING, "command execution time out");
+                    return PM3_ETIMEOUT;
+                case PM3_ESOFT:
+                    if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
+                    return PM3_ESOFT;
+                default:
+                    break;
+            }
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, " MCD: " _GREEN_("%02X"), card.uid[0]);
+        PrintAndLogEx(SUCCESS, " MSN: " _GREEN_("%s"), sprint_hex(card.uid + 1, sizeof(card.uid) - 1));
+        legic_print_type(card.cardsize, 0);
+
+    } while (loop && kbd_enter_pressed() == false);
+
     return PM3_SUCCESS;
 }
