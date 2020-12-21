@@ -622,8 +622,15 @@ static int emrtd_read_file(uint8_t *dataout, int *dataoutlen, uint8_t *kenc, uin
     return true;
 }
 
+static int emrtd_lds_determine_tag_length(uint8_t tag) {
+    if ((tag == 0x5F) || (tag == 0x7F)) {
+        return 2;
+    }
+    return 1;
+}
+
 static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag) {
-    int offset = 1;
+    int offset = emrtd_lds_determine_tag_length(*datain);
     offset += emrtd_get_asn1_field_length(datain, datainlen, offset);
 
     int e_idlen = 0;
@@ -632,11 +639,7 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *d
     while (offset < datainlen) {
         PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, offset: %i, data: %X", offset, *(datain + offset));
         // Determine element ID length to set as offset on asn1datalength
-        if ((*(datain + offset) == 0x5F) || (*(datain + offset) == 0x7F)) {
-            e_idlen = 2;
-        } else {
-            e_idlen = 1;
-        }
+        e_idlen = emrtd_lds_determine_tag_length(*(datain + offset));
 
         // Get the length of the element
         e_datalen = emrtd_get_asn1_data_length(datain + offset, datainlen - offset, e_idlen);
