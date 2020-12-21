@@ -55,6 +55,7 @@ int preferences_load(void) {
     session.overlay_sliders = true;
     session.show_hints = true;
 
+    session.bar_mode = STYLE_VALUE;
 //    setDefaultPath (spDefault, "");
 //    setDefaultPath (spDump, "");
 //    setDefaultPath (spTrace, "");
@@ -210,6 +211,20 @@ void preferences_save_callback(json_t *root) {
         default:
             JsonSaveStr(root, "logging.level", "NORMAL");
     }
+
+    switch (session.bar_mode) {
+        case STYLE_BAR:
+            JsonSaveStr(root, "show.bar.mode", "bar");
+            break;
+        case STYLE_MIXED:
+            JsonSaveStr(root, "show.bar.mode", "mixed");
+            break;
+        case STYLE_VALUE:
+            JsonSaveStr(root, "show.bar.mode", "value");
+            break;
+        default:
+            JsonSaveStr(root, "show.bar.mode", "value");
+    }
     /*
         switch (session.device_debug_level) {
             case ddbOFF:
@@ -298,6 +313,16 @@ void preferences_load_callback(json_t *root) {
 
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "os.supports.colors", &b1) == 0)
         session.supports_colors = (bool)b1;
+
+    // bar mode 
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "show.bar.mode", &s1) == 0) {
+        strncpy(tempStr, s1, sizeof(tempStr) - 1);
+        str_lower(tempStr);
+        if (strncmp(tempStr, "bar", 5) == 0) session.bar_mode = STYLE_BAR;
+        if (strncmp(tempStr, "mixed", 5) == 0) session.bar_mode = STYLE_MIXED;
+        if (strncmp(tempStr, "value", 7) == 0) session.bar_mode = STYLE_VALUE;
+    }
+
     /*
         // Logging Level
         if (json_unpack_ex(root, &up_error, 0, "{s:s}", "device.debug.level", &s1) == 0) {
@@ -343,6 +368,17 @@ static int usage_set_debug(void) {
     PrintAndLogEx(NORMAL, "     "_GREEN_("full")"        - full debug messages");
     return PM3_SUCCESS;
 }
+
+static int usage_set_bar_mode(void) {
+    PrintAndLogEx(NORMAL, "Usage: pref set barmode <bar | mixed | value>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("bar")"         - measured values as bar only");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("mixed")"       - measured values as numbers and bar");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("value")"       - measured values");
+    return PM3_SUCCESS;
+}
+
 /*
 static int usage_set_devicedebug(void) {
     PrintAndLogEx(NORMAL, "Usage: pref set devicedebug <off | error | info | debug | extended>");
@@ -519,6 +555,23 @@ static void showPlotSliderState(prefShowOpt_t opt) {
         PrintAndLogEx(INFO, "   %s show plot sliders...... "_GREEN_("on"), prefShowMsg(opt));
     else
         PrintAndLogEx(INFO, "   %s show plot sliders...... "_WHITE_("off"), prefShowMsg(opt));
+}
+
+static void showBarModeState(prefShowOpt_t opt) {
+
+    switch (session.bar_mode) {
+        case STYLE_BAR:
+            PrintAndLogEx(INFO, "   %s mode................... "_GREEN_("bar"), prefShowMsg(opt));
+            break;
+        case STYLE_MIXED:
+            PrintAndLogEx(INFO, "   %s mode................... "_GREEN_("mixed"), prefShowMsg(opt));
+            break;
+        case STYLE_VALUE:
+            PrintAndLogEx(INFO, "   %s mode................... "_GREEN_("value"), prefShowMsg(opt));
+            break;
+        default:
+            PrintAndLogEx(INFO, "   %s mode.................. "_RED_("unknown"), prefShowMsg(opt));
+    }
 }
 
 
@@ -921,6 +974,57 @@ static int getCmdHelp(const char *Cmd) {
 }
 */
 
+static int setCmdBarMode(const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool validValue = false;
+    char strOpt[50];
+    barMode_t newValue = session.bar_mode;
+
+    if (param_getchar(Cmd, cmdp) == 0x00)
+        return usage_set_bar_mode();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+
+        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp(strOpt, "help", 4) == 0)
+                return usage_set_bar_mode();
+
+            if (strncmp(strOpt, "bar", 3) == 0) {
+                validValue = true;
+                newValue = STYLE_BAR;
+            }
+            if (strncmp(strOpt, "mixed", 5) == 0) {
+                validValue = true;
+                newValue = STYLE_MIXED;
+            }
+            if (strncmp(strOpt, "value", 5) == 0) {
+                validValue = true;
+                newValue = STYLE_VALUE;
+            }
+
+            if (validValue) {
+                if (session.bar_mode != newValue) {// changed
+                    showBarModeState(prefShowOLD);
+                    session.bar_mode = newValue;
+                    showBarModeState(prefShowNEW);
+                    preferences_save();
+                } else {
+                    PrintAndLogEx(INFO, "nothing changed");
+                    showBarModeState(prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR, "invalid option");
+                return usage_set_bar_mode();
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int getCmdEmoji(const char *Cmd) {
     showEmojiState(prefShowNone);
     return PM3_SUCCESS;
@@ -946,27 +1050,35 @@ static int getCmdPlotSlider(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getCmdBarMode(const char *Cmd) {
+    showBarModeState(prefShowNone);
+    return PM3_SUCCESS;
+}
+
+
 static command_t getCommandTable[] = {
 //     {"help",             getCmdHelp,          AlwaysAvailable, "This help"},
-    {"emoji",            getCmdEmoji,         AlwaysAvailable, "Get emoji display preference"},
-    {"hints",            getCmdHint,          AlwaysAvailable, "Get hint display preference"},
+    {"barmode",          getCmdBarMode,       AlwaysAvailable, "Get bar mode preference"},
+    {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     //  {"defaultsavepaths", getCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
-    {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
-    {"plotsliders",      getCmdPlotSlider,    AlwaysAvailable, "Get plot slider display preference"},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
+    {"emoji",            getCmdEmoji,         AlwaysAvailable, "Get emoji display preference"},
+    {"hints",            getCmdHint,          AlwaysAvailable, "Get hint display preference"},
+    {"plotsliders",      getCmdPlotSlider,    AlwaysAvailable, "Get plot slider display preference"},
     {NULL, NULL, NULL, NULL}
 };
 
 static command_t setCommandTable[] = {
     {"help",             setCmdHelp,          AlwaysAvailable, "This help"},
+    {"barmode",          setCmdBarMode,       AlwaysAvailable, "Set bar mode"},
+    {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
+    {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
-    {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     //  {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
-    {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
-    {"plotsliders", setCmdPlotSliders,         AlwaysAvailable, "Set plot slider display"},
     //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
+    {"plotsliders", setCmdPlotSliders,         AlwaysAvailable, "Set plot slider display"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -1009,6 +1121,8 @@ static int CmdPrefShow(const char *Cmd) {
     showClientDebugState(prefShowNone);
     showPlotSliderState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
+
+    showBarModeState(prefShowNone);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }

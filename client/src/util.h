@@ -108,4 +108,5 @@ uint32_t bitcount32(uint32_t a);
 uint64_t bitcount64(uint64_t a);
 uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
+
 #endif

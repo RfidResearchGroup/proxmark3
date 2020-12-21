@@ -624,4 +624,69 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
     }
 }
 
+void print_progress(size_t count, uint64_t max, barMode_t style) {
 
+    #define PERCENTAGE(V, T)   (100 - (((T - V) * 100) / T))
+
+/*
+    typedef struct smooth_s {
+        const char *bar;
+    } smooth_t;
+
+    static smooth_t smoothtable[] = {
+        {"\xe2\x96\x8F"},
+        {"\xe2\x96\x8E"},
+        {"\xe2\x96\x8D"},
+        {"\xe2\x96\x8C"},
+        {"\xe2\x96\x8B"},
+        {"\xe2\x96\x8A"},
+        {"\xe2\x96\x89"},
+        {"\xe2\x96\x88"},
+    };
+*/
+
+    // +1 for \0
+    char *bar = calloc(100 + 1, sizeof(uint8_t));
+
+    uint8_t value = PERCENTAGE(count, max);
+
+    // prefix is added already.
+    memset(bar + strlen(bar), 0x23, value);
+
+    // add spaces
+    memset(bar + strlen(bar), 0x2E,  100 - value);
+
+    // color buffer
+    uint8_t collen = 100 + 1 + 40;
+    char *cbar = calloc(collen, sizeof(uint8_t));
+
+    // Add colors
+    snprintf(cbar,  collen,  _GREEN_("%.*s"), 60, bar);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), 20,  bar + 60);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), 20, bar + 80);
+
+    uint8_t len = collen + 1 + 1 + 30;
+    char *buffer = calloc(len, sizeof(uint8_t));
+
+    switch(style) {
+        case STYLE_BAR: {
+	        sprintf(buffer, "%s", cbar);
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, buffer);
+            break;
+        }
+        case STYLE_MIXED: {
+            sprintf(buffer, "%s [ %zu mV / %3u V ]", cbar, count, (uint32_t)(count / 1000));
+	        printf("\b%c[2K\r[" _YELLOW_("=")"] %s ", 27, buffer);
+            break;
+        }
+        case STYLE_VALUE: {
+            printf("[" _YELLOW_("=")"] %zu mV / %3u V \r", count, (uint32_t)(count / 1000));
+            break;
+        }
+    }
+
+	fflush(stdout);
+	free(buffer);
+    free(bar);
+    free(cbar);
+}
