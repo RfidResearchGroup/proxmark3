@@ -46,21 +46,19 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_search(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf search");
-    PrintAndLogEx(NORMAL, "Will try to find a HF read out of the unknown tag.");
-    PrintAndLogEx(NORMAL, "Continues to search for all different HF protocols");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h               - This help");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 int CmdHFSearch(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_hf_search();
-
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf search",
+                  "Will try to find a HF read out of the unknown tag.\n"
+                  "Continues to search for all different HF protocols.",
+                  "hf sniff"
+                  );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     int res = PM3_ESOFT;
 
     PROMPT_CLEARLINE;
@@ -271,7 +269,7 @@ int CmdHFSniff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf sniff",
-                  "The high frequency sniffer will assign all available memory on device for sniffed data.s\n"
+                  "The high frequency sniffer will assign all available memory on device for sniffed data.\n"
                   "Use `data samples` to download from device and `data plot` to visualize it.\n"
                   "Press button to quit the sniffing.",
                   "hf sniff\n"
