@@ -561,16 +561,16 @@ static void showBarModeState(prefShowOpt_t opt) {
 
     switch (session.bar_mode) {
         case STYLE_BAR:
-            PrintAndLogEx(INFO, "   %s mode................... "_GREEN_("bar"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode................ "_GREEN_("bar"), prefShowMsg(opt));
             break;
         case STYLE_MIXED:
-            PrintAndLogEx(INFO, "   %s mode................... "_GREEN_("mixed"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode................ "_GREEN_("mixed"), prefShowMsg(opt));
             break;
         case STYLE_VALUE:
-            PrintAndLogEx(INFO, "   %s mode................... "_GREEN_("value"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode................ "_GREEN_("value"), prefShowMsg(opt));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s mode.................. "_RED_("unknown"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode............... "_RED_("unknown"), prefShowMsg(opt));
     }
 }
 
