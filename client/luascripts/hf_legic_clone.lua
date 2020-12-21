@@ -530,7 +530,7 @@ local function main(args)
                 res = res .."\ncreated clone_dump from\n\t"..infile.." crc: "..oldcrc.."\ndump_file:"
                 res = res .."\n\t"..outfile.." crc: "..string.sub(newcrc, -2)
                 res = res .."\nyou may load the new file with:"
-                res = res ..ansicolors.yellow.."hf legic eload f "..outfile..ansicolors.reset
+                res = res ..ansicolors.yellow.."hf legic eload -f "..outfile..ansicolors.reset
                 res = res .."\n\nif you don't write to tag immediately ('-w' switch) you will need to recalculate each segmentCRC"
                 res = res .."\nafter writing this dump to a tag!"
                 res = res .."\n\na segmentCRC gets calculated over MCD,MSN0..3, Segment-Header0..3"

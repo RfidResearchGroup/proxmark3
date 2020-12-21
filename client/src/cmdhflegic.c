@@ -28,20 +28,6 @@ static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024
 
-static int usage_legic_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads a binary dump into emulator memory\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic eload [h] [card memory] [f <file name w/o `.bin`>]\n");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h               : this help");
-    PrintAndLogEx(NORMAL, "      [card memory]   : 0 = MIM22");
-    PrintAndLogEx(NORMAL, "                      : 1 = MIM256 (default)");
-    PrintAndLogEx(NORMAL, "                      : 2 = MIM1024");
-    PrintAndLogEx(NORMAL, "      f <filename>    : filename w/o .bin to load");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic eload 2 f myfile"));
-    return PM3_SUCCESS;
-}
 static int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, "It saves bin/eml/json dump file of emulator memory\n");
     PrintAndLogEx(NORMAL, "Usage:  hf legic esave [h] [card memory] f <file name w/o `.bin`>\n");
@@ -978,58 +964,47 @@ static int CmdLegicRestore(const char *Cmd) {
 }
 
 static int CmdLegicELoad(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic eload",
+                  "Loads a LEGIC binary dump into emulator memory",
+                  "hf legic eload -f myfile -t 0  <- Simulate Type MIM22\n"
+                  "hf legic eload -f myfile -t 1  <- Simulate Type MIM256 (default)\n"
+                  "hf legic eload -f myfile -t 2  <- Simulate Type MIM1024");
 
-    size_t numofbytes = 256;
-    char filename[FILE_PATH_SIZE] = {0x00};
-    bool errors = false, shall_obsfuscate = false, have_filename = false;
-    uint8_t cmdp = 0;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<filename>", "Specify a filename to restore"),
+        arg_int0("t", "type", "<dec>", "Tag type to simulate."),
+        arg_lit0(NULL, "obfuscate", "Obfuscate dump data (xor with MCC)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h' : {
-                return usage_legic_eload();
-            }
-            case 'f' : {
-                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                    PrintAndLogEx(FAILED, "Filename too long");
-                    break;
-                }
-                have_filename = true;
-                cmdp += 2;
-                break;
-            }
-            case 'x': {
-                shall_obsfuscate = true;
-                cmdp++;
-                break;
-            }
-            case '0' : {
-                numofbytes = 22;
-                cmdp++;
-                break;
-            }
-            case '1' : {
-                numofbytes = 256;
-                cmdp++;
-                break;
-            }
-            case '2' : {
-                numofbytes = 1024;
-                cmdp++;
-                break;
-            }
-            default : {
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-            }
-        }
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    size_t numofbytes = 0;
+    
+    switch (arg_get_int_def(ctx, 2, 1)) {
+        case 0:
+            numofbytes = 22;
+            break;
+        case 1:
+            numofbytes = 256;
+            break;
+        case 2:
+            numofbytes = 1024;
+            break;
+        default:
+            PrintAndLogEx(ERR, "Unknown tag type");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
     }
-    if (have_filename == false)
-        errors = true;
 
-    //Validations
-    if (errors || strlen(Cmd) == 0) return usage_legic_eload();
+    bool shall_obsfuscate = arg_get_lit(ctx, 3);
+
+    CLIParserFree(ctx);
 
     // set up buffer
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
