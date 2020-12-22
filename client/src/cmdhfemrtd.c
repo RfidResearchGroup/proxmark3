@@ -203,9 +203,9 @@ static char emrtd_calculate_check_digit(char *data) {
 }
 
 static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset) {
-    PrintAndLogEx(DEBUG, "asn1datalength, datain: %s", sprint_hex_inrow(datain, datainlen));
+    PrintAndLogEx(DEBUG, "asn1 datalength, datain: %s", sprint_hex_inrow(datain, datainlen));
     int lenfield = (int) * (datain + offset);
-    PrintAndLogEx(DEBUG, "asn1datalength, lenfield: %i", lenfield);
+    PrintAndLogEx(DEBUG, "asn1 datalength, lenfield: %02X", lenfield);
     if (lenfield <= 0x7f) {
         return lenfield;
     } else if (lenfield == 0x81) {
@@ -221,7 +221,7 @@ static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset
 static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offset) {
     PrintAndLogEx(DEBUG, "asn1 fieldlength, datain: %s", sprint_hex_inrow(datain, datainlen));
     int lenfield = (int) * (datain + offset);
-    PrintAndLogEx(DEBUG, "asn1 fieldlength, thing: %i", lenfield);
+    PrintAndLogEx(DEBUG, "asn1 fieldlength, lenfield: %02X", lenfield);
     if (lenfield <= 0x7F) {
         return 1;
     } else if (lenfield == 0x81) {
@@ -629,10 +629,10 @@ static int emrtd_lds_determine_tag_length(uint8_t tag) {
     return 1;
 }
 
-static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag, bool skiptoptag) {
+static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *dataout, int *dataoutlen, int tag1, int tag2, bool twobytetag, bool entertoptag) {
     int offset = 0;
 
-    if (skiptoptag) {
+    if (entertoptag) {
         offset += emrtd_lds_determine_tag_length(*datain);
         offset += emrtd_get_asn1_field_length(datain, datainlen, offset);
     }
@@ -650,6 +650,8 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, int datainlen, uint8_t *d
 
         // Get the length of the element's length
         e_fieldlen = emrtd_get_asn1_field_length(datain + offset, datainlen - offset, e_idlen);
+
+        PrintAndLogEx(DEBUG, "emrtd_lds_get_data_by_tag, e_idlen: %02X, e_datalen: %02X, e_fieldlen: %02X", e_idlen, e_datalen, e_fieldlen);
 
         // If the element is what we're looking for, get the data and return true
         if (*(datain + offset) == tag1 && (!twobytetag || *(datain + offset + 1) == tag2)) {
@@ -1477,10 +1479,68 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
+static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
+    // very very very very cursed code.
+    uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t emrtdsigtext[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    size_t toplen, signeddatalen, emrtdsigcontainerlen, emrtdsiglen, emrtdsigtextlen = 0;
+
+    if (!emrtd_lds_get_data_by_tag(data, (int) datalen, top, (int *) &toplen, 0x30, 0x00, false, true)) {
+        PrintAndLogEx(ERR, "Failed to read top from EF_SOD.");
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "top: %s.", sprint_hex_inrow(top, toplen));
+
+    if (!emrtd_lds_get_data_by_tag(top, (int) toplen, signeddata, (int *) &signeddatalen, 0xA0, 0x00, false, false)) {
+        PrintAndLogEx(ERR, "Failed to read signedData from EF_SOD.");
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "signeddata: %s.", sprint_hex_inrow(signeddata, signeddatalen));
+
+    // Do true on reading into the tag as it's a "sequence"
+    if (!emrtd_lds_get_data_by_tag(signeddata, (int) signeddatalen, emrtdsigcontainer, (int *) &emrtdsigcontainerlen, 0x30, 0x00, false, true)) {
+        PrintAndLogEx(ERR, "Failed to read eMRTDSignature container from EF_SOD.");
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "emrtdsigcontainer: %s.", sprint_hex_inrow(emrtdsigcontainer, emrtdsigcontainerlen));
+
+    if (!emrtd_lds_get_data_by_tag(emrtdsigcontainer, (int) emrtdsigcontainerlen, emrtdsig, (int *) &emrtdsiglen, 0xA0, 0x00, false, false)) {
+        PrintAndLogEx(ERR, "Failed to read eMRTDSignature from EF_SOD.");
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "emrtdsig: %s.", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+
+    // TODO: Not doing memcpy here, it didn't work, fix it somehow
+    if (!emrtd_lds_get_data_by_tag(emrtdsig, (int) emrtdsiglen, emrtdsigtext, (int *) &emrtdsigtextlen, 0x04, 0x00, false, false)) {
+        PrintAndLogEx(ERR, "Failed to read eMRTDSignature (text) from EF_SOD.");
+        return false;
+    }
+    memcpy(dataout, emrtdsigtext, emrtdsigtextlen);
+    *dataoutlen = emrtdsigtextlen;
+    return PM3_SUCCESS;
+}
+
 static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
-//    PrintAndLogEx(NORMAL, "");
-//    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
-//    PrintAndLogEx(WARNING, "TODO");
+    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    // size_t emrtdsiglen, e_datalen, e_fieldlen = 0;
+    size_t emrtdsiglen = 0;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+
+    if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
+        return false;
+    }
+    // TODO: parse this
+    PrintAndLogEx(INFO, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+
     return PM3_SUCCESS;
 }
 
