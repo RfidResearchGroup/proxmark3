@@ -1532,8 +1532,19 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
 
 static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
     uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t hash[65] = { 0x00 };
+    size_t hashlen = 0;
+
+    uint8_t hashidstr[4] = { 0x00 };
+    size_t hashidstrlen = 0;
+
     // size_t emrtdsiglen, e_datalen, e_fieldlen = 0;
     size_t emrtdsiglen = 0;
+    size_t hashlistlen = 0;
+    size_t e_datalen = 0;
+    size_t e_fieldlen = 0;
+    size_t offset = 0;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
@@ -1541,8 +1552,33 @@ static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
     if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
         return false;
     }
-    // TODO: parse this
-    PrintAndLogEx(INFO, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+
+    PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+
+    if (!emrtd_lds_get_data_by_tag(emrtdsig, (int) emrtdsiglen, hashlist, (int *) &hashlistlen, 0x30, 0x00, false, true, 1)) {
+        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "hash list: %s", sprint_hex_inrow(hashlist, hashlistlen));
+
+    while (offset < hashlistlen) {
+        // Get the length of the element
+        e_datalen = emrtd_get_asn1_data_length(hashlist + offset, hashlistlen - offset, 1);
+
+        // Get the length of the element's length
+        e_fieldlen = emrtd_get_asn1_field_length(hashlist + offset, hashlistlen - offset, 1);
+
+        switch (hashlist[offset]) {
+            case 0x30:
+                emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, (int) e_datalen, hashidstr, (int *) &hashidstrlen, 0x02, 0x00, false, false, 0);
+                emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, (int) e_datalen, hash, (int *) &hashlen, 0x04, 0x00, false, false, 0);
+                PrintAndLogEx(SUCCESS, "Hash for EF_DG%i: %s", hashidstr[0], sprint_hex_inrow(hash, hashlen));
+                break;
+        }
+        // + 1 for length of ID
+        offset += 1 + e_datalen + e_fieldlen;
+    }
 
     return PM3_SUCCESS;
 }
