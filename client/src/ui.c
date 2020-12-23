@@ -14,15 +14,16 @@
 #if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200112L
 #endif
-#ifdef HAVE_READLINE
-#include <readline/readline.h>
-#endif
 #include "ui.h"
 #include "commonutil.h"  // ARRAYLEN
 
 #include <stdio.h> // for Mingw readline
 #include <stdarg.h>
 #include <stdlib.h>
+
+#ifdef HAVE_READLINE
+#include <readline/readline.h>
+#endif
 
 #include <complex.h>
 #include "util.h"
