@@ -19,6 +19,7 @@ typedef struct emrtd_dg_s {
     const char *filename;
     const char *desc;
     bool pace;
+    bool eac; // EAC only (we can't dump these)
     bool required; // some are required only if PACE
     bool fastdump; // fast to dump
     int (*parser)(uint8_t *data, size_t datalen);
