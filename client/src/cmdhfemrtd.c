@@ -1831,7 +1831,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
         arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
-        arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
+        arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars (passports only)"),
         arg_str0(NULL, "path", "<dirpath>", "display info from offline dump stored in dirpath"),
         arg_param_end
     };
