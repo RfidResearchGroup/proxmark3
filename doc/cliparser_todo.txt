@@ -56,8 +56,6 @@ hf 15 restore
 hf 15 wrbl
 hf 15 writeafi
 hf 15 writedsfid
-hf epa cnonces
-hf epa preplay
 hf felica reader
 hf felica sniff
 hf felica raw
