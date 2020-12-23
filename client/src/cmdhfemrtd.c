@@ -693,17 +693,19 @@ static bool emrtd_select_and_read(uint8_t *dataout, int *dataoutlen, const char 
     return true;
 }
 
+const uint8_t jpeg_header[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
+const uint8_t jpeg2k_header[6] = { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50 };
+
 static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length) {
     int offset, datalen = 0;
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
     // based on mrpkey.py
-    // FF D8 FF E0 -> JPEG
-    // 00 00 00 0C 6A 50 -> JPEG 2000
     // Note: Doing file_length - 6 to account for the longest data we're checking.
+    // Checks first byte before the rest to reduce overhead
     for (offset = 0; offset < file_length - 6; offset++) {
-        if ((file_contents[offset] == 0xFF && file_contents[offset + 1] == 0xD8 && file_contents[offset + 2] == 0xFF && file_contents[offset + 3] == 0xE0) ||
-                (file_contents[offset] == 0x00 && file_contents[offset + 1] == 0x00 && file_contents[offset + 2] == 0x00 && file_contents[offset + 3] == 0x0C && file_contents[offset + 4] == 0x6A && file_contents[offset + 5] == 0x50)) {
+        if ((file_contents[offset] == 0xFF && memcmp(jpeg_header, file_contents + offset, 4) != 0) ||
+                (file_contents[offset] == 0x00 && memcmp(jpeg2k_header, file_contents + offset, 6) != 0)) {
             datalen = file_length - offset;
             break;
         }
