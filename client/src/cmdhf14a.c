@@ -2001,7 +2001,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         if (do_aid_search) {
 
-            
+
             PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
 
             bool found = false;

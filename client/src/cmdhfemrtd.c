@@ -1017,7 +1017,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     // Add EF_SOD to the list
     filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
-    for (size_t i = 0; i < filelistlen; i++) {
+    for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);

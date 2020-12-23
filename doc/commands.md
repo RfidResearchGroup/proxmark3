@@ -126,7 +126,7 @@ Check column "offline" for their availability.
 
 ### hf 14a
 
- { ISO14443A RFIDs...               }
+ { ISO14443A RFIDs...                  }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -147,7 +147,7 @@ Check column "offline" for their availability.
 
 ### hf 14b
 
- { ISO14443B RFIDs...               }
+ { ISO14443B RFIDs...                  }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -167,7 +167,7 @@ Check column "offline" for their availability.
 
 ### hf 15
 
- { ISO15693 RFIDs...                }
+ { ISO15693 RFIDs...                   }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -193,7 +193,7 @@ Check column "offline" for their availability.
 
 ### hf epa
 
- { German Identification Card...    }
+ { German Identification Card...       }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -202,9 +202,21 @@ Check column "offline" for their availability.
 |`hf epa preplay         `|N       |`<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs`
 
 
+### hf emrtd
+
+ { Machine Readable Travel Document... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf emrtd help          `|Y       |`This help`
+|`hf emrtd dump          `|N       |`Dump eMRTD files to binary files`
+|`hf emrtd info          `|Y       |`Display info about an eMRTD`
+|`hf emrtd list          `|Y       |`List ISO 14443A/7816 history`
+
+
 ### hf felica
 
- { ISO18092 / FeliCa RFIDs...       }
+ { ISO18092 / FeliCa RFIDs...          }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -229,7 +241,7 @@ Check column "offline" for their availability.
 
 ### hf fido
 
- { FIDO and FIDO2 authenticators... }
+ { FIDO and FIDO2 authenticators...    }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -244,7 +256,7 @@ Check column "offline" for their availability.
 
 ### hf iclass
 
- { ICLASS RFIDs...                  }
+ { ICLASS RFIDs...                     }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -275,7 +287,7 @@ Check column "offline" for their availability.
 
 ### hf legic
 
- { LEGIC RFIDs...                   }
+ { LEGIC RFIDs...                      }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -296,7 +308,7 @@ Check column "offline" for their availability.
 
 ### hf lto
 
- { LTO Cartridge Memory RFIDs...    }
+ { LTO Cartridge Memory RFIDs...       }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -311,7 +323,7 @@ Check column "offline" for their availability.
 
 ### hf mf
 
- { MIFARE RFIDs...                  }
+ { MIFARE RFIDs...                     }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -363,7 +375,7 @@ Check column "offline" for their availability.
 
 ### hf mfp
 
- { MIFARE Plus RFIDs...             }
+ { MIFARE Plus RFIDs...                }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -383,7 +395,7 @@ Check column "offline" for their availability.
 
 ### hf mfu
 
- { MIFARE Ultralight RFIDs...       }
+ { MIFARE Ultralight RFIDs...          }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -406,7 +418,7 @@ Check column "offline" for their availability.
 
 ### hf mfdes
 
- { MIFARE Desfire RFIDs...          }
+ { MIFARE Desfire RFIDs...             }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -436,7 +448,7 @@ Check column "offline" for their availability.
 
 ### hf st
 
- { ST Rothult RFIDs...              }
+ { ST Rothult RFIDs...                 }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -451,7 +463,7 @@ Check column "offline" for their availability.
 
 ### hf thinfilm
 
- { Thinfilm RFIDs...                }
+ { Thinfilm RFIDs...                   }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -463,7 +475,7 @@ Check column "offline" for their availability.
 
 ### hf topaz
 
- { TOPAZ (NFC Type 1) RFIDs...      }
+ { TOPAZ (NFC Type 1) RFIDs...         }
 
 |command                  |offline |description
 |-------                  |------- |-----------
@@ -478,7 +490,7 @@ Check column "offline" for their availability.
 
 ### hf waveshare
 
- { Waveshare NFC ePaper...          }
+ { Waveshare NFC ePaper...             }
 
 |command                  |offline |description
 |-------                  |------- |-----------

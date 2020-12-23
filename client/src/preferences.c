@@ -314,7 +314,7 @@ void preferences_load_callback(json_t *root) {
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "os.supports.colors", &b1) == 0)
         session.supports_colors = (bool)b1;
 
-    // bar mode 
+    // bar mode
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "show.bar.mode", &s1) == 0) {
         strncpy(tempStr, s1, sizeof(tempStr) - 1);
         str_lower(tempStr);

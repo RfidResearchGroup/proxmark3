@@ -18,7 +18,6 @@
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "cmdtrace.h"
-#include "cliparser.h"
 #include "util_posix.h"
 #include "comms.h"
 #include "des.h"

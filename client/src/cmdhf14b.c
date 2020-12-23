@@ -82,9 +82,9 @@ static void hf14b_aid_search(bool verbose) {
     bool activate_field = true;
     for (elmindx = 0; elmindx < json_array_size(root); elmindx++) {
 
-       if (kbd_enter_pressed()) {
-           break;
-       }
+        if (kbd_enter_pressed()) {
+            break;
+        }
 
         json_t *data = AIDSearchGetElm(root, elmindx);
         uint8_t vaid[200] = {0};

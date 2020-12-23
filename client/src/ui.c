@@ -14,7 +14,9 @@
 #if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200112L
 #endif
-
+#ifdef HAVE_READLINE
+#include <readline/readline.h>
+#endif
 #include "ui.h"
 #include "commonutil.h"  // ARRAYLEN
 
@@ -625,58 +627,84 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 }
 
 void print_progress(size_t count, uint64_t max, barMode_t style) {
+    int cols = 100 + 35;
+#ifdef HAVE_READLINE
+    static int prev_cols = 0;
+    int rows;
+    rl_reset_screen_size(); // refresh Readline idea of the actual screen width
+    rl_get_screen_size(&rows, &cols);
+    (void) rows;
+    if (prev_cols > cols) {
+        PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+    }
+    prev_cols = cols;
+#endif
+    int width = cols - 35;
+#define PERCENTAGE(V, T)   ((V * width) / T)
+    // x/8 fractional part of the percentage
+#define PERCENTAGEFRAC(V, T)   ((int)(((((float)V * width) / T) - ((V * width) / T)) * 8))
 
-    #define PERCENTAGE(V, T)   (100 - (((T - V) * 100) / T))
-
-/*
-    typedef struct smooth_s {
-        const char *bar;
-    } smooth_t;
-
-    static smooth_t smoothtable[] = {
-        {"\xe2\x96\x8F"},
-        {"\xe2\x96\x8E"},
-        {"\xe2\x96\x8D"},
-        {"\xe2\x96\x8C"},
-        {"\xe2\x96\x8B"},
-        {"\xe2\x96\x8A"},
-        {"\xe2\x96\x89"},
-        {"\xe2\x96\x88"},
+    const char *smoothtable[] = {
+        "\xe2\x80\x80",
+        "\xe2\x96\x8F",
+        "\xe2\x96\x8E",
+        "\xe2\x96\x8D",
+        "\xe2\x96\x8C",
+        "\xe2\x96\x8B",
+        "\xe2\x96\x8A",
+        "\xe2\x96\x89",
+        "\xe2\x96\x88",
     };
-*/
 
+    uint8_t mode = session.emoji_mode == EMOJI;
+    const char *block[] = {"#", "\xe2\x96\x88"};
+    // use a 3-byte space in emoji mode to ease computations
+    const char *space[] = {" ", "\xe2\x80\x80"};
+    uint8_t unit = strlen(block[mode]);
     // +1 for \0
-    char *bar = calloc(100 + 1, sizeof(uint8_t));
+    char *bar = calloc(unit * width + 1, sizeof(uint8_t));
 
     uint8_t value = PERCENTAGE(count, max);
 
+    int i = 0;
     // prefix is added already.
-    memset(bar + strlen(bar), 0x23, value);
-
+    for (; i < unit * value; i += unit) {
+        memcpy(bar + i, block[mode], unit);
+    }
+    // add last block
+    if (mode == 1) {
+        memcpy(bar + i, smoothtable[PERCENTAGEFRAC(count, max)], unit);
+    } else {
+        memcpy(bar + i, space[mode], unit);
+    }
+    i += unit;
     // add spaces
-    memset(bar + strlen(bar), 0x2E,  100 - value);
-
+    for (; i < unit * width; i += unit) {
+        memcpy(bar + i, space[mode], unit);
+    }
     // color buffer
-    uint8_t collen = 100 + 1 + 40;
+    size_t collen = strlen(bar) + 40;
     char *cbar = calloc(collen, sizeof(uint8_t));
 
     // Add colors
-    snprintf(cbar,  collen,  _GREEN_("%.*s"), 60, bar);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), 20,  bar + 60);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), 20, bar + 80);
+    int p60 = unit * (width * 60 / 100);
+    int p20 = unit * (width * 20 / 100);
+    snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), p20,  bar + p60);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), unit * width - p60 - p20, bar + p60 + p20);
 
-    uint8_t len = collen + 1 + 1 + 30;
+    size_t len = strlen(cbar) + 32;
     char *buffer = calloc(len, sizeof(uint8_t));
 
-    switch(style) {
+    switch (style) {
         case STYLE_BAR: {
-	        sprintf(buffer, "%s", cbar);
+            sprintf(buffer, "%s", cbar);
             printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, buffer);
             break;
         }
         case STYLE_MIXED: {
             sprintf(buffer, "%s [ %zu mV / %3u V ]", cbar, count, (uint32_t)(count / 1000));
-	        printf("\b%c[2K\r[" _YELLOW_("=")"] %s ", 27, buffer);
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s ", 27, buffer);
             break;
         }
         case STYLE_VALUE: {
@@ -685,8 +713,8 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         }
     }
 
-	fflush(stdout);
-	free(buffer);
+    fflush(stdout);
+    free(buffer);
     free(bar);
     free(cbar);
 }

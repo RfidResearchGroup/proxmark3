@@ -306,7 +306,7 @@ static int CmdLFTune(const char *Cmd) {
     uint32_t max = 71000;
     bool first = true;
 
-	print_progress(0, max, style);
+    print_progress(0, max, style);
 
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
@@ -328,11 +328,11 @@ static int CmdLFTune(const char *Cmd) {
 
         uint32_t volt = resp.data.asDwords[0];
         if (first) {
-            max =  (volt * 1.03);
+            max = (volt * 1.03);
             first = false;
         }
-        if ( volt > max) {
-            max =  (volt * 1.03);
+        if (volt > max) {
+            max = (volt * 1.03);
         }
         print_progress(volt, max, style);
     }
