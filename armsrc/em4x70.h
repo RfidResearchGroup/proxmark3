@@ -20,7 +20,7 @@ typedef struct {
 typedef enum {
     RISING_EDGE,
     FALLING_EDGE
-}edge_detection_t;
+} edge_detection_t;
 
 void em4x70_info(em4x70_data_t *etd);
 void em4x70_write(em4x70_data_t *etd);

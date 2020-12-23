@@ -61,7 +61,7 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen);
 
 typedef enum  { // list must match dg_table
-    EF_COM=0,
+    EF_COM = 0,
     EF_DG1,
     EF_DG2,
     EF_DG3,
@@ -109,7 +109,7 @@ static emrtd_dg_t dg_table[] = {
 };
 
 static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
-    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
+    for (int dgi = 0; dg_table[dgi].filename != NULL; dgi++) {
         if (dg_table[dgi].tag == tag) {
             return &dg_table[dgi];
         }
@@ -117,7 +117,7 @@ static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
     return NULL;
 }
 static emrtd_dg_t *emrtd_fileid_to_dg(const char *file_id) {
-    for (int dgi=0; dg_table[dgi].filename != NULL; dgi++) {
+    for (int dgi = 0; dg_table[dgi].filename != NULL; dgi++) {
         if (strcmp(dg_table[dgi].fileid, file_id) == 0) {
             return &dg_table[dgi];
         }
@@ -691,7 +691,7 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length) {
     // Note: Doing file_length - 6 to account for the longest data we're checking.
     for (offset = 0; offset < file_length - 6; offset++) {
         if ((file_contents[offset] == 0xFF && file_contents[offset + 1] == 0xD8 && file_contents[offset + 2] == 0xFF && file_contents[offset + 3] == 0xE0) ||
-            (file_contents[offset] == 0x00 && file_contents[offset + 1] == 0x00 && file_contents[offset + 2] == 0x00 && file_contents[offset + 3] == 0x0C && file_contents[offset + 4] == 0x6A && file_contents[offset + 5] == 0x50)) {
+                (file_contents[offset] == 0x00 && file_contents[offset + 1] == 0x00 && file_contents[offset + 2] == 0x00 && file_contents[offset + 3] == 0x0C && file_contents[offset + 4] == 0x6A && file_contents[offset + 5] == 0x50)) {
             datalen = file_length - offset;
             break;
         }
@@ -745,7 +745,7 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length) {
 static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length) {
     int fieldlen = emrtd_get_asn1_field_length(file_contents, file_length, 1);
     int datalen = emrtd_get_asn1_data_length(file_contents, file_length, 1);
-    
+
     if (fieldlen + 1 > EMRTD_MAX_FILE_SIZE) {
         PrintAndLogEx(ERR, "error (emrtd_dump_ef_sod) fieldlen out-of-bounds");
         return PM3_SUCCESS;
@@ -766,7 +766,7 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, cons
     PrintAndLogEx(INFO, "Read %s, len: %i.", name, resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
     saveFile(name, ".BIN", response, resplen);
-    emrtd_dg_t * dg = emrtd_fileid_to_dg(file);
+    emrtd_dg_t *dg = emrtd_fileid_to_dg(file);
     if ((dg != NULL) && (dg->dumper != NULL)) {
         dg->dumper(response, resplen);
     }
@@ -778,7 +778,7 @@ static void rng(int length, uint8_t *dataout) {
     //for (int i = 0; i < (length / 4); i++) {
     //    num_to_bytes(prng_successor(msclock() + i, 32), 4, &dataout[i * 4]);
     //}
-    memset(dataout, 0x00, length);   
+    memset(dataout, 0x00, length);
 }
 
 static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac, bool use_14b) {
@@ -1006,7 +1006,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
@@ -1027,9 +1027,9 @@ static bool emrtd_compare_check_digit(char *datain, int datalen, char expected_c
     uint8_t check_digit = emrtd_calculate_check_digit(tempdata) + 0x30;
     bool res = check_digit == expected_check_digit;
     PrintAndLogEx(DEBUG, "emrtd_compare_check_digit, expected %c == %c calculated ( %s )"
-        , expected_check_digit
-        , check_digit
-        , (res) ? _GREEN_("ok") : _RED_("fail"));
+                  , expected_check_digit
+                  , check_digit
+                  , (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -1231,7 +1231,7 @@ static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_COM") " --------------------");
     for (int i = 0; i < filelistlen; i++) {
-        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
@@ -1513,7 +1513,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     int res = emrtd_print_ef_com_info(response, resplen);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
@@ -1530,7 +1530,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
@@ -1563,7 +1563,7 @@ int infoHF_EMRTD_offline(const char *path) {
     }
 
     int res = emrtd_print_ef_com_info(data, datalen);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         free(data);
         free(filepath);
         return res;
@@ -1583,7 +1583,7 @@ int infoHF_EMRTD_offline(const char *path) {
     filelist[filelistlen++] = 0x77;
     // Read files in the file list
     for (int i = 0; i < filelistlen; i++) {
-        emrtd_dg_t * dg = emrtd_tag_to_dg(filelist[i]);
+        emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
@@ -1592,8 +1592,7 @@ int infoHF_EMRTD_offline(const char *path) {
             strcpy(filepath, path);
             strncat(filepath, PATHSEP, 2);
             strcat(filepath, dg->filename);
-            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)
-            {
+            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) {
                 // we won't halt on parsing errors
                 if (dg->parser != NULL)
                     dg->parser(data, datalen);
@@ -1662,7 +1661,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
             memset(docnum + slen, '<', 9 - slen);
         }
     }
-    
+
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
@@ -1672,7 +1671,7 @@ static int cmd_hf_emrtd_dump(const char *Cmd) {
             error = true;
         }
     }
-    
+
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
@@ -1748,7 +1747,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
             memset(docnum + slen, '<', 9 - slen);
         }
     }
-    
+
     if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
@@ -1758,7 +1757,7 @@ static int cmd_hf_emrtd_info(const char *Cmd) {
             error = true;
         }
     }
-    
+
     if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {

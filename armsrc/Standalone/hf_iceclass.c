@@ -158,17 +158,17 @@ static void download_instructions(uint8_t t) {
 
 // Save to flash if file doesn't exist.
 // Write over file if size of flash file is less than new datalen
-static void save_to_flash(uint8_t *data, uint16_t datalen, char * filename) {
+static void save_to_flash(uint8_t *data, uint16_t datalen, char *filename) {
 
     rdv40_spiffs_lazy_mount();
 
     char fn[SPIFFS_OBJ_NAME_LEN];
 
-    if (filename == NULL){
-            sprintf(fn, "iclass-%02X%02X%02X%02X%02X%02X%02X%02X.bin",
-                    data[0], data[1], data[2], data[3],
-                    data[4], data[5], data[6], data[7]
-                );
+    if (filename == NULL) {
+        sprintf(fn, "iclass-%02X%02X%02X%02X%02X%02X%02X%02X.bin",
+                data[0], data[1], data[2], data[3],
+                data[4], data[5], data[6], data[7]
+               );
     } else {
         int name_len = SPIFFS_OBJ_NAME_LEN;
         int filename_len = strlen(filename);
@@ -176,7 +176,7 @@ static void save_to_flash(uint8_t *data, uint16_t datalen, char * filename) {
         // if the given name len longer than buffer allows, cut it down to size
         name_len = (name_len >= SPIFFS_OBJ_NAME_LEN) ? SPIFFS_OBJ_NAME_LEN : filename_len;
         memcpy(fn, filename, name_len);
-    }    
+    }
 
     int res;
     if (exists_in_spiffs(fn) == false) {
@@ -558,12 +558,12 @@ static int dump_sim_mode(void) {
             }
         }
         switch_off();
-        char * temp_file = HF_ICALSSS_READSIM_TEMP_BIN;
+        char *temp_file = HF_ICALSSS_READSIM_TEMP_BIN;
         save_to_flash(card_data, (start_block + dumped) * 8, temp_file);
         Dbprintf("%u bytes saved", (start_block + dumped) * 8);
 
         if (((start_block + dumped) * 8) > 0) {
-            break; //switch to sim mode 
+            break; //switch to sim mode
         }
     }
 
@@ -577,7 +577,7 @@ static int dump_sim_mode(void) {
     if (res == SPIFFS_OK) {
         Dbprintf("loaded " _GREEN_(HF_ICALSSS_READSIM_TEMP_BIN) " (%u bytes)", fsize);
     }
-    
+
     Dbprintf("simming " _GREEN_(HF_ICALSSS_READSIM_TEMP_BIN));
     iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, NULL, NULL, NULL);
 

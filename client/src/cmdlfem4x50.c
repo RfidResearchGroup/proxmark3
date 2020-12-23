@@ -286,7 +286,7 @@ int CmdEM4x50EView(const char *Cmd) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         return PM3_ETIMEOUT;
     }
-    
+
     // valid em4x50 data?
     uint32_t serial = bytes_to_num(data + 4 * EM4X50_DEVICE_SERIAL, 4);
     uint32_t device_id = bytes_to_num(data + 4 * EM4X50_DEVICE_ID, 4);

@@ -53,7 +53,7 @@ int CmdHFSearch(const char *Cmd) {
                   "Will try to find a HF read out of the unknown tag.\n"
                   "Continues to search for all different HF protocols.",
                   "hf sniff"
-                  );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -244,7 +244,7 @@ int CmdHFTune(const char *Cmd) {
             max = (volt * 1.03);
             first = false;
         }
-        if ( volt > max) {
+        if (volt > max) {
             max = (volt * 1.03);
         }
         print_progress(volt, max, style);
@@ -274,7 +274,7 @@ int CmdHFSniff(const char *Cmd) {
                   "Press button to quit the sniffing.",
                   "hf sniff\n"
                   "hf sniff --sp 1000 --st 0   -> skip 1000 pairs, skip 0 triggers"
-                  );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "sp", "<dec>", "skip sample pairs"),

@@ -328,11 +328,11 @@ static int CmdLFTune(const char *Cmd) {
 
         uint32_t volt = resp.data.asDwords[0];
         if (first) {
-            max =  (volt * 1.03);
+            max = (volt * 1.03);
             first = false;
         }
-        if ( volt > max) {
-            max =  (volt * 1.03);
+        if (volt > max) {
+            max = (volt * 1.03);
         }
         print_progress(volt, max, style);
     }
