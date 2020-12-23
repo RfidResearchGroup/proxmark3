@@ -58,7 +58,6 @@ static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
-static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen);
 
 typedef enum  { // list must match dg_table
     EF_COM = 0,
@@ -102,7 +101,7 @@ static emrtd_dg_t dg_table[] = {
     {0x6e, "010E", "EF_DG14",         "Security Options",                                   false, false, false, true,  NULL,                     NULL},
     {0x6f, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, false, true,  NULL,                     NULL},
     {0x70, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, false, true,  NULL,                     NULL},
-    {0x77, "011D", "EF_SOD",          "Document Security Object",                           false, false, false, true,  emrtd_print_ef_sod_info,  emrtd_dump_ef_sod},
+    {0x77, "011D", "EF_SOD",          "Document Security Object",                           false, false, false, false, NULL,                     emrtd_dump_ef_sod},
     {0xff, "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  false, true,  true,  NULL,                     NULL},
     {0xff, "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, false, true,  NULL,                     NULL},
     {0x00, NULL, NULL, NULL, false, false, false, false, NULL, NULL}
@@ -1484,106 +1483,106 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
-static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
-    // very very very very cursed code.
-    uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsigtext[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    size_t toplen, signeddatalen, emrtdsigcontainerlen, emrtdsiglen, emrtdsigtextlen = 0;
+// static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
+//     // very very very very cursed code.
+//     uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+//     uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+//     uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+//     uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+//     uint8_t emrtdsigtext[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+//     size_t toplen, signeddatalen, emrtdsigcontainerlen, emrtdsiglen, emrtdsigtextlen = 0;
 
-    if (!emrtd_lds_get_data_by_tag(data, datalen, top, &toplen, 0x30, 0x00, false, true, 0)) {
-        PrintAndLogEx(ERR, "Failed to read top from EF_SOD.");
-        return false;
-    }
+//     if (!emrtd_lds_get_data_by_tag(data, datalen, top, &toplen, 0x30, 0x00, false, true, 0)) {
+//         PrintAndLogEx(ERR, "Failed to read top from EF_SOD.");
+//         return false;
+//     }
 
-    PrintAndLogEx(DEBUG, "top: %s.", sprint_hex_inrow(top, toplen));
+//     PrintAndLogEx(DEBUG, "top: %s.", sprint_hex_inrow(top, toplen));
 
-    if (!emrtd_lds_get_data_by_tag(top, toplen, signeddata, &signeddatalen, 0xA0, 0x00, false, false, 0)) {
-        PrintAndLogEx(ERR, "Failed to read signedData from EF_SOD.");
-        return false;
-    }
+//     if (!emrtd_lds_get_data_by_tag(top, toplen, signeddata, &signeddatalen, 0xA0, 0x00, false, false, 0)) {
+//         PrintAndLogEx(ERR, "Failed to read signedData from EF_SOD.");
+//         return false;
+//     }
 
-    PrintAndLogEx(DEBUG, "signeddata: %s.", sprint_hex_inrow(signeddata, signeddatalen));
+//     PrintAndLogEx(DEBUG, "signeddata: %s.", sprint_hex_inrow(signeddata, signeddatalen));
 
-    // Do true on reading into the tag as it's a "sequence"
-    if (!emrtd_lds_get_data_by_tag(signeddata, signeddatalen, emrtdsigcontainer, &emrtdsigcontainerlen, 0x30, 0x00, false, true, 0)) {
-        PrintAndLogEx(ERR, "Failed to read eMRTDSignature container from EF_SOD.");
-        return false;
-    }
+//     // Do true on reading into the tag as it's a "sequence"
+//     if (!emrtd_lds_get_data_by_tag(signeddata, signeddatalen, emrtdsigcontainer, &emrtdsigcontainerlen, 0x30, 0x00, false, true, 0)) {
+//         PrintAndLogEx(ERR, "Failed to read eMRTDSignature container from EF_SOD.");
+//         return false;
+//     }
 
-    PrintAndLogEx(DEBUG, "emrtdsigcontainer: %s.", sprint_hex_inrow(emrtdsigcontainer, emrtdsigcontainerlen));
+//     PrintAndLogEx(DEBUG, "emrtdsigcontainer: %s.", sprint_hex_inrow(emrtdsigcontainer, emrtdsigcontainerlen));
 
-    if (!emrtd_lds_get_data_by_tag(emrtdsigcontainer, emrtdsigcontainerlen, emrtdsig, &emrtdsiglen, 0xA0, 0x00, false, false, 0)) {
-        PrintAndLogEx(ERR, "Failed to read eMRTDSignature from EF_SOD.");
-        return false;
-    }
+//     if (!emrtd_lds_get_data_by_tag(emrtdsigcontainer, emrtdsigcontainerlen, emrtdsig, &emrtdsiglen, 0xA0, 0x00, false, false, 0)) {
+//         PrintAndLogEx(ERR, "Failed to read eMRTDSignature from EF_SOD.");
+//         return false;
+//     }
 
-    PrintAndLogEx(DEBUG, "emrtdsig: %s.", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+//     PrintAndLogEx(DEBUG, "emrtdsig: %s.", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
-    // TODO: Not doing memcpy here, it didn't work, fix it somehow
-    if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, emrtdsigtext, &emrtdsigtextlen, 0x04, 0x00, false, false, 0)) {
-        PrintAndLogEx(ERR, "Failed to read eMRTDSignature (text) from EF_SOD.");
-        return false;
-    }
-    memcpy(dataout, emrtdsigtext, emrtdsigtextlen);
-    *dataoutlen = emrtdsigtextlen;
-    return PM3_SUCCESS;
-}
+//     // TODO: Not doing memcpy here, it didn't work, fix it somehow
+//     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, emrtdsigtext, &emrtdsigtextlen, 0x04, 0x00, false, false, 0)) {
+//         PrintAndLogEx(ERR, "Failed to read eMRTDSignature (text) from EF_SOD.");
+//         return false;
+//     }
+//     memcpy(dataout, emrtdsigtext, emrtdsigtextlen);
+//     *dataoutlen = emrtdsigtextlen;
+//     return PM3_SUCCESS;
+// }
 
-static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
-    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t hash[65] = { 0x00 };
-    size_t hashlen = 0;
+// static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
+//     uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+//     uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+//     uint8_t hash[65] = { 0x00 };
+//     size_t hashlen = 0;
 
-    uint8_t hashidstr[4] = { 0x00 };
-    size_t hashidstrlen = 0;
+//     uint8_t hashidstr[4] = { 0x00 };
+//     size_t hashidstrlen = 0;
 
-    // size_t emrtdsiglen, e_datalen, e_fieldlen = 0;
-    size_t emrtdsiglen = 0;
-    size_t hashlistlen = 0;
-    size_t e_datalen = 0;
-    size_t e_fieldlen = 0;
-    size_t offset = 0;
+//     // size_t emrtdsiglen, e_datalen, e_fieldlen = 0;
+//     size_t emrtdsiglen = 0;
+//     size_t hashlistlen = 0;
+//     size_t e_datalen = 0;
+//     size_t e_fieldlen = 0;
+//     size_t offset = 0;
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+//     PrintAndLogEx(NORMAL, "");
+//     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
 
-    if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
-        return false;
-    }
+//     if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
+//         return false;
+//     }
 
-    PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+//     PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
-    if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
-        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
-        return false;
-    }
+//     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
+//         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
+//         return false;
+//     }
 
-    PrintAndLogEx(DEBUG, "hash list: %s", sprint_hex_inrow(hashlist, hashlistlen));
+//     PrintAndLogEx(DEBUG, "hash list: %s", sprint_hex_inrow(hashlist, hashlistlen));
 
-    while (offset < hashlistlen) {
-        // Get the length of the element
-        e_datalen = emrtd_get_asn1_data_length(hashlist + offset, hashlistlen - offset, 1);
+//     while (offset < hashlistlen) {
+//         // Get the length of the element
+//         e_datalen = emrtd_get_asn1_data_length(hashlist + offset, hashlistlen - offset, 1);
 
-        // Get the length of the element's length
-        e_fieldlen = emrtd_get_asn1_field_length(hashlist + offset, hashlistlen - offset, 1);
+//         // Get the length of the element's length
+//         e_fieldlen = emrtd_get_asn1_field_length(hashlist + offset, hashlistlen - offset, 1);
 
-        switch (hashlist[offset]) {
-            case 0x30:
-                emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hashidstr, &hashidstrlen, 0x02, 0x00, false, false, 0);
-                emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hash, &hashlen, 0x04, 0x00, false, false, 0);
-                PrintAndLogEx(SUCCESS, "Hash for EF_DG%i: %s", hashidstr[0], sprint_hex_inrow(hash, hashlen));
-                break;
-        }
-        // + 1 for length of ID
-        offset += 1 + e_datalen + e_fieldlen;
-    }
+//         switch (hashlist[offset]) {
+//             case 0x30:
+//                 emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hashidstr, &hashidstrlen, 0x02, 0x00, false, false, 0);
+//                 emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hash, &hashlen, 0x04, 0x00, false, false, 0);
+//                 PrintAndLogEx(SUCCESS, "Hash for EF_DG%i: %s", hashidstr[0], sprint_hex_inrow(hash, hashlen));
+//                 break;
+//         }
+//         // + 1 for length of ID
+//         offset += 1 + e_datalen + e_fieldlen;
+//     }
 
-    return PM3_SUCCESS;
-}
+//     return PM3_SUCCESS;
+// }
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
@@ -1696,7 +1695,7 @@ int infoHF_EMRTD_offline(const char *path) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        if (!dg->pace) {
+        if (!dg->pace && !dg->eac) {
             strcpy(filepath, path);
             strncat(filepath, PATHSEP, 2);
             strcat(filepath, dg->filename);
