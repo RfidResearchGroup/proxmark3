@@ -704,12 +704,31 @@ function writeFile(bytes, filename)
     return true
 end
 
+function getRandomTempName()
+  local upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  local lowerCase = "abcdefghijklmnopqrstuvwxyz"
+
+  local characterSet = upperCase .. lowerCase
+
+  local keyLength = 8
+  local output = ""
+
+  for	i = 1, keyLength do
+    local rand = math.random(#characterSet)
+    output = output .. string.sub(characterSet, rand, rand)
+  end
+
+  output = "hf-legic-temp-" .. output
+
+  return output
+end
+
 ---
 -- read from pm3 into virtual-tag
 function readFromPM3()
   local tag, bytes, infile
     --infile="legic.temp"
-    infile=os.tmpname()
+    infile=getRandomTempName()
     core.console("hf legic dump -f "..infile)
     tag=readFile(infile..".bin")
     os.remove(infile)
