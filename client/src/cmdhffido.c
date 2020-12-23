@@ -48,10 +48,18 @@ static int cmd_hf_fido_list(const char *Cmd) {
     return CmdTraceList(args);
 }
 
-static int cmd_hf_fido_info(const char *cmd) {
+static int cmd_hf_fido_info(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fido info",
+                  "Get info from Fido tags",
+                  "hf fido info");
 
-    if (cmd && strlen(cmd) > 0)
-        PrintAndLogEx(WARNING, "WARNING: command doesn't have any parameters.\n");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     // info about 14a part
     infoHF14A(false, false, false);

@@ -73,7 +73,6 @@ hf felica rqspecver
 hf felica resetmode
 hf felica litesim
 hf felica litedump
-hf fido info
 hf mf darkside
 hf mf nested
 hf mf hardnested
