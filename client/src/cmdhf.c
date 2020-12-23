@@ -219,7 +219,7 @@ int CmdHFTune(const char *Cmd) {
     uint32_t max = 0xFFFF;
     bool first = true;
 
-	print_progress(0, max, style);
+    print_progress(0, max, style);
 
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {

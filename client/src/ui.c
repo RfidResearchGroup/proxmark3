@@ -14,7 +14,9 @@
 #if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200112L
 #endif
-
+#ifdef HAVE_READLINE
+#include <readline/readline.h>
+#endif
 #include "ui.h"
 #include "commonutil.h"  // ARRAYLEN
 
@@ -625,10 +627,22 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
 }
 
 void print_progress(size_t count, uint64_t max, barMode_t style) {
-
-    #define PERCENTAGE(V, T)   ((V * 100) / T)
+    int cols = 100 + 35;
+#ifdef HAVE_READLINE
+    static int prev_cols = 0;
+    int rows;
+    rl_reset_screen_size(); // refresh Readline idea of the actual screen width
+    rl_get_screen_size (&rows, &cols);
+    (void) rows;
+    if (prev_cols > cols) {
+        PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+    }
+    prev_cols = cols;
+#endif
+    int width = cols - 35;
+    #define PERCENTAGE(V, T)   ((V * width) / T)
     // x/8 fractional part of the percentage
-    #define PERCENTAGEFRAC(V, T)   ((int)(((((float)V * 100) / T) - ((V * 100) / T)) * 8))
+    #define PERCENTAGEFRAC(V, T)   ((int)(((((float)V * width) / T) - ((V * width) / T)) * 8))
 
     const char *smoothtable[] = {
         "\xe2\x80\x80",
@@ -648,7 +662,7 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     const char *space[] = {" ", "\xe2\x80\x80"};
     uint8_t unit = strlen(block[mode]);
     // +1 for \0
-    char *bar = calloc(unit*100 + 1, sizeof(uint8_t));
+    char *bar = calloc(unit*width + 1, sizeof(uint8_t));
 
     uint8_t value = PERCENTAGE(count, max);
 
@@ -665,7 +679,7 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     }
     i += unit;
     // add spaces
-    for (; i < unit*100; i+=unit) {
+    for (; i < unit*width; i+=unit) {
         memcpy(bar + i, space[mode], unit);
     }
     // color buffer
@@ -673,9 +687,11 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     char *cbar = calloc(collen, sizeof(uint8_t));
 
     // Add colors
-    snprintf(cbar,  collen,  _GREEN_("%.*s"), unit*60, bar);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), unit*20,  bar + unit*60);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), unit*20, bar + unit*80);
+    int p60 = unit*(width*60/100);
+    int p20 = unit*(width*20/100);
+    snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), p20,  bar + p60);
+    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), unit*width - p60 - p20, bar + p60 + p20);
 
     size_t len = strlen(cbar) + 32;
     char *buffer = calloc(len, sizeof(uint8_t));
