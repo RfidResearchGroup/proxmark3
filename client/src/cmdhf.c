@@ -52,13 +52,15 @@ int CmdHFSearch(const char *Cmd) {
     CLIParserInit(&ctx, "hf search",
                   "Will try to find a HF read out of the unknown tag.\n"
                   "Continues to search for all different HF protocols.",
-                  "hf sniff"
+                  "hf search"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     int res = PM3_ESOFT;
 
     PROMPT_CLEARLINE;
