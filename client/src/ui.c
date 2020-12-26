@@ -657,7 +657,8 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         "\xe2\x96\x88",
     };
 
-    uint8_t mode = session.emoji_mode == EMOJI;
+    uint8_t mode = session.supports_colors;
+
     const char *block[] = {"#", "\xe2\x96\x88"};
     // use a 3-byte space in emoji mode to ease computations
     const char *space[] = {" ", "\xe2\x80\x80"};
@@ -704,12 +705,12 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
             break;
         }
         case STYLE_MIXED: {
-            sprintf(buffer, "%s [ %zu mV / %3u V ]", cbar, count, (uint32_t)(count / 1000));
+            sprintf(buffer, "%s [ %zu mV / %2u V / %2u Vmax ]", cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
             printf("\b%c[2K\r[" _YELLOW_("=")"] %s ", 27, buffer);
             break;
         }
         case STYLE_VALUE: {
-            printf("[" _YELLOW_("=")"] %zu mV / %3u V \r", count, (uint32_t)(count / 1000));
+            printf("[" _YELLOW_("=")"] %zu mV / %2u V / %2u Vmax\r", count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
             break;
         }
     }
