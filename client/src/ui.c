@@ -657,7 +657,7 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         "\xe2\x96\x88",
     };
 
-    uint8_t mode = session.supports_colors;
+    uint8_t mode = (session.emoji_mode == EMOJI);
 
     const char *block[] = {"#", "\xe2\x96\x88"};
     // use a 3-byte space in emoji mode to ease computations
@@ -689,11 +689,15 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     char *cbar = calloc(collen, sizeof(uint8_t));
 
     // Add colors
-    int p60 = unit * (width * 60 / 100);
-    int p20 = unit * (width * 20 / 100);
-    snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), p20,  bar + p60);
-    snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), unit * width - p60 - p20, bar + p60 + p20);
+    if ( session.supports_colors ) {
+        int p60 = unit * (width * 60 / 100);
+        int p20 = unit * (width * 20 / 100);
+        snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
+        snprintf(cbar + strlen(cbar), collen - strlen(cbar), _CYAN_("%.*s"), p20,  bar + p60);
+        snprintf(cbar + strlen(cbar), collen - strlen(cbar), _YELLOW_("%.*s"), unit * width - p60 - p20, bar + p60 + p20);
+    } else {
+        snprintf(cbar,  collen,  "%s", bar);
+    }
 
     size_t len = strlen(cbar) + 32;
     char *buffer = calloc(len, sizeof(uint8_t));
