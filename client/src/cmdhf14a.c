@@ -2135,15 +2135,26 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 }
 
 static uint16_t get_sw(uint8_t *d, uint8_t n) {
-    if (n < 2)
+    if (n < 2) {
         return 0;
-
+    }
     n -= 2;
     return d[n] * 0x0100 + d[n + 1];
 }
 
+static uint64_t inc_sw_error_occurence(uint16_t sw, uint64_t all_sw[256][256]) {
+    uint8_t sw1 = (uint8_t)(sw >> 8);
+    uint8_t sw2 = (uint8_t)(0xff & sw);
+    if (sw1 == 0x90 && sw2 == 0x00) {
+        return 0; // Don't count successes.
+    }
+    if (sw1 == 0x6d && sw2 == 0x00) {
+        return 0xffffffffffffffffULL; // Always max "Instruction not supported".
+    }
+    return ++all_sw[sw1][sw2];
+}
+
 static int CmdHf14AFindapdu(const char *Cmd) {
-    // TODO: What response values should be considerd "valid" or "instersting" (worth dispalying)?
     // TODO: Option to select AID/File (and skip INS 0xA4).
     // TODO: Validate the decoding of the APDU (not specific to this command, check
     //       https://cardwerk.com/smartcards/smartcard_standard_ISO7816-4_5_basic_organizations.aspx#chap5_3_2).
@@ -2161,12 +2172,13 @@ static int CmdHf14AFindapdu(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("c",  "cla",    "<hex>",    "Start value of CLASS (1 hex byte)"),
-        arg_str0("i",  "ins",    "<hex>",    "Start value of INSTRUCTION (1 hex byte)"),
-        arg_str0(NULL, "p1",     "<hex>",    "Start value of P1 (1 hex byte)"),
-        arg_str0(NULL, "p2",     "<hex>",    "Start value of P2 (1 hex byte)"),
-        arg_u64_0("r", "reset",  "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
-        arg_lit0("v",  "verbose",            "Verbose output"),
+        arg_str0("c",  "cla",           "<hex>",    "Start value of CLASS (1 hex byte)"),
+        arg_str0("i",  "ins",           "<hex>",    "Start value of INSTRUCTION (1 hex byte)"),
+        arg_str0(NULL, "p1",            "<hex>",    "Start value of P1 (1 hex byte)"),
+        arg_str0(NULL, "p2",            "<hex>",    "Start value of P2 (1 hex byte)"),
+        arg_u64_0("r", "reset",         "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
+        arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 500."),
+        arg_lit0("v",  "verbose",                   "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2184,7 +2196,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     uint8_t p2_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 4, p2_arg, &p2_len);
     uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60); // Reset every 5 minutes.
-    bool verbose = arg_get_lit(ctx, 6);
+    uint64_t error_limit = arg_get_u64_def(ctx, 6, 500);
+    bool verbose = arg_get_lit(ctx, 7);
 
     CLIParserFree(ctx);
 
@@ -2211,6 +2224,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     bool inc_p1 = true;
+    uint64_t all_sw[256][256] = {0};
+    uint64_t sw_occurences = 0;
     uint64_t t_start = msclock();
     uint64_t t_last_reset = msclock();
 
@@ -2233,33 +2248,38 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                 int command_n = sizeof(command);
                 res = ExchangeAPDU14a(command, command_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
                 if (res) {
+                    DropField();
+                    activate_field = true;
                     continue;
                 }
+                uint16_t sw = get_sw(response, response_n);
+                sw_occurences = inc_sw_error_occurence(sw, all_sw);
 
                 // Was there and length error? If so, try with Le length (case 2 instad of case 1,
                 // https://stackoverflow.com/a/30679558). Le = 0x00 will get interpreted as extended length APDU
                 // with Le being 0x0100.
-                uint16_t sw = get_sw(response, response_n);
                 bool command_with_le = false;
                 if (sw == 0x6700) {
-                    PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
-                                  sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                    PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
+                    if (sw_occurences < error_limit) {
+                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
+                                      sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                        PrintAndLogEx(INFO, "Resending current command with Le = 0x0100 (extended length APDU)");
+                    }
                     uint8_t command2[7] = {cla, ins, p1, p2, 0x00};
                     int command2_n = sizeof(command2);
                     res = ExchangeAPDU14a(command2, command2_n, activate_field, keep_field_on, response, sizeof(response), &response_n);
                     if (res) {
+                        DropField();
+                        activate_field = true;
                         continue;
                     }
+                    sw = get_sw(response, response_n);
+                    sw_occurences = inc_sw_error_occurence(sw, all_sw);
                     command_with_le = true;
                 }
 
-                // Check response.
-                sw = get_sw(response, response_n);
-                if (sw != 0x6a86 &&
-                        sw != 0x6986 &&
-                        sw != 0x6d00
-                   ) {
+                // Show response.
+                if (sw_occurences < error_limit) {
                     if (command_with_le) {
                         PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X00\": %04X (%s)", cla, ins, p1, p2,
                                       sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
