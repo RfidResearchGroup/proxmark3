@@ -2159,7 +2159,6 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     // TODO: Validate the decoding of the APDU (not specific to this command, check
     //       https://cardwerk.com/smartcards/smartcard_standard_ISO7816-4_5_basic_organizations.aspx#chap5_3_2).
     // TODO: Check all cases (APDUs) with no data bytes (no/short/extended length).
-    // TODO: Option to blacklist instructions (or whole APDUs).
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a apdufind",
                   "Enumerate APDU's of ISO7816 protocol to find valid CLS/INS/P1P2 commands.\n"
@@ -2168,6 +2167,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                   "Tag must be on antenna before running.",
                   "hf 14a apdufind\n"
                   "hf 14a apdufind --cla 80\n"
+                  "hf 14a apdufind --cla 80 --error-limit 20 --skip-ins a4 --skip-ins b0\n"
                  );
 
     void *argtable[] = {
@@ -2177,7 +2177,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
         arg_str0(NULL, "p1",            "<hex>",    "Start value of P1 (1 hex byte)"),
         arg_str0(NULL, "p2",            "<hex>",    "Start value of P2 (1 hex byte)"),
         arg_u64_0("r", "reset",         "<number>", "Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes"),
-        arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 500."),
+        arg_u64_0("e", "error-limit",   "<number>", "Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 256."),
+        arg_strx0("s", "skip-ins",      "<hex>",    "Do not test an instructions (can be specifed multiple times)"),
         arg_lit0("v",  "verbose",                   "Verbose output"),
         arg_param_end
     };
@@ -2195,9 +2196,12 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     int p2_len = 0;
     uint8_t p2_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 4, p2_arg, &p2_len);
-    uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60); // Reset every 5 minutes.
-    uint64_t error_limit = arg_get_u64_def(ctx, 6, 500);
-    bool verbose = arg_get_lit(ctx, 7);
+    uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60);
+    uint64_t error_limit = arg_get_u64_def(ctx, 6, 256);
+    int ignore_ins_len = 0;
+    uint8_t ignore_ins_arg[250] = {0};
+    CLIGetHexWithReturn(ctx, 7, ignore_ins_arg, &ignore_ins_len);
+    bool verbose = arg_get_lit(ctx, 8);
 
     CLIParserFree(ctx);
 
@@ -2239,6 +2243,13 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                     goto out;
                 }
 
+                // Skip/Ignore this instrctuion?
+                for (int i = 0; i < ignore_ins_len; i++) {
+                    if (ins == ignore_ins_arg[i]) {
+                        goto next_ins;
+                    }
+                }
+
                 if (verbose) {
                     PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
                 }
@@ -2250,7 +2261,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                 if (res) {
                     DropField();
                     activate_field = true;
-                    continue;
+                    goto next_ins;
                 }
                 uint16_t sw = get_sw(response, response_n);
                 sw_occurences = inc_sw_error_occurence(sw, all_sw);
@@ -2271,7 +2282,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                     if (res) {
                         DropField();
                         activate_field = true;
-                        continue;
+                        goto next_ins;
                     }
                     sw = get_sw(response, response_n);
                     sw_occurences = inc_sw_error_occurence(sw, all_sw);
@@ -2293,6 +2304,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                                       sprint_ascii(response, response_n - 2));
                     }
                 }
+next_ins:
                 activate_field = false; // Do not reativate the filed until the next reset.
             } while (++ins != ins_arg[0]);
             // Increment P1/P2 in an alternating fashion.
