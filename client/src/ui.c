@@ -689,7 +689,7 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     char *cbar = calloc(collen, sizeof(uint8_t));
 
     // Add colors
-    if ( session.supports_colors ) {
+    if (session.supports_colors) {
         int p60 = unit * (width * 60 / 100);
         int p20 = unit * (width * 20 / 100);
         snprintf(cbar,  collen,  _GREEN_("%.*s"), p60, bar);
