@@ -34,5 +34,6 @@ int CmdEM4x50ELoad(const char *Cmd);
 int CmdEM4x50ESave(const char *Cmd);
 int CmdEM4x50Chk(const char *Cmd);
 int CmdEM4x50EView(const char *Cmd);
+int CmdEM4x50Test(const char *Cmd);
 
 #endif

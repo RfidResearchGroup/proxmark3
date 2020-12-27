@@ -516,6 +516,7 @@ typedef struct {
 #define CMD_LF_EM4X50_READER                                              0x0251
 #define CMD_LF_EM4X50_ESET                                                0x0252
 #define CMD_LF_EM4X50_CHK                                                 0x0253
+#define CMD_LF_EM4X50_TEST                                                0x0254
 #define CMD_LF_EM4X70_INFO                                                0x0260
 #define CMD_LF_EM4X70_WRITE                                               0x0261
 #define CMD_LF_EM4X70_UNLOCK                                              0x0262

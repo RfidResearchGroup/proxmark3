@@ -47,6 +47,10 @@ typedef struct {
 } PACKED em4x50_data_t;
 
 typedef struct {
+    bool field;
+} PACKED em4x50_test_t;
+
+typedef struct {
     uint8_t byte[4];
 } PACKED em4x50_word_t;
 

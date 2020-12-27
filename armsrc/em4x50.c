@@ -431,7 +431,6 @@ static int find_double_listen_window(bool bcommand) {
                         // send RM for request mode
                         em4x50_reader_send_bit(0);
                         em4x50_reader_send_bit(0);
-
                         LED_B_OFF();
 
                         return PM3_SUCCESS;
@@ -724,13 +723,27 @@ static bool em4x50_sim_send_word(uint32_t word) {
 
 static bool em4x50_sim_send_listen_window(void) {
 
+    bool cond = false;
     uint16_t check = 0;
+    uint32_t tval1[5 * EM4X50_T_TAG_FULL_PERIOD] = {0};
+    uint32_t tval2[5 * EM4X50_T_TAG_FULL_PERIOD] = {0};
+
+    StartTicks();
 
     for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
 
+        cond = ((t >= 3 * EM4X50_T_TAG_FULL_PERIOD) && (t < 4 * EM4X50_T_TAG_FULL_PERIOD));
+        
         // wait until SSC_CLK goes HIGH
+        if (cond) {
+            AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+            while (AT91C_BASE_TC0->TC_CV > 0);
+        }
+        
         while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             WDT_HIT();
+            
             if (check == 1000) {
                 if (BUTTON_PRESS())
                     return false;
@@ -738,6 +751,8 @@ static bool em4x50_sim_send_listen_window(void) {
             }
             ++check;
         }
+        if (cond)
+            tval1[t] = GetTicks();
 
         if (t >= 4 * EM4X50_T_TAG_FULL_PERIOD)
             SHORT_COIL();
@@ -753,6 +768,12 @@ static bool em4x50_sim_send_listen_window(void) {
         check = 0;
 
         // wait until SSC_CLK goes LOW
+        if (cond) {
+            AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+            while (AT91C_BASE_TC0->TC_CV > 0);
+        }
+        
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
             if (check == 1000) {
@@ -762,8 +783,16 @@ static bool em4x50_sim_send_listen_window(void) {
             }
             ++check;
         }
+        if (cond)
+            tval2[t] = GetTicks();
     }
 
+    for (int t = 0; t < 5 * EM4X50_T_TAG_FULL_PERIOD; t++) {
+        //if (tval[t] > 4)
+            Dbprintf("%3i probably RM intialization found: delta = %i %i", t, tval1[t], tval2[t]);
+    }
+    Dbprintf("");
+    
     return true;
 }
 
@@ -1280,4 +1309,40 @@ void em4x50_sim(uint8_t *filename) {
     BigBuf_free();
     lf_finalize();
     reply_ng(CMD_LF_EM4X50_SIM, status, NULL, 0);
+}
+
+void em4x50_test(em4x50_test_t *ett) {
+
+    int status = PM3_EFAILED;
+
+    em4x50_setup_read();
+
+    if (ett->field) {
+        LOW(GPIO_SSC_DOUT);
+        LED_A_ON();
+
+        if (DBGLEVEL >= DBG_DEBUG)
+            Dbprintf("switched field on");
+        
+        status = 1;
+    } else {
+        HIGH(GPIO_SSC_DOUT);
+        LED_A_OFF();
+
+        if (DBGLEVEL >= DBG_DEBUG)
+            Dbprintf("switched field off");
+        
+        status = 0;
+    }
+    
+    while (BUTTON_PRESS() == false) {
+
+        if (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+            Dbprintf("field on");
+        } else if (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)){
+            Dbprintf("field on");
+        }
+    }
+    
+    reply_ng(CMD_LF_EM4X50_TEST, status, NULL, 0);
 }

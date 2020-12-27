@@ -1163,6 +1163,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_chk((uint8_t *)packet->data.asBytes);
             break;
         }
+        case CMD_LF_EM4X50_TEST: {
+            em4x50_test((em4x50_test_t *)packet->data.asBytes);
+            break;
+        }
 #endif
 
 #ifdef WITH_EM4x70

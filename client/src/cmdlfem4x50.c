@@ -1158,6 +1158,43 @@ int CmdEM4x50Sim(const char *Cmd) {
     return resp.status;
 }
 
+int CmdEM4x50Test(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x50 test",
+                  "perform EM4x50 tests.",
+                  "lf em 4x50 test --field 1    -> reader field on \n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("", "field", "field off/on"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    em4x50_test_t ett;
+    ett.field = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    // start
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_LF_EM4X50_TEST, (uint8_t *)&ett, sizeof(ett));
+    WaitForResponse(CMD_LF_EM4X50_TEST, &resp);
+
+    // print response
+    if (resp.status == 1) {
+        PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("on"));
+    } else if (resp.status == 0) {
+        PrintAndLogEx(SUCCESS, "Field switched " _GREEN_("off"));
+    } else {
+        PrintAndLogEx(FAILED, "Test call " _RED_("failed"));
+    }
+
+    return resp.status;
+}
+
 static command_t CommandTable[] = {
     {"help",   CmdHelp,              AlwaysAvailable, "This help"},
     {"brute",  CmdEM4x50Brute,       IfPm3EM4x50,     "guess password of EM4x50"},
@@ -1175,6 +1212,7 @@ static command_t CommandTable[] = {
     {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "upload dump of EM4x50 to emulator memory"},
     {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "save emulator memory to file"},
     {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "view EM4x50 content in emulator memory"},
+    {"test",   CmdEM4x50Test,        IfPm3EM4x50,     "perform EM4x50 tests"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -1188,3 +1226,4 @@ int CmdLFEM4X50(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
+
