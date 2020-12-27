@@ -198,8 +198,8 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf epa help            `|Y       |`This help`
-|`hf epa cnonces         `|N       |`Acquire encrypted PACE nonces of specific size`
-|`hf epa preplay         `|N       |`Perform PACE protocol by replaying given APDUs`
+|`hf epa cnonces         `|N       |`<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses`
+|`hf epa preplay         `|N       |`<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs`
 
 
 ### hf emrtd
