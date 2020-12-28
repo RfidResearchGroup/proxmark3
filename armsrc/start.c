@@ -14,14 +14,16 @@
 
 #include "proxmark3_arm.h"
 #include "appmain.h"
+#ifndef WITH_NO_COMPRESSION
 #include "lz4.h"
+#endif
 #include "BigBuf.h"
 #include "string.h"
 
 extern struct common_area common_area;
 extern char __data_src_start__, __data_start__, __data_end__, __bss_start__, __bss_end__;
 
-
+#ifndef WITH_NO_COMPRESSION
 static void uncompress_data_section(void) {
     int avail_in;
     memcpy(&avail_in, &__data_src_start__, sizeof(int));
@@ -35,6 +37,7 @@ static void uncompress_data_section(void) {
     // save the size of the compressed data section
     common_area.arg1 = avail_in;
 }
+#endif
 
 void __attribute__((section(".startos"))) Vector(void);
 void Vector(void) {
@@ -47,12 +50,23 @@ void Vector(void) {
         common_area.version = 1;
     }
     common_area.flags.osimage_present = 1;
-
-    uncompress_data_section();
+	
+#ifdef WITH_NO_COMPRESSION
+	/* Set up data segment: Copy from flash to ram */
+    char *src = &__data_src_start__;
+    char *dst = &__data_start__;
+    char *end = &__data_end__;
+    while(dst < end) *dst++ = *src++;
+	dst = &__bss_start__;
+    end = &__bss_end__;
+#else
+	uncompress_data_section();
 
     /* Set up (that is: clear) BSS. */
     char *dst = &__bss_start__;
     char *end = &__bss_end__;
+#endif
+    
     while (dst < end) *dst++ = 0;
 
     AppMain();
