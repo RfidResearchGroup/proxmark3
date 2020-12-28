@@ -20,6 +20,7 @@
 #include "protocols.h"              // definitions of ISO14A/7816 protocol
 #include "emv/apduinfo.h"           // GetAPDUCodeDescription
 #include "sha1.h"                   // KSeed calculation etc
+#include "crypto/libpcrypto.h"      // Hash calculation (sha256), TODO: AES too
 #include "mifare/desfire_crypto.h"  // des_encrypt/des_decrypt
 #include "des.h"                    // mbedtls_des_key_set_parity
 #include "cmdhf14b.h"               // exchange_14b_apdu
@@ -83,28 +84,28 @@ typedef enum  { // list must match dg_table
 } emrtd_dg_enum;
 
 static emrtd_dg_t dg_table[] = {
-//  tag     fileid  filename           desc                                                 pace   eac    req    fast   parser                    dumper
-    {0x60, "011E", "EF_COM",          "Header and Data Group Presence Information",         false, false, true,  true,  emrtd_print_ef_com_info,  NULL},
-    {0x61, "0101", "EF_DG1",          "Details recorded in MRZ",                            false, false, true,  true,  emrtd_print_ef_dg1_info,  NULL},
-    {0x75, "0102", "EF_DG2",          "Encoded Face",                                       false, false, true,  false, NULL,                     emrtd_dump_ef_dg2},
-    {0x63, "0103", "EF_DG3",          "Encoded Finger(s)",                                  false, true,  false, false, NULL,                     NULL},
-    {0x76, "0104", "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                     NULL},
-    {0x65, "0105", "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, NULL,                     emrtd_dump_ef_dg5},
-    {0x66, "0106", "EF_DG6",          "Reserved for Future Use",                            false, false, false, false, NULL,                     NULL},
-    {0x67, "0107", "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, false, NULL,                     emrtd_dump_ef_dg7},
-    {0x68, "0108", "EF_DG8",          "Data Feature(s)",                                    false, false, false, true,  NULL,                     NULL},
-    {0x69, "0109", "EF_DG9",          "Structure Feature(s)",                               false, false, false, true,  NULL,                     NULL},
-    {0x6a, "010A", "EF_DG10",         "Substance Feature(s)",                               false, false, false, true,  NULL,                     NULL},
-    {0x6b, "010B", "EF_DG11",         "Additional Personal Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg11_info, NULL},
-    {0x6c, "010C", "EF_DG12",         "Additional Document Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg12_info, NULL},
-    {0x6d, "010D", "EF_DG13",         "Optional Detail(s)",                                 false, false, false, true,  NULL,                     NULL},
-    {0x6e, "010E", "EF_DG14",         "Security Options",                                   false, false, false, true,  NULL,                     NULL},
-    {0x6f, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, false, true,  NULL,                     NULL},
-    {0x70, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, false, true,  NULL,                     NULL},
-    {0x77, "011D", "EF_SOD",          "Document Security Object",                           false, false, false, false, NULL,                     emrtd_dump_ef_sod},
-    {0xff, "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  false, true,  true,  NULL,                     NULL},
-    {0xff, "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, false, true,  NULL,                     NULL},
-    {0x00, NULL, NULL, NULL, false, false, false, false, NULL, NULL}
+//  tag    dg# fileid  filename           desc                                                  pace   eac    req    fast   parser                    dumper
+    {0x60, 0,  "011E", "EF_COM",          "Header and Data Group Presence Information",         false, false, true,  true,  emrtd_print_ef_com_info,  NULL},
+    {0x61, 1,  "0101", "EF_DG1",          "Details recorded in MRZ",                            false, false, true,  true,  emrtd_print_ef_dg1_info,  NULL},
+    {0x75, 2,  "0102", "EF_DG2",          "Encoded Face",                                       false, false, true,  false, NULL,                     emrtd_dump_ef_dg2},
+    {0x63, 3,  "0103", "EF_DG3",          "Encoded Finger(s)",                                  false, true,  false, false, NULL,                     NULL},
+    {0x76, 4,  "0104", "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                     NULL},
+    {0x65, 5,  "0105", "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, NULL,                     emrtd_dump_ef_dg5},
+    {0x66, 6,  "0106", "EF_DG6",          "Reserved for Future Use",                            false, false, false, false, NULL,                     NULL},
+    {0x67, 7,  "0107", "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, false, NULL,                     emrtd_dump_ef_dg7},
+    {0x68, 8,  "0108", "EF_DG8",          "Data Feature(s)",                                    false, false, false, true,  NULL,                     NULL},
+    {0x69, 9,  "0109", "EF_DG9",          "Structure Feature(s)",                               false, false, false, true,  NULL,                     NULL},
+    {0x6a, 10, "010A", "EF_DG10",         "Substance Feature(s)",                               false, false, false, true,  NULL,                     NULL},
+    {0x6b, 11, "010B", "EF_DG11",         "Additional Personal Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg11_info, NULL},
+    {0x6c, 12, "010C", "EF_DG12",         "Additional Document Detail(s)",                      false, false, false, true,  emrtd_print_ef_dg12_info, NULL},
+    {0x6d, 13, "010D", "EF_DG13",         "Optional Detail(s)",                                 false, false, false, true,  NULL,                     NULL},
+    {0x6e, 14, "010E", "EF_DG14",         "Security Options",                                   false, false, false, true,  NULL,                     NULL},
+    {0x6f, 15, "010F", "EF_DG15",         "Active Authentication Public Key Info",              false, false, false, true,  NULL,                     NULL},
+    {0x70, 16, "0110", "EF_DG16",         "Person(s) to Notify",                                false, false, false, true,  NULL,                     NULL},
+    {0x77, 0,  "011D", "EF_SOD",          "Document Security Object",                           false, false, false, false, NULL,                     emrtd_dump_ef_sod},
+    {0xff, 0,  "011C", "EF_CardAccess",   "PACE SecurityInfos",                                 true,  false, true,  true,  NULL,                     NULL},
+    {0xff, 0,  "011D", "EF_CardSecurity", "PACE SecurityInfos for Chip Authentication Mapping", true,  false, false, true,  NULL,                     NULL},
+    {0x00, 0,  NULL, NULL, NULL, false, false, false, false, NULL, NULL}
 };
 
 static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
@@ -1483,106 +1484,105 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
-// static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
-//     // very very very very cursed code.
-//     uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-//     uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-//     uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-//     uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-//     uint8_t emrtdsigtext[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-//     size_t toplen, signeddatalen, emrtdsigcontainerlen, emrtdsiglen, emrtdsigtextlen = 0;
+static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
+    // very very very very cursed code.
+    uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t emrtdsigtext[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    size_t toplen, signeddatalen, emrtdsigcontainerlen, emrtdsiglen, emrtdsigtextlen = 0;
 
-//     if (!emrtd_lds_get_data_by_tag(data, datalen, top, &toplen, 0x30, 0x00, false, true, 0)) {
-//         PrintAndLogEx(ERR, "Failed to read top from EF_SOD.");
-//         return false;
-//     }
+    if (!emrtd_lds_get_data_by_tag(data, datalen, top, &toplen, 0x30, 0x00, false, true, 0)) {
+        PrintAndLogEx(ERR, "Failed to read top from EF_SOD.");
+        return false;
+    }
 
-//     PrintAndLogEx(DEBUG, "top: %s.", sprint_hex_inrow(top, toplen));
+    PrintAndLogEx(DEBUG, "top: %s.", sprint_hex_inrow(top, toplen));
 
-//     if (!emrtd_lds_get_data_by_tag(top, toplen, signeddata, &signeddatalen, 0xA0, 0x00, false, false, 0)) {
-//         PrintAndLogEx(ERR, "Failed to read signedData from EF_SOD.");
-//         return false;
-//     }
+    if (!emrtd_lds_get_data_by_tag(top, toplen, signeddata, &signeddatalen, 0xA0, 0x00, false, false, 0)) {
+        PrintAndLogEx(ERR, "Failed to read signedData from EF_SOD.");
+        return false;
+    }
 
-//     PrintAndLogEx(DEBUG, "signeddata: %s.", sprint_hex_inrow(signeddata, signeddatalen));
+    PrintAndLogEx(DEBUG, "signeddata: %s.", sprint_hex_inrow(signeddata, signeddatalen));
 
-//     // Do true on reading into the tag as it's a "sequence"
-//     if (!emrtd_lds_get_data_by_tag(signeddata, signeddatalen, emrtdsigcontainer, &emrtdsigcontainerlen, 0x30, 0x00, false, true, 0)) {
-//         PrintAndLogEx(ERR, "Failed to read eMRTDSignature container from EF_SOD.");
-//         return false;
-//     }
+    // Do true on reading into the tag as it's a "sequence"
+    if (!emrtd_lds_get_data_by_tag(signeddata, signeddatalen, emrtdsigcontainer, &emrtdsigcontainerlen, 0x30, 0x00, false, true, 0)) {
+        PrintAndLogEx(ERR, "Failed to read eMRTDSignature container from EF_SOD.");
+        return false;
+    }
 
-//     PrintAndLogEx(DEBUG, "emrtdsigcontainer: %s.", sprint_hex_inrow(emrtdsigcontainer, emrtdsigcontainerlen));
+    PrintAndLogEx(DEBUG, "emrtdsigcontainer: %s.", sprint_hex_inrow(emrtdsigcontainer, emrtdsigcontainerlen));
 
-//     if (!emrtd_lds_get_data_by_tag(emrtdsigcontainer, emrtdsigcontainerlen, emrtdsig, &emrtdsiglen, 0xA0, 0x00, false, false, 0)) {
-//         PrintAndLogEx(ERR, "Failed to read eMRTDSignature from EF_SOD.");
-//         return false;
-//     }
+    if (!emrtd_lds_get_data_by_tag(emrtdsigcontainer, emrtdsigcontainerlen, emrtdsig, &emrtdsiglen, 0xA0, 0x00, false, false, 0)) {
+        PrintAndLogEx(ERR, "Failed to read eMRTDSignature from EF_SOD.");
+        return false;
+    }
 
-//     PrintAndLogEx(DEBUG, "emrtdsig: %s.", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+    PrintAndLogEx(DEBUG, "emrtdsig: %s.", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
-//     // TODO: Not doing memcpy here, it didn't work, fix it somehow
-//     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, emrtdsigtext, &emrtdsigtextlen, 0x04, 0x00, false, false, 0)) {
-//         PrintAndLogEx(ERR, "Failed to read eMRTDSignature (text) from EF_SOD.");
-//         return false;
-//     }
-//     memcpy(dataout, emrtdsigtext, emrtdsigtextlen);
-//     *dataoutlen = emrtdsigtextlen;
-//     return PM3_SUCCESS;
-// }
+    // TODO: Not doing memcpy here, it didn't work, fix it somehow
+    if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, emrtdsigtext, &emrtdsigtextlen, 0x04, 0x00, false, false, 0)) {
+        PrintAndLogEx(ERR, "Failed to read eMRTDSignature (text) from EF_SOD.");
+        return false;
+    }
+    memcpy(dataout, emrtdsigtext, emrtdsigtextlen);
+    *dataoutlen = emrtdsigtextlen;
+    return PM3_SUCCESS;
+}
 
-// static int emrtd_print_ef_sod_info(uint8_t *data, size_t datalen) {
-//     uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-//     uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-//     uint8_t hash[65] = { 0x00 };
-//     size_t hashlen = 0;
+static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *hashes) {
+    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t hash[65] = { 0x00 };
+    size_t hashlen = 0;
 
-//     uint8_t hashidstr[4] = { 0x00 };
-//     size_t hashidstrlen = 0;
+    uint8_t hashidstr[4] = { 0x00 };
+    size_t hashidstrlen = 0;
 
-//     // size_t emrtdsiglen, e_datalen, e_fieldlen = 0;
-//     size_t emrtdsiglen = 0;
-//     size_t hashlistlen = 0;
-//     size_t e_datalen = 0;
-//     size_t e_fieldlen = 0;
-//     size_t offset = 0;
+    // size_t emrtdsiglen, e_datalen, e_fieldlen = 0;
+    size_t emrtdsiglen = 0;
+    size_t hashlistlen = 0;
+    size_t e_datalen = 0;
+    size_t e_fieldlen = 0;
+    size_t offset = 0;
 
-//     PrintAndLogEx(NORMAL, "");
-//     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+    if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
+        return false;
+    }
 
-//     if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
-//         return false;
-//     }
+    PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
-//     PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+    if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
+        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
+        return false;
+    }
 
-//     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
-//         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
-//         return false;
-//     }
+    PrintAndLogEx(DEBUG, "hash list: %s", sprint_hex_inrow(hashlist, hashlistlen));
 
-//     PrintAndLogEx(DEBUG, "hash list: %s", sprint_hex_inrow(hashlist, hashlistlen));
+    while (offset < hashlistlen) {
+        // Get the length of the element
+        e_datalen = emrtd_get_asn1_data_length(hashlist + offset, hashlistlen - offset, 1);
 
-//     while (offset < hashlistlen) {
-//         // Get the length of the element
-//         e_datalen = emrtd_get_asn1_data_length(hashlist + offset, hashlistlen - offset, 1);
+        // Get the length of the element's length
+        e_fieldlen = emrtd_get_asn1_field_length(hashlist + offset, hashlistlen - offset, 1);
 
-//         // Get the length of the element's length
-//         e_fieldlen = emrtd_get_asn1_field_length(hashlist + offset, hashlistlen - offset, 1);
+        switch (hashlist[offset]) {
+            case 0x30:
+                emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hashidstr, &hashidstrlen, 0x02, 0x00, false, false, 0);
+                emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hash, &hashlen, 0x04, 0x00, false, false, 0);
+                if (hashlen <= 64) {  // TODO: This is for coverity, account for it.
+                    memcpy(hashes + (hashidstr[0] * 64), hash, hashlen);
+                }
+                break;
+        }
+        // + 1 for length of ID
+        offset += 1 + e_datalen + e_fieldlen;
+    }
 
-//         switch (hashlist[offset]) {
-//             case 0x30:
-//                 emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hashidstr, &hashidstrlen, 0x02, 0x00, false, false, 0);
-//                 emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hash, &hashlen, 0x04, 0x00, false, false, 0);
-//                 PrintAndLogEx(SUCCESS, "Hash for EF_DG%i: %s", hashidstr[0], sprint_hex_inrow(hash, hashlen));
-//                 break;
-//         }
-//         // + 1 for length of ID
-//         offset += 1 + e_datalen + e_fieldlen;
-//     }
-
-//     return PM3_SUCCESS;
-// }
+    return PM3_SUCCESS;
+}
 
 int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
@@ -1633,8 +1633,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         DropField();
         return PM3_ESOFT;
     }
+    // TODO: DROP THIS TOO A LA OFFLINE
     // Add EF_SOD to the list
-    filelist[filelistlen++] = 0x77;
+    // filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
@@ -1686,8 +1687,26 @@ int infoHF_EMRTD_offline(const char *path) {
         return PM3_ESOFT;
     }
     free(data);
-    // Add EF_SOD to the list
-    filelist[filelistlen++] = 0x77;
+
+    uint8_t dg_hashes[20][64];
+    uint8_t hash_out[64];
+
+    strcpy(filepath, path);
+    strncat(filepath, PATHSEP, 2);
+    strcat(filepath, dg_table[EF_SOD].filename);
+
+    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to read EF_SOD.");
+        free(filepath);
+        return PM3_ESOFT;
+    }
+
+    res = emrtd_parse_ef_sod_hashes(data, datalen, *dg_hashes);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
+    }
+    free(data);
+
     // Read files in the file list
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
@@ -1703,6 +1722,12 @@ int infoHF_EMRTD_offline(const char *path) {
                 // we won't halt on parsing errors
                 if (dg->parser != NULL)
                     dg->parser(data, datalen);
+                sha512hash(data, datalen, hash_out);
+                if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
+                    PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
+                } else {
+                    PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
+                }
                 free(data);
             }
         }
