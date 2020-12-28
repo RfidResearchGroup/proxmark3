@@ -1633,9 +1633,22 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         DropField();
         return PM3_ESOFT;
     }
-    // TODO: DROP THIS TOO A LA OFFLINE
-    // Add EF_SOD to the list
-    // filelist[filelistlen++] = 0x77;
+
+    // Grab the hash list
+    uint8_t dg_hashes[16][64];
+    uint8_t hash_out[64];
+
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_SOD].fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
+        PrintAndLogEx(ERR, "Failed to read EF_SOD.");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    res = emrtd_parse_ef_sod_hashes(response, resplen, *dg_hashes);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
+    }
+
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
@@ -1647,6 +1660,14 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             if (emrtd_select_and_read(response, &resplen, dg->fileid, ks_enc, ks_mac, ssc, BAC, use_14b)) {
                 if (dg->parser != NULL)
                     dg->parser(response, resplen);
+
+                // Check file hash
+                sha512hash(response, resplen, hash_out);
+                if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
+                    PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
+                } else {
+                    PrintAndLogEx(ERR, _RED_("Hash verification failed for EF_DG%i."), dg->dgnum);
+                }
             }
         }
     }
@@ -1688,7 +1709,8 @@ int infoHF_EMRTD_offline(const char *path) {
     }
     free(data);
 
-    uint8_t dg_hashes[20][64];
+    // Grab the hash list
+    uint8_t dg_hashes[16][64];
     uint8_t hash_out[64];
 
     strcpy(filepath, path);
@@ -1722,6 +1744,8 @@ int infoHF_EMRTD_offline(const char *path) {
                 // we won't halt on parsing errors
                 if (dg->parser != NULL)
                     dg->parser(data, datalen);
+
+                // Check file hash
                 sha512hash(data, datalen, hash_out);
                 if (memcmp(dg_hashes[dg->dgnum], hash_out, 64) == 0) {
                     PrintAndLogEx(SUCCESS, _GREEN_("Hash verification passed for EF_DG%i."), dg->dgnum);
