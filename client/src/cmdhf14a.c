@@ -2228,6 +2228,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     bool inc_p1 = true;
+    bool skip_ins = false;
     uint64_t all_sw[256][256] = {0};
     uint64_t sw_occurences = 0;
     uint64_t t_start = msclock();
@@ -2237,6 +2238,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     do {
         do {
             do {
+retry_ins:
                 // Exit (was the Enter key pressed)?
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(INFO, "User interrupted detected. Aborting");
@@ -2246,8 +2248,13 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                 // Skip/Ignore this instrctuion?
                 for (int i = 0; i < ignore_ins_len; i++) {
                     if (ins == ignore_ins_arg[i]) {
-                        goto next_ins;
+                        skip_ins = true;
+                        break;
                     }
+                }
+                if (skip_ins) {
+                    skip_ins = false;
+                    continue;
                 }
 
                 if (verbose) {
@@ -2261,7 +2268,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                 if (res) {
                     DropField();
                     activate_field = true;
-                    goto next_ins;
+                    goto retry_ins;
                 }
                 uint16_t sw = get_sw(response, response_n);
                 sw_occurences = inc_sw_error_occurence(sw, all_sw);
@@ -2282,7 +2289,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                     if (res) {
                         DropField();
                         activate_field = true;
-                        goto next_ins;
+                        goto retry_ins;
                     }
                     sw = get_sw(response, response_n);
                     sw_occurences = inc_sw_error_occurence(sw, all_sw);
@@ -2291,11 +2298,15 @@ static int CmdHf14AFindapdu(const char *Cmd) {
 
                 // Show response.
                 if (sw_occurences < error_limit) {
+                    logLevel_t log_level = INFO;
+                    if (sw == 0x9000) {
+                        log_level = SUCCESS;
+                    }
                     if (command_with_le) {
-                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X00\": %04X (%s)", cla, ins, p1, p2,
+                        PrintAndLogEx(log_level, "Got response for APDU \"%02X%02X%02X%02X00\": %04X (%s)", cla, ins, p1, p2,
                                       sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                     } else {
-                        PrintAndLogEx(INFO, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
+                        PrintAndLogEx(log_level, "Got response for APDU \"%02X%02X%02X%02X\": %04X (%s)", cla, ins, p1, p2,
                                       sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                     }
                     // Show response data.
@@ -2304,7 +2315,6 @@ static int CmdHf14AFindapdu(const char *Cmd) {
                                       sprint_ascii(response, response_n - 2));
                     }
                 }
-next_ins:
                 activate_field = false; // Do not reativate the filed until the next reset.
             } while (++ins != ins_arg[0]);
             // Increment P1/P2 in an alternating fashion.
