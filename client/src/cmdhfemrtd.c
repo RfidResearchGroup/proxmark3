@@ -1532,16 +1532,15 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     return PM3_SUCCESS;
 }
 
-static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *hashes) {
+static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *hashes, int *hashalgo) {
     uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t hash[65] = { 0x00 };
+    uint8_t hash[64] = { 0x00 };
     size_t hashlen = 0;
 
     uint8_t hashidstr[4] = { 0x00 };
     size_t hashidstrlen = 0;
 
-    // size_t emrtdsiglen, e_datalen, e_fieldlen = 0;
     size_t emrtdsiglen = 0;
     size_t hashlistlen = 0;
     size_t e_datalen = 0;
@@ -1572,8 +1571,10 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
             case 0x30:
                 emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hashidstr, &hashidstrlen, 0x02, 0x00, false, false, 0);
                 emrtd_lds_get_data_by_tag(hashlist + offset + e_fieldlen + 1, e_datalen, hash, &hashlen, 0x04, 0x00, false, false, 0);
-                if (hashlen <= 64) {  // TODO: This is for coverity, account for it.
+                if (hashlen <= 64) {
                     memcpy(hashes + (hashidstr[0] * 64), hash, hashlen);
+                } else {
+                    PrintAndLogEx(ERR, "error (emrtd_parse_ef_sod_hashes) hashlen out-of-bounds");
                 }
                 break;
         }
