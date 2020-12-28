@@ -55,7 +55,21 @@
                     "name": "PATH","value": "${workspaceFolder}/../../msys2/mingw64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin"
                 }]
             }
-        }
+        },{
+            "type": "cortex-debug",
+            "request": "launch",
+            "name": "Debug J-Link",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "fullimage: clean & make",
+            "executable": "${workspaceRoot}/armsrc/obj/fullimage.stage1.elf",
+            "serverpath": "/opt/SEGGER/JLink/JLinkGDBServerCLExe", 
+            "servertype": "jlink",
+            "device": "AT91SAM7S512",
+            "interface": "jtag",
+            "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
+            "runToMain": true,
+            "armToolchainPath": "/usr/bin/"
+            }
     ],
     "inputs": [
         {

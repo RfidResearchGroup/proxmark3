@@ -143,6 +143,14 @@
                 }
               },
             "problemMatcher": []
+        },{
+            "label": "fullimage: clean & make",
+            "type": "shell",
+            "command": "make armsrc/clean && make armsrc/all SKIP_COMPRESSION=1 DEBUG=1",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
         }
     ],
     "inputs": [
