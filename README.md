@@ -135,12 +135,6 @@ The separation from official Proxmark3 repo gives us a lot of freedom to create 
 The official PM3-GUI from Gaucho will not work.
 The new [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less. Change is needed in order to show helptext when client isn't connected to a device.  We don't know how active the maintainers.
 
-## The end
-
-- July 2018 [@herrmann1001](https://mobile.twitter.com/herrmann1001)
-- updated Feb 2019 [@5w0rdfish](https://mobile.twitter.com/5w0rdFish)
-- updated 2019 [@doegox](https://mobile.twitter.com/doegox)
-
 # Donations
 
 Nothing says thank you as much as a donation. So if you feel the love, do feel free to become a iceman patron. For some tiers it comes with rewards.
