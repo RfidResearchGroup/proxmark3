@@ -4,26 +4,32 @@ local ansicolors = require('ansicolors')
 
 copyright = ''
 author = "Iceman"
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This script tries to set UID on a mifare Ultralight magic card which either
  - answers to chinese backdoor commands
  - brickable magic tag  (must write in one session)
+
+ It defaults to GEN1A type of uid changeable card.
 ]]
 example = [[
-     -- backdoor magic tag
+     -- backdoor magic tag (gen1a)
      script run hf_mfu_setuid -u 11223344556677
 
-     -- brickable magic tag
+     -- backdoor magic tag (gen1b)
      script run hf_mfu_setuid -b -u 11223344556677
+
+     -- brickable magic tag (gen2)
+     script run hf_mfu_setuid -2 -u 11223344556677
 ]]
 usage = [[
-script run hf_mfu_setuid [-h] [-b] [-u <uid>]
+script run hf_mfu_setuid [-h] [-b] [-2] [-u <uid>]
 ]]
 arguments = [[
     -h             : this help
     -u <UID>       : UID (14 hexsymbols)
-    -b             : write to brickable magic tag
+    -b             : write to magic tag GEN1B
+    -2             : write to brickable magic tag GEN2
 ]]
 
 local DEBUG = true
@@ -65,23 +71,33 @@ local function help()
 end
 --
 --- Set UID on magic command enabled
-function magicUID(b0, b1, b2)
+function magicUID(b0, b1, b2,  isgen1a)
 
-    print('Using backdoor Magic tag function')
+    if isgen1a then 
+        print('Using backdoor Magic tag (gen1a) function')
+    else
+        print('Using backdoor Magic tag (gen1b) function')
+    end
 
     -- write block 0
     core.console('hf 14a raw -k -a -b 7 40')
-    core.console('hf 14a raw -k -a 43')
+    if isgen1a then 
+        core.console('hf 14a raw -k -a 43')
+    end
     core.console('hf 14a raw -c -a A200'..b0)
 
     -- write block 1
     core.console('hf 14a raw -k -a -b 7 40')
-    core.console('hf 14a raw -k -a 43')
+    if isgen1a then 
+        core.console('hf 14a raw -k -a 43')
+    end
     core.console('hf 14a raw -c -a A201'..b1)
 
     -- write block 2
     core.console('hf 14a raw -k -a -b 7 40')
-    core.console('hf 14a raw -k -a 43')
+    if isgen1a then 
+        core.console('hf 14a raw -k -a 43')
+    end
     core.console('hf 14a raw -c -a A202'..b2)
 end
 --
@@ -113,10 +129,11 @@ function main(args)
     local tagtype = 1
 
     -- Read the parameters
-    for o, a in getopt.getopt(args, 'hu:b') do
+    for o, a in getopt.getopt(args, 'hu:b2') do
         if o == 'h' then return help() end
         if o == 'u' then uid = a end
         if o == 'b' then tagtype = 2 end
+        if o == '2' then tagtype = 3 end
     end
 
     -- uid string checks
@@ -137,10 +154,11 @@ function main(args)
 
     core.clearCommandBuffer()
 
-    if tagtype == 2 then
+    if tagtype == 3 then        
         brickableUID(block0, block1, block2)
     else
-        magicUID(block0, block1, block2)
+        local is_gen1a = (tagtype == 1)
+        magicUID(block0, block1, block2, is_gen1a)
     end
 
         --halt
