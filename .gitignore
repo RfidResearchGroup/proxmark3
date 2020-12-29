@@ -108,3 +108,8 @@ fpga_version_info.c
 
 # .tmp files are created during compilation
 *.tmp
+
+#VSCode files
+!.vscode/*.json
+.vscode/launch.json
+.vscode/tasks.json

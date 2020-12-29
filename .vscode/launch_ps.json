@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+		{
+            "name": "Client: (gdb) Build & Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${cwd}/client/proxmark3",
+            "args": ["${SerialPort}"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+				"name": "PATH","value": "${workspaceFolder}/../../msys2/mingw64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin"
+			],
+            "externalConsole": true,//for ProxSpace externalConsole=true is required, because the internal cosole stops updating after a while
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "client: Debug: clean & make",
+            "miDebuggerPath": "${DebuggerPath}"
+        },{
+            "name": "Firmware: (J-Link) Build & Launch",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "fullimage: clean & make",
+            "executable": "${workspaceRoot}/armsrc/obj/fullimage.elf",
+            "serverpath": "${JLinkServerPath}",
+            "servertype": "jlink",
+            "device": "AT91SAM7S${DeviceMem}",
+            "interface": "jtag",
+            "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
+            "runToMain": false,
+            "armToolchainPath": "/usr/bin/"
+        }
+    ]
+}

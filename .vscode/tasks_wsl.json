@@ -1,0 +1,177 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "all: Make & run",
+            "type": "shell",
+            "command": "make -j && ./pm3",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "choose: Make",
+            "type": "shell",
+            "command": "make ${input:componentType} -j",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+        },
+        {
+            "label": "client: Debug: make",
+            "type": "shell",
+            "command": "make client -j DEBUG=1",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+        },
+        {
+            "label": "client: Debug: clean & make",
+            "type": "shell",
+            "command": "make client/clean && make client -j DEBUG=1",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }   
+                }
+              },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+        },
+        {
+            "label": "fullimage: Make & Flash",
+            "type": "shell",
+            "command": "make fullimage && ./pm3-flash-fullimage",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
+            "problemMatcher": []
+        },
+        {
+            "label": "BOOTROM: Make & Flash",
+            "type": "shell",
+            "command": "make bootrom && ./pm3-flash-bootrom",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run client",
+            "type": "shell",
+            "command": "./pm3",
+            "windows": {
+                "options": {
+                    "cwd": "${workspaceFolder}/../..",
+                    "shell": {
+                        "executable": "${workspaceFolder}/../../runme64.bat",
+                        "args": [
+                            "-c \"cd ${workspaceFolderBasename} &&"
+                        ],
+                        
+                    }
+                }
+              },
+            "problemMatcher": []
+        },{
+            "label": "fullimage: clean & make",
+            "type": "shell",
+            "command": "make armsrc/clean && make armsrc/all SKIP_COMPRESSION=1 DEBUG=1",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+        }
+    ],
+    "inputs": [
+        {
+            "type": "pickString",
+            "id": "componentType",
+            "description": "What Makefile target do you want to execute?",
+            "options": [
+                "all",
+                "client",
+                "bootrom",
+                "fullimage",
+                "recovery",
+                "clean",
+                "install",
+                "uninstall",
+                "style",
+                "miscchecks",
+                "check",
+            ],
+            "default": "all"
+        }
+    ]
+}
