@@ -217,6 +217,11 @@ static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset
     PrintAndLogEx(DEBUG, "asn1 datalength, lenfield: %02X", lenfield);
     if (lenfield <= 0x7f) {
         return lenfield;
+    } else if (lenfield == 0x80) {
+        // TODO: 0x80 means indeterminate, and this impl is a workaround.
+        // Giving rest of the file is a workaround, nothing more, nothing less.
+        // https://wf.lavatech.top/ave-but-random/emrtd-data-quirks#EF_SOD
+        return datainlen;
     } else if (lenfield == 0x81) {
         return ((int) * (datain + offset + 1));
     } else if (lenfield == 0x82) {
@@ -231,7 +236,7 @@ static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offse
     PrintAndLogEx(DEBUG, "asn1 fieldlength, datain: %s", sprint_hex_inrow(datain, datainlen));
     int lenfield = (int) * (datain + offset);
     PrintAndLogEx(DEBUG, "asn1 fieldlength, lenfield: %02X", lenfield);
-    if (lenfield <= 0x7F) {
+    if (lenfield <= 0x80) {
         return 1;
     } else if (lenfield == 0x81) {
         return 2;
@@ -1544,6 +1549,9 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
     uint8_t hashalgoset[64] = { 0x00 };
     size_t hashalgosetlen = 0;
 
+    // We'll return hash algo -1 if we can't find anything
+    *hashalgo = -1;
+
     if (!emrtd_lds_get_data_by_tag(data, datalen, hashalgoset, &hashalgosetlen, 0x30, 0x00, false, true, 0)) {
         PrintAndLogEx(ERR, "Failed to read hash algo set from EF_SOD.");
         return false;
@@ -1571,8 +1579,6 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
         }
     }
 
-    // Return hash algo -1 if we can't find anything
-    *hashalgo = -1;
     PrintAndLogEx(ERR, "Failed to parse hash list (Unknown algo: %s). Hash verification won't be available.", sprint_hex_inrow(hashalgoset, hashalgosetlen));
     return PM3_ESOFT;
 }
