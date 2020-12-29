@@ -64,6 +64,24 @@ To use the compiled client, the only differences are that executables end with `
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
+## (Optional) Visual Studio Code debugging
+
+Download and install [Visual Studio Code](https://code.visualstudio.com/) 
+
+Download and install [J-Link Software and Documentation pack for Windows](https://www.segger.com/downloads/jlink/JLink_Windows.exe) 
+
+Enter PorxSpace (`runme64.bat`)  and enter your project folder.
+
+Setup the Visual Studio Code configuration, by running:
+```sh
+./.vscode/setup.sh
+```
+
+now launch Visual Studio Code and open your project folder
+
+_note_
+Please install the recommended Visual Studio Code extensions in order for debugging to work.
+
 # Installing on Windows with WSL 1
 
 WSL 1 requires to run on Windows 10 version 1709 or above. Previous windows versions didn't have support for COM ports.
