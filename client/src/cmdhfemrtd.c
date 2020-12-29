@@ -111,7 +111,7 @@ static emrtd_dg_t dg_table[] = {
 // https://tools.ietf.org/html/rfc3447#page-43
 static emrtd_hashalg_t hashalg_table[] = {
 //  name        hash func   len len descriptor
-    {"SHA-1",   sha1hash,   20,  9, {0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00}},
+    {"SHA-1",   sha1hash,   20,  7, {0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A}},
     {"SHA-256", sha256hash, 32, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01}},
     {"SHA-512", sha512hash, 64, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03}},
     {NULL,      NULL,       0,  0,  {}}
@@ -1551,6 +1551,12 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
 
     PrintAndLogEx(DEBUG, "hash algo set: %s", sprint_hex_inrow(hashalgoset, hashalgosetlen));
 
+    // If last two bytes are 05 00, ignore them.
+    // https://wf.lavatech.top/ave-but-random/emrtd-data-quirks#EF_SOD
+    if (hashalgoset[hashalgosetlen - 2] == 0x05 && hashalgoset[hashalgosetlen - 1] == 0x00) {
+        hashalgosetlen -= 2;
+    }
+
     for (int hashi = 0; hashalg_table[hashi].name != NULL; hashi++) {
         PrintAndLogEx(DEBUG, "trying: %s", hashalg_table[hashi].name);
         // We're only interested in checking if the length matches to avoid memory shenanigans
@@ -1565,8 +1571,9 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
         }
     }
 
-    // Return hash algo 0 if we can't find anything
+    // Return hash algo -1 if we can't find anything
     *hashalgo = -1;
+    PrintAndLogEx(ERR, "Failed to parse hash list (Unknown algo: %s). Hash verification won't be available.", sprint_hex_inrow(hashalgoset, hashalgosetlen));
     return PM3_ESOFT;
 }
 
@@ -1591,9 +1598,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 
     PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
-    if (emrtd_parse_ef_sod_hash_algo(emrtdsig, emrtdsiglen, hashalgo) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to parse hash list (Unknown algo?). Hash verification won't be available.");
-    }
+    emrtd_parse_ef_sod_hash_algo(emrtdsig, emrtdsiglen, hashalgo);
 
     if (!emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1)) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
