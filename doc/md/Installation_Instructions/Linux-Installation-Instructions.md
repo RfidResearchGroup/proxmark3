@@ -25,15 +25,12 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev libbluetooth-dev \
-binutils-arm-none-eabi gdb openocd gdb-multiarch
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev libbluetooth-dev
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `libbluetooth-dev`.
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qtbase5-dev`.
-
-If you don't need the debugging packages, you can skip the installation of `binutils-arm-none-eabi`,`gdb`,`openocd` and `gdb-multiarch`.
 
 If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_ you may have to install `libcanberra-gtk-module`.
 
@@ -115,25 +112,3 @@ It must return `ok`. Otherwise this means you've got a permission problem to fix
 # Compile and use the project
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
-
-
-## (Optional) Visual Studio Code debugging
-
-Download and install [Visual Studio Code](https://code.visualstudio.com/) 
-
-Download and install [J-Link Software and Documentation pack](https://www.segger.com/downloads/jlink) 
-
-On some systems `arm-none-eabi-gdb` was replaced with `gdb-multiarch`. In order to use the J-Link debugger you need to link `arm-none-eabi-gdb` to `gdb-multiarch`:
-```sh
-ln -s /usr/bin/gdb-multiarch /usr/bin/arm-none-eabi-gdb
-```
-
-Setup the Visual Studio Code configuration, by going into your project folder and run:
-```sh
-./.vscode/setup.sh
-```
-
-now launch Visual Studio Code and open your project folder
-
-_note_
-Please install the recommended Visual Studio Code extensions in order for debugging to work.

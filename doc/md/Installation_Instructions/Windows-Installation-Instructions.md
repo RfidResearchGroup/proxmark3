@@ -64,24 +64,6 @@ To use the compiled client, the only differences are that executables end with `
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-## (Optional) Visual Studio Code debugging
-
-Download and install [Visual Studio Code](https://code.visualstudio.com/) 
-
-Download and install [J-Link Software and Documentation pack for Windows](https://www.segger.com/downloads/jlink/JLink_Windows.exe) 
-
-Enter PorxSpace (`runme64.bat`)  and enter your project folder.
-
-Setup the Visual Studio Code configuration, by running:
-```sh
-./.vscode/setup.sh
-```
-
-now launch Visual Studio Code and open your project folder
-
-_note_
-Please install the recommended Visual Studio Code extensions in order for debugging to work.
-
 # Installing on Windows with WSL 1
 
 WSL 1 requires to run on Windows 10 version 1709 or above. Previous windows versions didn't have support for COM ports.
@@ -167,33 +149,3 @@ Note that it may take a quite long time for a freshly plugged Proxmark3 to be vi
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-
-## (Optional) Visual Studio Code debugging
-
-Download and install [Visual Studio Code](https://code.visualstudio.com/) 
-
-Download and install [J-Link Software and Documentation pack for Windows](https://www.segger.com/downloads/jlink/JLink_Windows.exe) 
-
-Enter WSL prompt (`wsl` or `start windows terminal`)  and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
-
-Install dependencies
-```sh
-sudo apt-get install --no-install-recommends binutils-arm-none-eabi gdb openocd gdb-multiarch
-```
-
-The J-Link debugger requires `arm-none-eabi-gdb` which was replaced with `gdb-multiarch`. In order to use the J-Link debugger link `arm-none-eabi-gdb` to `gdb-multiarch`:
-```sh
-sudo ln -s /usr/bin/gdb-multiarch /usr/bin/arm-none-eabi-gdb
-```
-
-Setup the Visual Studio Code configuration, by going into your project folder and run:
-```sh
-./.vscode/setup.sh
-```
-
-and launch Visual Studio Code
-```sh
-code .
-```
-_note_
-Please install the recommended Visual Studio Code extensions in order for debugging to work.
