@@ -152,6 +152,8 @@ Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmar
 
 ## (Optional) Visual Studio Code debugging
 
+Download and install [Visual Studio Code](https://code.visualstudio.com/) 
+
 Download and install [J-Link Software and Documentation pack for Windows](https://www.segger.com/downloads/jlink/JLink_Windows.exe) 
 
 Enter WSL prompt (`wsl` or `start windows terminal`)  and from there, follow the [Linux Installation Instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) for Ubuntu, summarized here below:
