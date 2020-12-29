@@ -42,28 +42,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int usage_hf_mfu_dump(void) {
-    PrintAndLogEx(NORMAL, "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
-    PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
-    PrintAndLogEx(NORMAL, "and saves binary dump into the file " _YELLOW_("`filename.bin`") " or " _YELLOW_("`cardUID.bin`"));
-    PrintAndLogEx(NORMAL, "It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
-    PrintAndLogEx(NORMAL, "  Options :");
-    PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
-    PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w/o .bin") " to save the dump as");
-    PrintAndLogEx(NORMAL, "  p <pg>  : starting Page number to manually set a page to start the dump at");
-    PrintAndLogEx(NORMAL, "  q <qty> : number of Pages to manually set how many pages to dump");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu dump"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu dump f myfile"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu dump k 00112233445566778899AABBCCDDEEFF"));
-    PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu dump k AABBCCDD"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 static int usage_hf_mfu_restore(void) {
     PrintAndLogEx(NORMAL, "Restore dumpfile onto card.");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu restore [h] [l] [s] k <key> n <filename w .bin> ");
@@ -1911,83 +1889,78 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
 //  Read and Dump Card Contents,  using auto detection of tag size.
 static int CmdHF14AMfUDump(const char *Cmd) {
 
-    int fileNameLen = 0;
-    char filename[FILE_PATH_SIZE] = {0x00};
-    char *fptr = filename;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu dump",
+                  "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1\n"
+                  "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216\n"
+                  "and saves data into binary/json files.\n"
+                  "It autodetects card type.",
+                  "hf mfu dump -f myfile        -> dump whole tag, save to `myfile.bin`\n"
+                  "hf mfu dump -k AABBCCDD      -> dump whole tag using pwd AABBCCDD\n"
+                  "hf mfu dump -p 10            -> start at page 10 and dump rest of blocks\n"
+                  "hf mfu dump -p 10 -q 2       -> start at page 10 and dump two blocks\n"
+                  "hf mfu dump --key 00112233445566778899AABBCCDDEEFF"
+                 );
 
-    uint8_t data[1024] = {0x00};
-    memset(data, 0x00, sizeof(data));
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
+        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL,           "swap entered key's endianness"),
+        arg_int0("p", "page", "<dec>", "manually set start page number to start from"),
+        arg_int0("q", "qty", "<dec>", "manually set number of pages to dump"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool hasAuthKey = false;
-    int pages = 16;
-    uint8_t dataLen = 0;
-    uint8_t cmdp = 0;
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int ak_len = 0;
     uint8_t authenticationkey[16] = {0x00};
-    memset(authenticationkey, 0x00, sizeof(authenticationkey));
     uint8_t *authKeyPtr = authenticationkey;
+    CLIGetHexWithReturn(ctx, 2, authenticationkey, &ak_len);
+    bool swap_endian = arg_get_lit(ctx, 3);
+    int start_page = arg_get_int_def(ctx, 4, 0);
+    int pages = arg_get_int_def(ctx, 5, 16);
+    CLIParserFree(ctx);
 
-    bool errors = false;
-    bool swapEndian = false;
-    bool manualPages = false;
-    uint8_t startPage = 0;
-    uint8_t card_mem_size = 0;
-    char tempStr[50];
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_mfu_dump();
-            case 'k':
-                dataLen = param_getstr(Cmd, cmdp + 1, tempStr, sizeof(tempStr));
-                if (dataLen == 32 || dataLen == 8) { //ul-c or ev1/ntag key length
-                    errors = param_gethex(tempStr, 0, authenticationkey, dataLen);
-                    dataLen /= 2;
-                } else {
-                    PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
-                    errors = true;
-                }
-                cmdp += 2;
-                hasAuthKey = true;
-                break;
-            case 'l':
-                swapEndian = true;
-                cmdp++;
-                break;
-            case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                if (fileNameLen > FILE_PATH_SIZE - 5)
-                    fileNameLen = FILE_PATH_SIZE - 5;
-                cmdp += 2;
-                break;
-            case 'p': //set start page
-                startPage = param_get8(Cmd, cmdp + 1);
-                manualPages = true;
-                cmdp += 2;
-                break;
-            case 'q':
-                pages = param_get8(Cmd, cmdp + 1);
-                cmdp += 2;
-                manualPages = true;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter: " _RED_("'%c'"), param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
+    bool has_auth_key = false;
+    bool has_pwd = false;
+    if (ak_len == 16) {
+        has_auth_key = true;
+    } else if (ak_len == 4) {
+        has_pwd = true;
+    } else if (ak_len != 0){
+        PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
     }
 
-    //Validations
-    if (errors) return usage_hf_mfu_dump();
+    bool manual_pages = false;
+    if ( start_page > 0)
+        manual_pages = true;
 
-    //if we entered a key in little endian and set the swapEndian switch - switch it...
-    if (swapEndian && hasAuthKey)
-        authKeyPtr = SwapEndian64(authenticationkey, dataLen, (dataLen == 16) ? 8 : 4);
+    if (pages != 16)
+        manual_pages = true;
+
+    uint8_t card_mem_size = 0;
+
+    // Swap endianness
+    if (swap_endian) {
+        if (has_auth_key)
+            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 8);
+
+        if (has_pwd)
+            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 4);
+    }
 
     TagTypeUL_t tagtype = GetHF14AMfU_Type();
-    if (tagtype == UL_ERROR) return -1;
+    if (tagtype == UL_ERROR)
+        return PM3_ESOFT;
 
     //get number of pages to read
-    if (!manualPages) {
+    if (manual_pages == false) {
         for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
             if (tagtype & UL_TYPES_ARRAY[idx]) {
                 //add one as maxblks starts at 0
@@ -1999,7 +1972,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     ul_print_type(tagtype, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory...");
     uint8_t keytype = 0;
-    if (hasAuthKey) {
+    if (has_auth_key) {
         if (tagtype & UL_C)
             keytype = 1; //UL_C auth
         else
@@ -2007,34 +1980,38 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, start_page, pages, keytype, authKeyPtr, ak_len);
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "Command execute time-out");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
     if (resp.oldarg[0] != 1) {
         PrintAndLogEx(WARNING, "Failed dumping card");
-        return 1;
+        return PM3_ESOFT;
     }
+
+    // read all memory
+    uint8_t data[1024] = {0x00};
+    memset(data, 0x00, sizeof(data));
 
     uint32_t startindex = resp.oldarg[2];
-    uint32_t bufferSize = resp.oldarg[1];
-    if (bufferSize > sizeof(data)) {
+    uint32_t buffer_size = resp.oldarg[1];
+    if (buffer_size > sizeof(data)) {
         PrintAndLogEx(FAILED, "Data exceeded Buffer size!");
-        bufferSize = sizeof(data);
+        buffer_size = sizeof(data);
     }
 
-    if (!GetFromDevice(BIG_BUF, data, bufferSize, startindex, NULL, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
-    bool is_partial = (pages != bufferSize / 4);
+    bool is_partial = (pages != buffer_size / 4);
 
-    pages = bufferSize / 4;
+    pages = buffer_size / 4;
 
     iso14a_card_select_t card;
     mfu_dump_t dump_file_data;
@@ -2063,9 +2040,9 @@ static int CmdHF14AMfUDump(const char *Cmd) {
             memcpy(data + (pages * 4) - 4, get_pack, sizeof(get_pack));
         }
 
-        if (hasAuthKey) {
+        if (has_auth_key) {
             uint8_t dummy_pack[] = {0, 0};
-            ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
         } else {
             ul_select(&card);
         }
@@ -2083,17 +2060,17 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         // NTAG can have nfc counter pwd protection enabled
         for (; n < 3; n++) {
 
-            if (hasAuthKey) {
+            if (has_auth_key) {
                 uint8_t dummy_pack[] = {0, 0};
-                ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+                ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
             } else {
                 ul_select(&card);
             }
             ulev1_readCounter(n, &get_counter_tearing[n][0], 3);
 
-            if (hasAuthKey) {
+            if (has_auth_key) {
                 uint8_t dummy_pack[] = {0, 0};
-                ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+                ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
             } else {
                 ul_select(&card);
             }
@@ -2102,9 +2079,9 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
         DropField();
 
-        if (hasAuthKey) {
+        if (has_auth_key) {
             uint8_t dummy_pack[] = {0, 0};
-            ul_auth_select(&card, tagtype, hasAuthKey, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
         } else
             ul_select(&card);
 
@@ -2114,21 +2091,21 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     // format and add keys to block dump output
     // only add keys if not partial read, and complete pages read
-    if (!is_partial && pages == card_mem_size && hasAuthKey) {
+    if (!is_partial && pages == card_mem_size && has_auth_key) {
         // if we didn't swapendian before - do it now for the sprint_hex call
         // NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
         //       need to swap to keep it the same
-        if (!swapEndian) {
-            authKeyPtr = SwapEndian64(authenticationkey, dataLen, (dataLen == 16) ? 8 : 4);
+        if (swap_endian == false) {
+            authKeyPtr = SwapEndian64(authenticationkey, ak_len, (ak_len == 16) ? 8 : 4);
         } else {
             authKeyPtr = authenticationkey;
         }
 
         if (tagtype & UL_C) { //add 4 pages
-            memcpy(data + pages * 4, authKeyPtr, dataLen);
-            pages += dataLen / 4;
+            memcpy(data + pages * 4, authKeyPtr, ak_len);
+            pages += ak_len / 4;
         } else { // 2nd page from end
-            memcpy(data + (pages * 4) - 8, authenticationkey, dataLen);
+            memcpy(data + (pages * 4) - 8, authenticationkey, ak_len);
         }
     }
 
@@ -2140,17 +2117,17 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     memcpy(dump_file_data.counter_tearing, get_counter_tearing, sizeof(dump_file_data.counter_tearing));
     memcpy(dump_file_data.data, data, pages * 4);
 
-    printMFUdumpEx(&dump_file_data, pages, startPage);
+    printMFUdumpEx(&dump_file_data, pages, start_page);
 
     // user supplied filename?
-    if (fileNameLen < 1) {
+    if (fnlen < 1) {
 
         PrintAndLogEx(INFO, "Using UID as filename");
         uint8_t uid[7] = {0};
         memcpy(uid, (uint8_t *)&dump_file_data.data, 3);
         memcpy(uid + 3, (uint8_t *)&dump_file_data.data + 4, 4);
-        fptr += sprintf(fptr, "hf-mfu-");
-        FillFileNameByUID(fptr, uid, "-dump", sizeof(uid));
+        strcat(filename, "hf-mfu-");
+        FillFileNameByUID(filename, uid, "-dump", sizeof(uid));
     }
     uint16_t datalen = pages * 4 + MFU_DUMP_PREFIX_LENGTH;
     saveFile(filename, ".bin", (uint8_t *)&dump_file_data, datalen);
@@ -2159,7 +2136,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (is_partial)
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void wait4response(uint8_t b) {
