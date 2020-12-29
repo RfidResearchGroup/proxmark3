@@ -236,26 +236,6 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 112233445566778899AA"));
     return PM3_SUCCESS;
 }
-static int usage_hf_14a_sniff(void) {
-    PrintAndLogEx(NORMAL, "Collect data from the field and save into command buffer.");
-    PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf 14a list'");
-    PrintAndLogEx(NORMAL, "Usage:  hf 14a sniff [c][r]");
-    PrintAndLogEx(NORMAL, "c - triggered by first data from card");
-    PrintAndLogEx(NORMAL, "r - triggered by first 7-bit request from reader (REQ,WUP,...)");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf 14a sniff c r"));
-    return PM3_SUCCESS;
-}
-
-static int usage_hf_14a_reader(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf 14a reader [k|s|x] [3]");
-    PrintAndLogEx(NORMAL, "       k    keep the field active after command executed");
-    PrintAndLogEx(NORMAL, "       s    silent (no messages)");
-    PrintAndLogEx(NORMAL, "       x    just drop the signal field");
-    PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
-    PrintAndLogEx(NORMAL, "       @    continuous mode. Updates hf plot as well");
-    return PM3_SUCCESS;
-}
 
 static int CmdHF14AList(const char *Cmd) {
     char args[128] = {0};
@@ -462,36 +442,43 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 }
 
 static int CmdHF14AReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a reader",
+                  "Reader for ISO 14443A based tags",
+                  "hf 14a reader -@ <- Continuous mode");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("k", "keep", "keep the field active after command executed"),
+        arg_lit0("s", "silent", "silent (no messages)"),
+        arg_lit0(NULL, "drop", "just drop the signal field"),
+        arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool disconnectAfter = true;
+    if (arg_get_lit(ctx, 1)) {
+        disconnectAfter = false;
+    }
+
+    bool silent = arg_get_lit(ctx, 2);
 
     uint32_t cm = ISO14A_CONNECT;
-    bool disconnectAfter = true, silent = false, continuous = false;
-    int cmdp = 0;
-    int res = PM3_SUCCESS;
-    while (param_getchar(Cmd, cmdp) != 0x00) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
-                return usage_hf_14a_reader();
-            case '3':
-                cm |= ISO14A_NO_RATS;
-                break;
-            case 'k':
-                disconnectAfter = false;
-                break;
-            case 's':
-                silent = true;
-                break;
-            case 'x':
-                cm &= ~ISO14A_CONNECT;
-                break;
-            case '@':
-                continuous = true;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown command.");
-                return PM3_EINVARG;
-        }
-        cmdp++;
+    if (arg_get_lit(ctx, 3)) {
+        cm &= ~ISO14A_CONNECT;
     }
+
+    if (arg_get_lit(ctx, 4)) {
+        cm |= ISO14A_NO_RATS;
+    }
+
+    bool continuous = arg_get_lit(ctx, 5);
+
+    CLIParserFree(ctx);
+
+    int res = PM3_SUCCESS;
 
     if (!disconnectAfter)
         cm |= ISO14A_NO_DISCONNECT;
@@ -768,13 +755,32 @@ int CmdHF14ASim(const char *Cmd) {
 }
 
 int CmdHF14ASniff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a sniff",
+                  "Collect data from the field and save into command buffer.\n"
+                  "Buffer accessible from command 'hf 14a list'",
+                  " hf 14a sniff -c -r");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("c", "card", "triggered by first data from card"),
+        arg_lit0("r", "reader", "triggered by first 7-bit request from reader (REQ,WUP,...)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     uint8_t param = 0;
-    for (uint8_t i = 0; i < 2; i++) {
-        uint8_t ctmp = tolower(param_getchar(Cmd, i));
-        if (ctmp == 'h') return usage_hf_14a_sniff();
-        if (ctmp == 'c') param |= 0x01;
-        if (ctmp == 'r') param |= 0x02;
+
+    if (arg_get_lit(ctx, 1)) {
+        param |= 0x01;
     }
+
+    if (arg_get_lit(ctx, 2)) {
+        param |= 0x02;
+    }
+
+    CLIParserFree(ctx);
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
     return PM3_SUCCESS;

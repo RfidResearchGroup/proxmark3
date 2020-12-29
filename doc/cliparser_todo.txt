@@ -41,10 +41,8 @@ data print
 data samples
 data setdebugmode
 data tune
-hf 14a reader
 hf 14a cuids
 hf 14a sim
-hf 14a sniff
 hf 14a config
 hf 14b sriwrite
 hf 15 dump
